@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/hashicorp/consul-nia/config"
 	"github.com/hashicorp/consul-nia/version"
 )
 
@@ -55,10 +56,15 @@ func NewCLI(out, err io.Writer) *CLI {
 // status from the command.
 func (cli *CLI) Run(args []string) int {
 	// Handle parsing the CLI flags.
+	var configFiles config.FlagAppendSliceValue
 	var isVersion, isInspect bool
 
 	// Parse the flags
 	f := flag.NewFlagSet("", flag.ContinueOnError)
+	f.Var(&configFiles, "config-file", "A config file to use. Can be either "+
+		".hcl or .json format. Can be specified multiple times.")
+	f.Var(&configFiles, "config-dir", "A directory to look for .hcl or .json "+
+		"config files in. Can be specified multiple times.")
 	f.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
 	f.BoolVar(&isInspect, "inspect", false, "Print the current and proposed "+
 		"state change, and then exits.")
@@ -83,9 +89,17 @@ func (cli *CLI) Run(args []string) int {
 		return ExitCodeOK
 	}
 
-	if isInspect {
-		log.Printf("[DEBUG] (cli) inspect flag was given, processing then exiting")
-		fmt.Fprintln(cli.errStream, "TODO")
+	// Build the config.
+	conf, err := config.BuildConfig([]string(configFiles))
+	if err != nil {
+		log.Printf("[ERR] (cli) error building configuration: %s", err)
+		os.Exit(ExitCodeConfigError)
+	}
+	fmt.Println(conf.GoString())
+
+	if isInspect || *conf.InspectMode {
+		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
+		fmt.Fprintln(cli.outStream, "TODO")
 		return ExitCodeOK
 	}
 
