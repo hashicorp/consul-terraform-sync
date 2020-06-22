@@ -23,6 +23,8 @@ const (
 type Config struct {
 	LogLevel    *string `mapstructure:"log_level"`
 	InspectMode *bool   `mapstructure:"inspect_mode"`
+
+	Syslog *SyslogConfig `mapstructure:"syslog"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -38,11 +40,6 @@ func BuildConfig(paths []string) (*Config, error) {
 		config = config.Merge(c)
 	}
 
-	if err := config.Validate(); err != nil {
-		log.Printf("[DEBUG] (config) error parsing config")
-		return nil, err
-	}
-
 	return config, nil
 }
 
@@ -51,6 +48,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		LogLevel:    String(DefaultLogLevel),
 		InspectMode: Bool(false),
+		Syslog:      DefaultSyslogConfig(),
 	}
 }
 
@@ -64,6 +62,7 @@ func (c *Config) Copy() *Config {
 	return &Config{
 		LogLevel:    StringCopy(c.LogLevel),
 		InspectMode: BoolCopy(c.InspectMode),
+		Syslog:      c.Syslog.Copy(),
 	}
 }
 
@@ -91,11 +90,22 @@ func (c *Config) Merge(o *Config) *Config {
 		r.InspectMode = BoolCopy(o.InspectMode)
 	}
 
+	if o.Syslog != nil {
+		r.Syslog = r.Syslog.Merge(o.Syslog)
+	}
+
 	return r
 }
 
-func (c *Config) Validate() error {
-	return nil
+func (c *Config) Finalize() {
+	if c == nil {
+		return
+	}
+
+	if c.Syslog == nil {
+		c.Syslog = DefaultSyslogConfig()
+	}
+	c.Syslog.Finalize()
 }
 
 func (c *Config) GoString() string {
@@ -105,10 +115,12 @@ func (c *Config) GoString() string {
 
 	return fmt.Sprintf("&Config{"+
 		"LogLevel:%#v, "+
-		"InspectMode:%#v"+
+		"InspectMode:%#v, "+
+		"Syslog:%s"+
 		"}",
 		StringVal(c.LogLevel),
 		BoolVal(c.InspectMode),
+		c.Syslog.GoString(),
 	)
 }
 

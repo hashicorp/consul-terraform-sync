@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/consul-nia/config"
+	"github.com/hashicorp/consul-nia/logging"
 	"github.com/hashicorp/consul-nia/version"
 )
 
@@ -22,6 +23,7 @@ const (
 
 	ExitCodeError = 10 + iota
 	ExitCodeInterrupt
+	ExitCodeRequiredFlagsError
 	ExitCodeParseFlagsError
 	ExitCodeConfigError
 )
@@ -77,8 +79,34 @@ func (cli *CLI) Run(args []string) int {
 		return ExitCodeParseFlagsError
 	}
 
-	// Print version information for debugging
+	// Validate required flags
+	if !isVersion && len(configFiles) == 0 {
+		log.Printf("[ERR] config file(s) required, use --config-file or --config-dir flag options")
+		return ExitCodeRequiredFlagsError
+	}
+
+	// Build the config.
+	conf, err := config.BuildConfig([]string(configFiles))
+	if err != nil {
+		log.Printf("[ERR] (cli) error building configuration: %s", err)
+		os.Exit(ExitCodeConfigError)
+	}
+	conf.Finalize()
+
+	if err := logging.Setup(&logging.Config{
+		Level:          config.StringVal(conf.LogLevel),
+		Syslog:         config.BoolVal(conf.Syslog.Enabled),
+		SyslogFacility: config.StringVal(conf.Syslog.Facility),
+		SyslogName:     config.StringVal(conf.Syslog.Name),
+		Writer:         cli.errStream,
+	}); err != nil {
+		log.Printf("[ERR] (cli) error setting up logging: %s", err)
+		return ExitCodeConfigError
+	}
+
+	// Print information on startup for debugging
 	log.Printf("[INFO] %s", version.GetHumanVersion())
+	log.Printf("[INFO] %s", conf.GoString())
 
 	// If the version was requested, return an "error" containing the version
 	// information. This might sound weird, but most *nix applications actually
@@ -88,14 +116,6 @@ func (cli *CLI) Run(args []string) int {
 		fmt.Fprintf(cli.errStream, "%s %s\n", version.Name, version.GetHumanVersion())
 		return ExitCodeOK
 	}
-
-	// Build the config.
-	conf, err := config.BuildConfig([]string(configFiles))
-	if err != nil {
-		log.Printf("[ERR] (cli) error building configuration: %s", err)
-		os.Exit(ExitCodeConfigError)
-	}
-	fmt.Println(conf.GoString())
 
 	if isInspect || *conf.InspectMode {
 		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
