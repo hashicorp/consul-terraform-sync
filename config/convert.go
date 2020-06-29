@@ -23,6 +23,15 @@ func BoolCopy(b *bool) *bool {
 	return Bool(*b)
 }
 
+// BoolPresent returns a boolean indicating if the pointer is nil, or if the
+// pointer is pointing to the zero value..
+func BoolPresent(b *bool) bool {
+	if b == nil {
+		return false
+	}
+	return true
+}
+
 // String returns a pointer to the given string.
 func String(s string) *string {
 	return &s

@@ -23,7 +23,7 @@ type SyslogConfig struct {
 	Name     *string `mapstructure:"name"`
 }
 
-// DefaultSyslogConfig returns the default configuration struct
+// DefaultSyslogConfig returns the default configuration struct.
 func DefaultSyslogConfig() *SyslogConfig {
 	return &SyslogConfig{
 		Enabled: Bool(false),

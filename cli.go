@@ -81,7 +81,8 @@ func (cli *CLI) Run(args []string) int {
 
 	// Validate required flags
 	if !isVersion && len(configFiles) == 0 {
-		log.Printf("[ERR] config file(s) required, use --config-file or --config-dir flag options")
+		log.Printf("[ERR] config file(s) required, use --config-dir or --config-file flag options")
+		f.PrintDefaults()
 		return ExitCodeRequiredFlagsError
 	}
 
@@ -92,6 +93,11 @@ func (cli *CLI) Run(args []string) int {
 		os.Exit(ExitCodeConfigError)
 	}
 	conf.Finalize()
+
+	if err := conf.Validate(); err != nil {
+		log.Printf("[ERR] (cli) error validating configuration: %s", err)
+		os.Exit(ExitCodeConfigError)
+	}
 
 	if err := logging.Setup(&logging.Config{
 		Level:          config.StringVal(conf.LogLevel),
@@ -106,7 +112,7 @@ func (cli *CLI) Run(args []string) int {
 
 	// Print information on startup for debugging
 	log.Printf("[INFO] %s", version.GetHumanVersion())
-	log.Printf("[INFO] %s", conf.GoString())
+	log.Printf("[DEBUG] %s", conf.GoString())
 
 	// If the version was requested, return an "error" containing the version
 	// information. This might sound weird, but most *nix applications actually

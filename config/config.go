@@ -25,6 +25,8 @@ type Config struct {
 	InspectMode *bool   `mapstructure:"inspect_mode"`
 
 	Syslog *SyslogConfig `mapstructure:"syslog"`
+	Consul *ConsulConfig `mapstructure:"consul"`
+	Driver *DriverConfig `mapstructure:"driver"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -45,10 +47,13 @@ func BuildConfig(paths []string) (*Config, error) {
 
 // DefaultConfig returns the default configuration struct
 func DefaultConfig() *Config {
+	consul := DefaultConsulConfig()
 	return &Config{
 		LogLevel:    String(DefaultLogLevel),
 		InspectMode: Bool(false),
 		Syslog:      DefaultSyslogConfig(),
+		Consul:      consul,
+		Driver:      DefaultDriverConfig(consul),
 	}
 }
 
@@ -63,6 +68,8 @@ func (c *Config) Copy() *Config {
 		LogLevel:    StringCopy(c.LogLevel),
 		InspectMode: BoolCopy(c.InspectMode),
 		Syslog:      c.Syslog.Copy(),
+		Consul:      c.Consul.Copy(),
+		Driver:      c.Driver.Copy(),
 	}
 }
 
@@ -94,6 +101,14 @@ func (c *Config) Merge(o *Config) *Config {
 		r.Syslog = r.Syslog.Merge(o.Syslog)
 	}
 
+	if o.Consul != nil {
+		r.Consul = r.Consul.Merge(o.Consul)
+	}
+
+	if o.Driver != nil {
+		r.Driver = r.Driver.Merge(o.Driver)
+	}
+
 	return r
 }
 
@@ -106,6 +121,28 @@ func (c *Config) Finalize() {
 		c.Syslog = DefaultSyslogConfig()
 	}
 	c.Syslog.Finalize()
+
+	if c.Consul == nil {
+		c.Consul = DefaultConsulConfig()
+	}
+	c.Consul.Finalize()
+
+	if c.Driver == nil {
+		c.Driver = DefaultDriverConfig(c.Consul)
+	}
+	c.Driver.Finalize()
+}
+
+func (c *Config) Validate() error {
+	if c == nil {
+		return nil
+	}
+
+	if err := c.Driver.Validate(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *Config) GoString() string {
@@ -114,13 +151,17 @@ func (c *Config) GoString() string {
 	}
 
 	return fmt.Sprintf("&Config{"+
-		"LogLevel:%#v, "+
+		"LogLevel:%s, "+
 		"InspectMode:%#v, "+
-		"Syslog:%s"+
+		"Syslog:%s, "+
+		"Consul:%s, "+
+		"Driver:%s"+
 		"}",
 		StringVal(c.LogLevel),
 		BoolVal(c.InspectMode),
 		c.Syslog.GoString(),
+		c.Consul.GoString(),
+		c.Driver.GoString(),
 	)
 }
 
@@ -264,4 +305,13 @@ func supportedFormat(format string) bool {
 	}
 
 	return false
+}
+
+func stringFromEnv(list []string, def string) *string {
+	for _, s := range list {
+		if v := os.Getenv(s); v != "" {
+			return String(strings.TrimSpace(v))
+		}
+	}
+	return String(def)
 }
