@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/consul-nia/config"
+	"github.com/hashicorp/consul-nia/driver"
 	"github.com/hashicorp/consul-nia/logging"
 	"github.com/hashicorp/consul-nia/version"
 )
@@ -26,6 +27,7 @@ const (
 	ExitCodeRequiredFlagsError
 	ExitCodeParseFlagsError
 	ExitCodeConfigError
+	ExitCodeDriverError
 )
 
 // CLI is the main entry point.
@@ -129,5 +131,23 @@ func (cli *CLI) Run(args []string) int {
 		return ExitCodeOK
 	}
 
+	tf := newTerraformDriver(conf)
+	if err := tf.Init(); err != nil {
+		log.Printf("[ERR] (cli) error initializing Terraform driver: %s", err)
+		return ExitCodeDriverError
+	}
+
 	return ExitCodeOK
+}
+
+func newTerraformDriver(conf *config.Config) *driver.Terraform {
+	tfConf := *conf.Driver.Terraform
+	return driver.NewTerraform(&driver.TerraformConfig{
+		LogLevel:   *tfConf.LogLevel,
+		Path:       *tfConf.Path,
+		DataDir:    *tfConf.DataDir,
+		WorkingDir: *tfConf.WorkingDir,
+		SkipVerify: *tfConf.SkipVerify,
+		Backend:    tfConf.Backend,
+	})
 }
