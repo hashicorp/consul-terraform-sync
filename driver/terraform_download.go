@@ -2,6 +2,7 @@ package driver
 
 import (
 	"archive/zip"
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -15,7 +16,10 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/openpgp"
 )
+
+const hashicorpPublicKeyURL = "https://keybase.io/hashicorp/pgp_keys.asc"
 
 // terraformInstalled checks to see if terraform already exists at path.
 // Note: at this point assuming if terraform already exists, that it is the
@@ -67,7 +71,7 @@ func (tf *Terraform) install() error {
 		}
 		log.Printf("[DEBUG] (driver.terraform) checksum and signature verified")
 	} else {
-		log.Printf("[DEBUG] (driver.terraform) verifying download skipped")
+		log.Printf("[DEBUG] (driver.terraform) skipping download verification")
 	}
 
 	log.Printf("[DEBUG] (driver.terraform) unziping %s to %s\n", filename, tf.path)
@@ -106,55 +110,35 @@ func download(url, filename string) error {
 func verifyTerraformDownload(path, filename, version string) error {
 	// Download SHASUM file and signature
 	shasumFilename := fmt.Sprintf("terraform_%s_SHA256SUMS", version)
-	resp, err := http.Get(fmt.Sprintf("%s/terraform/%s/%s",
-		releasesURL, version, shasumFilename))
+	shasumURL := fmt.Sprintf("%s/terraform/%s/%s", releasesURL, version, shasumFilename)
+	shasumContent, err := getFile(http.DefaultClient, shasumURL)
 	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Println("[ERR] (driver.terraform) unable to download SHASUM to verify download")
-		return err
+		return errors.Wrap(err, "unable to fetch SHASUM to verify download")
 	}
 
-	respBody, err := ioutil.ReadAll(resp.Body)
+	signatureURL := fmt.Sprintf("%s.sig", shasumURL)
+	signatureContent, err := getFile(http.DefaultClient, signatureURL)
 	if err != nil {
-		log.Println("[ERR] (driver.terraform) error reading SHASUM file to verify download")
-		return err
+		return errors.Wrap(err, "unable to fetch signature to verify download")
 	}
 
-	var expectedChecksum string
-	for _, line := range strings.Split(string(respBody), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) != 2 {
-			continue
-		}
-		checksum, f := fields[0], fields[1]
-		if f == filename {
-			expectedChecksum = checksum
-		}
-	}
-	if expectedChecksum == "" {
-		return fmt.Errorf("checksum for %s not found to verify download", filename)
-	}
-
-	f, err := os.Open(filepath.Join(path, filename))
+	hashicorpPublicKey, err := getFile(http.DefaultClient, hashicorpPublicKeyURL)
 	if err != nil {
-		return errors.Wrap(err, "issue reading download from disk to calculate SHASUM")
-	}
-	defer f.Close()
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, f); err != nil {
-		return errors.Wrap(err, "error fetching the SHASUM of the terraform archive")
+		return errors.Wrap(err, "unable to fetch HashiCorp public GPG key to verify download")
 	}
 
-	actualChecksum := fmt.Sprintf("%x", hash.Sum(nil))
-	if actualChecksum != expectedChecksum {
-		log.Println("[ERR] (driver.terraform) terraform archive has incorrect SHA-256 "+
-			"checksum %x (expected %x)", actualChecksum, expectedChecksum)
-		return fmt.Errorf("SHASUM does not match the downloaded terraform archive")
+	// Verify the signature using the HashiCorp public key
+	err = verifySignature(hashicorpPublicKey, shasumContent, signatureContent)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("unable to verify HashiCorp signature "+
+			"for terraform downloaded from %s", signatureURL))
+	}
+
+	// Verify that the SHA256 calculated for the file matches the SHASUM file
+	err = verifyChecksum(path, filename, shasumContent)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("unable to verify checksum for terraform "+
+			"downloaded from %s", shasumURL))
 	}
 
 	return nil
@@ -187,6 +171,71 @@ func unzip(src, dest string) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// getFile returns the content of a downloaded file.
+func getFile(client *http.Client, url string) ([]byte, error) {
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s", resp.Status)
+	}
+
+	return ioutil.ReadAll(resp.Body)
+}
+
+// verifySignature verifies a PGP signature for a file with the provided key
+func verifySignature(key, file, signature []byte) error {
+	keyring, err := openpgp.ReadArmoredKeyRing(bytes.NewReader(key))
+	if err != nil {
+		return err
+	}
+
+	_, err = openpgp.CheckDetachedSignature(keyring,
+		bytes.NewReader(file), bytes.NewReader(signature))
+	return err
+}
+
+// verifyChecksum calculates and verifies the SHA256 of the file with the
+// checksum file containing lines of checksums and filenames.
+func verifyChecksum(path, filename string, shasumContent []byte) error {
+	var expectedChecksum string
+	for _, line := range strings.Split(string(shasumContent), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			continue
+		}
+		checksum, f := fields[0], fields[1]
+		if f == filename {
+			expectedChecksum = checksum
+		}
+	}
+	if expectedChecksum == "" {
+		return fmt.Errorf("checksum for %s not found to verify download", filename)
+	}
+
+	f, err := os.Open(filepath.Join(path, filename))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, f); err != nil {
+		return err
+	}
+
+	actualChecksum := fmt.Sprintf("%x", hash.Sum(nil))
+	if actualChecksum != expectedChecksum {
+		return fmt.Errorf("%s has incorrect SHA-256 checksum %x (expected %x)",
+			filename, actualChecksum, expectedChecksum)
 	}
 
 	return nil
