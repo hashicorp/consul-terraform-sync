@@ -30,6 +30,7 @@ type TerraformConfig struct {
 	Path       *string                `mapstructure:"path"`
 	DataDir    *string                `mapstructure:"data_dir"`
 	WorkingDir *string                `mapstructure:"working_dir"`
+	SkipVerify *bool                  `mapstructure:"skip_verify"`
 	Backend    map[string]interface{} `mapstructure:"backend"`
 }
 
@@ -52,6 +53,7 @@ func DefaultTerraformConfig(consul *ConsulConfig) *TerraformConfig {
 		Path:       String(wd),
 		DataDir:    String(path.Join(wd, DefaultTFDataDir)),
 		WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+		SkipVerify: Bool(false),
 		Backend:    backend,
 	}
 }
@@ -100,6 +102,10 @@ func (c *TerraformConfig) Copy() *TerraformConfig {
 		o.WorkingDir = StringCopy(c.WorkingDir)
 	}
 
+	if c.SkipVerify != nil {
+		o.SkipVerify = BoolCopy(c.SkipVerify)
+	}
+
 	if c.Backend != nil {
 		o.Backend = make(map[string]interface{})
 		for k, v := range c.Backend {
@@ -144,6 +150,10 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 		r.WorkingDir = StringCopy(o.WorkingDir)
 	}
 
+	if o.SkipVerify != nil {
+		r.SkipVerify = BoolCopy(o.SkipVerify)
+	}
+
 	if o.Backend != nil {
 		for k, v := range o.Backend {
 			r.Backend[k] = v
@@ -182,6 +192,10 @@ func (c *TerraformConfig) Finalize() {
 		c.WorkingDir = String(path.Join(wd, DefaultTFWorkingDir))
 	}
 
+	if c.SkipVerify == nil {
+		c.SkipVerify = Bool(false)
+	}
+
 	if c.Backend == nil {
 		c.Backend = make(map[string]interface{})
 	}
@@ -216,12 +230,14 @@ func (c *TerraformConfig) GoString() string {
 		"Path:%s, "+
 		"DataDir:%s, "+
 		"WorkingDir:%s, "+
+		"SkipVerify:%v, "+
 		"Backend:%+v"+
 		"}",
 		StringVal(c.LogLevel),
 		StringVal(c.Path),
 		StringVal(c.DataDir),
 		StringVal(c.WorkingDir),
+		BoolVal(c.SkipVerify),
 		c.Backend,
 	)
 }
