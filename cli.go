@@ -64,7 +64,7 @@ func (cli *CLI) Run(args []string) int {
 	var isVersion, isInspect bool
 
 	// Parse the flags
-	f := flag.NewFlagSet("", flag.ContinueOnError)
+	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	f.Var(&configFiles, "config-file", "A config file to use. Can be either "+
 		".hcl or .json format. Can be specified multiple times.")
 	f.Var(&configFiles, "config-dir", "A directory to look for .hcl or .json "+
@@ -131,11 +131,13 @@ func (cli *CLI) Run(args []string) int {
 		return ExitCodeOK
 	}
 
-	tf := newTerraformDriver(conf)
-	if err := tf.Init(); err != nil {
+	log.Printf("[INFO] (cli) setting up Terraform driver")
+	driver := newTerraformDriver(conf)
+	if err := driver.Init(); err != nil {
 		log.Printf("[ERR] (cli) error initializing Terraform driver: %s", err)
 		return ExitCodeDriverError
 	}
+	log.Printf("[INFO] (cli) Terraform driver initialized")
 
 	return ExitCodeOK
 }
