@@ -12,7 +12,7 @@ jobs:
           keys:
           - ct-modcache-v1-{{ checksum "go.mod" }}
       - run: |
-          go test ./...
+          go test ./... -cover
       - save_cache:
           key: ct-modcache-v1-{{ checksum "go.mod" }}
           paths:
