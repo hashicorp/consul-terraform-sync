@@ -10,8 +10,8 @@ const Version = "0.0.0"
 var (
 	Name string
 
-	// The git commit that was compiled. These will be filled in by the
-	// compiler.
+	// GitCommit is the git commit that was compiled. These will be filled in by
+	// the compiler.
 	GitCommit   string
 	GitDescribe string
 
@@ -35,9 +35,10 @@ func GetHumanVersion() string {
 	}
 	if release != "" {
 		version += fmt.Sprintf("-%s", release)
-		if GitCommit != "" {
-			version += fmt.Sprintf(" (%s)", GitCommit)
-		}
+	}
+
+	if GitCommit != "" {
+		version += fmt.Sprintf(" (%s)", GitCommit)
 	}
 
 	// Strip off any single quotes added by the git information.
