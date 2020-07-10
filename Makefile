@@ -26,10 +26,9 @@ LD_FLAGS ?= \
 	-X '${PROJECT}/version.GitCommit=${GIT_COMMIT}' \
 	-X '${PROJECT}/version.GitDescribe=${GIT_DESCRIBE}'
 
-# dev builds and installs the project locally.
+# dev builds and installs the project locally to $GOPATH/bin.
 dev:
 	@echo "==> Installing ${NAME} for ${GOOS}/${GOARCH}"
 	@rm -f "${GOPATH}/pkg/${GOOS}_${GOARCH}/${PROJECT}/version.a"
-	mkdir -p pkg/$(GOOS)_$(GOARCH)/ bin/
 	go install -ldflags "$(LD_FLAGS)" -tags '$(GOTAGS)'
 .PHONY: dev
