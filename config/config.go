@@ -127,6 +127,7 @@ func (c *Config) Finalize() {
 	}
 	c.Consul.Finalize()
 
+	// Finalize driver after Consul to configure the default driver if needed
 	if c.Driver == nil {
 		c.Driver = DefaultDriverConfig(c.Consul)
 	}

@@ -65,7 +65,7 @@ func DefaultTerraformBackend(consul *ConsulConfig) (map[string]interface{}, erro
 	}
 
 	kvPath := DefaultTFBackendKVPath
-	if *consul.KVPath != "" {
+	if consul.KVPath != nil && *consul.KVPath != "" {
 		kvPath = path.Join(*consul.KVPath, "terraform")
 	}
 
@@ -156,6 +156,9 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 
 	if o.Backend != nil {
 		for k, v := range o.Backend {
+			if r.Backend == nil {
+				r.Backend = make(map[string]interface{})
+			}
 			r.Backend[k] = v
 		}
 	}

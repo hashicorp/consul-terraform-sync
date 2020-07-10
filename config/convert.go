@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 // Bool returns a pointer to the given bool.
 func Bool(b bool) *bool {
 	return &b
@@ -32,6 +34,20 @@ func BoolPresent(b *bool) bool {
 	return true
 }
 
+// Int returns a pointer to the given int.
+func Int(i int) *int {
+	return &i
+}
+
+// IntVal returns the value of the int at the pointer, or 0 if the pointer is
+// nil.
+func IntVal(i *int) int {
+	if i == nil {
+		return 0
+	}
+	return *i
+}
+
 // String returns a pointer to the given string.
 func String(s string) *string {
 	return &s
@@ -62,4 +78,27 @@ func StringPresent(s *string) bool {
 		return false
 	}
 	return *s != ""
+}
+
+// TimeDuration returns a pointer to the given time.Duration.
+func TimeDuration(t time.Duration) *time.Duration {
+	return &t
+}
+
+// TimeDurationVal returns the value of the string at the pointer, or 0 if the
+// pointer is nil.
+func TimeDurationVal(t *time.Duration) time.Duration {
+	if t == nil {
+		return time.Duration(0)
+	}
+	return *t
+}
+
+// TimeDurationCopy returns a copy of the time.Duration pointer
+func TimeDurationCopy(t *time.Duration) *time.Duration {
+	if t == nil {
+		return nil
+	}
+
+	return TimeDuration(*t)
 }
