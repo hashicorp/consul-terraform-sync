@@ -167,7 +167,7 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *TerraformConfig) Finalize() {
+func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 	if c == nil {
 		return
 	}
@@ -201,6 +201,10 @@ func (c *TerraformConfig) Finalize() {
 
 	if c.Backend == nil {
 		c.Backend = make(map[string]interface{})
+	}
+
+	if len(c.Backend) == 0 && consul != nil {
+		c.Backend, _ = DefaultTerraformBackend(consul)
 	}
 }
 

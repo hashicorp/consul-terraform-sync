@@ -2,9 +2,12 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDriverConfig_Copy(t *testing.T) {
@@ -130,6 +133,8 @@ func TestDriverConfig_Merge(t *testing.T) {
 
 func TestDriverConfig_Finalize(t *testing.T) {
 	t.Parallel()
+	wd, err := os.Getwd()
+	require.NoError(t, err)
 
 	t.Run("empty_panics", func(t *testing.T) {
 		d := &DriverConfig{}
@@ -152,7 +157,14 @@ func TestDriverConfig_Finalize(t *testing.T) {
 				Terraform: &TerraformConfig{LogLevel: String("info")},
 			},
 			&DriverConfig{
-				Terraform: &TerraformConfig{LogLevel: String("info")},
+				Terraform: &TerraformConfig{
+					LogLevel:   String("info"),
+					Path:       String(wd),
+					DataDir:    String(path.Join(wd, DefaultTFDataDir)),
+					WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+					SkipVerify: Bool(false),
+					Backend:    map[string]interface{}{},
+				},
 			},
 		},
 	}

@@ -75,6 +75,7 @@ func (c *DriverConfig) Finalize() {
 	if c.Terraform == nil {
 		c.Terraform = DefaultTerraformConfig(c.consul)
 	}
+	c.Terraform.Finalize(c.consul)
 }
 
 // Validate validates the values and nested values of the configuration struct.

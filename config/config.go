@@ -24,9 +24,11 @@ type Config struct {
 	LogLevel    *string `mapstructure:"log_level"`
 	InspectMode *bool   `mapstructure:"inspect_mode"`
 
-	Syslog *SyslogConfig `mapstructure:"syslog"`
-	Consul *ConsulConfig `mapstructure:"consul"`
-	Driver *DriverConfig `mapstructure:"driver"`
+	Syslog   *SyslogConfig   `mapstructure:"syslog"`
+	Consul   *ConsulConfig   `mapstructure:"consul"`
+	Driver   *DriverConfig   `mapstructure:"driver"`
+	Tasks    *TaskConfigs    `mapstructure:"task"`
+	Services *ServiceConfigs `mapstructure:"service"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -54,6 +56,8 @@ func DefaultConfig() *Config {
 		Syslog:      DefaultSyslogConfig(),
 		Consul:      consul,
 		Driver:      DefaultDriverConfig(consul),
+		Tasks:       DefaultTaskConfigs(),
+		Services:    DefaultServiceConfigs(),
 	}
 }
 
@@ -70,11 +74,15 @@ func (c *Config) Copy() *Config {
 		Syslog:      c.Syslog.Copy(),
 		Consul:      c.Consul.Copy(),
 		Driver:      c.Driver.Copy(),
+		Tasks:       c.Tasks.Copy(),
+		Services:    c.Services.Copy(),
 	}
 }
 
-// Merge merges the values in config into this config object. Values in the
-// config object overwrite the values in c.
+// Merge combines all values in this configuration with the values in the other
+// configuration, with values in the other configuration taking precedence.
+// Maps and slices are merged, most other values are overwritten. Complex
+// structs define their own merge functionality.
 func (c *Config) Merge(o *Config) *Config {
 	if c == nil {
 		if o == nil {
@@ -109,9 +117,18 @@ func (c *Config) Merge(o *Config) *Config {
 		r.Driver = r.Driver.Merge(o.Driver)
 	}
 
+	if o.Tasks != nil {
+		r.Tasks = r.Tasks.Merge(o.Tasks)
+	}
+
+	if o.Services != nil {
+		r.Services = r.Services.Merge(o.Services)
+	}
+
 	return r
 }
 
+// Finalize ensures there no nil pointers.
 func (c *Config) Finalize() {
 	if c == nil {
 		return
@@ -131,21 +148,44 @@ func (c *Config) Finalize() {
 	if c.Driver == nil {
 		c.Driver = DefaultDriverConfig(c.Consul)
 	}
+	if c.Driver.consul == nil {
+		c.Driver.consul = c.Consul
+	}
 	c.Driver.Finalize()
+
+	if c.Tasks == nil {
+		c.Tasks = DefaultTaskConfigs()
+	}
+	c.Tasks.Finalize()
+
+	if c.Services == nil {
+		c.Services = DefaultServiceConfigs()
+	}
+	c.Services.Finalize()
 }
 
+// Validate validates the values and nested values of the configuration struct
 func (c *Config) Validate() error {
 	if c == nil {
-		return nil
+		return fmt.Errorf("missing required configuration")
 	}
 
 	if err := c.Driver.Validate(); err != nil {
 		return err
 	}
 
+	if err := c.Tasks.Validate(); err != nil {
+		return err
+	}
+
+	if err := c.Services.Validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
+// GoString defines the printable version of this struct.
 func (c *Config) GoString() string {
 	if c == nil {
 		return "(*Config)(nil)"
@@ -176,10 +216,15 @@ func decodeConfig(content []byte, format string) (*Config, error) {
 	switch format {
 	case "json":
 		err = json.Unmarshal(content, &raw)
-		decodeHook = mapstructure.ComposeDecodeHookFunc(decode.HookTranslateKeys)
+		decodeHook = mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+			decode.HookTranslateKeys,
+		)
 	case "hcl":
 		err = hcl.Decode(&raw, string(content))
-		decodeHook = mapstructure.ComposeDecodeHookFunc(decode.HookWeakDecodeFromSlice,
+		decodeHook = mapstructure.ComposeDecodeHookFunc(
+			decode.HookWeakDecodeFromSlice,
+			mapstructure.StringToTimeDurationHookFunc(),
 			decode.HookTranslateKeys)
 	default:
 		return nil, fmt.Errorf("invalid format: %s", format)
@@ -192,10 +237,11 @@ func decodeConfig(content []byte, format string) (*Config, error) {
 	var config Config
 	var md mapstructure.Metadata
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		DecodeHook:  decodeHook,
-		ErrorUnused: true,
-		Metadata:    &md,
-		Result:      &config,
+		DecodeHook:       decodeHook,
+		WeaklyTypedInput: true,
+		ErrorUnused:      true,
+		Metadata:         &md,
+		Result:           &config,
 	})
 	if err != nil {
 		log.Println("[DEBUG] (config) mapstructure decoder creation failed")

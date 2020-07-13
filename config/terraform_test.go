@@ -348,19 +348,24 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 
+	consul := DefaultConsulConfig()
+
 	cases := []struct {
-		name string
-		i    *TerraformConfig
-		r    *TerraformConfig
+		name   string
+		i      *TerraformConfig
+		consul *ConsulConfig
+		r      *TerraformConfig
 	}{
 		{
 			"nil",
+			nil,
 			nil,
 			nil,
 		},
 		{
 			"empty",
 			&TerraformConfig{},
+			nil,
 			&TerraformConfig{
 				LogLevel:   String(DefaultTFLogLevel),
 				Path:       String(wd),
@@ -370,11 +375,30 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Backend:    map[string]interface{}{},
 			},
 		},
+		{
+			"consul backend",
+			&TerraformConfig{},
+			consul,
+			&TerraformConfig{
+				LogLevel:   String(DefaultTFLogLevel),
+				Path:       String(wd),
+				DataDir:    String(path.Join(wd, DefaultTFDataDir)),
+				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+				SkipVerify: Bool(false),
+				Backend: map[string]interface{}{
+					"consul": map[string]interface{}{
+						"address": *consul.Address,
+						"path":    DefaultTFBackendKVPath,
+						"gzip":    true,
+					},
+				},
+			},
+		},
 	}
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tc.i.Finalize()
+			tc.i.Finalize(tc.consul)
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}
