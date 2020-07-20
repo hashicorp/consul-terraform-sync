@@ -21,7 +21,7 @@ const (
 
 	// DefaultTFWorkingDir is the default location where NIA will use as the
 	// working directory to manage infrastructure.
-	DefaultTFWorkingDir = ".terraform-workspace"
+	DefaultTFWorkingDir = ".terraform-tasks"
 )
 
 // TerraformConfig is the configuration for the Terraform driver.

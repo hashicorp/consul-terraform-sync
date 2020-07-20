@@ -18,16 +18,22 @@ type TaskConfig struct {
 	// used to map provider configuration to the task.
 	Providers []string `mapstructure:"providers"`
 
-	// Services is the list of logical service names the task executes on. Consul
-	// NIA monitors the Consul Catalog for changes to these services and triggers
-	// the task to run. Any service not explicitly defined by a `service` block
-	// is assumed the default namespace.
+	// Services is the list of service IDs or logical service names the task
+	// executes on. Consul NIA monitors the Consul Catalog for changes to these
+	// services and triggers the task to run. Any service value not explicitly
+	// defined by a `service` block with a matching ID is assumed to be a logical
+	// service name in the default namespace.
 	Services []string `mapstructure:"services"`
 
 	// Source is the location the driver uses to fetch dependencies. The source
 	// format is dependent on the driver. For the Terraform driver, the source
 	// is the module path (local or remote).
 	Source *string `mapstructure:"source"`
+
+	// Version is the version of source the task will use. For the Terraform
+	// driver, this is the module version. The latest version will be used as
+	// the default if omitted.
+	Version *string `mapstructure:"version"`
 }
 
 // TaskConfigs is a collection of TaskConfig
@@ -52,6 +58,8 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	}
 
 	o.Source = StringCopy(c.Source)
+
+	o.Version = StringCopy(c.Version)
 
 	return &o
 }
@@ -94,6 +102,10 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Source = StringCopy(o.Source)
 	}
 
+	if o.Version != nil {
+		r.Version = StringCopy(o.Version)
+	}
+
 	return r
 }
 
@@ -121,6 +133,10 @@ func (c *TaskConfig) Finalize() {
 
 	if c.Source == nil {
 		c.Source = String("")
+	}
+
+	if c.Version == nil {
+		c.Version = String("")
 	}
 }
 
@@ -159,12 +175,14 @@ func (c *TaskConfig) GoString() string {
 		"Providers:%s, "+
 		"Services:%s, "+
 		"Source:%s, "+
+		"Version:%s"+
 		"}",
 		StringVal(c.Name),
 		StringVal(c.Description),
 		c.Providers,
 		c.Services,
 		StringVal(c.Source),
+		StringVal(c.Version),
 	)
 }
 

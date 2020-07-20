@@ -12,6 +12,10 @@ type ServiceConfig struct {
 	// Description is the human readable text to describe the service.
 	Description *string `mapstructure:"description"`
 
+	// ID identifies the service for Consul NIA. This is used to explicitly
+	// identify the service config for a task to use.
+	ID *string `mapstructure:"id"`
+
 	// Name is the Consul logical name of the service (required).
 	Name *string `mapstructure:"name"`
 
@@ -32,6 +36,7 @@ func (c *ServiceConfig) Copy() *ServiceConfig {
 
 	var o ServiceConfig
 	o.Description = StringCopy(c.Description)
+	o.ID = StringCopy(c.ID)
 	o.Name = StringCopy(c.Name)
 	o.Namespace = StringCopy(c.Namespace)
 	return &o
@@ -59,6 +64,10 @@ func (c *ServiceConfig) Merge(o *ServiceConfig) *ServiceConfig {
 		r.Description = StringCopy(o.Description)
 	}
 
+	if o.ID != nil {
+		r.ID = StringCopy(o.ID)
+	}
+
 	if o.Name != nil {
 		r.Name = StringCopy(o.Name)
 	}
@@ -82,6 +91,10 @@ func (c *ServiceConfig) Finalize() {
 
 	if c.Name == nil {
 		c.Name = String("")
+	}
+
+	if c.ID == nil {
+		c.ID = StringCopy(c.Name)
 	}
 
 	if c.Namespace == nil {
@@ -189,10 +202,20 @@ func (c *ServiceConfigs) Validate() error {
 		return fmt.Errorf("missing services configuration")
 	}
 
+	ids := make(map[string]bool)
 	for _, s := range *c {
 		if err := s.Validate(); err != nil {
 			return err
 		}
+
+		id := *s.Name
+		if s.ID != nil {
+			id = *s.ID
+		}
+		if ids[id] {
+			return fmt.Errorf("unique service IDs are required: %s", id)
+		}
+		ids[id] = true
 	}
 
 	return nil

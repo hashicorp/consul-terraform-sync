@@ -168,6 +168,7 @@ func TestServiceConfig_Finalize(t *testing.T) {
 			&ServiceConfig{},
 			&ServiceConfig{
 				Description: String(""),
+				ID:          String(""),
 				Name:        String(""),
 				Namespace:   String(""),
 			},
@@ -179,6 +180,7 @@ func TestServiceConfig_Finalize(t *testing.T) {
 			},
 			&ServiceConfig{
 				Description: String(""),
+				ID:          String("service"),
 				Name:        String("service"),
 				Namespace:   String(""),
 			},

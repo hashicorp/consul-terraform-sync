@@ -30,6 +30,7 @@ func TestTaskConfig_Copy(t *testing.T) {
 				Providers:   []string{"provider"},
 				Services:    []string{"service"},
 				Source:      String("source"),
+				Version:     String("0.0.0"),
 			},
 		},
 	}
@@ -183,6 +184,30 @@ func TestTaskConfig_Merge(t *testing.T) {
 			&TaskConfig{Source: String("source")},
 			&TaskConfig{Source: String("source")},
 		},
+		{
+			"version_overrides",
+			&TaskConfig{Version: String("0.0.0")},
+			&TaskConfig{Version: String("")},
+			&TaskConfig{Version: String("")},
+		},
+		{
+			"version_empty_one",
+			&TaskConfig{Version: String("0.0.0")},
+			&TaskConfig{},
+			&TaskConfig{Version: String("0.0.0")},
+		},
+		{
+			"version_empty_two",
+			&TaskConfig{},
+			&TaskConfig{Version: String("0.0.0")},
+			&TaskConfig{Version: String("0.0.0")},
+		},
+		{
+			"version_same",
+			&TaskConfig{Version: String("0.0.0")},
+			&TaskConfig{Version: String("0.0.0")},
+			&TaskConfig{Version: String("0.0.0")},
+		},
 	}
 
 	for i, tc := range cases {
@@ -210,6 +235,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Providers:   []string{},
 				Services:    []string{},
 				Source:      String(""),
+				Version:     String(""),
 			},
 		},
 		{
@@ -223,6 +249,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Providers:   []string{},
 				Services:    []string{},
 				Source:      String(""),
+				Version:     String(""),
 			},
 		},
 	}
