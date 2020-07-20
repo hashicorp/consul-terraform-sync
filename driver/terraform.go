@@ -1,9 +1,13 @@
 package driver
 
-import "log"
+import (
+	"log"
+
+	"github.com/hashicorp/consul-nia/templates/tftmpl"
+)
 
 const (
-	terraformVersion = "0.13.0-beta2"
+	terraformVersion = "0.13.0-beta3"
 	releasesURL      = "https://releases.hashicorp.com"
 )
 
@@ -42,6 +46,8 @@ func NewTerraform(config *TerraformConfig) *Terraform {
 		skipVerify: config.SkipVerify,
 		backend:    config.Backend,
 
+		// TODO: the version is currently hard-coded. NIA should discover
+		// the latest patch version within the minor version.
 		version: terraformVersion,
 	}
 }
@@ -67,4 +73,17 @@ func (tf *Terraform) Init() error {
 // Version returns the Terraform CLI version for the Terraform driver.
 func (tf *Terraform) Version() string {
 	return tf.version
+}
+
+// InitTask initializes the Terraform root module for the task.
+func (tf *Terraform) InitTask(task Task, force bool) error {
+	input := tftmpl.RootModuleInputData{
+		Task: tftmpl.Task{
+			Name:    task.Name,
+			Source:  task.Source,
+			Version: task.Version,
+		},
+		Backend: tf.backend,
+	}
+	return tftmpl.InitRootModule(input, tf.workingDir, force)
 }

@@ -116,18 +116,9 @@ func (cli *CLI) Run(args []string) int {
 	log.Printf("[INFO] %s", version.GetHumanVersion())
 	log.Printf("[DEBUG] %s", conf.GoString())
 
-	// If the version was requested, return an "error" containing the version
-	// information. This might sound weird, but most *nix applications actually
-	// print their version on stderr anyway.
 	if isVersion {
 		log.Printf("[DEBUG] (cli) version flag was given, exiting now")
 		fmt.Fprintf(cli.errStream, "%s %s\n", version.Name, version.GetHumanVersion())
-		return ExitCodeOK
-	}
-
-	if isInspect || *conf.InspectMode {
-		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
-		fmt.Fprintln(cli.outStream, "TODO")
 		return ExitCodeOK
 	}
 
@@ -138,6 +129,24 @@ func (cli *CLI) Run(args []string) int {
 		return ExitCodeDriverError
 	}
 	log.Printf("[INFO] (cli) Terraform driver initialized")
+
+	// initialize tasks. this is hardcoded in main function for demo purposes
+	// TODO: separate by provider instances using workspaces.
+	// Future: improve by combining tasks into workflows.
+	tasks := newDriverTasks(conf)
+	for _, task := range tasks {
+		err := driver.InitTask(task, true)
+		if err != nil {
+			// TODO: flush out error better
+			log.Printf("[ERR] %s", err)
+		}
+	}
+
+	if isInspect || *conf.InspectMode {
+		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
+		fmt.Fprintln(cli.outStream, "TODO")
+		return ExitCodeOK
+	}
 
 	return ExitCodeOK
 }
@@ -152,4 +161,43 @@ func newTerraformDriver(conf *config.Config) *driver.Terraform {
 		SkipVerify: *tfConf.SkipVerify,
 		Backend:    tfConf.Backend,
 	})
+}
+
+func newDriverTasks(conf *config.Config) []driver.Task {
+	tasks := make([]driver.Task, len(*conf.Tasks))
+	for i, t := range *conf.Tasks {
+
+		services := make([]driver.Service, len(t.Services))
+		for _, service := range t.Services {
+			services[i] = getService(conf.Services, service)
+		}
+
+		tasks[i] = driver.Task{
+			Description: *t.Description,
+			Name:        *t.Name,
+			Services:    services,
+			Source:      *t.Source,
+			Version:     *t.Version,
+		}
+	}
+
+	return tasks
+}
+
+// getService is a helper to find and convert a user-defined service
+// configuration by ID to a driver service type. If a service is not
+// explicitly configured, it assumes the service is a logical service name
+// in the default namespace.
+func getService(services *config.ServiceConfigs, id string) driver.Service {
+	for _, s := range *services {
+		if *s.ID == id {
+			return driver.Service{
+				Description: *s.Description,
+				Name:        *s.Name,
+				Namespace:   *s.Namespace,
+			}
+		}
+	}
+
+	return driver.Service{Name: id}
 }

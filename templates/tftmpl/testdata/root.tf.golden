@@ -1,0 +1,13 @@
+terraform {
+  required_version = ">=0.13"
+  backend "consul" {
+    scheme = "https"
+    path   = "consul-nia/terraform"
+  }
+}
+
+module "test" {
+  source   = "namespace/consul-nia/consul//modules/test"
+  services = var.services
+}
+

@@ -54,6 +54,9 @@ func (tf *Terraform) install() error {
 	opsys := runtime.GOOS
 	arch := runtime.GOARCH
 
+	// Create path if doesn't already exist
+	os.MkdirAll(tf.path, os.ModePerm)
+
 	filename := fmt.Sprintf("terraform_%s_%s_%s.zip", tf.version, opsys, arch)
 	fullFilePath := filepath.Join(tf.path, filename)
 	url := fmt.Sprintf("%s/terraform/%s/%s", releasesURL, tf.version, filename)
