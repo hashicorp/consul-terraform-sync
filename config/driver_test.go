@@ -136,11 +136,6 @@ func TestDriverConfig_Finalize(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 
-	t.Run("empty_panics", func(t *testing.T) {
-		d := &DriverConfig{}
-		assert.Panics(t, func() { d.Finalize() })
-	})
-
 	cases := []struct {
 		name string
 		i    *DriverConfig
@@ -152,10 +147,8 @@ func TestDriverConfig_Finalize(t *testing.T) {
 			nil,
 		},
 		{
-			"with_terraform",
-			&DriverConfig{
-				Terraform: &TerraformConfig{LogLevel: String("info")},
-			},
+			"empty",
+			&DriverConfig{},
 			&DriverConfig{
 				Terraform: &TerraformConfig{
 					LogLevel:   String("info"),
@@ -163,6 +156,25 @@ func TestDriverConfig_Finalize(t *testing.T) {
 					DataDir:    String(path.Join(wd, DefaultTFDataDir)),
 					WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
 					SkipVerify: Bool(false),
+					Backend:    map[string]interface{}{},
+				},
+			},
+		},
+		{
+			"with_terraform",
+			&DriverConfig{
+				Terraform: &TerraformConfig{
+					LogLevel:   String("debug"),
+					SkipVerify: Bool(true),
+				},
+			},
+			&DriverConfig{
+				Terraform: &TerraformConfig{
+					LogLevel:   String("debug"),
+					Path:       String(wd),
+					DataDir:    String(path.Join(wd, DefaultTFDataDir)),
+					WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+					SkipVerify: Bool(true),
 					Backend:    map[string]interface{}{},
 				},
 			},

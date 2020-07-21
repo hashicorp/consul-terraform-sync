@@ -35,12 +35,7 @@ type TerraformConfig struct {
 }
 
 // DefaultTerraformConfig returns the default configuration struct.
-func DefaultTerraformConfig(consul *ConsulConfig) *TerraformConfig {
-	backend, err := DefaultTerraformBackend(consul)
-	if err != nil {
-		log.Panic(err)
-	}
-
+func DefaultTerraformConfig() *TerraformConfig {
 	wd, err := os.Getwd()
 	if err != nil {
 		log.Println("[ERR] unable to retrieve current working directory to setup " +
@@ -54,7 +49,7 @@ func DefaultTerraformConfig(consul *ConsulConfig) *TerraformConfig {
 		DataDir:    String(path.Join(wd, DefaultTFDataDir)),
 		WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
 		SkipVerify: Bool(false),
-		Backend:    backend,
+		Backend:    make(map[string]interface{}),
 	}
 }
 

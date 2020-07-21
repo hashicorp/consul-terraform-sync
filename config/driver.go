@@ -11,11 +11,8 @@ type DriverConfig struct {
 }
 
 // DefaultDriverConfig returns the default configuration struct.
-func DefaultDriverConfig(consul *ConsulConfig) *DriverConfig {
-	return &DriverConfig{
-		consul:    consul,
-		Terraform: DefaultTerraformConfig(consul),
-	}
+func DefaultDriverConfig() *DriverConfig {
+	return &DriverConfig{}
 }
 
 // Copy returns a deep copy of this configuration.
@@ -73,7 +70,7 @@ func (c *DriverConfig) Finalize() {
 	}
 
 	if c.Terraform == nil {
-		c.Terraform = DefaultTerraformConfig(c.consul)
+		c.Terraform = DefaultTerraformConfig()
 	}
 	c.Terraform.Finalize(c.consul)
 }

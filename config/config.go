@@ -56,7 +56,7 @@ func DefaultConfig() *Config {
 		InspectMode: Bool(false),
 		Syslog:      DefaultSyslogConfig(),
 		Consul:      consul,
-		Driver:      DefaultDriverConfig(consul),
+		Driver:      DefaultDriverConfig(),
 		Tasks:       DefaultTaskConfigs(),
 		Services:    DefaultServiceConfigs(),
 		Providers:   DefaultProviderConfigs(),
@@ -153,7 +153,7 @@ func (c *Config) Finalize() {
 
 	// Finalize driver after Consul to configure the default driver if needed
 	if c.Driver == nil {
-		c.Driver = DefaultDriverConfig(c.Consul)
+		c.Driver = DefaultDriverConfig()
 	}
 	if c.Driver.consul == nil {
 		c.Driver.consul = c.Consul

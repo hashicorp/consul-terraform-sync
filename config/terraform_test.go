@@ -10,56 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDefaultTerraformConfig(t *testing.T) {
-	t.Parallel()
-
-	t.Run("nil_consul_panics", func(t *testing.T) {
-		assert.Panics(t, func() { DefaultTerraformConfig(nil) })
-	})
-
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-
-	t.Run("default_consul", func(t *testing.T) {
-		consul := DefaultConsulConfig()
-		expected := &TerraformConfig{
-			LogLevel:   String("info"),
-			Path:       String(wd),
-			DataDir:    String(path.Join(wd, DefaultTFDataDir)),
-			WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
-			SkipVerify: Bool(false),
-			Backend: map[string]interface{}{"consul": map[string]interface{}{
-				"address": *consul.Address,
-				"path":    DefaultTFBackendKVPath,
-				"gzip":    true,
-			}},
-		}
-		c := DefaultTerraformConfig(consul)
-		assert.Equal(t, expected, c)
-	})
-
-	t.Run("consul", func(t *testing.T) {
-		consul := &ConsulConfig{
-			Address: String("127.0.0.1:8080"),
-			KVPath:  String("custom-path"),
-		}
-		expected := &TerraformConfig{
-			LogLevel:   String("info"),
-			Path:       String(wd),
-			DataDir:    String(path.Join(wd, DefaultTFDataDir)),
-			WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
-			SkipVerify: Bool(false),
-			Backend: map[string]interface{}{"consul": map[string]interface{}{
-				"address": "127.0.0.1:8080",
-				"path":    "custom-path/terraform",
-				"gzip":    true,
-			}},
-		}
-		c := DefaultTerraformConfig(consul)
-		assert.Equal(t, expected, c)
-	})
-}
-
 func TestTerraformConfig_Copy(t *testing.T) {
 	t.Parallel()
 
@@ -376,7 +326,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 			},
 		},
 		{
-			"consul backend",
+			"default consul backend",
 			&TerraformConfig{},
 			consul,
 			&TerraformConfig{
@@ -389,6 +339,28 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 					"consul": map[string]interface{}{
 						"address": *consul.Address,
 						"path":    DefaultTFBackendKVPath,
+						"gzip":    true,
+					},
+				},
+			},
+		},
+		{
+			"custom consul backend",
+			&TerraformConfig{},
+			&ConsulConfig{
+				Address: String("127.0.0.1:8080"),
+				KVPath:  String("custom-path"),
+			},
+			&TerraformConfig{
+				LogLevel:   String(DefaultTFLogLevel),
+				Path:       String(wd),
+				DataDir:    String(path.Join(wd, DefaultTFDataDir)),
+				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+				SkipVerify: Bool(false),
+				Backend: map[string]interface{}{
+					"consul": map[string]interface{}{
+						"address": "127.0.0.1:8080",
+						"path":    "custom-path/terraform",
 						"gzip":    true,
 					},
 				},
