@@ -215,5 +215,5 @@ func getProvider(providers *config.ProviderConfigs, name string) map[string]inte
 		}
 	}
 
-	return nil
+	return map[string]interface{}{name: make(map[string]interface{})}
 }
