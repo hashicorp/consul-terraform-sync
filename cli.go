@@ -163,6 +163,8 @@ func newTerraformDriver(conf *config.Config) *driver.Terraform {
 	})
 }
 
+// newDriverTasks converts user-defined task configurations to the task object
+// used by drivers.
 func newDriverTasks(conf *config.Config) []driver.Task {
 	tasks := make([]driver.Task, len(*conf.Tasks))
 	for i, t := range *conf.Tasks {
@@ -208,6 +210,11 @@ func getService(services *config.ServiceConfigs, id string) driver.Service {
 	return driver.Service{Name: id}
 }
 
+// getProvider is a helper to find and convert a user-defined provider
+// configuration by the provider name. If a provider is not explicitly
+// configured, it assumes the default provider block that is empty.
+//
+// provider "name" { }
 func getProvider(providers *config.ProviderConfigs, name string) map[string]interface{} {
 	for _, p := range *providers {
 		if _, ok := (*p)[name]; ok {
