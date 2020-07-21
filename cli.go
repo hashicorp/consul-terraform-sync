@@ -168,13 +168,19 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 	for i, t := range *conf.Tasks {
 
 		services := make([]driver.Service, len(t.Services))
-		for _, service := range t.Services {
-			services[i] = getService(conf.Services, service)
+		for si, service := range t.Services {
+			services[si] = getService(conf.Services, service)
+		}
+
+		providers := make([]map[string]interface{}, len(t.Providers))
+		for pi, provider := range t.Providers {
+			providers[pi] = getProvider(conf.Providers, provider)
 		}
 
 		tasks[i] = driver.Task{
 			Description: *t.Description,
 			Name:        *t.Name,
+			Providers:   providers,
 			Services:    services,
 			Source:      *t.Source,
 			Version:     *t.Version,
@@ -200,4 +206,14 @@ func getService(services *config.ServiceConfigs, id string) driver.Service {
 	}
 
 	return driver.Service{Name: id}
+}
+
+func getProvider(providers *config.ProviderConfigs, name string) map[string]interface{} {
+	for _, p := range *providers {
+		if _, ok := (*p)[name]; ok {
+			return *p
+		}
+	}
+
+	return nil
 }

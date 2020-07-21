@@ -57,8 +57,11 @@ service {
   description = "descriptionB"
 }
 
+provider "X" {}
+
 task {
-  name = "automate services for X to do Y"
+  name = "task"
+  description = "automate services for X to do Y"
   services = ["serviceA", "serviceB", "serviceC"]
   providers = ["X"]
   source = "Y"

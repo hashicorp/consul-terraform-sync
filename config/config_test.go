@@ -86,12 +86,16 @@ var (
 		},
 		Tasks: &TaskConfigs{
 			{
-				Name:      String("automate services for X to do Y"),
-				Services:  []string{"serviceA", "serviceB", "serviceC"},
-				Providers: []string{"X"},
-				Source:    String("Y"),
+				Description: String("automate services for X to do Y"),
+				Name:        String("task"),
+				Services:    []string{"serviceA", "serviceB", "serviceC"},
+				Providers:   []string{"X"},
+				Source:      String("Y"),
 			},
 		},
+		Providers: &ProviderConfigs{{
+			"X": map[string]interface{}{},
+		}},
 	}
 )
 
@@ -251,7 +255,6 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.Consul.TLS.Cert = String("")
 	expected.Consul.Transport.MaxIdleConns = Int(100)
 	expected.Driver.consul = expected.Consul
-	(*expected.Tasks)[0].Description = String("")
 	(*expected.Tasks)[0].Version = String("")
 	(*expected.Services)[0].Namespace = String("")
 	(*expected.Services)[0].ID = String("serviceA")

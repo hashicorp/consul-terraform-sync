@@ -24,11 +24,12 @@ type Config struct {
 	LogLevel    *string `mapstructure:"log_level"`
 	InspectMode *bool   `mapstructure:"inspect_mode"`
 
-	Syslog   *SyslogConfig   `mapstructure:"syslog"`
-	Consul   *ConsulConfig   `mapstructure:"consul"`
-	Driver   *DriverConfig   `mapstructure:"driver"`
-	Tasks    *TaskConfigs    `mapstructure:"task"`
-	Services *ServiceConfigs `mapstructure:"service"`
+	Syslog    *SyslogConfig    `mapstructure:"syslog"`
+	Consul    *ConsulConfig    `mapstructure:"consul"`
+	Driver    *DriverConfig    `mapstructure:"driver"`
+	Tasks     *TaskConfigs     `mapstructure:"task"`
+	Services  *ServiceConfigs  `mapstructure:"service"`
+	Providers *ProviderConfigs `mapstructure:"provider"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -58,6 +59,7 @@ func DefaultConfig() *Config {
 		Driver:      DefaultDriverConfig(consul),
 		Tasks:       DefaultTaskConfigs(),
 		Services:    DefaultServiceConfigs(),
+		Providers:   DefaultProviderConfigs(),
 	}
 }
 
@@ -76,6 +78,7 @@ func (c *Config) Copy() *Config {
 		Driver:      c.Driver.Copy(),
 		Tasks:       c.Tasks.Copy(),
 		Services:    c.Services.Copy(),
+		Providers:   c.Providers.Copy(),
 	}
 }
 
@@ -125,6 +128,10 @@ func (c *Config) Merge(o *Config) *Config {
 		r.Services = r.Services.Merge(o.Services)
 	}
 
+	if o.Providers != nil {
+		r.Providers = r.Providers.Merge(o.Providers)
+	}
+
 	return r
 }
 
@@ -162,6 +169,11 @@ func (c *Config) Finalize() {
 		c.Services = DefaultServiceConfigs()
 	}
 	c.Services.Finalize()
+
+	if c.Providers == nil {
+		c.Providers = DefaultProviderConfigs()
+	}
+	c.Providers.Finalize()
 }
 
 // Validate validates the values and nested values of the configuration struct
@@ -182,6 +194,12 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.Providers.Validate(); err != nil {
+		return err
+	}
+
+	// TODO: validate providers listed in tasks exist
+
 	return nil
 }
 
@@ -196,13 +214,19 @@ func (c *Config) GoString() string {
 		"InspectMode:%#v, "+
 		"Syslog:%s, "+
 		"Consul:%s, "+
-		"Driver:%s"+
+		"Driver:%s, "+
+		"Tasks:%s, "+
+		"Services:%s, "+
+		"Providers:%s"+
 		"}",
 		StringVal(c.LogLevel),
 		BoolVal(c.InspectMode),
 		c.Syslog.GoString(),
 		c.Consul.GoString(),
 		c.Driver.GoString(),
+		c.Tasks.GoString(),
+		c.Services.GoString(),
+		c.Providers.GoString(),
 	)
 }
 
