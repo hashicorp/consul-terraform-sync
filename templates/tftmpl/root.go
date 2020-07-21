@@ -74,7 +74,9 @@ func NewRootModule(input RootModuleInputData) (*hclwrite.File, error) {
 		break
 	}
 	backendBody := tfBody.AppendNewBlock("backend", []string{backendLabel}).Body()
-	for attr, val := range backendBlock {
+	sortedBackendAttr := sortKeys(backendBlock)
+	for _, attr := range sortedBackendAttr {
+		val := backendBlock[attr]
 		backendBody.SetAttributeValue(attr, hcl2shim.HCL2ValueFromConfigValue(val))
 	}
 	rootBody.AppendNewline()
@@ -94,12 +96,8 @@ func NewRootModule(input RootModuleInputData) (*hclwrite.File, error) {
 		// Convert user provider attr+values to provider block arguments from variables
 		// and sort the attributes for consistency
 		// attr = var.<providerName>.<attr>
-		sortedAttr := make([]string, 0, len(providerBlock))
-		for attr := range providerBlock {
-			sortedAttr = append(sortedAttr, attr)
-		}
-		sort.Strings(sortedAttr)
-		for _, attr := range sortedAttr {
+		sortedProviderAttr := sortKeys(providerBlock)
+		for _, attr := range sortedProviderAttr {
 			// Drop the alias meta attribute. Each provider instance will be ran as
 			// a separate task
 			if attr == "alias" {
@@ -190,4 +188,13 @@ func appendComment(b *hclwrite.Body, comment string) {
 		},
 	})
 	b.AppendNewline()
+}
+
+func sortKeys(m map[string]interface{}) []string {
+	sorted := make([]string, 0, len(m))
+	for key := range m {
+		sorted = append(sorted, key)
+	}
+	sort.Strings(sorted)
+	return sorted
 }
