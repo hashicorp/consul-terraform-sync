@@ -6,8 +6,15 @@ terraform {
   }
 }
 
+provider "null" {
+  attr  = var.null.attr
+  count = var.null.count
+}
+
+# user description for task named 'test'
 module "test" {
   source   = "namespace/consul-nia/consul//modules/test"
+  version  = "0.0.0"
   services = var.services
 }
 

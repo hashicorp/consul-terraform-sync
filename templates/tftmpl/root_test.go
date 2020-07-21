@@ -15,15 +15,24 @@ var update = flag.Bool("update", false, "update golden files")
 func TestNewRootModule(t *testing.T) {
 	goldenFile := filepath.Join("testdata", "root.tf.golden")
 	input := RootModuleInputData{
-		Task: Task{
-			Name:   "test",
-			Source: "namespace/consul-nia/consul//modules/test",
-		},
 		Backend: map[string]interface{}{
 			"consul": map[string]interface{}{
 				"scheme": "https",
 				"path":   "consul-nia/terraform",
 			},
+		},
+		Providers: []map[string]interface{}{{
+			"null": map[string]interface{}{
+				"alias": "dropped",
+				"attr":  "value",
+				"count": 10,
+			},
+		}},
+		Task: Task{
+			Description: "user description for task named 'test'",
+			Name:        "test",
+			Source:      "namespace/consul-nia/consul//modules/test",
+			Version:     "0.0.0",
 		},
 	}
 	f, err := NewRootModule(input)
