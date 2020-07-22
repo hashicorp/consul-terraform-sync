@@ -263,9 +263,13 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.Consul.Transport.MaxIdleConns = Int(100)
 	expected.Driver.consul = expected.Consul
 	(*expected.Tasks)[0].Version = String("")
-	(*expected.Services)[0].Namespace = String("")
 	(*expected.Services)[0].ID = String("serviceA")
+	(*expected.Services)[0].Namespace = String("")
+	(*expected.Services)[0].Datacenter = String("")
+	(*expected.Services)[0].Tag = String("")
 	(*expected.Services)[1].ID = String("serviceB")
+	(*expected.Services)[1].Datacenter = String("")
+	(*expected.Services)[1].Tag = String("")
 
 	c := longConfig.Copy()
 	c.Finalize()

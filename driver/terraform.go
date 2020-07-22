@@ -80,16 +80,29 @@ func (tf *Terraform) Version() string {
 
 // InitTask initializes the Terraform root module for the task.
 func (tf *Terraform) InitTask(task Task, force bool) error {
-	input := tftmpl.NewRootModuleInputData(
-		tf.backend,
-		task.Providers,
-		task.ProviderInfo,
-		tftmpl.Task{
+	services := make([]*tftmpl.Service, len(task.Services))
+	for i, s := range task.Services {
+		services[i] = &tftmpl.Service{
+			Datacenter:  s.Datacenter,
+			Description: s.Description,
+			Name:        s.Name,
+			Namespace:   s.Namespace,
+			Tag:         s.Tag,
+		}
+	}
+
+	input := tftmpl.RootModuleInputData{
+		Backend:      tf.backend,
+		Providers:    task.Providers,
+		ProviderInfo: task.ProviderInfo,
+		Services:     services,
+		Task: tftmpl.Task{
 			Description: task.Description,
 			Name:        task.Name,
 			Source:      task.Source,
 			Version:     task.Version,
 		},
-	)
-	return tftmpl.InitRootModule(input, tf.workingDir, force)
+	}
+	input.Init()
+	return tftmpl.InitRootModule(&input, tf.workingDir, force)
 }

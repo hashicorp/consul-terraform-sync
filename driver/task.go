@@ -1,9 +1,11 @@
 package driver
 
 type Service struct {
+	Datacenter  string
 	Description string
 	Name        string
 	Namespace   string
+	Tag         string
 }
 
 type Task struct {

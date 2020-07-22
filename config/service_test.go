@@ -167,10 +167,12 @@ func TestServiceConfig_Finalize(t *testing.T) {
 			"empty",
 			&ServiceConfig{},
 			&ServiceConfig{
+				Datacenter:  String(""),
 				Description: String(""),
 				ID:          String(""),
 				Name:        String(""),
 				Namespace:   String(""),
+				Tag:         String(""),
 			},
 		},
 		{
@@ -179,10 +181,12 @@ func TestServiceConfig_Finalize(t *testing.T) {
 				Name: String("service"),
 			},
 			&ServiceConfig{
+				Datacenter:  String(""),
 				Description: String(""),
 				ID:          String("service"),
 				Name:        String("service"),
 				Namespace:   String(""),
+				Tag:         String(""),
 			},
 		},
 	}

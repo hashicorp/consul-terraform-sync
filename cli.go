@@ -212,9 +212,11 @@ func getService(services *config.ServiceConfigs, id string) driver.Service {
 	for _, s := range *services {
 		if *s.ID == id {
 			return driver.Service{
+				Datacenter:  *s.Datacenter,
 				Description: *s.Description,
 				Name:        *s.Name,
 				Namespace:   *s.Namespace,
+				Tag:         *s.Tag,
 			}
 		}
 	}

@@ -26,34 +26,35 @@ func TestInitRootModule(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	input := NewRootModuleInputData(
-		map[string]interface{}{
+	input := RootModuleInputData{
+		Backend: map[string]interface{}{
 			"consul": map[string]interface{}{
 				"scheme": "https",
 				"path":   "consul-nia/terraform",
 			},
 		},
-		[]map[string]interface{}{{
+		Providers: []map[string]interface{}{{
 			"testProvider": map[string]interface{}{
 				"alias": "tp",
 				"attr":  "value",
 				"count": 10,
 			},
 		}},
-		map[string]interface{}{
+		ProviderInfo: map[string]interface{}{
 			"testProvider": map[string]interface{}{
 				"version": "1.0.0",
 				"source":  "namespace/testProvider",
 			},
 		},
-		Task{
+		Task: Task{
 			Description: "user description for task named 'test'",
 			Name:        "test",
 			Source:      "namespace/consul-nia/consul//modules/test",
 			Version:     "0.0.0",
 		},
-	)
-	err = InitRootModule(input, dir, false)
+	}
+	input.Init()
+	err = InitRootModule(&input, dir, false)
 	assert.NoError(t, err)
 
 	files := []struct {
@@ -78,36 +79,36 @@ func TestInitRootModule(t *testing.T) {
 
 func TestNewMainTF(t *testing.T) {
 	goldenFile := filepath.Join("testdata", "main.tf.golden")
-	input := NewRootModuleInputData(
-		map[string]interface{}{
+	input := RootModuleInputData{
+		Backend: map[string]interface{}{
 			"consul": map[string]interface{}{
 				"scheme": "https",
 				"path":   "consul-nia/terraform",
 			},
 		},
-		[]map[string]interface{}{{
+		Providers: []map[string]interface{}{{
 			"testProvider": map[string]interface{}{
 				"alias": "tp",
 				"attr":  "value",
 				"count": 10,
 			},
 		}},
-		map[string]interface{}{
+		ProviderInfo: map[string]interface{}{
 			"testProvider": map[string]interface{}{
 				"version": "1.0.0",
 				"source":  "namespace/testProvider",
 			},
 		},
-		Task{
+		Task: Task{
 			Description: "user description for task named 'test'",
 			Name:        "test",
 			Source:      "namespace/consul-nia/consul//modules/test",
 			Version:     "0.0.0",
 		},
-	)
-
+	}
+	input.Init()
 	b := new(bytes.Buffer)
-	err := NewMainTF(b, input)
+	err := NewMainTF(b, &input)
 	require.NoError(t, err)
 	checkGoldenFile(t, goldenFile, b.Bytes())
 }
