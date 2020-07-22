@@ -1,8 +1,10 @@
 package tftmpl
 
 import (
+	"bytes"
 	"flag"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -10,34 +12,91 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var update = flag.Bool("update", false, "update golden files")
+var (
+	update = flag.Bool("update", false, "update golden files")
+	long   = flag.Bool("long", false, "run long tests")
+)
 
-func TestNewRootModule(t *testing.T) {
-	goldenFile := filepath.Join("testdata", "root.tf.golden")
-	input := RootModuleInputData{
-		Backend: map[string]interface{}{
-			"consul": map[string]interface{}{
-				"scheme": "https",
-				"path":   "consul-nia/terraform",
-			},
+func TestInitRootModule(t *testing.T) {
+	if !*long {
+		t.Skip("test writes to disk, skipping")
+	}
+
+	dir, err := ioutil.TempDir("", "consul-nia-tftmpl-")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	input := NewRootModuleInputData(map[string]interface{}{
+		"consul": map[string]interface{}{
+			"scheme": "https",
+			"path":   "consul-nia/terraform",
 		},
-		Providers: []map[string]interface{}{{
-			"null": map[string]interface{}{
-				"alias": "dropped",
+	},
+		[]map[string]interface{}{{
+			"testProvider": map[string]interface{}{
+				"alias": "tp",
 				"attr":  "value",
 				"count": 10,
 			},
 		}},
-		Task: Task{
+		Task{
 			Description: "user description for task named 'test'",
 			Name:        "test",
 			Source:      "namespace/consul-nia/consul//modules/test",
 			Version:     "0.0.0",
 		},
+	)
+	err = InitRootModule(input, dir, false)
+	assert.NoError(t, err)
+
+	files := []struct {
+		GoldenFile string
+		ActualFile string
+	}{
+		{
+			"testdata/main.tf.golden",
+			filepath.Join(dir, input.Task.Name, RootFilename),
+		}, {
+			"testdata/variables.tf.golden",
+			filepath.Join(dir, input.Task.Name, VarsFilename),
+		},
 	}
-	f, err := NewRootModule(input)
+
+	for _, f := range files {
+		actual, err := ioutil.ReadFile(f.ActualFile)
+		require.NoError(t, err)
+		checkGoldenFile(t, f.GoldenFile, actual)
+	}
+}
+
+func TestNewMainTF(t *testing.T) {
+	goldenFile := filepath.Join("testdata", "main.tf.golden")
+	input := NewRootModuleInputData(
+		map[string]interface{}{
+			"consul": map[string]interface{}{
+				"scheme": "https",
+				"path":   "consul-nia/terraform",
+			},
+		},
+		[]map[string]interface{}{{
+			"testProvider": map[string]interface{}{
+				"alias": "tp",
+				"attr":  "value",
+				"count": 10,
+			},
+		}},
+		Task{
+			Description: "user description for task named 'test'",
+			Name:        "test",
+			Source:      "namespace/consul-nia/consul//modules/test",
+			Version:     "0.0.0",
+		},
+	)
+
+	b := new(bytes.Buffer)
+	err := NewMainTF(b, input)
 	require.NoError(t, err)
-	checkGoldenFile(t, goldenFile, f.Bytes())
+	checkGoldenFile(t, goldenFile, b.Bytes())
 }
 
 func checkGoldenFile(t *testing.T, goldenFile string, actual []byte) {
