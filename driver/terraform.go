@@ -16,35 +16,38 @@ var _ Driver = (*Terraform)(nil)
 // Terraform is an NIA driver that uses the Terraform CLI to interface with
 // low-level network infrastructure.
 type Terraform struct {
-	logLevel   string
-	path       string
-	dataDir    string
-	workingDir string
-	skipVerify bool
-	backend    map[string]interface{}
+	logLevel          string
+	path              string
+	dataDir           string
+	workingDir        string
+	skipVerify        bool
+	backend           map[string]interface{}
+	requiredProviders map[string]interface{}
 
 	version string
 }
 
 // TerraformConfig configures the Terraform driver
 type TerraformConfig struct {
-	LogLevel   string
-	Path       string
-	DataDir    string
-	WorkingDir string
-	SkipVerify bool
-	Backend    map[string]interface{}
+	LogLevel          string
+	Path              string
+	DataDir           string
+	WorkingDir        string
+	SkipVerify        bool
+	Backend           map[string]interface{}
+	RequiredProviders map[string]interface{}
 }
 
 // NewTerraform configures and initializes a new Terraform driver
 func NewTerraform(config *TerraformConfig) *Terraform {
 	return &Terraform{
-		logLevel:   config.LogLevel,
-		path:       config.Path,
-		dataDir:    config.DataDir,
-		workingDir: config.WorkingDir,
-		skipVerify: config.SkipVerify,
-		backend:    config.Backend,
+		logLevel:          config.LogLevel,
+		path:              config.Path,
+		dataDir:           config.DataDir,
+		workingDir:        config.WorkingDir,
+		skipVerify:        config.SkipVerify,
+		backend:           config.Backend,
+		requiredProviders: config.RequiredProviders,
 
 		// TODO: the version is currently hard-coded. NIA should discover
 		// the latest patch version within the minor version.
@@ -80,6 +83,7 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 	input := tftmpl.NewRootModuleInputData(
 		tf.backend,
 		task.Providers,
+		task.ProviderInfo,
 		tftmpl.Task{
 			Description: task.Description,
 			Name:        task.Name,

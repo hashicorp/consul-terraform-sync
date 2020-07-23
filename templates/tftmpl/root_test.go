@@ -26,12 +26,13 @@ func TestInitRootModule(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	input := NewRootModuleInputData(map[string]interface{}{
-		"consul": map[string]interface{}{
-			"scheme": "https",
-			"path":   "consul-nia/terraform",
+	input := NewRootModuleInputData(
+		map[string]interface{}{
+			"consul": map[string]interface{}{
+				"scheme": "https",
+				"path":   "consul-nia/terraform",
+			},
 		},
-	},
 		[]map[string]interface{}{{
 			"testProvider": map[string]interface{}{
 				"alias": "tp",
@@ -39,6 +40,12 @@ func TestInitRootModule(t *testing.T) {
 				"count": 10,
 			},
 		}},
+		map[string]interface{}{
+			"testProvider": map[string]interface{}{
+				"version": "1.0.0",
+				"source":  "namespace/testProvider",
+			},
+		},
 		Task{
 			Description: "user description for task named 'test'",
 			Name:        "test",
@@ -85,6 +92,12 @@ func TestNewMainTF(t *testing.T) {
 				"count": 10,
 			},
 		}},
+		map[string]interface{}{
+			"testProvider": map[string]interface{}{
+				"version": "1.0.0",
+				"source":  "namespace/testProvider",
+			},
+		},
 		Task{
 			Description: "user description for task named 'test'",
 			Name:        "test",

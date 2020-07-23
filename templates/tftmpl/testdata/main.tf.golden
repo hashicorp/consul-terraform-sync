@@ -6,6 +6,12 @@
 
 terraform {
   required_version = ">=0.13"
+  required_providers {
+    testProvider = {
+      source  = "namespace/testProvider"
+      version = "1.0.0"
+    }
+  }
   backend "consul" {
     path   = "consul-nia/terraform"
     scheme = "https"

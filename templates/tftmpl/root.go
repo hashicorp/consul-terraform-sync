@@ -6,10 +6,12 @@ import (
 	"log"
 	"os"
 	"path"
+	"sort"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/hashicorp/terraform/configs/hcl2shim"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -48,9 +50,10 @@ type Task struct {
 
 // RootModuleInputData is the input data used to generate the root module
 type RootModuleInputData struct {
-	Backend   map[string]interface{}
-	Providers []map[string]interface{}
-	Task      Task
+	Backend      map[string]interface{}
+	Providers    []map[string]interface{}
+	ProviderInfo map[string]interface{}
+	Task         Task
 
 	backend   *namedBlock
 	providers []*namedBlock
@@ -60,12 +63,15 @@ type RootModuleInputData struct {
 // root module. It converts the parameters into HCL objects compatible for
 // Terraform configuration syntax.
 func NewRootModuleInputData(backend map[string]interface{},
-	providers []map[string]interface{}, task Task) *RootModuleInputData {
+	providers []map[string]interface{},
+	providerInfo map[string]interface{},
+	task Task) *RootModuleInputData {
 
 	data := RootModuleInputData{
-		Backend:   backend,
-		Providers: providers,
-		Task:      task,
+		Backend:      backend,
+		Providers:    providers,
+		ProviderInfo: providerInfo,
+		Task:         task,
 	}
 
 	data.backend = newNamedBlock(backend)
@@ -155,7 +161,7 @@ func NewMainTF(w io.Writer, input *RootModuleInputData) error {
 
 	hclFile := hclwrite.NewEmptyFile()
 	rootBody := hclFile.Body()
-	appendRootTerraformBlock(rootBody, input.backend)
+	appendRootTerraformBlock(rootBody, input.backend, input.ProviderInfo)
 	rootBody.AppendNewline()
 	appendRootProviderBlocks(rootBody, input.providers)
 	rootBody.AppendNewline()
@@ -167,10 +173,22 @@ func NewMainTF(w io.Writer, input *RootModuleInputData) error {
 
 // appendRootTerraformBlock appends the Terraform block with version constraint
 // and backend.
-func appendRootTerraformBlock(body *hclwrite.Body, backend *namedBlock) {
+func appendRootTerraformBlock(body *hclwrite.Body, backend *namedBlock,
+	providerInfo map[string]interface{}) {
+
 	tfBlock := body.AppendNewBlock("terraform", nil)
 	tfBody := tfBlock.Body()
 	tfBody.SetAttributeValue("required_version", cty.StringVal(TerraformRequiredVersion))
+
+	if len(providerInfo) != 0 {
+		requiredProvidersBody := tfBody.AppendNewBlock("required_providers", nil).Body()
+		for _, pName := range sortedKeys(providerInfo) {
+			info, ok := providerInfo[pName]
+			if ok {
+				requiredProvidersBody.SetAttributeValue(pName, hcl2shim.HCL2ValueFromConfigValue(info))
+			}
+		}
+	}
 
 	// Configure the Terraform backend within the Terraform block
 	backendBody := tfBody.AppendNewBlock("backend", []string{backend.Name}).Body()
@@ -248,4 +266,13 @@ func fileExists(name string) bool {
 		}
 	}
 	return true
+}
+
+func sortedKeys(m map[string]interface{}) []string {
+	sorted := make([]string, 0, len(m))
+	for key := range m {
+		sorted = append(sorted, key)
+	}
+	sort.Strings(sorted)
+	return sorted
 }

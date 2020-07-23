@@ -155,12 +155,13 @@ func (cli *CLI) Run(args []string) int {
 func newTerraformDriver(conf *config.Config) *driver.Terraform {
 	tfConf := *conf.Driver.Terraform
 	return driver.NewTerraform(&driver.TerraformConfig{
-		LogLevel:   *tfConf.LogLevel,
-		Path:       *tfConf.Path,
-		DataDir:    *tfConf.DataDir,
-		WorkingDir: *tfConf.WorkingDir,
-		SkipVerify: *tfConf.SkipVerify,
-		Backend:    tfConf.Backend,
+		LogLevel:          *tfConf.LogLevel,
+		Path:              *tfConf.Path,
+		DataDir:           *tfConf.DataDir,
+		WorkingDir:        *tfConf.WorkingDir,
+		SkipVerify:        *tfConf.SkipVerify,
+		Backend:           tfConf.Backend,
+		RequiredProviders: tfConf.RequiredProviders,
 	})
 }
 
@@ -176,17 +177,27 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 		}
 
 		providers := make([]map[string]interface{}, len(t.Providers))
-		for pi, provider := range t.Providers {
-			providers[pi] = getProvider(conf.Providers, provider)
+		providerInfo := make(map[string]interface{})
+		for pi, pName := range t.Providers {
+			providers[pi] = getProvider(conf.Providers, pName)
+
+			// This is Terraform specific to pass version and source info for
+			// providers from the required_provider block
+			if tfConf := conf.Driver.Terraform; tfConf != nil {
+				if pInfo, ok := tfConf.RequiredProviders[pName]; ok {
+					providerInfo[pName] = pInfo
+				}
+			}
 		}
 
 		tasks[i] = driver.Task{
-			Description: *t.Description,
-			Name:        *t.Name,
-			Providers:   providers,
-			Services:    services,
-			Source:      *t.Source,
-			Version:     *t.Version,
+			Description:  *t.Description,
+			Name:         *t.Name,
+			Providers:    providers,
+			ProviderInfo: providerInfo,
+			Services:     services,
+			Source:       *t.Source,
+			Version:      *t.Version,
 		}
 	}
 
