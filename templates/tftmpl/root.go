@@ -87,24 +87,26 @@ func InitRootModule(input *RootModuleInputData, dir string, force bool) error {
 	exists := fileExists(mainPath)
 	switch {
 	case exists && !force:
-		log.Printf("[DEBUG] (templates.terraform) %s in root module for task %q "+
+		log.Printf("[DEBUG] (templates.tftmpl) %s in root module for task %q "+
 			"already exists, skipping file creation", RootFilename, input.Task.Name)
 
 	case exists && force:
-		log.Printf("[INFO] (templates.terraform) overwriting %s in root module "+
+		log.Printf("[INFO] (templates.tftmpl) overwriting %s in root module "+
 			"for task %q", RootFilename, input.Task.Name)
 		fallthrough
 
 	default:
-		log.Printf("[DEBUG] (templates.terraform) creating %s in root module for "+
+		log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
 			"task %q: %s", RootFilename, input.Task.Name, mainPath)
 		f, err := os.Create(mainPath)
 		if err != nil {
-			log.Printf("[ERR]")
+			log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
+				"module for %q: %s", RootFilename, input.Task.Name, err)
 			return err
 		}
 		if err := NewMainTF(f, input); err != nil {
-			log.Printf("[ERR]")
+			log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
+				"root module for %q: %s", RootFilename, input.Task.Name, err)
 			return err
 		}
 	}
@@ -114,24 +116,26 @@ func InitRootModule(input *RootModuleInputData, dir string, force bool) error {
 	exists = fileExists(varPath)
 	switch {
 	case exists && !force:
-		log.Printf("[DEBUG] (templates.terraform) %s in root module for task %q "+
+		log.Printf("[DEBUG] (templates.tftmpl) %s in root module for task %q "+
 			"already exists, skipping file creation", VarsFilename, input.Task.Name)
 
 	case exists && force:
-		log.Printf("[INFO] (templates.terraform) overwriting %s in root module "+
+		log.Printf("[INFO] (templates.tftmpl) overwriting %s in root module "+
 			"for task %q", VarsFilename, input.Task.Name)
 		fallthrough
 
 	default:
-		log.Printf("[DEBUG] (templates.terraform) creating %s in root module for "+
+		log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
 			"task %q: %s", VarsFilename, input.Task.Name, varPath)
 		f, err := os.Create(varPath)
 		if err != nil {
-			log.Printf("[ERR]")
+			log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
+				"module for %q: %s", VarsFilename, input.Task.Name, err)
 			return err
 		}
 		if err := NewVariablesTF(f, input); err != nil {
-			log.Printf("[ERR]")
+			log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
+				"root module for %q: %s", VarsFilename, input.Task.Name, err)
 			return err
 		}
 	}
@@ -145,7 +149,7 @@ func NewMainTF(w io.Writer, input *RootModuleInputData) error {
 	if err != nil {
 		// This isn't required for TF config files to be usable. So we'll just log
 		// the error and continue.
-		log.Printf("[WARN] (templates.terraform) unable to write preamble warning to %q",
+		log.Printf("[WARN] (templates.tftmpl) unable to write preamble warning to %q",
 			RootFilename)
 	}
 

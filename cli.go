@@ -138,7 +138,8 @@ func (cli *CLI) Run(args []string) int {
 		err := driver.InitTask(task, true)
 		if err != nil {
 			// TODO: flush out error better
-			log.Printf("[ERR] %s", err)
+			log.Printf("[ERR] (cli) error initializing task to be executed: %s", err)
+			return ExitCodeDriverError
 		}
 	}
 

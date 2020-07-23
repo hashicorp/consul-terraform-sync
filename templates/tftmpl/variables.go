@@ -41,7 +41,7 @@ func NewVariablesTF(w io.Writer, input *RootModuleInputData) error {
 	if err != nil {
 		// This isn't required for TF config files to be usable. So we'll just log
 		// the error and continue.
-		log.Printf("[WARN] (templates.terraform) unable to write preamble warning to %q",
+		log.Printf("[WARN] (templates.tftmpl) unable to write preamble warning to %q",
 			RootFilename)
 	}
 
