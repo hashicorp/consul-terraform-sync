@@ -44,6 +44,13 @@ driver "terraform" {
     path = "kv-path/terraform"
     gzip = true
   }
+  required_providers {
+    pName1 = "v0.0.0"
+    pName2 = {
+      version = "v0.0.1",
+      source = "namespace/pName2"
+    }
+  }
 }
 
 service {

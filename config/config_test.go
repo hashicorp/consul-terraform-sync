@@ -72,6 +72,13 @@ var (
 						"gzip":    true,
 					},
 				},
+				RequiredProviders: map[string]interface{}{
+					"pName1": "v0.0.0",
+					"pName2": map[string]interface{}{
+						"version": "v0.0.1",
+						"source":  "namespace/pName2",
+					},
+				},
 			},
 		},
 		Services: &ServiceConfigs{

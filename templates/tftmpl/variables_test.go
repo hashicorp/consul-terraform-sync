@@ -19,6 +19,7 @@ func TestNewRootVariables(t *testing.T) {
 				"count": 10,
 			},
 		}},
+		nil,
 		Task{},
 	)
 	b := new(bytes.Buffer)

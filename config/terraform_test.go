@@ -34,6 +34,13 @@ func TestTerraformConfig_Copy(t *testing.T) {
 				Backend: map[string]interface{}{"consul": map[string]interface{}{
 					"path": "consul-nia/terraform",
 				}},
+				RequiredProviders: map[string]interface{}{
+					"pName1": "v0.0.0",
+					"pName2": map[string]string{
+						"version": "v0.0.0",
+						"source":  "namespace/pName2",
+					},
+				},
 			},
 		},
 	}
@@ -283,6 +290,105 @@ func TestTerraformConfig_Merge(t *testing.T) {
 				},
 			},
 		},
+		{
+			"required_providers_overrides",
+			&TerraformConfig{
+				RequiredProviders: map[string]interface{}{
+					"pName1": "v0.0.0",
+					"pName2": map[string]string{
+						"version": "v0.0.1",
+						"source":  "namespace/pName2",
+					},
+				},
+			},
+			&TerraformConfig{
+				RequiredProviders: map[string]interface{}{
+					"pName1": map[string]string{
+						"version": "v0.0.0",
+						"source":  "namespace/pName1",
+					},
+				},
+			},
+			&TerraformConfig{
+				RequiredProviders: map[string]interface{}{
+					"pName1": map[string]string{
+						"version": "v0.0.0",
+						"source":  "namespace/pName1",
+					},
+					"pName2": map[string]string{
+						"version": "v0.0.1",
+						"source":  "namespace/pName2",
+					},
+				},
+			},
+		},
+		{
+			"required_providers_empty_one",
+			&TerraformConfig{
+				RequiredProviders: map[string]interface{}{
+					"pName1": map[string]string{
+						"version": "v0.0.0",
+						"source":  "namespace/pName1",
+					},
+				},
+			},
+			&TerraformConfig{},
+			&TerraformConfig{
+				RequiredProviders: map[string]interface{}{
+					"pName1": map[string]string{
+						"version": "v0.0.0",
+						"source":  "namespace/pName1",
+					},
+				},
+			},
+		},
+		{
+			"required_providers_empty_two",
+			&TerraformConfig{},
+			&TerraformConfig{
+				RequiredProviders: map[string]interface{}{
+					"pName1": map[string]string{
+						"version": "v0.0.0",
+						"source":  "namespace/pName1",
+					},
+				},
+			},
+			&TerraformConfig{
+				RequiredProviders: map[string]interface{}{
+					"pName1": map[string]string{
+						"version": "v0.0.0",
+						"source":  "namespace/pName1",
+					},
+				},
+			},
+		},
+		{
+			"required_providers_same",
+			&TerraformConfig{
+				RequiredProviders: map[string]interface{}{
+					"pName1": map[string]string{
+						"version": "v0.0.0",
+						"source":  "namespace/pName1",
+					},
+				},
+			},
+			&TerraformConfig{
+				RequiredProviders: map[string]interface{}{
+					"pName1": map[string]string{
+						"version": "v0.0.0",
+						"source":  "namespace/pName1",
+					},
+				},
+			},
+			&TerraformConfig{
+				RequiredProviders: map[string]interface{}{
+					"pName1": map[string]string{
+						"version": "v0.0.0",
+						"source":  "namespace/pName1",
+					},
+				},
+			},
+		},
 	}
 
 	for i, tc := range cases {
@@ -317,12 +423,13 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 			&TerraformConfig{},
 			nil,
 			&TerraformConfig{
-				LogLevel:   String(DefaultTFLogLevel),
-				Path:       String(wd),
-				DataDir:    String(path.Join(wd, DefaultTFDataDir)),
-				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
-				SkipVerify: Bool(false),
-				Backend:    map[string]interface{}{},
+				LogLevel:          String(DefaultTFLogLevel),
+				Path:              String(wd),
+				DataDir:           String(path.Join(wd, DefaultTFDataDir)),
+				WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
+				SkipVerify:        Bool(false),
+				Backend:           map[string]interface{}{},
+				RequiredProviders: map[string]interface{}{},
 			},
 		},
 		{
@@ -342,6 +449,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 						"gzip":    true,
 					},
 				},
+				RequiredProviders: map[string]interface{}{},
 			},
 		},
 		{
@@ -364,6 +472,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 						"gzip":    true,
 					},
 				},
+				RequiredProviders: map[string]interface{}{},
 			},
 		},
 	}

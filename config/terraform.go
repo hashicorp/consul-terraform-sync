@@ -26,12 +26,13 @@ const (
 
 // TerraformConfig is the configuration for the Terraform driver.
 type TerraformConfig struct {
-	LogLevel   *string                `mapstructure:"log_level"`
-	Path       *string                `mapstructure:"path"`
-	DataDir    *string                `mapstructure:"data_dir"`
-	WorkingDir *string                `mapstructure:"working_dir"`
-	SkipVerify *bool                  `mapstructure:"skip_verify"`
-	Backend    map[string]interface{} `mapstructure:"backend"`
+	LogLevel          *string                `mapstructure:"log_level"`
+	Path              *string                `mapstructure:"path"`
+	DataDir           *string                `mapstructure:"data_dir"`
+	WorkingDir        *string                `mapstructure:"working_dir"`
+	SkipVerify        *bool                  `mapstructure:"skip_verify"`
+	Backend           map[string]interface{} `mapstructure:"backend"`
+	RequiredProviders map[string]interface{} `mapstructure:"required_providers"`
 }
 
 // DefaultTerraformConfig returns the default configuration struct.
@@ -44,12 +45,13 @@ func DefaultTerraformConfig() *TerraformConfig {
 	}
 
 	return &TerraformConfig{
-		LogLevel:   String(DefaultTFLogLevel),
-		Path:       String(wd),
-		DataDir:    String(path.Join(wd, DefaultTFDataDir)),
-		WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
-		SkipVerify: Bool(false),
-		Backend:    make(map[string]interface{}),
+		LogLevel:          String(DefaultTFLogLevel),
+		Path:              String(wd),
+		DataDir:           String(path.Join(wd, DefaultTFDataDir)),
+		WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
+		SkipVerify:        Bool(false),
+		Backend:           make(map[string]interface{}),
+		RequiredProviders: make(map[string]interface{}),
 	}
 }
 
@@ -108,6 +110,13 @@ func (c *TerraformConfig) Copy() *TerraformConfig {
 		}
 	}
 
+	if c.RequiredProviders != nil {
+		o.RequiredProviders = make(map[string]interface{})
+		for k, v := range c.RequiredProviders {
+			o.RequiredProviders[k] = v
+		}
+	}
+
 	return &o
 }
 
@@ -158,6 +167,15 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 		}
 	}
 
+	if o.RequiredProviders != nil {
+		for k, v := range o.RequiredProviders {
+			if r.RequiredProviders == nil {
+				r.RequiredProviders = make(map[string]interface{})
+			}
+			r.RequiredProviders[k] = v
+		}
+	}
+
 	return r
 }
 
@@ -201,6 +219,10 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 	if len(c.Backend) == 0 && consul != nil {
 		c.Backend, _ = DefaultTerraformBackend(consul)
 	}
+
+	if c.RequiredProviders == nil {
+		c.RequiredProviders = make(map[string]interface{})
+	}
 }
 
 // Validate validates the values and nested values of the configuration struct
@@ -233,7 +255,8 @@ func (c *TerraformConfig) GoString() string {
 		"DataDir:%s, "+
 		"WorkingDir:%s, "+
 		"SkipVerify:%v, "+
-		"Backend:%+v"+
+		"Backend:%+v, "+
+		"RequiredProviders:%+v"+
 		"}",
 		StringVal(c.LogLevel),
 		StringVal(c.Path),
@@ -241,5 +264,6 @@ func (c *TerraformConfig) GoString() string {
 		StringVal(c.WorkingDir),
 		BoolVal(c.SkipVerify),
 		c.Backend,
+		c.RequiredProviders,
 	)
 }

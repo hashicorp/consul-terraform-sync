@@ -7,10 +7,11 @@ type Service struct {
 }
 
 type Task struct {
-	Description string
-	Name        string
-	Providers   []map[string]interface{}
-	Services    []Service
-	Source      string
-	Version     string
+	Description  string
+	Name         string
+	Providers    []map[string]interface{}
+	ProviderInfo map[string]interface{}
+	Services     []Service
+	Source       string
+	Version      string
 }
