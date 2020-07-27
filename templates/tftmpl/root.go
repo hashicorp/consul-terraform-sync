@@ -130,17 +130,22 @@ func InitRootModule(input *RootModuleInputData, dir string, force bool) error {
 	default:
 		log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
 			"task %q: %s", RootFilename, input.Task.Name, mainPath)
+
 		f, err := os.Create(mainPath)
 		if err != nil {
 			log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
 				"module for %q: %s", RootFilename, input.Task.Name, err)
 			return err
 		}
+		defer f.Close()
+
 		if err := NewMainTF(f, input); err != nil {
 			log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
 				"root module for %q: %s", RootFilename, input.Task.Name, err)
 			return err
 		}
+
+		f.Sync()
 	}
 
 	// Handle variables.tf
@@ -159,17 +164,22 @@ func InitRootModule(input *RootModuleInputData, dir string, force bool) error {
 	default:
 		log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
 			"task %q: %s", VarsFilename, input.Task.Name, varPath)
+
 		f, err := os.Create(varPath)
 		if err != nil {
 			log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
 				"module for %q: %s", VarsFilename, input.Task.Name, err)
 			return err
 		}
+		defer f.Close()
+
 		if err := NewVariablesTF(f, input); err != nil {
 			log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
 				"root module for %q: %s", VarsFilename, input.Task.Name, err)
 			return err
 		}
+
+		f.Sync()
 	}
 
 	// Handle *.tfvars.tmpl
@@ -189,17 +199,22 @@ func InitRootModule(input *RootModuleInputData, dir string, force bool) error {
 	default:
 		log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
 			"task %q: %s", tfvarsFilename, input.Task.Name, tfvarsPath)
+
 		f, err := os.Create(tfvarsPath)
 		if err != nil {
 			log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
 				"module for %q: %s", tfvarsFilename, input.Task.Name, err)
 			return err
 		}
+		defer f.Close()
+
 		if err := NewTFVarsTmpl(f, input); err != nil {
 			log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
 				"root module for %q: %s", tfvarsFilename, input.Task.Name, err)
 			return err
 		}
+
+		f.Sync()
 	}
 
 	return nil
