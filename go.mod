@@ -9,6 +9,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.6.0
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/terraform v0.12.29
+	github.com/hashicorp/terraform-exec v0.3.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.5.1
