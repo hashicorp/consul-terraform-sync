@@ -48,38 +48,64 @@ type Task struct {
 	Version     string
 }
 
+type Service struct {
+	Datacenter  string
+	Description string
+	Name        string
+	Namespace   string
+	Tag         string
+}
+
+// TODO incorporate namespace
+func (s Service) TemplateServiceID() string {
+	id := s.Name
+
+	if s.Tag != "" {
+		id = fmt.Sprintf("%s.%s", s.Tag, s.Name)
+	}
+
+	if s.Datacenter != "" {
+		id = fmt.Sprintf("%s@%s", id, s.Datacenter)
+	}
+
+	return id
+}
+
 // RootModuleInputData is the input data used to generate the root module
 type RootModuleInputData struct {
 	Backend      map[string]interface{}
 	Providers    []map[string]interface{}
 	ProviderInfo map[string]interface{}
+	Services     []*Service
 	Task         Task
 
 	backend   *namedBlock
 	providers []*namedBlock
+	services  []*Service
 }
 
-// NewRootModuleInputData initializes input data used to generate a Terraform
-// root module. It converts the parameters into HCL objects compatible for
+// Init processes input data used to generate a Terraform root module. It
+// converts the RootModuleInputData values into HCL objects compatible for
 // Terraform configuration syntax.
-func NewRootModuleInputData(backend map[string]interface{},
-	providers []map[string]interface{},
-	providerInfo map[string]interface{},
-	task Task) *RootModuleInputData {
-
-	data := RootModuleInputData{
-		Backend:      backend,
-		Providers:    providers,
-		ProviderInfo: providerInfo,
-		Task:         task,
+func (d *RootModuleInputData) Init() {
+	if d.Backend != nil {
+		d.backend = newNamedBlock(d.Backend)
+	} else {
+		d.Backend = make(map[string]interface{})
 	}
 
-	data.backend = newNamedBlock(backend)
-	data.providers = make([]*namedBlock, len(providers))
-	for i, p := range providers {
-		data.providers[i] = newNamedBlock(p)
+	d.providers = make([]*namedBlock, len(d.Providers))
+	for i, p := range d.Providers {
+		d.providers[i] = newNamedBlock(p)
 	}
-	return &data
+	sort.Slice(d.providers, func(i, j int) bool {
+		return d.providers[i].Name < d.providers[j].Name
+	})
+
+	d.services = d.Services
+	sort.Slice(d.services, func(i, j int) bool {
+		return d.services[i].Name < d.services[j].Name
+	})
 }
 
 // InitRootModule generates the root module and writes the following files to
@@ -104,17 +130,22 @@ func InitRootModule(input *RootModuleInputData, dir string, force bool) error {
 	default:
 		log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
 			"task %q: %s", RootFilename, input.Task.Name, mainPath)
+
 		f, err := os.Create(mainPath)
 		if err != nil {
 			log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
 				"module for %q: %s", RootFilename, input.Task.Name, err)
 			return err
 		}
+		defer f.Close()
+
 		if err := NewMainTF(f, input); err != nil {
 			log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
 				"root module for %q: %s", RootFilename, input.Task.Name, err)
 			return err
 		}
+
+		f.Sync()
 	}
 
 	// Handle variables.tf
@@ -133,17 +164,57 @@ func InitRootModule(input *RootModuleInputData, dir string, force bool) error {
 	default:
 		log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
 			"task %q: %s", VarsFilename, input.Task.Name, varPath)
+
 		f, err := os.Create(varPath)
 		if err != nil {
 			log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
 				"module for %q: %s", VarsFilename, input.Task.Name, err)
 			return err
 		}
+		defer f.Close()
+
 		if err := NewVariablesTF(f, input); err != nil {
 			log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
 				"root module for %q: %s", VarsFilename, input.Task.Name, err)
 			return err
 		}
+
+		f.Sync()
+	}
+
+	// Handle *.tfvars.tmpl
+	tfvarsFilename := TFVarsFilename(input.Task.Name)
+	tfvarsPath := path.Join(modulePath, tfvarsFilename)
+	exists = fileExists(tfvarsPath)
+	switch {
+	case exists && !force:
+		log.Printf("[DEBUG] (templates.tftmpl) %s in root module for task %q "+
+			"already exists, skipping file creation", tfvarsFilename, input.Task.Name)
+
+	case exists && force:
+		log.Printf("[INFO] (templates.tftmpl) overwriting %s in root module "+
+			"for task %q", tfvarsFilename, input.Task.Name)
+		fallthrough
+
+	default:
+		log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
+			"task %q: %s", tfvarsFilename, input.Task.Name, tfvarsPath)
+
+		f, err := os.Create(tfvarsPath)
+		if err != nil {
+			log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
+				"module for %q: %s", tfvarsFilename, input.Task.Name, err)
+			return err
+		}
+		defer f.Close()
+
+		if err := NewTFVarsTmpl(f, input); err != nil {
+			log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
+				"root module for %q: %s", tfvarsFilename, input.Task.Name, err)
+			return err
+		}
+
+		f.Sync()
 	}
 
 	return nil
@@ -191,6 +262,9 @@ func appendRootTerraformBlock(body *hclwrite.Body, backend *namedBlock,
 	}
 
 	// Configure the Terraform backend within the Terraform block
+	if backend == nil {
+		return
+	}
 	backendBody := tfBody.AppendNewBlock("backend", []string{backend.Name}).Body()
 	backendAttrs := backend.SortedAttributes()
 	for _, attr := range backendAttrs {

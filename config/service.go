@@ -9,6 +9,9 @@ import (
 // a service. This block may be specified multiple times to configure multiple
 // services.
 type ServiceConfig struct {
+	// Datacenter is the datacenter the service is deployed in.
+	Datacenter *string `mapstricture:"datacenter"`
+
 	// Description is the human readable text to describe the service.
 	Description *string `mapstructure:"description"`
 
@@ -23,6 +26,9 @@ type ServiceConfig struct {
 	// provided, the namespace will be inferred from the Consul NIA ACL token, or
 	// default to the `default` namespace.
 	Namespace *string `mapstructure:"namespace"`
+
+	// Tag is used to filter nodes based on the tag for the service
+	Tag *string `mapstructure:"tag"`
 }
 
 // ServiceConfigs is a collection of ServiceConfig
@@ -35,10 +41,12 @@ func (c *ServiceConfig) Copy() *ServiceConfig {
 	}
 
 	var o ServiceConfig
+	o.Datacenter = StringCopy(c.Datacenter)
 	o.Description = StringCopy(c.Description)
 	o.ID = StringCopy(c.ID)
 	o.Name = StringCopy(c.Name)
 	o.Namespace = StringCopy(c.Namespace)
+	o.Tag = StringCopy(c.Tag)
 	return &o
 }
 
@@ -60,6 +68,10 @@ func (c *ServiceConfig) Merge(o *ServiceConfig) *ServiceConfig {
 
 	r := c.Copy()
 
+	if o.Datacenter != nil {
+		r.Datacenter = StringCopy(o.Datacenter)
+	}
+
 	if o.Description != nil {
 		r.Description = StringCopy(o.Description)
 	}
@@ -76,6 +88,10 @@ func (c *ServiceConfig) Merge(o *ServiceConfig) *ServiceConfig {
 		r.Namespace = StringCopy(o.Namespace)
 	}
 
+	if o.Tag != nil {
+		r.Tag = StringCopy(o.Tag)
+	}
+
 	return r
 }
 
@@ -83,6 +99,10 @@ func (c *ServiceConfig) Merge(o *ServiceConfig) *ServiceConfig {
 func (c *ServiceConfig) Finalize() {
 	if c == nil {
 		return
+	}
+
+	if c.Datacenter == nil {
+		c.Datacenter = String("")
 	}
 
 	if c.Description == nil {
@@ -99,6 +119,10 @@ func (c *ServiceConfig) Finalize() {
 
 	if c.Namespace == nil {
 		c.Namespace = String("")
+	}
+
+	if c.Tag == nil {
+		c.Tag = String("")
 	}
 }
 
@@ -125,10 +149,14 @@ func (c *ServiceConfig) GoString() string {
 	return fmt.Sprintf("&ServiceConfig{"+
 		"Name:%s, "+
 		"Namespace:%s, "+
+		"Datacenter:%s, "+
+		"Tag:%s, "+
 		"Description:%s"+
 		"}",
 		StringVal(c.Name),
 		StringVal(c.Namespace),
+		StringVal(c.Datacenter),
+		StringVal(c.Tag),
 		StringVal(c.Description),
 	)
 }
