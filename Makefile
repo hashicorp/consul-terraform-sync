@@ -9,8 +9,8 @@ GOPATH=$(shell go env GOPATH)
 GOPATH := $(lastword $(subst :, ,${GOPATH}))# use last GOPATH entry
 
 # Project information
-GOVERSION := 1.13.12
-PROJECT := $(shell go list -m -mod=vendor)
+GOVERSION := 1.14
+PROJECT := $(shell go list -m)
 NAME := $(notdir $(PROJECT))
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
 GIT_DESCRIBE ?= $(shell git describe --tags --always)
@@ -30,5 +30,17 @@ LD_FLAGS ?= \
 dev:
 	@echo "==> Installing ${NAME} for ${GOOS}/${GOARCH}"
 	@rm -f "${GOPATH}/pkg/${GOOS}_${GOARCH}/${PROJECT}/version.a"
-	go install -ldflags "$(LD_FLAGS)" -tags '$(GOTAGS)'
+	@go install -ldflags "$(LD_FLAGS)" -tags '$(GOTAGS)'
 .PHONY: dev
+
+# test runs the test suite
+test:
+	@echo "==> Testing ${NAME}"
+	@go test -count=1 -timeout=30s -cover ./... ${TESTARGS}
+.PHONY: test
+
+# test-all runs the test suite and integration tests
+test-all:
+	@echo "==> Testing ${NAME} (integration)"
+	@go test -count=1 -timeout=60s -tags=integration -cover ./... ${TESTARGS}
+.PHONY: test-all

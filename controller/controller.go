@@ -3,10 +3,15 @@ package controller
 import (
 	"context"
 	"errors"
+	"io/ioutil"
 	"log"
+	"path"
+	"strings"
 
 	"github.com/hashicorp/consul-nia/config"
 	"github.com/hashicorp/consul-nia/driver"
+	"github.com/hashicorp/consul-nia/templates/tftmpl"
+	"github.com/hashicorp/hcat"
 )
 
 // Controller describes the interface for monitoring Consul for relevant changes
@@ -79,6 +84,37 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 	}
 
 	return tasks
+}
+
+// newTaskTemplates converts config task definitions into templates to be
+// monitored and rendered.
+func newTaskTemplates(conf *config.Config) (map[string]*hcat.Template, error) {
+	if conf.Driver.Terraform == nil {
+		return nil, errors.New("unsupported driver to run tasks")
+	}
+
+	templates := make(map[string]*hcat.Template, len(*conf.Tasks))
+	for _, t := range *conf.Tasks {
+		tmplFile := tftmpl.TFVarsFilename(*t.Name)
+		tmplFullpath := path.Join(*conf.Driver.Terraform.WorkingDir, *t.Name, tmplFile)
+		tfvarsFilepath := strings.TrimRight(tmplFullpath, ".tmpl")
+
+		content, err := ioutil.ReadFile(tmplFullpath)
+		if err != nil {
+			return nil, err
+		}
+
+		renderer := hcat.NewFileRenderer(hcat.FileRendererInput{
+			Path: tfvarsFilepath,
+		})
+
+		templates[*t.Name] = hcat.NewTemplate(hcat.TemplateInput{
+			Contents: string(content),
+			Renderer: renderer,
+		})
+	}
+
+	return templates, nil
 }
 
 // getService is a helper to find and convert a user-defined service
