@@ -1,8 +1,12 @@
 package driver
 
 import (
+	"context"
+	"fmt"
 	"log"
+	"strings"
 
+	"github.com/hashicorp/consul-nia/client"
 	"github.com/hashicorp/consul-nia/templates/tftmpl"
 )
 
@@ -21,6 +25,7 @@ type Terraform struct {
 	dataDir           string
 	workingDir        string
 	skipVerify        bool
+	workers           []*worker
 	backend           map[string]interface{}
 	requiredProviders map[string]interface{}
 
@@ -105,4 +110,62 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 	}
 	input.Init()
 	return tftmpl.InitRootModule(&input, tf.workingDir, force)
+}
+
+// InitWorker given a task, identifies a unit of work and creates a worker for it.
+// Worker is added to the driver. Currently assumes a task has a single instance of
+// a provider and is therefore equivalanet to a unit of work.
+// TODO: multiple provider instances
+func (tf *Terraform) InitWorker(task Task) error {
+	client, err := client.NewPrinter(&client.PrinterConfig{ // TODO: swap with NewTerraformCli
+		LogLevel:   tf.logLevel,
+		ExecPath:   tf.path,
+		WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
+		Workspace:  task.Name,
+	})
+	if err != nil {
+		return err
+	}
+
+	tf.workers = append(tf.workers, &worker{
+		client: client,
+		work:   &work{task},
+	})
+	return nil
+}
+
+// InitWork initializes the client for all of the driver's workers
+func (tf *Terraform) InitWork(ctx context.Context) error {
+	var errs []string
+
+	for _, r := range tf.workers {
+		if err := r.client.Init(ctx); err != nil {
+			log.Printf("[ERR] (driver.terraform) apply work %s error: %s", r.client, err)
+			errs = append(errs, err.Error())
+		}
+	}
+
+	if len(errs) > 0 {
+		// TODO: handle errors better when we do concurrency
+		return fmt.Errorf(strings.Join(errs, "\n"))
+	}
+	return nil
+}
+
+// ApplyWork applies changes for all of the driver's workers
+func (tf *Terraform) ApplyWork(ctx context.Context) error {
+	var errs []string
+
+	for _, r := range tf.workers {
+		if err := r.client.Apply(ctx); err != nil {
+			log.Printf("[ERR] (driver.terraform) apply work %s error: %s", r.client, err)
+			errs = append(errs, err.Error())
+		}
+	}
+
+	if len(errs) > 0 {
+		// TODO: handle errors better when we do concurrency
+		return fmt.Errorf(strings.Join(errs, "\n"))
+	}
+	return nil
 }

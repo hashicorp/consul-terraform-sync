@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -9,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/consul-nia/config"
-	"github.com/hashicorp/consul-nia/driver"
+	"github.com/hashicorp/consul-nia/controller"
 	"github.com/hashicorp/consul-nia/logging"
 	"github.com/hashicorp/consul-nia/version"
 )
@@ -122,119 +123,27 @@ func (cli *CLI) Run(args []string) int {
 		return ExitCodeOK
 	}
 
-	log.Printf("[INFO] (cli) setting up Terraform driver")
-	driver := newTerraformDriver(conf)
-	if err := driver.Init(); err != nil {
-		log.Printf("[ERR] (cli) error initializing Terraform driver: %s", err)
-		return ExitCodeDriverError
-	}
-	log.Printf("[INFO] (cli) Terraform driver initialized")
+	// Set up controller
+	log.Printf("[INFO] (cli) setting up controller")
 
-	// initialize tasks. this is hardcoded in main function for demo purposes
-	// TODO: separate by provider instances using workspaces.
-	// Future: improve by combining tasks into workflows.
-	tasks := newDriverTasks(conf)
-	for _, task := range tasks {
-		err := driver.InitTask(task, true)
-		if err != nil {
-			// TODO: flush out error better
-			log.Printf("[ERR] (cli) error initializing task to be executed: %s", err)
-			return ExitCodeDriverError
-		}
+	var prov controller.Controller
+	if prov, err = controller.NewReadWrite(conf); err != nil {
+		log.Printf("[ERR] (cli) error setting up controller: %s", err)
+		return ExitCodeConfigError
 	}
 
 	if isInspect || *conf.InspectMode {
 		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
 		fmt.Fprintln(cli.outStream, "TODO")
-		return ExitCodeOK
+		prov = controller.NewReadOnly(conf)
 	}
+
+	log.Printf("[INFO] (cli) initializing controller")
+	prov.Init()
+
+	log.Printf("[INFO] (cli) running controller")
+	ctx := context.Background()
+	prov.Run(ctx)
 
 	return ExitCodeOK
-}
-
-func newTerraformDriver(conf *config.Config) *driver.Terraform {
-	tfConf := *conf.Driver.Terraform
-	return driver.NewTerraform(&driver.TerraformConfig{
-		LogLevel:          *tfConf.LogLevel,
-		Path:              *tfConf.Path,
-		DataDir:           *tfConf.DataDir,
-		WorkingDir:        *tfConf.WorkingDir,
-		SkipVerify:        *tfConf.SkipVerify,
-		Backend:           tfConf.Backend,
-		RequiredProviders: tfConf.RequiredProviders,
-	})
-}
-
-// newDriverTasks converts user-defined task configurations to the task object
-// used by drivers.
-func newDriverTasks(conf *config.Config) []driver.Task {
-	tasks := make([]driver.Task, len(*conf.Tasks))
-	for i, t := range *conf.Tasks {
-
-		services := make([]driver.Service, len(t.Services))
-		for si, service := range t.Services {
-			services[si] = getService(conf.Services, service)
-		}
-
-		providers := make([]map[string]interface{}, len(t.Providers))
-		providerInfo := make(map[string]interface{})
-		for pi, pName := range t.Providers {
-			providers[pi] = getProvider(conf.Providers, pName)
-
-			// This is Terraform specific to pass version and source info for
-			// providers from the required_provider block
-			if tfConf := conf.Driver.Terraform; tfConf != nil {
-				if pInfo, ok := tfConf.RequiredProviders[pName]; ok {
-					providerInfo[pName] = pInfo
-				}
-			}
-		}
-
-		tasks[i] = driver.Task{
-			Description:  *t.Description,
-			Name:         *t.Name,
-			Providers:    providers,
-			ProviderInfo: providerInfo,
-			Services:     services,
-			Source:       *t.Source,
-			Version:      *t.Version,
-		}
-	}
-
-	return tasks
-}
-
-// getService is a helper to find and convert a user-defined service
-// configuration by ID to a driver service type. If a service is not
-// explicitly configured, it assumes the service is a logical service name
-// in the default namespace.
-func getService(services *config.ServiceConfigs, id string) driver.Service {
-	for _, s := range *services {
-		if *s.ID == id {
-			return driver.Service{
-				Datacenter:  *s.Datacenter,
-				Description: *s.Description,
-				Name:        *s.Name,
-				Namespace:   *s.Namespace,
-				Tag:         *s.Tag,
-			}
-		}
-	}
-
-	return driver.Service{Name: id}
-}
-
-// getProvider is a helper to find and convert a user-defined provider
-// configuration by the provider name. If a provider is not explicitly
-// configured, it assumes the default provider block that is empty.
-//
-// provider "name" { }
-func getProvider(providers *config.ProviderConfigs, name string) map[string]interface{} {
-	for _, p := range *providers {
-		if _, ok := (*p)[name]; ok {
-			return *p
-		}
-	}
-
-	return map[string]interface{}{name: make(map[string]interface{})}
 }
