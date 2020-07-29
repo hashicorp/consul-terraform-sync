@@ -30,7 +30,7 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 	return &ReadWrite{
 		driver:  d,
 		conf:    conf,
-		watcher: newWatcher(conf, newConsulClient(conf)),
+		watcher: newWatcher(conf),
 	}, nil
 }
 

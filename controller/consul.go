@@ -5,6 +5,16 @@ import (
 	"github.com/hashicorp/hcat"
 )
 
+// newWatcher initializes a new hcat Watcher with a Consul client
+func newWatcher(conf *config.Config) *hcat.Watcher {
+	watcher := hcat.WatcherInput{
+		Clients: newConsulClient(conf),
+		Cache:   hcat.NewStore(),
+	}
+
+	return hcat.NewWatcher(watcher)
+}
+
 // newConsulClient creates a new Consul client used for monitoring the Service
 // Catalog
 func newConsulClient(conf *config.Config) hcat.Looker {
@@ -38,13 +48,4 @@ func newConsulClient(conf *config.Config) hcat.Looker {
 
 	cs := hcat.NewClientSet()
 	return cs.AddConsul(consul)
-}
-
-func newWatcher(conf *config.Config, client hcat.Looker) *hcat.Watcher {
-	watcher := hcat.WatcherInput{
-		Clients: client,
-		Cache:   hcat.NewStore(),
-	}
-
-	return hcat.NewWatcher(watcher)
 }
