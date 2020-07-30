@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	terraformVersion = "0.13.0-beta3"
+	terraformVersion = "0.13.0-rc1"
 	releasesURL      = "https://releases.hashicorp.com"
 )
 

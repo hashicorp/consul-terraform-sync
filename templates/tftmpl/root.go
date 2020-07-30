@@ -19,7 +19,7 @@ const (
 	// TerraformRequiredVersion is the version constraint pinned to the generated
 	// root module to ensure compatibility across Consul NIA, Terraform, and
 	// modules.
-	TerraformRequiredVersion = ">=0.13"
+	TerraformRequiredVersion = "~>0.13.0"
 
 	// RootFilename is the file name for the root module.
 	RootFilename = "main.tf"
