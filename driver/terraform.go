@@ -13,6 +13,10 @@ import (
 const (
 	terraformVersion = "0.13.0-rc1"
 	releasesURL      = "https://releases.hashicorp.com"
+
+	// Types of clients that are alternatives to the default Terraform CLI client
+	developmentClient = "development"
+	testClient        = "test"
 )
 
 var _ Driver = (*Terraform)(nil)
@@ -29,7 +33,8 @@ type Terraform struct {
 	backend           map[string]interface{}
 	requiredProviders map[string]interface{}
 
-	version string
+	version    string
+	clientType string
 }
 
 // TerraformConfig configures the Terraform driver
@@ -41,6 +46,9 @@ type TerraformConfig struct {
 	SkipVerify        bool
 	Backend           map[string]interface{}
 	RequiredProviders map[string]interface{}
+
+	// empty/unknown string will default to TerraformCLI client
+	ClientType string
 }
 
 // NewTerraform configures and initializes a new Terraform driver
@@ -56,7 +64,8 @@ func NewTerraform(config *TerraformConfig) *Terraform {
 
 		// TODO: the version is currently hard-coded. NIA should discover
 		// the latest patch version within the minor version.
-		version: terraformVersion,
+		version:    terraformVersion,
+		clientType: developmentClient, // TODO: remove when ready to consume TF client
 	}
 }
 
@@ -117,13 +126,9 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 // a provider and is therefore equivalanet to a unit of work.
 // TODO: multiple provider instances
 func (tf *Terraform) InitWorker(task Task) error {
-	client, err := client.NewPrinter(&client.PrinterConfig{ // TODO: swap with NewTerraformCli
-		LogLevel:   tf.logLevel,
-		ExecPath:   tf.path,
-		WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
-		Workspace:  task.Name,
-	})
+	client, err := tf.initClient(task)
 	if err != nil {
+		log.Printf("[ERR] (driver.terraform) init client type %s error: %s", tf.clientType, err)
 		return err
 	}
 
@@ -132,6 +137,36 @@ func (tf *Terraform) InitWorker(task Task) error {
 		work:   &work{task},
 	})
 	return nil
+}
+
+// initClient initializes a specific type of client given a task
+func (tf *Terraform) initClient(task Task) (client.Client, error) {
+	var c client.Client
+	var err error
+
+	switch tf.clientType {
+	case developmentClient:
+		log.Printf("[TRACE] (driver.terraform) creating development client for task '%s'", task.Name)
+		c, err = client.NewPrinter(&client.PrinterConfig{
+			LogLevel:   tf.logLevel,
+			ExecPath:   tf.path,
+			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
+			Workspace:  task.Name,
+		})
+	case testClient:
+		log.Printf("[TRACE] (driver.terraform) creating mock client for task '%s'", task.Name)
+		c = client.NewMockClient()
+	default:
+		log.Printf("[TRACE] (driver.terraform) creating terraform cli client for task '%s'", task.Name)
+		c, err = client.NewTerraformCLI(&client.TerraformCLIConfig{
+			LogLevel:   tf.logLevel,
+			ExecPath:   tf.path,
+			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
+			Workspace:  task.Name,
+		})
+	}
+
+	return c, err
 }
 
 // InitWork initializes the client for all of the driver's workers
