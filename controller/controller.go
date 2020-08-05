@@ -50,6 +50,9 @@ func newTerraformDriver(conf *config.Config) *driver.Terraform {
 // newDriverTasks converts user-defined task configurations to the task object
 // used by drivers.
 func newDriverTasks(conf *config.Config) []driver.Task {
+	if conf == nil {
+		return []driver.Task{}
+	}
 	tasks := make([]driver.Task, len(*conf.Tasks))
 	for i, t := range *conf.Tasks {
 

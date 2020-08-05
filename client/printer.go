@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 )
@@ -26,6 +27,9 @@ type PrinterConfig struct {
 
 // NewPrinter creates a new client
 func NewPrinter(config *PrinterConfig) (*Printer, error) {
+	if config == nil {
+		return nil, errors.New("PrinterConfig cannot be nil - mirror Terraform CLI error")
+	}
 	return &Printer{
 		logLevel:   config.LogLevel,
 		workingDir: config.WorkingDir,
@@ -34,29 +38,29 @@ func NewPrinter(config *PrinterConfig) (*Printer, error) {
 }
 
 // Init logs out 'init'
-func (l *Printer) Init(ctx context.Context) error {
+func (p *Printer) Init(ctx context.Context) error {
 	log.Printf("[INFO] (client.printer) initing workspace: '%s', workingdir: '%s'",
-		l.workspace, l.workingDir)
+		p.workspace, p.workingDir)
 	return nil
 }
 
 // Apply logs out 'apply'
-func (l *Printer) Apply(ctx context.Context) error {
+func (p *Printer) Apply(ctx context.Context) error {
 	log.Printf("[INFO] (client.printer) applying workspace: '%s', workingdir: '%s'",
-		l.workspace, l.workingDir)
+		p.workspace, p.workingDir)
 	return nil
 }
 
 // Plan logs out 'plan'
-func (l *Printer) Plan(ctx context.Context) error {
+func (p *Printer) Plan(ctx context.Context) error {
 	log.Printf("[INFO] (client.printer) planning workspace: '%s', workingdir: '%s'",
-		l.workspace, l.workingDir)
+		p.workspace, p.workingDir)
 	return nil
 }
 
 // GoString defines the printable version of this struct.
-func (l *Printer) GoString() string {
-	if l == nil {
+func (p *Printer) GoString() string {
+	if p == nil {
 		return "(*Printer)(nil)"
 	}
 
@@ -65,8 +69,8 @@ func (l *Printer) GoString() string {
 		"WorkingDir:%s, "+
 		"WorkSpace:%s, "+
 		"}",
-		l.logLevel,
-		l.workingDir,
-		l.workspace,
+		p.logLevel,
+		p.workingDir,
+		p.workspace,
 	)
 }

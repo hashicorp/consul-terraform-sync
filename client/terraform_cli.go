@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-exec/tfexec"
@@ -15,7 +16,7 @@ var _ Client = (*TerraformCli)(nil)
 // TerraformCli is the client that wraps around terraform-exec
 // to execute Terraform cli commands
 type TerraformCli struct {
-	tf         *tfexec.Terraform
+	tf         terraformExec
 	logLevel   string
 	workingDir string
 	workspace  string
@@ -32,6 +33,10 @@ type TerraformCliConfig struct {
 // NewTerraformCli creates a terraform-exec client and configures and
 // initializes a new Terraform client
 func NewTerraformCli(config *TerraformCliConfig) (*TerraformCli, error) {
+	if config == nil {
+		return nil, errors.New("TerraformCliConfig cannot be nil - no meaningful default values")
+	}
+
 	tf, err := tfexec.NewTerraform(config.WorkingDir, config.ExecPath)
 	if err != nil {
 		return nil, err
