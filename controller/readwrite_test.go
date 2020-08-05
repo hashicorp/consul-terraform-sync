@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/consul-nia/config"
 	"github.com/hashicorp/consul-nia/driver"
@@ -15,7 +14,7 @@ func TestNewReadWrite(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name        string // also error name
+		name        string
 		expectError bool
 		conf        *config.Config
 	}{
@@ -51,7 +50,7 @@ func TestReadWriteInit(t *testing.T) {
 	conf := singleTaskConfig()
 
 	cases := []struct {
-		name        string // also error name
+		name        string
 		expectError bool
 		mockDriver  *driver.MockDriver
 		config      *config.Config
@@ -106,7 +105,7 @@ func TestReadWriteInit(t *testing.T) {
 
 			if tc.expectError {
 				assert.Error(t, err)
-				assert.Equal(t, tc.name, err.Error())
+				assert.Contains(t, err.Error(), tc.name)
 				return
 			}
 			assert.NoError(t, err)
@@ -152,7 +151,7 @@ func TestReadWriteRun(t *testing.T) {
 
 			if tc.expectError {
 				assert.Error(t, err)
-				assert.Equal(t, tc.name, err.Error())
+				assert.Contains(t, err.Error(), tc.name)
 				return
 			}
 			assert.NoError(t, err)
@@ -162,34 +161,9 @@ func TestReadWriteRun(t *testing.T) {
 
 // singleTaskConfig returns a happy path config that has a single task
 func singleTaskConfig() *config.Config {
-	return &config.Config{
+	c := &config.Config{
 		Consul: &config.ConsulConfig{
 			Address: config.String("consul-example.com"),
-			Auth: &config.AuthConfig{
-				Enabled:  config.Bool(true),
-				Username: config.String("username"),
-				Password: config.String("password"),
-			},
-			KVPath: config.String("kv_path"),
-			TLS: &config.TLSConfig{
-				CACert:     config.String("ca_cert"),
-				CAPath:     config.String("ca_path"),
-				Enabled:    config.Bool(true),
-				Key:        config.String("key"),
-				ServerName: config.String("server_name"),
-				Verify:     config.Bool(false),
-				Cert:       config.String("ssl_cert"),
-			},
-			Token: config.String("token"),
-			Transport: &config.TransportConfig{
-				DialKeepAlive:       config.TimeDuration(5 * time.Second),
-				DialTimeout:         config.TimeDuration(10 * time.Second),
-				DisableKeepAlives:   config.Bool(false),
-				IdleConnTimeout:     config.TimeDuration(1 * time.Minute),
-				MaxIdleConns:        config.Int(5),
-				MaxIdleConnsPerHost: config.Int(5),
-				TLSHandshakeTimeout: config.TimeDuration(10 * time.Second),
-			},
 		},
 		Driver: &config.DriverConfig{
 			Terraform: &config.TerraformConfig{
@@ -198,13 +172,6 @@ func singleTaskConfig() *config.Config {
 				DataDir:    config.String("data"),
 				WorkingDir: config.String("working"),
 				SkipVerify: config.Bool(true),
-				Backend: map[string]interface{}{
-					"consul": map[string]interface{}{
-						"address": "consul-example.com",
-						"path":    "kv-path/terraform",
-						"gzip":    true,
-					},
-				},
 			},
 		},
 		Tasks: &config.TaskConfigs{
@@ -233,4 +200,7 @@ func singleTaskConfig() *config.Config {
 			"X": map[string]interface{}{},
 		}},
 	}
+
+	c.Finalize()
+	return c
 }

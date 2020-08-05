@@ -24,12 +24,12 @@ func (m *mockTerraformExec) Plan(ctx context.Context, opts ...tfexec.PlanOption)
 	return nil
 }
 
-func NewTestTerraformCli(config *TerraformCliConfig, mock *mockTerraformExec) *TerraformCli {
+func NewTestTerraformCLI(config *TerraformCLIConfig, mock *mockTerraformExec) *TerraformCLI {
 	if mock == nil {
 		mock = &mockTerraformExec{}
 	}
 
-	client := &TerraformCli{
+	client := &TerraformCLI{
 		tf:         mock,
 		logLevel:   "INFO",
 		workingDir: "test/working/dir",
@@ -53,13 +53,13 @@ func NewTestTerraformCli(config *TerraformCliConfig, mock *mockTerraformExec) *T
 	return client
 }
 
-func TestNewTerraformCli(t *testing.T) {
+func TestNewTerraformCLI(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name        string
 		expectError bool
-		config      *TerraformCliConfig
+		config      *TerraformCLIConfig
 	}{
 		{
 			"error nil config",
@@ -69,7 +69,7 @@ func TestNewTerraformCli(t *testing.T) {
 		{
 			"terraform-exec error: no working dir",
 			true,
-			&TerraformCliConfig{
+			&TerraformCLIConfig{
 				LogLevel:   "INFO",
 				ExecPath:   "path/to/tf",
 				WorkingDir: "",
@@ -79,7 +79,7 @@ func TestNewTerraformCli(t *testing.T) {
 		{
 			"terraform-exec error: no tf binary in exec path",
 			true,
-			&TerraformCliConfig{
+			&TerraformCLIConfig{
 				LogLevel:   "INFO",
 				ExecPath:   "path/to/tf",
 				WorkingDir: "./",
@@ -93,7 +93,7 @@ func TestNewTerraformCli(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := NewTerraformCli(tc.config)
+			actual, err := NewTerraformCLI(tc.config)
 
 			if tc.expectError {
 				assert.Error(t, err)
@@ -106,26 +106,26 @@ func TestNewTerraformCli(t *testing.T) {
 	}
 }
 
-func TestTerraformCliInit(t *testing.T) {
+func TestTerraformCLIInit(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name        string
 		expectError bool
-		config      *TerraformCliConfig
+		config      *TerraformCLIConfig
 		tfMock      *mockTerraformExec
 	}{
 		{
 			"happy path",
 			false,
-			&TerraformCliConfig{},
+			&TerraformCLIConfig{},
 			&mockTerraformExec{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			client := NewTestTerraformCli(tc.config, tc.tfMock)
+			client := NewTestTerraformCLI(tc.config, tc.tfMock)
 			ctx := context.Background()
 			err := client.Init(ctx)
 
@@ -139,26 +139,26 @@ func TestTerraformCliInit(t *testing.T) {
 	}
 }
 
-func TestTerraformCliApply(t *testing.T) {
+func TestTerraformCLIApply(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name        string
 		expectError bool
-		config      *TerraformCliConfig
+		config      *TerraformCLIConfig
 		tfMock      *mockTerraformExec
 	}{
 		{
 			"happy path",
 			false,
-			&TerraformCliConfig{},
+			&TerraformCLIConfig{},
 			&mockTerraformExec{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			client := NewTestTerraformCli(tc.config, tc.tfMock)
+			client := NewTestTerraformCLI(tc.config, tc.tfMock)
 			ctx := context.Background()
 			err := client.Apply(ctx)
 
@@ -172,26 +172,26 @@ func TestTerraformCliApply(t *testing.T) {
 	}
 }
 
-func TestTerraformCliPlan(t *testing.T) {
+func TestTerraformCLIPlan(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name        string
 		expectError bool
-		config      *TerraformCliConfig
+		config      *TerraformCLIConfig
 		tfMock      *mockTerraformExec
 	}{
 		{
 			"happy path",
 			false,
-			&TerraformCliConfig{},
+			&TerraformCLIConfig{},
 			&mockTerraformExec{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			client := NewTestTerraformCli(tc.config, tc.tfMock)
+			client := NewTestTerraformCLI(tc.config, tc.tfMock)
 			ctx := context.Background()
 			err := client.Plan(ctx)
 
@@ -205,10 +205,10 @@ func TestTerraformCliPlan(t *testing.T) {
 	}
 }
 
-func TestTerraformCliGoString(t *testing.T) {
+func TestTerraformCLIGoString(t *testing.T) {
 	cases := []struct {
 		name string
-		tf   *TerraformCli
+		tf   *TerraformCLI
 	}{
 		{
 			"nil Terraform cli client",
@@ -216,7 +216,7 @@ func TestTerraformCliGoString(t *testing.T) {
 		},
 		{
 			"happy path",
-			&TerraformCli{
+			&TerraformCLI{
 				logLevel:   "INFO",
 				workingDir: "path/to/wd",
 				workspace:  "ws",
@@ -231,7 +231,7 @@ func TestTerraformCliGoString(t *testing.T) {
 				return
 			}
 
-			assert.Contains(t, tc.tf.GoString(), "&TerraformCli")
+			assert.Contains(t, tc.tf.GoString(), "&TerraformCLI")
 			assert.Contains(t, tc.tf.GoString(), tc.tf.logLevel)
 			assert.Contains(t, tc.tf.GoString(), tc.tf.workingDir)
 			assert.Contains(t, tc.tf.GoString(), tc.tf.workspace)

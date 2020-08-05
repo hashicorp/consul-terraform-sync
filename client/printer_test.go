@@ -3,8 +3,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"log"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,26 +50,27 @@ func TestNewPrinter(t *testing.T) {
 	}
 }
 
-func DefaultTestPrinter() (*Printer, error) {
-	return NewPrinter(&PrinterConfig{
+func DefaultTestPrinter(buf *bytes.Buffer) (*Printer, error) {
+	printer, err := NewPrinter(&PrinterConfig{
 		LogLevel:   "INFO",
 		WorkingDir: "path/to/wd",
 		Workspace:  "ws",
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Overwrite the printer's logger so that we can look at contents
+	printer.logger.SetOutput(buf)
+	return printer, nil
 }
 
 func TestPrinterInit(t *testing.T) {
-	// no t.Parallel() because changing log output. occasionally fails when parallel.
+	t.Parallel()
 
-	p, err := DefaultTestPrinter()
-	assert.NoError(t, err)
-
-	// output log to a buffer
 	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
+	p, err := DefaultTestPrinter(&buf)
+	assert.NoError(t, err)
 
 	ctx := context.Background()
 	p.Init(ctx)
@@ -81,17 +80,11 @@ func TestPrinterInit(t *testing.T) {
 }
 
 func TestPrinterApply(t *testing.T) {
-	// no t.Parallel() because changing log output. occasionally fails when parallel.
+	t.Parallel()
 
-	p, err := DefaultTestPrinter()
-	assert.NoError(t, err)
-
-	// output log to a buffer
 	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
+	p, err := DefaultTestPrinter(&buf)
+	assert.NoError(t, err)
 
 	ctx := context.Background()
 	p.Apply(ctx)
@@ -101,17 +94,11 @@ func TestPrinterApply(t *testing.T) {
 }
 
 func TestPrinterPlan(t *testing.T) {
-	// no t.Parallel() because changing log output. occasionally fails when parallel.
+	t.Parallel()
 
-	p, err := DefaultTestPrinter()
-	assert.NoError(t, err)
-
-	// output log to a buffer
 	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
+	p, err := DefaultTestPrinter(&buf)
+	assert.NoError(t, err)
 
 	ctx := context.Background()
 	p.Plan(ctx)

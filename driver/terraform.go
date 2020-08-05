@@ -13,6 +13,10 @@ import (
 const (
 	terraformVersion = "0.13.0-rc1"
 	releasesURL      = "https://releases.hashicorp.com"
+
+	// Types of clients that are alternatives to the default Terraform CLI client
+	developmentClient = "development"
+	testClient        = "test"
 )
 
 var _ Driver = (*Terraform)(nil)
@@ -43,7 +47,7 @@ type TerraformConfig struct {
 	Backend           map[string]interface{}
 	RequiredProviders map[string]interface{}
 
-	// empty/unknown string will default to TerraformCli client
+	// empty/unknown string will default to TerraformCLI client
 	ClientType string
 }
 
@@ -61,7 +65,7 @@ func NewTerraform(config *TerraformConfig) *Terraform {
 		// TODO: the version is currently hard-coded. NIA should discover
 		// the latest patch version within the minor version.
 		version:    terraformVersion,
-		clientType: "development", // TODO: remove when ready to consume TF client
+		clientType: developmentClient, // TODO: remove when ready to consume TF client
 	}
 }
 
@@ -141,7 +145,7 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 	var err error
 
 	switch tf.clientType {
-	case "development":
+	case developmentClient:
 		log.Printf("[TRACE] (driver.terraform) creating development client for task '%s'", task.Name)
 		c, err = client.NewPrinter(&client.PrinterConfig{
 			LogLevel:   tf.logLevel,
@@ -149,12 +153,12 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
 			Workspace:  task.Name,
 		})
-	case "test":
+	case testClient:
 		log.Printf("[TRACE] (driver.terraform) creating mock client for task '%s'", task.Name)
 		c = client.NewMockClient()
 	default:
 		log.Printf("[TRACE] (driver.terraform) creating terraform cli client for task '%s'", task.Name)
-		c, err = client.NewTerraformCli(&client.TerraformCliConfig{
+		c, err = client.NewTerraformCLI(&client.TerraformCLIConfig{
 			LogLevel:   tf.logLevel,
 			ExecPath:   tf.path,
 			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
