@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"io/ioutil"
 	"log"
 	"time"
 
@@ -14,10 +15,12 @@ var _ Controller = (*ReadWrite)(nil)
 
 // ReadWrite is the controller to run in read-write mode
 type ReadWrite struct {
-	driver    driver.Driver
-	conf      *config.Config
-	templates map[string]*hcat.Template
-	watcher   *hcat.Watcher
+	driver     driver.Driver
+	conf       *config.Config
+	fileReader func(string) ([]byte, error)
+	templates  map[string]hcatTemplate
+	watcher    hcatWatcher
+	resolver   hcatResolver
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
@@ -28,9 +31,12 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 	}
 
 	return &ReadWrite{
-		driver:  d,
-		conf:    conf,
-		watcher: newWatcher(conf),
+		driver:     d,
+		conf:       conf,
+		templates:  make(map[string]hcatTemplate),
+		watcher:    newWatcher(conf),
+		fileReader: ioutil.ReadFile,
+		resolver:   hcat.NewResolver(),
 	}, nil
 }
 
@@ -66,7 +72,7 @@ func (rw *ReadWrite) Init() error {
 		}
 	}
 
-	templates, err := newTaskTemplates(rw.conf)
+	templates, err := newTaskTemplates(rw.conf, rw.fileReader)
 	if err != nil {
 		log.Printf("[ERR] (controller.readwrite) error initializing template: %s", err)
 		return err
@@ -85,14 +91,14 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	// TODO: improve and refactor this control loop of template rendering to
 	// trigger task runs instead of waiting for all to render once
 	// init/apply work on all tasks.
-	r := hcat.NewResolver()
 	results := make([]string, 0, len(rw.templates))
 	for {
 		for taskName, tmpl := range rw.templates {
-			result, err := r.Run(tmpl, rw.watcher)
+			result, err := rw.resolver.Run(tmpl, rw.watcher)
 			if err != nil {
 				// TODO handle when rendering and execution is per task instead of bulk
-				log.Fatalf("[ERR] error running template for task %s: %s", taskName, err)
+				log.Printf("[ERR] error running template for task %s: %s", taskName, err)
+				return err
 			}
 			if result.Complete {
 				rendered, err := tmpl.Render(result.Contents)
@@ -112,15 +118,22 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		// TODO configure
 		err := rw.watcher.Wait(time.Second)
 		if err != nil {
-			log.Fatalf("[ERR] templates could not render: %s", err)
+			log.Printf("[ERR] templates could not render: %s", err)
+			return err
 		}
 	}
 
 	log.Printf("[INFO] (controller.readwrite) init work")
-	rw.driver.InitWork(ctx)
+	if err := rw.driver.InitWork(ctx); err != nil {
+		log.Printf("[ERR] (controller.readwrite) could not do terraform init: %s", err)
+		return err
+	}
 
 	log.Printf("[INFO] (controller.readwrite) apply work")
-	rw.driver.ApplyWork(ctx)
+	if err := rw.driver.ApplyWork(ctx); err != nil {
+		log.Printf("[ERR] (controller.readwrite) could not do terraform apply: %s", err)
+		return err
+	}
 
 	return nil
 }
