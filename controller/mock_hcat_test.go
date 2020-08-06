@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMockHcatTemplateRender(t *testing.T) {
+func TestMockTemplateRender(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -28,7 +28,7 @@ func TestMockHcatTemplateRender(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newMockHcatTemplate()
+			m := newMockTemplate()
 
 			// setup Render() return values
 			if tc.returnErr != nil {
@@ -47,7 +47,7 @@ func TestMockHcatTemplateRender(t *testing.T) {
 	}
 }
 
-func TestMockHcatTemplateExecute(t *testing.T) {
+func TestMockTemplateExecute(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -60,7 +60,7 @@ func TestMockHcatTemplateExecute(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newMockHcatTemplate()
+			m := newMockTemplate()
 
 			_, err := m.Execute(hcat.NewStore())
 			assert.NoError(t, err)
@@ -68,7 +68,7 @@ func TestMockHcatTemplateExecute(t *testing.T) {
 	}
 }
 
-func TestMockHcatTemplateID(t *testing.T) {
+func TestMockTemplateID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -81,7 +81,7 @@ func TestMockHcatTemplateID(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newMockHcatTemplate()
+			m := newMockTemplate()
 
 			id := m.ID()
 			assert.NotEmpty(t, id)
@@ -89,7 +89,7 @@ func TestMockHcatTemplateID(t *testing.T) {
 	}
 }
 
-func TestMockHcatResolverRun(t *testing.T) {
+func TestMockResolverRun(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -108,7 +108,7 @@ func TestMockHcatResolverRun(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newMockHcatResolver()
+			m := newMockResolver()
 
 			// setup Run() return values
 			if tc.returnErr != nil {
@@ -127,7 +127,7 @@ func TestMockHcatResolverRun(t *testing.T) {
 	}
 }
 
-func TestMockHcatWatcherWait(t *testing.T) {
+func TestMockWatcherWait(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -146,7 +146,7 @@ func TestMockHcatWatcherWait(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newMockHcatWatcher()
+			m := newMockWatcher()
 
 			// setup Wait() return values
 			if tc.returnErr != nil {
@@ -165,15 +165,15 @@ func TestMockHcatWatcherWait(t *testing.T) {
 	}
 }
 
-func TestMockHcatWatcherAdd(t *testing.T) {
-	// Skip writing test for mockHcatWatcher.Add(d hcat.Dependency)
+func TestMockWatcherAdd(t *testing.T) {
+	// Skip writing test for mockWatcher.Add(d hcat.Dependency)
 
-	// Dependency currently lives and is used in hcat internally. In order to
+	// Dependency currently lives and is used in hashicat internally. In order to
 	// write a unit test for Add(), we would have to mock Dependency and other
 	// internal elements it consumes.
 }
 
-func TestMockHcatWatcherChanged(t *testing.T) {
+func TestMockWatcherChanged(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -186,7 +186,7 @@ func TestMockHcatWatcherChanged(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newMockHcatWatcher()
+			m := newMockWatcher()
 
 			ok := m.Changed("id")
 			assert.True(t, ok)
@@ -194,7 +194,7 @@ func TestMockHcatWatcherChanged(t *testing.T) {
 	}
 }
 
-func TestMockHcatWatcherRecall(t *testing.T) {
+func TestMockWatcherRecall(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -207,7 +207,7 @@ func TestMockHcatWatcherRecall(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newMockHcatWatcher()
+			m := newMockWatcher()
 
 			_, ok := m.Recall("id")
 			assert.True(t, ok)
@@ -215,7 +215,7 @@ func TestMockHcatWatcherRecall(t *testing.T) {
 	}
 }
 
-func TestMockHcatWatcherRegister(t *testing.T) {
+func TestMockWatcherRegister(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -228,7 +228,7 @@ func TestMockHcatWatcherRegister(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newMockHcatWatcher()
+			m := newMockWatcher()
 
 			m.Register("id")
 			// no return value to assert.

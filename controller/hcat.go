@@ -6,23 +6,31 @@ import (
 	"github.com/hashicorp/hcat"
 )
 
-// hcatTemplate describes the interface for hcat's Template
+var _ hcat.Templater = (template)(nil)
+var _ hcat.Renderer = (template)(nil)
+
+// template describes the interface for hashicat's Template structure
+// which implements the interfaces Templater and Renderer
 // https://github.com/hashicorp/hcat
-type hcatTemplate interface {
+type template interface {
 	Render(content []byte) (hcat.RenderResult, error)
 	Execute(hcat.Recaller) (*hcat.ExecuteResult, error)
 	ID() string
 }
 
-// hcatResolver describes the interface for hcat's Resolver
+// resolver describes the interface for hashicat's Resolver structure
+// which does implement any hashicat interface at time of writing
 // https://github.com/hashicorp/hcat
-type hcatResolver interface {
+type resolver interface {
 	Run(tmpl hcat.Templater, w hcat.Watcherer) (hcat.ResolveEvent, error)
 }
 
-// hcatWatcher describes the interface for hcat's Watcher
+var _ hcat.Watcherer = (watcher)(nil)
+
+// watcher describes the interface for hashicat's Watcher structure
+// which implements the interface Watcherer
 // https://github.com/hashicorp/hcat
-type hcatWatcher interface {
+type watcher interface {
 	Wait(timeout time.Duration) error
 	Add(d hcat.Dependency) bool
 	Changed(tmplID string) bool

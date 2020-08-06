@@ -18,9 +18,9 @@ type ReadWrite struct {
 	driver     driver.Driver
 	conf       *config.Config
 	fileReader func(string) ([]byte, error)
-	templates  map[string]hcatTemplate
-	watcher    hcatWatcher
-	resolver   hcatResolver
+	templates  map[string]template
+	watcher    watcher
+	resolver   resolver
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
@@ -33,7 +33,7 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 	return &ReadWrite{
 		driver:     d,
 		conf:       conf,
-		templates:  make(map[string]hcatTemplate),
+		templates:  make(map[string]template),
 		watcher:    newWatcher(conf),
 		fileReader: ioutil.ReadFile,
 		resolver:   hcat.NewResolver(),

@@ -139,35 +139,35 @@ func TestReadWriteRun(t *testing.T) {
 		name         string
 		expectError  bool
 		mockDriver   *driver.MockDriver
-		mockResolver *mockHcatResolver
-		mockTemplate *mockHcatTemplate
-		mockWatcher  *mockHcatWatcher
+		mockResolver *mockResolver
+		mockTemplate *mockTemplate
+		mockWatcher  *mockWatcher
 		config       *config.Config
 	}{
 		{
 			"error on resolver.Run()",
 			true,
 			driver.NewMockDriver(),
-			&mockHcatResolver{
+			&mockResolver{
 				RunFunc: func(hcat.Templater, hcat.Watcherer) (hcat.ResolveEvent, error) {
 					return hcat.ResolveEvent{}, errors.New("error on resolver.Run()")
 				},
 			},
-			newMockHcatTemplate(),
-			newMockHcatWatcher(),
+			newMockTemplate(),
+			newMockWatcher(),
 			singleTaskConfig(),
 		},
 		{
 			"error on watcher.Wait()",
 			true,
 			driver.NewMockDriver(),
-			newMockHcatResolver(),
-			&mockHcatTemplate{
+			newMockResolver(),
+			&mockTemplate{
 				RenderFunc: func([]byte) (hcat.RenderResult, error) {
 					return hcat.RenderResult{}, errors.New("error on template.Render()")
 				},
 			},
-			&mockHcatWatcher{
+			&mockWatcher{
 				WaitFunc: func(time.Duration) error { return errors.New("error on watcher.Wait()") },
 			},
 			singleTaskConfig(),
@@ -178,9 +178,9 @@ func TestReadWriteRun(t *testing.T) {
 			&driver.MockDriver{
 				InitWorkFunc: func() error { return errors.New("error on driver.InitWork()") },
 			},
-			newMockHcatResolver(),
-			newMockHcatTemplate(),
-			newMockHcatWatcher(),
+			newMockResolver(),
+			newMockTemplate(),
+			newMockWatcher(),
 			singleTaskConfig(),
 		},
 		{
@@ -190,25 +190,25 @@ func TestReadWriteRun(t *testing.T) {
 				InitWorkFunc:  func() error { return nil },
 				ApplyWorkFunc: func() error { return errors.New("error on driver.ApplyWork()") },
 			},
-			newMockHcatResolver(),
-			newMockHcatTemplate(),
-			newMockHcatWatcher(),
+			newMockResolver(),
+			newMockTemplate(),
+			newMockWatcher(),
 			singleTaskConfig(),
 		},
 		{
 			"happy path",
 			false,
 			driver.NewMockDriver(),
-			newMockHcatResolver(),
-			newMockHcatTemplate(),
-			newMockHcatWatcher(),
+			newMockResolver(),
+			newMockTemplate(),
+			newMockWatcher(),
 			singleTaskConfig(),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			templates := make(map[string]hcatTemplate)
+			templates := make(map[string]template)
 			templates["test template"] = tc.mockTemplate
 
 			controller := ReadWrite{

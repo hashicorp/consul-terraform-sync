@@ -6,16 +6,16 @@ import (
 	"github.com/hashicorp/hcat"
 )
 
-var _ hcatTemplate = (*mockHcatTemplate)(nil)
+var _ template = (*mockTemplate)(nil)
 
-// mockHcatTemplate is a mock implementation of hcat's Template for testing purposes
-type mockHcatTemplate struct {
+// mockTemplate is a mock implementation of hcat's Template for testing purposes
+type mockTemplate struct {
 	RenderFunc func([]byte) (hcat.RenderResult, error)
 }
 
-// newMockHcatTemplate configures and initializes a new mock hcat Template
-func newMockHcatTemplate() *mockHcatTemplate {
-	return &mockHcatTemplate{
+// newMockTemplate configures and initializes a new mock hashicat Template
+func newMockTemplate() *mockTemplate {
+	return &mockTemplate{
 		RenderFunc: func([]byte) (hcat.RenderResult, error) {
 			return hcat.RenderResult{}, nil
 		},
@@ -23,32 +23,32 @@ func newMockHcatTemplate() *mockHcatTemplate {
 }
 
 // Render mocks render for testing
-func (m *mockHcatTemplate) Render(content []byte) (hcat.RenderResult, error) {
+func (m *mockTemplate) Render(content []byte) (hcat.RenderResult, error) {
 	return m.RenderFunc(content)
 }
 
 // Execute mocks execute for testing
 // Note: function not directly consumed by NIA, therefore not fully mocked out at this time
-func (m *mockHcatTemplate) Execute(hcat.Recaller) (*hcat.ExecuteResult, error) {
+func (m *mockTemplate) Execute(hcat.Recaller) (*hcat.ExecuteResult, error) {
 	return nil, nil
 }
 
 // ID mocks ID for testing
 // Note: function not directly consumed by NIA, therefore not fully mocked out at this time
-func (m *mockHcatTemplate) ID() string {
+func (m *mockTemplate) ID() string {
 	return "id"
 }
 
-var _ hcatResolver = (*mockHcatResolver)(nil)
+var _ resolver = (*mockResolver)(nil)
 
-// mockHcatResolver is a mock implementation of hcat's Resolver for testing purposes
-type mockHcatResolver struct {
+// mockResolver is a mock implementation of hcat's Resolver for testing purposes
+type mockResolver struct {
 	RunFunc func(hcat.Templater, hcat.Watcherer) (hcat.ResolveEvent, error)
 }
 
-// newMockHcatResolver configures and initializes a new mock hcat Resolver
-func newMockHcatResolver() *mockHcatResolver {
-	return &mockHcatResolver{
+// newMockResolver configures and initializes a new mock hashicat Resolver
+func newMockResolver() *mockResolver {
+	return &mockResolver{
 		RunFunc: func(hcat.Templater, hcat.Watcherer) (hcat.ResolveEvent, error) {
 			return hcat.ResolveEvent{
 				Complete: true,
@@ -58,20 +58,20 @@ func newMockHcatResolver() *mockHcatResolver {
 }
 
 // Run mocks run for testing
-func (m *mockHcatResolver) Run(tmpl hcat.Templater, w hcat.Watcherer) (hcat.ResolveEvent, error) {
+func (m *mockResolver) Run(tmpl hcat.Templater, w hcat.Watcherer) (hcat.ResolveEvent, error) {
 	return m.RunFunc(tmpl, w)
 }
 
-var _ hcatWatcher = (*mockHcatWatcher)(nil)
+var _ watcher = (*mockWatcher)(nil)
 
-// mockHcatWatcher is a mock implementation of Hcat's Watcher for testing purposes
-type mockHcatWatcher struct {
+// mockWatcher is a mock implementation of Hcat's Watcher for testing purposes
+type mockWatcher struct {
 	WaitFunc func(time.Duration) error
 }
 
-// newMockHcatWatcher configures and initializes a new mock hcat Watcher
-func newMockHcatWatcher() *mockHcatWatcher {
-	return &mockHcatWatcher{
+// newMockWatcher configures and initializes a new mock hashicat Watcher
+func newMockWatcher() *mockWatcher {
+	return &mockWatcher{
 		WaitFunc: func(time.Duration) error {
 			return nil
 		},
@@ -79,29 +79,29 @@ func newMockHcatWatcher() *mockHcatWatcher {
 }
 
 // Wait mocks wait for testing
-func (m *mockHcatWatcher) Wait(timeout time.Duration) error {
+func (m *mockWatcher) Wait(timeout time.Duration) error {
 	return m.WaitFunc(timeout)
 }
 
 // Add mocks add for testing
 // Note: function not directly consumed by NIA, therefore not fully mocked out at this time
-func (m *mockHcatWatcher) Add(d hcat.Dependency) bool {
+func (m *mockWatcher) Add(d hcat.Dependency) bool {
 	return true
 }
 
 // Changed mocks changed for testing
 // Note: function not directly consumed by NIA, therefore not fully mocked out at this time
-func (m *mockHcatWatcher) Changed(tmplID string) bool {
+func (m *mockWatcher) Changed(tmplID string) bool {
 	return true
 }
 
 // Recall mocks recall for testing
-func (m *mockHcatWatcher) Recall(id string) (interface{}, bool) {
+func (m *mockWatcher) Recall(id string) (interface{}, bool) {
 	return "", true
 }
 
 // Register mocks register for testing
 // Note: function not directly consumed by NIA, therefore not fully mocked out at this time
-func (m *mockHcatWatcher) Register(tmplID string, deps ...hcat.Dependency) {
+func (m *mockWatcher) Register(tmplID string, deps ...hcat.Dependency) {
 	return
 }
