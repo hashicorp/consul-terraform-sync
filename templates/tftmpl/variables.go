@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"sort"
+	"strings"
 
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -16,18 +17,18 @@ import (
 var VariableServices = []byte(
 	`# Service definition protocol v0
 variable "services" {
-	description = "Consul services monitored by Consul NIA (protocol v0)"
-	type = map(object({
-		# Name of the service
-		name = string
-		# Description of the service
-		description = string
-		# List of addresses for instances of the service by IP and port
-		addresses = list(object({
-			address = string
-			port = number
-		}))
-	}))
+  description = "Consul services monitored by Consul NIA (protocol v0)"
+  type = map(object({
+    # Name of the service
+    name = string
+    # Description of the service
+    description = string
+    # List of addresses for instances of the service by IP and port
+    addresses = list(object({
+      address = string
+      port    = number
+    }))
+  }))
 }
 `)
 
@@ -58,7 +59,10 @@ func NewVariablesTF(w io.Writer, input *RootModuleInputData) error {
 		}
 	}
 
-	_, err = hclFile.WriteTo(w)
+	// Format the file before writing
+	content := hclFile.Bytes()
+	content = hclwrite.Format(content)
+	_, err = w.Write(content)
 	return err
 }
 
@@ -69,35 +73,58 @@ func appendNamedBlockVariable(body *hclwrite.Body, block *namedBlock) {
 	pBody.SetAttributeValue("default", cty.NullVal(*block.ObjectType()))
 	pBody.SetAttributeValue("description", cty.StringVal(fmt.Sprintf(
 		"Configuration object for %s", block.Name)))
-	appendRawObjType(pBody, "type", block.ObjectVal())
+
+	v := block.ObjectVal()
+	rawTypeAttr := fmt.Sprintf("type = %s", variableTypeString(*v, v.Type()))
+	pBody.AppendUnstructuredTokens(hclwrite.Tokens{{
+		Type:  hclsyntax.TokenNil,
+		Bytes: []byte(rawTypeAttr),
+	}})
+	pBody.AppendNewline()
 }
 
-// appendRawObjType appends a raw line containing a Terraform configuration
-// variable type for an object with dynamic attributes.
-//
-// type = object({ <attr> = <type> })
-func appendRawObjType(b *hclwrite.Body, attr string, val *cty.Value) {
-	if !val.Type().IsObjectType() {
-		return
+// variableTypeString generates the raw Terraform type strings for supported
+// variable types. Collection types are generic and accepts any element type.
+// Structural types recursively calls this function to generate the nested
+// types. If a type is not supported, "unknown" is returned.
+func variableTypeString(val cty.Value, valType cty.Type) string {
+	switch {
+	case valType.IsPrimitiveType():
+		return valType.FriendlyName()
+
+	case valType.IsSetType(), valType.IsListType():
+		return "list(any)"
+
+	case valType.IsMapType():
+		return "map(any)"
+
+	case valType.IsObjectType():
+		// object({ <key> = <type>, <key> = <type>, ... })
+		m := val.AsValueMap()
+		keys := make([]string, 0, len(m))
+		keyTypePairs := make([]string, 0, len(m))
+
+		for k := range m {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			v := m[k]
+			keyType := fmt.Sprintf("%s = %s", k, variableTypeString(v, v.Type()))
+			keyTypePairs = append(keyTypePairs, keyType)
+		}
+		return fmt.Sprintf("object({\n%s\n})", strings.Join(keyTypePairs, "\n"))
+
+	case valType.IsTupleType():
+		// tuple([<type>, <type>, ...])
+		types := valType.TupleElementTypes()
+		typeStrings := make([]string, len(types))
+		for i, t := range types {
+			typeStrings[i] = variableTypeString(cty.NullVal(t), t)
+		}
+		return fmt.Sprintf("tuple([%s])", strings.Join(typeStrings, ", "))
 	}
 
-	line := fmt.Sprintf("\t%s = object({\n", attr)
-	m := val.AsValueMap()
-	attrs := make([]string, 0, len(m))
-	for attr := range m {
-		attrs = append(attrs, attr)
-	}
-	sort.Strings(attrs)
-	for _, attr := range attrs {
-		v := m[attr]
-		line += fmt.Sprintf("\t\t%s = %s\n", attr, v.Type().FriendlyName())
-	}
-	line += "\t})\n"
-
-	b.AppendUnstructuredTokens(hclwrite.Tokens{
-		{
-			Type:  hclsyntax.TokenNil,
-			Bytes: []byte(line),
-		},
-	})
+	return "unknown"
 }

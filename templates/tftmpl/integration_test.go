@@ -62,10 +62,10 @@ func TestInitRootModule(t *testing.T) {
 		ActualFile string
 	}{
 		{
-			"testdata/main.tf.golden",
+			"testdata/main.tf",
 			filepath.Join(dir, input.Task.Name, RootFilename),
 		}, {
-			"testdata/variables.tf.golden",
+			"testdata/variables.tf",
 			filepath.Join(dir, input.Task.Name, VarsFilename),
 		},
 	}
@@ -121,8 +121,8 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 	r := hcat.NewResolver()
 
 	// Load template from disk and render
-	goldenFile := "testdata/terraform.tfvars.golden"
-	contents, err := ioutil.ReadFile("testdata/terraform.tfvars.tmpl.golden")
+	goldenFile := "testdata/terraform.tfvars"
+	contents, err := ioutil.ReadFile("testdata/terraform.tfvars.tmpl")
 	require.NoError(t, err)
 
 	input := hcat.TemplateInput{

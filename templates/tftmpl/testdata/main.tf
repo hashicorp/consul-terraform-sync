@@ -28,5 +28,7 @@ module "test" {
   source   = "namespace/consul-nia/consul//modules/test"
   version  = "0.0.0"
   services = var.services
-}
 
+  bool_true = var.bool_true
+  one       = var.one
+}

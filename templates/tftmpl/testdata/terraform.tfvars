@@ -11,10 +11,10 @@ testProvider = {
 }
 
 services = {
-  "api": {
+  "api" : {
     name        = "api"
     description = "api service for web"
-    addresses   = [
+    addresses = [
       {
         address = "1.2.3.4"
         port    = 8080
@@ -25,14 +25,14 @@ services = {
       }
     ]
   },
-  "web": {
+  "web" : {
     name        = "web"
     description = "web service"
-    addresses   = [
+    addresses = [
       {
         address = "1.1.1.1"
         port    = 8000
       }
     ]
-  } 
+  }
 }

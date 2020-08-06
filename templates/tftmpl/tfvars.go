@@ -75,14 +75,17 @@ func appendRawServiceTemplateValues(body *hclwrite.Body, services []*Service) {
 	lastIdx := len(services) - 1
 	for i, s := range services {
 		rawService := fmt.Sprintf(`
-  "%s": {
+  "%s" : {
     name        = "%s"
     description = "%s"
-    addresses   = [%s
+    addresses = [
+%s
     ]
   }`, s.Name, s.Name, s.Description, fmt.Sprintf(baseAddressStr, s.TemplateServiceID()))
 
-		if i != lastIdx {
+		if i == lastIdx {
+			rawService += "\n}"
+		} else {
 			rawService += ","
 		}
 
@@ -92,10 +95,6 @@ func appendRawServiceTemplateValues(body *hclwrite.Body, services []*Service) {
 		}
 		tokens = append(tokens, &token)
 	}
-	tokens = append(tokens, &hclwrite.Token{
-		Type:  hclsyntax.TokenCBrace,
-		Bytes: []byte("\n}"),
-	})
 	body.SetAttributeRaw("services", tokens)
 }
 

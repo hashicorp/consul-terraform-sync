@@ -26,6 +26,10 @@ const (
 
 	// VarsFilename is the file name for the variable definitions in the root module
 	VarsFilename = "variables.tf"
+
+	// ModuleVarsFilename is the file name for the variable definitions corresponding
+	// to the input variables from a user that is specific to the task's module.
+	ModuleVarsFilename = "variables.module.tf"
 )
 
 // RootPreamble is a warning message included to the beginning of the
@@ -78,6 +82,7 @@ type RootModuleInputData struct {
 	ProviderInfo map[string]interface{}
 	Services     []*Service
 	Task         Task
+	Variables    map[string]cty.Value
 
 	backend   *namedBlock
 	providers []*namedBlock
@@ -236,9 +241,12 @@ func NewMainTF(w io.Writer, input *RootModuleInputData) error {
 	rootBody.AppendNewline()
 	appendRootProviderBlocks(rootBody, input.providers)
 	rootBody.AppendNewline()
-	appendRootModuleBlock(rootBody, input.Task)
+	appendRootModuleBlock(rootBody, input.Task, sortedVariableKeys(input.Variables))
 
-	_, err = hclFile.WriteTo(w)
+	// Format the file before writing
+	content := hclFile.Bytes()
+	content = hclwrite.Format(content)
+	_, err = w.Write(content)
 	return err
 }
 
@@ -303,7 +311,7 @@ func appendRootProviderBlocks(body *hclwrite.Body, providers []*namedBlock) {
 }
 
 // appendRootModuleBlock appends a Terraform module block for the task
-func appendRootModuleBlock(body *hclwrite.Body, task Task) {
+func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string) {
 	// Add user description for task above the module block
 	if task.Description != "" {
 		appendComment(body, task.Description)
@@ -315,21 +323,29 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task) {
 	if len(task.Version) > 0 {
 		moduleBody.SetAttributeValue("version", cty.StringVal(task.Version))
 	}
-	body.AppendNewline()
+
 	moduleBody.SetAttributeTraversal("services", hcl.Traversal{
 		hcl.TraverseRoot{Name: "var"},
 		hcl.TraverseAttr{Name: "services"},
 	})
+
+	if len(varNames) != 0 {
+		moduleBody.AppendNewline()
+	}
+	for _, name := range varNames {
+		moduleBody.SetAttributeTraversal(name, hcl.Traversal{
+			hcl.TraverseRoot{Name: "var"},
+			hcl.TraverseAttr{Name: name},
+		})
+	}
 }
 
 // appendComment appends a single HCL comment line
 func appendComment(b *hclwrite.Body, comment string) {
-	b.AppendUnstructuredTokens(hclwrite.Tokens{
-		{
-			Type:  hclsyntax.TokenComment,
-			Bytes: []byte(fmt.Sprintf("# %s", comment)),
-		},
-	})
+	b.AppendUnstructuredTokens(hclwrite.Tokens{{
+		Type:  hclsyntax.TokenComment,
+		Bytes: []byte(fmt.Sprintf("# %s", comment)),
+	}})
 	b.AppendNewline()
 }
 
@@ -343,6 +359,15 @@ func fileExists(name string) bool {
 }
 
 func sortedKeys(m map[string]interface{}) []string {
+	sorted := make([]string, 0, len(m))
+	for key := range m {
+		sorted = append(sorted, key)
+	}
+	sort.Strings(sorted)
+	return sorted
+}
+
+func sortedVariableKeys(m map[string]cty.Value) []string {
 	sorted := make([]string, 0, len(m))
 	for key := range m {
 		sorted = append(sorted, key)
