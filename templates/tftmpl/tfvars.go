@@ -9,24 +9,15 @@ import (
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
-// TFVarsTmplFileExt is the file extension for the templated .tfvars
-const TFVarsTmplFileExt = ".tfvars.tmpl"
-
-// TFVarsFilename adds the file extension to the name for a tfvars template.
-func TFVarsFilename(name string) string {
-	return fmt.Sprint(name, TFVarsTmplFileExt)
-}
-
 // NewTFVarsTmpl writes content to assign values to the root module's variables
 // that is commonly placed in a .tfvars file.
 func NewTFVarsTmpl(w io.Writer, input *RootModuleInputData) error {
-	fileName := TFVarsFilename(input.Task.Name)
 	_, err := w.Write(RootPreamble)
 	if err != nil {
 		// This isn't required for TF config files to be usable. So we'll just log
 		// the error and continue.
 		log.Printf("[WARN] (templates.tftmpl) unable to write preamble warning to %q",
-			fileName)
+			TFVarsTmplFilename)
 	}
 
 	hclFile := hclwrite.NewEmptyFile()

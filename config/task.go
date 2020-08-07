@@ -30,6 +30,11 @@ type TaskConfig struct {
 	// is the module path (local or remote).
 	Source *string `mapstructure:"source"`
 
+	// VariablesFile is the path to a file containing variables for the task. For
+	// the Terraform driver, these are used as Terraform input variables passed
+	// as arguments to the Terraform module.
+	VariablesFile *string `mapstructure:"variables_file"`
+
 	// Version is the version of source the task will use. For the Terraform
 	// driver, this is the module version. The latest version will be used as
 	// the default if omitted.
@@ -58,6 +63,8 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	}
 
 	o.Source = StringCopy(c.Source)
+
+	o.VariablesFile = StringCopy(c.VariablesFile)
 
 	o.Version = StringCopy(c.Version)
 
@@ -102,6 +109,10 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Source = StringCopy(o.Source)
 	}
 
+	if o.VariablesFile != nil {
+		r.VariablesFile = StringCopy(o.VariablesFile)
+	}
+
 	if o.Version != nil {
 		r.Version = StringCopy(o.Version)
 	}
@@ -133,6 +144,10 @@ func (c *TaskConfig) Finalize() {
 
 	if c.Source == nil {
 		c.Source = String("")
+	}
+
+	if c.VariablesFile == nil {
+		c.VariablesFile = String("")
 	}
 
 	if c.Version == nil {
@@ -175,6 +190,7 @@ func (c *TaskConfig) GoString() string {
 		"Providers:%s, "+
 		"Services:%s, "+
 		"Source:%s, "+
+		"VariablesFile:%s, "+
 		"Version:%s"+
 		"}",
 		StringVal(c.Name),
@@ -182,6 +198,7 @@ func (c *TaskConfig) GoString() string {
 		c.Providers,
 		c.Services,
 		StringVal(c.Source),
+		StringVal(c.VariablesFile),
 		StringVal(c.Version),
 	)
 }

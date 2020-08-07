@@ -75,13 +75,14 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 		}
 
 		tasks[i] = driver.Task{
-			Description:  *t.Description,
-			Name:         *t.Name,
-			Providers:    providers,
-			ProviderInfo: providerInfo,
-			Services:     services,
-			Source:       *t.Source,
-			Version:      *t.Version,
+			Description:   *t.Description,
+			Name:          *t.Name,
+			Providers:     providers,
+			ProviderInfo:  providerInfo,
+			Services:      services,
+			Source:        *t.Source,
+			VariablesFile: *t.VariablesFile,
+			Version:       *t.Version,
 		}
 	}
 
@@ -97,8 +98,7 @@ func newTaskTemplates(conf *config.Config, fileReader func(string) ([]byte, erro
 
 	templates := make(map[string]template, len(*conf.Tasks))
 	for _, t := range *conf.Tasks {
-		tmplFile := tftmpl.TFVarsFilename(*t.Name)
-		tmplFullpath := path.Join(*conf.Driver.Terraform.WorkingDir, *t.Name, tmplFile)
+		tmplFullpath := path.Join(*conf.Driver.Terraform.WorkingDir, *t.Name, tftmpl.TFVarsTmplFilename)
 		tfvarsFilepath := strings.TrimRight(tmplFullpath, ".tmpl")
 
 		content, err := fileReader(tmplFullpath)

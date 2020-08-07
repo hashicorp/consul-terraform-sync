@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zclconf/go-cty/cty"
 )
 
 func TestInitRootModule(t *testing.T) {
@@ -51,6 +52,10 @@ func TestInitRootModule(t *testing.T) {
 			Name:        "test",
 			Source:      "namespace/consul-nia/consul//modules/test",
 			Version:     "0.0.0",
+		},
+		Variables: map[string]cty.Value{
+			"one":       cty.NumberIntVal(1),
+			"bool_true": cty.BoolVal(true),
 		},
 	}
 	input.Init()
