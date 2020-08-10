@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"log"
 	"path"
 	"strings"
@@ -91,18 +90,18 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 
 // newTaskTemplates converts config task definitions into templates to be
 // monitored and rendered.
-func newTaskTemplates(conf *config.Config) (map[string]*hcat.Template, error) {
+func newTaskTemplates(conf *config.Config, fileReader func(string) ([]byte, error)) (map[string]template, error) {
 	if conf.Driver.Terraform == nil {
 		return nil, errors.New("unsupported driver to run tasks")
 	}
 
-	templates := make(map[string]*hcat.Template, len(*conf.Tasks))
+	templates := make(map[string]template, len(*conf.Tasks))
 	for _, t := range *conf.Tasks {
 		tmplFile := tftmpl.TFVarsFilename(*t.Name)
 		tmplFullpath := path.Join(*conf.Driver.Terraform.WorkingDir, *t.Name, tmplFile)
 		tfvarsFilepath := strings.TrimRight(tmplFullpath, ".tmpl")
 
-		content, err := ioutil.ReadFile(tmplFullpath)
+		content, err := fileReader(tmplFullpath)
 		if err != nil {
 			return nil, err
 		}
