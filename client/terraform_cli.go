@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"path/filepath"
 
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
@@ -17,6 +19,7 @@ var _ Client = (*TerraformCLI)(nil)
 // to execute Terraform cli commands
 type TerraformCLI struct {
 	tf         terraformExec
+	taskName   string
 	logLevel   string
 	workingDir string
 	workspace  string
@@ -24,6 +27,7 @@ type TerraformCLI struct {
 
 // TerraformCLIConfig configures the Terraform client
 type TerraformCLIConfig struct {
+	TaskName   string
 	LogLevel   string
 	ExecPath   string
 	WorkingDir string
@@ -37,7 +41,8 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 		return nil, errors.New("TerraformCLIConfig cannot be nil - no meaningful default values")
 	}
 
-	tf, err := tfexec.NewTerraform(config.WorkingDir, config.ExecPath)
+	tfPath := filepath.Join(config.ExecPath, "terraform")
+	tf, err := tfexec.NewTerraform(config.WorkingDir, tfPath)
 	if err != nil {
 		return nil, err
 	}
@@ -47,12 +52,16 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 		tf.SetEnv(env)
 	}
 
-	return &TerraformCLI{
+	client := &TerraformCLI{
 		tf:         tf,
+		taskName:   config.TaskName,
 		logLevel:   config.LogLevel,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
-	}, nil
+	}
+	log.Printf("[TRACE] (client.terraformcli) created Terraform CLI client %s", client.GoString())
+
+	return client, nil
 }
 
 // Init executes the cli command a `terraform init`
@@ -62,7 +71,8 @@ func (t *TerraformCLI) Init(ctx context.Context) error {
 
 // Apply executes the cli command `terraform apply` for a given workspace
 func (t *TerraformCLI) Apply(ctx context.Context) error {
-	return t.tf.Apply(ctx)
+	file := fmt.Sprintf("%s.tfvars", t.taskName)
+	return t.tf.Apply(ctx, tfexec.VarFile(file))
 }
 
 // Plan executes the cli command a `terraform plan` for a given workspace
@@ -77,10 +87,12 @@ func (t *TerraformCLI) GoString() string {
 	}
 
 	return fmt.Sprintf("&TerraformCLI{"+
+		"TaskName:%s, "+
 		"LogLevel:%s, "+
 		"WorkingDir:%s, "+
 		"WorkSpace:%s, "+
 		"}",
+		t.taskName,
 		t.logLevel,
 		t.workingDir,
 		t.workspace,

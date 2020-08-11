@@ -23,6 +23,7 @@ const (
 type Config struct {
 	LogLevel    *string `mapstructure:"log_level"`
 	InspectMode *bool   `mapstructure:"inspect_mode"`
+	ClientType  *string `mapstructure:"client_type"`
 
 	Syslog    *SyslogConfig    `mapstructure:"syslog"`
 	Consul    *ConsulConfig    `mapstructure:"consul"`
@@ -139,6 +140,10 @@ func (c *Config) Merge(o *Config) *Config {
 func (c *Config) Finalize() {
 	if c == nil {
 		return
+	}
+
+	if c.ClientType == nil {
+		c.ClientType = String("")
 	}
 
 	if c.Syslog == nil {

@@ -257,6 +257,7 @@ func TestConfig_Finalize(t *testing.T) {
 	// Finalize tests top level config calls nested finalize
 	// Backfill expected values
 	expected := longConfig.Copy()
+	expected.ClientType = String("")
 	expected.Syslog.Facility = String("LOCAL0")
 	expected.Consul.KVNamespace = String("")
 	expected.Consul.TLS.Cert = String("")

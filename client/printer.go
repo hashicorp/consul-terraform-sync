@@ -13,6 +13,7 @@ var _ Client = (*Printer)(nil)
 // Printer is a fake client that only logs out actions. Intended to mirror
 // TerraformCLI client and to be used for development only
 type Printer struct {
+	taskName   string
 	logLevel   string
 	workingDir string
 	workspace  string
@@ -21,6 +22,7 @@ type Printer struct {
 
 // PrinterConfig configures the log client
 type PrinterConfig struct {
+	TaskName   string
 	LogLevel   string
 	ExecPath   string
 	WorkingDir string
@@ -33,6 +35,7 @@ func NewPrinter(config *PrinterConfig) (*Printer, error) {
 		return nil, errors.New("PrinterConfig cannot be nil - mirror Terraform CLI error")
 	}
 	return &Printer{
+		taskName:   config.TaskName,
 		logLevel:   config.LogLevel,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
@@ -70,10 +73,12 @@ func (p *Printer) GoString() string {
 	}
 
 	return fmt.Sprintf("&Printer{"+
+		"TaskName:%s, "+
 		"LogLevel:%s, "+
 		"WorkingDir:%s, "+
 		"WorkSpace:%s, "+
 		"}",
+		p.taskName,
 		p.logLevel,
 		p.workingDir,
 		p.workspace,
