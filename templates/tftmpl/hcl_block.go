@@ -16,7 +16,7 @@ import (
 // 	}
 type namedBlock struct {
 	Name  string
-	Block map[string]cty.Value
+	Block Variables
 
 	blockKeysCache   []string
 	objectTypeCache  *cty.Type
@@ -38,7 +38,7 @@ func newNamedBlock(b map[string]interface{}) *namedBlock {
 	}
 
 	// Convert interface to usable cty.Value type
-	block := make(map[string]cty.Value, len(rawBlock))
+	block := make(Variables, len(rawBlock))
 	for k, v := range rawBlock {
 		block[k] = hcl2shim.HCL2ValueFromConfigValue(v)
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zclconf/go-cty/cty"
 )
 
 func TestInitRootModule(t *testing.T) {
@@ -52,6 +53,10 @@ func TestInitRootModule(t *testing.T) {
 			Source:      "namespace/consul-nia/consul//modules/test",
 			Version:     "0.0.0",
 		},
+		Variables: Variables{
+			"one":       cty.NumberIntVal(1),
+			"bool_true": cty.BoolVal(true),
+		},
 	}
 	input.Init()
 	err = InitRootModule(&input, dir, false)
@@ -62,10 +67,10 @@ func TestInitRootModule(t *testing.T) {
 		ActualFile string
 	}{
 		{
-			"testdata/main.tf.golden",
+			"testdata/main.tf",
 			filepath.Join(dir, input.Task.Name, RootFilename),
 		}, {
-			"testdata/variables.tf.golden",
+			"testdata/variables.tf",
 			filepath.Join(dir, input.Task.Name, VarsFilename),
 		},
 	}
@@ -121,8 +126,8 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 	r := hcat.NewResolver()
 
 	// Load template from disk and render
-	goldenFile := "testdata/terraform.tfvars.golden"
-	contents, err := ioutil.ReadFile("testdata/terraform.tfvars.tmpl.golden")
+	goldenFile := "testdata/terraform.tfvars"
+	contents, err := ioutil.ReadFile("testdata/terraform.tfvars.tmpl")
 	require.NoError(t, err)
 
 	input := hcat.TemplateInput{

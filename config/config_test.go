@@ -262,6 +262,7 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.Consul.TLS.Cert = String("")
 	expected.Consul.Transport.MaxIdleConns = Int(100)
 	expected.Driver.consul = expected.Consul
+	(*expected.Tasks)[0].VariablesFile = String("")
 	(*expected.Tasks)[0].Version = String("")
 	(*expected.Services)[0].ID = String("serviceA")
 	(*expected.Services)[0].Namespace = String("")
