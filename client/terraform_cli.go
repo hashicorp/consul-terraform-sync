@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strings"
 
+	"github.com/hashicorp/consul-nia/templates/tftmpl"
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
 
@@ -19,7 +21,6 @@ var _ Client = (*TerraformCLI)(nil)
 // to execute Terraform cli commands
 type TerraformCLI struct {
 	tf         terraformExec
-	taskName   string
 	logLevel   string
 	workingDir string
 	workspace  string
@@ -27,7 +28,6 @@ type TerraformCLI struct {
 
 // TerraformCLIConfig configures the Terraform client
 type TerraformCLIConfig struct {
-	TaskName   string
 	LogLevel   string
 	ExecPath   string
 	WorkingDir string
@@ -54,7 +54,6 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 
 	client := &TerraformCLI{
 		tf:         tf,
-		taskName:   config.TaskName,
 		logLevel:   config.LogLevel,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
@@ -71,8 +70,8 @@ func (t *TerraformCLI) Init(ctx context.Context) error {
 
 // Apply executes the cli command `terraform apply` for a given workspace
 func (t *TerraformCLI) Apply(ctx context.Context) error {
-	file := fmt.Sprintf("%s.tfvars", t.taskName)
-	return t.tf.Apply(ctx, tfexec.VarFile(file))
+	tfvarFile := strings.TrimRight(tftmpl.TFVarsTmplFilename, ".tmpl")
+	return t.tf.Apply(ctx, tfexec.VarFile(tfvarFile))
 }
 
 // Plan executes the cli command a `terraform plan` for a given workspace
@@ -87,12 +86,10 @@ func (t *TerraformCLI) GoString() string {
 	}
 
 	return fmt.Sprintf("&TerraformCLI{"+
-		"TaskName:%s, "+
 		"LogLevel:%s, "+
 		"WorkingDir:%s, "+
 		"WorkSpace:%s, "+
 		"}",
-		t.taskName,
 		t.logLevel,
 		t.workingDir,
 		t.workspace,

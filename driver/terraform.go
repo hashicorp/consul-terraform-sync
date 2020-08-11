@@ -158,7 +158,6 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 	case developmentClient:
 		log.Printf("[TRACE] (driver.terraform) creating development client for task '%s'", task.Name)
 		c, err = client.NewPrinter(&client.PrinterConfig{
-			TaskName:   task.Name,
 			LogLevel:   tf.logLevel,
 			ExecPath:   tf.path,
 			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
@@ -170,7 +169,6 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 	default:
 		log.Printf("[TRACE] (driver.terraform) creating terraform cli client for task '%s'", task.Name)
 		c, err = client.NewTerraformCLI(&client.TerraformCLIConfig{
-			TaskName:   task.Name,
 			LogLevel:   tf.logLevel,
 			ExecPath:   tf.path,
 			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
