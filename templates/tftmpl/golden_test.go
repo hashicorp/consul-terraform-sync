@@ -51,7 +51,7 @@ func TestNewFiles(t *testing.T) {
 					Source:      "namespace/consul-nia/consul//modules/test",
 					Version:     "0.0.0",
 				},
-				Variables: map[string]cty.Value{
+				Variables: Variables{
 					"one":       cty.NumberIntVal(1),
 					"bool_true": cty.BoolVal(true),
 				},
@@ -101,7 +101,7 @@ func TestNewFiles(t *testing.T) {
 			Func:   NewModuleVariablesTF,
 			Golden: "testdata/variables.module.tf",
 			Input: RootModuleInputData{
-				Variables: map[string]cty.Value{
+				Variables: Variables{
 					"num": cty.NumberIntVal(10),
 					"b":   cty.BoolVal(true),
 					"key": cty.StringVal("some_key"),

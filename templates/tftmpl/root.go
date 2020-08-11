@@ -73,6 +73,8 @@ type Service struct {
 	Tag         string
 }
 
+type Variables map[string]cty.Value
+
 // TODO incorporate namespace
 func (s Service) TemplateServiceID() string {
 	id := s.Name
@@ -95,7 +97,7 @@ type RootModuleInputData struct {
 	ProviderInfo map[string]interface{}
 	Services     []*Service
 	Task         Task
-	Variables    map[string]cty.Value
+	Variables    Variables
 
 	backend   *namedBlock
 	providers []*namedBlock
@@ -191,7 +193,7 @@ func NewMainTF(w io.Writer, input *RootModuleInputData) error {
 	rootBody.AppendNewline()
 	appendRootProviderBlocks(rootBody, input.providers)
 	rootBody.AppendNewline()
-	appendRootModuleBlock(rootBody, input.Task, sortedVariableKeys(input.Variables))
+	appendRootModuleBlock(rootBody, input.Task, input.Variables.Keys())
 
 	// Format the file before writing
 	content := hclFile.Bytes()
@@ -317,9 +319,9 @@ func sortedKeys(m map[string]interface{}) []string {
 	return sorted
 }
 
-func sortedVariableKeys(m map[string]cty.Value) []string {
-	sorted := make([]string, 0, len(m))
-	for key := range m {
+func (v Variables) Keys() []string {
+	sorted := make([]string, 0, len(v))
+	for key := range v {
 		sorted = append(sorted, key)
 	}
 	sort.Strings(sorted)

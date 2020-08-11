@@ -92,15 +92,37 @@ func variableTypeString(val cty.Value, valType cty.Type) string {
 	case valType.IsPrimitiveType():
 		return valType.FriendlyName()
 
-	case valType.IsSetType(), valType.IsListType():
+	case valType.IsListType():
 		return "list(any)"
+
+	case valType.IsSetType():
+		return "set(any)"
 
 	case valType.IsMapType():
 		return "map(any)"
 
+	case valType.IsTupleType():
+		// tuple([<type>, <type>, ...])
+		types := valType.TupleElementTypes()
+		typeStrings := make([]string, len(types))
+		for i, t := range types {
+			typeStrings[i] = variableTypeString(cty.NullVal(t), t)
+		}
+		return fmt.Sprintf("tuple([%s])", strings.Join(typeStrings, ", "))
+
 	case valType.IsObjectType():
 		// object({ <key> = <type>, <key> = <type>, ... })
+
+		if !val.Type().IsObjectType() {
+			// This is an unlikely edge case where the value does not match the type
+			return "object({})"
+		}
+
 		m := val.AsValueMap()
+		if len(m) == 0 {
+			return "object({})"
+		}
+
 		keys := make([]string, 0, len(m))
 		keyTypePairs := make([]string, 0, len(m))
 
@@ -115,15 +137,6 @@ func variableTypeString(val cty.Value, valType cty.Type) string {
 			keyTypePairs = append(keyTypePairs, keyType)
 		}
 		return fmt.Sprintf("object({\n%s\n})", strings.Join(keyTypePairs, "\n"))
-
-	case valType.IsTupleType():
-		// tuple([<type>, <type>, ...])
-		types := valType.TupleElementTypes()
-		typeStrings := make([]string, len(types))
-		for i, t := range types {
-			typeStrings[i] = variableTypeString(cty.NullVal(t), t)
-		}
-		return fmt.Sprintf("tuple([%s])", strings.Join(typeStrings, ", "))
 	}
 
 	return "unknown"

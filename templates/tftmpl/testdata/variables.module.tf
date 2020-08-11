@@ -6,27 +6,27 @@
 
 
 variable "b" {
-  default = []
+  default = null
   type    = bool
 }
 
 variable "key" {
-  default = []
+  default = null
   type    = string
 }
 
 variable "l" {
-  default = []
+  default = null
   type    = list(any)
 }
 
 variable "num" {
-  default = []
+  default = null
   type    = number
 }
 
 variable "obj" {
-  default = []
+  default = null
   type = object({
     argList = list(any)
     argMap  = map(any)
@@ -36,6 +36,6 @@ variable "obj" {
 }
 
 variable "tup" {
-  default = []
+  default = null
   type    = tuple([string, number, bool])
 }

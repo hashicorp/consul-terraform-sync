@@ -105,6 +105,15 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 		}
 	}
 
+	var vars tftmpl.Variables
+	if task.VariablesFile != "" {
+		var err error
+		vars, err = tftmpl.LoadModuleVariables(task.VariablesFile)
+		if err != nil {
+			return err
+		}
+	}
+
 	input := tftmpl.RootModuleInputData{
 		Backend:      tf.backend,
 		Providers:    task.Providers,
@@ -116,6 +125,7 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 			Source:      task.Source,
 			Version:     task.Version,
 		},
+		Variables: vars,
 	}
 	input.Init()
 	return tftmpl.InitRootModule(&input, tf.workingDir, force)

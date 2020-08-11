@@ -53,7 +53,7 @@ func TestInitRootModule(t *testing.T) {
 			Source:      "namespace/consul-nia/consul//modules/test",
 			Version:     "0.0.0",
 		},
-		Variables: map[string]cty.Value{
+		Variables: Variables{
 			"one":       cty.NumberIntVal(1),
 			"bool_true": cty.BoolVal(true),
 		},

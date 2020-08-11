@@ -14,7 +14,7 @@ import (
 )
 
 // LoadModuleVariables loads Terraform input variables from a file.
-func LoadModuleVariables(filePath string) (map[string]cty.Value, error) {
+func LoadModuleVariables(filePath string) (Variables, error) {
 	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func LoadModuleVariables(filePath string) (map[string]cty.Value, error) {
 // ParseModuleVariables parses bytes representing Terraform input variables
 // for a module. It encodes the content into cty.Value types. Invalid HCL
 // syntax and unsupported Terraform variable types result in an error.
-func ParseModuleVariables(content []byte, filename string) (map[string]cty.Value, error) {
+func ParseModuleVariables(content []byte, filename string) (Variables, error) {
 	p := hclparse.NewParser()
 
 	hclFile, diag := p.ParseHCL(content, filename)
@@ -39,7 +39,7 @@ func ParseModuleVariables(content []byte, filename string) (map[string]cty.Value
 		return nil, diag
 	}
 
-	variables := make(map[string]cty.Value)
+	variables := make(Variables)
 	var diags hcl.Diagnostics
 	for k, attr := range attrs {
 		val, diag := attr.Expr.Value(&hcl.EvalContext{})
@@ -74,13 +74,12 @@ func NewModuleVariablesTF(w io.Writer, input *RootModuleInputData) error {
 	rootBody.AppendNewline()
 
 	lastIdx := len(input.Variables) - 1
-	sorted := sortedVariableKeys(input.Variables)
-	for i, name := range sorted {
+	for i, name := range input.Variables.Keys() {
 		v := input.Variables[name]
 		vType := v.Type()
 
 		vBody := rootBody.AppendNewBlock("variable", []string{name}).Body()
-		vBody.SetAttributeValue("default", cty.SetValEmpty(vType))
+		vBody.SetAttributeValue("default", cty.NullVal(vType))
 
 		rawTypeAttr := fmt.Sprintf("type = %s", variableTypeString(v, vType))
 		vBody.AppendUnstructuredTokens(hclwrite.Tokens{{
