@@ -48,7 +48,8 @@ func TestE2E(t *testing.T) {
 	_, err = os.Stat(tempDir)
 	if !os.IsNotExist(err) {
 		log.Println("[WARN] temp dir was not cleared out after last test. Deleting.")
-		os.RemoveAll(tempDir)
+		err = os.RemoveAll(tempDir)
+		require.NoError(t, err)
 	}
 	err = os.Mkdir(tempDir, os.ModePerm)
 	// no defer to delete directory: only delete at end of test if no errors
@@ -64,7 +65,7 @@ func TestE2E(t *testing.T) {
 	require.NoError(t, err)
 
 	// call nia. set output to stdout
-	cmd := exec.Command("consul-nia", fmt.Sprintf("--config-file=%s", configPath))
+	cmd := exec.Command("sudo", "consul-nia", fmt.Sprintf("--config-file=%s", configPath))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()

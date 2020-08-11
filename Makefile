@@ -45,7 +45,9 @@ test-all:
 	@go test -count=1 -timeout=60s -tags=integration,e2e -cover ./... ${TESTARGS}
 .PHONY: test-all
 
+# test-setup-e2e sets up the nia binary and permissions to run consul-nia
+# cli in circle
 test-setup-e2e: dev
-	mv ${GOPATH}/bin/consul-nia /usr/local/bin/consul-nia
+	sudo mv ${GOPATH}/bin/consul-nia /usr/local/bin/consul-nia
 .PHONY: test-setup-e2e
 
