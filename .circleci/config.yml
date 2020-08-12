@@ -17,6 +17,7 @@ jobs:
           unzip consul.zip
           sudo cp consul /usr/local/bin/
       - run: |
+          make test-setup-e2e
           make test-all
       - save_cache:
           key: ct-modcache-v1-{{ checksum "go.mod" }}

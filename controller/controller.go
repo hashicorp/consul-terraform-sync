@@ -43,6 +43,7 @@ func newTerraformDriver(conf *config.Config) *driver.Terraform {
 		SkipVerify:        *tfConf.SkipVerify,
 		Backend:           tfConf.Backend,
 		RequiredProviders: tfConf.RequiredProviders,
+		ClientType:        *conf.ClientType,
 	})
 }
 

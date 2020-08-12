@@ -65,7 +65,7 @@ func NewTerraform(config *TerraformConfig) *Terraform {
 		// TODO: the version is currently hard-coded. NIA should discover
 		// the latest patch version within the minor version.
 		version:    terraformVersion,
-		clientType: developmentClient, // TODO: remove when ready to consume TF client
+		clientType: config.ClientType,
 	}
 }
 
@@ -138,7 +138,7 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 func (tf *Terraform) InitWorker(task Task) error {
 	client, err := tf.initClient(task)
 	if err != nil {
-		log.Printf("[ERR] (driver.terraform) init client type %s error: %s", tf.clientType, err)
+		log.Printf("[ERR] (driver.terraform) init client type '%s' error: %s", tf.clientType, err)
 		return err
 	}
 
@@ -172,7 +172,7 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 			LogLevel:   tf.logLevel,
 			ExecPath:   tf.path,
 			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
-			Workspace:  task.Name,
+			Workspace:  "",
 		})
 	}
 
@@ -185,7 +185,7 @@ func (tf *Terraform) InitWork(ctx context.Context) error {
 
 	for _, r := range tf.workers {
 		if err := r.client.Init(ctx); err != nil {
-			log.Printf("[ERR] (driver.terraform) apply work %s error: %s", r.client, err)
+			log.Printf("[ERR] (driver.terraform) init work %s error: %s", r.client.GoString(), err)
 			errs = append(errs, err.Error())
 		}
 	}
@@ -203,7 +203,7 @@ func (tf *Terraform) ApplyWork(ctx context.Context) error {
 
 	for _, r := range tf.workers {
 		if err := r.client.Apply(ctx); err != nil {
-			log.Printf("[ERR] (driver.terraform) apply work %s error: %s", r.client, err)
+			log.Printf("[ERR] (driver.terraform) apply work %s error: %s", r.client.GoString(), err)
 			errs = append(errs, err.Error())
 		}
 	}

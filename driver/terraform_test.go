@@ -20,7 +20,7 @@ func TestInitWorker(t *testing.T) {
 	}{
 		{
 			"happy path with development client",
-			"development",
+			developmentClient,
 			false,
 			[]Task{
 				Task{Name: "first"},
@@ -28,7 +28,7 @@ func TestInitWorker(t *testing.T) {
 		},
 		{
 			"happy path with mock client",
-			"test",
+			testClient,
 			false,
 			[]Task{
 				Task{Name: "first"},

@@ -39,8 +39,15 @@ test:
 	@go test -count=1 -timeout=30s -cover ./... ${TESTARGS}
 .PHONY: test
 
-# test-all runs the test suite and integration tests
+# test-all runs the test suite and integration & e2e tests
 test-all:
-	@echo "==> Testing ${NAME} (integration)"
-	@go test -count=1 -timeout=60s -tags=integration -cover ./... ${TESTARGS}
+	@echo "==> Testing ${NAME} (integration & e2e)"
+	@go test -count=1 -timeout=60s -tags=integration,e2e -cover ./... ${TESTARGS}
 .PHONY: test-all
+
+# test-setup-e2e sets up the nia binary and permissions to run consul-nia
+# cli in circle
+test-setup-e2e: dev
+	sudo mv ${GOPATH}/bin/consul-nia /usr/local/bin/consul-nia
+.PHONY: test-setup-e2e
+

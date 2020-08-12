@@ -63,6 +63,7 @@ func (cli *CLI) Run(args []string) int {
 	// Handle parsing the CLI flags.
 	var configFiles config.FlagAppendSliceValue
 	var isVersion, isInspect bool
+	var clientType string
 
 	// Parse the flags
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
@@ -73,6 +74,9 @@ func (cli *CLI) Run(args []string) int {
 	f.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
 	f.BoolVar(&isInspect, "inspect", false, "Print the current and proposed "+
 		"state change, and then exits.")
+	// Additional flag only intended to be used for development
+	f.StringVar(&clientType, "client-type", "", "Select the client type to use. Defaults "+
+		"to Terraform client if empty or unknown value. Can also 'development' or 'test'.")
 
 	err := f.Parse(os.Args[1:])
 	if err != nil {
@@ -126,6 +130,7 @@ func (cli *CLI) Run(args []string) int {
 	// Set up controller
 	log.Printf("[INFO] (cli) setting up controller")
 
+	conf.ClientType = config.String(clientType)
 	var prov controller.Controller
 	if prov, err = controller.NewReadWrite(conf); err != nil {
 		log.Printf("[ERR] (cli) error setting up controller: %s", err)
@@ -139,11 +144,17 @@ func (cli *CLI) Run(args []string) int {
 	}
 
 	log.Printf("[INFO] (cli) initializing controller")
-	prov.Init()
+	if err = prov.Init(); err != nil {
+		log.Printf("[ERR] (cli) error initializing controller: %s", err)
+		return ExitCodeError
+	}
 
 	log.Printf("[INFO] (cli) running controller")
 	ctx := context.Background()
-	prov.Run(ctx)
+	if err = prov.Run(ctx); err != nil {
+		log.Printf("[ERR] (cli) error running controller: %s", err)
+		return ExitCodeError
+	}
 
 	return ExitCodeOK
 }
