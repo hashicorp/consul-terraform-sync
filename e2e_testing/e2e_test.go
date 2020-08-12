@@ -18,7 +18,7 @@ import (
 // tempDir is the overall directory where files generated from
 // e2e are stored. This directory is destroyed after e2e testing
 // if no errors.
-const tempDir = "e2e_tmp"
+const tempDir = "tmp"
 
 // resourcesDir is the sub-directory of tempDir where the
 // Terraform resources created from running consul-nia are stored
