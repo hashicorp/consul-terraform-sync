@@ -6,7 +6,7 @@ require (
 	github.com/hashicorp/consul v1.8.0
 	github.com/hashicorp/consul/sdk v0.5.0
 	github.com/hashicorp/go-syslog v1.0.0
-	github.com/hashicorp/hcat v0.0.0-20200728234213-db8d93fdc5a1
+	github.com/hashicorp/hcat v0.0.0-20200818151320-76bc9776bf9a
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/hcl/v2 v2.6.0
 	github.com/hashicorp/logutils v1.0.0

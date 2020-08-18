@@ -12,27 +12,72 @@ testProvider = {
 
 services = {
   "api" : {
-    name        = "api"
-    description = "api service for web"
-    addresses = [
-      {
-        address = "1.2.3.4"
-        port    = 8080
-      },
-      {
-        address = "5.6.7.8"
-        port    = 8080
-      }
-    ]
+    id              = "api"
+    name            = "api"
+    address         = "1.2.3.4"
+    port            = 8080
+    meta            = {}
+    tags            = ["tag"]
+    namespace       = null
+    status          = "passing"
+    node            = "node-39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node_id         = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node_address    = "127.0.0.1"
+    node_datacenter = "dc1"
+    node_tagged_addresses = {
+      lan      = "127.0.0.1"
+      lan_ipv4 = "127.0.0.1"
+      wan      = "127.0.0.1"
+      wan_ipv4 = "127.0.0.1"
+    }
+    node_meta = {
+      consul-network-segment = ""
+    }
+  },
+  "api-2" : {
+    id              = "api-2"
+    name            = "api"
+    address         = "5.6.7.8"
+    port            = 8080
+    meta            = {}
+    tags            = ["tag"]
+    namespace       = null
+    status          = "passing"
+    node            = "node-39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node_id         = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node_address    = "127.0.0.1"
+    node_datacenter = "dc1"
+    node_tagged_addresses = {
+      lan      = "127.0.0.1"
+      lan_ipv4 = "127.0.0.1"
+      wan      = "127.0.0.1"
+      wan_ipv4 = "127.0.0.1"
+    }
+    node_meta = {
+      consul-network-segment = ""
+    }
   },
   "web" : {
-    name        = "web"
-    description = "web service"
-    addresses = [
-      {
-        address = "1.1.1.1"
-        port    = 8000
-      }
-    ]
+    id              = "web"
+    name            = "web"
+    address         = "1.1.1.1"
+    port            = 8000
+    meta            = {}
+    tags            = []
+    namespace       = null
+    status          = "passing"
+    node            = "node-39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node_id         = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node_address    = "127.0.0.1"
+    node_datacenter = "dc1"
+    node_tagged_addresses = {
+      lan      = "127.0.0.1"
+      lan_ipv4 = "127.0.0.1"
+      wan      = "127.0.0.1"
+      wan_ipv4 = "127.0.0.1"
+    }
+    node_meta = {
+      consul-network-segment = ""
+    }
   }
 }

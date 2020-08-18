@@ -65,14 +65,7 @@ func appendRawServiceTemplateValues(body *hclwrite.Body, services []*Service) {
 	})
 	lastIdx := len(services) - 1
 	for i, s := range services {
-		rawService := fmt.Sprintf(`
-  "%s" : {
-    name        = "%s"
-    description = "%s"
-    addresses = [
-%s
-    ]
-  }`, s.Name, s.Name, s.Description, fmt.Sprintf(baseAddressStr, s.TemplateServiceID()))
+		rawService := fmt.Sprintf(baseAddressStr, s.TemplateServiceID())
 
 		if i == lastIdx {
 			rawService += "\n}"
@@ -91,19 +84,25 @@ func appendRawServiceTemplateValues(body *hclwrite.Body, services []*Service) {
 
 // baseAddressStr is the raw template following hcat syntax for addresses of
 // Consul services.
-const baseAddressStr = `{{- with $srv := service "%s"}}
+const baseAddressStr = `
+{{- with $srv := service "%s"}}
   {{- $last := len $srv | subtract 1}}
-    {{- range $i := loop $last}}
-      {{- with index $srv $i}}
-      {
-        address = "{{.Address}}"
-        port    = {{.Port}}
-      },{{end}}
-    {{- end}}
-  {{- with index $srv $last}}
-      {
-        address = "{{.Address}}"
-        port    = {{.Port}}
-      }
+  {{- range $i, $s := $srv}}
+  "{{.ID}}" : {
+    id              = "{{.ID}}"
+    name            = "{{.Name}}"
+    address         = "{{.Address}}"
+    port            = {{.Port}}
+    meta            = {{hclStringMap .ServiceMeta 3}}
+    tags            = {{hclStringList .Tags}}
+    namespace       = {{hclString .Namespace}}
+    status          = "{{.Status}}"
+    node            = "{{.Node}}"
+    node_id         = "{{.NodeID}}"
+    node_address    = "{{.NodeAddress}}"
+    node_datacenter = "{{.NodeDatacenter}}"
+    node_tagged_addresses = {{hclStringMap .NodeTaggedAddresses 3}}
+    node_meta = {{hclStringMap .NodeMeta 3}}
+  }{{if (ne $i $last)}},{{- end}}
   {{- end}}
 {{- end}}`
