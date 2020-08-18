@@ -71,11 +71,11 @@ func TestE2E(t *testing.T) {
 	err = cmd.Run()
 	require.NoError(t, err)
 
-	contents, err := ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_api.0.txt", tempDir, resourcesDir))
+	contents, err := ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_api.txt", tempDir, resourcesDir))
 	require.NoError(t, err)
 	require.Equal(t, "1.2.3.4", string(contents))
 
-	contents, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_web.0.txt", tempDir, resourcesDir))
+	contents, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_web.txt", tempDir, resourcesDir))
 	require.NoError(t, err)
 	require.Equal(t, "5.6.7.8", string(contents))
 
@@ -101,7 +101,7 @@ driver "terraform" {
 `, tempDir, tempDir)
 
 	return consulBlock + terraformBlock + `
-log_level = "trace"
+log_level = "debug"
 
 service {
   name = "api"
