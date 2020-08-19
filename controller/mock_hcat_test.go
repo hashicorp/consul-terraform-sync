@@ -166,7 +166,7 @@ func TestMockWatcherWait(t *testing.T) {
 }
 
 func TestMockWatcherAdd(t *testing.T) {
-	// Skip writing test for mockWatcher.Add(d hcat.Dependency)
+	// Skip writing test for mockWatcher.Add(d dep.Dependency)
 
 	// Dependency currently lives and is used in hashicat internally. In order to
 	// write a unit test for Add(), we would have to mock Dependency and other

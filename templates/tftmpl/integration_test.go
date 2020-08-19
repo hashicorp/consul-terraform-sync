@@ -92,6 +92,10 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		c.LogLevel = "warn"
 		c.Stdout = ioutil.Discard
 		c.Stderr = ioutil.Discard
+
+		// Hardcode node info so it doesn't change per run
+		c.NodeName = "node-39e5a7f5-2834-e16d-6925-78167c9f50d8"
+		c.NodeID = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
 	})
 	require.NoError(t, err, "failed to start consul server 1")
 	defer srv.Stop()
@@ -133,6 +137,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 	input := hcat.TemplateInput{
 		Contents:      string(contents),
 		ErrMissingKey: true,
+		FuncMapMerge:  HCLTmplFuncMap,
 	}
 	tmpl := hcat.NewTemplate(input)
 

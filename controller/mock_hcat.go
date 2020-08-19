@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcat"
+	"github.com/hashicorp/hcat/dep"
 )
 
 var _ template = (*mockTemplate)(nil)
@@ -85,7 +86,7 @@ func (m *mockWatcher) Wait(timeout time.Duration) error {
 
 // Add mocks add for testing
 // Note: function not directly consumed by NIA, therefore not fully mocked out at this time
-func (m *mockWatcher) Add(d hcat.Dependency) bool {
+func (m *mockWatcher) Add(d dep.Dependency) bool {
 	return true
 }
 
@@ -102,6 +103,6 @@ func (m *mockWatcher) Recall(id string) (interface{}, bool) {
 
 // Register mocks register for testing
 // Note: function not directly consumed by NIA, therefore not fully mocked out at this time
-func (m *mockWatcher) Register(tmplID string, deps ...hcat.Dependency) {
+func (m *mockWatcher) Register(tmplID string, deps ...dep.Dependency) {
 	return
 }

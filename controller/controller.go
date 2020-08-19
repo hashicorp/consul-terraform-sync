@@ -112,8 +112,9 @@ func newTaskTemplates(conf *config.Config, fileReader func(string) ([]byte, erro
 		})
 
 		templates[*t.Name] = hcat.NewTemplate(hcat.TemplateInput{
-			Contents: string(content),
-			Renderer: renderer,
+			Contents:     string(content),
+			Renderer:     renderer,
+			FuncMapMerge: tftmpl.HCLTmplFuncMap,
 		})
 	}
 

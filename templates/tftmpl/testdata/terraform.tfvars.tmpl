@@ -11,48 +11,46 @@ testProvider = {
 }
 
 services = {
-  "api" : {
-    name        = "api"
-    description = "api service for web"
-    addresses = [
 {{- with $srv := service "tag.api@dc1"}}
   {{- $last := len $srv | subtract 1}}
-    {{- range $i := loop $last}}
-      {{- with index $srv $i}}
-      {
-        address = "{{.Address}}"
-        port    = {{.Port}}
-      },{{end}}
-    {{- end}}
-  {{- with index $srv $last}}
-      {
-        address = "{{.Address}}"
-        port    = {{.Port}}
-      }
+  {{- range $i, $s := $srv}}
+  "{{.ID}}" : {
+    id              = "{{.ID}}"
+    name            = "{{.Name}}"
+    address         = "{{.Address}}"
+    port            = {{.Port}}
+    meta            = {{hclStringMap .ServiceMeta 3}}
+    tags            = {{hclStringList .Tags}}
+    namespace       = {{hclString .Namespace}}
+    status          = "{{.Status}}"
+    node            = "{{.Node}}"
+    node_id         = "{{.NodeID}}"
+    node_address    = "{{.NodeAddress}}"
+    node_datacenter = "{{.NodeDatacenter}}"
+    node_tagged_addresses = {{hclStringMap .NodeTaggedAddresses 3}}
+    node_meta = {{hclStringMap .NodeMeta 3}}
+  }{{if (ne $i $last)}},{{- end}}
   {{- end}}
-{{- end}}
-    ]
-  },
-  "web" : {
-    name        = "web"
-    description = "web service"
-    addresses = [
+{{- end}},
 {{- with $srv := service "web@dc1"}}
   {{- $last := len $srv | subtract 1}}
-    {{- range $i := loop $last}}
-      {{- with index $srv $i}}
-      {
-        address = "{{.Address}}"
-        port    = {{.Port}}
-      },{{end}}
-    {{- end}}
-  {{- with index $srv $last}}
-      {
-        address = "{{.Address}}"
-        port    = {{.Port}}
-      }
+  {{- range $i, $s := $srv}}
+  "{{.ID}}" : {
+    id              = "{{.ID}}"
+    name            = "{{.Name}}"
+    address         = "{{.Address}}"
+    port            = {{.Port}}
+    meta            = {{hclStringMap .ServiceMeta 3}}
+    tags            = {{hclStringList .Tags}}
+    namespace       = {{hclString .Namespace}}
+    status          = "{{.Status}}"
+    node            = "{{.Node}}"
+    node_id         = "{{.NodeID}}"
+    node_address    = "{{.NodeAddress}}"
+    node_datacenter = "{{.NodeDatacenter}}"
+    node_tagged_addresses = {{hclStringMap .NodeTaggedAddresses 3}}
+    node_meta = {{hclStringMap .NodeMeta 3}}
+  }{{if (ne $i $last)}},{{- end}}
   {{- end}}
 {{- end}}
-    ]
-  }
 }
