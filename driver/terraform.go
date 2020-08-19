@@ -133,7 +133,7 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 
 // InitWorker given a task, identifies a unit of work and creates a worker for it.
 // Worker is added to the driver. Currently assumes a task has a single instance of
-// a provider and is therefore equivalanet to a unit of work.
+// a provider and is therefore equivalent to a unit of work.
 // TODO: multiple provider instances
 func (tf *Terraform) InitWorker(task Task) error {
 	client, err := tf.initClient(task)
@@ -172,7 +172,7 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 			LogLevel:   tf.logLevel,
 			ExecPath:   tf.path,
 			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
-			Workspace:  "",
+			Workspace:  task.Name,
 		})
 	}
 
@@ -202,6 +202,7 @@ func (tf *Terraform) ApplyWork(ctx context.Context) error {
 	var errs []string
 
 	for _, r := range tf.workers {
+		log.Printf("[TRACE] (driver.terraform) apply work for worker %s", r.client.GoString())
 		if err := r.client.Apply(ctx); err != nil {
 			log.Printf("[ERR] (driver.terraform) apply work %s error: %s", r.client.GoString(), err)
 			errs = append(errs, err.Error())

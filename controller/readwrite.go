@@ -125,13 +125,13 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 	log.Printf("[INFO] (controller.readwrite) init work")
 	if err := rw.driver.InitWork(ctx); err != nil {
-		log.Printf("[ERR] (controller.readwrite) could not do terraform init: %s", err)
+		log.Printf("[ERR] (controller.readwrite) could not initialize: %s", err)
 		return err
 	}
 
 	log.Printf("[INFO] (controller.readwrite) apply work")
 	if err := rw.driver.ApplyWork(ctx); err != nil {
-		log.Printf("[ERR] (controller.readwrite) could not do terraform apply: %s", err)
+		log.Printf("[ERR] (controller.readwrite) could not apply: %s", err)
 		return err
 	}
 
