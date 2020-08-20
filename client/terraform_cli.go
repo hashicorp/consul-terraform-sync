@@ -115,7 +115,7 @@ func (t *TerraformCLI) workspaceNew(ctx context.Context) error {
 			log.Printf("[DEBUG] (client.terraformcli) workspace already exists: '%s'", t.workspace)
 			return nil
 		}
-		return fmt.Errorf("Error creating workspace %s: %s", t.workspace, errStr)
+		return fmt.Errorf("Error creating workspace %s: %s: %s", t.workspace, err.Error(), errStr)
 	}
 	return nil
 }

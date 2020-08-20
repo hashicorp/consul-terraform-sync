@@ -90,9 +90,6 @@ func TestNewTerraformCLI(t *testing.T) {
 				Workspace:  "my-workspace",
 			},
 		},
-		// No happy path unit test possible because it requires the
-		// terraform binary to exist. This would need to be tested
-		// with an integration test
 	}
 
 	for _, tc := range cases {

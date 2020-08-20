@@ -30,7 +30,9 @@ const resourcesDir = "resources"
 const configFile = "config.hcl"
 
 func TestE2EBasic(t *testing.T) {
-	t.Parallel()
+	// Note: no t.Parallel() for this particular test. Choosing this test to run 'first'
+	// since e2e test running simultaneously will download Terraform into shared
+	// directory causes some flakiness. All other e2e tests, should have t.Parallel()
 
 	srv, err := newTestConsulServer(t)
 	require.NoError(t, err, "failed to start consul server")
