@@ -1,10 +1,13 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -24,6 +27,7 @@ type TerraformCLI struct {
 	logLevel   string
 	workingDir string
 	workspace  string
+	execPath   string
 }
 
 // TerraformCLIConfig configures the Terraform client
@@ -46,15 +50,11 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	if err != nil {
 		return nil, err
 	}
-	if config.Workspace != "" {
-		env := make(map[string]string)
-		env[workspaceEnv] = config.Workspace
-		tf.SetEnv(env)
-	}
 
 	client := &TerraformCLI{
 		tf:         tf,
 		logLevel:   config.LogLevel,
+		execPath:   tfPath,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
 	}
@@ -65,18 +65,59 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 
 // Init executes the cli command a `terraform init`
 func (t *TerraformCLI) Init(ctx context.Context) error {
-	return t.tf.Init(ctx)
+	if err := t.tf.Init(ctx); err != nil {
+		return err
+	}
+	return t.workspaceNew(ctx)
 }
 
 // Apply executes the cli command `terraform apply` for a given workspace
 func (t *TerraformCLI) Apply(ctx context.Context) error {
+
+	// Set the workspace in the environment
+	env := make(map[string]string)
+	env[workspaceEnv] = t.workspace
+	t.tf.SetEnv(env)
+
 	tfvarFile := strings.TrimRight(tftmpl.TFVarsTmplFilename, ".tmpl")
 	return t.tf.Apply(ctx, tfexec.VarFile(tfvarFile))
 }
 
-// Plan executes the cli command a `terraform plan` for a given workspace
+// Plan executes the cli command `terraform plan` for a given workspace
 func (t *TerraformCLI) Plan(ctx context.Context) error {
 	return t.tf.Plan(ctx)
+}
+
+// workspaceNew make the `terraform workspace new` cli call. At the time of writing
+// terraform-exec package does not support this cli command yet:
+// https://github.com/hashicorp/terraform-exec/issues/4
+// TODO: revisit this and replace with terraform-exec when ready
+// and update TestTerraformCLIInit which is currently being skipped
+func (t *TerraformCLI) workspaceNew(ctx context.Context) error {
+	// the args/env vars mimic the default ones set by terraform-exec
+	args := []string{"workspace", "new", t.workspace, "-no-color"}
+	workspaceEnv := fmt.Sprintf("%s=%s", workspaceEnv, t.workspace)
+	env := []string{workspaceEnv, "TF_IN_AUTOMATION=1", "TF_LOG=", "CHECKPOINT_DISABLE="}
+
+	cmd := exec.CommandContext(ctx, t.execPath, args...)
+	cmd.Env = env
+	cmd.Dir = t.workingDir
+
+	// log out stdout, capture stderr in buffer
+	cmd.Stdout = os.Stdout
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+		errStr := string(stderr.Bytes())
+		if strings.Contains(errStr, "already exists") {
+			log.Printf("[DEBUG] (client.terraformcli) workspace already exists: '%s'", t.workspace)
+			return nil
+		}
+		return fmt.Errorf("Error creating workspace %s: %s", t.workspace, errStr)
+	}
+	return nil
 }
 
 // GoString defines the printable version of this struct.

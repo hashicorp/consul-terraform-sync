@@ -6,13 +6,12 @@ require (
 	github.com/hashicorp/consul v1.8.0
 	github.com/hashicorp/consul/sdk v0.5.0
 	github.com/hashicorp/go-syslog v1.0.0
-	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/hashicorp/hcat v0.0.0-20200819213737-8df9f16d7129
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/hcl/v2 v2.6.0
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/terraform v0.12.29
-	github.com/hashicorp/terraform-exec v0.3.0
+	github.com/hashicorp/terraform-exec v0.6.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.5.1
