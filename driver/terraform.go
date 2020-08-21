@@ -73,7 +73,7 @@ func NewTerraform(config *TerraformConfig) *Terraform {
 // installed to the configured path.
 func (tf *Terraform) Init() error {
 	if !terraformInstalled(tf.path) {
-		log.Printf("[INFO] (driver.terraform) installing terraform (%s) to path %s", tf.version, tf.path)
+		log.Printf("[INFO] (driver.terraform) installing terraform (%s) to path '%s'", tf.version, tf.path)
 		if err := tf.install(); err != nil {
 			log.Printf("[ERR] (driver.terraform) error installing terraform: %s", err)
 			return err

@@ -1,6 +1,6 @@
 version: 2.1
 jobs:
-  build:
+  unit_integration_tests:
     environment:
       GO111MODULE: "on"
       CONSUL_VERSION: 1.8.0
@@ -17,9 +17,37 @@ jobs:
           unzip consul.zip
           sudo cp consul /usr/local/bin/
       - run: |
-          make test-setup-e2e
-          make test-all
+          make test-integration
       - save_cache:
           key: ct-modcache-v1-{{ checksum "go.mod" }}
           paths:
           - /go/pkg/mod
+  e2e_tests:
+    environment:
+      GO111MODULE: "on"
+      CONSUL_VERSION: 1.8.0
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - ct-modcache-v1-{{ checksum "go.mod" }}
+      - run: |
+          curl -sLo consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
+          unzip consul.zip
+          sudo cp consul /usr/local/bin/
+      - run: |
+          make test-e2e
+      - save_cache:
+          key: ct-modcache-v1-{{ checksum "go.mod" }}
+          paths:
+          - /go/pkg/mod
+
+workflows:
+  version: 2
+  build-test:
+    jobs:
+      - unit_integration_tests
+      - e2e_tests
