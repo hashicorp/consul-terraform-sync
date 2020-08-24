@@ -39,7 +39,7 @@ jobs:
           unzip consul.zip
           sudo cp consul /usr/local/bin/
       - run: |
-          make test-e2e
+          make test-e2e-cirecleci
       - save_cache:
           key: ct-modcache-v1-{{ checksum "go.mod" }}
           paths:

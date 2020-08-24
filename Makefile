@@ -45,15 +45,18 @@ test-integration:
 	@go test -count=1 -timeout=60s -tags=integration -cover ./... ${TESTARGS}
 .PHONY: test-all
 
+# test-e2e runs e2e tests
+test-e2e:
+	@echo "==> Testing ${NAME} (e2e)"
+	@go test ./e2e -count=1 -timeout=60s -tags=e2e ./... ${TESTARGS}
+.PHONY: test-e2e
+
 # test-setup-e2e sets up the nia binary and permissions to run consul-nia
 # cli in circle
 test-setup-e2e: dev
 	sudo mv ${GOPATH}/bin/consul-nia /usr/local/bin/consul-nia
 .PHONY: test-setup-e2e
 
-# test-e2e runs e2e tests
-test-e2e: test-setup-e2e
-	@echo "==> Testing ${NAME} (e2e)"
-	@go test ./e2e -count=1 -timeout=60s -tags=e2e ./... ${TESTARGS}
-.PHONY: test-e2e
-
+# test-e2e-cirecleci does circleci setup and then runs the e2e tests
+test-e2e-cirecleci: test-setup-e2e test-e2e
+.PHONY: test-e2e-cirecleci
