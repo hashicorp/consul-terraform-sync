@@ -1,6 +1,9 @@
 package e2e
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 const (
 	dbTaskName  = "e2e_task_api_db"
@@ -28,14 +31,18 @@ consul {
 }
 
 func terraformBlock(dir string) string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
 	return fmt.Sprintf(`
 driver "terraform" {
 	skip_verify = true
-	path = "/usr/local/bin/"
+	path = "%s"
 	data_dir = "%s"
 	working_dir = "%s"
 }
-`, dir, dir)
+`, cwd, dir, dir)
 }
 
 func dbTask() string {

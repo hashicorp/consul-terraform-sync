@@ -60,3 +60,8 @@ test-setup-e2e: dev
 # test-e2e-cirecleci does circleci setup and then runs the e2e tests
 test-e2e-cirecleci: test-setup-e2e test-e2e
 .PHONY: test-e2e-cirecleci
+
+# delete any cruft
+clean:
+	rm -f ./e2e/terraform
+.PHONY: clean
