@@ -75,7 +75,7 @@ func TestE2EBasic(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, status)
 
-	adminRemoveDir(tempDir)
+	removeDir(tempDir)
 }
 
 func TestE2ERestartConsulNIA(t *testing.T) {
@@ -101,7 +101,7 @@ func TestE2ERestartConsulNIA(t *testing.T) {
 	err = runConsulNIA(configPath)
 	require.NoError(t, err)
 
-	adminRemoveDir(tempDir)
+	removeDir(tempDir)
 }
 
 func newTestConsulServer(t *testing.T) (*testutil.TestServer, error) {
@@ -129,7 +129,7 @@ func makeTempDir(tempDir string) error {
 	_, err := os.Stat(tempDir)
 	if !os.IsNotExist(err) {
 		log.Printf("[WARN] temp dir %s was not cleared out after last test. Deleting.", tempDir)
-		if err = adminRemoveDir(tempDir); err != nil {
+		if err = removeDir(tempDir); err != nil {
 			return err
 		}
 	}
@@ -148,19 +148,15 @@ func makeConfig(configPath, contents string) error {
 }
 
 func runConsulNIA(configPath string) error {
-	cmd := exec.Command("sudo", "consul-nia", fmt.Sprintf("--config-file=%s", configPath))
+	cmd := exec.Command("consul-nia", fmt.Sprintf("--config-file=%s", configPath))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
-// adminRemoveDir removes temporary directory created for a test. consul-nia
-// (run in sudo mode) creates sub-directories with admin. need 'sudo' to remove.
-func adminRemoveDir(tempDir string) error {
-	cmd := exec.Command("sudo", "rm", "-r", tempDir)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+// removeDir removes temporary directory created for a test
+func removeDir(tempDir string) error {
+	return os.RemoveAll(tempDir)
 }
 
 func checkStateFile(consulAddr, taskname string) (int, error) {
