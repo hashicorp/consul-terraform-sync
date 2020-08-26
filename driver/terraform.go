@@ -144,7 +144,7 @@ func (tf *Terraform) InitWorker(task Task) error {
 
 	tf.workers = append(tf.workers, &worker{
 		client: client,
-		work:   &work{task},
+		work:   &work{task: task},
 	})
 	return nil
 }
@@ -179,39 +179,66 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 	return c, err
 }
 
-// InitWork initializes the client for all of the driver's workers
+// InitWork initializes the client for all of the driver's workers concurrently
 func (tf *Terraform) InitWork(ctx context.Context) error {
-	var errs []string
+	resultCh := make(chan error)
 
-	for _, r := range tf.workers {
-		if err := r.client.Init(ctx); err != nil {
-			log.Printf("[ERR] (driver.terraform) init work %s error: %s", r.client.GoString(), err)
+	for _, w := range tf.workers {
+		go func(ctx context.Context, w *worker) {
+			log.Printf("[TRACE] (driver.terraform) go init for work: %v", w.work)
+			resultCh <- w.client.Init(ctx)
+		}(ctx, w)
+	}
+
+	count := 0
+	var errs []string
+	for err := range resultCh {
+		count++
+		log.Printf("[TRACE] (driver.terraform) init receive '%s'. count %d / %d", err, count, len(tf.workers))
+		if err != nil {
 			errs = append(errs, err.Error())
+		}
+		if count == len(tf.workers) {
+			break
 		}
 	}
 
 	if len(errs) > 0 {
-		// TODO: handle errors better when we do concurrency
-		return fmt.Errorf(strings.Join(errs, "\n"))
+		delim := "\n * "
+		return fmt.Errorf("Received %d errors from init-ing %d workers:%s%s",
+			len(errs), len(tf.workers), delim, strings.Join(errs, delim))
 	}
 	return nil
 }
 
-// ApplyWork applies changes for all of the driver's workers
+// ApplyWork applies changes for all of the driver's workers concurrently
 func (tf *Terraform) ApplyWork(ctx context.Context) error {
-	var errs []string
+	resultCh := make(chan error)
 
-	for _, r := range tf.workers {
-		log.Printf("[TRACE] (driver.terraform) apply work for worker %s", r.client.GoString())
-		if err := r.client.Apply(ctx); err != nil {
-			log.Printf("[ERR] (driver.terraform) apply work %s error: %s", r.client.GoString(), err)
+	for _, w := range tf.workers {
+		go func(ctx context.Context, w *worker) {
+			log.Printf("[TRACE] (driver.terraform) go apply for work: %v", w.work)
+			resultCh <- w.client.Apply(ctx)
+		}(ctx, w)
+	}
+
+	count := 0
+	var errs []string
+	for err := range resultCh {
+		count++
+		log.Printf("[TRACE] (driver.terraform) apply receive '%s'. count %d / %d", err, count, len(tf.workers))
+		if err != nil {
 			errs = append(errs, err.Error())
+		}
+		if count == len(tf.workers) {
+			break
 		}
 	}
 
 	if len(errs) > 0 {
-		// TODO: handle errors better when we do concurrency
-		return fmt.Errorf(strings.Join(errs, "\n"))
+		delim := "\n * "
+		return fmt.Errorf("Received %d errors from applying %d workers:%s%s",
+			len(errs), len(tf.workers), delim, strings.Join(errs, delim))
 	}
 	return nil
 }

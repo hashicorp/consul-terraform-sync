@@ -1,6 +1,11 @@
 package driver
 
-import "github.com/hashicorp/consul-nia/client"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/hashicorp/consul-nia/client"
+)
 
 type Service struct {
 	Datacenter  string
@@ -32,5 +37,33 @@ type worker struct {
 // or sequentially amongst others. Currently this an individual task. Instances not supported yet.
 type work struct {
 	task Task
+	desc string
 	// instance
+}
+
+// String returns brief description of work
+func (w *work) String() string {
+	if w == nil {
+		return "nil"
+	}
+
+	if len(w.desc) > 0 {
+		return w.desc
+	}
+
+	providers := make([]string, len(w.task.Providers))
+	for ix, p := range w.task.Providers {
+		for k := range p {
+			providers[ix] = k
+			break // 1 map entry per provider
+		}
+	}
+
+	w.desc = fmt.Sprintf("TaskName: '%s', "+
+		"TaskProviders: '%s'",
+		w.task.Name,
+		strings.Join(providers, ", "),
+	)
+
+	return w.desc
 }
