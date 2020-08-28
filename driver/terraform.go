@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul-nia/client"
+	mocks "github.com/hashicorp/consul-nia/mocks/client"
 	"github.com/hashicorp/consul-nia/templates/tftmpl"
 )
 
@@ -165,7 +166,7 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 		})
 	case testClient:
 		log.Printf("[TRACE] (driver.terraform) creating mock client for task '%s'", task.Name)
-		c = client.NewMockClient()
+		c = new(mocks.Client)
 	default:
 		log.Printf("[TRACE] (driver.terraform) creating terraform cli client for task '%s'", task.Name)
 		c, err = client.NewTerraformCLI(&client.TerraformCLIConfig{

@@ -2,6 +2,8 @@ package client
 
 import "context"
 
+//go:generate mockery --name=Client --filename=client.go  --output=../mocks/client
+
 // Client describes the interface for a driver's client that interacts
 // with network infrastructure.
 type Client interface {
