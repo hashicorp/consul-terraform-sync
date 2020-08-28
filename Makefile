@@ -65,3 +65,10 @@ test-e2e-cirecleci: test-setup-e2e test-e2e
 clean:
 	rm -f ./e2e/terraform
 .PHONY: clean
+
+# generate generates code for mockery annotations
+# requires installing https://github.com/vektra/mockery
+generate:
+	go generate ./...
+.PHONY: generate
+

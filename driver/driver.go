@@ -2,6 +2,8 @@ package driver
 
 import "context"
 
+//go:generate mockery --name=Driver --filename=driver.go  --output=../mocks/driver
+
 // Driver describes the interface for using an NIA driver to carry out changes
 // downstream to update network infrastructure.
 type Driver interface {

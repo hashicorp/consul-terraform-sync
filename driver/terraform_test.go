@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hashicorp/consul-nia/client"
+	mocks "github.com/hashicorp/consul-nia/mocks/client"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -124,14 +124,8 @@ func TestInitWork(t *testing.T) {
 			// create workers for the driver
 			workers := make([]*worker, len(tc.errs))
 			for ix, err := range tc.errs {
-
-				// set up mock client to return err
-				errs := make(chan error, 1)
-				errs <- err
-				c := &client.MockClient{
-					InitFunc: func() error { return <-errs },
-				}
-
+				c := new(mocks.Client)
+				c.On("Init", ctx).Return(err)
 				workers[ix] = &worker{
 					client: c,
 					work:   &work{},
@@ -215,15 +209,8 @@ func TestApplyWork(t *testing.T) {
 			// create workers for the driver
 			workers := make([]*worker, len(tc.errs))
 			for ix, err := range tc.errs {
-
-				// set up mock client to return err
-				errs := make(chan error, 1)
-				errs <- err
-
-				c := &client.MockClient{
-					ApplyFunc: func() error { return <-errs },
-				}
-
+				c := new(mocks.Client)
+				c.On("Apply", ctx).Return(err)
 				workers[ix] = &worker{
 					client: c,
 					work:   &work{},

@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/consul-nia/config"
-	"github.com/hashicorp/consul-nia/driver"
+	mocks "github.com/hashicorp/consul-nia/mocks/controller"
+	mocksD "github.com/hashicorp/consul-nia/mocks/driver"
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestNewReadWrite(t *testing.T) {
@@ -52,61 +53,56 @@ func TestReadWriteInit(t *testing.T) {
 	conf := singleTaskConfig()
 
 	cases := []struct {
-		name        string
-		expectError bool
-		mockDriver  *driver.MockDriver
-		fileReader  func(string) ([]byte, error)
-		config      *config.Config
+		name          string
+		expectError   bool
+		initErr       error
+		initTaskErr   error
+		initWorkerErr error
+		fileReader    func(string) ([]byte, error)
+		config        *config.Config
 	}{
 		{
 			"error on driver.Init()",
 			true,
-			&driver.MockDriver{
-				InitFunc: func() error { return errors.New("error on driver.Init()") },
-			},
+			errors.New("error on driver.Init()"),
+			nil,
+			nil,
 			func(string) ([]byte, error) { return []byte{}, nil },
 			conf,
 		},
 		{
 			"error on driver.InitTask()",
 			true,
-			&driver.MockDriver{
-				InitFunc:     func() error { return nil },
-				InitTaskFunc: func(driver.Task, bool) error { return errors.New("error on driver.InitTask()") },
-			},
+			nil,
+			errors.New("error on driver.InitTask()"),
+			nil,
 			func(string) ([]byte, error) { return []byte{}, nil },
 			conf,
 		},
 		{
 			"error on driver.InitWorker()",
 			true,
-			&driver.MockDriver{
-				InitFunc:       func() error { return nil },
-				InitTaskFunc:   func(driver.Task, bool) error { return nil },
-				InitWorkerFunc: func(driver.Task) error { return errors.New("error on driver.InitWorker()") },
-			},
+			nil,
+			nil,
+			errors.New("error on driver.InitWorker()"),
 			func(string) ([]byte, error) { return []byte{}, nil },
 			conf,
 		},
 		{
 			"error on newTaskTemplates()",
 			true,
-			&driver.MockDriver{
-				InitFunc:       func() error { return nil },
-				InitTaskFunc:   func(driver.Task, bool) error { return nil },
-				InitWorkerFunc: func(driver.Task) error { return nil },
-			},
+			nil,
+			nil,
+			nil,
 			func(string) ([]byte, error) { return []byte{}, errors.New("error on newTaskTemplates()") },
 			conf,
 		},
 		{
 			"happy path",
 			false,
-			&driver.MockDriver{
-				InitFunc:       func() error { return nil },
-				InitTaskFunc:   func(driver.Task, bool) error { return nil },
-				InitWorkerFunc: func(driver.Task) error { return nil },
-			},
+			nil,
+			nil,
+			nil,
 			func(string) ([]byte, error) { return []byte{}, nil },
 			conf,
 		},
@@ -114,8 +110,13 @@ func TestReadWriteInit(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			d := new(mocksD.Driver)
+			d.On("Init").Return(tc.initErr).Once()
+			d.On("InitTask", mock.Anything, mock.Anything).Return(tc.initTaskErr).Once()
+			d.On("InitWorker", mock.Anything).Return(tc.initWorkerErr).Once()
+
 			controller := ReadWrite{
-				driver:     tc.mockDriver,
+				driver:     d,
 				conf:       tc.config,
 				fileReader: tc.fileReader,
 			}
@@ -136,88 +137,91 @@ func TestReadWriteRun(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name         string
-		expectError  bool
-		mockDriver   *driver.MockDriver
-		mockResolver *mockResolver
-		mockTemplate *mockTemplate
-		mockWatcher  *mockWatcher
-		config       *config.Config
+		name              string
+		expectError       bool
+		initWorkErr       error
+		applyWorkErr      error
+		resolverRunErr    error
+		templateRenderErr error
+		watcherWaitErr    error
+		config            *config.Config
 	}{
 		{
 			"error on resolver.Run()",
 			true,
-			driver.NewMockDriver(),
-			&mockResolver{
-				RunFunc: func(hcat.Templater, hcat.Watcherer) (hcat.ResolveEvent, error) {
-					return hcat.ResolveEvent{}, errors.New("error on resolver.Run()")
-				},
-			},
-			newMockTemplate(),
-			newMockWatcher(),
+			nil,
+			nil,
+			errors.New("error on resolver.Run()"),
+			nil,
+			nil,
 			singleTaskConfig(),
 		},
 		{
 			"error on watcher.Wait()",
 			true,
-			driver.NewMockDriver(),
-			newMockResolver(),
-			&mockTemplate{
-				RenderFunc: func([]byte) (hcat.RenderResult, error) {
-					return hcat.RenderResult{}, errors.New("error on template.Render()")
-				},
-			},
-			&mockWatcher{
-				WaitFunc: func(time.Duration) error { return errors.New("error on watcher.Wait()") },
-			},
+			nil,
+			nil,
+			nil,
+			errors.New("error on template.Render()"),
+			errors.New("error on watcher.Wait()"),
 			singleTaskConfig(),
 		},
 		{
 			"error on driver.InitWork()",
 			true,
-			&driver.MockDriver{
-				InitWorkFunc: func() error { return errors.New("error on driver.InitWork()") },
-			},
-			newMockResolver(),
-			newMockTemplate(),
-			newMockWatcher(),
+			errors.New("error on driver.InitWork()"),
+			nil,
+			nil,
+			nil,
+			nil,
 			singleTaskConfig(),
 		},
 		{
 			"error on driver.ApplyWork()",
 			true,
-			&driver.MockDriver{
-				InitWorkFunc:  func() error { return nil },
-				ApplyWorkFunc: func() error { return errors.New("error on driver.ApplyWork()") },
-			},
-			newMockResolver(),
-			newMockTemplate(),
-			newMockWatcher(),
+			nil,
+			errors.New("error on driver.ApplyWork()"),
+			nil,
+			nil,
+			nil,
 			singleTaskConfig(),
 		},
 		{
 			"happy path",
 			false,
-			driver.NewMockDriver(),
-			newMockResolver(),
-			newMockTemplate(),
-			newMockWatcher(),
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
 			singleTaskConfig(),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			tmpl := new(mocks.Template)
+			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.templateRenderErr).Once()
 			templates := make(map[string]template)
-			templates["test template"] = tc.mockTemplate
+			templates["test template"] = tmpl
+
+			r := new(mocks.Resolver)
+			r.On("Run", mock.Anything, mock.Anything).Return(hcat.ResolveEvent{Complete: true}, tc.resolverRunErr)
+
+			w := new(mocks.Watcher)
+			w.On("Wait", mock.Anything).Return(tc.watcherWaitErr)
+
+			d := new(mocksD.Driver)
+			d.On("InitWork", mock.Anything).Return(tc.initWorkErr)
+			d.On("ApplyWork", mock.Anything).Return(tc.applyWorkErr)
 
 			controller := ReadWrite{
-				driver:     tc.mockDriver,
+				driver:     d,
 				conf:       tc.config,
 				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
 				templates:  templates,
-				watcher:    tc.mockWatcher,
-				resolver:   tc.mockResolver,
+				watcher:    w,
+				resolver:   r,
 			}
 
 			ctx := context.Background()
