@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul-nia/config"
+	"github.com/hashicorp/consul-nia/driver"
 	mocks "github.com/hashicorp/consul-nia/mocks/controller"
 	mocksD "github.com/hashicorp/consul-nia/mocks/driver"
 	"github.com/hashicorp/hcat"
@@ -116,7 +117,8 @@ func TestReadWriteInit(t *testing.T) {
 			d.On("InitWorker", mock.Anything).Return(tc.initWorkerErr).Once()
 
 			controller := ReadWrite{
-				driver:     d,
+				newDriver:  func(*config.Config) driver.Driver { return d },
+				drivers:    make(map[string]driver.Driver),
 				conf:       tc.config,
 				fileReader: tc.fileReader,
 			}
@@ -200,10 +202,12 @@ func TestReadWriteRun(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			taskName := "test task"
+
 			tmpl := new(mocks.Template)
 			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.templateRenderErr).Once()
 			templates := make(map[string]template)
-			templates["test template"] = tmpl
+			templates[taskName] = tmpl
 
 			r := new(mocks.Resolver)
 			r.On("Run", mock.Anything, mock.Anything).Return(hcat.ResolveEvent{Complete: true}, tc.resolverRunErr)
@@ -216,12 +220,14 @@ func TestReadWriteRun(t *testing.T) {
 			d.On("ApplyWork", mock.Anything).Return(tc.applyWorkErr)
 
 			controller := ReadWrite{
-				driver:     d,
 				conf:       tc.config,
 				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
-				templates:  templates,
+				templates:  map[string]template{taskName: tmpl},
 				watcher:    w,
 				resolver:   r,
+				drivers: map[string]driver.Driver{
+					taskName: d,
+				},
 			}
 
 			ctx := context.Background()
