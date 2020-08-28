@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 
 	mocks "github.com/hashicorp/consul-nia/mocks/client"
@@ -53,6 +54,7 @@ func TestInitWorker(t *testing.T) {
 				workingDir: "test/working/dir",
 				path:       "exec/path",
 				clientType: tc.clientType,
+				workers:    make(map[string]*worker),
 			}
 
 			for _, task := range tc.tasks {
@@ -122,11 +124,12 @@ func TestInitWork(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// create workers for the driver
-			workers := make([]*worker, len(tc.errs))
+			workers := make(map[string]*worker, len(tc.errs))
 			for ix, err := range tc.errs {
 				c := new(mocks.Client)
 				c.On("Init", ctx).Return(err)
-				workers[ix] = &worker{
+				is := strconv.Itoa(ix)
+				workers[is] = &worker{
 					client: c,
 					work:   &work{},
 				}
@@ -207,11 +210,12 @@ func TestApplyWork(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// create workers for the driver
-			workers := make([]*worker, len(tc.errs))
+			workers := make(map[string]*worker, len(tc.errs))
 			for ix, err := range tc.errs {
 				c := new(mocks.Client)
 				c.On("Apply", ctx).Return(err)
-				workers[ix] = &worker{
+				is := strconv.Itoa(ix)
+				workers[is] = &worker{
 					client: c,
 					work:   &work{},
 				}

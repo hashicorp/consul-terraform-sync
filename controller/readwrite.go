@@ -109,6 +109,17 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 				log.Printf("[DEBUG] %q rendered: %+v", taskName, rendered)
 				results = append(results, taskName)
+				log.Printf("[INFO] (controller.readwrite) init work")
+				if err := rw.driver.InitTaskWork(taskName, ctx); err != nil {
+					log.Printf("[ERR] (controller.readwrite) could not initialize: %s", err)
+					return err
+				}
+
+				log.Printf("[INFO] (controller.readwrite) apply work")
+				if err := rw.driver.ApplyTaskWork(taskName, ctx); err != nil {
+					log.Printf("[ERR] (controller.readwrite) could not apply: %s", err)
+					return err
+				}
 			}
 		}
 		if len(results) == len(rw.templates) {
@@ -121,18 +132,6 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 			log.Printf("[ERR] templates could not render: %s", err)
 			return err
 		}
-	}
-
-	log.Printf("[INFO] (controller.readwrite) init work")
-	if err := rw.driver.InitWork(ctx); err != nil {
-		log.Printf("[ERR] (controller.readwrite) could not initialize: %s", err)
-		return err
-	}
-
-	log.Printf("[INFO] (controller.readwrite) apply work")
-	if err := rw.driver.ApplyWork(ctx); err != nil {
-		log.Printf("[ERR] (controller.readwrite) could not apply: %s", err)
-		return err
 	}
 
 	return nil

@@ -30,7 +30,7 @@ type Terraform struct {
 	dataDir           string
 	workingDir        string
 	skipVerify        bool
-	workers           []*worker
+	workers           map[string]*worker // task-name -> worker
 	backend           map[string]interface{}
 	requiredProviders map[string]interface{}
 
@@ -60,6 +60,7 @@ func NewTerraform(config *TerraformConfig) *Terraform {
 		dataDir:           config.DataDir,
 		workingDir:        config.WorkingDir,
 		skipVerify:        config.SkipVerify,
+		workers:           make(map[string]*worker),
 		backend:           config.Backend,
 		requiredProviders: config.RequiredProviders,
 
@@ -143,10 +144,10 @@ func (tf *Terraform) InitWorker(task Task) error {
 		return err
 	}
 
-	tf.workers = append(tf.workers, &worker{
+	tf.workers[task.Name] = &worker{
 		client: client,
 		work:   &work{task: task},
-	})
+	}
 	return nil
 }
 
@@ -180,6 +181,15 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 	return c, err
 }
 
+// InitWork initializes a single task/workers client
+func (tf *Terraform) InitTaskWork(taskName string, ctx context.Context) error {
+	if w, ok := tf.workers[taskName]; ok {
+		log.Printf("[TRACE] (driver.terraform) go init for work: %v", w.work)
+		return w.client.Init(ctx)
+	}
+	return fmt.Errorf("No task found with name: %s", taskName)
+}
+
 // InitWork initializes the client for all of the driver's workers concurrently
 func (tf *Terraform) InitWork(ctx context.Context) error {
 	resultCh := make(chan error)
@@ -210,6 +220,15 @@ func (tf *Terraform) InitWork(ctx context.Context) error {
 			len(errs), len(tf.workers), delim, strings.Join(errs, delim))
 	}
 	return nil
+}
+
+// ApplyTaskWork applies changes for all of the driver's workers concurrently
+func (tf *Terraform) ApplyTaskWork(taskName string, ctx context.Context) error {
+	if w, ok := tf.workers[taskName]; ok {
+		log.Printf("[TRACE] (driver.terraform) go apply for work: %v", w.work)
+		return w.client.Apply(ctx)
+	}
+	return fmt.Errorf("No task found with name: %s", taskName)
 }
 
 // ApplyWork applies changes for all of the driver's workers concurrently

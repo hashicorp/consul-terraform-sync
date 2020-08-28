@@ -212,8 +212,8 @@ func TestReadWriteRun(t *testing.T) {
 			w.On("Wait", mock.Anything).Return(tc.watcherWaitErr)
 
 			d := new(mocksD.Driver)
-			d.On("InitWork", mock.Anything).Return(tc.initWorkErr)
-			d.On("ApplyWork", mock.Anything).Return(tc.applyWorkErr)
+			d.On("InitTaskWork", mock.Anything, mock.Anything).Return(tc.initWorkErr)
+			d.On("ApplyTaskWork", mock.Anything, mock.Anything).Return(tc.applyWorkErr)
 
 			controller := ReadWrite{
 				driver:     d,

@@ -14,6 +14,20 @@ type Driver struct {
 	mock.Mock
 }
 
+// ApplyTaskWork provides a mock function with given fields: taskName, ctx
+func (_m *Driver) ApplyTaskWork(taskName string, ctx context.Context) error {
+	ret := _m.Called(taskName, ctx)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, context.Context) error); ok {
+		r0 = rf(taskName, ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ApplyWork provides a mock function with given fields: ctx
 func (_m *Driver) ApplyWork(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -49,6 +63,20 @@ func (_m *Driver) InitTask(task driver.Task, force bool) error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func(driver.Task, bool) error); ok {
 		r0 = rf(task, force)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// InitTaskWork provides a mock function with given fields: taskName, ctx
+func (_m *Driver) InitTaskWork(taskName string, ctx context.Context) error {
+	ret := _m.Called(taskName, ctx)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, context.Context) error); ok {
+		r0 = rf(taskName, ctx)
 	} else {
 		r0 = ret.Error(0)
 	}
