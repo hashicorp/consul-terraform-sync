@@ -1,13 +1,10 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"log"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -66,12 +63,22 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	return client, nil
 }
 
-// Init executes the cli command a `terraform init`
+// Init initializes by executing the cli command `terraform init` and
+// `terraform workspace new <name>`
 func (t *TerraformCLI) Init(ctx context.Context) error {
 	if err := t.tf.Init(ctx); err != nil {
 		return err
 	}
-	return t.workspaceNew(ctx)
+
+	if err := t.tf.WorkspaceNew(ctx, t.workspace); err != nil {
+		var wsErr *tfexec.ErrWorkspaceExists
+		if errors.As(err, &wsErr) {
+			log.Printf("[DEBUG] (client.terraformcli) workspace already exists: '%s'", t.workspace)
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 // Apply executes the cli command `terraform apply` for a given workspace
@@ -109,38 +116,6 @@ func (t *TerraformCLI) Plan(ctx context.Context) error {
 
 	_, err := t.tf.Plan(ctx, opts...)
 	return err
-}
-
-// workspaceNew make the `terraform workspace new` cli call. At the time of writing
-// terraform-exec package does not support this cli command yet:
-// https://github.com/hashicorp/terraform-exec/issues/4
-// TODO: revisit this and replace with terraform-exec when ready
-// and update TestTerraformCLIInit which is currently being skipped
-func (t *TerraformCLI) workspaceNew(ctx context.Context) error {
-	// the args/env vars mimic the default ones set by terraform-exec
-	args := []string{"workspace", "new", t.workspace, "-no-color"}
-	workspaceEnv := fmt.Sprintf("%s=%s", workspaceEnv, t.workspace)
-	env := []string{workspaceEnv, "TF_IN_AUTOMATION=1", "TF_LOG=", "CHECKPOINT_DISABLE="}
-
-	cmd := exec.CommandContext(ctx, t.execPath, args...)
-	cmd.Env = env
-	cmd.Dir = t.workingDir
-
-	// log out stdout, capture stderr in buffer
-	cmd.Stdout = os.Stdout
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	if err != nil {
-		errStr := string(stderr.Bytes())
-		if strings.Contains(errStr, "already exists") {
-			log.Printf("[DEBUG] (client.terraformcli) workspace already exists: '%s'", t.workspace)
-			return nil
-		}
-		return fmt.Errorf("Error creating workspace %s: %s: %s", t.workspace, err.Error(), errStr)
-	}
-	return nil
 }
 
 // GoString defines the printable version of this struct.
