@@ -30,10 +30,12 @@ type TaskConfig struct {
 	// is the module path (local or remote).
 	Source *string `mapstructure:"source"`
 
-	// VariablesFile is the path to a file containing variables for the task. For
-	// the Terraform driver, these are used as Terraform input variables passed
-	// as arguments to the Terraform module.
-	VariablesFile *string `mapstructure:"variables_file"`
+	// VarFiles is a list of paths to files containing variables for the
+	// task. For the Terraform driver, these are files ending in `.tfvars` and
+	// are used as Terraform input variables passed as arguments to the Terraform
+	// module. Variables are loaded in the same order as they appear in the order
+	// of the files. Duplicate variables are overwritten with the later value.
+	VarFiles []string `mapstructure:"variable_files"`
 
 	// Version is the version of source the task will use. For the Terraform
 	// driver, this is the module version. The latest version will be used as
@@ -64,7 +66,9 @@ func (c *TaskConfig) Copy() *TaskConfig {
 
 	o.Source = StringCopy(c.Source)
 
-	o.VariablesFile = StringCopy(c.VariablesFile)
+	for _, vf := range c.VarFiles {
+		o.VarFiles = append(o.VarFiles, vf)
+	}
 
 	o.Version = StringCopy(c.Version)
 
@@ -109,8 +113,8 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Source = StringCopy(o.Source)
 	}
 
-	if o.VariablesFile != nil {
-		r.VariablesFile = StringCopy(o.VariablesFile)
+	for _, vf := range o.VarFiles {
+		r.VarFiles = append(r.VarFiles, vf)
 	}
 
 	if o.Version != nil {
@@ -146,8 +150,8 @@ func (c *TaskConfig) Finalize() {
 		c.Source = String("")
 	}
 
-	if c.VariablesFile == nil {
-		c.VariablesFile = String("")
+	if c.VarFiles == nil {
+		c.VarFiles = []string{}
 	}
 
 	if c.Version == nil {
@@ -190,7 +194,7 @@ func (c *TaskConfig) GoString() string {
 		"Providers:%s, "+
 		"Services:%s, "+
 		"Source:%s, "+
-		"VariablesFile:%s, "+
+		"VarFiles:%s, "+
 		"Version:%s"+
 		"}",
 		StringVal(c.Name),
@@ -198,7 +202,7 @@ func (c *TaskConfig) GoString() string {
 		c.Providers,
 		c.Services,
 		StringVal(c.Source),
-		StringVal(c.VariablesFile),
+		c.VarFiles,
 		StringVal(c.Version),
 	)
 }
