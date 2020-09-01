@@ -2,39 +2,29 @@ package client
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"github.com/hashicorp/terraform-exec/tfexec"
+	mocks "github.com/hashicorp/consul-nia/mocks/client"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/hashicorp/terraform-exec/tfexec"
 )
 
-var _ terraformExec = (*mockTerraformExec)(nil)
-
-type mockTerraformExec struct{}
-
-func (m *mockTerraformExec) SetEnv(env map[string]string) error {
-	return nil
-}
-
-func (m *mockTerraformExec) Init(ctx context.Context, opts ...tfexec.InitOption) error {
-	return nil
-}
-
-func (m *mockTerraformExec) Apply(ctx context.Context, opts ...tfexec.ApplyOption) error {
-	return nil
-}
-
-func (m *mockTerraformExec) Plan(ctx context.Context, opts ...tfexec.PlanOption) (bool, error) {
-	return true, nil
-}
-
-func NewTestTerraformCLI(config *TerraformCLIConfig, mock *mockTerraformExec) *TerraformCLI {
-	if mock == nil {
-		mock = &mockTerraformExec{}
+func NewTestTerraformCLI(config *TerraformCLIConfig, tfMock *mocks.TerraformExec) *TerraformCLI {
+	if tfMock == nil {
+		m := new(mocks.TerraformExec)
+		m.On("SetEnv", mock.Anything).Return(nil)
+		m.On("Init", mock.Anything).Return(nil)
+		m.On("Apply", mock.Anything, mock.Anything).Return(nil)
+		m.On("Plan", mock.Anything, mock.Anything).Return(true, nil)
+		m.On("WorkspaceNew", mock.Anything, mock.Anything).Return(nil)
+		tfMock = m
 	}
 
 	client := &TerraformCLI{
-		tf:         mock,
+		tf:         tfMock,
 		logLevel:   "INFO",
 		workingDir: "test/working/dir",
 		workspace:  "test-workspace",
@@ -108,26 +98,52 @@ func TestNewTerraformCLI(t *testing.T) {
 }
 
 func TestTerraformCLIInit(t *testing.T) {
-	t.Skip("skipping this test until terraform-exec implements WorkspaceNew")
 	t.Parallel()
 
 	cases := []struct {
 		name        string
 		expectError bool
 		config      *TerraformCLIConfig
-		tfMock      *mockTerraformExec
+		initErr     error
+		wsErr       error
 	}{
 		{
 			"happy path",
 			false,
 			&TerraformCLIConfig{},
-			&mockTerraformExec{},
+			nil,
+			nil,
+		},
+		{
+			"init err",
+			true,
+			&TerraformCLIConfig{},
+			errors.New("init error"),
+			nil,
+		},
+		{
+			"workspace-new error: unknown error",
+			true,
+			&TerraformCLIConfig{},
+			nil,
+			errors.New("workspace-new error"),
+		},
+		{
+			"workspace-new: already exists",
+			false,
+			&TerraformCLIConfig{},
+			nil,
+			&tfexec.ErrWorkspaceExists{Name: "workspace-name"},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			client := NewTestTerraformCLI(tc.config, tc.tfMock)
+			m := new(mocks.TerraformExec)
+			m.On("Init", mock.Anything).Return(tc.initErr)
+			m.On("WorkspaceNew", mock.Anything, mock.Anything).Return(tc.wsErr)
+
+			client := NewTestTerraformCLI(tc.config, m)
 			ctx := context.Background()
 			err := client.Init(ctx)
 
@@ -148,19 +164,17 @@ func TestTerraformCLIApply(t *testing.T) {
 		name        string
 		expectError bool
 		config      *TerraformCLIConfig
-		tfMock      *mockTerraformExec
 	}{
 		{
 			"happy path",
 			false,
 			&TerraformCLIConfig{},
-			&mockTerraformExec{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			client := NewTestTerraformCLI(tc.config, tc.tfMock)
+			client := NewTestTerraformCLI(tc.config, nil)
 			ctx := context.Background()
 			err := client.Apply(ctx)
 
@@ -181,19 +195,17 @@ func TestTerraformCLIPlan(t *testing.T) {
 		name        string
 		expectError bool
 		config      *TerraformCLIConfig
-		tfMock      *mockTerraformExec
 	}{
 		{
 			"happy path",
 			false,
 			&TerraformCLIConfig{},
-			&mockTerraformExec{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			client := NewTestTerraformCLI(tc.config, tc.tfMock)
+			client := NewTestTerraformCLI(tc.config, nil)
 			ctx := context.Background()
 			err := client.Plan(ctx)
 
