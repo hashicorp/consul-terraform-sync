@@ -24,8 +24,8 @@ func (m *mockTerraformExec) Apply(ctx context.Context, opts ...tfexec.ApplyOptio
 	return nil
 }
 
-func (m *mockTerraformExec) Plan(ctx context.Context, opts ...tfexec.PlanOption) error {
-	return nil
+func (m *mockTerraformExec) Plan(ctx context.Context, opts ...tfexec.PlanOption) (bool, error) {
+	return true, nil
 }
 
 func NewTestTerraformCLI(config *TerraformCLIConfig, mock *mockTerraformExec) *TerraformCLI {

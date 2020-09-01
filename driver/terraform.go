@@ -107,11 +107,19 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 	}
 
 	var vars tftmpl.Variables
-	if task.VariablesFile != "" {
-		var err error
-		vars, err = tftmpl.LoadModuleVariables(task.VariablesFile)
+	for _, vf := range task.VarFiles {
+		tfvars, err := tftmpl.LoadModuleVariables(vf)
 		if err != nil {
 			return err
+		}
+
+		if len(vars) == 0 {
+			vars = tfvars
+			continue
+		}
+
+		for k, v := range tfvars {
+			vars[k] = v
 		}
 	}
 
@@ -174,6 +182,7 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 			ExecPath:   tf.path,
 			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
 			Workspace:  task.Name,
+			VarFiles:   task.VarFiles,
 		})
 	}
 

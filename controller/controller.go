@@ -76,14 +76,14 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 		}
 
 		tasks[i] = driver.Task{
-			Description:   *t.Description,
-			Name:          *t.Name,
-			Providers:     providers,
-			ProviderInfo:  providerInfo,
-			Services:      services,
-			Source:        *t.Source,
-			VariablesFile: *t.VariablesFile,
-			Version:       *t.Version,
+			Description:  *t.Description,
+			Name:         *t.Name,
+			Providers:    providers,
+			ProviderInfo: providerInfo,
+			Services:     services,
+			Source:       *t.Source,
+			VarFiles:     t.VarFiles,
+			Version:      *t.Version,
 		}
 	}
 
