@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/hashicorp/consul-nia/tree/master.svg?style=svg)](https://circleci.com/gh/hashicorp/consul-nia/tree/master)
+
 # Consul NIA
 
 NIA stands for Network Infrastructure Automation. Consul NIA is a service-oriented tool for managing network infrastructure near real-time. Consul NIA runs as a daemon and integrates the network topology maintained by your Consul cluster with your network infrastructure to dynamically secure and connect services.
