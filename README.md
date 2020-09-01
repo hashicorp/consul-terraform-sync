@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/hashicorp/consul-nia/tree/master.svg?style=svg)](https://circleci.com/gh/hashicorp/consul-nia/tree/master)
+[![CircleCI](https://circleci.com/gh/hashicorp/consul-nia/tree/master.svg?style=svg&circle-token=a88491ffa8b02149fc483c29c6b8b91ed771f5a5)](https://circleci.com/gh/hashicorp/consul-nia/tree/master)
 
 # Consul NIA
 
