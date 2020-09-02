@@ -34,7 +34,7 @@ consul {
 }
 
 driver "terraform" {
-  log_level = "warn"
+  log = true
   path = "path"
   data_dir = "data"
   working_dir = "working"

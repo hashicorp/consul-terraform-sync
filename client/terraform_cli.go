@@ -64,7 +64,8 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 		log.Printf("[DEBUG] (client.terraformcli) Terraform output is muted")
 	}
 
-	// This is equivalent to TF_LOG_PATH. tfexec only supports TRACE log level.
+	// This is equivalent to setting TF_LOG_PATH=$WORKDIR/terraform.log.
+	// tfexec only supports TRACE log level which results in verbose logging.
 	// Caution: Do not run in production, and may be useful for debugging and
 	// development purposes. There is no log rotation and may quickly result
 	// large files.

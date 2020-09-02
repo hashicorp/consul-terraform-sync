@@ -27,7 +27,7 @@ func TestDriverConfig_Copy(t *testing.T) {
 			"same_enabled",
 			&DriverConfig{
 				consul:    &ConsulConfig{Address: String("localhost:8500")},
-				Terraform: &TerraformConfig{LogLevel: String("debug")},
+				Terraform: &TerraformConfig{Log: Bool(true)},
 			},
 		},
 	}
@@ -99,27 +99,27 @@ func TestDriverConfig_Merge(t *testing.T) {
 		},
 		{
 			"terraform_overrides",
-			&DriverConfig{Terraform: &TerraformConfig{LogLevel: String("info")}},
-			&DriverConfig{Terraform: &TerraformConfig{LogLevel: String("")}},
-			&DriverConfig{Terraform: &TerraformConfig{LogLevel: String("")}},
+			&DriverConfig{Terraform: &TerraformConfig{Log: Bool(true)}},
+			&DriverConfig{Terraform: &TerraformConfig{Log: Bool(false)}},
+			&DriverConfig{Terraform: &TerraformConfig{Log: Bool(false)}},
 		},
 		{
 			"terraform_empty_one",
-			&DriverConfig{Terraform: &TerraformConfig{LogLevel: String("debug")}},
+			&DriverConfig{Terraform: &TerraformConfig{Log: Bool(true)}},
 			&DriverConfig{},
-			&DriverConfig{Terraform: &TerraformConfig{LogLevel: String("debug")}},
+			&DriverConfig{Terraform: &TerraformConfig{Log: Bool(true)}},
 		},
 		{
 			"terraform_empty_two",
 			&DriverConfig{},
-			&DriverConfig{Terraform: &TerraformConfig{LogLevel: String("debug")}},
-			&DriverConfig{Terraform: &TerraformConfig{LogLevel: String("debug")}},
+			&DriverConfig{Terraform: &TerraformConfig{Log: Bool(true)}},
+			&DriverConfig{Terraform: &TerraformConfig{Log: Bool(true)}},
 		},
 		{
 			"terraform_same",
-			&DriverConfig{Terraform: &TerraformConfig{LogLevel: String("debug")}},
-			&DriverConfig{Terraform: &TerraformConfig{LogLevel: String("debug")}},
-			&DriverConfig{Terraform: &TerraformConfig{LogLevel: String("debug")}},
+			&DriverConfig{Terraform: &TerraformConfig{Log: Bool(true)}},
+			&DriverConfig{Terraform: &TerraformConfig{Log: Bool(true)}},
+			&DriverConfig{Terraform: &TerraformConfig{Log: Bool(true)}},
 		},
 	}
 
@@ -151,7 +151,8 @@ func TestDriverConfig_Finalize(t *testing.T) {
 			&DriverConfig{},
 			&DriverConfig{
 				Terraform: &TerraformConfig{
-					LogLevel:          String("info"),
+					Log:               Bool(false),
+					PersistLog:        Bool(false),
 					Path:              String(wd),
 					DataDir:           String(path.Join(wd, DefaultTFDataDir)),
 					WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
@@ -165,13 +166,14 @@ func TestDriverConfig_Finalize(t *testing.T) {
 			"with_terraform",
 			&DriverConfig{
 				Terraform: &TerraformConfig{
-					LogLevel:   String("debug"),
+					Log:        Bool(true),
 					SkipVerify: Bool(true),
 				},
 			},
 			&DriverConfig{
 				Terraform: &TerraformConfig{
-					LogLevel:          String("debug"),
+					Log:               Bool(true),
+					PersistLog:        Bool(false),
 					Path:              String(wd),
 					DataDir:           String(path.Join(wd, DefaultTFDataDir)),
 					WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),

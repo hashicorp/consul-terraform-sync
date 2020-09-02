@@ -60,7 +60,7 @@ var (
 		},
 		Driver: &DriverConfig{
 			Terraform: &TerraformConfig{
-				LogLevel:   String("warn"),
+				Log:        Bool(true),
 				Path:       String("path"),
 				DataDir:    String("data"),
 				WorkingDir: String("working"),
@@ -263,6 +263,7 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.Consul.TLS.Cert = String("")
 	expected.Consul.Transport.MaxIdleConns = Int(100)
 	expected.Driver.consul = expected.Consul
+	expected.Driver.Terraform.PersistLog = Bool(false)
 	(*expected.Tasks)[0].VarFiles = []string{}
 	(*expected.Tasks)[0].Version = String("")
 	(*expected.Services)[0].ID = String("serviceA")

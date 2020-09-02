@@ -25,7 +25,6 @@ func NewTestTerraformCLI(config *TerraformCLIConfig, tfMock *mocks.TerraformExec
 
 	client := &TerraformCLI{
 		tf:         tfMock,
-		logLevel:   "INFO",
 		workingDir: "test/working/dir",
 		workspace:  "test-workspace",
 	}
@@ -34,9 +33,6 @@ func NewTestTerraformCLI(config *TerraformCLIConfig, tfMock *mocks.TerraformExec
 		return client
 	}
 
-	if config.LogLevel != "" {
-		client.logLevel = config.LogLevel
-	}
 	if config.WorkingDir != "" {
 		client.workingDir = config.WorkingDir
 	}
@@ -64,7 +60,6 @@ func TestNewTerraformCLI(t *testing.T) {
 			"terraform-exec error: no working dir",
 			true,
 			&TerraformCLIConfig{
-				LogLevel:   "INFO",
 				ExecPath:   "path/to/tf",
 				WorkingDir: "",
 				Workspace:  "default",
@@ -74,7 +69,6 @@ func TestNewTerraformCLI(t *testing.T) {
 			"happy path",
 			false,
 			&TerraformCLIConfig{
-				LogLevel:   "INFO",
 				ExecPath:   "path/to/tf",
 				WorkingDir: "./",
 				Workspace:  "my-workspace",
@@ -231,7 +225,6 @@ func TestTerraformCLIGoString(t *testing.T) {
 		{
 			"happy path",
 			&TerraformCLI{
-				logLevel:   "INFO",
 				workingDir: "path/to/wd",
 				workspace:  "ws",
 			},
@@ -246,7 +239,6 @@ func TestTerraformCLIGoString(t *testing.T) {
 			}
 
 			assert.Contains(t, tc.tf.GoString(), "&TerraformCLI")
-			assert.Contains(t, tc.tf.GoString(), tc.tf.logLevel)
 			assert.Contains(t, tc.tf.GoString(), tc.tf.workingDir)
 			assert.Contains(t, tc.tf.GoString(), tc.tf.workspace)
 		})
