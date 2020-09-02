@@ -23,6 +23,7 @@ const (
 
 // TerraformConfig is the configuration for the Terraform driver.
 type TerraformConfig struct {
+	Log               *bool                  `mapstructure:"log"`
 	PersistLog        *bool                  `mapstructure:"persist_log"`
 	Path              *string                `mapstructure:"path"`
 	DataDir           *string                `mapstructure:"data_dir"`
@@ -42,6 +43,7 @@ func DefaultTerraformConfig() *TerraformConfig {
 	}
 
 	return &TerraformConfig{
+		Log:               Bool(false),
 		PersistLog:        Bool(false),
 		Path:              String(wd),
 		DataDir:           String(path.Join(wd, DefaultTFDataDir)),
@@ -79,6 +81,10 @@ func (c *TerraformConfig) Copy() *TerraformConfig {
 	}
 
 	var o TerraformConfig
+
+	if c.Log != nil {
+		o.Log = BoolCopy(c.Log)
+	}
 
 	if c.PersistLog != nil {
 		o.PersistLog = BoolCopy(c.PersistLog)
@@ -135,6 +141,10 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 
 	r := c.Copy()
 
+	if o.Log != nil {
+		r.Log = BoolCopy(o.Log)
+	}
+
 	if o.PersistLog != nil {
 		r.PersistLog = BoolCopy(o.PersistLog)
 	}
@@ -187,6 +197,10 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 		log.Println("[ERR] unable to retrieve current working directory to setup " +
 			"default configuration for the Terraform driver")
 		log.Panic(err)
+	}
+
+	if c.Log == nil {
+		c.Log = Bool(false)
 	}
 
 	if c.PersistLog == nil {
@@ -247,7 +261,8 @@ func (c *TerraformConfig) GoString() string {
 	}
 
 	return fmt.Sprintf("&TerraformConfig{"+
-		"PersistLog:%s, "+
+		"Log:%v, "+
+		"PersistLog:%v, "+
 		"Path:%s, "+
 		"DataDir:%s, "+
 		"WorkingDir:%s, "+
@@ -255,6 +270,7 @@ func (c *TerraformConfig) GoString() string {
 		"Backend:%+v, "+
 		"RequiredProviders:%+v"+
 		"}",
+		BoolVal(c.Log),
 		BoolVal(c.PersistLog),
 		StringVal(c.Path),
 		StringVal(c.DataDir),
