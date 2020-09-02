@@ -21,16 +21,14 @@ var _ Client = (*TerraformCLI)(nil)
 // to execute Terraform cli commands
 type TerraformCLI struct {
 	tf         terraformExec
-	logLevel   string
 	workingDir string
 	workspace  string
-	execPath   string
 	varFiles   []string
 }
 
 // TerraformCLIConfig configures the Terraform client
 type TerraformCLIConfig struct {
-	LogLevel   string
+	PersistLog bool
 	ExecPath   string
 	WorkingDir string
 	Workspace  string
@@ -50,10 +48,17 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 		return nil, err
 	}
 
+	logger := log.New(log.Writer(), "", log.Flags())
+	tf.SetLogger(logger)
+	tf.SetStdout(log.Writer())
+	tf.SetStderr(log.Writer())
+
+	if config.PersistLog {
+		tf.SetLogPath(filepath.Join(config.WorkingDir, "terraform.log"))
+	}
+
 	client := &TerraformCLI{
 		tf:         tf,
-		logLevel:   config.LogLevel,
-		execPath:   tfPath,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
 		varFiles:   config.VarFiles,
@@ -125,14 +130,10 @@ func (t *TerraformCLI) GoString() string {
 	}
 
 	return fmt.Sprintf("&TerraformCLI{"+
-		"LogLevel:%s, "+
-		"ExecPath:%s, "+
 		"WorkingDir:%s, "+
 		"WorkSpace:%s, "+
 		"VarFiles:%s"+
 		"}",
-		t.logLevel,
-		t.execPath,
 		t.workingDir,
 		t.workspace,
 		t.varFiles,

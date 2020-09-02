@@ -8,9 +8,6 @@ import (
 )
 
 const (
-	// DefaultTFLogLevel is the default log level for the local Terraform process.
-	DefaultTFLogLevel = "info"
-
 	// DefaultTFBackendKVPath is the default KV path used for configuring the
 	// default backend to use Consul KV.
 	DefaultTFBackendKVPath = "consul-nia/terraform"
@@ -26,7 +23,7 @@ const (
 
 // TerraformConfig is the configuration for the Terraform driver.
 type TerraformConfig struct {
-	LogLevel          *string                `mapstructure:"log_level"`
+	PersistLog        *bool                  `mapstructure:"persist_log"`
 	Path              *string                `mapstructure:"path"`
 	DataDir           *string                `mapstructure:"data_dir"`
 	WorkingDir        *string                `mapstructure:"working_dir"`
@@ -45,7 +42,7 @@ func DefaultTerraformConfig() *TerraformConfig {
 	}
 
 	return &TerraformConfig{
-		LogLevel:          String(DefaultTFLogLevel),
+		PersistLog:        Bool(false),
 		Path:              String(wd),
 		DataDir:           String(path.Join(wd, DefaultTFDataDir)),
 		WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
@@ -83,8 +80,8 @@ func (c *TerraformConfig) Copy() *TerraformConfig {
 
 	var o TerraformConfig
 
-	if c.LogLevel != nil {
-		o.LogLevel = StringCopy(c.LogLevel)
+	if c.PersistLog != nil {
+		o.PersistLog = BoolCopy(c.PersistLog)
 	}
 
 	if c.Path != nil {
@@ -138,8 +135,8 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 
 	r := c.Copy()
 
-	if o.LogLevel != nil {
-		r.LogLevel = StringCopy(o.LogLevel)
+	if o.PersistLog != nil {
+		r.PersistLog = BoolCopy(o.PersistLog)
 	}
 
 	if o.Path != nil {
@@ -192,19 +189,19 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 		log.Panic(err)
 	}
 
-	if c.LogLevel == nil {
-		c.LogLevel = String(DefaultTFLogLevel)
+	if c.PersistLog == nil {
+		c.PersistLog = Bool(false)
 	}
 
 	if c.Path == nil {
 		c.Path = String(wd)
 	}
 
-	if c.DataDir == nil {
+	if c.DataDir == nil || *c.DataDir == "" {
 		c.DataDir = String(path.Join(wd, DefaultTFDataDir))
 	}
 
-	if c.WorkingDir == nil {
+	if c.WorkingDir == nil || *c.WorkingDir == "" {
 		c.WorkingDir = String(path.Join(wd, DefaultTFWorkingDir))
 	}
 
@@ -250,7 +247,7 @@ func (c *TerraformConfig) GoString() string {
 	}
 
 	return fmt.Sprintf("&TerraformConfig{"+
-		"LogLevel:%s, "+
+		"PersistLog:%s, "+
 		"Path:%s, "+
 		"DataDir:%s, "+
 		"WorkingDir:%s, "+
@@ -258,7 +255,7 @@ func (c *TerraformConfig) GoString() string {
 		"Backend:%+v, "+
 		"RequiredProviders:%+v"+
 		"}",
-		StringVal(c.LogLevel),
+		BoolVal(c.PersistLog),
 		StringVal(c.Path),
 		StringVal(c.DataDir),
 		StringVal(c.WorkingDir),

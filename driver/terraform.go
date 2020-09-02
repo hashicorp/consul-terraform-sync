@@ -25,7 +25,7 @@ var _ Driver = (*Terraform)(nil)
 // Terraform is an NIA driver that uses the Terraform CLI to interface with
 // low-level network infrastructure.
 type Terraform struct {
-	logLevel          string
+	persistLog        bool
 	path              string
 	dataDir           string
 	workingDir        string
@@ -40,7 +40,7 @@ type Terraform struct {
 
 // TerraformConfig configures the Terraform driver
 type TerraformConfig struct {
-	LogLevel          string
+	PersistLog        bool
 	Path              string
 	DataDir           string
 	WorkingDir        string
@@ -55,7 +55,7 @@ type TerraformConfig struct {
 // NewTerraform configures and initializes a new Terraform driver
 func NewTerraform(config *TerraformConfig) *Terraform {
 	return &Terraform{
-		logLevel:          config.LogLevel,
+		persistLog:        config.PersistLog,
 		path:              config.Path,
 		dataDir:           config.DataDir,
 		workingDir:        config.WorkingDir,
@@ -167,7 +167,7 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 	case developmentClient:
 		log.Printf("[TRACE] (driver.terraform) creating development client for task '%s'", task.Name)
 		c, err = client.NewPrinter(&client.PrinterConfig{
-			LogLevel:   tf.logLevel,
+			LogLevel:   "debug",
 			ExecPath:   tf.path,
 			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
 			Workspace:  task.Name,
@@ -178,7 +178,7 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 	default:
 		log.Printf("[TRACE] (driver.terraform) creating terraform cli client for task '%s'", task.Name)
 		c, err = client.NewTerraformCLI(&client.TerraformCLIConfig{
-			LogLevel:   tf.logLevel,
+			PersistLog: tf.persistLog,
 			ExecPath:   tf.path,
 			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
 			Workspace:  task.Name,
