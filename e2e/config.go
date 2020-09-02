@@ -39,10 +39,9 @@ func terraformBlock(dir string) string {
 driver "terraform" {
 	skip_verify = true
 	path = "%s"
-	data_dir = "%s"
 	working_dir = "%s"
 }
-`, cwd, dir, dir)
+`, cwd, dir)
 }
 
 func dbTask() string {

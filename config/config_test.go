@@ -62,7 +62,6 @@ var (
 			Terraform: &TerraformConfig{
 				Log:        Bool(true),
 				Path:       String("path"),
-				DataDir:    String("data"),
 				WorkingDir: String("working"),
 				SkipVerify: Bool(true),
 				Backend: map[string]interface{}{

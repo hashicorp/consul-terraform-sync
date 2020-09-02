@@ -36,7 +36,6 @@ consul {
 driver "terraform" {
   log = true
   path = "path"
-  data_dir = "data"
   working_dir = "working"
   skip_verify = true
   backend "consul" {
