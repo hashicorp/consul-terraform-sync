@@ -36,7 +36,8 @@ func newDriver(conf *config.Config) (driver.Driver, error) {
 func newTerraformDriver(conf *config.Config) *driver.Terraform {
 	tfConf := *conf.Driver.Terraform
 	return driver.NewTerraform(&driver.TerraformConfig{
-		LogLevel:          *tfConf.LogLevel,
+		Log:               *tfConf.Log,
+		PersistLog:        *tfConf.PersistLog,
 		Path:              *tfConf.Path,
 		DataDir:           *tfConf.DataDir,
 		WorkingDir:        *tfConf.WorkingDir,

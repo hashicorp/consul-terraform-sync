@@ -49,7 +49,6 @@ func TestInitWorker(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			tf := &Terraform{
-				logLevel:   "INFO",
 				workingDir: "test/working/dir",
 				path:       "exec/path",
 				clientType: tc.clientType,

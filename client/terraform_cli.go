@@ -21,16 +21,15 @@ var _ Client = (*TerraformCLI)(nil)
 // to execute Terraform cli commands
 type TerraformCLI struct {
 	tf         terraformExec
-	logLevel   string
 	workingDir string
 	workspace  string
-	execPath   string
 	varFiles   []string
 }
 
 // TerraformCLIConfig configures the Terraform client
 type TerraformCLIConfig struct {
-	LogLevel   string
+	Log        bool
+	PersistLog bool
 	ExecPath   string
 	WorkingDir string
 	Workspace  string
@@ -50,10 +49,34 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 		return nil, err
 	}
 
+	// tfexec does not support logging levels. This enables Terraform output to
+	// log within Consul NIA logs. This is useful for debugging and development
+	// purposes. It may be difficult to work with log aggregators that expect
+	// uniform log format.
+	if config.Log {
+		log.Printf("[DEBUG] (client.terraformcli) Terraform logging is set, " +
+			"Terraform logs will output with Consul NIA logs")
+		logger := log.New(log.Writer(), "", log.Flags())
+		tf.SetLogger(logger)
+		tf.SetStdout(log.Writer())
+		tf.SetStderr(log.Writer())
+	} else {
+		log.Printf("[DEBUG] (client.terraformcli) Terraform output is muted")
+	}
+
+	// This is equivalent to setting TF_LOG_PATH=$WORKDIR/terraform.log.
+	// tfexec only supports TRACE log level which results in verbose logging.
+	// Caution: Do not run in production, and may be useful for debugging and
+	// development purposes. There is no log rotation and may quickly result
+	// large files.
+	if config.PersistLog {
+		logPath := filepath.Join(config.WorkingDir, "terraform.log")
+		tf.SetLogPath(logPath)
+		log.Printf("[DEBUG] (client.terraformcli) Terraform log persiting on disk: %s", logPath)
+	}
+
 	client := &TerraformCLI{
 		tf:         tf,
-		logLevel:   config.LogLevel,
-		execPath:   tfPath,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
 		varFiles:   config.VarFiles,
@@ -125,14 +148,10 @@ func (t *TerraformCLI) GoString() string {
 	}
 
 	return fmt.Sprintf("&TerraformCLI{"+
-		"LogLevel:%s, "+
-		"ExecPath:%s, "+
 		"WorkingDir:%s, "+
 		"WorkSpace:%s, "+
 		"VarFiles:%s"+
 		"}",
-		t.logLevel,
-		t.execPath,
 		t.workingDir,
 		t.workspace,
 		t.varFiles,

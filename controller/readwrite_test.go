@@ -245,7 +245,7 @@ func singleTaskConfig() *config.Config {
 		},
 		Driver: &config.DriverConfig{
 			Terraform: &config.TerraformConfig{
-				LogLevel:   config.String("warn"),
+				Log:        config.Bool(true),
 				Path:       config.String("path"),
 				DataDir:    config.String("data"),
 				WorkingDir: config.String("working"),
