@@ -198,7 +198,7 @@ func (tf *Terraform) InitWork(ctx context.Context) error {
 	for _, w := range tf.workers {
 		go func(ctx context.Context, w *worker) {
 			log.Printf("[TRACE] (driver.terraform) go init for work: %v", w.work)
-			resultCh <- w.client.Init(ctx)
+			resultCh <- w.init(ctx)
 		}(ctx, w)
 	}
 
@@ -230,7 +230,7 @@ func (tf *Terraform) ApplyWork(ctx context.Context) error {
 	for _, w := range tf.workers {
 		go func(ctx context.Context, w *worker) {
 			log.Printf("[TRACE] (driver.terraform) go apply for work: %v", w.work)
-			resultCh <- w.client.Apply(ctx)
+			resultCh <- w.apply(ctx)
 		}(ctx, w)
 	}
 

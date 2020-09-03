@@ -1,12 +1,14 @@
 package driver
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/consul-nia/client"
 )
 
+// Service contains service configuration information
 type Service struct {
 	Datacenter  string
 	Description string
@@ -15,6 +17,7 @@ type Service struct {
 	Tag         string
 }
 
+// Task contains task configuration information
 type Task struct {
 	Description  string
 	Name         string
@@ -26,11 +29,26 @@ type Task struct {
 	Version      string
 }
 
-// worker is executes a unit of work and has a one-to-one relationship with a client
-// that will be responsible for executing the work.
+// worker executes a unit of work and has a one-to-one relationship with a client
+// that will be responsible for executing the work. Currently worker is not safe for
+// concurrent use by multiple goroutines
 type worker struct {
 	client client.Client
 	work   *work
+}
+
+func (w *worker) init(ctx context.Context) error {
+	if err := w.client.Init(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (w *worker) apply(ctx context.Context) error {
+	if err := w.client.Apply(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 // work represents a standalone unit of work that can be executed concurrently alongside others
