@@ -23,17 +23,15 @@ type Controller interface {
 	Run(ctx context.Context) error
 }
 
-func newDriver(conf *config.Config) (driver.Driver, error) {
-	var driver driver.Driver
+func newDriverFunc(conf *config.Config) (func(*config.Config) driver.Driver, error) {
 	if conf.Driver.Terraform != nil {
 		log.Printf("[INFO] (controller) setting up Terraform driver")
-		driver = newTerraformDriver(conf)
-		return driver, nil
+		return newTerraformDriver, nil
 	}
 	return nil, errors.New("Unsupported driver")
 }
 
-func newTerraformDriver(conf *config.Config) *driver.Terraform {
+func newTerraformDriver(conf *config.Config) driver.Driver {
 	tfConf := *conf.Driver.Terraform
 	return driver.NewTerraform(&driver.TerraformConfig{
 		Log:               *tfConf.Log,
