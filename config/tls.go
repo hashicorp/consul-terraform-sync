@@ -103,23 +103,33 @@ func (c *TLSConfig) Finalize() {
 	}
 
 	if c.Cert == nil {
-		c.Cert = String("")
+		c.Cert = stringFromEnv([]string{
+			"CONSUL_CLIENT_CERT",
+		}, "")
 	}
 
 	if c.CACert == nil {
-		c.CACert = String("")
+		c.CACert = stringFromEnv([]string{
+			"CONSUL_CACERT",
+		}, "")
 	}
 
 	if c.CAPath == nil {
-		c.CAPath = String("")
+		c.CAPath = stringFromEnv([]string{
+			"CONSUL_CAPATH",
+		}, "")
 	}
 
 	if c.Key == nil {
-		c.Key = String("")
+		c.Key = stringFromEnv([]string{
+			"CONSUL_CLIENT_KEY",
+		}, "")
 	}
 
 	if c.ServerName == nil {
-		c.ServerName = String("")
+		c.ServerName = stringFromEnv([]string{
+			"CONSUL_TLS_SERVER_NAME",
+		}, "")
 	}
 
 	if c.Verify == nil {

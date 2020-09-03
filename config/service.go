@@ -27,7 +27,7 @@ type ServiceConfig struct {
 	// default to the `default` namespace.
 	Namespace *string `mapstructure:"namespace"`
 
-	// Tag is used to filter nodes based on the tag for the service
+	// Tag is used to filter nodes based on the tag for the service.
 	Tag *string `mapstructure:"tag"`
 }
 
