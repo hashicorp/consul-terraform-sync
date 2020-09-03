@@ -28,7 +28,6 @@ func TestTerraformConfig_Copy(t *testing.T) {
 			&TerraformConfig{
 				Log:        Bool(true),
 				Path:       String("path"),
-				DataDir:    String("data"),
 				WorkingDir: String("working"),
 				SkipVerify: Bool(false),
 				Backend: map[string]interface{}{"consul": map[string]interface{}{
@@ -151,30 +150,6 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{Path: String("path")},
 			&TerraformConfig{Path: String("path")},
 			&TerraformConfig{Path: String("path")},
-		},
-		{
-			"data_dir_overrides",
-			&TerraformConfig{DataDir: String("data")},
-			&TerraformConfig{DataDir: String("")},
-			&TerraformConfig{DataDir: String("")},
-		},
-		{
-			"data_dir_empty_one",
-			&TerraformConfig{DataDir: String("data")},
-			&TerraformConfig{},
-			&TerraformConfig{DataDir: String("data")},
-		},
-		{
-			"data_dir_empty_two",
-			&TerraformConfig{},
-			&TerraformConfig{DataDir: String("data")},
-			&TerraformConfig{DataDir: String("data")},
-		},
-		{
-			"data_dir_same",
-			&TerraformConfig{DataDir: String("data")},
-			&TerraformConfig{DataDir: String("data")},
-			&TerraformConfig{DataDir: String("data")},
 		},
 		{
 			"working_dir_overrides",
@@ -444,7 +419,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:               Bool(false),
 				PersistLog:        Bool(false),
 				Path:              String(wd),
-				DataDir:           String(path.Join(wd, DefaultTFDataDir)),
 				WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
 				SkipVerify:        Bool(false),
 				Backend:           map[string]interface{}{},
@@ -459,7 +433,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
-				DataDir:    String(path.Join(wd, DefaultTFDataDir)),
 				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
 				SkipVerify: Bool(false),
 				Backend: map[string]interface{}{
@@ -483,7 +456,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
-				DataDir:    String(path.Join(wd, DefaultTFDataDir)),
 				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
 				SkipVerify: Bool(false),
 				Backend: map[string]interface{}{

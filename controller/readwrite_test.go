@@ -247,7 +247,6 @@ func singleTaskConfig() *config.Config {
 			Terraform: &config.TerraformConfig{
 				Log:        config.Bool(true),
 				Path:       config.String("path"),
-				DataDir:    config.String("data"),
 				WorkingDir: config.String("working"),
 				SkipVerify: config.Bool(true),
 			},

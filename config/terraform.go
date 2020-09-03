@@ -12,10 +12,6 @@ const (
 	// default backend to use Consul KV.
 	DefaultTFBackendKVPath = "consul-nia/terraform"
 
-	// DefaultTFDataDir is the default location where Terraform keeps its working
-	// directory.
-	DefaultTFDataDir = ".terraform"
-
 	// DefaultTFWorkingDir is the default location where NIA will use as the
 	// working directory to manage infrastructure.
 	DefaultTFWorkingDir = ".terraform-tasks"
@@ -26,7 +22,6 @@ type TerraformConfig struct {
 	Log               *bool                  `mapstructure:"log"`
 	PersistLog        *bool                  `mapstructure:"persist_log"`
 	Path              *string                `mapstructure:"path"`
-	DataDir           *string                `mapstructure:"data_dir"`
 	WorkingDir        *string                `mapstructure:"working_dir"`
 	SkipVerify        *bool                  `mapstructure:"skip_verify"`
 	Backend           map[string]interface{} `mapstructure:"backend"`
@@ -46,7 +41,6 @@ func DefaultTerraformConfig() *TerraformConfig {
 		Log:               Bool(false),
 		PersistLog:        Bool(false),
 		Path:              String(wd),
-		DataDir:           String(path.Join(wd, DefaultTFDataDir)),
 		WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
 		SkipVerify:        Bool(false),
 		Backend:           make(map[string]interface{}),
@@ -92,10 +86,6 @@ func (c *TerraformConfig) Copy() *TerraformConfig {
 
 	if c.Path != nil {
 		o.Path = StringCopy(c.Path)
-	}
-
-	if c.DataDir != nil {
-		o.DataDir = StringCopy(c.DataDir)
 	}
 
 	if c.WorkingDir != nil {
@@ -153,10 +143,6 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 		r.Path = StringCopy(o.Path)
 	}
 
-	if o.DataDir != nil {
-		r.DataDir = StringCopy(o.DataDir)
-	}
-
 	if o.WorkingDir != nil {
 		r.WorkingDir = StringCopy(o.WorkingDir)
 	}
@@ -211,10 +197,6 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 		c.Path = String(wd)
 	}
 
-	if c.DataDir == nil || *c.DataDir == "" {
-		c.DataDir = String(path.Join(wd, DefaultTFDataDir))
-	}
-
 	if c.WorkingDir == nil || *c.WorkingDir == "" {
 		c.WorkingDir = String(path.Join(wd, DefaultTFWorkingDir))
 	}
@@ -264,7 +246,6 @@ func (c *TerraformConfig) GoString() string {
 		"Log:%v, "+
 		"PersistLog:%v, "+
 		"Path:%s, "+
-		"DataDir:%s, "+
 		"WorkingDir:%s, "+
 		"SkipVerify:%v, "+
 		"Backend:%+v, "+
@@ -273,7 +254,6 @@ func (c *TerraformConfig) GoString() string {
 		BoolVal(c.Log),
 		BoolVal(c.PersistLog),
 		StringVal(c.Path),
-		StringVal(c.DataDir),
 		StringVal(c.WorkingDir),
 		BoolVal(c.SkipVerify),
 		c.Backend,

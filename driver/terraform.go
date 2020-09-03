@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/consul-nia/client"
@@ -28,7 +29,6 @@ type Terraform struct {
 	log               bool
 	persistLog        bool
 	path              string
-	dataDir           string
 	workingDir        string
 	skipVerify        bool
 	workers           []*worker
@@ -44,7 +44,6 @@ type TerraformConfig struct {
 	Log               bool
 	PersistLog        bool
 	Path              string
-	DataDir           string
 	WorkingDir        string
 	SkipVerify        bool
 	Backend           map[string]interface{}
@@ -60,7 +59,6 @@ func NewTerraform(config *TerraformConfig) *Terraform {
 		log:               config.Log,
 		persistLog:        config.PersistLog,
 		path:              config.Path,
-		dataDir:           config.DataDir,
 		workingDir:        config.WorkingDir,
 		skipVerify:        config.SkipVerify,
 		backend:           config.Backend,
@@ -172,7 +170,7 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 		c, err = client.NewPrinter(&client.PrinterConfig{
 			LogLevel:   "debug",
 			ExecPath:   tf.path,
-			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
+			WorkingDir: filepath.Join(tf.workingDir, task.Name),
 			Workspace:  task.Name,
 		})
 	case testClient:
@@ -184,7 +182,7 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 			Log:        tf.log,
 			PersistLog: tf.persistLog,
 			ExecPath:   tf.path,
-			WorkingDir: fmt.Sprintf("%s/%s", tf.workingDir, task.Name),
+			WorkingDir: filepath.Join(tf.workingDir, task.Name),
 			Workspace:  task.Name,
 			VarFiles:   task.VarFiles,
 		})
