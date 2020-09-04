@@ -147,7 +147,7 @@ task {
   services = ["web", "api"]
   source = "org/example/module"
   version = "1.0.0"
-  var_files = []
+  variable_files = []
 }
 ```
 
@@ -156,7 +156,7 @@ task {
 * `providers` - `(list(string): [])` Providers is the list of provider names the task is dependent on. This is used to map [provider configuration](#provider) to the task.
 * `services` - `(list(string): [])` Services is the list of service IDs or logical service names the task executes on. Consul NIA monitors the Consul Catalog for changes to these services and triggers the task to run. Any service value not explicitly defined by a `service` block with a matching ID is assumed to be a logical service name in the default namespace (enterprise).
 * `source` - `(string: <required>)` Source is the location the driver uses to fetch dependencies. The source format is dependent on the driver. For the [Terraform driver](#terraform-driver), the source is the module path (local or remote). Read more on [Terraform module source here](https://www.terraform.io/docs/modules/sources.html).
-* `variable_files` - `(list(string): [])` A list of paths to files containing variables for the task. For the [Terraform driver](#terraform-driver), these are files with `.tfvars` file extensions are used as Terraform [input variables](https://www.terraform.io/docs/configuration/variables.html) passed as arguments to the Terraform module. Variables are loaded in the same order as they appear in the order of the files. Duplicate variables are overwritten with the later value.
+* `variable_files` - `(list(string): [])` A list of paths to files containing variables for the task. For the [Terraform driver](#terraform-driver), these are files with `.tfvars` file extensions and are used as Terraform [input variables](https://www.terraform.io/docs/configuration/variables.html) to pass as arguments to the Terraform module. Variables are loaded in the same order as they appear in the order of the files. Duplicate variables are overwritten with the later value.
 * `version` - `(string: <none>)` The version of the provided source the task will use. For the [Terraform driver](#terraform-driver), this is the module version. The latest version will be used as the default if omitted.
 
 ### Terraform Driver
