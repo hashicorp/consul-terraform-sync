@@ -15,13 +15,20 @@ var _ Controller = (*ReadWrite)(nil)
 
 // ReadWrite is the controller to run in read-write mode
 type ReadWrite struct {
-	newDriver  func(*config.Config) driver.Driver
-	drivers    map[string]driver.Driver // task-name -> driver
 	conf       *config.Config
+	newDriver  func(*config.Config) driver.Driver
 	fileReader func(string) ([]byte, error)
-	templates  map[string]template
+	units      []unit
 	watcher    watcher
 	resolver   resolver
+}
+
+// unit of work per template/task
+type unit struct {
+	taskName string
+	driver   driver.Driver
+	template template
+	inited   bool
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
@@ -31,12 +38,10 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 		return nil, err
 	}
 	return &ReadWrite{
-		newDriver:  nd,
-		drivers:    make(map[string]driver.Driver),
 		conf:       conf,
-		templates:  make(map[string]template),
-		watcher:    newWatcher(conf),
+		newDriver:  nd,
 		fileReader: ioutil.ReadFile,
+		watcher:    newWatcher(conf),
 		resolver:   hcat.NewResolver(),
 	}, nil
 }
@@ -53,14 +58,20 @@ func (rw *ReadWrite) Init() error {
 	// Future: improve by combining tasks into workflows.
 	log.Printf("[INFO] (controller.readwrite) initializing all tasks and workers")
 	tasks := newDriverTasks(rw.conf)
+	units := make([]unit, 0, len(tasks))
+
+	templates, err := newTaskTemplates(rw.conf, rw.fileReader)
+	if err != nil {
+		log.Printf("[ERR] (controller.readwrite) error initializing template: %s", err)
+		return err
+	}
+
 	for _, task := range tasks {
 		d := rw.newDriver(rw.conf)
 		if err := d.Init(); err != nil {
 			log.Printf("[ERR] (controller.readwrite) error initializing driver: %s", err)
 			return err
 		}
-		rw.drivers[task.Name] = d
-
 		log.Printf("[DEBUG] (controller.readwrite) initializing task %q", task.Name)
 		err := d.InitTask(task, true)
 		if err != nil {
@@ -74,14 +85,14 @@ func (rw *ReadWrite) Init() error {
 			log.Printf("[ERR] (controller.readwrite) error initializing worker for task %q: %s", task.Name, err)
 			return err
 		}
+		units = append(units, unit{
+			taskName: task.Name,
+			template: templates[task.Name],
+			driver:   d,
+		})
 	}
 
-	templates, err := newTaskTemplates(rw.conf, rw.fileReader)
-	if err != nil {
-		log.Printf("[ERR] (controller.readwrite) error initializing template: %s", err)
-		return err
-	}
-	rw.templates = templates
+	rw.units = units
 
 	return nil
 }
@@ -95,9 +106,12 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	// TODO: improve and refactor this control loop of template rendering to
 	// trigger task runs instead of waiting for all to render once
 	// init/apply work on all tasks.
-	results := make([]string, 0, len(rw.templates))
+	results := make([]string, 0, len(rw.units))
 	for {
-		for taskName, tmpl := range rw.templates {
+		for _, unit := range rw.units {
+			tmpl := unit.template
+			taskName := unit.taskName
+
 			result, err := rw.resolver.Run(tmpl, rw.watcher)
 			if err != nil {
 				// TODO handle when rendering and execution is per task instead of bulk
@@ -115,7 +129,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 				// XXX fire off something to run the task here
 				results = append(results, taskName)
 				log.Printf("[INFO] (controller.readwrite) init work")
-				d := rw.drivers[taskName]
+				d := unit.driver
 				if err := d.InitWork(ctx); err != nil {
 					log.Printf("[ERR] (controller.readwrite) could not initialize: %s", err)
 					return err
@@ -128,7 +142,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 				}
 			}
 		}
-		if len(results) == len(rw.templates) {
+		if len(results) == len(rw.units) {
 			break
 		}
 

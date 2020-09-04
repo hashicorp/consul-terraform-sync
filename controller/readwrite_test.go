@@ -118,7 +118,6 @@ func TestReadWriteInit(t *testing.T) {
 
 			controller := ReadWrite{
 				newDriver:  func(*config.Config) driver.Driver { return d },
-				drivers:    make(map[string]driver.Driver),
 				conf:       tc.config,
 				fileReader: tc.fileReader,
 			}
@@ -202,12 +201,9 @@ func TestReadWriteRun(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			taskName := "test task"
 
 			tmpl := new(mocks.Template)
 			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.templateRenderErr).Once()
-			templates := make(map[string]template)
-			templates[taskName] = tmpl
 
 			r := new(mocks.Resolver)
 			r.On("Run", mock.Anything, mock.Anything).Return(hcat.ResolveEvent{Complete: true}, tc.resolverRunErr)
@@ -219,15 +215,14 @@ func TestReadWriteRun(t *testing.T) {
 			d.On("InitWork", mock.Anything).Return(tc.initWorkErr)
 			d.On("ApplyWork", mock.Anything).Return(tc.applyWorkErr)
 
+			u := unit{template: tmpl, driver: d}
+
 			controller := ReadWrite{
 				conf:       tc.config,
 				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
-				templates:  map[string]template{taskName: tmpl},
+				units:      []unit{u},
 				watcher:    w,
 				resolver:   r,
-				drivers: map[string]driver.Driver{
-					taskName: d,
-				},
 			}
 
 			ctx := context.Background()
