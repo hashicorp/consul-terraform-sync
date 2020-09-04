@@ -52,14 +52,23 @@ $ which consul-nia
 Once installed, verify the installation works by prompting the help option.
 
 ```shell
-$ consul-nia -help
+$ consul-nia -h
 Usage of consul-nia:
   -config-dir value
-      A directory to look for .hcl or .json config files in. Can be specified multiple times.
+      A directory to load files for configuring Consul NIA. Configuration files
+      require an .hcl or .json file extention in order to specify their format.
+      This option can be specified multiple times to load different directories.
   -config-file value
-      A config file to use. Can be either .hcl or .json format. Can be specified multiple times.
+      A file to load for configuring Consul NIA. Configuration file requires an
+      .hcl or .json extension in order to specify their format. This option can
+      be specified multiple times to load different configuration files.
   -inspect
-      Print the current and proposed state change, and then exits.
+      Run Consul NIA in Inspect mode to print the current and proposed state
+      change, and then exits. No changes are applied in this mode.
   -version
       Print the version of this daemon.
 ```
+
+## Configuration
+
+[Documentation to configure Consul NIA](docs/config.md)

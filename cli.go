@@ -67,13 +67,19 @@ func (cli *CLI) Run(args []string) int {
 
 	// Parse the flags
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	f.Var(&configFiles, "config-file", "A config file to use. Can be either "+
-		".hcl or .json format. Can be specified multiple times.")
-	f.Var(&configFiles, "config-dir", "A directory to look for .hcl or .json "+
-		"config files in. Can be specified multiple times.")
+	f.Var(&configFiles, "config-dir", "A directory to load files for "+
+		"configuring Consul NIA. Configuration files require an .hcl or .json "+
+		"file extention in order to specify their format. This option can be "+
+		"specified multiple times to load different directories.")
+	f.Var(&configFiles, "config-file", "A file to load for configuring Consul "+
+		"NIA. Configuration file requires an .hcl or .json extension in order to "+
+		"specify their format. This option can be specified multiple times to "+
+		"load different configuration files.")
+	f.BoolVar(&isInspect, "inspect", false, "Run Consul NIA in Inspect mode to "+
+		"print the current and proposed state change, and then exits. No changes "+
+		"are applied in this mode.")
 	f.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
-	f.BoolVar(&isInspect, "inspect", false, "Print the current and proposed "+
-		"state change, and then exits.")
+
 	// Additional flag only intended to be used for development
 	f.StringVar(&clientType, "client-type", "", "Select the client type to use. Defaults "+
 		"to Terraform client if empty or unknown value. Can also 'development' or 'test'.")
