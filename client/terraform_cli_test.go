@@ -136,6 +136,7 @@ func TestTerraformCLIInit(t *testing.T) {
 			m := new(mocks.TerraformExec)
 			m.On("Init", mock.Anything).Return(tc.initErr)
 			m.On("WorkspaceNew", mock.Anything, mock.Anything).Return(tc.wsErr)
+			m.On("WorkspaceSelect", mock.Anything, mock.Anything).Return(nil)
 
 			client := NewTestTerraformCLI(tc.config, m)
 			ctx := context.Background()

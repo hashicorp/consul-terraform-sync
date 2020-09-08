@@ -18,4 +18,5 @@ type terraformExec interface {
 	Apply(ctx context.Context, opts ...tfexec.ApplyOption) error
 	Plan(ctx context.Context, opts ...tfexec.PlanOption) (bool, error)
 	WorkspaceNew(ctx context.Context, workspace string, opts ...tfexec.WorkspaceNewCmdOption) error
+	WorkspaceSelect(ctx context.Context, workspace string) error
 }

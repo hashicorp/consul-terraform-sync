@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"time"
@@ -116,7 +115,6 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 				// XXX fire off something to run the task here
 				results = append(results, taskName)
 				log.Printf("[INFO] (controller.readwrite) init work")
-				fmt.Println(taskName)
 				d := rw.drivers[taskName]
 				if err := d.InitWork(ctx); err != nil {
 					log.Printf("[ERR] (controller.readwrite) could not initialize: %s", err)
