@@ -127,7 +127,7 @@ func TestInitWork(t *testing.T) {
 				c.On("Init", ctx).Return(err)
 				workers[ix] = &worker{
 					client: c,
-					work:   &work{},
+					task:   Task{},
 				}
 			}
 
@@ -212,7 +212,7 @@ func TestApplyWork(t *testing.T) {
 				c.On("Apply", ctx).Return(err)
 				workers[ix] = &worker{
 					client: c,
-					work:   &work{},
+					task:   Task{},
 				}
 			}
 

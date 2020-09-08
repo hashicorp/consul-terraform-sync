@@ -80,11 +80,18 @@ func (c *ProviderConfigs) Validate() error {
 		return fmt.Errorf("missing provider configuration")
 	}
 
-	// TODO validate uniqueness by alias
+	m := make(map[string]bool)
 	for _, s := range *c {
 		if err := s.Validate(); err != nil {
 			return err
 		}
+
+		// Require providers to be unique by name and alias.
+		id := s.id()
+		if ok := m[id]; ok {
+			return fmt.Errorf("duplicate provider configuration: %s", id)
+		}
+		m[id] = true
 	}
 
 	return nil
@@ -121,4 +128,30 @@ func (c *ProviderConfig) Validate() error {
 	}
 
 	return nil
+}
+
+// id returns the unique name to represent the provider configuration. If alias is set,
+// the ID is <name>.<alias>. Otherwise, the name is used as the ID.
+func (c *ProviderConfig) id() string {
+	if c == nil || len(*c) == 0 {
+		return ""
+	}
+
+	var name string
+	var rawConf interface{}
+	for k, v := range *c {
+		name = k
+		rawConf = v
+	}
+	pConf, ok := rawConf.(map[string]interface{})
+	if !ok {
+		return name
+	}
+
+	alias, ok := pConf["alias"].(string)
+	if !ok {
+		return name
+	}
+
+	return fmt.Sprintf("%s.%s", name, alias)
 }

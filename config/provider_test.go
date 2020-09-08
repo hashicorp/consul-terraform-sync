@@ -214,6 +214,64 @@ func TestProviderConfigs_Validate(t *testing.T) {
 			"empty provider map",
 			&ProviderConfigs{{}},
 			false,
+		}, {
+			"multiple",
+			&ProviderConfigs{{
+				"null": map[string]interface{}{
+					"attr":  "n",
+					"count": 10,
+				},
+			}, {
+				"template": map[string]interface{}{
+					"foo": "bar",
+				},
+			}},
+			true,
+		}, {
+			"alias",
+			&ProviderConfigs{{
+				"null": map[string]interface{}{
+					"attr":  "n",
+					"count": 10,
+				},
+			}, {
+				"null": map[string]interface{}{
+					"alias": "negative",
+					"attr":  "abc",
+					"count": -2,
+				},
+			}},
+			true,
+		}, {
+			"duplicate",
+			&ProviderConfigs{{
+				"null": map[string]interface{}{
+					"attr":  "n",
+					"count": 10,
+				},
+			}, {
+				"null": map[string]interface{}{
+					"attr":  "abc",
+					"count": -2,
+				},
+			}},
+			false,
+		}, {
+			"duplicate alias",
+			&ProviderConfigs{{
+				"null": map[string]interface{}{
+					"alias": "alias",
+					"attr":  "n",
+					"count": 10,
+				},
+			}, {
+				"null": map[string]interface{}{
+					"alias": "alias",
+					"attr":  "abc",
+					"count": -2,
+				},
+			}},
+			false,
 		},
 	}
 

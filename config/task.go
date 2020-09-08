@@ -178,6 +178,16 @@ func (c *TaskConfig) Validate() error {
 		return fmt.Errorf("source for the task is required")
 	}
 
+	// Restrict only one provider instance per task
+	pNames := make(map[string]bool)
+	for _, p := range c.Providers {
+		name := strings.Split(p, ".")[0]
+		if ok := pNames[name]; ok {
+			return fmt.Errorf("only one provider instance per task")
+		}
+		pNames[name] = true
+	}
+
 	return nil
 }
 

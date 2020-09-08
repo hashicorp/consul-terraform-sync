@@ -134,14 +134,39 @@ func getService(services *config.ServiceConfigs, id string) driver.Service {
 }
 
 // getProvider is a helper to find and convert a user-defined provider
-// configuration by the provider name. If a provider is not explicitly
-// configured, it assumes the default provider block that is empty.
+// configuration by the provider ID, which is either the provider name
+// or <name>.<alias>. If a provider is not explicitly configured, it
+// assumes the default provider block that is empty.
 //
 // provider "name" { }
-func getProvider(providers *config.ProviderConfigs, name string) map[string]interface{} {
+func getProvider(providers *config.ProviderConfigs, id string) map[string]interface{} {
+	var name, alias string
+	split := strings.SplitN(id, ".", 2)
+	if len(split) == 2 {
+		name, alias = split[0], split[1]
+	} else {
+		name = id
+	}
+
 	for _, p := range *providers {
-		if _, ok := (*p)[name]; ok {
-			return *p
+		// Find the provider by name
+		if pRaw, ok := (*p)[name]; ok {
+			if alias == "" {
+				return *p
+			}
+
+			// Find the provider by alias
+			pConf, ok := pRaw.(map[string]interface{})
+			if !ok {
+				// Not much we can do if the provider block has unexpected structure
+				// at this point. We'll move forward with the default empty block.
+				break
+			}
+
+			a, ok := pConf["alias"].(string)
+			if ok && a == alias {
+				return *p
+			}
 		}
 	}
 
