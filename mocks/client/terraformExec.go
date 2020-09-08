@@ -118,3 +118,17 @@ func (_m *TerraformExec) WorkspaceNew(ctx context.Context, workspace string, opt
 
 	return r0
 }
+
+// WorkspaceSelect provides a mock function with given fields: ctx, workspace
+func (_m *TerraformExec) WorkspaceSelect(ctx context.Context, workspace string) error {
+	ret := _m.Called(ctx, workspace)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, workspace)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
