@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/consul-nia/config"
@@ -158,16 +159,6 @@ func TestReadWriteRun(t *testing.T) {
 			singleTaskConfig(),
 		},
 		{
-			"error on watcher.Wait()",
-			true,
-			nil,
-			nil,
-			nil,
-			errors.New("error on template.Render()"),
-			errors.New("error on watcher.Wait()"),
-			singleTaskConfig(),
-		},
-		{
 			"error on driver.InitWork()",
 			true,
 			errors.New("error on driver.InitWork()"),
@@ -226,16 +217,65 @@ func TestReadWriteRun(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			err := controller.Run(ctx)
+			err := controller.run(ctx)
 
 			if tc.expectError {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tc.name)
+				if assert.Error(t, err) {
+					assert.Contains(t, err.Error(), tc.name)
+				}
 				return
 			}
 			assert.NoError(t, err)
 		})
 	}
+}
+
+func TestReadWriteLoop(t *testing.T) {
+	t.Run("loop-wait-exit", func(t *testing.T) {
+		w := new(mocks.Watcher)
+		w.On("Wait", mock.Anything).Return(errors.New("end-wait"))
+
+		ctl := ReadWrite{
+			units:   []unit{},
+			watcher: w,
+		}
+		ctx := context.Background()
+		errCh := make(chan error, 1) // buffer lets loop run in foreground
+		ctl.loop(ctx, errCh)
+		err := <-errCh
+		if err != nil && err.Error() != "end-wait" {
+			t.Error("wanted 'end-wait', got:", err)
+		}
+	})
+	t.Run("loop-context-cancel", func(t *testing.T) {
+		w := new(mocks.Watcher)
+		wg := sync.WaitGroup{}
+		wg.Add(3)
+		count := 0
+		w.On("Wait", mock.Anything).Run(
+			func(mock.Arguments) {
+				if count > 2 {
+					wg.Wait()
+				} else {
+					count++
+					wg.Done()
+				}
+			}).Return(nil)
+
+		ctl := ReadWrite{
+			units:   []unit{},
+			watcher: w,
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		errCh := make(chan error)
+		go ctl.loop(ctx, errCh)
+		wg.Wait()
+		cancel()
+		err := <-errCh
+		if err != nil && err.Error() != "context canceled" {
+			t.Error("wanted 'context canceled', got:", err)
+		}
+	})
 }
 
 // singleTaskConfig returns a happy path config that has a single task

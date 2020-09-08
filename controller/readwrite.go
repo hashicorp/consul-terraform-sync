@@ -100,59 +100,90 @@ func (rw *ReadWrite) Init() error {
 // Run runs the controller in read-write mode by continuously monitoring Consul
 // catalog and using the driver to apply network infrastructure changes for
 // any work that have been updated.
+// Blocking call that runs main consul monitoring loop
 func (rw *ReadWrite) Run(ctx context.Context) error {
+	errCh := make(chan error)
+	go rw.loop(ctx, errCh)
+	return <-errCh
+}
+
+// placeholder until we update hashicat version which has this same code
+// as a convenience function
+func waitCh(w watcher, timeout time.Duration) <-chan error {
+	errCh := make(chan error)
+	go func() {
+		errCh <- w.Wait(timeout)
+	}()
+	return errCh
+}
+
+// main loop
+func (rw *ReadWrite) loop(ctx context.Context, errCh chan<- error) {
+	for {
+		if err := rw.run(ctx); err != nil {
+			errCh <- err
+			return
+		}
+
+		select {
+		case err := <-waitCh(rw.watcher, time.Minute):
+			if err != nil {
+				errCh <- err
+				return
+			}
+		case <-ctx.Done():
+			errCh <- ctx.Err()
+			return
+		}
+	}
+}
+
+// A single run through of all the templates
+func (rw *ReadWrite) run(ctx context.Context) error {
 	log.Printf("[DEBUG] (controller.readwrite) preparing work")
 	// renders all templates once and applies for demo purposes
 	// TODO: improve and refactor this control loop of template rendering to
 	// trigger task runs instead of waiting for all to render once
 	// init/apply work on all tasks.
 	results := make([]string, 0, len(rw.units))
-	for {
-		for _, unit := range rw.units {
-			tmpl := unit.template
-			taskName := unit.taskName
+	for _, unit := range rw.units {
+		tmpl := unit.template
+		taskName := unit.taskName
 
-			result, err := rw.resolver.Run(tmpl, rw.watcher)
-			if err != nil {
-				// TODO handle when rendering and execution is per task instead of bulk
-				log.Printf("[ERR] error running template for task %s: %s", taskName, err)
-				return err
-			}
-			if result.Complete {
-				rendered, err := tmpl.Render(result.Contents)
-				if err != nil {
-					log.Printf("[ERR] error rendering template for task %s: %s", taskName, err)
-					continue
-				}
-
-				log.Printf("[DEBUG] %q rendered: %+v", taskName, rendered)
-				// XXX fire off something to run the task here
-				results = append(results, taskName)
-				log.Printf("[INFO] (controller.readwrite) init work")
-				d := unit.driver
-				if err := d.InitWork(ctx); err != nil {
-					log.Printf("[ERR] (controller.readwrite) could not initialize: %s", err)
-					return err
-				}
-
-				log.Printf("[INFO] (controller.readwrite) apply work")
-				if err := d.ApplyWork(ctx); err != nil {
-					log.Printf("[ERR] (controller.readwrite) could not apply: %s", err)
-					return err
-				}
-			}
-		}
-		if len(results) == len(rw.units) {
-			break
-		}
-
-		// TODO configure
-		err := rw.watcher.Wait(time.Second)
+		// This only returns result.Complete if the template has new data
+		// that has been completely fetched.
+		result, err := rw.resolver.Run(tmpl, rw.watcher)
 		if err != nil {
-			log.Printf("[ERR] templates could not render: %s", err)
+			// TODO handle when rendering and execution is per task instead of bulk
+			log.Printf("[ERR] error running template for task %s: %s",
+				taskName, err)
 			return err
 		}
-	}
+		// If true the template should be rendered and driver work run.
+		if result.Complete {
+			rendered, err := tmpl.Render(result.Contents)
+			if err != nil {
+				log.Printf("[ERR] error rendering template for task %s: %s",
+					taskName, err)
+				continue
+			}
 
+			log.Printf("[DEBUG] %q rendered: %+v", taskName, rendered)
+			results = append(results, taskName)
+			log.Printf("[INFO] (controller.readwrite) init work")
+			d := unit.driver
+			if err := d.InitWork(ctx); err != nil {
+				log.Printf("[ERR] (controller.readwrite) could not initialize: %s",
+					err)
+				return err
+			}
+
+			log.Printf("[INFO] (controller.readwrite) apply work")
+			if err := d.ApplyWork(ctx); err != nil {
+				log.Printf("[ERR] (controller.readwrite) could not apply: %s", err)
+				return err
+			}
+		}
+	}
 	return nil
 }
