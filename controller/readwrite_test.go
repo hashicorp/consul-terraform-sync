@@ -110,10 +110,11 @@ func TestReadWriteInit(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			d := new(mocksD.Driver)
-			d.On("Init").Return(tc.initErr).Once()
+			d.On("Init", mock.Anything).Return(tc.initErr).Once()
 			d.On("InitTask", mock.Anything, mock.Anything).Return(tc.initTaskErr).Once()
 			d.On("InitWorker", mock.Anything).Return(tc.initWorkerErr).Once()
 
@@ -123,7 +124,7 @@ func TestReadWriteInit(t *testing.T) {
 				fileReader: tc.fileReader,
 			}
 
-			err := controller.Init()
+			err := controller.Init(ctx)
 
 			if tc.expectError {
 				assert.Error(t, err)

@@ -17,7 +17,7 @@ import (
 // and triggering the driver to update network infrastructure.
 type Controller interface {
 	// Init initializes elements needed by controller
-	Init() error
+	Init(ctx context.Context) error
 
 	// Run runs the controller by monitoring Consul and triggering the driver as needed
 	Run(ctx context.Context) <-chan error
