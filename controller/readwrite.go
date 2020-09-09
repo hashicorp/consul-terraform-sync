@@ -60,12 +60,6 @@ func (rw *ReadWrite) Init() error {
 	tasks := newDriverTasks(rw.conf)
 	units := make([]unit, 0, len(tasks))
 
-	templates, err := newTaskTemplates(rw.conf, rw.fileReader)
-	if err != nil {
-		log.Printf("[ERR] (controller.readwrite) error initializing template: %s", err)
-		return err
-	}
-
 	for _, task := range tasks {
 		d := rw.newDriver(rw.conf)
 		if err := d.Init(); err != nil {
@@ -85,9 +79,14 @@ func (rw *ReadWrite) Init() error {
 			log.Printf("[ERR] (controller.readwrite) error initializing worker for task %q: %s", task.Name, err)
 			return err
 		}
+		template, err := newTaskTemplate(task.Name, rw.conf, rw.fileReader)
+		if err != nil {
+			log.Printf("[ERR] (controller.readwrite) error initializing template: %s", err)
+			return err
+		}
 		units = append(units, unit{
 			taskName: task.Name,
-			template: templates[task.Name],
+			template: template,
 			driver:   d,
 		})
 	}
