@@ -285,9 +285,10 @@ func TestTaskConfig_Validate(t *testing.T) {
 		{
 			"valid",
 			&TaskConfig{
-				Name:     String("task"),
-				Services: []string{"service"},
-				Source:   String("source"),
+				Name:      String("task"),
+				Services:  []string{"serviceA", "serviceB"},
+				Source:    String("source"),
+				Providers: []string{"providerA", "providerB"},
 			},
 			true,
 		},
@@ -304,6 +305,26 @@ func TestTaskConfig_Validate(t *testing.T) {
 		{
 			"missing source",
 			&TaskConfig{Name: String("task"), Services: []string{"service"}},
+			false,
+		},
+		{
+			"duplicate provider",
+			&TaskConfig{
+				Name:      String("task"),
+				Services:  []string{"serviceA", "serviceB"},
+				Source:    String("source"),
+				Providers: []string{"providerA", "providerA"},
+			},
+			false,
+		},
+		{
+			"duplicate provider with alias",
+			&TaskConfig{
+				Name:      String("task"),
+				Services:  []string{"serviceA", "serviceB"},
+				Source:    String("source"),
+				Providers: []string{"providerA", "providerA.alias"},
+			},
 			false,
 		},
 	}
