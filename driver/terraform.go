@@ -34,7 +34,6 @@ type Terraform struct {
 	persistLog        bool
 	path              string
 	workingDir        string
-	skipVerify        bool
 	workers           []*worker
 	backend           map[string]interface{}
 	requiredProviders map[string]interface{}
@@ -49,7 +48,6 @@ type TerraformConfig struct {
 	PersistLog        bool
 	Path              string
 	WorkingDir        string
-	SkipVerify        bool
 	Backend           map[string]interface{}
 	RequiredProviders map[string]interface{}
 
@@ -64,7 +62,6 @@ func NewTerraform(config *TerraformConfig) *Terraform {
 		persistLog:        config.PersistLog,
 		path:              config.Path,
 		workingDir:        config.WorkingDir,
-		skipVerify:        config.SkipVerify,
 		backend:           config.Backend,
 		requiredProviders: config.RequiredProviders,
 		clientType:        config.ClientType,

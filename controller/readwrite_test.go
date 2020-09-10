@@ -290,7 +290,6 @@ func singleTaskConfig() *config.Config {
 				Log:        config.Bool(true),
 				Path:       config.String("path"),
 				WorkingDir: config.String("working"),
-				SkipVerify: config.Bool(true),
 			},
 		},
 		Tasks: &config.TaskConfigs{

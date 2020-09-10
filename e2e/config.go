@@ -37,7 +37,6 @@ func terraformBlock(dir string) string {
 	}
 	return fmt.Sprintf(`
 driver "terraform" {
-	skip_verify = true
 	path = "%s"
 	working_dir = "%s"
 }

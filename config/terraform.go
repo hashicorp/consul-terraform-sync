@@ -23,7 +23,6 @@ type TerraformConfig struct {
 	PersistLog        *bool                  `mapstructure:"persist_log"`
 	Path              *string                `mapstructure:"path"`
 	WorkingDir        *string                `mapstructure:"working_dir"`
-	SkipVerify        *bool                  `mapstructure:"skip_verify"`
 	Backend           map[string]interface{} `mapstructure:"backend"`
 	RequiredProviders map[string]interface{} `mapstructure:"required_providers"`
 }
@@ -42,7 +41,6 @@ func DefaultTerraformConfig() *TerraformConfig {
 		PersistLog:        Bool(false),
 		Path:              String(wd),
 		WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
-		SkipVerify:        Bool(false),
 		Backend:           make(map[string]interface{}),
 		RequiredProviders: make(map[string]interface{}),
 	}
@@ -90,10 +88,6 @@ func (c *TerraformConfig) Copy() *TerraformConfig {
 
 	if c.WorkingDir != nil {
 		o.WorkingDir = StringCopy(c.WorkingDir)
-	}
-
-	if c.SkipVerify != nil {
-		o.SkipVerify = BoolCopy(c.SkipVerify)
 	}
 
 	if c.Backend != nil {
@@ -147,10 +141,6 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 		r.WorkingDir = StringCopy(o.WorkingDir)
 	}
 
-	if o.SkipVerify != nil {
-		r.SkipVerify = BoolCopy(o.SkipVerify)
-	}
-
 	if o.Backend != nil {
 		for k, v := range o.Backend {
 			if r.Backend == nil {
@@ -201,10 +191,6 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 		c.WorkingDir = String(path.Join(wd, DefaultTFWorkingDir))
 	}
 
-	if c.SkipVerify == nil {
-		c.SkipVerify = Bool(false)
-	}
-
 	if c.Backend == nil {
 		c.Backend = make(map[string]interface{})
 	}
@@ -247,7 +233,6 @@ func (c *TerraformConfig) GoString() string {
 		"PersistLog:%v, "+
 		"Path:%s, "+
 		"WorkingDir:%s, "+
-		"SkipVerify:%v, "+
 		"Backend:%+v, "+
 		"RequiredProviders:%+v"+
 		"}",
@@ -255,7 +240,6 @@ func (c *TerraformConfig) GoString() string {
 		BoolVal(c.PersistLog),
 		StringVal(c.Path),
 		StringVal(c.WorkingDir),
-		BoolVal(c.SkipVerify),
 		c.Backend,
 		c.RequiredProviders,
 	)

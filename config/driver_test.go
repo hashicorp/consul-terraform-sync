@@ -155,7 +155,6 @@ func TestDriverConfig_Finalize(t *testing.T) {
 					PersistLog:        Bool(false),
 					Path:              String(wd),
 					WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
-					SkipVerify:        Bool(false),
 					Backend:           map[string]interface{}{},
 					RequiredProviders: map[string]interface{}{},
 				},
@@ -165,8 +164,7 @@ func TestDriverConfig_Finalize(t *testing.T) {
 			"with_terraform",
 			&DriverConfig{
 				Terraform: &TerraformConfig{
-					Log:        Bool(true),
-					SkipVerify: Bool(true),
+					Log: Bool(true),
 				},
 			},
 			&DriverConfig{
@@ -175,7 +173,6 @@ func TestDriverConfig_Finalize(t *testing.T) {
 					PersistLog:        Bool(false),
 					Path:              String(wd),
 					WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
-					SkipVerify:        Bool(true),
 					Backend:           map[string]interface{}{},
 					RequiredProviders: map[string]interface{}{},
 				},

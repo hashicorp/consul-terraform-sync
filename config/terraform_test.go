@@ -29,7 +29,6 @@ func TestTerraformConfig_Copy(t *testing.T) {
 				Log:        Bool(true),
 				Path:       String("path"),
 				WorkingDir: String("working"),
-				SkipVerify: Bool(false),
 				Backend: map[string]interface{}{"consul": map[string]interface{}{
 					"path": "consul-nia/terraform",
 				}},
@@ -174,30 +173,6 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{WorkingDir: String("working")},
 			&TerraformConfig{WorkingDir: String("working")},
 			&TerraformConfig{WorkingDir: String("working")},
-		},
-		{
-			"skip_verify_overrides",
-			&TerraformConfig{SkipVerify: Bool(true)},
-			&TerraformConfig{SkipVerify: Bool(false)},
-			&TerraformConfig{SkipVerify: Bool(false)},
-		},
-		{
-			"skip_verify_empty_one",
-			&TerraformConfig{SkipVerify: Bool(true)},
-			&TerraformConfig{},
-			&TerraformConfig{SkipVerify: Bool(true)},
-		},
-		{
-			"skip_verify_empty_two",
-			&TerraformConfig{},
-			&TerraformConfig{SkipVerify: Bool(true)},
-			&TerraformConfig{SkipVerify: Bool(true)},
-		},
-		{
-			"skip_verify_same",
-			&TerraformConfig{SkipVerify: Bool(true)},
-			&TerraformConfig{SkipVerify: Bool(true)},
-			&TerraformConfig{SkipVerify: Bool(true)},
 		},
 		{
 			"backend_overrides",
@@ -420,7 +395,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				PersistLog:        Bool(false),
 				Path:              String(wd),
 				WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
-				SkipVerify:        Bool(false),
 				Backend:           map[string]interface{}{},
 				RequiredProviders: map[string]interface{}{},
 			},
@@ -434,7 +408,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				PersistLog: Bool(false),
 				Path:       String(wd),
 				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
-				SkipVerify: Bool(false),
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"address": *consul.Address,
@@ -457,7 +430,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				PersistLog: Bool(false),
 				Path:       String(wd),
 				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
-				SkipVerify: Bool(false),
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"address": "127.0.0.1:8080",
