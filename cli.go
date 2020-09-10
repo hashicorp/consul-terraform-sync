@@ -7,7 +7,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/hashicorp/consul-nia/config"
 	"github.com/hashicorp/consul-nia/controller"
@@ -157,10 +159,28 @@ func (cli *CLI) Run(args []string) int {
 
 	log.Printf("[INFO] (cli) running controller")
 	ctx := context.Background()
-	if err = prov.Run(ctx); err != nil {
+	if err := runLoop(prov, ctx); err != nil {
 		log.Printf("[ERR] (cli) error running controller: %s", err)
 		return ExitCodeError
 	}
 
 	return ExitCodeOK
+}
+
+// runLoop is used to manage the running loop of the container. It handles
+// signals and returning any error that bubbles up from the controller.
+func runLoop(ctl controller.Controller, ctx context.Context) error {
+	interruptCh := make(chan os.Signal, 1)
+	signal.Notify(interruptCh, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	errCh := ctl.Run(ctx)
+	for {
+		select {
+		case <-interruptCh:
+			return nil
+		case <-ctx.Done():
+			return nil
+		case err := <-errCh:
+			return err
+		}
+	}
 }

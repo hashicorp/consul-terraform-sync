@@ -20,7 +20,7 @@ type Controller interface {
 	Init() error
 
 	// Run runs the controller by monitoring Consul and triggering the driver as needed
-	Run(ctx context.Context) error
+	Run(ctx context.Context) <-chan error
 }
 
 func newDriverFunc(conf *config.Config) (func(*config.Config) driver.Driver, error) {

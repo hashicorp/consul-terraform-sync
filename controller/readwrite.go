@@ -28,7 +28,6 @@ type unit struct {
 	taskName string
 	driver   driver.Driver
 	template template
-	inited   bool
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
@@ -100,10 +99,10 @@ func (rw *ReadWrite) Init() error {
 // catalog and using the driver to apply network infrastructure changes for
 // any work that have been updated.
 // Blocking call that runs main consul monitoring loop
-func (rw *ReadWrite) Run(ctx context.Context) error {
+func (rw *ReadWrite) Run(ctx context.Context) <-chan error {
 	errCh := make(chan error)
 	go rw.loop(ctx, errCh)
-	return <-errCh
+	return errCh
 }
 
 // placeholder until we update hashicat version which has this same code
@@ -148,6 +147,7 @@ func (rw *ReadWrite) run(ctx context.Context) error {
 	for _, unit := range rw.units {
 		tmpl := unit.template
 		taskName := unit.taskName
+		log.Print("[DEBUG] (controller.readwrite) running task:", taskName)
 
 		// This only returns result.Complete if the template has new data
 		// that has been completely fetched.
@@ -160,6 +160,7 @@ func (rw *ReadWrite) run(ctx context.Context) error {
 		}
 		// If true the template should be rendered and driver work run.
 		if result.Complete {
+			log.Printf("[DEBUG] (controller.readwrite) task %s complete", taskName)
 			rendered, err := tmpl.Render(result.Contents)
 			if err != nil {
 				log.Printf("[ERR] error rendering template for task %s: %s",
