@@ -132,6 +132,7 @@ func (cli *CLI) Run(args []string) int {
 	if isVersion {
 		log.Printf("[DEBUG] (cli) version flag was given, exiting now")
 		fmt.Fprintf(cli.errStream, "%s %s\n", version.Name, version.GetHumanVersion())
+		fmt.Fprintf(cli.errStream, "Compatible with Terraform %s\n", version.CompatibleTerraformVersionConstraint)
 		return ExitCodeOK
 	}
 
@@ -151,14 +152,14 @@ func (cli *CLI) Run(args []string) int {
 		prov = controller.NewReadOnly(conf)
 	}
 
+	ctx := context.Background()
 	log.Printf("[INFO] (cli) initializing controller")
-	if err = prov.Init(); err != nil {
+	if err = prov.Init(ctx); err != nil {
 		log.Printf("[ERR] (cli) error initializing controller: %s", err)
 		return ExitCodeError
 	}
 
 	log.Printf("[INFO] (cli) running controller")
-	ctx := context.Background()
 	if err := runLoop(prov, ctx); err != nil {
 		log.Printf("[ERR] (cli) error running controller: %s", err)
 		return ExitCodeError

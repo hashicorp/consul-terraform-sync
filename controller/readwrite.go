@@ -47,7 +47,7 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 
 // Init initializes the controller before it can be run. Ensures that
 // driver is initializes, works are created for each task.
-func (rw *ReadWrite) Init() error {
+func (rw *ReadWrite) Init(ctx context.Context) error {
 	log.Printf("[INFO] (controller.readwrite) initializing driver")
 
 	log.Printf("[INFO] (controller.readwrite) driver initialized")
@@ -61,7 +61,7 @@ func (rw *ReadWrite) Init() error {
 
 	for _, task := range tasks {
 		d := rw.newDriver(rw.conf)
-		if err := d.Init(); err != nil {
+		if err := d.Init(ctx); err != nil {
 			log.Printf("[ERR] (controller.readwrite) error initializing driver: %s", err)
 			return err
 		}

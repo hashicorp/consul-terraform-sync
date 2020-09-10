@@ -8,7 +8,7 @@ import "context"
 // downstream to update network infrastructure.
 type Driver interface {
 	// Init initializes the driver and environment
-	Init() error
+	Init(ctx context.Context) error
 
 	// InitTask initializes a task that the driver will execute
 	InitTask(task Task, force bool) error

@@ -21,7 +21,7 @@ func NewReadOnly(conf *config.Config) *ReadOnly {
 }
 
 // Init initializes the controller before it can be run
-func (ro *ReadOnly) Init() error {
+func (ro *ReadOnly) Init(ctx context.Context) error {
 	// TODO
 	return nil
 }

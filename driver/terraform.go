@@ -13,15 +13,19 @@ import (
 )
 
 const (
-	terraformVersion = "0.13.0-rc1"
-	releasesURL      = "https://releases.hashicorp.com"
-
 	// Types of clients that are alternatives to the default Terraform CLI client
 	developmentClient = "development"
 	testClient        = "test"
+
+	errSuggestion = "remove Terraform from the configured path or specify a new path to safely install a compatible version."
 )
 
-var _ Driver = (*Terraform)(nil)
+var (
+	_ Driver = (*Terraform)(nil)
+
+	errUnsupportedTerraformVersion = fmt.Errorf("unsupported Terraform version: %s", errSuggestion)
+	errIncompatibleTerraformBinary = fmt.Errorf("incompatible Terraform binary: %s", errSuggestion)
+)
 
 // Terraform is an NIA driver that uses the Terraform CLI to interface with
 // low-level network infrastructure.
@@ -63,29 +67,38 @@ func NewTerraform(config *TerraformConfig) *Terraform {
 		skipVerify:        config.SkipVerify,
 		backend:           config.Backend,
 		requiredProviders: config.RequiredProviders,
-
-		// TODO: the version is currently hard-coded. NIA should discover
-		// the latest patch version within the minor version.
-		version:    terraformVersion,
-		clientType: config.ClientType,
+		clientType:        config.ClientType,
 	}
 }
 
 // Init initializes the Terraform local environment. The Terraform binary is
 // installed to the configured path.
-func (tf *Terraform) Init() error {
-	if !terraformInstalled(tf.path) {
-		log.Printf("[INFO] (driver.terraform) installing terraform (%s) to path '%s'", tf.version, tf.path)
-		if err := tf.install(); err != nil {
-			log.Printf("[ERR] (driver.terraform) error installing terraform: %s", err)
+func (tf *Terraform) Init(ctx context.Context) error {
+	if isTFInstalled(tf.path) {
+		tfVersion, compatible, err := isTFCompatible(ctx, tf.workingDir, tf.path)
+		if err != nil {
+			if strings.Contains(err.Error(), "exec format error") {
+				return errIncompatibleTerraformBinary
+			}
 			return err
 		}
-		log.Printf("[INFO] (driver.terraform) successfully installed terraform")
-	} else {
-		log.Printf("[INFO] (driver.terraform) skipping install, terraform "+
-			"already exists at path %s/terraform", tf.path)
+
+		if !compatible {
+			return errUnsupportedTerraformVersion
+		}
+
+		tf.version = tfVersion.String()
+		log.Printf("[INFO] (driver.terraform) skipping install, terraform %s "+
+			"already exists at path %s/terraform", tf.version, tf.path)
+		return nil
 	}
 
+	log.Printf("[INFO] (driver.terraform) installing terraform to path '%s'", tf.path)
+	if err := tf.install(ctx); err != nil {
+		log.Printf("[ERR] (driver.terraform) error installing terraform: %s", err)
+		return err
+	}
+	log.Printf("[INFO] (driver.terraform) successfully installed terraform")
 	return nil
 }
 
