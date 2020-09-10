@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-nia/config"
 	"github.com/hashicorp/consul/sdk/testutil"
@@ -151,7 +153,16 @@ func runConsulNIA(configPath string) error {
 	cmd := exec.Command("consul-nia", fmt.Sprintf("--config-file=%s", configPath))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	time.Sleep(time.Second * 5)
+	cmd.Process.Signal(os.Interrupt)
+	sigintErr := errors.New("signal: interrupt")
+	if err := cmd.Wait(); err != nil && err != sigintErr {
+		return err
+	}
+	return nil
 }
 
 // removeDir removes temporary directory created for a test

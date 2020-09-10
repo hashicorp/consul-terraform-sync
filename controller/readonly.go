@@ -28,7 +28,7 @@ func (ro *ReadOnly) Init() error {
 
 // Run runs the controller in read-only mode by checking Consul catalog once for
 // latest and using the driver to plan network infrastructure changes
-func (ro *ReadOnly) Run(ctx context.Context) error {
+func (ro *ReadOnly) Run(ctx context.Context) <-chan error {
 	// TODO
 	return nil
 }

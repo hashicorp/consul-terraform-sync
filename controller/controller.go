@@ -20,7 +20,7 @@ type Controller interface {
 	Init() error
 
 	// Run runs the controller by monitoring Consul and triggering the driver as needed
-	Run(ctx context.Context) error
+	Run(ctx context.Context) <-chan error
 }
 
 func newDriverFunc(conf *config.Config) (func(*config.Config) driver.Driver, error) {
@@ -88,35 +88,29 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 	return tasks
 }
 
-// newTaskTemplates converts config task definitions into templates to be
-// monitored and rendered.
-func newTaskTemplates(conf *config.Config, fileReader func(string) ([]byte, error)) (map[string]template, error) {
+// newTaskTemplate creates templates to be monitored and rendered.
+func newTaskTemplate(taskName string, conf *config.Config, fileReader func(string) ([]byte, error)) (template, error) {
 	if conf.Driver.Terraform == nil {
 		return nil, errors.New("unsupported driver to run tasks")
 	}
 
-	templates := make(map[string]template, len(*conf.Tasks))
-	for _, t := range *conf.Tasks {
-		tmplFullpath := path.Join(*conf.Driver.Terraform.WorkingDir, *t.Name, tftmpl.TFVarsTmplFilename)
-		tfvarsFilepath := strings.TrimRight(tmplFullpath, ".tmpl")
+	tmplFullpath := path.Join(*conf.Driver.Terraform.WorkingDir, taskName, tftmpl.TFVarsTmplFilename)
+	tfvarsFilepath := strings.TrimRight(tmplFullpath, ".tmpl")
 
-		content, err := fileReader(tmplFullpath)
-		if err != nil {
-			return nil, err
-		}
-
-		renderer := hcat.NewFileRenderer(hcat.FileRendererInput{
-			Path: tfvarsFilepath,
-		})
-
-		templates[*t.Name] = hcat.NewTemplate(hcat.TemplateInput{
-			Contents:     string(content),
-			Renderer:     renderer,
-			FuncMapMerge: tftmpl.HCLTmplFuncMap,
-		})
+	content, err := fileReader(tmplFullpath)
+	if err != nil {
+		return nil, err
 	}
 
-	return templates, nil
+	renderer := hcat.NewFileRenderer(hcat.FileRendererInput{
+		Path: tfvarsFilepath,
+	})
+
+	return hcat.NewTemplate(hcat.TemplateInput{
+		Contents:     string(content),
+		Renderer:     renderer,
+		FuncMapMerge: tftmpl.HCLTmplFuncMap,
+	}), nil
 }
 
 // getService is a helper to find and convert a user-defined service
