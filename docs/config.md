@@ -45,6 +45,9 @@ task {
   version = "1.0.0"
   providers = ["myprovider"]
   services = ["web", "api"]
+  wait {
+    min = "10s"
+  }
 }
 
 driver "terraform" {
@@ -78,6 +81,10 @@ syslog {}
   * `enabled` - `(bool: false)` Enable syslog logging. Specifying other option also enables syslog logging.
   * `facility` - `(string: <none>)` Name of the syslog facility to log to.
   * `name` - `(string: "consul-nia")` Name to use for the Consul NIA process when logging to syslog.
+* `wait` - Wait configures quiescence timers for all [tasks](#task). It defines the minimum and maximum amount of time to wait for the cluster to reach a consistent state before triggering task executions. The default is enabled to reduce the number of times downstream infrastructure is updated within a short period of time. This is useful to enable in systems that have a lot of flapping.
+  * `enabled` - `(bool: true)` Enable quiescence timer globally. Specifying `min` will also enable it.
+  * `min` - `(string: 5s)` The minimum period of time to wait after changes are detected before triggering related tasks.
+  * `max` - `(string: 20s)` The maximum period of time to wait after changes are detected before triggering related tasks.
 
 ### Consul
 
@@ -158,6 +165,10 @@ task {
 * `source` - `(string: <required>)` Source is the location the driver uses to fetch dependencies. The source format is dependent on the driver. For the [Terraform driver](#terraform-driver), the source is the module path (local or remote). Read more on [Terraform module source here](https://www.terraform.io/docs/modules/sources.html).
 * `variable_files` - `(list(string): [])` A list of paths to files containing variables for the task. For the [Terraform driver](#terraform-driver), these are files with `.tfvars` file extensions and are used as Terraform [input variables](https://www.terraform.io/docs/configuration/variables.html) to pass as arguments to the Terraform module. Variables are loaded in the same order as they appear in the order of the files. Duplicate variables are overwritten with the later value.
 * `version` - `(string: <none>)` The version of the provided source the task will use. For the [Terraform driver](#terraform-driver), this is the module version. The latest version will be used as the default if omitted.
+* `wait` - Wait configures a quiescence timer for the task. It defines the minimum and maximum amount of time to wait for the cluster to reach a consistent state before triggering task execution. The default is inherited from the top level [`wait` block](#consul-nia). If configured, these values will take precedence over the global quiescence timer. This is useful to enable for a task that is dependent on services that have a lot of flapping.
+  * `enabled` - `(bool: true)` Enable or disable a quiescence timer for the task. Specifying `min` will also enable it.
+  * `min` - `(string: 5s)` The minimum period of time to wait after changes are detected before triggering related tasks.
+  * `max` - `(string: 20s)` The maximum period of time to wait after changes are detected before triggering related tasks.
 
 ### Terraform Driver
 The `driver` block configures the subprocess for Consul NIA to propagate infrastructure change. The default Terraform driver does not need to be explicitly configured.

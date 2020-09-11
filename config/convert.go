@@ -102,3 +102,12 @@ func TimeDurationCopy(t *time.Duration) *time.Duration {
 
 	return TimeDuration(*t)
 }
+
+// TimeDurationPresent returns a boolean indicating if the pointer is nil, or
+// if the pointer is pointing to the zero value.
+func TimeDurationPresent(t *time.Duration) bool {
+	if t == nil {
+		return false
+	}
+	return *t != 0
+}
