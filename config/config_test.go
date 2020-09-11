@@ -63,7 +63,6 @@ var (
 				Log:        Bool(true),
 				Path:       String("path"),
 				WorkingDir: String("working"),
-				SkipVerify: Bool(true),
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"address": "consul-example.com",

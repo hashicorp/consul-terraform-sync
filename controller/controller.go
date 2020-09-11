@@ -38,7 +38,6 @@ func newTerraformDriver(conf *config.Config) driver.Driver {
 		PersistLog:        *tfConf.PersistLog,
 		Path:              *tfConf.Path,
 		WorkingDir:        *tfConf.WorkingDir,
-		SkipVerify:        *tfConf.SkipVerify,
 		Backend:           tfConf.Backend,
 		RequiredProviders: tfConf.RequiredProviders,
 		ClientType:        *conf.ClientType,

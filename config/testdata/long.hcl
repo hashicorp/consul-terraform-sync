@@ -37,7 +37,6 @@ driver "terraform" {
   log = true
   path = "path"
   working_dir = "working"
-  skip_verify = true
   backend "consul" {
     address = "consul-example.com"
     path = "kv-path/terraform"

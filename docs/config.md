@@ -168,7 +168,6 @@ driver "terraform {
   persist_log = false
   path = ""
   working_dir = ""
-  skip_verify = false
   
   backend "consul" {
     scheme = "https"
@@ -188,7 +187,6 @@ driver "terraform {
 * `path` - `(string: optional)` The file path to install Terraform or discover an existing Terraform binary. If omitted, Consul NIA will install Terraform in the same directory as the daemon.
 * `persist_log` - `(bool: false)` Enable trace logging for each Terraform client to disk per task. This is equivalent to setting `TF_LOG_PATH=<work_dir>/terraform.log`. Trace log level results in verbose logging and may be useful for debugging and development purposes. We do not recommend enabling this for production. There is no log rotation and may quickly result in large files.
 * `required_providers` - `(obj)` Declare each Terraform providers used across all tasks. This is similar to the [Terraform `terraform.required_providers`](https://www.terraform.io/docs/configuration/provider-requirements.html#requiring-providers) field to specify the source and version for each provider. Consul NIA will process these requirements when preparing each task that uses the provider.
-* `skip_verify` - `(bool: false)` If enabled, Consul NIA will skip release signature validation when installing Terraform.
 * `working_dir` - `(string: "nia-tasks")` The base working directory to manage Terraform configurations all tasks. The full path of each working directory will have the task identifier appended to the end of the path, e.g. `./nia-tasks/task-name`.
 
 ### Provider
