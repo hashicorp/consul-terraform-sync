@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/consul-nia/config"
 	"github.com/hashicorp/consul-nia/driver"
+	"github.com/hashicorp/consul-nia/handler"
 	"github.com/hashicorp/hcat"
 )
 
@@ -21,6 +22,7 @@ type ReadWrite struct {
 	units      []unit
 	watcher    watcher
 	resolver   resolver
+	postApply  handler.Handler
 }
 
 // unit of work per template/task
@@ -36,12 +38,17 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 	if err != nil {
 		return nil, err
 	}
+	h, err := getPostApplyHandlers(conf)
+	if err != nil {
+		return nil, err
+	}
 	return &ReadWrite{
 		conf:       conf,
 		newDriver:  nd,
 		fileReader: ioutil.ReadFile,
 		watcher:    newWatcher(conf),
 		resolver:   hcat.NewResolver(),
+		postApply:  h,
 	}, nil
 }
 
@@ -184,6 +191,12 @@ func (rw *ReadWrite) run(ctx context.Context) error {
 				return err
 			}
 		}
+	}
+
+	if rw.postApply != nil {
+		log.Printf("[INFO] (controller.readwrite) post-apply out-of-band actions")
+		// TODO: improvement to only trigger handlers for tasks that were updated
+		rw.postApply.Do()
 	}
 	return nil
 }

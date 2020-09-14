@@ -156,7 +156,7 @@ func runConsulNIA(configPath string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 8)
 	cmd.Process.Signal(os.Interrupt)
 	sigintErr := errors.New("signal: interrupt")
 	if err := cmd.Wait(); err != nil && err != sigintErr {
