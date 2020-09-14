@@ -1,12 +1,10 @@
 package handler
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/PaloAltoNetworks/pango"
 	"github.com/PaloAltoNetworks/pango/commit"
-	"github.com/hashicorp/consul-nia/config"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -35,50 +33,43 @@ var _ Handler = (*Panos)(nil)
 type Panos struct {
 	next         Handler
 	client       panosClient
-	providerConf panosConfig
-}
-
-// panosConfig captures panos provider configuration
-type panosConfig struct {
-	Hostname          *string  `mapstructure:"hostname"`
-	Username          *string  `mapstructure:"username"`
-	Password          *string  `mapstructure:"password"`
-	APIKey            *string  `mapstructure:"api_key" json:"api_key"`
-	Protocol          *string  `mapstructure:"protocol"`
-	Port              *int     `mapstructure:"port"`
-	Timeout           *int     `mapstructure:"timeout"`
-	Logging           []string `mapstructure:"logging"`
-	VerifyCertificate *bool    `mapstructure:"verify_certificate" json:"verify_certificate"`
-	JSONConfigFile    *string  `mapstructure:"json_config_file"`
+	providerConf pango.Client
+	configPath   string
 }
 
 // NewPanos configures and returns a new panos handler
 func NewPanos(c map[string]interface{}) (*Panos, error) {
-	var conf panosConfig
-	if err := mapstructure.Decode(c, &conf); err != nil {
+	log.Printf("[INFO] (handler.panos) creating handler")
+
+	var conf pango.Client
+	decoderConf := &mapstructure.DecoderConfig{TagName: "json", Result: &conf}
+	decoder, err := mapstructure.NewDecoder(decoderConf)
+	if err != nil {
+		return nil, err
+	}
+	if err := decoder.Decode(c); err != nil {
 		return nil, err
 	}
 
-	log.Printf("[INFO] (handler.panos) creating handler with initial config: %s", conf.GoString())
+	configPath := ""
+	for k, val := range c {
+		if k == "json_config_file" {
+			if v, ok := val.(string); ok {
+				configPath = v
+				break
+			}
+		}
+	}
 
 	fw := &pango.Firewall{
-		Client: pango.Client{
-			Hostname:              config.StringVal(conf.Hostname),
-			Username:              config.StringVal(conf.Username),
-			Password:              config.StringVal(conf.Password),
-			ApiKey:                config.StringVal(conf.APIKey),
-			Protocol:              config.StringVal(conf.Protocol),
-			Port:                  uint(config.IntVal(conf.Port)),
-			Timeout:               config.IntVal(conf.Timeout),
-			VerifyCertificate:     config.BoolVal(conf.VerifyCertificate),
-			LoggingFromInitialize: conf.Logging,
-		},
+		Client: conf,
 	}
 
 	return &Panos{
 		next:         nil,
 		client:       fw,
 		providerConf: conf,
+		configPath:   configPath,
 	}, nil
 }
 
@@ -91,8 +82,7 @@ func (h *Panos) Do() {
 		}
 	}()
 
-	configPath := config.StringVal(h.providerConf.JSONConfigFile)
-	if err := h.client.InitializeUsing(configPath, true); err != nil {
+	if err := h.client.InitializeUsing(h.configPath, true); err != nil {
 		// potential optimizations to call Initialize() once / less frequently
 		log.Printf("[ERR] (handler.panos) error initializing panos client: %s", err)
 		return
@@ -123,34 +113,4 @@ func (h *Panos) Do() {
 // SetNext sets the next handler that should be called.
 func (h *Panos) SetNext(next Handler) {
 	h.next = next
-}
-
-// GoString defines the printable version of this struct.
-func (c *panosConfig) GoString() string {
-	if c == nil {
-		return "(*panosConfig)(nil)"
-	}
-	return fmt.Sprintf("&panosConfig{"+
-		"Hostname:%s, "+
-		"Username:%s, "+
-		"Password:%s, "+
-		"APIKey:%s, "+
-		"Protocol:%s, "+
-		"Port:%d, "+
-		"Timeout:%d, "+
-		"Logging:%v, "+
-		"VerifyCertificate:%t, "+
-		"JSONConfigFile:%s"+
-		"}",
-		config.StringVal(c.Hostname),
-		config.StringVal(c.Username),
-		"<password-redacted>",
-		"<api-key-redacted>",
-		config.StringVal(c.Protocol),
-		config.IntVal(c.Port),
-		config.IntVal(c.Timeout),
-		c.Logging,
-		config.BoolVal(c.VerifyCertificate),
-		config.StringVal(c.JSONConfigFile),
-	)
 }

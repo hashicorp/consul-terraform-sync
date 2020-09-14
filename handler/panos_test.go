@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hashicorp/consul-nia/config"
+	"github.com/PaloAltoNetworks/pango"
 	mocks "github.com/hashicorp/consul-nia/mocks/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -13,10 +13,11 @@ import (
 
 func TestNewPanos(t *testing.T) {
 	cases := []struct {
-		name        string
-		expectError bool
-		config      map[string]interface{}
-		expected    panosConfig
+		name               string
+		expectError        bool
+		config             map[string]interface{}
+		expected           pango.Client
+		expectedConfigPath string
 	}{
 		{
 			"happy path",
@@ -29,18 +30,22 @@ func TestNewPanos(t *testing.T) {
 				"protocol":           "http",
 				"port":               8080,
 				"timeout":            5,
+				"logging":            []string{"action", "uid"},
 				"verify_certificate": true,
+				"json_config_file":   "/my/path/config.json",
 			},
-			panosConfig{
-				Hostname:          config.String("10.10.10.10"),
-				Username:          config.String("user"),
-				Password:          config.String("pw123"),
-				APIKey:            config.String("abcd"),
-				Protocol:          config.String("http"),
-				Port:              config.Int(8080),
-				Timeout:           config.Int(5),
-				VerifyCertificate: config.Bool(true),
+			pango.Client{
+				Hostname:              "10.10.10.10",
+				Username:              "user",
+				Password:              "pw123",
+				ApiKey:                "abcd",
+				Protocol:              "http",
+				Port:                  8080,
+				Timeout:               5,
+				LoggingFromInitialize: []string{"action", "uid"},
+				VerifyCertificate:     true,
 			},
+			"/my/path/config.json",
 		},
 	}
 
@@ -54,6 +59,7 @@ func TestNewPanos(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assertEqualCred(t, tc.expected, h.providerConf)
+			assert.Equal(t, tc.expectedConfigPath, h.configPath)
 		})
 	}
 }
@@ -168,54 +174,14 @@ func TestPanosSetNext(t *testing.T) {
 	}
 }
 
-func TestPanosConfigGoString(t *testing.T) {
-	cases := []struct {
-		name     string
-		config   *panosConfig
-		expected string
-	}{
-		{
-			"happy path",
-			&panosConfig{
-				Hostname:          config.String("10.10.10.10"),
-				Username:          config.String("user"),
-				Password:          config.String("pw123"),
-				APIKey:            config.String("abcd"),
-				Protocol:          config.String("http"),
-				Port:              config.Int(8080),
-				Timeout:           config.Int(5),
-				Logging:           []string{"action", "uid"},
-				VerifyCertificate: config.Bool(true),
-				JSONConfigFile:    config.String("config.json"),
-			},
-			`&panosConfig{Hostname:10.10.10.10, Username:user, ` +
-				`Password:<password-redacted>, APIKey:<api-key-redacted>, ` +
-				`Protocol:http, Port:8080, Timeout:5, Logging:[action uid], ` +
-				`VerifyCertificate:true, JSONConfigFile:config.json}`,
-		},
-		{
-			"nil",
-			nil,
-			`(*panosConfig)(nil)`,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			actual := tc.config.GoString()
-			assert.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
-func assertEqualCred(t *testing.T, exp, act panosConfig) {
-	assert.Equal(t, config.StringVal(exp.Hostname), config.StringVal(act.Hostname))
-	assert.Equal(t, config.StringVal(exp.Username), config.StringVal(act.Username))
-	assert.Equal(t, config.StringVal(exp.Password), config.StringVal(act.Password))
-	assert.Equal(t, config.StringVal(exp.APIKey), config.StringVal(act.APIKey))
-	assert.Equal(t, config.StringVal(exp.Protocol), config.StringVal(act.Protocol))
-	assert.Equal(t, config.IntVal(exp.Port), config.IntVal(act.Port))
-	assert.Equal(t, config.IntVal(exp.Timeout), config.IntVal(act.Timeout))
-	assert.Equal(t, config.BoolVal(exp.VerifyCertificate), config.BoolVal(act.VerifyCertificate))
-	assert.Equal(t, config.StringVal(exp.JSONConfigFile), config.StringVal(act.JSONConfigFile))
+func assertEqualCred(t *testing.T, exp, act pango.Client) {
+	assert.Equal(t, exp.Hostname, act.Hostname)
+	assert.Equal(t, exp.Username, act.Username)
+	assert.Equal(t, exp.Password, act.Password)
+	assert.Equal(t, exp.ApiKey, act.ApiKey)
+	assert.Equal(t, exp.Protocol, act.Protocol)
+	assert.Equal(t, exp.Port, act.Port)
+	assert.Equal(t, exp.Timeout, act.Timeout)
+	assert.Equal(t, exp.LoggingFromInitialize, act.LoggingFromInitialize)
+	assert.Equal(t, exp.VerifyCertificate, act.VerifyCertificate)
 }
