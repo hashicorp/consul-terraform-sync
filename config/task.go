@@ -41,6 +41,9 @@ type TaskConfig struct {
 	// driver, this is the module version. The latest version will be used as
 	// the default if omitted.
 	Version *string `mapstructure:"version"`
+
+	// Wait configures per-task quiescence timers.
+	Wait *WaitConfig `mapstructure:"wait"`
 }
 
 // TaskConfigs is a collection of TaskConfig
@@ -71,6 +74,8 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	}
 
 	o.Version = StringCopy(c.Version)
+
+	o.Wait = c.Wait.Copy()
 
 	return &o
 }
@@ -121,11 +126,15 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Version = StringCopy(o.Version)
 	}
 
+	if o.Wait != nil {
+		r.Wait = r.Wait.Merge(o.Wait)
+	}
+
 	return r
 }
 
 // Finalize ensures there no nil pointers.
-func (c *TaskConfig) Finalize() {
+func (c *TaskConfig) Finalize(wait *WaitConfig) {
 	if c == nil {
 		return
 	}
@@ -157,6 +166,16 @@ func (c *TaskConfig) Finalize() {
 	if c.Version == nil {
 		c.Version = String("")
 	}
+
+	if c.Wait == nil {
+		// Inherit wait config if set
+		if wait != nil {
+			c.Wait = wait
+		} else {
+			c.Wait = DefaultTaskWaitConfig()
+		}
+	}
+	c.Wait.Finalize()
 }
 
 // Validate validates the values and required options. This method is recommended
@@ -188,6 +207,10 @@ func (c *TaskConfig) Validate() error {
 		pNames[name] = true
 	}
 
+	if err := c.Wait.Validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -205,7 +228,8 @@ func (c *TaskConfig) GoString() string {
 		"Services:%s, "+
 		"Source:%s, "+
 		"VarFiles:%s, "+
-		"Version:%s"+
+		"Version:%s, "+
+		"Wait:%s"+
 		"}",
 		StringVal(c.Name),
 		StringVal(c.Description),
@@ -214,6 +238,7 @@ func (c *TaskConfig) GoString() string {
 		StringVal(c.Source),
 		c.VarFiles,
 		StringVal(c.Version),
+		c.Wait.GoString(),
 	)
 }
 
@@ -270,13 +295,13 @@ func (c *TaskConfigs) Merge(o *TaskConfigs) *TaskConfigs {
 
 // Finalize ensures the configuration has no nil pointers and sets default
 // values.
-func (c *TaskConfigs) Finalize() {
+func (c *TaskConfigs) Finalize(wait *WaitConfig) {
 	if c == nil {
 		*c = *DefaultTaskConfigs()
 	}
 
 	for _, t := range *c {
-		t.Finalize()
+		t.Finalize(wait)
 	}
 }
 

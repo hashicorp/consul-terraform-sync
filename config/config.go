@@ -31,6 +31,9 @@ type Config struct {
 	Tasks     *TaskConfigs     `mapstructure:"task"`
 	Services  *ServiceConfigs  `mapstructure:"service"`
 	Providers *ProviderConfigs `mapstructure:"provider"`
+
+	// Wait configures quiescence timers for all tasks.
+	Wait *WaitConfig `mapstructure:"wait"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -61,6 +64,7 @@ func DefaultConfig() *Config {
 		Tasks:       DefaultTaskConfigs(),
 		Services:    DefaultServiceConfigs(),
 		Providers:   DefaultProviderConfigs(),
+		Wait:        DefaultWaitConfig(),
 	}
 }
 
@@ -80,6 +84,7 @@ func (c *Config) Copy() *Config {
 		Tasks:       c.Tasks.Copy(),
 		Services:    c.Services.Copy(),
 		Providers:   c.Providers.Copy(),
+		Wait:        c.Wait.Copy(),
 	}
 }
 
@@ -133,6 +138,10 @@ func (c *Config) Merge(o *Config) *Config {
 		r.Providers = r.Providers.Merge(o.Providers)
 	}
 
+	if o.Wait != nil {
+		r.Wait = r.Wait.Merge(o.Wait)
+	}
+
 	return r
 }
 
@@ -165,10 +174,16 @@ func (c *Config) Finalize() {
 	}
 	c.Driver.Finalize()
 
+	// Finalize top level wait to use as inherited default value for tasks
+	if c.Wait == nil {
+		c.Wait = DefaultWaitConfig()
+	}
+	c.Wait.Finalize()
+
 	if c.Tasks == nil {
 		c.Tasks = DefaultTaskConfigs()
 	}
-	c.Tasks.Finalize()
+	c.Tasks.Finalize(c.Wait.Copy())
 
 	if c.Services == nil {
 		c.Services = DefaultServiceConfigs()
@@ -205,6 +220,10 @@ func (c *Config) Validate() error {
 
 	// TODO: validate providers listed in tasks exist
 
+	if err := c.Wait.Validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -222,7 +241,8 @@ func (c *Config) GoString() string {
 		"Driver:%s, "+
 		"Tasks:%s, "+
 		"Services:%s, "+
-		"Providers:%s"+
+		"Providers:%s, "+
+		"Wait:%s"+
 		"}",
 		StringVal(c.LogLevel),
 		BoolVal(c.InspectMode),
@@ -232,6 +252,7 @@ func (c *Config) GoString() string {
 		c.Tasks.GoString(),
 		c.Services.GoString(),
 		c.Providers.GoString(),
+		c.Wait.GoString(),
 	)
 }
 

@@ -3,13 +3,12 @@ package config
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTaskConfig_Copy(t *testing.T) {
-	t.Parallel()
-
 	cases := []struct {
 		name string
 		a    *TaskConfig
@@ -44,8 +43,6 @@ func TestTaskConfig_Copy(t *testing.T) {
 }
 
 func TestTaskConfig_Merge(t *testing.T) {
-	t.Parallel()
-
 	cases := []struct {
 		name string
 		a    *TaskConfig
@@ -219,8 +216,6 @@ func TestTaskConfig_Merge(t *testing.T) {
 }
 
 func TestTaskConfig_Finalize(t *testing.T) {
-	t.Parallel()
-
 	cases := []struct {
 		name string
 		i    *TaskConfig
@@ -237,6 +232,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Source:      String(""),
 				VarFiles:    []string{},
 				Version:     String(""),
+				Wait:        DefaultTaskWaitConfig(),
 			},
 		},
 		{
@@ -252,21 +248,88 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Source:      String(""),
 				VarFiles:    []string{},
 				Version:     String(""),
+				Wait:        DefaultTaskWaitConfig(),
 			},
 		},
 	}
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tc.i.Finalize()
+			tc.i.Finalize(nil)
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}
 }
 
-func TestTaskConfig_Validate(t *testing.T) {
-	t.Parallel()
+func TestTaskConfig_Finalize_wait(t *testing.T) {
+	globalWait := &WaitConfig{
+		Enabled: Bool(true),
+		Min:     TimeDuration(5 * time.Second),
+	}
 
+	cases := []struct {
+		name  string
+		i     *TaskConfig
+		rWait *WaitConfig
+	}{
+		{
+			"inherits global",
+			&TaskConfig{},
+			globalWait,
+		},
+		{
+			"task config takes precedence",
+			&TaskConfig{
+				Wait: &WaitConfig{
+					Enabled: Bool(true),
+					Min:     TimeDuration(2 * time.Second),
+				},
+			},
+			&WaitConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(2 * time.Second),
+				Max:     TimeDuration(8 * time.Second),
+			},
+		},
+		{
+			"task config takes precedence disable",
+			&TaskConfig{
+				Wait: &WaitConfig{
+					Enabled: Bool(false),
+				},
+			},
+			&WaitConfig{
+				Enabled: Bool(false),
+				Min:     TimeDuration(5 * time.Second),
+				Max:     TimeDuration(20 * time.Second),
+			},
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			tc.i.Finalize(globalWait)
+			assert.Equal(t, tc.rWait, tc.i.Wait)
+		})
+	}
+
+	t.Run("global disable", func(t *testing.T) {
+		globalWait := &WaitConfig{
+			Enabled: Bool(false),
+		}
+		expected := &WaitConfig{
+			Enabled: Bool(false),
+			Min:     TimeDuration(5 * time.Second),
+			Max:     TimeDuration(20 * time.Second),
+		}
+
+		taskConf := &TaskConfig{}
+		taskConf.Finalize(globalWait)
+		assert.Equal(t, expected, taskConf.Wait)
+	})
+}
+
+func TestTaskConfig_Validate(t *testing.T) {
 	cases := []struct {
 		name    string
 		i       *TaskConfig

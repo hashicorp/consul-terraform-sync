@@ -6,6 +6,11 @@ syslog {
   name = "syslog"
 }
 
+wait {
+  min = "20s"
+  max = "60s"
+}
+
 consul {
   address = "consul-example.com"
   auth {
