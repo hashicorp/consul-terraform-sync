@@ -158,7 +158,6 @@ func TestReadWriteRun(t *testing.T) {
 	cases := []struct {
 		name              string
 		expectError       bool
-		initWorkErr       error
 		applyWorkErr      error
 		resolverRunErr    error
 		templateRenderErr error
@@ -169,18 +168,7 @@ func TestReadWriteRun(t *testing.T) {
 			"error on resolver.Run()",
 			true,
 			nil,
-			nil,
 			errors.New("error on resolver.Run()"),
-			nil,
-			nil,
-			singleTaskConfig(),
-		},
-		{
-			"error on driver.InitWork()",
-			true,
-			errors.New("error on driver.InitWork()"),
-			nil,
-			nil,
 			nil,
 			nil,
 			singleTaskConfig(),
@@ -188,7 +176,6 @@ func TestReadWriteRun(t *testing.T) {
 		{
 			"error on driver.ApplyWork()",
 			true,
-			nil,
 			errors.New("error on driver.ApplyWork()"),
 			nil,
 			nil,
@@ -198,7 +185,6 @@ func TestReadWriteRun(t *testing.T) {
 		{
 			"happy path",
 			false,
-			nil,
 			nil,
 			nil,
 			nil,
@@ -221,7 +207,6 @@ func TestReadWriteRun(t *testing.T) {
 			w.On("Wait", mock.Anything).Return(tc.watcherWaitErr)
 
 			d := new(mocksD.Driver)
-			d.On("InitWork", mock.Anything).Return(tc.initWorkErr)
 			d.On("ApplyWork", mock.Anything).Return(tc.applyWorkErr)
 
 			h, err := getPostApplyHandlers(tc.config)
