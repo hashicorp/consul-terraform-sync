@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -144,9 +145,9 @@ func TestReadWriteInit(t *testing.T) {
 			if tc.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tc.name)
-				return
+			} else {
+				assert.NoError(t, err)
 			}
-			assert.NoError(t, err)
 		})
 	}
 }
@@ -213,7 +214,8 @@ func TestReadWriteRun(t *testing.T) {
 			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.templateRenderErr).Once()
 
 			r := new(mocks.Resolver)
-			r.On("Run", mock.Anything, mock.Anything).Return(hcat.ResolveEvent{Complete: true}, tc.resolverRunErr)
+			r.On("Run", mock.Anything, mock.Anything).
+				Return(hcat.ResolveEvent{Complete: true}, tc.resolverRunErr)
 
 			w := new(mocks.Watcher)
 			w.On("Wait", mock.Anything).Return(tc.watcherWaitErr)
@@ -222,22 +224,18 @@ func TestReadWriteRun(t *testing.T) {
 			d.On("InitWork", mock.Anything).Return(tc.initWorkErr)
 			d.On("ApplyWork", mock.Anything).Return(tc.applyWorkErr)
 
-			u := unit{template: tmpl, driver: d}
 			h, err := getPostApplyHandlers(tc.config)
 			assert.NoError(t, err)
 
 			controller := ReadWrite{
-				conf:       tc.config,
-				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
-				units:      []unit{u},
-				watcher:    w,
-				resolver:   r,
-				postApply:  h,
+				watcher:   w,
+				resolver:  r,
+				postApply: h,
 			}
-
+			u := unit{template: tmpl, driver: d}
 			ctx := context.Background()
-			err = controller.run(ctx)
 
+			err = controller.checkApply(u, ctx)
 			if tc.expectError {
 				if assert.Error(t, err) {
 					assert.Contains(t, err.Error(), tc.name)
@@ -249,23 +247,62 @@ func TestReadWriteRun(t *testing.T) {
 	}
 }
 
-func TestReadWriteLoop(t *testing.T) {
-	t.Run("loop-wait-exit", func(t *testing.T) {
-		w := new(mocks.Watcher)
-		w.On("Wait", mock.Anything).Return(errors.New("end-wait"))
+func TestReadWriteUnits(t *testing.T) {
+	tmpl := new(mocks.Template)
+	tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, nil)
 
-		ctl := ReadWrite{
-			units:   []unit{},
-			watcher: w,
+	r := new(mocks.Resolver)
+	r.On("Run", mock.Anything, mock.Anything).
+		Return(hcat.ResolveEvent{Complete: true}, nil)
+
+	w := new(mocks.Watcher)
+	w.On("Wait", mock.Anything).Return(nil)
+
+	t.Run("simple-success", func(t *testing.T) {
+		d := new(mocksD.Driver)
+		d.On("InitWork", mock.Anything).Return(nil)
+		d.On("ApplyWork", mock.Anything).Return(nil)
+		d.On("ApplyWork", mock.Anything).Return(fmt.Errorf("test"))
+
+		u := unit{taskName: "foo", template: tmpl, driver: d}
+		controller := ReadWrite{
+			watcher:  w,
+			resolver: r,
+			units:    []unit{u},
 		}
+
 		ctx := context.Background()
-		errCh := make(chan error, 1) // buffer lets loop run in foreground
-		ctl.loop(ctx, errCh)
+		errCh := controller.runUnits(ctx)
 		err := <-errCh
-		if err != nil && err.Error() != "end-wait" {
-			t.Error("wanted 'end-wait', got:", err)
+		if err != nil {
+			t.Error(err)
 		}
 	})
+
+	t.Run("apply-error", func(t *testing.T) {
+		d := new(mocksD.Driver)
+		d.On("InitWork", mock.Anything).Return(nil)
+		d.On("ApplyWork", mock.Anything).Return(fmt.Errorf("test"))
+
+		u := unit{taskName: "foo", template: tmpl, driver: d}
+		controller := ReadWrite{
+			watcher:  w,
+			resolver: r,
+			units:    []unit{u},
+		}
+
+		ctx := context.Background()
+		errCh := controller.runUnits(ctx)
+		err := <-errCh
+		testErr := fmt.Errorf("could not apply: %s", "test")
+		if errors.Is(err, testErr) {
+			t.Error(
+				fmt.Sprintf("bad error, expected '%v', got '%v'", testErr, err))
+		}
+	})
+}
+
+func TestReadWriteLoop(t *testing.T) {
 	t.Run("loop-context-cancel", func(t *testing.T) {
 		w := new(mocks.Watcher)
 		wg := sync.WaitGroup{}
