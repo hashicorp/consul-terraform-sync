@@ -186,14 +186,16 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path": "consul-nia/override",
+						"path":   "consul-nia/override",
+						"scheme": "http",
 					},
 				},
 			},
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path": "consul-nia/override",
+						"path":   "consul-nia/override",
+						"scheme": "http",
 					},
 				},
 			},
@@ -419,6 +421,35 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 			},
 		},
 		{
+			"consul backend with TLS",
+			&TerraformConfig{},
+			&ConsulConfig{
+				TLS: &TLSConfig{
+					CACert: String("ca_cert"),
+					Cert:   String("client_cert"),
+					Key:    String("client_key"),
+				},
+			},
+			&TerraformConfig{
+				Log:        Bool(false),
+				PersistLog: Bool(false),
+				Path:       String(wd),
+				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+				Backend: map[string]interface{}{
+					"consul": map[string]interface{}{
+						"address":   *consul.Address,
+						"path":      DefaultTFBackendKVPath,
+						"gzip":      true,
+						"scheme":    "https",
+						"ca_file":   "ca_cert",
+						"cert_file": "client_cert",
+						"key_file":  "client_key",
+					},
+				},
+				RequiredProviders: map[string]interface{}{},
+			},
+		},
+		{
 			"custom consul backend",
 			&TerraformConfig{},
 			&ConsulConfig{
@@ -444,6 +475,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			tc.consul.Finalize()
 			tc.i.Finalize(tc.consul)
 			assert.Equal(t, tc.r, tc.i)
 		})

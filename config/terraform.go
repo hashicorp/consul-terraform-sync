@@ -63,6 +63,22 @@ func DefaultTerraformBackend(consul *ConsulConfig) (map[string]interface{}, erro
 		"gzip":    true,
 	}
 
+	if consul.TLS != nil && *consul.TLS.Enabled {
+		backend["scheme"] = "https"
+
+		if caCert := consul.TLS.CACert; *caCert != "" {
+			backend["ca_file"] = *caCert
+		}
+
+		if cert := consul.TLS.Cert; *cert != "" {
+			backend["cert_file"] = *cert
+		}
+
+		if key := consul.TLS.Key; *key != "" {
+			backend["key_file"] = *key
+		}
+	}
+
 	return map[string]interface{}{"consul": backend}, nil
 }
 
@@ -145,8 +161,11 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 		for k, v := range o.Backend {
 			if r.Backend == nil {
 				r.Backend = make(map[string]interface{})
+				r.Backend[k] = v
+			} else {
+				r.Backend[k] = mergeMaps(r.Backend[k].(map[string]interface{}),
+					v.(map[string]interface{}))
 			}
-			r.Backend[k] = v
 		}
 	}
 
@@ -195,8 +214,13 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 		c.Backend = make(map[string]interface{})
 	}
 
-	if len(c.Backend) == 0 && consul != nil {
-		c.Backend, _ = DefaultTerraformBackend(consul)
+	if consul != nil {
+		defaultBackend, _ := DefaultTerraformBackend(consul)
+		if len(c.Backend) == 0 {
+			c.Backend = defaultBackend
+		} else if b, ok := c.Backend["consul"]; ok {
+			c.Backend["consul"] = mergeMaps(defaultBackend["consul"].(map[string]interface{}), b.(map[string]interface{}))
+		}
 	}
 
 	if c.RequiredProviders == nil {
@@ -243,4 +267,17 @@ func (c *TerraformConfig) GoString() string {
 		c.Backend,
 		c.RequiredProviders,
 	)
+}
+
+func mergeMaps(c, o map[string]interface{}) map[string]interface{} {
+	r := make(map[string]interface{})
+	for k, v := range c {
+		r[k] = v
+	}
+
+	for k, v := range o {
+		r[k] = v
+	}
+
+	return r
 }

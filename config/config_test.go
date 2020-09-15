@@ -267,6 +267,10 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.Consul.Transport.MaxIdleConns = Int(100)
 	expected.Driver.consul = expected.Consul
 	expected.Driver.Terraform.PersistLog = Bool(false)
+	backend := expected.Driver.Terraform.Backend["consul"].(map[string]interface{})
+	backend["scheme"] = "https"
+	backend["ca_file"] = "ca_cert"
+	backend["key_file"] = "key"
 	(*expected.Tasks)[0].VarFiles = []string{}
 	(*expected.Tasks)[0].Version = String("")
 	(*expected.Tasks)[0].Wait = expected.Wait
