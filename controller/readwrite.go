@@ -2,8 +2,10 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-nia/config"
@@ -124,17 +126,17 @@ func waitCh(w watcher, timeout time.Duration) <-chan error {
 
 // main loop
 func (rw *ReadWrite) loop(ctx context.Context, errCh chan<- error) {
+
 	for {
-		if err := rw.run(ctx); err != nil {
-			errCh <- err
-			return
+		for err := range rw.runUnits(ctx) {
+			// aggregate error collector for runUnits, just logs everythign for  now
+			log.Printf("[ERR] (controller.readwrite) run error: %s", err)
 		}
 
 		select {
 		case err := <-waitCh(rw.watcher, time.Minute):
 			if err != nil {
-				errCh <- err
-				return
+				log.Printf("[ERR] (controller.readwrite) wait error from watcher: %s", err)
 			}
 		case <-ctx.Done():
 			errCh <- ctx.Err()
@@ -143,53 +145,64 @@ func (rw *ReadWrite) loop(ctx context.Context, errCh chan<- error) {
 	}
 }
 
-// A single run through of all the templates
-func (rw *ReadWrite) run(ctx context.Context) error {
+// A single run through of all the units/tasks/templates
+// Returned error channel closes when done with all units
+func (rw *ReadWrite) runUnits(ctx context.Context) chan error {
 	log.Printf("[DEBUG] (controller.readwrite) preparing work")
-	// renders all templates once and applies for demo purposes
-	// TODO: improve and refactor this control loop of template rendering to
-	// trigger task runs instead of waiting for all to render once
-	// init/apply work on all tasks.
-	results := make([]string, 0, len(rw.units))
-	for _, unit := range rw.units {
-		tmpl := unit.template
-		taskName := unit.taskName
-		log.Print("[DEBUG] (controller.readwrite) running task:", taskName)
 
-		// This only returns result.Complete if the template has new data
-		// that has been completely fetched.
-		result, err := rw.resolver.Run(tmpl, rw.watcher)
-		if err != nil {
-			// TODO handle when rendering and execution is per task instead of bulk
-			log.Printf("[ERR] error running template for task %s: %s",
-				taskName, err)
-			return err
-		}
-		// If true the template should be rendered and driver work run.
-		if result.Complete {
-			log.Printf("[DEBUG] (controller.readwrite) task %s complete", taskName)
-			rendered, err := tmpl.Render(result.Contents)
+	// keep error chan and waitgroup here to keep runTask simple (on task)
+	errCh := make(chan error, 1)
+	wg := sync.WaitGroup{}
+	for _, u := range rw.units {
+		wg.Add(1)
+		go func(u unit) {
+			err := rw.checkApply(u, ctx)
 			if err != nil {
-				log.Printf("[ERR] error rendering template for task %s: %s",
-					taskName, err)
-				continue
+				errCh <- err
 			}
+			wg.Done()
+		}(u)
+	}
 
-			log.Printf("[DEBUG] %q rendered: %+v", taskName, rendered)
-			results = append(results, taskName)
-			log.Printf("[INFO] (controller.readwrite) init work")
-			d := unit.driver
-			if err := d.InitWork(ctx); err != nil {
-				log.Printf("[ERR] (controller.readwrite) could not initialize: %s",
-					err)
-				return err
-			}
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
 
-			log.Printf("[INFO] (controller.readwrite) apply work")
-			if err := d.ApplyWork(ctx); err != nil {
-				log.Printf("[ERR] (controller.readwrite) could not apply: %s", err)
-				return err
-			}
+	return errCh
+}
+
+// Single run, render, apply of a unit (task)
+func (rw *ReadWrite) checkApply(u unit, ctx context.Context) error {
+	tmpl := u.template
+	taskName := u.taskName
+	log.Print("[DEBUG] (controller.readwrite) running task:", taskName)
+	// This only returns result.Complete if the template has new data
+	// that has been completely fetched.
+	result, err := rw.resolver.Run(tmpl, rw.watcher)
+	if err != nil {
+		return fmt.Errorf("error running template for task %s: %s",
+			taskName, err)
+	}
+	// If true the template should be rendered and driver work run.
+	if result.Complete {
+		log.Printf("[DEBUG] (controller.readwrite) task %s complete", taskName)
+		rendered, err := tmpl.Render(result.Contents)
+		if err != nil {
+			return fmt.Errorf("error rendering template for task %s: %s",
+				taskName, err)
+		}
+		log.Printf("[DEBUG] %q rendered: %+v", taskName, rendered)
+
+		d := u.driver
+		log.Printf("[INFO] (controller.readwrite) init work")
+		if err := d.InitWork(ctx); err != nil {
+			return fmt.Errorf("could not initialize: %s", err)
+		}
+
+		log.Printf("[INFO] (controller.readwrite) apply work")
+		if err := d.ApplyWork(ctx); err != nil {
+			return fmt.Errorf("could not apply: %s", err)
 		}
 	}
 
