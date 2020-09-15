@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/consul-nia/config"
 	"github.com/hashicorp/consul-nia/driver"
+	"github.com/hashicorp/consul-nia/handler"
 	mocks "github.com/hashicorp/consul-nia/mocks/controller"
 	mocksD "github.com/hashicorp/consul-nia/mocks/driver"
 	"github.com/hashicorp/hcat"
@@ -33,6 +34,20 @@ func TestNewReadWrite(t *testing.T) {
 			true,
 			&config.Config{
 				Driver: &config.DriverConfig{},
+			},
+		},
+		{
+			"handler error",
+			true,
+			&config.Config{
+				Driver: &config.DriverConfig{
+					Terraform: &config.TerraformConfig{},
+				},
+				Providers: &config.ProviderConfigs{
+					&config.ProviderConfig{
+						handler.TerraformProviderFake: "malformed-config",
+					},
+				},
 			},
 		},
 	}
@@ -208,6 +223,8 @@ func TestReadWriteRun(t *testing.T) {
 			d.On("ApplyWork", mock.Anything).Return(tc.applyWorkErr)
 
 			u := unit{template: tmpl, driver: d}
+			h, err := getPostApplyHandlers(tc.config)
+			assert.NoError(t, err)
 
 			controller := ReadWrite{
 				conf:       tc.config,
@@ -215,10 +232,11 @@ func TestReadWriteRun(t *testing.T) {
 				units:      []unit{u},
 				watcher:    w,
 				resolver:   r,
+				postApply:  h,
 			}
 
 			ctx := context.Background()
-			err := controller.run(ctx)
+			err = controller.run(ctx)
 
 			if tc.expectError {
 				if assert.Error(t, err) {
@@ -297,7 +315,7 @@ func singleTaskConfig() *config.Config {
 				Description: config.String("automate services for X to do Y"),
 				Name:        config.String("task"),
 				Services:    []string{"serviceA", "serviceB", "serviceC"},
-				Providers:   []string{"X"},
+				Providers:   []string{"X", handler.TerraformProviderFake},
 				Source:      config.String("Y"),
 				Version:     config.String("v1"),
 			},
@@ -316,6 +334,9 @@ func singleTaskConfig() *config.Config {
 		},
 		Providers: &config.ProviderConfigs{{
 			"X": map[string]interface{}{},
+			handler.TerraformProviderFake: map[string]interface{}{
+				"name": "fake-provider",
+			},
 		}},
 	}
 

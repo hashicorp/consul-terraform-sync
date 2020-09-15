@@ -3,6 +3,7 @@ module github.com/hashicorp/consul-nia
 go 1.14
 
 require (
+	github.com/PaloAltoNetworks/pango v0.4.1-0.20200904214627-5b4d88ba9b10
 	github.com/hashicorp/consul v1.8.0
 	github.com/hashicorp/consul/sdk v0.5.0
 	github.com/hashicorp/go-checkpoint v0.5.0
