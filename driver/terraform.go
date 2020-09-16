@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/consul-nia/client"
 	mocks "github.com/hashicorp/consul-nia/mocks/client"
 	"github.com/hashicorp/consul-nia/templates/tftmpl"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -34,7 +35,7 @@ type Terraform struct {
 	persistLog        bool
 	path              string
 	workingDir        string
-	workers           []*worker
+	worker            *worker
 	backend           map[string]interface{}
 	requiredProviders map[string]interface{}
 
@@ -161,10 +162,10 @@ func (tf *Terraform) InitWorker(task Task) error {
 		return err
 	}
 
-	tf.workers = append(tf.workers, &worker{
+	tf.worker = &worker{
 		client: client,
 		task:   task,
-	})
+	}
 	return nil
 }
 
@@ -200,66 +201,22 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 	return c, err
 }
 
-// InitWork initializes the client for all of the driver's workers concurrently
-func (tf *Terraform) InitWork(ctx context.Context) error {
-	resultCh := make(chan error)
-
-	for _, w := range tf.workers {
-		go func(ctx context.Context, w *worker) {
-			log.Printf("[TRACE] (driver.terraform) go init for task: %v", w.task.Name)
-			resultCh <- w.init(ctx)
-		}(ctx, w)
-	}
-
-	count := 0
-	var errs []string
-	for err := range resultCh {
-		count++
-		log.Printf("[TRACE] (driver.terraform) init receive '%s'. count %d / %d", err, count, len(tf.workers))
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
-		if count == len(tf.workers) {
-			break
-		}
-	}
-
-	if len(errs) > 0 {
-		delim := "\n * "
-		return fmt.Errorf("Received %d errors from init-ing %d workers:%s%s",
-			len(errs), len(tf.workers), delim, strings.Join(errs, delim))
-	}
-	return nil
-}
-
-// ApplyWork applies changes for all of the driver's workers concurrently
+// ApplyWork applies changes for the worker.
 func (tf *Terraform) ApplyWork(ctx context.Context) error {
-	resultCh := make(chan error)
+	w := tf.worker
+	taskName := w.task.Name
 
-	for _, w := range tf.workers {
-		go func(ctx context.Context, w *worker) {
-			log.Printf("[TRACE] (driver.terraform) go apply for task: %v", w.task.Name)
-			resultCh <- w.apply(ctx)
-		}(ctx, w)
+	log.Printf("[TRACE] (driver.terraform) init '%s'", taskName)
+	if err := w.init(ctx); err != nil {
+		log.Printf("[ERROR] (driver.terraform) init (skip apply) for '%s': %s",
+			taskName, err)
+		return errors.Wrap(err, fmt.Sprintf("Error tf-init for '%s'", taskName))
 	}
 
-	count := 0
-	var errs []string
-	for err := range resultCh {
-		count++
-		log.Printf("[TRACE] (driver.terraform) apply receive '%s'. count %d / %d", err, count, len(tf.workers))
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
-		if count == len(tf.workers) {
-			break
-		}
-	}
-
-	if len(errs) > 0 {
-		delim := "\n * "
-		return fmt.Errorf("Received %d errors from applying %d workers:%s%s",
-			len(errs), len(tf.workers), delim, strings.Join(errs, delim))
+	log.Printf("[TRACE] (driver.terraform) apply '%s'", taskName)
+	if err := w.apply(ctx); err != nil {
+		log.Printf("[ERROR] (driver.terraform) apply '%s': %s", taskName, err)
+		return errors.Wrap(err, fmt.Sprintf("Error tf-apply for '%s'", taskName))
 	}
 	return nil
 }

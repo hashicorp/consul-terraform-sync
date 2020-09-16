@@ -16,9 +16,6 @@ type Driver interface {
 	// InitWorker initializes a worker for a task
 	InitWorker(task Task) error
 
-	// InitWork initalizes all work that is managed by driver
-	InitWork(ctx context.Context) error
-
 	// ApplyWork applies changes for all the work managed by driver
 	ApplyWork(ctx context.Context) error
 

@@ -195,12 +195,7 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) error {
 		log.Printf("[DEBUG] %q rendered: %+v", taskName, rendered)
 
 		d := u.driver
-		log.Printf("[INFO] (controller.readwrite) init work")
-		if err := d.InitWork(ctx); err != nil {
-			return fmt.Errorf("could not initialize: %s", err)
-		}
-
-		log.Printf("[INFO] (controller.readwrite) apply work")
+		log.Printf("[INFO] (controller.readwrite) apply work %s", taskName)
 		if err := d.ApplyWork(ctx); err != nil {
 			return fmt.Errorf("could not apply: %s", err)
 		}
