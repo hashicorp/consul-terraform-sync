@@ -10,14 +10,11 @@ type Driver interface {
 	// Init initializes the driver and environment
 	Init(ctx context.Context) error
 
-	// InitTask initializes a task that the driver will execute
+	// InitTask initializes the task that the driver executes
 	InitTask(task Task, force bool) error
 
-	// InitWorker initializes a worker for a task
-	InitWorker(task Task) error
-
-	// ApplyWork applies changes for all the work managed by driver
-	ApplyWork(ctx context.Context) error
+	// ApplyTask applies change for the task managed by the driver
+	ApplyTask(ctx context.Context) error
 
 	// Version returns the version of the driver.
 	Version() string

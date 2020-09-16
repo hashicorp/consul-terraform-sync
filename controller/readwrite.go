@@ -81,12 +81,6 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 			return err
 		}
 
-		log.Printf("[DEBUG] (controller.readwrite) initializing worker for task %q", task.Name)
-		err = d.InitWorker(task)
-		if err != nil {
-			log.Printf("[ERR] (controller.readwrite) error initializing worker for task %q: %s", task.Name, err)
-			return err
-		}
 		template, err := newTaskTemplate(task.Name, rw.conf, rw.fileReader)
 		if err != nil {
 			log.Printf("[ERR] (controller.readwrite) error initializing template: %s", err)
@@ -196,7 +190,7 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) error {
 
 		d := u.driver
 		log.Printf("[INFO] (controller.readwrite) apply work %s", taskName)
-		if err := d.ApplyWork(ctx); err != nil {
+		if err := d.ApplyTask(ctx); err != nil {
 			return fmt.Errorf("could not apply: %s", err)
 		}
 	}

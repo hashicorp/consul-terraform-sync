@@ -105,7 +105,8 @@ func (tf *Terraform) Version() string {
 	return tf.version
 }
 
-// InitTask initializes the Terraform root module for the task.
+// InitTask initializes the task by creating the Terraform root module and
+// client to execute task.
 func (tf *Terraform) InitTask(task Task, force bool) error {
 	services := make([]*tftmpl.Service, len(task.Services))
 	for i, s := range task.Services {
@@ -149,13 +150,11 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 		Variables: vars,
 	}
 	input.Init()
-	return tftmpl.InitRootModule(&input, tf.workingDir, force)
-}
 
-// InitWorker given a task, identifies a unit of work and creates a worker for it.
-// Worker is added to the driver. Currently assumes a task has a single instance of
-// a provider and is therefore equivalent to a unit of work.
-func (tf *Terraform) InitWorker(task Task) error {
+	if err := tftmpl.InitRootModule(&input, tf.workingDir, force); err != nil {
+		return err
+	}
+
 	client, err := tf.initClient(task)
 	if err != nil {
 		log.Printf("[ERR] (driver.terraform) init client type '%s' error: %s", tf.clientType, err)
@@ -201,8 +200,8 @@ func (tf *Terraform) initClient(task Task) (client.Client, error) {
 	return c, err
 }
 
-// ApplyWork applies changes for the worker.
-func (tf *Terraform) ApplyWork(ctx context.Context) error {
+// ApplyTask applies the task changes.
+func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	w := tf.worker
 	taskName := w.task.Name
 

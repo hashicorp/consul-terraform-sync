@@ -3,61 +3,61 @@ package driver
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
+	"github.com/hashicorp/consul-nia/client"
 	mocks "github.com/hashicorp/consul-nia/mocks/client"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInitWorker(t *testing.T) {
+func TestInitClient(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name        string
 		clientType  string
 		expectError bool
-		task        Task
+		expect      client.Client
 	}{
 		{
 			"happy path with development client",
 			developmentClient,
 			false,
-			Task{Name: "development-client task"},
+			&client.Printer{},
 		},
 		{
 			"happy path with mock client",
 			testClient,
 			false,
-			Task{Name: "mock-client task"},
+			&mocks.Client{},
 		},
 		{
 			"error when creating Terraform CLI client",
 			"",
 			true,
-			Task{Name: "task"},
+			&client.TerraformCLI{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tf := &Terraform{
-				workingDir: "test/working/dir",
-				path:       "exec/path",
+			d := &Terraform{
 				clientType: tc.clientType,
 			}
 
-			err := tf.InitWorker(tc.task)
+			actual, err := d.initClient(Task{})
 			if tc.expectError {
 				assert.Error(t, err)
-				return
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, reflect.TypeOf(tc.expect), reflect.TypeOf(actual))
 			}
-			assert.NoError(t, err)
-			assert.Equal(t, tc.task, tf.worker.task)
 		})
 	}
 }
 
-func TestApplyWork(t *testing.T) {
+func TestApplyTask(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -99,7 +99,7 @@ func TestApplyWork(t *testing.T) {
 				},
 			}
 
-			err := tf.ApplyWork(ctx)
+			err := tf.ApplyTask(ctx)
 			if !tc.expectError {
 				assert.NoError(t, err)
 			} else {

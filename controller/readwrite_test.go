@@ -71,19 +71,17 @@ func TestReadWriteInit(t *testing.T) {
 	conf := singleTaskConfig()
 
 	cases := []struct {
-		name          string
-		expectError   bool
-		initErr       error
-		initTaskErr   error
-		initWorkerErr error
-		fileReader    func(string) ([]byte, error)
-		config        *config.Config
+		name        string
+		expectError bool
+		initErr     error
+		initTaskErr error
+		fileReader  func(string) ([]byte, error)
+		config      *config.Config
 	}{
 		{
 			"error on driver.Init()",
 			true,
 			errors.New("error on driver.Init()"),
-			nil,
 			nil,
 			func(string) ([]byte, error) { return []byte{}, nil },
 			conf,
@@ -93,16 +91,6 @@ func TestReadWriteInit(t *testing.T) {
 			true,
 			nil,
 			errors.New("error on driver.InitTask()"),
-			nil,
-			func(string) ([]byte, error) { return []byte{}, nil },
-			conf,
-		},
-		{
-			"error on driver.InitWorker()",
-			true,
-			nil,
-			nil,
-			errors.New("error on driver.InitWorker()"),
 			func(string) ([]byte, error) { return []byte{}, nil },
 			conf,
 		},
@@ -111,14 +99,12 @@ func TestReadWriteInit(t *testing.T) {
 			true,
 			nil,
 			nil,
-			nil,
 			func(string) ([]byte, error) { return []byte{}, errors.New("error on newTaskTemplates()") },
 			conf,
 		},
 		{
 			"happy path",
 			false,
-			nil,
 			nil,
 			nil,
 			func(string) ([]byte, error) { return []byte{}, nil },
@@ -132,7 +118,6 @@ func TestReadWriteInit(t *testing.T) {
 			d := new(mocksD.Driver)
 			d.On("Init", mock.Anything).Return(tc.initErr).Once()
 			d.On("InitTask", mock.Anything, mock.Anything).Return(tc.initTaskErr).Once()
-			d.On("InitWorker", mock.Anything).Return(tc.initWorkerErr).Once()
 
 			controller := ReadWrite{
 				newDriver:  func(*config.Config) driver.Driver { return d },
@@ -158,7 +143,7 @@ func TestReadWriteRun(t *testing.T) {
 	cases := []struct {
 		name              string
 		expectError       bool
-		applyWorkErr      error
+		applyTaskErr      error
 		resolverRunErr    error
 		templateRenderErr error
 		watcherWaitErr    error
@@ -174,9 +159,9 @@ func TestReadWriteRun(t *testing.T) {
 			singleTaskConfig(),
 		},
 		{
-			"error on driver.ApplyWork()",
+			"error on driver.ApplyTask()",
 			true,
-			errors.New("error on driver.ApplyWork()"),
+			errors.New("error on driver.ApplyTask()"),
 			nil,
 			nil,
 			nil,
@@ -207,7 +192,7 @@ func TestReadWriteRun(t *testing.T) {
 			w.On("Wait", mock.Anything).Return(tc.watcherWaitErr)
 
 			d := new(mocksD.Driver)
-			d.On("ApplyWork", mock.Anything).Return(tc.applyWorkErr)
+			d.On("ApplyTask", mock.Anything).Return(tc.applyTaskErr)
 
 			h, err := getPostApplyHandlers(tc.config)
 			assert.NoError(t, err)
@@ -246,8 +231,8 @@ func TestReadWriteUnits(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("InitWork", mock.Anything).Return(nil)
-		d.On("ApplyWork", mock.Anything).Return(nil)
-		d.On("ApplyWork", mock.Anything).Return(fmt.Errorf("test"))
+		d.On("ApplyTask", mock.Anything).Return(nil)
+		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
 
 		u := unit{taskName: "foo", template: tmpl, driver: d}
 		controller := ReadWrite{
@@ -267,7 +252,7 @@ func TestReadWriteUnits(t *testing.T) {
 	t.Run("apply-error", func(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("InitWork", mock.Anything).Return(nil)
-		d.On("ApplyWork", mock.Anything).Return(fmt.Errorf("test"))
+		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
 
 		u := unit{taskName: "foo", template: tmpl, driver: d}
 		controller := ReadWrite{
