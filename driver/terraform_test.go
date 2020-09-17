@@ -63,24 +63,35 @@ func TestApplyTask(t *testing.T) {
 	cases := []struct {
 		name        string
 		expectError bool
+		inited      bool
 		initReturn  error
 		applyReturn error
 	}{
 		{
 			"happy path",
 			false,
+			false,
+			nil,
+			nil,
+		},
+		{
+			"already inited",
+			false,
+			true,
 			nil,
 			nil,
 		},
 		{
 			"error on init",
 			true,
+			false,
 			errors.New("init error"),
 			nil,
 		},
 		{
 			"error on apply",
 			true,
+			false,
 			nil,
 			errors.New("apply error"),
 		},
@@ -96,6 +107,7 @@ func TestApplyTask(t *testing.T) {
 				worker: &worker{
 					client: c,
 					task:   Task{},
+					inited: tc.inited,
 				},
 			}
 

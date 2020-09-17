@@ -33,17 +33,22 @@ type Task struct {
 type worker struct {
 	client client.Client
 	task   Task
+
+	inited bool
 }
 
 func (w *worker) init(ctx context.Context) error {
 	if err := w.client.Init(ctx); err != nil {
+		// TODO: retry strategy
 		return err
 	}
+	w.inited = true
 	return nil
 }
 
 func (w *worker) apply(ctx context.Context) error {
 	if err := w.client.Apply(ctx); err != nil {
+		// TODO: retry strategy
 		return err
 	}
 	return nil
