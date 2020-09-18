@@ -7,12 +7,10 @@ import (
 
 // newWatcher initializes a new hcat Watcher with a Consul client
 func newWatcher(conf *config.Config) *hcat.Watcher {
-	watcher := hcat.WatcherInput{
+	return hcat.NewWatcher(hcat.WatcherInput{
 		Clients: newConsulClient(conf),
 		Cache:   hcat.NewStore(),
-	}
-
-	return hcat.NewWatcher(watcher)
+	})
 }
 
 // newConsulClient creates a new Consul client used for monitoring the Service

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-nia/config"
 	"github.com/hashicorp/consul-nia/driver"
@@ -272,36 +272,34 @@ func TestReadWriteUnits(t *testing.T) {
 	})
 }
 
-func TestReadWriteLoop(t *testing.T) {
-	t.Run("loop-context-cancel", func(t *testing.T) {
-		w := new(mocks.Watcher)
-		wg := sync.WaitGroup{}
-		wg.Add(3)
-		count := 0
-		w.On("Wait", mock.Anything).Run(
-			func(mock.Arguments) {
-				if count > 2 {
-					wg.Wait()
-				} else {
-					count++
-					wg.Done()
-				}
-			}).Return(nil)
+func TestReadWriteRun_context_cancel(t *testing.T) {
+	w := new(mocks.Watcher)
+	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil).
+		On("Stop").Return()
 
-		ctl := ReadWrite{
-			units:   []unit{},
-			watcher: w,
+	ctl := ReadWrite{
+		units:   []unit{},
+		watcher: w,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error)
+	go func() {
+		err := ctl.Run(ctx)
+		if err != nil {
+			errCh <- err
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		errCh := make(chan error)
-		go ctl.loop(ctx, errCh)
-		wg.Wait()
-		cancel()
-		err := <-errCh
-		if err != nil && err.Error() != "context canceled" {
+	}()
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err != context.Canceled {
 			t.Error("wanted 'context canceled', got:", err)
 		}
-	})
+	case <-time.After(time.Second * 5):
+		t.Fatal("Run did not exit properly from cancelling context")
+	}
 }
 
 // singleTaskConfig returns a happy path config that has a single task

@@ -4,6 +4,7 @@ package tftmpl
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -141,6 +142,8 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 	}
 	tmpl := hcat.NewTemplate(input)
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
 	for {
 		re, err := r.Run(tmpl, w)
 		require.NoError(t, err)
@@ -150,7 +153,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			break
 		}
 
-		err = w.Wait(time.Second * 5)
+		err = <-w.WaitCh(ctx)
 		assert.NoError(t, err)
 	}
 }
