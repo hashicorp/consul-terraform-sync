@@ -16,6 +16,7 @@ require (
 	github.com/hashicorp/terraform v0.12.29
 	github.com/hashicorp/terraform-exec v0.9.0
 	github.com/mitchellh/mapstructure v1.3.3
+	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.5.1
 	github.com/zclconf/go-cty v1.5.1
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899 // indirect
