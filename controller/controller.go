@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"os"
 	"path"
 	"strings"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/hashicorp/consul-nia/templates/tftmpl"
 	"github.com/hashicorp/hcat"
 )
+
+const filePerm = os.FileMode(0640)
 
 // Controller describes the interface for monitoring Consul for relevant changes
 // and triggering the driver to update network infrastructure.
@@ -103,7 +106,8 @@ func newTaskTemplate(taskName string, conf *config.Config, fileReader func(strin
 	}
 
 	renderer := hcat.NewFileRenderer(hcat.FileRendererInput{
-		Path: tfvarsFilepath,
+		Path:  tfvarsFilepath,
+		Perms: filePerm,
 	})
 
 	return hcat.NewTemplate(hcat.TemplateInput{

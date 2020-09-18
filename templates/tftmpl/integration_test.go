@@ -23,9 +23,12 @@ import (
 )
 
 func TestInitRootModule(t *testing.T) {
-	dir, err := ioutil.TempDir("", "consul-nia-tftmpl-")
+	dir, err := ioutil.TempDir(".", "consul-nia-tftmpl-")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
+
+	// set directory permission to test files inheriting the permissions
+	expectedPerm := os.FileMode(0660)
 
 	input := RootModuleInputData{
 		Backend: map[string]interface{}{
@@ -59,7 +62,7 @@ func TestInitRootModule(t *testing.T) {
 		},
 	}
 	input.Init()
-	err = InitRootModule(&input, dir, false)
+	err = InitRootModule(&input, dir, expectedPerm, false)
 	assert.NoError(t, err)
 
 	files := []struct {
@@ -68,10 +71,10 @@ func TestInitRootModule(t *testing.T) {
 	}{
 		{
 			"testdata/main.tf",
-			filepath.Join(dir, input.Task.Name, RootFilename),
+			filepath.Join(dir, RootFilename),
 		}, {
 			"testdata/variables.tf",
-			filepath.Join(dir, input.Task.Name, VarsFilename),
+			filepath.Join(dir, VarsFilename),
 		},
 	}
 
@@ -79,6 +82,10 @@ func TestInitRootModule(t *testing.T) {
 		actual, err := ioutil.ReadFile(f.ActualFile)
 		require.NoError(t, err)
 		checkGoldenFile(t, f.GoldenFile, actual)
+
+		info, err := os.Stat(f.ActualFile)
+		require.NoError(t, err)
+		assert.Equal(t, expectedPerm, info.Mode().Perm())
 	}
 }
 

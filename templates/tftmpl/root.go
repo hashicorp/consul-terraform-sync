@@ -130,7 +130,7 @@ func (d *RootModuleInputData) Init() {
 
 // InitRootModule generates the root module and writes the following files to
 // disk: main.tf, variables.tf
-func InitRootModule(input *RootModuleInputData, modulePath string, force bool) error {
+func InitRootModule(input *RootModuleInputData, modulePath string, filePerms os.FileMode, force bool) error {
 	for filename, newFileFunc := range rootFileFuncs {
 		if filename == ModuleVarsFilename && len(input.Variables) == 0 {
 			// Skip variables.module.tf if there are no user input variables
@@ -160,6 +160,12 @@ func InitRootModule(input *RootModuleInputData, modulePath string, force bool) e
 				return err
 			}
 			defer f.Close()
+
+			if err := f.Chmod(filePerms); err != nil {
+				log.Printf("[ERR] (templates.tftmpl) unable to change permissions "+
+					"for %s in root module for %q: %s", filename, input.Task.Name, err)
+				return err
+			}
 
 			if err := newFileFunc(f, input); err != nil {
 				log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
