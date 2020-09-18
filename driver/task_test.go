@@ -37,9 +37,11 @@ func TestWorkerInit(t *testing.T) {
 			err := w.init(ctx)
 			if tc.initErr != nil {
 				assert.Error(t, err)
+				assert.False(t, w.inited)
 				return
 			}
 			assert.NoError(t, err)
+			assert.True(t, w.inited)
 		})
 	}
 }
