@@ -61,14 +61,15 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 
 		providers := make([]map[string]interface{}, len(t.Providers))
 		providerInfo := make(map[string]interface{})
-		for pi, pName := range t.Providers {
-			providers[pi] = getProvider(conf.Providers, pName)
+		for pi, providerID := range t.Providers {
+			providers[pi] = getProvider(conf.Providers, providerID)
 
 			// This is Terraform specific to pass version and source info for
 			// providers from the required_provider block
+			name, _ := splitProviderID(providerID)
 			if tfConf := conf.Driver.Terraform; tfConf != nil {
-				if pInfo, ok := tfConf.RequiredProviders[pName]; ok {
-					providerInfo[pName] = pInfo
+				if pInfo, ok := tfConf.RequiredProviders[name]; ok {
+					providerInfo[name] = pInfo
 				}
 			}
 		}
@@ -133,13 +134,7 @@ func getService(services *config.ServiceConfigs, id string) driver.Service {
 	return driver.Service{Name: id}
 }
 
-// getProvider is a helper to find and convert a user-defined provider
-// configuration by the provider ID, which is either the provider name
-// or <name>.<alias>. If a provider is not explicitly configured, it
-// assumes the default provider block that is empty.
-//
-// provider "name" { }
-func getProvider(providers *config.ProviderConfigs, id string) map[string]interface{} {
+func splitProviderID(id string) (string, string) {
 	var name, alias string
 	split := strings.SplitN(id, ".", 2)
 	if len(split) == 2 {
@@ -147,6 +142,17 @@ func getProvider(providers *config.ProviderConfigs, id string) map[string]interf
 	} else {
 		name = id
 	}
+	return name, alias
+}
+
+// getProvider is a helper to find and convert a user-defined provider
+// configuration by the provider ID, which is either the provider name
+// or <name>.<alias>. If a provider is not explicitly configured, it
+// assumes the default provider block that is empty.
+//
+// provider "name" { }
+func getProvider(providers *config.ProviderConfigs, id string) map[string]interface{} {
+	name, alias := splitProviderID(id)
 
 	for _, p := range *providers {
 		// Find the provider by name
