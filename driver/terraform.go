@@ -210,7 +210,7 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	} else {
 		log.Printf("[TRACE] (driver.terraform) init '%s'", taskName)
 		if err := w.init(ctx); err != nil {
-			log.Printf("[ERROR] (driver.terraform) init (skip apply) for '%s'", taskName)
+			log.Printf("[ERR] (driver.terraform) init (skip apply) for '%s'", taskName)
 			return errors.Wrap(err, fmt.Sprintf("Error tf-init for '%s'", taskName))
 		}
 	}

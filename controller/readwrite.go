@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/consul-nia/config"
 	"github.com/hashicorp/consul-nia/driver"
@@ -86,6 +85,7 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 			log.Printf("[ERR] (controller.readwrite) error initializing template: %s", err)
 			return err
 		}
+
 		units = append(units, unit{
 			taskName: task.Name,
 			template: template,
@@ -102,39 +102,24 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 // catalog and using the driver to apply network infrastructure changes for
 // any work that have been updated.
 // Blocking call that runs main consul monitoring loop
-func (rw *ReadWrite) Run(ctx context.Context) <-chan error {
-	errCh := make(chan error)
-	go rw.loop(ctx, errCh)
-	return errCh
-}
-
-// placeholder until we update hashicat version which has this same code
-// as a convenience function
-func waitCh(w watcher, timeout time.Duration) <-chan error {
-	errCh := make(chan error)
-	go func() {
-		errCh <- w.Wait(timeout)
-	}()
-	return errCh
-}
-
-// main loop
-func (rw *ReadWrite) loop(ctx context.Context, errCh chan<- error) {
+func (rw *ReadWrite) Run(ctx context.Context) error {
 
 	for {
 		for err := range rw.runUnits(ctx) {
-			// aggregate error collector for runUnits, just logs everythign for  now
+			// aggregate error collector for runUnits, just logs everything for now
 			log.Printf("[ERR] (controller.readwrite) run error: %s", err)
 		}
 
 		select {
-		case err := <-waitCh(rw.watcher, time.Minute):
+		case err := <-rw.watcher.WaitCh(ctx):
 			if err != nil {
 				log.Printf("[ERR] (controller.readwrite) wait error from watcher: %s", err)
 			}
+
 		case <-ctx.Done():
-			errCh <- ctx.Err()
-			return
+			log.Printf("[INFO] (controller.readwrite) stopping controller")
+			rw.watcher.Stop()
+			return ctx.Err()
 		}
 	}
 }

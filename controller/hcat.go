@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"time"
+	"context"
 
 	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/dep"
@@ -36,9 +36,10 @@ var _ hcat.Watcherer = (watcher)(nil)
 // which implements the interface Watcherer
 // https://github.com/hashicorp/hcat
 type watcher interface {
-	Wait(timeout time.Duration) error
+	WaitCh(ctx context.Context) <-chan error
 	Add(d dep.Dependency) bool
 	Changed(tmplID string) bool
 	Recall(id string) (interface{}, bool)
 	Register(tmplID string, deps ...dep.Dependency)
+	Stop()
 }

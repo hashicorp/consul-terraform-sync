@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/hashicorp/consul-nia/config"
 	"github.com/hashicorp/consul-nia/controller"
@@ -140,8 +141,8 @@ func (cli *CLI) Run(args []string) int {
 	log.Printf("[INFO] (cli) setting up controller")
 
 	conf.ClientType = config.String(clientType)
-	var prov controller.Controller
-	if prov, err = controller.NewReadWrite(conf); err != nil {
+	var ctrl controller.Controller
+	if ctrl, err = controller.NewReadWrite(conf); err != nil {
 		log.Printf("[ERR] (cli) error setting up controller: %s", err)
 		return ExitCodeConfigError
 	}
@@ -149,39 +150,64 @@ func (cli *CLI) Run(args []string) int {
 	if isInspect || *conf.InspectMode {
 		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
 		fmt.Fprintln(cli.outStream, "TODO")
-		prov = controller.NewReadOnly(conf)
+		ctrl = controller.NewReadOnly(conf)
 	}
 
-	ctx := context.Background()
-	log.Printf("[INFO] (cli) initializing controller")
-	if err = prov.Init(ctx); err != nil {
-		log.Printf("[ERR] (cli) error initializing controller: %s", err)
-		return ExitCodeError
-	}
+	errCh := make(chan error, 1)
+	exitCh := make(chan struct{}, 1)
+	ctx, cancel := context.WithCancel(context.Background())
 
-	log.Printf("[INFO] (cli) running controller")
-	if err := runLoop(prov, ctx); err != nil {
-		log.Printf("[ERR] (cli) error running controller: %s", err)
-		return ExitCodeError
-	}
+	go func() {
+		log.Printf("[INFO] (cli) initializing controller")
+		if err = ctrl.Init(ctx); err != nil {
+			if err == context.Canceled {
+				exitCh <- struct{}{}
+				return
+			}
+			log.Printf("[ERR] (cli) error initializing controller: %s", err)
+			errCh <- err
+			return
+		}
 
-	return ExitCodeOK
-}
+		log.Printf("[INFO] (cli) running controller")
+		if err := ctrl.Run(ctx); err != nil {
+			if err == context.Canceled {
+				exitCh <- struct{}{}
+			} else {
+				log.Printf("[ERR] (cli) error running controller: %s", err)
+				errCh <- err
+			}
+			return
+		}
 
-// runLoop is used to manage the running loop of the container. It handles
-// signals and returning any error that bubbles up from the controller.
-func runLoop(ctl controller.Controller, ctx context.Context) error {
+		exitCh <- struct{}{}
+	}()
+
 	interruptCh := make(chan os.Signal, 1)
 	signal.Notify(interruptCh, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
-	errCh := ctl.Run(ctx)
 	for {
 		select {
-		case <-interruptCh:
-			return nil
-		case <-ctx.Done():
-			return nil
-		case err := <-errCh:
-			return err
+		case sig := <-interruptCh:
+			// Cancel the context and wait for controller go routine to gracefully
+			// shutdown
+			log.Printf("[INFO] signal received to initiate graceful shutdown: %v", sig)
+			cancel()
+
+			select {
+			case <-exitCh:
+				log.Printf("[INFO] graceful shutdown")
+				return ExitCodeOK
+			case <-time.After(10 * time.Second):
+				log.Printf("[INFO] graceful shutdown timed out, exiting")
+				return ExitCodeInterrupt
+			}
+
+		case <-exitCh:
+			log.Printf("[WARN] unexpected shutdown")
+			return ExitCodeError
+
+		case <-errCh:
+			return ExitCodeError
 		}
 	}
 }
