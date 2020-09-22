@@ -20,7 +20,7 @@ const (
 	testClient        = "test"
 
 	// Permissions for created directories and files
-	workingDirPerms = os.FileMode(0760) // drwxr-----
+	workingDirPerms = os.FileMode(0750) // drwxr-x---
 	filePerms       = os.FileMode(0640) // -rw-r-----
 
 	errSuggestion = "remove Terraform from the configured path or specify a new path to safely install a compatible version."
