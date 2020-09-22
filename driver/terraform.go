@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -17,6 +18,10 @@ const (
 	// Types of clients that are alternatives to the default Terraform CLI client
 	developmentClient = "development"
 	testClient        = "test"
+
+	// Permissions for created directories and files
+	workingDirPerms = os.FileMode(0750) // drwxr-x---
+	filePerms       = os.FileMode(0640) // -rw-r-----
 
 	errSuggestion = "remove Terraform from the configured path or specify a new path to safely install a compatible version."
 )
@@ -72,6 +77,13 @@ func NewTerraform(config *TerraformConfig) *Terraform {
 // Init initializes the Terraform local environment. The Terraform binary is
 // installed to the configured path.
 func (tf *Terraform) Init(ctx context.Context) error {
+	if _, err := os.Stat(tf.workingDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(tf.workingDir, workingDirPerms); err != nil {
+			log.Printf("[ERR] (driver.terraform) error creating base work directory: %s", err)
+			return err
+		}
+	}
+
 	if isTFInstalled(tf.path) {
 		tfVersion, compatible, err := isTFCompatible(ctx, tf.workingDir, tf.path)
 		if err != nil {
@@ -108,6 +120,14 @@ func (tf *Terraform) Version() string {
 // InitTask initializes the task by creating the Terraform root module and
 // client to execute task.
 func (tf *Terraform) InitTask(task Task, force bool) error {
+	modulePath := filepath.Join(tf.workingDir, task.Name)
+	if _, err := os.Stat(modulePath); os.IsNotExist(err) {
+		if err := os.Mkdir(modulePath, workingDirPerms); err != nil {
+			log.Printf("[ERR] (driver.terraform) error creating task work directory: %s", err)
+			return err
+		}
+	}
+
 	services := make([]*tftmpl.Service, len(task.Services))
 	for i, s := range task.Services {
 		services[i] = &tftmpl.Service{
@@ -151,7 +171,7 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 	}
 	input.Init()
 
-	if err := tftmpl.InitRootModule(&input, tf.workingDir, force); err != nil {
+	if err := tftmpl.InitRootModule(&input, modulePath, filePerms, force); err != nil {
 		return err
 	}
 
