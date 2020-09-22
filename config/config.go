@@ -25,15 +25,13 @@ type Config struct {
 	InspectMode *bool   `mapstructure:"inspect_mode"`
 	ClientType  *string `mapstructure:"client_type"`
 
-	Syslog    *SyslogConfig    `mapstructure:"syslog"`
-	Consul    *ConsulConfig    `mapstructure:"consul"`
-	Driver    *DriverConfig    `mapstructure:"driver"`
-	Tasks     *TaskConfigs     `mapstructure:"task"`
-	Services  *ServiceConfigs  `mapstructure:"service"`
-	Providers *ProviderConfigs `mapstructure:"provider"`
-
-	// Wait configures quiescence timers for all tasks.
-	Wait *WaitConfig `mapstructure:"wait"`
+	Syslog       *SyslogConfig       `mapstructure:"syslog"`
+	Consul       *ConsulConfig       `mapstructure:"consul"`
+	Driver       *DriverConfig       `mapstructure:"driver"`
+	Tasks        *TaskConfigs        `mapstructure:"task"`
+	Services     *ServiceConfigs     `mapstructure:"service"`
+	Providers    *ProviderConfigs    `mapstructure:"provider"`
+	BufferPeriod *BufferPeriodConfig `mapstructure:"buffer_period"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -56,15 +54,15 @@ func BuildConfig(paths []string) (*Config, error) {
 func DefaultConfig() *Config {
 	consul := DefaultConsulConfig()
 	return &Config{
-		LogLevel:    String(DefaultLogLevel),
-		InspectMode: Bool(false),
-		Syslog:      DefaultSyslogConfig(),
-		Consul:      consul,
-		Driver:      DefaultDriverConfig(),
-		Tasks:       DefaultTaskConfigs(),
-		Services:    DefaultServiceConfigs(),
-		Providers:   DefaultProviderConfigs(),
-		Wait:        DefaultWaitConfig(),
+		LogLevel:     String(DefaultLogLevel),
+		InspectMode:  Bool(false),
+		Syslog:       DefaultSyslogConfig(),
+		Consul:       consul,
+		Driver:       DefaultDriverConfig(),
+		Tasks:        DefaultTaskConfigs(),
+		Services:     DefaultServiceConfigs(),
+		Providers:    DefaultProviderConfigs(),
+		BufferPeriod: DefaultBufferPeriodConfig(),
 	}
 }
 
@@ -76,15 +74,15 @@ func (c *Config) Copy() *Config {
 	}
 
 	return &Config{
-		LogLevel:    StringCopy(c.LogLevel),
-		InspectMode: BoolCopy(c.InspectMode),
-		Syslog:      c.Syslog.Copy(),
-		Consul:      c.Consul.Copy(),
-		Driver:      c.Driver.Copy(),
-		Tasks:       c.Tasks.Copy(),
-		Services:    c.Services.Copy(),
-		Providers:   c.Providers.Copy(),
-		Wait:        c.Wait.Copy(),
+		LogLevel:     StringCopy(c.LogLevel),
+		InspectMode:  BoolCopy(c.InspectMode),
+		Syslog:       c.Syslog.Copy(),
+		Consul:       c.Consul.Copy(),
+		Driver:       c.Driver.Copy(),
+		Tasks:        c.Tasks.Copy(),
+		Services:     c.Services.Copy(),
+		Providers:    c.Providers.Copy(),
+		BufferPeriod: c.BufferPeriod.Copy(),
 	}
 }
 
@@ -138,8 +136,8 @@ func (c *Config) Merge(o *Config) *Config {
 		r.Providers = r.Providers.Merge(o.Providers)
 	}
 
-	if o.Wait != nil {
-		r.Wait = r.Wait.Merge(o.Wait)
+	if o.BufferPeriod != nil {
+		r.BufferPeriod = r.BufferPeriod.Merge(o.BufferPeriod)
 	}
 
 	return r
@@ -174,16 +172,10 @@ func (c *Config) Finalize() {
 	}
 	c.Driver.Finalize()
 
-	// Finalize top level wait to use as inherited default value for tasks
-	if c.Wait == nil {
-		c.Wait = DefaultWaitConfig()
-	}
-	c.Wait.Finalize()
-
 	if c.Tasks == nil {
 		c.Tasks = DefaultTaskConfigs()
 	}
-	c.Tasks.Finalize(c.Wait.Copy())
+	c.Tasks.Finalize()
 
 	if c.Services == nil {
 		c.Services = DefaultServiceConfigs()
@@ -194,6 +186,11 @@ func (c *Config) Finalize() {
 		c.Providers = DefaultProviderConfigs()
 	}
 	c.Providers.Finalize()
+
+	if c.BufferPeriod == nil {
+		c.BufferPeriod = DefaultBufferPeriodConfig()
+	}
+	c.BufferPeriod.Finalize()
 }
 
 // Validate validates the values and nested values of the configuration struct
@@ -220,7 +217,7 @@ func (c *Config) Validate() error {
 
 	// TODO: validate providers listed in tasks exist
 
-	if err := c.Wait.Validate(); err != nil {
+	if err := c.BufferPeriod.Validate(); err != nil {
 		return err
 	}
 
@@ -242,7 +239,7 @@ func (c *Config) GoString() string {
 		"Tasks:%s, "+
 		"Services:%s, "+
 		"Providers:%s, "+
-		"Wait:%s"+
+		"BufferPeriod:%s"+
 		"}",
 		StringVal(c.LogLevel),
 		BoolVal(c.InspectMode),
@@ -252,7 +249,7 @@ func (c *Config) GoString() string {
 		c.Tasks.GoString(),
 		c.Services.GoString(),
 		c.Providers.GoString(),
-		c.Wait.GoString(),
+		c.BufferPeriod.GoString(),
 	)
 }
 

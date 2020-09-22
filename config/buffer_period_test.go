@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWaitConfig_Copy(t *testing.T) {
+func TestBufferPeriodConfig_Copy(t *testing.T) {
 	cases := []struct {
 		name string
-		a    *WaitConfig
+		a    *BufferPeriodConfig
 	}{
 		{
 			"nil",
@@ -19,11 +19,11 @@ func TestWaitConfig_Copy(t *testing.T) {
 		},
 		{
 			"empty",
-			&WaitConfig{},
+			&BufferPeriodConfig{},
 		},
 		{
 			"same_enabled",
-			&WaitConfig{
+			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(10 * time.Second),
 				Max:     TimeDuration(20 * time.Second),
@@ -39,24 +39,24 @@ func TestWaitConfig_Copy(t *testing.T) {
 	}
 }
 
-func TestWaitConfig_Merge(t *testing.T) {
+func TestBufferPeriodConfig_Merge(t *testing.T) {
 	cases := []struct {
 		name string
-		a    *WaitConfig
-		b    *WaitConfig
-		r    *WaitConfig
+		a    *BufferPeriodConfig
+		b    *BufferPeriodConfig
+		r    *BufferPeriodConfig
 	}{
 		{
 			"nil_a",
 			nil,
-			&WaitConfig{},
-			&WaitConfig{},
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{},
 		},
 		{
 			"nil_b",
-			&WaitConfig{},
+			&BufferPeriodConfig{},
 			nil,
-			&WaitConfig{},
+			&BufferPeriodConfig{},
 		},
 		{
 			"nil_both",
@@ -66,81 +66,81 @@ func TestWaitConfig_Merge(t *testing.T) {
 		},
 		{
 			"empty",
-			&WaitConfig{},
-			&WaitConfig{},
-			&WaitConfig{},
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{},
 		},
 		{
 			"enabled_overrides",
-			&WaitConfig{Enabled: Bool(true)},
-			&WaitConfig{Enabled: Bool(false)},
-			&WaitConfig{Enabled: Bool(false)},
+			&BufferPeriodConfig{Enabled: Bool(true)},
+			&BufferPeriodConfig{Enabled: Bool(false)},
+			&BufferPeriodConfig{Enabled: Bool(false)},
 		},
 		{
 			"enabled_empty_one",
-			&WaitConfig{Enabled: Bool(true)},
-			&WaitConfig{},
-			&WaitConfig{Enabled: Bool(true)},
+			&BufferPeriodConfig{Enabled: Bool(true)},
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{Enabled: Bool(true)},
 		},
 		{
 			"enabled_empty_two",
-			&WaitConfig{},
-			&WaitConfig{Enabled: Bool(true)},
-			&WaitConfig{Enabled: Bool(true)},
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{Enabled: Bool(true)},
+			&BufferPeriodConfig{Enabled: Bool(true)},
 		},
 		{
 			"enabled_same",
-			&WaitConfig{Enabled: Bool(true)},
-			&WaitConfig{Enabled: Bool(true)},
-			&WaitConfig{Enabled: Bool(true)},
+			&BufferPeriodConfig{Enabled: Bool(true)},
+			&BufferPeriodConfig{Enabled: Bool(true)},
+			&BufferPeriodConfig{Enabled: Bool(true)},
 		},
 		{
 			"min_overrides",
-			&WaitConfig{Min: TimeDuration(10 * time.Second)},
-			&WaitConfig{Min: TimeDuration(0 * time.Second)},
-			&WaitConfig{Min: TimeDuration(0 * time.Second)},
+			&BufferPeriodConfig{Min: TimeDuration(10 * time.Second)},
+			&BufferPeriodConfig{Min: TimeDuration(0 * time.Second)},
+			&BufferPeriodConfig{Min: TimeDuration(0 * time.Second)},
 		},
 		{
 			"min_empty_one",
-			&WaitConfig{Min: TimeDuration(10 * time.Second)},
-			&WaitConfig{},
-			&WaitConfig{Min: TimeDuration(10 * time.Second)},
+			&BufferPeriodConfig{Min: TimeDuration(10 * time.Second)},
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{Min: TimeDuration(10 * time.Second)},
 		},
 		{
 			"min_empty_two",
-			&WaitConfig{},
-			&WaitConfig{Min: TimeDuration(10 * time.Second)},
-			&WaitConfig{Min: TimeDuration(10 * time.Second)},
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{Min: TimeDuration(10 * time.Second)},
+			&BufferPeriodConfig{Min: TimeDuration(10 * time.Second)},
 		},
 		{
 			"min_same",
-			&WaitConfig{Min: TimeDuration(10 * time.Second)},
-			&WaitConfig{Min: TimeDuration(10 * time.Second)},
-			&WaitConfig{Min: TimeDuration(10 * time.Second)},
+			&BufferPeriodConfig{Min: TimeDuration(10 * time.Second)},
+			&BufferPeriodConfig{Min: TimeDuration(10 * time.Second)},
+			&BufferPeriodConfig{Min: TimeDuration(10 * time.Second)},
 		},
 		{
 			"max_overrides",
-			&WaitConfig{Max: TimeDuration(20 * time.Second)},
-			&WaitConfig{Max: TimeDuration(0 * time.Second)},
-			&WaitConfig{Max: TimeDuration(0 * time.Second)},
+			&BufferPeriodConfig{Max: TimeDuration(20 * time.Second)},
+			&BufferPeriodConfig{Max: TimeDuration(0 * time.Second)},
+			&BufferPeriodConfig{Max: TimeDuration(0 * time.Second)},
 		},
 		{
 			"max_empty_one",
-			&WaitConfig{Max: TimeDuration(20 * time.Second)},
-			&WaitConfig{},
-			&WaitConfig{Max: TimeDuration(20 * time.Second)},
+			&BufferPeriodConfig{Max: TimeDuration(20 * time.Second)},
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{Max: TimeDuration(20 * time.Second)},
 		},
 		{
 			"max_empty_two",
-			&WaitConfig{},
-			&WaitConfig{Max: TimeDuration(20 * time.Second)},
-			&WaitConfig{Max: TimeDuration(20 * time.Second)},
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{Max: TimeDuration(20 * time.Second)},
+			&BufferPeriodConfig{Max: TimeDuration(20 * time.Second)},
 		},
 		{
 			"max_same",
-			&WaitConfig{Max: TimeDuration(20 * time.Second)},
-			&WaitConfig{Max: TimeDuration(20 * time.Second)},
-			&WaitConfig{Max: TimeDuration(20 * time.Second)},
+			&BufferPeriodConfig{Max: TimeDuration(20 * time.Second)},
+			&BufferPeriodConfig{Max: TimeDuration(20 * time.Second)},
+			&BufferPeriodConfig{Max: TimeDuration(20 * time.Second)},
 		},
 	}
 
@@ -152,16 +152,16 @@ func TestWaitConfig_Merge(t *testing.T) {
 	}
 }
 
-func TestWaitConfig_Finalize(t *testing.T) {
+func TestBufferPeriodConfig_Finalize(t *testing.T) {
 	cases := []struct {
 		name string
-		i    *WaitConfig
-		r    *WaitConfig
+		i    *BufferPeriodConfig
+		r    *BufferPeriodConfig
 	}{
 		{
 			"empty",
-			&WaitConfig{},
-			&WaitConfig{
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{
 				Enabled: Bool(false),
 				Min:     TimeDuration(5 * time.Second),
 				Max:     TimeDuration(20 * time.Second),
@@ -169,10 +169,10 @@ func TestWaitConfig_Finalize(t *testing.T) {
 		},
 		{
 			"with_min",
-			&WaitConfig{
+			&BufferPeriodConfig{
 				Min: TimeDuration(10 * time.Second),
 			},
-			&WaitConfig{
+			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(10 * time.Second),
 				Max:     TimeDuration(40 * time.Second),
@@ -188,10 +188,10 @@ func TestWaitConfig_Finalize(t *testing.T) {
 	}
 }
 
-func TestWaitConfig_Validate(t *testing.T) {
+func TestBufferPeriodConfig_Validate(t *testing.T) {
 	cases := []struct {
 		name    string
-		i       *WaitConfig
+		i       *BufferPeriodConfig
 		isValid bool
 	}{
 		{
@@ -201,12 +201,12 @@ func TestWaitConfig_Validate(t *testing.T) {
 		},
 		{
 			"empty",
-			&WaitConfig{},
+			&BufferPeriodConfig{},
 			true,
 		},
 		{
 			"valid",
-			&WaitConfig{
+			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(time.Duration(10 * time.Second)),
 				Max:     TimeDuration(time.Duration(60 * time.Second)),
@@ -215,7 +215,7 @@ func TestWaitConfig_Validate(t *testing.T) {
 		},
 		{
 			"min negative",
-			&WaitConfig{
+			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(time.Duration(-10 * time.Second)),
 				Max:     TimeDuration(time.Duration(5 * time.Second)),
@@ -224,7 +224,7 @@ func TestWaitConfig_Validate(t *testing.T) {
 		},
 		{
 			"max negative",
-			&WaitConfig{
+			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(time.Duration(5 * time.Second)),
 				Max:     TimeDuration(time.Duration(-10 * time.Second)),
@@ -233,7 +233,7 @@ func TestWaitConfig_Validate(t *testing.T) {
 		},
 		{
 			"min > max",
-			&WaitConfig{
+			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(time.Duration(5 * time.Second)),
 				Max:     TimeDuration(time.Duration(2 * time.Second)),

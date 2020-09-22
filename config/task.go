@@ -42,8 +42,8 @@ type TaskConfig struct {
 	// the default if omitted.
 	Version *string `mapstructure:"version"`
 
-	// Wait configures per-task quiescence timers.
-	Wait *WaitConfig `mapstructure:"wait"`
+	// BufferPeriod configures per-task buffer timers.
+	BufferPeriod *BufferPeriodConfig `mapstructure:"buffer_period"`
 }
 
 // TaskConfigs is a collection of TaskConfig
@@ -75,7 +75,7 @@ func (c *TaskConfig) Copy() *TaskConfig {
 
 	o.Version = StringCopy(c.Version)
 
-	o.Wait = c.Wait.Copy()
+	o.BufferPeriod = c.BufferPeriod.Copy()
 
 	return &o
 }
@@ -126,15 +126,15 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Version = StringCopy(o.Version)
 	}
 
-	if o.Wait != nil {
-		r.Wait = r.Wait.Merge(o.Wait)
+	if o.BufferPeriod != nil {
+		r.BufferPeriod = r.BufferPeriod.Merge(o.BufferPeriod)
 	}
 
 	return r
 }
 
 // Finalize ensures there no nil pointers.
-func (c *TaskConfig) Finalize(wait *WaitConfig) {
+func (c *TaskConfig) Finalize() {
 	if c == nil {
 		return
 	}
@@ -167,15 +167,10 @@ func (c *TaskConfig) Finalize(wait *WaitConfig) {
 		c.Version = String("")
 	}
 
-	if c.Wait == nil {
-		// Inherit wait config if set
-		if wait != nil {
-			c.Wait = wait
-		} else {
-			c.Wait = DefaultTaskWaitConfig()
-		}
+	if c.BufferPeriod == nil {
+		c.BufferPeriod = DefaultTaskBufferPeriodConfig()
 	}
-	c.Wait.Finalize()
+	c.BufferPeriod.Finalize()
 }
 
 // Validate validates the values and required options. This method is recommended
@@ -207,7 +202,7 @@ func (c *TaskConfig) Validate() error {
 		pNames[name] = true
 	}
 
-	if err := c.Wait.Validate(); err != nil {
+	if err := c.BufferPeriod.Validate(); err != nil {
 		return err
 	}
 
@@ -229,7 +224,7 @@ func (c *TaskConfig) GoString() string {
 		"Source:%s, "+
 		"VarFiles:%s, "+
 		"Version:%s, "+
-		"Wait:%s"+
+		"BufferPeriod:%s"+
 		"}",
 		StringVal(c.Name),
 		StringVal(c.Description),
@@ -238,7 +233,7 @@ func (c *TaskConfig) GoString() string {
 		StringVal(c.Source),
 		c.VarFiles,
 		StringVal(c.Version),
-		c.Wait.GoString(),
+		c.BufferPeriod.GoString(),
 	)
 }
 
@@ -295,13 +290,13 @@ func (c *TaskConfigs) Merge(o *TaskConfigs) *TaskConfigs {
 
 // Finalize ensures the configuration has no nil pointers and sets default
 // values.
-func (c *TaskConfigs) Finalize(wait *WaitConfig) {
+func (c *TaskConfigs) Finalize() {
 	if c == nil {
 		*c = *DefaultTaskConfigs()
 	}
 
 	for _, t := range *c {
-		t.Finalize(wait)
+		t.Finalize()
 	}
 }
 

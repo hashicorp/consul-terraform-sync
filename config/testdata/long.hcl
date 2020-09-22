@@ -6,7 +6,7 @@ syslog {
   name = "syslog"
 }
 
-wait {
+buffer_period {
   min = "20s"
   max = "60s"
 }

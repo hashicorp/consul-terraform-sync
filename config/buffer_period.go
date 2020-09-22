@@ -6,13 +6,14 @@ import (
 )
 
 var (
-	DefaultWaitMin = time.Duration(5 * time.Second)
-	DefaultWaitMax = time.Duration(4 * DefaultWaitMin)
+	DefaultBufferPeriodMin = time.Duration(5 * time.Second)
+	DefaultBufferPeriodMax = time.Duration(4 * DefaultBufferPeriodMin)
 )
 
-// WaitConfig is the Min/Max duration used by the Watcher
-type WaitConfig struct {
-	// Enabled determines if this wait is enabled.
+// BufferPeriodConfig is the min and max duration to buffer changes for tasks
+// before executing.
+type BufferPeriodConfig struct {
+	// Enabled determines if this buffer period is enabled.
 	Enabled *bool `mapstructure:"enabled"`
 
 	// Min and Max are the minimum and maximum time, respectively, to wait for
@@ -21,31 +22,31 @@ type WaitConfig struct {
 	Max *time.Duration `mapstructure:"max"`
 }
 
-// DefaultWaitConfig is the global default configuration for all tasks.
-func DefaultWaitConfig() *WaitConfig {
-	return &WaitConfig{
+// DefaultBufferPeriodConfig is the global default configuration for all tasks.
+func DefaultBufferPeriodConfig() *BufferPeriodConfig {
+	return &BufferPeriodConfig{
 		Enabled: Bool(true),
-		Min:     &DefaultWaitMin,
-		Max:     &DefaultWaitMax,
+		Min:     &DefaultBufferPeriodMin,
+		Max:     &DefaultBufferPeriodMax,
 	}
 }
 
-// DefaultTaskWaitConfig is the default configuration for a task.
-func DefaultTaskWaitConfig() *WaitConfig {
-	return &WaitConfig{
+// DefaultTaskBufferPeriodConfig is the default configuration for a task.
+func DefaultTaskBufferPeriodConfig() *BufferPeriodConfig {
+	return &BufferPeriodConfig{
 		Enabled: Bool(false),
-		Min:     &DefaultWaitMin,
-		Max:     &DefaultWaitMax,
+		Min:     &DefaultBufferPeriodMin,
+		Max:     &DefaultBufferPeriodMax,
 	}
 }
 
 // Copy returns a deep copy of this configuration.
-func (c *WaitConfig) Copy() *WaitConfig {
+func (c *BufferPeriodConfig) Copy() *BufferPeriodConfig {
 	if c == nil {
 		return nil
 	}
 
-	var o WaitConfig
+	var o BufferPeriodConfig
 	o.Enabled = BoolCopy(c.Enabled)
 	o.Min = TimeDurationCopy(c.Min)
 	o.Max = TimeDurationCopy(c.Max)
@@ -56,7 +57,7 @@ func (c *WaitConfig) Copy() *WaitConfig {
 // configuration, with values in the other configuration taking precedence.
 // Maps and slices are merged, most other values are overwritten. Complex
 // structs define their own merge functionality.
-func (c *WaitConfig) Merge(o *WaitConfig) *WaitConfig {
+func (c *BufferPeriodConfig) Merge(o *BufferPeriodConfig) *BufferPeriodConfig {
 	if c == nil {
 		if o == nil {
 			return nil
@@ -86,13 +87,13 @@ func (c *WaitConfig) Merge(o *WaitConfig) *WaitConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *WaitConfig) Finalize() {
+func (c *BufferPeriodConfig) Finalize() {
 	if c.Enabled == nil {
 		c.Enabled = Bool(TimeDurationPresent(c.Min))
 	}
 
 	if c.Min == nil {
-		c.Min = TimeDuration(DefaultWaitMin)
+		c.Min = TimeDuration(DefaultBufferPeriodMin)
 	}
 
 	if c.Max == nil {
@@ -102,9 +103,9 @@ func (c *WaitConfig) Finalize() {
 
 // Validate validates the values and required options. This method is recommended
 // to run after Finalize() to ensure the configuration is safe to proceed.
-func (c *WaitConfig) Validate() error {
+func (c *BufferPeriodConfig) Validate() error {
 	if c == nil {
-		// Wait config is not required, return early
+		// config is not required, return early
 		return nil
 	}
 
@@ -113,23 +114,23 @@ func (c *WaitConfig) Validate() error {
 	}
 
 	if c.Min.Seconds() < 0 || c.Max.Seconds() < 0 {
-		return fmt.Errorf("wait: cannot be negative")
+		return fmt.Errorf("buffer_period: cannot be negative")
 	}
 
 	if *c.Max < *c.Min {
-		return fmt.Errorf("wait: min must be less than max")
+		return fmt.Errorf("buffer_period: min must be less than max")
 	}
 
 	return nil
 }
 
 // GoString defines the printable version of this struct.
-func (c *WaitConfig) GoString() string {
+func (c *BufferPeriodConfig) GoString() string {
 	if c == nil {
-		return "(*WaitConfig)(nil)"
+		return "(*BufferPeriodConfig)(nil)"
 	}
 
-	return fmt.Sprintf("&WaitConfig{"+
+	return fmt.Sprintf("&BufferPeriodConfig{"+
 		"Enabled:%v, "+
 		"Min:%s, "+
 		"Max:%s"+

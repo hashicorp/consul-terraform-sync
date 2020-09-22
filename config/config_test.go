@@ -101,7 +101,7 @@ var (
 		Providers: &ProviderConfigs{{
 			"X": map[string]interface{}{},
 		}},
-		Wait: &WaitConfig{
+		BufferPeriod: &BufferPeriodConfig{
 			Min: TimeDuration(20 * time.Second),
 			Max: TimeDuration(60 * time.Second),
 		},
@@ -261,7 +261,7 @@ func TestConfig_Finalize(t *testing.T) {
 	expected := longConfig.Copy()
 	expected.ClientType = String("")
 	expected.Syslog.Facility = String("LOCAL0")
-	expected.Wait.Enabled = Bool(true)
+	expected.BufferPeriod.Enabled = Bool(true)
 	expected.Consul.KVNamespace = String("")
 	expected.Consul.TLS.Cert = String("")
 	expected.Consul.Transport.MaxIdleConns = Int(100)
@@ -273,7 +273,7 @@ func TestConfig_Finalize(t *testing.T) {
 	backend["key_file"] = "key"
 	(*expected.Tasks)[0].VarFiles = []string{}
 	(*expected.Tasks)[0].Version = String("")
-	(*expected.Tasks)[0].Wait = expected.Wait
+	(*expected.Tasks)[0].BufferPeriod = DefaultBufferPeriodConfig()
 	(*expected.Services)[0].ID = String("serviceA")
 	(*expected.Services)[0].Namespace = String("")
 	(*expected.Services)[0].Datacenter = String("")
