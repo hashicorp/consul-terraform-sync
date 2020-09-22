@@ -205,7 +205,7 @@ func TestReadWriteRun(t *testing.T) {
 			u := unit{template: tmpl, driver: d}
 			ctx := context.Background()
 
-			err = controller.checkApply(u, ctx)
+			_, err = controller.checkApply(u, ctx)
 			if tc.expectError {
 				if assert.Error(t, err) {
 					assert.Contains(t, err.Error(), tc.name)
@@ -215,6 +215,74 @@ func TestReadWriteRun(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
+}
+
+func TestOnce(t *testing.T) {
+	t.Run("init-wraps-units", func(t *testing.T) {
+		conf := singleTaskConfig()
+
+		tmpl := new(mocks.Template)
+		tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, nil).Once()
+
+		r := new(mocks.Resolver)
+		var tf bool
+		falseThenTrue := func(hcat.Templater, hcat.Watcherer) hcat.ResolveEvent {
+			if !tf {
+				defer func() { tf = true }()
+			}
+			return hcat.ResolveEvent{Complete: tf}
+		}
+		r.On("Run", mock.Anything, mock.Anything).Return(falseThenTrue, nil).Twice()
+
+		w := new(mocks.Watcher)
+		errCh := make(chan error)
+		var errChRc <-chan error = errCh
+		go func() { errCh <- nil }()
+		w.On("WaitCh", mock.Anything).Return(errChRc).Once()
+
+		d := new(mocksD.Driver)
+		d.On("Init", mock.Anything).Return(nil).Once()
+		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
+		d.On("ApplyTask", mock.Anything).Return(nil).Once()
+
+		rw := &ReadWrite{
+			watcher:    w,
+			resolver:   r,
+			newDriver:  func(*config.Config) driver.Driver { return d },
+			conf:       conf,
+			fileReader: func(string) ([]byte, error) { return []byte{}, nil },
+		}
+
+		ctx := context.Background()
+		rw.Init(ctx)
+		// insert mock template into units
+		for i, u := range rw.units {
+			u.template = tmpl
+			rw.units[i] = u
+		}
+
+		// testing really starts here...
+		once := Oncer(rw)
+		done := make(chan error)
+		// running in goroutine so I can timeout
+		go func() {
+			done <- once.Once(ctx)
+		}()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Fatal("Unexpected error in Once():", err)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("Once didn't return in expected time")
+		}
+
+		// Not sure about these... to far into the "test implementation" zone?
+		tmpl.AssertExpectations(t)
+		r.AssertExpectations(t)
+		w.AssertExpectations(t)
+		d.AssertExpectations(t)
+	})
 }
 
 func TestReadWriteUnits(t *testing.T) {

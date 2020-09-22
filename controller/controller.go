@@ -24,6 +24,10 @@ type Controller interface {
 	Run(ctx context.Context) error
 }
 
+type Oncer interface {
+	Once(ctx context.Context) error
+}
+
 func newDriverFunc(conf *config.Config) (func(*config.Config) driver.Driver, error) {
 	if conf.Driver.Terraform != nil {
 		log.Printf("[INFO] (controller) setting up Terraform driver")
