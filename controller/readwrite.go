@@ -94,6 +94,7 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 	}
 
 	rw.units = units
+	rw.setTemplateBufferPeriods()
 
 	return nil
 }
@@ -131,7 +132,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 // A single run through of all the units/tasks/templates
 // Returned error channel closes when done with all units
 func (rw *ReadWrite) runUnits(ctx context.Context) chan error {
-	log.Printf("[DEBUG] (controller.readwrite) preparing work")
+	log.Printf("[TRACE] (controller.readwrite) preparing work")
 
 	// keep error chan and waitgroup here to keep runTask simple (on task)
 	errCh := make(chan error, 1)
@@ -158,7 +159,7 @@ func (rw *ReadWrite) runUnits(ctx context.Context) chan error {
 // Once runs the controller in read-write mode making sure each template has
 // been fully rendered and the task run, then it returns.
 func (rw *ReadWrite) Once(ctx context.Context) error {
-	log.Printf("[DEBUG] (controller.readwrite) preparing work")
+	log.Printf("[TRACE] (controller.readwrite) preparing work")
 
 	completed := make(map[string]bool, len(rw.units))
 	for {
@@ -195,7 +196,7 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) (bool, error) {
 	tmpl := u.template
 	taskName := u.taskName
 
-	log.Print("[DEBUG] (controller.readwrite) running task:", taskName)
+	log.Print("[TRACE] (controller.readwrite) running task:", taskName)
 	// This only returns result.Complete if the template has new data
 	// that has been completely fetched.
 	result, err := rw.resolver.Run(tmpl, rw.watcher)
@@ -205,16 +206,16 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) (bool, error) {
 	}
 	// If true the template should be rendered and driver work run.
 	if result.Complete {
-		log.Printf("[DEBUG] (controller.readwrite) task %s complete", taskName)
+		log.Printf("[DEBUG] (controller.readwrite) change detected for task %s", taskName)
 		rendered, err := tmpl.Render(result.Contents)
 		if err != nil {
 			return false, fmt.Errorf("error rendering template for task %s: %s",
 				taskName, err)
 		}
-		log.Printf("[DEBUG] %q rendered: %+v", taskName, rendered)
+		log.Printf("[DEBUG] template for task %q rendered: %+v", taskName, rendered)
 
 		d := u.driver
-		log.Printf("[INFO] (controller.readwrite) apply work %s", taskName)
+		log.Printf("[DEBUG] (controller.readwrite) executing task %s", taskName)
 		if err := d.ApplyTask(ctx); err != nil {
 			return false, fmt.Errorf("could not apply: %s", err)
 		}
@@ -226,4 +227,31 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) (bool, error) {
 		rw.postApply.Do()
 	}
 	return result.Complete, nil
+}
+
+// setTemplateBufferPeriods applies the task buffer period config to its template
+func (rw *ReadWrite) setTemplateBufferPeriods() {
+	if rw.watcher == nil {
+		return
+	}
+
+	taskConfigs := make(map[string]*config.TaskConfig)
+	for _, t := range *rw.conf.Tasks {
+		taskConfigs[*t.Name] = t
+	}
+
+	var unsetIDs []string
+	for _, u := range rw.units {
+		taskConfig := taskConfigs[u.taskName]
+		if buffPeriod := *taskConfig.BufferPeriod; *buffPeriod.Enabled {
+			rw.watcher.SetBufferPeriod(*buffPeriod.Min, *buffPeriod.Max, u.template.ID())
+		} else {
+			unsetIDs = append(unsetIDs, u.template.ID())
+		}
+	}
+
+	// Set default buffer period for unset templates
+	if buffPeriod := *rw.conf.BufferPeriod; *buffPeriod.Enabled {
+		rw.watcher.SetBufferPeriod(*buffPeriod.Min, *buffPeriod.Max, unsetIDs...)
+	}
 }

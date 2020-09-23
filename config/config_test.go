@@ -273,7 +273,7 @@ func TestConfig_Finalize(t *testing.T) {
 	backend["key_file"] = "key"
 	(*expected.Tasks)[0].VarFiles = []string{}
 	(*expected.Tasks)[0].Version = String("")
-	(*expected.Tasks)[0].BufferPeriod = DefaultBufferPeriodConfig()
+	(*expected.Tasks)[0].BufferPeriod = DefaultTaskBufferPeriodConfig()
 	(*expected.Services)[0].ID = String("serviceA")
 	(*expected.Services)[0].Namespace = String("")
 	(*expected.Services)[0].Datacenter = String("")
