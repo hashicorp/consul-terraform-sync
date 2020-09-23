@@ -65,7 +65,7 @@ func NewCLI(out, err io.Writer) *CLI {
 func (cli *CLI) Run(args []string) int {
 	// Handle parsing the CLI flags.
 	var configFiles config.FlagAppendSliceValue
-	var isVersion, isInspect bool
+	var isVersion, isInspect, isOnce bool
 	var clientType string
 
 	// Parse the flags
@@ -81,6 +81,8 @@ func (cli *CLI) Run(args []string) int {
 	f.BoolVar(&isInspect, "inspect", false, "Run Consul NIA in Inspect mode to "+
 		"print the current and proposed state change, and then exits. No changes "+
 		"are applied in this mode.")
+	f.BoolVar(&isOnce, "once", false, "Render templates and run tasks once. "+
+		"Does not run the process as a daemon and disables wait timers.")
 	f.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
 
 	// Additional flag only intended to be used for development
@@ -153,9 +155,11 @@ func (cli *CLI) Run(args []string) int {
 		ctrl = controller.NewReadOnly(conf)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	errCh := make(chan error, 1)
 	exitCh := make(chan struct{}, 1)
-	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
 		log.Printf("[INFO] (cli) initializing controller")
@@ -167,6 +171,24 @@ func (cli *CLI) Run(args []string) int {
 			log.Printf("[ERR] (cli) error initializing controller: %s", err)
 			errCh <- err
 			return
+		}
+
+		log.Printf("[INFO] (cli) running controller in Once mode")
+		switch c := ctrl.(type) {
+		case controller.Oncer:
+			if err := c.Once(ctx); err != nil {
+				if err == context.Canceled {
+					exitCh <- struct{}{}
+				} else {
+					log.Printf("[ERR] (cli) error running controller: %s", err)
+					errCh <- err
+				}
+				return
+			}
+			if isOnce {
+				exitCh <- struct{}{}
+				return
+			}
 		}
 
 		log.Printf("[INFO] (cli) running controller")
@@ -192,7 +214,6 @@ func (cli *CLI) Run(args []string) int {
 			// shutdown
 			log.Printf("[INFO] signal received to initiate graceful shutdown: %v", sig)
 			cancel()
-
 			select {
 			case <-exitCh:
 				log.Printf("[INFO] graceful shutdown")

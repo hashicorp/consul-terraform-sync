@@ -18,6 +18,9 @@ Usage of consul-nia:
   -inspect
       Run Consul NIA in Inspect mode to print the current and proposed state
       change, and then exits. No changes are applied in this mode.
+  -once
+      Render templates and run tasks once. Does not run the process as a daemon
+      and disables wait timers.
   -version
       Print the version of this daemon.
 ```

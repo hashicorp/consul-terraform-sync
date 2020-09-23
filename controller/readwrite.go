@@ -107,7 +107,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	for {
 		for err := range rw.runUnits(ctx) {
 			// aggregate error collector for runUnits, just logs everything for now
-			log.Printf("[ERR] (controller.readwrite) run error: %s", err)
+			log.Printf("[ERR] (controller.readwrite) %s", err)
 		}
 
 		select {
@@ -135,7 +135,7 @@ func (rw *ReadWrite) runUnits(ctx context.Context) chan error {
 	for _, u := range rw.units {
 		wg.Add(1)
 		go func(u unit) {
-			err := rw.checkApply(u, ctx)
+			_, err := rw.checkApply(u, ctx)
 			if err != nil {
 				errCh <- err
 			}
@@ -151,16 +151,52 @@ func (rw *ReadWrite) runUnits(ctx context.Context) chan error {
 	return errCh
 }
 
+// Once runs the controller in read-write mode making sure each template has
+// been fully rendered and the task run, then it returns.
+func (rw *ReadWrite) Once(ctx context.Context) error {
+	log.Printf("[DEBUG] (controller.readwrite) preparing work")
+
+	completed := make(map[string]bool, len(rw.units))
+	for {
+		done := true
+		for _, u := range rw.units {
+			if !completed[u.taskName] {
+				complete, err := rw.checkApply(u, ctx)
+				if err != nil {
+					return fmt.Errorf("[ERR] (controller.readwrite): %s", err)
+				}
+				completed[u.taskName] = complete
+				if !complete && done {
+					done = false
+				}
+			}
+		}
+		if done {
+			return nil
+		}
+
+		select {
+		case err := <-rw.watcher.WaitCh(ctx):
+			if err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
 // Single run, render, apply of a unit (task)
-func (rw *ReadWrite) checkApply(u unit, ctx context.Context) error {
+func (rw *ReadWrite) checkApply(u unit, ctx context.Context) (bool, error) {
 	tmpl := u.template
 	taskName := u.taskName
+
 	log.Print("[DEBUG] (controller.readwrite) running task:", taskName)
 	// This only returns result.Complete if the template has new data
 	// that has been completely fetched.
 	result, err := rw.resolver.Run(tmpl, rw.watcher)
 	if err != nil {
-		return fmt.Errorf("error running template for task %s: %s",
+		return false, fmt.Errorf("error running template for task %s: %s",
 			taskName, err)
 	}
 	// If true the template should be rendered and driver work run.
@@ -168,7 +204,7 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) error {
 		log.Printf("[DEBUG] (controller.readwrite) task %s complete", taskName)
 		rendered, err := tmpl.Render(result.Contents)
 		if err != nil {
-			return fmt.Errorf("error rendering template for task %s: %s",
+			return false, fmt.Errorf("error rendering template for task %s: %s",
 				taskName, err)
 		}
 		log.Printf("[DEBUG] %q rendered: %+v", taskName, rendered)
@@ -176,7 +212,7 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) error {
 		d := u.driver
 		log.Printf("[INFO] (controller.readwrite) apply work %s", taskName)
 		if err := d.ApplyTask(ctx); err != nil {
-			return fmt.Errorf("could not apply: %s", err)
+			return false, fmt.Errorf("could not apply: %s", err)
 		}
 	}
 
@@ -185,5 +221,5 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) error {
 		// TODO: improvement to only trigger handlers for tasks that were updated
 		rw.postApply.Do()
 	}
-	return nil
+	return result.Complete, nil
 }
