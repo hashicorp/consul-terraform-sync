@@ -89,6 +89,38 @@ func TestWorkerApply(t *testing.T) {
 	}
 }
 
+func TestWithRetry_context_cancel(t *testing.T) {
+	t.Parallel()
+
+	r := retry{
+		desc:   "fake fxn that never succeeds",
+		retry:  5,
+		random: rand.New(rand.NewSource(1)),
+		fxn: func() error {
+			return errors.New("test error")
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error)
+	go func() {
+		err := r.do(ctx)
+		if err != nil {
+			errCh <- err
+		}
+	}()
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err != context.Canceled {
+			t.Error("wanted 'context canceled', got:", err)
+		}
+	case <-time.After(time.Second * 5):
+		t.Fatal("Run did not exit properly from cancelling context")
+	}
+}
+
 func TestWithRetry(t *testing.T) {
 	t.Parallel()
 
@@ -124,6 +156,7 @@ func TestWithRetry(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// set up fake function
@@ -136,8 +169,13 @@ func TestWithRetry(t *testing.T) {
 				return fmt.Errorf("error on %d", count)
 			}
 
-			random := rand.New(rand.NewSource(1))
-			err := withRetry(fxn, "test fxn", random, tc.retry)
+			r := retry{
+				desc:   "test fxn",
+				retry:  tc.retry,
+				random: rand.New(rand.NewSource(1)),
+				fxn:    fxn,
+			}
+			err := r.do(ctx)
 			if tc.expected == nil {
 				assert.NoError(t, err)
 			} else {
@@ -178,8 +216,10 @@ func TestWaitTime(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			random := rand.New(rand.NewSource(1))
-			a := waitTime(tc.attempt, random)
+			r := retry{
+				random: rand.New(rand.NewSource(1)),
+			}
+			a := r.waitTime(tc.attempt)
 
 			actual := float64(a) / float64(time.Second)
 			assert.GreaterOrEqual(t, actual, tc.minReturn)
