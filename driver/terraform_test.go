@@ -4,59 +4,11 @@ import (
 	"context"
 	"errors"
 	"math/rand"
-	"reflect"
 	"testing"
 
-	"github.com/hashicorp/consul-nia/client"
 	mocks "github.com/hashicorp/consul-nia/mocks/client"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestInitClient(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		name        string
-		clientType  string
-		expectError bool
-		expect      client.Client
-	}{
-		{
-			"happy path with development client",
-			developmentClient,
-			false,
-			&client.Printer{},
-		},
-		{
-			"happy path with mock client",
-			testClient,
-			false,
-			&mocks.Client{},
-		},
-		{
-			"error when creating Terraform CLI client",
-			"",
-			true,
-			&client.TerraformCLI{},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			d := &Terraform{
-				clientType: tc.clientType,
-			}
-
-			actual, err := d.initClient(Task{})
-			if tc.expectError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, reflect.TypeOf(tc.expect), reflect.TypeOf(actual))
-			}
-		})
-	}
-}
 
 func TestApplyTask(t *testing.T) {
 	t.Parallel()
