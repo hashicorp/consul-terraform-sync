@@ -105,11 +105,10 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 func (rw *ReadWrite) Run(ctx context.Context) error {
 
 	for {
-		for err := range rw.runUnits(ctx) {
-			// aggregate error collector for runUnits, just logs everything for now
-			log.Printf("[ERR] (controller.readwrite) %s", err)
-		}
-
+		// Blocking on Wait is first as we just ran in Once mode so we want
+		// to wait for updates before re-running. Doing it the other way is
+		// basically a noop as it checks if templates have been changed but
+		// the logs read weird. Revisit after async work is done.
 		select {
 		case err := <-rw.watcher.WaitCh(ctx):
 			if err != nil {
@@ -120,6 +119,11 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 			log.Printf("[INFO] (controller.readwrite) stopping controller")
 			rw.watcher.Stop()
 			return ctx.Err()
+		}
+
+		for err := range rw.runUnits(ctx) {
+			// aggregate error collector for runUnits, just logs everything for now
+			log.Printf("[ERR] (controller.readwrite) %s", err)
 		}
 	}
 }
