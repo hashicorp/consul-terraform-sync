@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/consul-nia/client"
 	mocks "github.com/hashicorp/consul-nia/mocks/client"
@@ -15,6 +17,9 @@ import (
 )
 
 const (
+	// Number of times to retry in addition to initial attempt
+	defaultRetry = 2
+
 	// Types of clients that are alternatives to the default Terraform CLI client
 	developmentClient = "development"
 	testClient        = "test"
@@ -184,6 +189,8 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 	tf.worker = &worker{
 		client: client,
 		task:   task,
+		random: rand.New(rand.NewSource(time.Now().UnixNano())),
+		retry:  defaultRetry,
 	}
 	return nil
 }

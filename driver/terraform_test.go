@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"reflect"
 	"testing"
 
@@ -106,8 +107,9 @@ func TestApplyTask(t *testing.T) {
 			tf := &Terraform{
 				worker: &worker{
 					client: c,
-					task:   Task{},
+					task:   Task{Name: "ApplyTaskTest"},
 					inited: tc.inited,
+					random: rand.New(rand.NewSource(1)),
 				},
 			}
 
