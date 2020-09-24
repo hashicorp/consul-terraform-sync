@@ -224,6 +224,10 @@ func (cli *CLI) Run(args []string) int {
 			}
 
 		case <-exitCh:
+			if isOnce {
+				log.Printf("[INFO] graceful shutdown")
+				return ExitCodeOK
+			}
 			log.Printf("[WARN] unexpected shutdown")
 			return ExitCodeError
 
