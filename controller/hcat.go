@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/dep"
@@ -30,16 +31,18 @@ type resolver interface {
 	Run(tmpl hcat.Templater, w hcat.Watcherer) (hcat.ResolveEvent, error)
 }
 
-var _ hcat.Watcherer = (watcher)(nil)
+var _ watcher = (*hcat.Watcher)(nil)
 
 // watcher describes the interface for hashicat's Watcher structure
-// which implements the interface Watcherer
+// used by this project
 // https://github.com/hashicorp/hcat
 type watcher interface {
 	WaitCh(ctx context.Context) <-chan error
 	Add(d dep.Dependency) bool
 	Changed(tmplID string) bool
+	Buffer(tmplID string) bool
 	Recall(id string) (interface{}, bool)
 	Register(tmplID string, deps ...dep.Dependency)
+	SetBufferPeriod(min, max time.Duration, tmplIDs ...string)
 	Stop()
 }

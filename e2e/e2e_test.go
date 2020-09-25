@@ -49,7 +49,7 @@ func TestE2EBasic(t *testing.T) {
 	err = makeConfig(configPath, twoTaskConfig(srv.HTTPAddr, tempDir))
 	require.NoError(t, err)
 
-	err = runConsulNIA(configPath)
+	err = runConsulNIA(configPath, 20*time.Second)
 	require.NoError(t, err)
 
 	files, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, resourcesDir))
@@ -96,11 +96,11 @@ func TestE2ERestartConsulNIA(t *testing.T) {
 	err = makeConfig(configPath, oneTaskConfig(srv.HTTPAddr, tempDir))
 	require.NoError(t, err)
 
-	err = runConsulNIA(configPath)
+	err = runConsulNIA(configPath, 8*time.Second)
 	require.NoError(t, err)
 
 	// rerun nia. confirm no errors e.g. recreating workspaces
-	err = runConsulNIA(configPath)
+	err = runConsulNIA(configPath, 8*time.Second)
 	require.NoError(t, err)
 
 	removeDir(tempDir)
@@ -149,14 +149,14 @@ func makeConfig(configPath, contents string) error {
 	return err
 }
 
-func runConsulNIA(configPath string) error {
+func runConsulNIA(configPath string, dur time.Duration) error {
 	cmd := exec.Command("consul-nia", fmt.Sprintf("--config-file=%s", configPath))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	time.Sleep(time.Second * 8)
+	time.Sleep(dur)
 	cmd.Process.Signal(os.Interrupt)
 	sigintErr := errors.New("signal: interrupt")
 	if err := cmd.Wait(); err != nil && err != sigintErr {
