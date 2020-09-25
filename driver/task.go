@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"path/filepath"
 	"time"
 
 	"github.com/hashicorp/consul-nia/client"
+	mocks "github.com/hashicorp/consul-nia/mocks/client"
 	"github.com/pkg/errors"
 )
 
@@ -44,6 +46,66 @@ type worker struct {
 	inited bool
 }
 
+// workerConfig configures a worker
+type workerConfig struct {
+	task       Task
+	clientType string
+	log        bool
+	persistLog bool
+	path       string
+	workingDir string
+	retry      int
+}
+
+// newWorker initializes a worker for a task
+func newWorker(c *workerConfig) (*worker, error) {
+	client, err := initClient(c)
+	if err != nil {
+		log.Printf("[ERR] (task) init client type '%s' error: %s", c.clientType, err)
+		return nil, err
+	}
+
+	return &worker{
+		client: client,
+		task:   c.task,
+		random: rand.New(rand.NewSource(time.Now().UnixNano())),
+		retry:  c.retry,
+	}, nil
+}
+
+// initClient initializes a specific type of client given a task
+func initClient(conf *workerConfig) (client.Client, error) {
+	var err error
+	var c client.Client
+	taskName := conf.task.Name
+
+	switch conf.clientType {
+	case developmentClient:
+		log.Printf("[TRACE] (task) creating development client for task '%s'", taskName)
+		c, err = client.NewPrinter(&client.PrinterConfig{
+			LogLevel:   "debug",
+			ExecPath:   conf.path,
+			WorkingDir: filepath.Join(conf.workingDir, taskName),
+			Workspace:  taskName,
+		})
+	case testClient:
+		log.Printf("[TRACE] (task) creating mock client for task '%s'", taskName)
+		c = new(mocks.Client)
+	default:
+		log.Printf("[TRACE] (task) creating terraform cli client for task '%s'", taskName)
+		c, err = client.NewTerraformCLI(&client.TerraformCLIConfig{
+			Log:        conf.log,
+			PersistLog: conf.persistLog,
+			ExecPath:   conf.path,
+			WorkingDir: filepath.Join(conf.workingDir, taskName),
+			Workspace:  taskName,
+			VarFiles:   conf.task.VarFiles,
+		})
+	}
+
+	return c, err
+}
+
 func (w *worker) init(ctx context.Context) error {
 	r := retry{
 		desc:   fmt.Sprintf("Init %s", w.task.Name),
@@ -74,7 +136,7 @@ func (w *worker) apply(ctx context.Context) error {
 	return r.do(ctx)
 }
 
-// retry handles retries
+// retry handles executing and retrying a function
 type retry struct {
 	desc   string
 	retry  int

@@ -4,14 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/hashicorp/consul-nia/client"
-	mocks "github.com/hashicorp/consul-nia/mocks/client"
 	"github.com/hashicorp/consul-nia/templates/tftmpl"
 	"github.com/pkg/errors"
 )
@@ -180,51 +176,20 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 		return err
 	}
 
-	client, err := tf.initClient(task)
+	worker, err := newWorker(&workerConfig{
+		task:       task,
+		clientType: tf.clientType,
+		log:        tf.log,
+		persistLog: tf.persistLog,
+		path:       tf.path,
+		workingDir: tf.workingDir,
+	})
 	if err != nil {
-		log.Printf("[ERR] (driver.terraform) init client type '%s' error: %s", tf.clientType, err)
+		log.Printf("[ERR] (driver.terraform) init worker error: %s", err)
 		return err
 	}
-
-	tf.worker = &worker{
-		client: client,
-		task:   task,
-		random: rand.New(rand.NewSource(time.Now().UnixNano())),
-		retry:  defaultRetry,
-	}
+	tf.worker = worker
 	return nil
-}
-
-// initClient initializes a specific type of client given a task
-func (tf *Terraform) initClient(task Task) (client.Client, error) {
-	var c client.Client
-	var err error
-
-	switch tf.clientType {
-	case developmentClient:
-		log.Printf("[TRACE] (driver.terraform) creating development client for task '%s'", task.Name)
-		c, err = client.NewPrinter(&client.PrinterConfig{
-			LogLevel:   "debug",
-			ExecPath:   tf.path,
-			WorkingDir: filepath.Join(tf.workingDir, task.Name),
-			Workspace:  task.Name,
-		})
-	case testClient:
-		log.Printf("[TRACE] (driver.terraform) creating mock client for task '%s'", task.Name)
-		c = new(mocks.Client)
-	default:
-		log.Printf("[TRACE] (driver.terraform) creating terraform cli client for task '%s'", task.Name)
-		c, err = client.NewTerraformCLI(&client.TerraformCLIConfig{
-			Log:        tf.log,
-			PersistLog: tf.persistLog,
-			ExecPath:   tf.path,
-			WorkingDir: filepath.Join(tf.workingDir, task.Name),
-			Workspace:  task.Name,
-			VarFiles:   task.VarFiles,
-		})
-	}
-
-	return c, err
 }
 
 // ApplyTask applies the task changes.

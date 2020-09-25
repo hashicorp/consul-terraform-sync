@@ -5,13 +5,95 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-nia/client"
 	mocks "github.com/hashicorp/consul-nia/mocks/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func TestNewWorker(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		expectError bool
+		clientType  string
+	}{
+		{
+			"happy path (mock client)",
+			false,
+			testClient,
+		},
+		{
+			"error (default tf client)",
+			true,
+			"",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := newWorker(&workerConfig{
+				task:       Task{},
+				clientType: tc.clientType,
+			})
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestInitClient(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		clientType  string
+		expectError bool
+		expect      client.Client
+	}{
+		{
+			"happy path with development client",
+			developmentClient,
+			false,
+			&client.Printer{},
+		},
+		{
+			"happy path with mock client",
+			testClient,
+			false,
+			&mocks.Client{},
+		},
+		{
+			"error when creating Terraform CLI client",
+			"",
+			true,
+			&client.TerraformCLI{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := initClient(&workerConfig{
+				task:       Task{},
+				clientType: tc.clientType,
+			})
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, reflect.TypeOf(tc.expect), reflect.TypeOf(actual))
+			}
+		})
+	}
+}
 
 func TestWorkerInit(t *testing.T) {
 	t.Parallel()
