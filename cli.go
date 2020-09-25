@@ -82,7 +82,7 @@ func (cli *CLI) Run(args []string) int {
 		"print the current and proposed state change, and then exits. No changes "+
 		"are applied in this mode.")
 	f.BoolVar(&isOnce, "once", false, "Render templates and run tasks once. "+
-		"Does not run the process as a daemon and disables wait timers.")
+		"Does not run the process as a daemon and disables buffer periods.")
 	f.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
 
 	// Additional flag only intended to be used for development
