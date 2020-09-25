@@ -48,7 +48,7 @@ test-integration:
 # test-e2e runs e2e tests
 test-e2e:
 	@echo "==> Testing ${NAME} (e2e)"
-	@go test ./e2e -count=1 -timeout=60s -tags=e2e ./... ${TESTARGS}
+	@go test ./e2e -count=1 -timeout=60s -tags=e2e -v ./... ${TESTARGS}
 .PHONY: test-e2e
 
 # test-setup-e2e sets up the nia binary and permissions to run consul-nia
