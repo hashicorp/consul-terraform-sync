@@ -58,8 +58,6 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 func (rw *ReadWrite) Init(ctx context.Context) error {
 	log.Printf("[INFO] (controller.readwrite) initializing driver")
 
-	log.Printf("[INFO] (controller.readwrite) driver initialized")
-
 	// initialize tasks. this is hardcoded in main function for demo purposes
 	// TODO: separate by provider instances using workspaces.
 	// Future: improve by combining tasks into workflows.
@@ -76,13 +74,14 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 		log.Printf("[DEBUG] (controller.readwrite) initializing task %q", task.Name)
 		err := d.InitTask(task, true)
 		if err != nil {
-			log.Printf("[ERR] (controller.readwrite) error initializing task %q to be executed: %s", task.Name, err)
+			log.Printf("[ERR] (controller.readwrite) error initializing task %q: %s", task.Name, err)
 			return err
 		}
 
 		template, err := newTaskTemplate(task.Name, rw.conf, rw.fileReader)
 		if err != nil {
-			log.Printf("[ERR] (controller.readwrite) error initializing template: %s", err)
+			log.Printf("[ERR] (controller.readwrite) error initializing template "+
+				"for task %q: %s", task.Name, err)
 			return err
 		}
 
@@ -96,6 +95,7 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 	rw.units = units
 	rw.setTemplateBufferPeriods()
 
+	log.Printf("[INFO] (controller.readwrite) driver initialized")
 	return nil
 }
 
@@ -215,14 +215,14 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) (bool, error) {
 		log.Printf("[DEBUG] template for task %q rendered: %+v", taskName, rendered)
 
 		d := u.driver
-		log.Printf("[DEBUG] (controller.readwrite) executing task %s", taskName)
+		log.Printf("[INFO] (controller.readwrite) executing task %s", taskName)
 		if err := d.ApplyTask(ctx); err != nil {
 			return false, fmt.Errorf("could not apply: %s", err)
 		}
 	}
 
 	if rw.postApply != nil {
-		log.Printf("[INFO] (controller.readwrite) post-apply out-of-band actions")
+		log.Printf("[TRACE] (controller.readwrite) post-apply out-of-band actions")
 		// TODO: improvement to only trigger handlers for tasks that were updated
 		rw.postApply.Do()
 	}
