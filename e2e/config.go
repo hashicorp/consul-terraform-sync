@@ -37,6 +37,7 @@ func terraformBlock(dir string) string {
 	}
 	return fmt.Sprintf(`
 driver "terraform" {
+	log = true
 	path = "%s"
 	working_dir = "%s"
 }
