@@ -239,7 +239,6 @@ func TestOnce(t *testing.T) {
 		var errChRc <-chan error = errCh
 		go func() { errCh <- nil }()
 		w.On("WaitCh", mock.Anything).Return(errChRc).Once()
-		w.On("SetBufferPeriod", mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 		d := new(mocksD.Driver)
 		d.On("Init", mock.Anything).Return(nil).Once()

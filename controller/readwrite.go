@@ -93,7 +93,6 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 	}
 
 	rw.units = units
-	rw.setTemplateBufferPeriods()
 
 	log.Printf("[INFO] (controller.readwrite) driver initialized")
 	return nil
@@ -104,6 +103,9 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 // any work that have been updated.
 // Blocking call that runs main consul monitoring loop
 func (rw *ReadWrite) Run(ctx context.Context) error {
+	// Only initialize buffer periods for running the full loop and not for Once
+	// mode so it can immediately render the first time.
+	rw.setTemplateBufferPeriods()
 
 	for {
 		// Blocking on Wait is first as we just ran in Once mode so we want
@@ -231,7 +233,7 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) (bool, error) {
 
 // setTemplateBufferPeriods applies the task buffer period config to its template
 func (rw *ReadWrite) setTemplateBufferPeriods() {
-	if rw.watcher == nil {
+	if rw.watcher == nil || rw.conf == nil {
 		return
 	}
 

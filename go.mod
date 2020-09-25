@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/go-checkpoint v0.5.0
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-version v1.2.1
-	github.com/hashicorp/hcat v0.0.0-20200924233143-1c0f78d1d250
+	github.com/hashicorp/hcat v0.0.0-20200925205440-f610abc021d3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/hcl/v2 v2.6.0
 	github.com/hashicorp/logutils v1.0.0
