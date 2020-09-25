@@ -174,6 +174,56 @@ func TestPanosSetNext(t *testing.T) {
 	}
 }
 
+func TestPanosEmptyCommit(t *testing.T) {
+	cases := []struct {
+		name  string
+		job   uint
+		resp  string
+		err   error
+		empty bool
+	}{
+		{
+			"empty commit: super admin role",
+			uint(0),
+			`<response status="success" code="19"><msg>` +
+				`There are no changes to commit.</msg></response>`,
+			nil,
+			true,
+		},
+		{
+			"empty commit: custom role",
+			uint(0),
+			`<response status="success" code="13"><msg>` +
+				`The result of this commit would be the same as the previous etc`,
+			errors.New("The result of this commit would be the same as the previous etc"),
+			true,
+		},
+		{
+			"unknown commit: auth error",
+			uint(0),
+			`<response status = 'error' code = '403'><result><msg>` +
+				`Type [commit] not authorized for user role etc`,
+			errors.New("Type [commit] not authorized for user role"),
+			false,
+		},
+		{
+			"not empty commit: happy path",
+			uint(17),
+			`<response status="success" code="19"><result><msg><line>` +
+				`Commit job enqueued with jobid 17</line></msg><job>17</job> etc`,
+			nil,
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := emptyCommit(tc.job, []byte(tc.resp), tc.err)
+			assert.Equal(t, tc.empty, actual)
+		})
+	}
+}
+
 func assertEqualCred(t *testing.T, exp, act pango.Client) {
 	assert.Equal(t, exp.Hostname, act.Hostname)
 	assert.Equal(t, exp.Username, act.Username)

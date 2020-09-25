@@ -2,14 +2,21 @@ package handler
 
 import (
 	"log"
+	"strings"
 
 	"github.com/PaloAltoNetworks/pango"
 	"github.com/PaloAltoNetworks/pango/commit"
 	"github.com/mitchellh/mapstructure"
 )
 
-// TerraformProviderPanos is the name of a Palo Alto PANOS Terraform provider.
-const TerraformProviderPanos = "panos"
+const (
+	// TerraformProviderPanos is the name of a Palo Alto PANOS Terraform provider.
+	TerraformProviderPanos = "panos"
+
+	// Users with custom roles currently return an error for an empty commit with
+	// this server response prefix. See GH-73 for more details.
+	emptyCommitServerRespPrefix = `<response status="success" code="13">`
+)
 
 //go:generate mockery --name=panosClient  --structname=PanosClient --output=../mocks/handler
 
@@ -93,12 +100,11 @@ func (h *Panos) Do() {
 		Description: "NIA Commit",
 	}
 	job, resp, err := h.client.Commit(c.Element(), "", nil)
-	if err != nil {
-		log.Printf("[ERR] (handler.panos) error committing: %s. Server response: '%s'", err, resp)
+	if emptyCommit(job, resp, err) {
 		return
 	}
-	if job == 0 {
-		log.Printf("[DEBUG] (handler.panos) commit was not needed")
+	if err != nil {
+		log.Printf("[ERR] (handler.panos) error committing: %s. Server response: '%s'", err, resp)
 		return
 	}
 
@@ -113,4 +119,22 @@ func (h *Panos) Do() {
 // SetNext sets the next handler that should be called.
 func (h *Panos) SetNext(next Handler) {
 	h.next = next
+}
+
+// emptyCommit consumes the commit API return data to determine if commit was
+// empty i.e. there were no resource to commit
+func emptyCommit(job uint, resp []byte, err error) bool {
+	if err == nil && job == 0 {
+		log.Printf("[DEBUG] (handler.panos) superadmin commit not needed")
+		return true
+	}
+
+	if err != nil && strings.HasPrefix(string(resp), emptyCommitServerRespPrefix) {
+		log.Printf("[DEBUG] (handler.panos) custom-role commit not needed")
+		log.Printf("[TRACE] (handler.panos) custom-role empty commit err: '%s'."+
+			" server response: '%s'", err, resp)
+		return true
+	}
+
+	return false
 }
