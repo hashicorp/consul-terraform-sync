@@ -193,7 +193,7 @@ func (c *ConsulConfig) GoString() string {
 		StringVal(c.KVNamespace),
 		StringVal(c.KVPath),
 		c.TLS.GoString(),
-		senstiveGoString(c.Token),
+		sensitiveGoString(c.Token),
 		c.Transport.GoString(),
 	)
 }
