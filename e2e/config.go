@@ -22,6 +22,12 @@ func twoTaskConfig(consulAddr, tempDir string) string {
 	return oneTaskConfig(consulAddr, tempDir) + webTask()
 }
 
+// panosConfig returns a basic use case config file
+// Use for confirming specific resource / statefile output
+func panosConfig(consulAddr, tempDir string) string {
+	return panosBadCredConfig() + consulBlock(consulAddr) + terraformBlock(tempDir)
+}
+
 func consulBlock(addr string) string {
 	return fmt.Sprintf(`
 consul {
@@ -87,5 +93,23 @@ service {
 }
 
 provider "local" {}
+`
+}
+
+func panosBadCredConfig() string {
+	return `log_level = "trace"
+provider "panos" {
+	hostname = "10.10.10.10"
+	api_key = "badapikey_1234"
+}
+
+task {
+	name = "panos-bad-cred-e2e-test"
+	description = "panos handler should error and stop sync after once"
+	source = "findkim/ngfw/panos"
+	version = "0.0.1-beta3"
+	providers = ["panos"]
+	services = ["web"]
+}
 `
 }
