@@ -176,7 +176,14 @@ task {
 * `providers` - `(list(string): [])` Providers is the list of provider names the task is dependent on. This is used to map [provider configuration](#provider) to the task.
 * `services` - `(list(string): [])` Services is the list of service IDs or logical service names the task executes on. Consul NIA monitors the Consul Catalog for changes to these services and triggers the task to run. Any service value not explicitly defined by a `service` block with a matching ID is assumed to be a logical service name in the default namespace (enterprise).
 * `source` - `(string: <required>)` Source is the location the driver uses to fetch dependencies. The source format is dependent on the driver. For the [Terraform driver](#terraform-driver), the source is the module path (local or remote). Read more on [Terraform module source here](https://www.terraform.io/docs/modules/sources.html).
-* `variable_files` - `(list(string): [])` A list of paths to files containing variables for the task. For the [Terraform driver](#terraform-driver), these are files with `.tfvars` file extensions and are used as Terraform [input variables](https://www.terraform.io/docs/configuration/variables.html) to pass as arguments to the Terraform module. Variables are loaded in the same order as they appear in the order of the files. Duplicate variables are overwritten with the later value.
+* `variable_files` - `(list(string): [])` A list of paths to files containing variables for the task. For the [Terraform driver](#terraform-driver), these are used as Terraform [variable defintion (`.tfvars`) files](https://www.terraform.io/docs/configuration/variables.html#variable-definitions-tfvars-files) and consists of only variable name assignments. The variable assignments must match the corresponding variable declarations available by the Terraform module for the task. Consul NIA will generate the intermediate variable declarations to pass as arguments from the auto-generated root module to the task's module. Variables are loaded in the same order as they appear in the order of the files. Duplicate variables are overwritten with the later value. *Note: unless specified by the module, configure arguments for providers using [provider blocks](#provider).*
+  ```hcl
+  address_group = "consul-services"
+  tags = [
+    "consul-nia",
+    "terraform"
+  ]
+  ```
 * `version` - `(string: <none>)` The version of the provided source the task will use. For the [Terraform driver](#terraform-driver), this is the module version. The latest version will be used as the default if omitted.
 * `buffer_period` - Configures the buffer period for the task to dampen the affects of flapping services to downstream network devices. It defines the minimum and maximum amount of time to wait for the cluster to reach a consistent state and accumulate changes before triggering task execution. The default is inherited from the top level [`buffer_period` block](#consul-nia). If configured, these values will take precedence over the global buffer period. This is useful to enable for a task that is dependent on services that have a lot of flapping.
   * `enabled` - `(bool: false)` Enable or disable buffer periods for this task. Specifying `min` will also enable it.
@@ -236,5 +243,42 @@ task {
   source = "some/source"
   providers = ["vault"]
   services = ["web", "api"]
+}
+```
+
+#### Multiple Provider Configurations
+Consul NIA supports the [Terraform feature to define multiple configurations](https://www.terraform.io/docs/configuration/providers.html#alias-multiple-provider-configurations) for the same provider by leveraging the `alias` meta-argument. Define multiple provider blocks with the same provider name and set the `alias` to a unique value across a given provider. Select which provider configuration to use for a task by specifying the configuration with the provider name and alias (`<name>.<alias>`) within the list of providers in the [`task.provider`](#task) parameter.
+
+The example Consul NIA configuration below defines two similar tasks executing the same module with different instances of the Vault provider.
+
+```hcl
+provider "vault" {
+  alias = "a"
+  address = "vault.example.com"
+  namespace = "team-a"
+}
+
+provider "vault" {
+  alias = "b"
+  address = "vault.internal.com"
+  namespace = "team-b"
+}
+
+provider "dns" {
+  // ...
+}
+
+task {
+  name = "task-a"
+  source = "org/module"
+  providers = ["vault.a", "dns"]
+  // ...
+}
+
+task {
+  name = "task-b"
+  source = "org/module"
+  providers = ["vault.b", "dns"]
+  // ...
 }
 ```
