@@ -5,8 +5,11 @@ import (
 	"strings"
 )
 
+// ProviderConfigs is an array of configuration for each provider.
 type ProviderConfigs []*ProviderConfig
 
+// ProviderConfig is a map representing the configuration for a single provider
+// where the key is the name of provider and value is the configuration.
 type ProviderConfig map[string]interface{}
 
 // DefaultProviderConfigs returns a configuration that is populated with the
@@ -97,20 +100,25 @@ func (c *ProviderConfigs) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
+// GoString defines the printable version of this struct. Provider configuration
+// is completely redacted since providers will have varying arguments containing
+// secrets
 func (c *ProviderConfigs) GoString() string {
 	if c == nil {
 		return "(*ProviderConfigs)(nil)"
 	}
 
 	s := make([]string, len(*c))
-	for i, t := range *c {
-		s[i] = fmt.Sprint(t)
+	for i, provider := range *c {
+		for name := range *provider {
+			s[i] = fmt.Sprintf("&map[%s:%s]", name, redactMessage)
+		}
 	}
 
 	return "{" + strings.Join(s, ", ") + "}"
 }
 
+// Validate validates the values and nested values of the configuration struct.
 func (c *ProviderConfig) Validate() error {
 	if c == nil {
 		return fmt.Errorf("invalid provider configuration")

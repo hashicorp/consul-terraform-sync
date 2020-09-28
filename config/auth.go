@@ -2,6 +2,8 @@ package config
 
 import "fmt"
 
+const redactMessage = "(redacted)"
+
 // AuthConfig is the HTTP basic authentication data.
 type AuthConfig struct {
 	Enabled  *bool   `mapstructure:"enabled"`
@@ -95,13 +97,13 @@ func (c *AuthConfig) GoString() string {
 		"}",
 		BoolVal(c.Enabled),
 		StringVal(c.Username),
-		senstiveGoString(c.Password),
+		sensitiveGoString(c.Password),
 	)
 }
 
-func senstiveGoString(s *string) string {
+func sensitiveGoString(s *string) string {
 	if StringPresent(s) {
-		return "(redacted)"
+		return redactMessage
 	}
 
 	return ""
