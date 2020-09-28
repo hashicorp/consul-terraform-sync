@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/PaloAltoNetworks/pango"
-	mocks "github.com/hashicorp/consul-nia/mocks/handler"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

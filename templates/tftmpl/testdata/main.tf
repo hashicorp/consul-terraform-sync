@@ -13,7 +13,7 @@ terraform {
     }
   }
   backend "consul" {
-    path   = "consul-nia/terraform"
+    path   = "consul-terraform-sync/terraform"
     scheme = "https"
   }
 }
@@ -25,7 +25,7 @@ provider "testProvider" {
 
 # user description for task named 'test'
 module "test" {
-  source   = "namespace/consul-nia/consul//modules/test"
+  source   = "namespace/consul-terraform-sync/consul//modules/test"
   version  = "0.0.0"
   services = var.services
 

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/hashicorp/consul-nia/client"
-	mocks "github.com/hashicorp/consul-nia/mocks/client"
+	"github.com/hashicorp/consul-terraform-sync/client"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	"github.com/pkg/errors"
 )
 

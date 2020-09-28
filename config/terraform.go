@@ -10,7 +10,7 @@ import (
 const (
 	// DefaultTFBackendKVPath is the default KV path used for configuring the
 	// default backend to use Consul KV.
-	DefaultTFBackendKVPath = "consul-nia/terraform"
+	DefaultTFBackendKVPath = "consul-terraform-sync/terraform"
 
 	// DefaultTFWorkingDir is the default location where NIA will use as the
 	// working directory to manage infrastructure.

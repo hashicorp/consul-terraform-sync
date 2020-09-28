@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/hashicorp/consul-nia/version"
+	"github.com/hashicorp/consul-terraform-sync/version"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/consul-nia/templates/tftmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
 

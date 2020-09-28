@@ -3,7 +3,7 @@ package controller
 import (
 	"context"
 
-	"github.com/hashicorp/consul-nia/config"
+	"github.com/hashicorp/consul-terraform-sync/config"
 )
 
 var _ Controller = (*ReadOnly)(nil)

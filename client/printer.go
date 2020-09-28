@@ -37,7 +37,7 @@ func NewPrinter(config *PrinterConfig) (*Printer, error) {
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
 		// TODO: revisit to improve for long-term using a setup like
-		// https://github.com/hashicorp/consul-nia/blob/master/logging/logging.go#L34
+		// https://github.com/hashicorp/consul-terraform-sync/blob/master/logging/logging.go#L34
 		logger: log.New(os.Stdout, "", log.Ldate|log.Lmicroseconds),
 	}, nil
 }

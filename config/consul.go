@@ -8,7 +8,7 @@ const (
 
 	// DefaultConsulKVPath is the default Consul KV path to use for NIA
 	// KV operations.
-	DefaultConsulKVPath = "consul-nia/"
+	DefaultConsulKVPath = "consul-terraform-sync/"
 )
 
 // ConsulConfig is the configuration for Consul client.
