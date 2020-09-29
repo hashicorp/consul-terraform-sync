@@ -28,7 +28,7 @@ func TestConsulConfig_Copy(t *testing.T) {
 			&ConsulConfig{
 				Address:     String("1.2.3.4"),
 				Auth:        &AuthConfig{Enabled: Bool(true)},
-				KVPath:      String("consul-nia/"),
+				KVPath:      String("consul-terraform-sync/"),
 				KVNamespace: String("org"),
 				TLS:         &TLSConfig{Enabled: Bool(true)},
 				Token:       String("abcd1234"),

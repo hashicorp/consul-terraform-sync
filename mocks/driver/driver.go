@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	driver "github.com/hashicorp/consul-nia/driver"
+	driver "github.com/hashicorp/consul-terraform-sync/driver"
 	mock "github.com/stretchr/testify/mock"
 )
 

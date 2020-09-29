@@ -30,7 +30,7 @@ func TestTerraformConfig_Copy(t *testing.T) {
 				Path:       String("path"),
 				WorkingDir: String("working"),
 				Backend: map[string]interface{}{"consul": map[string]interface{}{
-					"path": "consul-nia/terraform",
+					"path": "consul-terraform-sync/terraform",
 				}},
 				RequiredProviders: map[string]interface{}{
 					"pName1": "v0.0.0",
@@ -179,14 +179,14 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path": "consul-nia/terraform",
+						"path": "consul-terraform-sync/terraform",
 					},
 				},
 			},
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path":   "consul-nia/override",
+						"path":   "consul-terraform-sync/override",
 						"scheme": "http",
 					},
 				},
@@ -194,7 +194,7 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path":   "consul-nia/override",
+						"path":   "consul-terraform-sync/override",
 						"scheme": "http",
 					},
 				},
@@ -205,7 +205,7 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path": "consul-nia/terraform",
+						"path": "consul-terraform-sync/terraform",
 					},
 				},
 			},
@@ -213,7 +213,7 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path": "consul-nia/terraform",
+						"path": "consul-terraform-sync/terraform",
 					},
 				},
 			},
@@ -224,14 +224,14 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path": "consul-nia/terraform",
+						"path": "consul-terraform-sync/terraform",
 					},
 				},
 			},
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path": "consul-nia/terraform",
+						"path": "consul-terraform-sync/terraform",
 					},
 				},
 			},
@@ -241,21 +241,21 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path": "consul-nia/terraform",
+						"path": "consul-terraform-sync/terraform",
 					},
 				},
 			},
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path": "consul-nia/terraform",
+						"path": "consul-terraform-sync/terraform",
 					},
 				},
 			},
 			&TerraformConfig{
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
-						"path": "consul-nia/terraform",
+						"path": "consul-terraform-sync/terraform",
 					},
 				},
 			},

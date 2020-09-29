@@ -12,10 +12,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hashicorp/consul-nia/config"
-	"github.com/hashicorp/consul-nia/controller"
-	"github.com/hashicorp/consul-nia/logging"
-	"github.com/hashicorp/consul-nia/version"
+	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/controller"
+	"github.com/hashicorp/consul-terraform-sync/logging"
+	"github.com/hashicorp/consul-terraform-sync/version"
 )
 
 // Exit codes are int values that represent an exit code for a particular error.

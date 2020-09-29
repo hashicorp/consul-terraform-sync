@@ -51,10 +51,10 @@ test-e2e:
 	@go test ./e2e -count=1 -timeout=60s -tags=e2e -v ./... ${TESTARGS}
 .PHONY: test-e2e
 
-# test-setup-e2e sets up the nia binary and permissions to run consul-nia
+# test-setup-e2e sets up the nia binary and permissions to run consul-terraform-sync
 # cli in circle
 test-setup-e2e: dev
-	sudo mv ${GOPATH}/bin/consul-nia /usr/local/bin/consul-nia
+	sudo mv ${GOPATH}/bin/consul-terraform-sync /usr/local/bin/consul-terraform-sync
 .PHONY: test-setup-e2e
 
 # test-e2e-cirecleci does circleci setup and then runs the e2e tests

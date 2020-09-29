@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/hashicorp/consul-nia/version"
+	"github.com/hashicorp/consul-terraform-sync/version"
 	"github.com/hashicorp/go-checkpoint"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-exec/tfexec"

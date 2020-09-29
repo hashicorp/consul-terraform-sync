@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/hashicorp/consul-nia/config"
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/hcat"
 )
 

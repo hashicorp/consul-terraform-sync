@@ -1,4 +1,4 @@
-module github.com/hashicorp/consul-nia
+module github.com/hashicorp/consul-terraform-sync
 
 go 1.14
 

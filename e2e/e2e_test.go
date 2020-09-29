@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul-nia/config"
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +25,7 @@ import (
 const tempDirPrefix = "tmp_"
 
 // resourcesDir is the sub-directory of tempDir where the
-// Terraform resources created from running consul-nia are stored
+// Terraform resources created from running consul-terraform-sync are stored
 const resourcesDir = "resources"
 
 // configFile is the name of the nia config file
@@ -150,7 +150,7 @@ func makeConfig(configPath, contents string) error {
 }
 
 func runConsulNIA(configPath string, dur time.Duration) error {
-	cmd := exec.Command("consul-nia", fmt.Sprintf("--config-file=%s", configPath))
+	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {

@@ -24,7 +24,7 @@ import (
 )
 
 func TestInitRootModule(t *testing.T) {
-	dir, err := ioutil.TempDir(".", "consul-nia-tftmpl-")
+	dir, err := ioutil.TempDir(".", "consul-terraform-sync-tftmpl-")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -35,7 +35,7 @@ func TestInitRootModule(t *testing.T) {
 		Backend: map[string]interface{}{
 			"consul": map[string]interface{}{
 				"scheme": "https",
-				"path":   "consul-nia/terraform",
+				"path":   "consul-terraform-sync/terraform",
 			},
 		},
 		Providers: []map[string]interface{}{{
@@ -54,7 +54,7 @@ func TestInitRootModule(t *testing.T) {
 		Task: Task{
 			Description: "user description for task named 'test'",
 			Name:        "test",
-			Source:      "namespace/consul-nia/consul//modules/test",
+			Source:      "namespace/consul-terraform-sync/consul//modules/test",
 			Version:     "0.0.0",
 		},
 		Variables: Variables{

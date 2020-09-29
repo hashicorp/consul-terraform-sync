@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	mocks "github.com/hashicorp/consul-nia/mocks/client"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 

@@ -5,8 +5,8 @@
 There is not a default configuration that can be defined to run the Consul NIA daemon in a useful manner. One of the flags to set the config path is required.
 
 ```
-$ consul-nia -h
-Usage of consul-nia:
+$ consul-terraform-sync -h
+Usage of consul-terraform-sync:
   -config-dir value
       A directory to load files for configuring Consul NIA. Configuration files
       require an .hcl or .json file extention in order to specify their format.
@@ -93,7 +93,7 @@ buffer_period {
 * `syslog` - Specifies the syslog server for logging.
   * `enabled` - `(bool: false)` Enable syslog logging. Specifying other option also enables syslog logging.
   * `facility` - `(string: <none>)` Name of the syslog facility to log to.
-  * `name` - `(string: "consul-nia")` Name to use for the Consul NIA process when logging to syslog.
+  * `name` - `(string: "consul-terraform-sync")` Name to use for the Consul NIA process when logging to syslog.
 * `buffer_period` - Configures the default buffer period for all [tasks](#task) to dampen the affects of flapping services to downstream network devices. It defines the minimum and maximum amount of time to wait for the cluster to reach a consistent state and accumulate changes before triggering task executions. The default is enabled to reduce the number of times downstream infrastructure is updated within a short period of time. This is useful to enable in systems that have a lot of flapping.
   * `enabled` - `(bool: true)` Enable or disable buffer periods globally. Specifying `min` will also enable it.
   * `min` - `(string: 5s)` The minimum period of time to wait after changes are detected before triggering related tasks.
@@ -180,12 +180,12 @@ task {
   ```hcl
   address_group = "consul-services"
   tags = [
-    "consul-nia",
+    "consul-terraform-sync",
     "terraform"
   ]
   ```
 * `version` - `(string: <none>)` The version of the provided source the task will use. For the [Terraform driver](#terraform-driver), this is the module version. The latest version will be used as the default if omitted.
-* `buffer_period` - Configures the buffer period for the task to dampen the affects of flapping services to downstream network devices. It defines the minimum and maximum amount of time to wait for the cluster to reach a consistent state and accumulate changes before triggering task execution. The default is inherited from the top level [`buffer_period` block](#consul-nia). If configured, these values will take precedence over the global buffer period. This is useful to enable for a task that is dependent on services that have a lot of flapping.
+* `buffer_period` - Configures the buffer period for the task to dampen the affects of flapping services to downstream network devices. It defines the minimum and maximum amount of time to wait for the cluster to reach a consistent state and accumulate changes before triggering task execution. The default is inherited from the top level [`buffer_period` block](#consul-terraform-sync). If configured, these values will take precedence over the global buffer period. This is useful to enable for a task that is dependent on services that have a lot of flapping.
   * `enabled` - `(bool: false)` Enable or disable buffer periods for this task. Specifying `min` will also enable it.
   * `min` - `(string: 5s)` The minimum period of time to wait after changes are detected before triggering related tasks.
   * `max` - `(string: 20s)` The maximum period of time to wait after changes are detected before triggering related tasks.
@@ -213,7 +213,7 @@ driver "terraform {
 }
 ```
 
-* `backend` - `(obj: optional)` The backend stores [Terraform state files](https://www.terraform.io/docs/state/index.html) for each task. This option is similar to the [Terraform backend configuration](https://www.terraform.io/docs/backends/types/consul.html). Consul backend is the only supported backend at this time. If omitted, Consul NIA will use default values and use configuration from the [`consul` block](#consul). The Consul KV path is the base path to store state files for Consul NIA tasks. The full path of each state file will have the task identifer appended to the end of the path, e.g. `consul-nia/terraform-env:task-name`.
+* `backend` - `(obj: optional)` The backend stores [Terraform state files](https://www.terraform.io/docs/state/index.html) for each task. This option is similar to the [Terraform backend configuration](https://www.terraform.io/docs/backends/types/consul.html). Consul backend is the only supported backend at this time. If omitted, Consul NIA will use default values and use configuration from the [`consul` block](#consul). The Consul KV path is the base path to store state files for Consul NIA tasks. The full path of each state file will have the task identifer appended to the end of the path, e.g. `consul-terraform-sync/terraform-env:task-name`.
 * `log` - `(bool: false)` Enable all Terraform output (stderr and stdout) to be included in the Consul NIA log. This is useful for debugging and development purposes. It may be difficult to work with log aggregators that expect uniform log format.
 * `path` - `(string: optional)` The file path to install Terraform or discover an existing Terraform binary. If omitted, Consul NIA will install Terraform in the same directory as the daemon.
 * `persist_log` - `(bool: false)` Enable trace logging for each Terraform client to disk per task. This is equivalent to setting `TF_LOG_PATH=<work_dir>/terraform.log`. Trace log level results in verbose logging and may be useful for debugging and development purposes. We do not recommend enabling this for production. There is no log rotation and may quickly result in large files.

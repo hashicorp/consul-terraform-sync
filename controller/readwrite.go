@@ -7,9 +7,9 @@ import (
 	"log"
 	"sync"
 
-	"github.com/hashicorp/consul-nia/config"
-	"github.com/hashicorp/consul-nia/driver"
-	"github.com/hashicorp/consul-nia/handler"
+	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/hcat"
 )
 

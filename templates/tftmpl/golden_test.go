@@ -29,7 +29,7 @@ func TestNewFiles(t *testing.T) {
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"scheme": "https",
-						"path":   "consul-nia/terraform",
+						"path":   "consul-terraform-sync/terraform",
 					},
 				},
 				Providers: []map[string]interface{}{{
@@ -48,7 +48,7 @@ func TestNewFiles(t *testing.T) {
 				Task: Task{
 					Description: "user description for task named 'test'",
 					Name:        "test",
-					Source:      "namespace/consul-nia/consul//modules/test",
+					Source:      "namespace/consul-terraform-sync/consul//modules/test",
 					Version:     "0.0.0",
 				},
 				Variables: Variables{
