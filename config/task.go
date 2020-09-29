@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
 
 // TaskConfig is the configuration for a Consul NIA task. This block may be
@@ -182,6 +184,14 @@ func (c *TaskConfig) Validate() error {
 
 	if c.Name == nil || len(*c.Name) == 0 {
 		return fmt.Errorf("unique name for the task is required")
+	}
+
+	// For the Terraform driver, the task name is used as the module local name.
+	// We'll validate early resembling Terraform restrictions to surface any errors
+	// before a task is ran.
+	if !hclsyntax.ValidIdentifier(*c.Name) {
+		return fmt.Errorf("A task name must start with a letter or underscore and "+
+			"may contain only letters, digits, underscores, and dashes: %q", *c.Name)
 	}
 
 	if len(c.Services) == 0 {
