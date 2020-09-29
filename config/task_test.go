@@ -292,6 +292,15 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
+			"invalid name",
+			&TaskConfig{
+				Name:     String("cannot contain spaces"),
+				Services: []string{"service"},
+				Source:   String("source"),
+			},
+			false,
+		},
+		{
 			"missing service",
 			&TaskConfig{Name: String("task"), Source: String("source")},
 			false,

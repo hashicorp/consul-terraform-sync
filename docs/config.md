@@ -172,7 +172,7 @@ task {
 ```
 
 * `description` - `(string: <none>)` The human readable text to describe the service.
-* `name` - `(string: <required>)` Name is the unique name of the task (required).
+* `name` - `(string: <required>)` Name is the unique name of the task (required). A task name must start with a letter or underscore and may contain only letters, digits, underscores, and dashes.
 * `providers` - `(list(string): [])` Providers is the list of provider names the task is dependent on. This is used to map [provider configuration](#provider) to the task.
 * `services` - `(list(string): [])` Services is the list of service IDs or logical service names the task executes on. Consul NIA monitors the Consul Catalog for changes to these services and triggers the task to run. Any service value not explicitly defined by a `service` block with a matching ID is assumed to be a logical service name in the default namespace (enterprise).
 * `source` - `(string: <required>)` Source is the location the driver uses to fetch dependencies. The source format is dependent on the driver. For the [Terraform driver](#terraform-driver), the source is the module path (local or remote). Read more on [Terraform module source here](https://www.terraform.io/docs/modules/sources.html).
