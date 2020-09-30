@@ -94,74 +94,121 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 	// Integration test to verify the tfvars templated file can be rendered
 	// with Consul service information.
 
-	// Setup Consul server
-	log.SetOutput(ioutil.Discard)
-	srv, err := testutil.NewTestServerConfig(func(c *testutil.TestServerConfig) {
-		c.LogLevel = "warn"
-		c.Stdout = ioutil.Discard
-		c.Stderr = ioutil.Discard
-
-		// Hardcode node info so it doesn't change per run
-		c.NodeName = "node-39e5a7f5-2834-e16d-6925-78167c9f50d8"
-		c.NodeID = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
-	})
-	require.NoError(t, err, "failed to start consul server 1")
-	defer srv.Stop()
-
-	// Register services
-	srv.AddAddressableService(t, "api", testutil.HealthPassing,
-		"1.2.3.4", 8080, []string{"tag"})
-	srv.AddAddressableService(t, "web", testutil.HealthPassing,
-		"1.1.1.1", 8000, []string{})
-
-	// Register another api service instance (with unique ID)
-	service := testutil.TestService{
-		ID:      "api-2",
-		Name:    "api",
-		Tags:    []string{"tag"},
-		Address: "5.6.7.8",
-		Port:    8080,
+	cases := []struct {
+		name         string
+		goldenFile   string
+		registerAPI  bool
+		registerAPI2 bool
+		registerWeb  bool
+	}{
+		{
+			"happy path",
+			"testdata/terraform.tfvars",
+			true,
+			true,
+			true,
+		},
+		{
+			"no instances of any service registered",
+			"testdata/no_services.tfvars",
+			false,
+			false,
+			false,
+		},
+		{
+			"no instances of service alphabetically first registered",
+			"testdata/only_web_service.tfvars",
+			false,
+			false,
+			true,
+		},
+		{
+			"no instances of service alphabetically last registered",
+			"testdata/only_api_service.tfvars",
+			true,
+			true,
+			false,
+		},
 	}
-	registerService(t, srv, service, testutil.HealthPassing)
 
-	// Setup watcher
-	clients := hcat.NewClientSet()
-	clients.AddConsul(hcat.ConsulInput{
-		Address: srv.HTTPAddr,
-	})
-	defer clients.Stop()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
 
-	w := hcat.NewWatcher(hcat.WatcherInput{
-		Clients: clients,
-		Cache:   hcat.NewStore(),
-	})
-	r := hcat.NewResolver()
+			// Setup Consul server
+			log.SetOutput(ioutil.Discard)
+			srv, err := testutil.NewTestServerConfig(func(c *testutil.TestServerConfig) {
+				c.LogLevel = "warn"
+				c.Stdout = ioutil.Discard
+				c.Stderr = ioutil.Discard
 
-	// Load template from disk and render
-	goldenFile := "testdata/terraform.tfvars"
-	contents, err := ioutil.ReadFile("testdata/terraform.tfvars.tmpl")
-	require.NoError(t, err)
+				// Hardcode node info so it doesn't change per run
+				c.NodeName = "node-39e5a7f5-2834-e16d-6925-78167c9f50d8"
+				c.NodeID = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
+			})
+			require.NoError(t, err, "failed to start consul server 1")
+			defer srv.Stop()
 
-	input := hcat.TemplateInput{
-		Contents:      string(contents),
-		ErrMissingKey: true,
-		FuncMapMerge:  HCLTmplFuncMap,
-	}
-	tmpl := hcat.NewTemplate(input)
+			// Register services
+			if tc.registerAPI {
+				srv.AddAddressableService(t, "api", testutil.HealthPassing,
+					"1.2.3.4", 8080, []string{"tag"})
+			}
+			if tc.registerWeb {
+				srv.AddAddressableService(t, "web", testutil.HealthPassing,
+					"1.1.1.1", 8000, []string{})
+			}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	for {
-		re, err := r.Run(tmpl, w)
-		require.NoError(t, err)
+			// Register another api service instance (with unique ID)
+			if tc.registerAPI2 {
+				service := testutil.TestService{
+					ID:      "api-2",
+					Name:    "api",
+					Tags:    []string{"tag"},
+					Address: "5.6.7.8",
+					Port:    8080,
+				}
+				registerService(t, srv, service, testutil.HealthPassing)
+			}
 
-		if re.Complete {
-			checkGoldenFile(t, goldenFile, re.Contents)
-			break
-		}
+			// Setup watcher
+			clients := hcat.NewClientSet()
+			clients.AddConsul(hcat.ConsulInput{
+				Address: srv.HTTPAddr,
+			})
+			defer clients.Stop()
 
-		err = <-w.WaitCh(ctx)
-		assert.NoError(t, err)
+			w := hcat.NewWatcher(hcat.WatcherInput{
+				Clients: clients,
+				Cache:   hcat.NewStore(),
+			})
+			r := hcat.NewResolver()
+
+			// Load template from disk and render
+			contents, err := ioutil.ReadFile("testdata/terraform.tfvars.tmpl")
+			require.NoError(t, err)
+
+			input := hcat.TemplateInput{
+				Contents:      string(contents),
+				ErrMissingKey: true,
+				FuncMapMerge:  HCLTmplFuncMap,
+			}
+			tmpl := hcat.NewTemplate(input)
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancel()
+			for {
+				re, err := r.Run(tmpl, w)
+				require.NoError(t, err)
+
+				if re.Complete {
+					checkGoldenFile(t, tc.goldenFile, re.Contents)
+					break
+				}
+
+				err = <-w.WaitCh(ctx)
+				assert.NoError(t, err)
+			}
+		})
 	}
 }
 

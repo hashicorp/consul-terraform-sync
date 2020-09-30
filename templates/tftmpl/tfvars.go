@@ -70,7 +70,10 @@ func appendRawServiceTemplateValues(body *hclwrite.Body, services []*Service) {
 		if i == lastIdx {
 			rawService += "\n}"
 		} else {
-			rawService += ","
+			nextS := services[i+1]
+			rawComma := fmt.Sprintf(baseCommaStr, s.TemplateServiceID(),
+				nextS.TemplateServiceID())
+			rawService += rawComma
 		}
 
 		token := hclwrite.Token{
@@ -105,4 +108,11 @@ const baseAddressStr = `
     node_meta = {{hclStringMap .NodeMeta 3}}
   }{{if (ne $i $last)}},{{- end}}
   {{- end}}
+{{- end}}`
+
+// baseCommaStr is the raw template following hcat syntax for the comma between
+// different Consul services. Rendering a comma requires there to be an instance
+// of the service before and after the comma.
+const baseCommaStr = `{{- with $beforeSrv := service "%s"}}
+  {{- with $afterSrv := service "%s"}},{{- end}}
 {{- end}}`

@@ -31,7 +31,9 @@ services = {
     node_meta = {{hclStringMap .NodeMeta 3}}
   }{{if (ne $i $last)}},{{- end}}
   {{- end}}
-{{- end}},
+{{- end}}{{- with $beforeSrv := service "tag.api@dc1"}}
+  {{- with $afterSrv := service "web@dc1"}},{{- end}}
+{{- end}}
 {{- with $srv := service "web@dc1"}}
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
