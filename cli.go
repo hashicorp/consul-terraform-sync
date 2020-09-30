@@ -78,9 +78,9 @@ func (cli *CLI) Run(args []string) int {
 		"NIA. Configuration file requires an .hcl or .json extension in order to "+
 		"specify their format. This option can be specified multiple times to "+
 		"load different configuration files.")
-	f.BoolVar(&isInspect, "inspect", false, "Run Consul NIA in Inspect mode to "+
-		"print the current and proposed state change, and then exits. No changes "+
-		"are applied in this mode.")
+	// f.BoolVar(&isInspect, "inspect", false, "Run Consul NIA in Inspect mode to "+
+	// 	"print the current and proposed state change, and then exits. No changes "+
+	// 	"are applied in this mode.")
 	f.BoolVar(&isOnce, "once", false, "Render templates and run tasks once. "+
 		"Does not run the process as a daemon and disables buffer periods.")
 	f.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
