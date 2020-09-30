@@ -28,7 +28,7 @@ const tempDirPrefix = "tmp_"
 // Terraform resources created from running consul-terraform-sync are stored
 const resourcesDir = "resources"
 
-// configFile is the name of the nia config file
+// configFile is the name of the sync config file
 const configFile = "config.hcl"
 
 func TestE2EBasic(t *testing.T) {
@@ -49,7 +49,7 @@ func TestE2EBasic(t *testing.T) {
 	err = makeConfig(configPath, twoTaskConfig(srv.HTTPAddr, tempDir))
 	require.NoError(t, err)
 
-	err = runConsulNIA(configPath, 20*time.Second)
+	err = runSync(configPath, 20*time.Second)
 	require.NoError(t, err)
 
 	files, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, resourcesDir))
@@ -80,7 +80,7 @@ func TestE2EBasic(t *testing.T) {
 	removeDir(tempDir)
 }
 
-func TestE2ERestartConsulNIA(t *testing.T) {
+func TestE2ERestartSync(t *testing.T) {
 	t.Parallel()
 
 	srv, err := newTestConsulServer(t)
@@ -96,11 +96,11 @@ func TestE2ERestartConsulNIA(t *testing.T) {
 	err = makeConfig(configPath, oneTaskConfig(srv.HTTPAddr, tempDir))
 	require.NoError(t, err)
 
-	err = runConsulNIA(configPath, 8*time.Second)
+	err = runSync(configPath, 8*time.Second)
 	require.NoError(t, err)
 
-	// rerun nia. confirm no errors e.g. recreating workspaces
-	err = runConsulNIA(configPath, 8*time.Second)
+	// rerun sync. confirm no errors e.g. recreating workspaces
+	err = runSync(configPath, 8*time.Second)
 	require.NoError(t, err)
 
 	removeDir(tempDir)
@@ -149,7 +149,7 @@ func makeConfig(configPath, contents string) error {
 	return err
 }
 
-func runConsulNIA(configPath string, dur time.Duration) error {
+func runSync(configPath string, dur time.Duration) error {
 	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

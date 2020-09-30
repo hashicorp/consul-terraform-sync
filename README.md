@@ -1,8 +1,8 @@
 [![CircleCI](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/master.svg?style=svg&circle-token=a88491ffa8b02149fc483c29c6b8b91ed771f5a5)](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/master)
 
-# Consul NIA
+# Consul Terraform Sync
 
-NIA stands for Network Infrastructure Automation. Consul NIA is a service-oriented tool for managing network infrastructure near real-time. Consul NIA runs as a daemon and integrates the network topology maintained by your Consul cluster with your network infrastructure to dynamically secure and connect services.
+Consul Terraform Sync (just Sync from here on) is a service-oriented tool for managing network infrastructure near real-time. Sync runs as a daemon and integrates the network topology maintained by your Consul cluster with your network infrastructure to dynamically secure and connect services.
 
 ## Community Support
 If you have questions about how `consul-terraform-sync` works, its capabilities or anything other than a bug or feature request (use github's issue tracker for those), please see our community support resources.
@@ -14,28 +14,28 @@ Other resources: https://www.consul.io/community.html
 Additionally, for issues and pull requests, we'll be using the 👍 reactions as a rough voting system to help gauge community priorities. So please add 👍 to any issue or pull request you'd like to see worked on. Thanks.
 
 ## Installation
-Consul NIA is a daemon that runs alongside [Consul](https://github.com/hashicorp/consul), similar to other Consul ecosystem tools like [Consul Template](https://github.com/hashicorp/consul-template). Consul NIA is not included with the Consul binary and will need to be installed separately.
+Sync is a daemon that runs alongside [Consul](https://github.com/hashicorp/consul), similar to other Consul ecosystem tools like [Consul Template](https://github.com/hashicorp/consul-template). Sync is not included with the Consul binary and will need to be installed separately.
 
 ### Download
-To install Consul NIA, find the appropriate package for your system and download it as a zip archive. Unzip the package to extract the binary named `consul-terraform-sync`. Move the consul-terraform-sync binary to a location available on your `$PATH`.
+To install Sync, find the appropriate package for your system and download it as a zip archive. Unzip the package to extract the binary named `consul-terraform-sync`. Move the consul-terraform-sync binary to a location available on your `$PATH`.
 
-  1. Download a pre-compiled, released version from the [Consul NIA release page](https://releases.hashicorp.com/consul-terraform-sync/).
+  1. Download a pre-compiled, released version from the [Sync release page](https://releases.hashicorp.com/consul-terraform-sync/).
   1. Extract the binary using `unzip` or `tar`.
   1. Move the binary into `$PATH`.
 
 ```shell
 $ wget https://releases.hashicorp.com/consul-terraform-sync/${VERSION}/consul-esm_${VERSION}_${OS}_${ARCH}.zip
-$ unzip consul_nia_${VERSION}_${OS}_${ARCH}.zip
+$ unzip consul_terraform_sync_${VERSION}_${OS}_${ARCH}.zip
 $ mv consul-terraform-sync /usr/local/bin/consul-terraform-sync
 ```
 
 ### Build from Source
 
-You can also build Consul NIA from source.
+You can also build Sync from source.
 
   1. Clone the repository to your local machine.
   1. Pick a [version](https://github.com/hashicorp/consul-terraform-sync/releases) or build from master.
-  1. Build Consul NIA using the [Makefile](Makefile).
+  1. Build Sync using the [Makefile](Makefile).
   1. The `consul-terraform-sync` binary is now installed to `$GOPATH/bin`.
 
 ```shell
@@ -55,11 +55,11 @@ Once installed, verify the installation works by prompting the help option.
 $ consul-terraform-sync -h
 Usage of consul-terraform-sync:
   -config-dir value
-      A directory to load files for configuring Consul NIA. Configuration files
+      A directory to load files for configuring Sync. Configuration files
       require an .hcl or .json file extention in order to specify their format.
       This option can be specified multiple times to load different directories.
   -config-file value
-      A file to load for configuring Consul NIA. Configuration file requires an
+      A file to load for configuring Sync. Configuration file requires an
       .hcl or .json extension in order to specify their format. This option can
       be specified multiple times to load different configuration files.
   -once
@@ -71,4 +71,4 @@ Usage of consul-terraform-sync:
 
 ## Configuration
 
-[Documentation to configure Consul NIA](docs/config.md)
+[Documentation to configure Sync](docs/config.md)

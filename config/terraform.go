@@ -12,9 +12,9 @@ const (
 	// default backend to use Consul KV.
 	DefaultTFBackendKVPath = "consul-terraform-sync/terraform"
 
-	// DefaultTFWorkingDir is the default location where NIA will use as the
+	// DefaultTFWorkingDir is the default location where Sync will use as the
 	// working directory to manage infrastructure.
-	DefaultTFWorkingDir = "nia-tasks"
+	DefaultTFWorkingDir = "sync-tasks"
 )
 
 // TerraformConfig is the configuration for the Terraform driver.
@@ -240,7 +240,7 @@ func (c *TerraformConfig) Validate() error {
 
 	for k := range c.Backend {
 		if k != "consul" {
-			return fmt.Errorf("unsupported Terraform backend by NIA %q", k)
+			return fmt.Errorf("unsupported Terraform backend by Sync %q", k)
 		}
 	}
 

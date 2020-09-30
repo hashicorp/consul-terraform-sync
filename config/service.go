@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// ServiceConfig defines the explicit configuration for Consul NIA to monitor
+// ServiceConfig defines the explicit configuration for Sync to monitor
 // a service. This block may be specified multiple times to configure multiple
 // services.
 type ServiceConfig struct {
@@ -15,7 +15,7 @@ type ServiceConfig struct {
 	// Description is the human readable text to describe the service.
 	Description *string `mapstructure:"description"`
 
-	// ID identifies the service for Consul NIA. This is used to explicitly
+	// ID identifies the service for Sync. This is used to explicitly
 	// identify the service config for a task to use.
 	ID *string `mapstructure:"id"`
 
@@ -23,7 +23,7 @@ type ServiceConfig struct {
 	Name *string `mapstructure:"name"`
 
 	// Namespace is the namespace of the service (Consul Enterprise only). If not
-	// provided, the namespace will be inferred from the Consul NIA ACL token, or
+	// provided, the namespace will be inferred from the Sync ACL token, or
 	// default to the `default` namespace.
 	Namespace *string `mapstructure:"namespace"`
 

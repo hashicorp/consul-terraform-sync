@@ -6,7 +6,7 @@ const (
 	// DefaultConsulAddress is the default address to connect with Consul
 	DefaultConsulAddress = "localhost:8500"
 
-	// DefaultConsulKVPath is the default Consul KV path to use for NIA
+	// DefaultConsulKVPath is the default Consul KV path to use for Sync
 	// KV operations.
 	DefaultConsulKVPath = "consul-terraform-sync/"
 )
@@ -19,7 +19,7 @@ type ConsulConfig struct {
 	// Auth is the HTTP basic authentication for communicating with Consul.
 	Auth *AuthConfig `mapstructure:"auth"`
 
-	// KVNamespace is the optional namespace for Consul NIA to use for Consul KV
+	// KVNamespace is the optional namespace for Sync to use for Consul KV
 	// queries and operations.
 	KVNamespace *string `mapstructure:"kv_namespace"`
 

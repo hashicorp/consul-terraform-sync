@@ -26,7 +26,7 @@ func isTFInstalled(tfPath string) bool {
 	}
 
 	// Check if terraform exists in $PATH to notify users about the new
-	// installation for NIA
+	// installation for Sync
 	path, err := exec.LookPath("terraform")
 	if err != nil {
 		return false
@@ -40,7 +40,7 @@ func isTFInstalled(tfPath string) bool {
 }
 
 // isTFCompatible checks if the installed Terraform is compatible with the
-// current architecture and is valid within Consul NIA version constraints.
+// current architecture and is valid within Sync version constraints.
 func isTFCompatible(ctx context.Context, workingDir, tfPath string) (*goVersion.Version, bool, error) {
 	// Verify version for existing terraform
 	tf, err := tfexec.NewTerraform(workingDir, filepath.Join(tfPath, "terraform"))
@@ -68,7 +68,7 @@ func isTFCompatible(ctx context.Context, workingDir, tfPath string) (*goVersion.
 }
 
 // install attempts to install the latest version of Terraform into the path.
-// If the latest version is outside of the known supported range for Consul NIA,
+// If the latest version is outside of the known supported range for Sync,
 // the fall back version 0.13.2 is downloaded.
 func (tf *Terraform) install(ctx context.Context) error {
 	resp, err := checkpoint.Check(&checkpoint.CheckParams{Product: "terraform"})
@@ -83,7 +83,7 @@ func (tf *Terraform) install(ctx context.Context) error {
 			"of terraform using checkpoint, fallback to version %s", fallbackTFVersion)
 		v = fallbackTFVersion
 	} else {
-		// Check if the latest version is within support range for Consul NIA.
+		// Check if the latest version is within support range for Sync.
 		latest := goVersion.Must(goVersion.NewVersion(resp.CurrentVersion))
 		if version.TerraformConstraint.Check(latest) {
 			v = resp.CurrentVersion

@@ -7,7 +7,7 @@ import (
 )
 
 // TerraformProviderFake is the name of a fake Terraform provider
-const TerraformProviderFake = "fake-nia"
+const TerraformProviderFake = "fake-sync"
 
 var _ Handler = (*Fake)(nil)
 

@@ -1,18 +1,18 @@
-# Configure Consul NIA
+# Configure Consul Terraform Sync
 
 ## CLI
 
-There is not a default configuration that can be defined to run the Consul NIA daemon in a useful manner. One of the flags to set the config path is required.
+There is not a default configuration that can be defined to run the Sync daemon in a useful manner. One of the flags to set the config path is required.
 
 ```
 $ consul-terraform-sync -h
 Usage of consul-terraform-sync:
   -config-dir value
-      A directory to load files for configuring Consul NIA. Configuration files
+      A directory to load files for configuring Sync. Configuration files
       require an .hcl or .json file extention in order to specify their format.
       This option can be specified multiple times to load different directories.
   -config-file value
-      A file to load for configuring Consul NIA. Configuration file requires an
+      A file to load for configuring Sync. Configuration file requires an
       .hcl or .json extension in order to specify their format. This option can
       be specified multiple times to load different configuration files.
   -once
@@ -24,7 +24,7 @@ Usage of consul-terraform-sync:
 
 ## Configuration
 
-The Consul NIA daemon is configured using a file. Consul NIA supports [HashiCorp Configuration Language](https://github.com/hashicorp/hcl) (HCL) and JSON configuration file formats. An example HCL configuration is shown below to automate a task to execute a Terraform module for 2 services.
+The Sync daemon is configured using a file. Sync supports [HashiCorp Configuration Language](https://github.com/hashicorp/hcl) (HCL) and JSON configuration file formats. An example HCL configuration is shown below to automate a task to execute a Terraform module for 2 services.
 
 ```hcl
 log_level = "info"
@@ -69,8 +69,8 @@ provider "myprovider" {
 }
 ```
 
-### Consul NIA
-Top level options are reserved for configuring Consul NIA.
+### Sync
+Top level options are reserved for configuring Sync.
 
 ```hcl
 log_level = "INFO"
@@ -83,12 +83,12 @@ buffer_period {
 }
 ```
 
-* `log_level` - `(string: "WARN")` The log level to use for Consul NIA logging.
+* `log_level` - `(string: "WARN")` The log level to use for Sync logging.
 * `port` - `(int: <none>)` Optional port that the daemon binds on to serve its API.
 * `syslog` - Specifies the syslog server for logging.
   * `enabled` - `(bool: false)` Enable syslog logging. Specifying other option also enables syslog logging.
   * `facility` - `(string: <none>)` Name of the syslog facility to log to.
-  * `name` - `(string: "consul-terraform-sync")` Name to use for the Consul NIA process when logging to syslog.
+  * `name` - `(string: "consul-terraform-sync")` Name to use for the Sync process when logging to syslog.
 * `buffer_period` - Configures the default buffer period for all [tasks](#task) to dampen the affects of flapping services to downstream network devices. It defines the minimum and maximum amount of time to wait for the cluster to reach a consistent state and accumulate changes before triggering task executions. The default is enabled to reduce the number of times downstream infrastructure is updated within a short period of time. This is useful to enable in systems that have a lot of flapping.
   * `enabled` - `(bool: true)` Enable or disable buffer periods globally. Specifying `min` will also enable it.
   * `min` - `(string: 5s)` The minimum period of time to wait after changes are detected before triggering related tasks.
@@ -132,7 +132,7 @@ consul {
   * `tls_handshake_timeout` - `(string: "10s")` amount of time to wait to complete the TLS handshake.
 
 ### Service
-A `service` block defines the explicit configuration for Consul NIA to monitor a service. This block may be specified multiple times to configure multiple services. For a service to be included in task automation, the service name or ID must be included in the `task.services` field of a [`task` block](#task). A service can be implicitly declared with default values by omitting the `service` block for that service and referenced by its name in the `task.services` field.
+A `service` block defines the explicit configuration for Sync to monitor a service. This block may be specified multiple times to configure multiple services. For a service to be included in task automation, the service name or ID must be included in the `task.services` field of a [`task` block](#task). A service can be implicitly declared with default values by omitting the `service` block for that service and referenced by its name in the `task.services` field.
 
 ```hcl
 service {
@@ -146,9 +146,9 @@ service {
 
 * `datacenter` - `(string: <none>)` The datacenter the service is deployed in.
 * `description` - `(string: <none>)` The human readable text to describe the service.
-* `id` - `(string: <none>)` ID identifies the service for Consul NIA. This is used to explicitly identify the service config for a task to use. If no ID is provided, the service is identified by the service name within a [task definition](#task).
+* `id` - `(string: <none>)` ID identifies the service for Sync. This is used to explicitly identify the service config for a task to use. If no ID is provided, the service is identified by the service name within a [task definition](#task).
 * `name` - `(string: <required>)` The Consul logical name of the service (required).
-* `namespace` <EnterpriseAlert inline /> - `(string: "default")` The namespace of the service. If not provided, the namespace will be inferred from the Consul NIA ACL token, or default to the `default` namespace.
+* `namespace` <EnterpriseAlert inline /> - `(string: "default")` The namespace of the service. If not provided, the namespace will be inferred from the Sync ACL token, or default to the `default` namespace.
 * `tag` - `(string: <none>)` Tag is used to filter nodes based on the tag for the service.
 
 ### Task
@@ -169,9 +169,9 @@ task {
 * `description` - `(string: <none>)` The human readable text to describe the service.
 * `name` - `(string: <required>)` Name is the unique name of the task (required). A task name must start with a letter or underscore and may contain only letters, digits, underscores, and dashes.
 * `providers` - `(list(string): [])` Providers is the list of provider names the task is dependent on. This is used to map [provider configuration](#provider) to the task.
-* `services` - `(list(string): [])` Services is the list of service IDs or logical service names the task executes on. Consul NIA monitors the Consul Catalog for changes to these services and triggers the task to run. Any service value not explicitly defined by a `service` block with a matching ID is assumed to be a logical service name in the default namespace (enterprise).
+* `services` - `(list(string): [])` Services is the list of service IDs or logical service names the task executes on. Sync monitors the Consul Catalog for changes to these services and triggers the task to run. Any service value not explicitly defined by a `service` block with a matching ID is assumed to be a logical service name in the default namespace (enterprise).
 * `source` - `(string: <required>)` Source is the location the driver uses to fetch dependencies. The source format is dependent on the driver. For the [Terraform driver](#terraform-driver), the source is the module path (local or remote). Read more on [Terraform module source here](https://www.terraform.io/docs/modules/sources.html).
-* `variable_files` - `(list(string): [])` A list of paths to files containing variables for the task. For the [Terraform driver](#terraform-driver), these are used as Terraform [variable defintion (`.tfvars`) files](https://www.terraform.io/docs/configuration/variables.html#variable-definitions-tfvars-files) and consists of only variable name assignments. The variable assignments must match the corresponding variable declarations available by the Terraform module for the task. Consul NIA will generate the intermediate variable declarations to pass as arguments from the auto-generated root module to the task's module. Variables are loaded in the same order as they appear in the order of the files. Duplicate variables are overwritten with the later value. *Note: unless specified by the module, configure arguments for providers using [provider blocks](#provider).*
+* `variable_files` - `(list(string): [])` A list of paths to files containing variables for the task. For the [Terraform driver](#terraform-driver), these are used as Terraform [variable defintion (`.tfvars`) files](https://www.terraform.io/docs/configuration/variables.html#variable-definitions-tfvars-files) and consists of only variable name assignments. The variable assignments must match the corresponding variable declarations available by the Terraform module for the task. Sync will generate the intermediate variable declarations to pass as arguments from the auto-generated root module to the task's module. Variables are loaded in the same order as they appear in the order of the files. Duplicate variables are overwritten with the later value. *Note: unless specified by the module, configure arguments for providers using [provider blocks](#provider).*
   ```hcl
   address_group = "consul-services"
   tags = [
@@ -186,7 +186,7 @@ task {
   * `max` - `(string: 20s)` The maximum period of time to wait after changes are detected before triggering related tasks.
 
 ### Terraform Driver
-The `driver` block configures the subprocess for Consul NIA to propagate infrastructure change. The default Terraform driver does not need to be explicitly configured.
+The `driver` block configures the subprocess for Sync to propagate infrastructure change. The default Terraform driver does not need to be explicitly configured.
 
 ```hcl
 driver "terraform {
@@ -208,12 +208,12 @@ driver "terraform {
 }
 ```
 
-* `backend` - `(obj: optional)` The backend stores [Terraform state files](https://www.terraform.io/docs/state/index.html) for each task. This option is similar to the [Terraform backend configuration](https://www.terraform.io/docs/backends/types/consul.html). Consul backend is the only supported backend at this time. If omitted, Consul NIA will use default values and use configuration from the [`consul` block](#consul). The Consul KV path is the base path to store state files for Consul NIA tasks. The full path of each state file will have the task identifer appended to the end of the path, e.g. `consul-terraform-sync/terraform-env:task-name`.
-* `log` - `(bool: false)` Enable all Terraform output (stderr and stdout) to be included in the Consul NIA log. This is useful for debugging and development purposes. It may be difficult to work with log aggregators that expect uniform log format.
-* `path` - `(string: optional)` The file path to install Terraform or discover an existing Terraform binary. If omitted, Consul NIA will install Terraform in the same directory as the daemon.
+* `backend` - `(obj: optional)` The backend stores [Terraform state files](https://www.terraform.io/docs/state/index.html) for each task. This option is similar to the [Terraform backend configuration](https://www.terraform.io/docs/backends/types/consul.html). Consul backend is the only supported backend at this time. If omitted, Sync will use default values and use configuration from the [`consul` block](#consul). The Consul KV path is the base path to store state files for Sync tasks. The full path of each state file will have the task identifer appended to the end of the path, e.g. `consul-terraform-sync/terraform-env:task-name`.
+* `log` - `(bool: false)` Enable all Terraform output (stderr and stdout) to be included in the Sync log. This is useful for debugging and development purposes. It may be difficult to work with log aggregators that expect uniform log format.
+* `path` - `(string: optional)` The file path to install Terraform or discover an existing Terraform binary. If omitted, Sync will install Terraform in the same directory as the daemon.
 * `persist_log` - `(bool: false)` Enable trace logging for each Terraform client to disk per task. This is equivalent to setting `TF_LOG_PATH=<work_dir>/terraform.log`. Trace log level results in verbose logging and may be useful for debugging and development purposes. We do not recommend enabling this for production. There is no log rotation and may quickly result in large files.
-* `required_providers` - `(obj)` Declare each Terraform providers used across all tasks. This is similar to the [Terraform `terraform.required_providers`](https://www.terraform.io/docs/configuration/provider-requirements.html#requiring-providers) field to specify the source and version for each provider. Consul NIA will process these requirements when preparing each task that uses the provider.
-* `working_dir` - `(string: "nia-tasks")` The base working directory to manage Terraform configurations all tasks. The full path of each working directory will have the task identifier appended to the end of the path, e.g. `./nia-tasks/task-name`.
+* `required_providers` - `(obj)` Declare each Terraform providers used across all tasks. This is similar to the [Terraform `terraform.required_providers`](https://www.terraform.io/docs/configuration/provider-requirements.html#requiring-providers) field to specify the source and version for each provider. Sync will process these requirements when preparing each task that uses the provider.
+* `working_dir` - `(string: "sync-tasks")` The base working directory to manage Terraform configurations all tasks. The full path of each working directory will have the task identifier appended to the end of the path, e.g. `./sync-tasks/task-name`.
 
 ### Provider
 A `provider` block configures the options to interface with network infrastructure. Define a block for each provider required by the set of Terraform modules across all tasks. This block resembles [provider blocks for Terraform configuration](https://www.terraform.io/docs/configuration/providers.html). To find details on how to configure a provider, refer to the corresponding documentation for the Terraform provider. The main directory of publicly available providers are hosted on the [Terraform Registry](https://registry.terraform.io/browse/providers).
@@ -242,9 +242,9 @@ task {
 ```
 
 #### Multiple Provider Configurations
-Consul NIA supports the [Terraform feature to define multiple configurations](https://www.terraform.io/docs/configuration/providers.html#alias-multiple-provider-configurations) for the same provider by leveraging the `alias` meta-argument. Define multiple provider blocks with the same provider name and set the `alias` to a unique value across a given provider. Select which provider configuration to use for a task by specifying the configuration with the provider name and alias (`<name>.<alias>`) within the list of providers in the [`task.provider`](#task) parameter.
+Sync supports the [Terraform feature to define multiple configurations](https://www.terraform.io/docs/configuration/providers.html#alias-multiple-provider-configurations) for the same provider by leveraging the `alias` meta-argument. Define multiple provider blocks with the same provider name and set the `alias` to a unique value across a given provider. Select which provider configuration to use for a task by specifying the configuration with the provider name and alias (`<name>.<alias>`) within the list of providers in the [`task.provider`](#task) parameter.
 
-The example Consul NIA configuration below defines two similar tasks executing the same module with different instances of the Vault provider.
+The example Sync configuration below defines two similar tasks executing the same module with different instances of the Vault provider.
 
 ```hcl
 provider "vault" {

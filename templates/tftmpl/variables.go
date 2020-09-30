@@ -17,7 +17,7 @@ import (
 var VariableServices = []byte(
 	`# Service definition protocol v0
 variable "services" {
-  description = "Consul services monitored by Consul NIA"
+  description = "Consul services monitored by Consul Terraform Sync"
   type = map(
     object({
       id        = string

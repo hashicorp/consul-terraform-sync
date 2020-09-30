@@ -97,7 +97,7 @@ func (h *Panos) Do() {
 	log.Printf("[TRACE] (handler.panos) client config after init: %s", h.client.String())
 
 	c := commit.FirewallCommit{
-		Description: "NIA Commit",
+		Description: "Sync Commit",
 	}
 	job, resp, err := h.client.Commit(c.Element(), "", nil)
 	if emptyCommit(job, resp, err) {

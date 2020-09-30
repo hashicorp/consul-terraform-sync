@@ -71,14 +71,14 @@ func (cli *CLI) Run(args []string) int {
 	// Parse the flags
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	f.Var(&configFiles, "config-dir", "A directory to load files for "+
-		"configuring Consul NIA. Configuration files require an .hcl or .json "+
+		"configuring Sync. Configuration files require an .hcl or .json "+
 		"file extention in order to specify their format. This option can be "+
 		"specified multiple times to load different directories.")
-	f.Var(&configFiles, "config-file", "A file to load for configuring Consul "+
-		"NIA. Configuration file requires an .hcl or .json extension in order to "+
+	f.Var(&configFiles, "config-file", "A file to load for configuring Sync. "+
+		"Configuration file requires an .hcl or .json extension in order to "+
 		"specify their format. This option can be specified multiple times to "+
 		"load different configuration files.")
-	// f.BoolVar(&isInspect, "inspect", false, "Run Consul NIA in Inspect mode to "+
+	// f.BoolVar(&isInspect, "inspect", false, "Run Sync in Inspect mode to "+
 	// 	"print the current and proposed state change, and then exits. No changes "+
 	// 	"are applied in this mode.")
 	f.BoolVar(&isOnce, "once", false, "Render templates and run tasks once. "+
