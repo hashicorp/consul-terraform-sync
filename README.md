@@ -62,9 +62,9 @@ Usage of consul-terraform-sync:
       A file to load for configuring Consul NIA. Configuration file requires an
       .hcl or .json extension in order to specify their format. This option can
       be specified multiple times to load different configuration files.
-  -inspect
-      Run Consul NIA in Inspect mode to print the current and proposed state
-      change, and then exits. No changes are applied in this mode.
+  -once
+      Render templates and run tasks once. Does not run the process as a daemon
+      and disables wait timers.
   -version
       Print the version of this daemon.
 ```

@@ -15,9 +15,6 @@ Usage of consul-terraform-sync:
       A file to load for configuring Consul NIA. Configuration file requires an
       .hcl or .json extension in order to specify their format. This option can
       be specified multiple times to load different configuration files.
-  -inspect
-      Run Consul NIA in Inspect mode to print the current and proposed state
-      change, and then exits. No changes are applied in this mode.
   -once
       Render templates and run tasks once. Does not run the process as a daemon
       and disables wait timers.
@@ -78,7 +75,6 @@ Top level options are reserved for configuring Consul NIA.
 ```hcl
 log_level = "INFO"
 port = null
-inspect_mode = false
 syslog {}
 buffer_period {
   enabled = true
@@ -89,7 +85,6 @@ buffer_period {
 
 * `log_level` - `(string: "WARN")` The log level to use for Consul NIA logging.
 * `port` - `(int: <none>)` Optional port that the daemon binds on to serve its API.
-* `inspect_mode` - `(bool: false)` Run Consul NIA in Inspect mode to print the current and proposed state change, and then exits. No changes are applied in this mode. This option is interchangeable with the `--inspect` CLI flag.
 * `syslog` - Specifies the syslog server for logging.
   * `enabled` - `(bool: false)` Enable syslog logging. Specifying other option also enables syslog logging.
   * `facility` - `(string: <none>)` Name of the syslog facility to log to.
