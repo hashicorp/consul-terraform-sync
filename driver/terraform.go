@@ -34,7 +34,7 @@ var (
 	errIncompatibleTerraformBinary = fmt.Errorf("incompatible Terraform binary: %s", errSuggestion)
 )
 
-// Terraform is an NIA driver that uses the Terraform CLI to interface with
+// Terraform is an Sync driver that uses the Terraform CLI to interface with
 // low-level network infrastructure.
 type Terraform struct {
 	log               bool

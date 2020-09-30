@@ -19,7 +19,7 @@ const (
 	DefaultLogLevel = "WARN"
 )
 
-// Config is used to configure Consul NIA
+// Config is used to configure Sync
 type Config struct {
 	LogLevel    *string `mapstructure:"log_level"`
 	InspectMode *bool   `mapstructure:"inspect_mode"`

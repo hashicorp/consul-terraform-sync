@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
 
-// TaskConfig is the configuration for a Consul NIA task. This block may be
+// TaskConfig is the configuration for a Sync task. This block may be
 // specified multiple times to configure multiple tasks.
 type TaskConfig struct {
 	// Description is a human readable text to describe the task.
@@ -21,7 +21,7 @@ type TaskConfig struct {
 	Providers []string `mapstructure:"providers"`
 
 	// Services is the list of service IDs or logical service names the task
-	// executes on. Consul NIA monitors the Consul Catalog for changes to these
+	// executes on. Sync monitors the Consul Catalog for changes to these
 	// services and triggers the task to run. Any service value not explicitly
 	// defined by a `service` block with a matching ID is assumed to be a logical
 	// service name in the default namespace.
