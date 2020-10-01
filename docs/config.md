@@ -132,7 +132,7 @@ consul {
   * `tls_handshake_timeout` - `(string: "10s")` amount of time to wait to complete the TLS handshake.
 
 ### Service
-A `service` block defines the explicit configuration for Sync to monitor a service. This block may be specified multiple times to configure multiple services. For a service to be included in task automation, the service name or ID must be included in the `task.services` field of a [`task` block](#task). A service can be implicitly declared with default values by omitting the `service` block for that service and referenced by its name in the `task.services` field.
+A `service` block is an optional block to explicitly define configuration of services that Sync monitors. A `service` block is only necessary for services that have non-default values e.g. custom datacenter. Services that do not have a `service` block configured will assume default values. To configure multiple services, specify multiple `service` blocks. For services to be included in task automation, the service must be included in the `task.services` field of a [`task` block](#task). If a `service` block is configured, the service can be referred in `task.services` by service name or ID. If a `service` block is not configured, it can only be referred to by service name.
 
 ```hcl
 service {
