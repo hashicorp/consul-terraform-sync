@@ -128,6 +128,96 @@ func TestE2EPanosHandlerError(t *testing.T) {
 	removeDir(tempDir)
 }
 
+func TestE2ELocalBackend(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name             string
+		tempDirPrefix    string
+		backendConfig    string
+		dbStateFilePath  string
+		webStateFilePath string
+	}{
+		{
+			"no parameters configured",
+			"local_backend_default",
+			`backend "local" {}`,
+			fmt.Sprintf("tmp_local_backend_default/%s/terraform.tfstate.d/%s",
+				dbTaskName, dbTaskName),
+			fmt.Sprintf("tmp_local_backend_default/%s/terraform.tfstate.d/%s",
+				webTaskName, webTaskName),
+		},
+		{
+			"workspace_dir configured",
+			"local_backend_ws_dir",
+			`backend "local" {
+				workspace_dir = "test-workspace"
+			}`,
+			fmt.Sprintf("tmp_local_backend_ws_dir/%s/test-workspace/%s",
+				dbTaskName, dbTaskName),
+			fmt.Sprintf("tmp_local_backend_ws_dir/%s/test-workspace/%s",
+				webTaskName, webTaskName),
+		},
+		{
+			"workspace_dir configured with tasks sharing a workspace dir",
+			"local_backend_shared_ws_dir",
+			`backend "local" {
+				workspace_dir = "../shared-workspace"
+			}`,
+			fmt.Sprintf("tmp_local_backend_shared_ws_dir/shared-workspace/%s",
+				dbTaskName),
+			fmt.Sprintf("tmp_local_backend_shared_ws_dir/shared-workspace/%s",
+				webTaskName),
+		},
+		{
+			"path configured",
+			"local_backend_path",
+			`backend "local" {
+				# Setting path is meaningless in Sync. TF only uses it for
+				# default workspace; Sync only uses non-default workspaces. This
+				# value is overridden by the workspace directory for non-default
+				# workspaces.
+				path = "this-will-be-replaced-by-default-dir/terraform.tfstate"
+			}`,
+			fmt.Sprintf("tmp_local_backend_path/%s/terraform.tfstate.d/%s",
+				dbTaskName, dbTaskName),
+			fmt.Sprintf("tmp_local_backend_path/%s/terraform.tfstate.d/%s",
+				webTaskName, webTaskName),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv, err := newTestConsulServer(t)
+			require.NoError(t, err, "failed to start consul server")
+			defer srv.Stop()
+
+			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.tempDirPrefix)
+			err = makeTempDir(tempDir)
+			// no defer to delete directory: only delete at end of test if no errors
+			require.NoError(t, err)
+
+			configPath := filepath.Join(tempDir, configFile)
+			err = makeConfig(configPath,
+				twoTaskCustomBackendConfig(srv.HTTPAddr, tempDir, tc.backendConfig))
+			require.NoError(t, err)
+
+			err = runSyncOnce(configPath)
+			require.NoError(t, err)
+
+			// check that statefile was created locally
+			exists, err := checkStateFileLocally(tc.dbStateFilePath)
+			require.NoError(t, err)
+			require.True(t, exists)
+
+			exists, err = checkStateFileLocally(tc.webStateFilePath)
+			require.NoError(t, err)
+			require.True(t, exists)
+
+			removeDir(tempDir)
+		})
+	}
+}
+
 func newTestConsulServer(t *testing.T) (*testutil.TestServer, error) {
 	log.SetOutput(ioutil.Discard)
 	srv, err := testutil.NewTestServerConfig(func(c *testutil.TestServerConfig) {
@@ -208,4 +298,23 @@ func checkStateFile(consulAddr, taskname string) (int, error) {
 	}
 	defer resp.Body.Close()
 	return resp.StatusCode, nil
+}
+
+// checkStateFileLocally returns whether or not a statefile exists
+func checkStateFileLocally(stateFilePath string) (bool, error) {
+	files, err := ioutil.ReadDir(stateFilePath)
+	if err != nil {
+		return false, err
+	}
+
+	if len(files) != 1 {
+		return false, nil
+	}
+
+	stateFile := files[0]
+	if stateFile.Name() != "terraform.tfstate" {
+		return false, nil
+	}
+
+	return true, nil
 }

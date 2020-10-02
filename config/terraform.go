@@ -239,7 +239,9 @@ func (c *TerraformConfig) Validate() error {
 	}
 
 	for k := range c.Backend {
-		if k != "consul" {
+		switch k {
+		case "consul", "local":
+		default:
 			return fmt.Errorf("unsupported Terraform backend by Sync %q", k)
 		}
 	}
@@ -247,6 +249,7 @@ func (c *TerraformConfig) Validate() error {
 	return nil
 }
 
+// GoString defines the printable version of this struct.
 func (c *TerraformConfig) GoString() string {
 	if c == nil {
 		return "(*TerraformConfig)(nil)"
