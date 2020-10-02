@@ -106,6 +106,28 @@ func TestE2ERestartSync(t *testing.T) {
 	removeDir(tempDir)
 }
 
+func TestE2EPanosHandlerError(t *testing.T) {
+	t.Parallel()
+
+	srv, err := newTestConsulServer(t)
+	require.NoError(t, err, "failed to start consul server")
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "panos_handler")
+	err = makeTempDir(tempDir)
+	// no defer to delete directory: only delete at end of test if no errors
+	require.NoError(t, err)
+
+	configPath := filepath.Join(tempDir, configFile)
+	err = makeConfig(configPath, panosConfig(srv.HTTPAddr, tempDir))
+	require.NoError(t, err)
+
+	err = runSyncOnce(configPath)
+	require.Error(t, err)
+
+	removeDir(tempDir)
+}
+
 func newTestConsulServer(t *testing.T) (*testutil.TestServer, error) {
 	log.SetOutput(ioutil.Discard)
 	srv, err := testutil.NewTestServerConfig(func(c *testutil.TestServerConfig) {
@@ -163,6 +185,13 @@ func runSync(configPath string, dur time.Duration) error {
 		return err
 	}
 	return nil
+}
+
+func runSyncOnce(configPath string) error {
+	cmd := exec.Command("consul-terraform-sync", "-once", fmt.Sprintf("--config-file=%s", configPath))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // removeDir removes temporary directory created for a test

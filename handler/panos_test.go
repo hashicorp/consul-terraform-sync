@@ -66,25 +66,52 @@ func TestNewPanos(t *testing.T) {
 
 func TestPanosDo(t *testing.T) {
 	cases := []struct {
+		name string
+		next bool
+	}{
+		{
+			"happy path - with next handler",
+			false,
+		},
+		{
+			"happy path - no next handler",
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := new(mocks.PanosClient)
+			m.On("InitializeUsing", mock.Anything, mock.Anything, mock.Anything).
+				Return(nil)
+			m.On("Commit", mock.Anything, mock.Anything, mock.Anything).
+				Return(uint(1), []byte("message"), nil)
+			m.On("WaitForJob", mock.Anything, mock.Anything).Return(nil)
+			m.On("String").Return("client string")
+
+			h := &Panos{client: m}
+			if tc.next {
+				next := &Panos{client: m}
+				h.SetNext(next)
+			}
+
+			assert.NoError(t, h.Do(nil))
+		})
+	}
+}
+
+func TestPanosCommit(t *testing.T) {
+	cases := []struct {
 		name       string
 		initReturn error
 		commitJob  uint
 		commitResp []byte
 		commitErr  error
 		waitReturn error
-		next       bool
+		expectErr  bool
 	}{
 		{
-			"happy path - with next handler",
-			nil,
-			100,
-			[]byte("ok"),
-			nil,
-			nil,
-			true,
-		},
-		{
-			"happy path - no next handler",
+			"happy path",
 			nil,
 			100,
 			[]byte("ok"),
@@ -99,7 +126,7 @@ func TestPanosDo(t *testing.T) {
 			[]byte("ok"),
 			nil,
 			nil,
-			false,
+			true,
 		},
 		{
 			"error on commit",
@@ -108,7 +135,7 @@ func TestPanosDo(t *testing.T) {
 			[]byte("failure"),
 			errors.New("commit error"),
 			nil,
-			false,
+			true,
 		},
 		{
 			"commit job 0",
@@ -120,13 +147,13 @@ func TestPanosDo(t *testing.T) {
 			false,
 		},
 		{
-			"error on return",
+			"error on wait",
 			nil,
 			10,
 			[]byte("ok"),
 			nil,
 			errors.New("wait error"),
-			false,
+			true,
 		},
 	}
 
@@ -142,16 +169,12 @@ func TestPanosDo(t *testing.T) {
 			m.On("String").Return("client string").Once()
 
 			h := &Panos{client: m}
-			if tc.next {
-				m := new(mocks.PanosClient)
-				m.On("InitializeUsing", mock.Anything, mock.Anything, mock.Anything).
-					Return(errors.New("stop")).Once()
-				next := &Panos{client: m}
-				h.SetNext(next)
+			err := h.commit()
+			if tc.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
-
-			h.Do()
-			// nothing to assert. confirming successful run + expected coverage
 		})
 	}
 }

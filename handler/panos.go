@@ -80,40 +80,42 @@ func NewPanos(c map[string]interface{}) (*Panos, error) {
 	}, nil
 }
 
-// Do executes panos' out-of-band Commit API. Errors are logged.
-func (h *Panos) Do() {
-	log.Printf("[INFO] (handler.panos) do")
-	defer func() {
-		if h.next != nil {
-			h.next.Do()
-		}
-	}()
+// Do executes panos' out-of-band Commit API and calls next handler while passing
+// on relevant errors
+func (h *Panos) Do(prevErr error) error {
+	log.Printf("[INFO] (handler.panos) commit. host '%s'", h.providerConf.Hostname)
+	err := h.commit()
+	return callNext(h.next, prevErr, err)
+}
 
+// commit calls panos' InitializeUsing & Commit SDK
+func (h *Panos) commit() error {
 	if err := h.client.InitializeUsing(h.configPath, true); err != nil {
 		// potential optimizations to call Initialize() once / less frequently
 		log.Printf("[ERR] (handler.panos) error initializing panos client: %s", err)
-		return
+		return err
 	}
 	log.Printf("[TRACE] (handler.panos) client config after init: %s", h.client.String())
 
 	c := commit.FirewallCommit{
-		Description: "Sync Commit",
+		Description: "Consul Terraform Sync Commit",
 	}
 	job, resp, err := h.client.Commit(c.Element(), "", nil)
 	if emptyCommit(job, resp, err) {
-		return
+		return nil
 	}
 	if err != nil {
 		log.Printf("[ERR] (handler.panos) error committing: %s. Server response: '%s'", err, resp)
-		return
+		return err
 	}
 
 	if err := h.client.WaitForJob(job, nil); err != nil {
 		log.Printf("[ERR] (handler.panos) error waiting for panos commit to finish: %s", err)
-		return
+		return err
 	}
 
 	log.Printf("[DEBUG] (handler.panos) commit successful")
+	return nil
 }
 
 // SetNext sets the next handler that should be called.

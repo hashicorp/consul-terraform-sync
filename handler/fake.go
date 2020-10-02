@@ -15,6 +15,7 @@ var _ Handler = (*Fake)(nil)
 // Intended to be used for testing and examples.
 type Fake struct {
 	name string
+	err  bool
 	next Handler
 }
 
@@ -30,6 +31,10 @@ func NewFake(config map[string]interface{}) (*Fake, error) {
 			if v, ok := val.(string); ok {
 				h.name = v
 			}
+		case "err":
+			if v, ok := val.(bool); ok {
+				h.err = v
+			}
 		}
 	}
 
@@ -42,12 +47,17 @@ func NewFake(config map[string]interface{}) (*Fake, error) {
 }
 
 // Do executes fake handler, which fmt.Print-s the fake handler's name which
-// is the output inspected by handler example
-func (h *Fake) Do() {
+// is the output inspected by handler example. It returns an error if configured
+// to do so.
+func (h *Fake) Do(prevErr error) error {
 	fmt.Printf("FakeHandler: '%s'\n", h.name)
-	if h.next != nil {
-		h.next.Do()
+
+	var err error = nil
+	if h.err {
+		err = fmt.Errorf("error %s", h.name)
 	}
+
+	return callNext(h.next, prevErr, err)
 }
 
 // SetNext sets the next handler that should be called

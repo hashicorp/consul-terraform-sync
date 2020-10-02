@@ -11,27 +11,32 @@ func TestNewFake(t *testing.T) {
 		name        string
 		expectError bool
 		config      map[string]interface{}
+		expect      *Fake
 	}{
 		{
 			"happy path",
 			false,
 			map[string]interface{}{
 				"name": "1",
+				"err":  true,
 			},
+			&Fake{name: "1", err: true},
 		},
 		{
 			"missing configuration",
 			true,
 			map[string]interface{}{},
+			nil,
 		},
 		{
 			"happy path + extra config",
 			false,
 			map[string]interface{}{
 				"name":  "1",
-				"err":   true,
+				"extra": "stuff",
 				"count": 8,
 			},
+			&Fake{name: "1", err: false},
 		},
 	}
 
@@ -44,22 +49,31 @@ func TestNewFake(t *testing.T) {
 				return
 			}
 			assert.NoError(t, err)
+			assert.Equal(t, *tc.expect, *h)
 		})
 	}
 }
 
 func TestFakeDo(t *testing.T) {
 	cases := []struct {
-		name string
-		next Handler
+		name      string
+		next      Handler
+		expectErr bool
 	}{
 		{
-			"existing next handler",
+			"happy path - with next handler",
 			&Fake{},
+			false,
 		},
 		{
-			"no next handler",
+			"happy path - no next handler",
 			nil,
+			false,
+		},
+		{
+			"error",
+			nil,
+			true,
 		},
 	}
 
@@ -69,8 +83,17 @@ func TestFakeDo(t *testing.T) {
 			if tc.next != nil {
 				h.SetNext(tc.next)
 			}
-			h.Do()
-			// nothing to assert at this moment. confirming that it runs successfully
+			if tc.expectErr {
+				h.err = true
+			}
+
+			err := h.Do(nil)
+			if tc.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
 		})
 	}
 }
