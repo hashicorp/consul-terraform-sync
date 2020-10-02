@@ -221,15 +221,16 @@ func (rw *ReadWrite) checkApply(u unit, ctx context.Context) (bool, error) {
 		if err := d.ApplyTask(ctx); err != nil {
 			return false, fmt.Errorf("could not apply: %s", err)
 		}
-	}
 
-	if rw.postApply != nil {
-		log.Printf("[TRACE] (controller.readwrite) post-apply out-of-band actions")
-		// TODO: improvement to only trigger handlers for tasks that were updated
-		if err := rw.postApply.Do(nil); err != nil {
-			return false, err
+		if rw.postApply != nil {
+			log.Printf("[TRACE] (controller.readwrite) post-apply out-of-band actions")
+			// TODO: improvement to only trigger handlers for tasks that were updated
+			if err := rw.postApply.Do(nil); err != nil {
+				return false, err
+			}
 		}
 	}
+
 	return result.Complete, nil
 }
 
