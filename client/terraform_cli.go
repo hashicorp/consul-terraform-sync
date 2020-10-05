@@ -51,14 +51,14 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	// purposes. It may be difficult to work with log aggregators that expect
 	// uniform log format.
 	if config.Log {
-		log.Printf("[DEBUG] (client.terraformcli) Terraform logging is set, " +
+		log.Printf("[INFO] (client.terraformcli) Terraform logging is set, " +
 			"Terraform logs will output with Sync logs")
 		logger := log.New(log.Writer(), "", log.Flags())
 		tf.SetLogger(logger)
 		tf.SetStdout(log.Writer())
 		tf.SetStderr(log.Writer())
 	} else {
-		log.Printf("[DEBUG] (client.terraformcli) Terraform output is muted")
+		log.Printf("[INFO] (client.terraformcli) Terraform output is muted")
 	}
 
 	// This is equivalent to setting TF_LOG_PATH=$WORKDIR/terraform.log.
@@ -69,7 +69,7 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	if config.PersistLog {
 		logPath := filepath.Join(config.WorkingDir, "terraform.log")
 		tf.SetLogPath(logPath)
-		log.Printf("[DEBUG] (client.terraformcli) Terraform log persiting on disk: %s", logPath)
+		log.Printf("[INFO] (client.terraformcli) persiting Terraform logs on disk: %s", logPath)
 	}
 
 	client := &TerraformCLI{
@@ -90,13 +90,16 @@ func (t *TerraformCLI) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := t.tf.WorkspaceNew(ctx, t.workspace); err != nil {
+	err := t.tf.WorkspaceNew(ctx, t.workspace)
+	if err != nil {
 		var wsErr *tfexec.ErrWorkspaceExists
 		if !errors.As(err, &wsErr) {
 			log.Printf("[ERR] (client.terraformcli) unable to create workspace: %q", t.workspace)
 			return err
 		}
 		log.Printf("[DEBUG] (client.terraformcli) workspace already exists: '%s'", t.workspace)
+	} else {
+		log.Printf("[TRACE] (client.terraformcli) workspace created: %q", t.workspace)
 	}
 
 	if err := t.tf.WorkspaceSelect(ctx, t.workspace); err != nil {

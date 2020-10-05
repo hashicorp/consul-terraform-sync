@@ -205,7 +205,7 @@ func TestReadWriteRun(t *testing.T) {
 			u := unit{template: tmpl, driver: d}
 			ctx := context.Background()
 
-			_, err = controller.checkApply(u, ctx)
+			_, err = controller.checkApply(ctx, u)
 			if tc.expectError {
 				if assert.Error(t, err) {
 					assert.Contains(t, err.Error(), tc.name)

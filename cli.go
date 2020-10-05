@@ -140,7 +140,7 @@ func (cli *CLI) Run(args []string) int {
 	}
 
 	// Set up controller
-	log.Printf("[INFO] (cli) setting up controller")
+	log.Printf("[INFO] (cli) setting up controller: readwrite")
 
 	conf.ClientType = config.String(clientType)
 	var ctrl controller.Controller
@@ -173,19 +173,22 @@ func (cli *CLI) Run(args []string) int {
 			return
 		}
 
-		log.Printf("[INFO] (cli) running controller in Once mode")
+		if isOnce {
+			log.Printf("[INFO] (cli) running controller in Once mode")
+		}
 		switch c := ctrl.(type) {
 		case controller.Oncer:
 			if err := c.Once(ctx); err != nil {
 				if err == context.Canceled {
 					exitCh <- struct{}{}
 				} else {
-					log.Printf("[ERR] (cli) error running controller: %s", err)
+					log.Printf("[ERR] (cli) error running controller in Once mode: %s", err)
 					errCh <- err
 				}
 				return
 			}
 			if isOnce {
+				log.Printf("[INFO] (cli) controller in Once mode has completed")
 				exitCh <- struct{}{}
 				return
 			}
@@ -212,23 +215,23 @@ func (cli *CLI) Run(args []string) int {
 		case sig := <-interruptCh:
 			// Cancel the context and wait for controller go routine to gracefully
 			// shutdown
-			log.Printf("[INFO] signal received to initiate graceful shutdown: %v", sig)
+			log.Printf("[INFO] (cli) signal received to initiate graceful shutdown: %v", sig)
 			cancel()
 			select {
 			case <-exitCh:
-				log.Printf("[INFO] graceful shutdown")
+				log.Printf("[INFO] (cli) graceful shutdown")
 				return ExitCodeOK
 			case <-time.After(10 * time.Second):
-				log.Printf("[INFO] graceful shutdown timed out, exiting")
+				log.Printf("[INFO] (cli) graceful shutdown timed out, exiting")
 				return ExitCodeInterrupt
 			}
 
 		case <-exitCh:
 			if isOnce {
-				log.Printf("[INFO] graceful shutdown")
+				log.Printf("[INFO] (cli) graceful shutdown")
 				return ExitCodeOK
 			}
-			log.Printf("[WARN] unexpected shutdown")
+			log.Printf("[WARN] (cli) unexpected shutdown")
 			return ExitCodeError
 
 		case <-errCh:

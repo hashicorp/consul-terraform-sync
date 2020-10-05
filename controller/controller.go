@@ -33,10 +33,10 @@ type Oncer interface {
 
 func newDriverFunc(conf *config.Config) (func(*config.Config) driver.Driver, error) {
 	if conf.Driver.Terraform != nil {
-		log.Printf("[INFO] (controller) setting up Terraform driver")
+		log.Printf("[INFO] (ctrl) setting up Terraform driver")
 		return newTerraformDriver, nil
 	}
-	return nil, errors.New("Unsupported driver")
+	return nil, errors.New("unsupported driver")
 }
 
 func newTerraformDriver(conf *config.Config) driver.Driver {
@@ -196,7 +196,7 @@ func getPostApplyHandlers(conf *config.Config) (handler.Handler, error) {
 	if conf.Driver.Terraform != nil {
 		return getTerraformHandlers(conf)
 	}
-	return nil, errors.New("Unsupported driver")
+	return nil, errors.New("unsupported driver")
 }
 
 // getTerraformHandlers returns the first handler in a chain of handlers
@@ -206,24 +206,24 @@ func getPostApplyHandlers(conf *config.Config) (handler.Handler, error) {
 // no providers have a handler.
 func getTerraformHandlers(conf *config.Config) (handler.Handler, error) {
 	counter := 0
-	var next handler.Handler = nil
+	var next handler.Handler
 	for _, p := range *conf.Providers {
 		for k, v := range *p {
 			h, err := handler.TerraformProviderHandler(k, v)
 			if err != nil {
 				log.Printf(
-					"[ERR] (controller) could not initialize handler for provider '%s': %s", k, err)
+					"[ERR] (ctrl) could not initialize handler for provider '%s': %s", k, err)
 				return nil, err
 			}
 			if h != nil {
 				counter++
 				log.Printf(
-					"[DEBUG] (controller) retrieved handler for provider '%s'", k)
+					"[INFO] (ctrl) retrieved handler for provider '%s'", k)
 				h.SetNext(next)
 				next = h
 			}
 		}
 	}
-	log.Printf("[INFO] (controller) retrieved %d Terraform handlers", counter)
+	log.Printf("[INFO] (ctrl) retrieved %d Terraform handlers", counter)
 	return next, nil
 }

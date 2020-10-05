@@ -73,7 +73,8 @@ func isTFCompatible(ctx context.Context, workingDir, tfPath string) (*goVersion.
 func (tf *Terraform) install(ctx context.Context) error {
 	resp, err := checkpoint.Check(&checkpoint.CheckParams{Product: "terraform"})
 	if err != nil {
-		log.Printf("[ERR] (driver.terraform) Checkpoint error: %s", err)
+		log.Printf("[ERR] (driver.terraform) error fetching Terraform versions "+
+			"from Checkpoint: %s", err)
 		return err
 	}
 

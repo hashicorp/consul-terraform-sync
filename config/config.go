@@ -277,7 +277,7 @@ func decodeConfig(content []byte, format string) (*Config, error) {
 		return nil, fmt.Errorf("invalid format: %s", format)
 	}
 	if err != nil {
-		log.Printf("[DEBUG] (config) failed to decode %s", format)
+		log.Printf("[ERR] (config) failed to decode %s", format)
 		return nil, err
 	}
 
@@ -313,13 +313,13 @@ func fromFile(path string) (*Config, error) {
 
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Printf("[DEBUG] (config) failed reading config file from disk: %s\n", path)
+		log.Printf("[ERR] (config) failed reading config file from disk: %s\n", path)
 		return nil, err
 	}
 
 	config, err := decodeConfig(content, format)
 	if err != nil {
-		log.Printf("[DEBUG] (config) failed decoding content from file: %s\n", path)
+		log.Printf("[ERR] (config) failed decoding content from file: %s\n", path)
 		return nil, err
 	}
 
@@ -331,7 +331,7 @@ func fromFile(path string) (*Config, error) {
 func fromPath(path string) (*Config, error) {
 	// Ensure the given filepath exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		log.Printf("[DEBUG] (config) missing file/folder: %s\n", path)
+		log.Printf("[ERR] (config) missing file/folder: %s\n", path)
 		return nil, err
 	}
 
@@ -356,7 +356,7 @@ func fromPath(path string) (*Config, error) {
 	// Ensure the given filepath has at least one config file
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
-		log.Printf("[DEBUG] (config) failed listing directory: %s\n", path)
+		log.Printf("[ERR] (config) failed listing directory: %s\n", path)
 		return nil, err
 	}
 
