@@ -198,18 +198,20 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	taskName := w.task.Name
 
 	if w.inited {
-		log.Printf("[TRACE] (driver.terraform) already inited, skip for '%s'", taskName)
+		log.Printf("[TRACE] (driver.terraform) workspace for task already "+
+			"initialized, skipping for '%s'", taskName)
 	} else {
-		log.Printf("[TRACE] (driver.terraform) init '%s'", taskName)
+		log.Printf("[TRACE] (driver.terraform) initializing workspace '%s'", taskName)
 		if err := w.init(ctx); err != nil {
-			log.Printf("[ERR] (driver.terraform) init (skip apply) for '%s'", taskName)
-			return errors.Wrap(err, fmt.Sprintf("Error tf-init for '%s'", taskName))
+			log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
+				"skipping apply for '%s'", taskName)
+			return errors.Wrap(err, fmt.Sprintf("error tf-init for '%s'", taskName))
 		}
 	}
 
 	log.Printf("[TRACE] (driver.terraform) apply '%s'", taskName)
 	if err := w.apply(ctx); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Error tf-apply for '%s'", taskName))
+		return errors.Wrap(err, fmt.Sprintf("error tf-apply for '%s'", taskName))
 	}
 	return nil
 }

@@ -49,7 +49,7 @@ func Setup(config *Config) error {
 
 	// Check if syslog is enabled
 	if config.Syslog {
-		log.Printf("[DEBUG] (logging) enabling syslog on %s", config.SyslogFacility)
+		log.Printf("[INFO] (logging) enabling syslog on %s", config.SyslogFacility)
 
 		l, err := gsyslog.NewLogger(gsyslog.LOG_NOTICE, config.SyslogFacility, config.SyslogName)
 		if err != nil {

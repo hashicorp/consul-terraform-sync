@@ -31,8 +31,8 @@ type TerraformConfig struct {
 func DefaultTerraformConfig() *TerraformConfig {
 	wd, err := os.Getwd()
 	if err != nil {
-		log.Println("[ERR] unable to retrieve current working directory to setup " +
-			"default configuration for the Terraform driver")
+		log.Println("[ERR] (config) unable to retrieve current working directory " +
+			"to setup default configuration for the Terraform driver")
 		log.Panic(err)
 	}
 
@@ -189,8 +189,8 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 
 	wd, err := os.Getwd()
 	if err != nil {
-		log.Println("[ERR] unable to retrieve current working directory to setup " +
-			"default configuration for the Terraform driver")
+		log.Println("[ERR] (config) unable to retrieve current working directory " +
+			"to setup default configuration for the Terraform driver")
 		log.Panic(err)
 	}
 
