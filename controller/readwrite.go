@@ -43,11 +43,15 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 	if err != nil {
 		return nil, err
 	}
+	watcher, err := newWatcher(conf)
+	if err != nil {
+		return nil, err
+	}
 	return &ReadWrite{
 		conf:       conf,
 		newDriver:  nd,
 		fileReader: ioutil.ReadFile,
-		watcher:    newWatcher(conf),
+		watcher:    watcher,
 		resolver:   hcat.NewResolver(),
 		postApply:  h,
 	}, nil
