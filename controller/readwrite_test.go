@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -12,11 +15,9 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/controller"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
-	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewReadWrite(t *testing.T) {
@@ -59,17 +60,20 @@ func TestNewReadWrite(t *testing.T) {
 			},
 		},
 	}
+	// fake consul server
+	addr := "127.0.0.1:8500"
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, `"test"`) }))
+	ts.Listener, _ = net.Listen("tcp", addr)
+	ts.Start()
+	defer ts.Close()
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.expectError == false {
-				// Setup Consul server
-				srv, err := testutil.NewTestServerConfig(func(c *testutil.TestServerConfig) {})
-				require.NoError(t, err, "failed to start consul server")
-				defer srv.Stop()
-				tc.conf.Consul.Address = &srv.HTTPAddr
+				tc.conf.Consul.Address = &addr
+				tc.conf.Finalize()
 			}
-
-			tc.conf.Finalize()
 			controller, err := NewReadWrite(tc.conf)
 			if tc.expectError {
 				assert.Error(t, err)
