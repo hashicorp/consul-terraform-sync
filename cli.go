@@ -67,6 +67,7 @@ func (cli *CLI) Run(args []string) int {
 	var configFiles config.FlagAppendSliceValue
 	var isVersion, isInspect, isOnce bool
 	var clientType string
+	var help, h bool
 
 	// Parse the flags
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
@@ -85,22 +86,30 @@ func (cli *CLI) Run(args []string) int {
 		"Does not run the process as a daemon and disables buffer periods.")
 	f.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
 
-	// Additional flag only intended to be used for development
-	f.StringVar(&clientType, "client-type", "", "Select the client type to use. Defaults "+
-		"to Terraform client if empty or unknown value. Can also 'development' or 'test'.")
+	// Setup help flags for custom output
+	f.BoolVar(&help, "help", false, "Print the flag options and descriptions.")
+	f.BoolVar(&h, "h", false, "Print the flag options and descriptions.")
+
+	// Development only flags. Not printed with -h, -help
+	f.StringVar(&clientType, "client-type", "", "Use only when developing"+
+		"consul-terraform-sync binary. Defaults to Terraform client if empty or"+
+		"unknown value. Values can also be 'development' or 'test'.")
 
 	err := f.Parse(os.Args[1:])
 	if err != nil {
-		if err == flag.ErrHelp {
-			return ExitCodeOK
-		}
 		return ExitCodeParseFlagsError
+	}
+
+	if help || h {
+		fmt.Printf("Usage of %s:\n", os.Args[0])
+		printFlags(f)
+		return ExitCodeOK
 	}
 
 	// Validate required flags
 	if !isVersion && len(configFiles) == 0 {
 		log.Printf("[ERR] config file(s) required, use --config-dir or --config-file flag options")
-		f.PrintDefaults()
+		printFlags(f)
 		return ExitCodeRequiredFlagsError
 	}
 
@@ -238,4 +247,20 @@ func (cli *CLI) Run(args []string) int {
 			return ExitCodeError
 		}
 	}
+}
+
+// printFlags prints out select flags
+func printFlags(f *flag.FlagSet) {
+	f.VisitAll(func(f *flag.Flag) {
+		switch f.Name {
+		case "h", "help":
+			// don't print out help flags
+			return
+		case "client-type":
+			// don't print out development-only flags
+			return
+		}
+		fmt.Printf("  -%s %s\n", f.Name, f.Value)
+		fmt.Printf("        %s\n", f.Usage)
+	})
 }
