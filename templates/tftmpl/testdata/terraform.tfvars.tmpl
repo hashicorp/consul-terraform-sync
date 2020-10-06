@@ -14,7 +14,7 @@ services = {
 {{- with $srv := service "tag.api@dc1"}}
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
-  "{{.ID}}" : {
+  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
     id              = "{{.ID}}"
     name            = "{{.Name}}"
     address         = "{{.Address}}"
@@ -37,7 +37,7 @@ services = {
 {{- with $srv := service "web@dc1"}}
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
-  "{{.ID}}" : {
+  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
     id              = "{{.ID}}"
     name            = "{{.Name}}"
     address         = "{{.Address}}"

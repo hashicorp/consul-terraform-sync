@@ -6,6 +6,39 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestJoinStrings(t *testing.T) {
+	testCases := []struct {
+		name     string
+		content  []string
+		expected string
+	}{
+		{
+			"empty",
+			[]string{},
+			"",
+		}, {
+			"string",
+			[]string{"foobar"},
+			"foobar",
+		}, {
+			"multiple strings",
+			[]string{"foo", "bar", "baz"},
+			"foo.bar.baz",
+		}, {
+			"empty string ignored",
+			[]string{"foo", "", "baz"},
+			"foo.baz",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := JoinStrings(".", tc.content...)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
 func TestHCLString(t *testing.T) {
 	testCases := []struct {
 		name     string
