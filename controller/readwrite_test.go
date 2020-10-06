@@ -12,9 +12,11 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/controller"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewReadWrite(t *testing.T) {
@@ -28,6 +30,11 @@ func TestNewReadWrite(t *testing.T) {
 		{
 			"happy path",
 			false,
+			singleTaskConfig(),
+		},
+		{
+			"unreachable consul server",
+			true,
 			singleTaskConfig(),
 		},
 		{
@@ -54,6 +61,15 @@ func TestNewReadWrite(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.expectError == false {
+				// Setup Consul server
+				srv, err := testutil.NewTestServerConfig(func(c *testutil.TestServerConfig) {})
+				require.NoError(t, err, "failed to start consul server")
+				defer srv.Stop()
+				tc.conf.Consul.Address = &srv.HTTPAddr
+			}
+
+			tc.conf.Finalize()
 			controller, err := NewReadWrite(tc.conf)
 			if tc.expectError {
 				assert.Error(t, err)

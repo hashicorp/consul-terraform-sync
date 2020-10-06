@@ -6,16 +6,7 @@ import (
 )
 
 // newWatcher initializes a new hcat Watcher with a Consul client
-func newWatcher(conf *config.Config) *hcat.Watcher {
-	return hcat.NewWatcher(hcat.WatcherInput{
-		Clients: newConsulClient(conf),
-		Cache:   hcat.NewStore(),
-	})
-}
-
-// newConsulClient creates a new Consul client used for monitoring the Service
-// Catalog
-func newConsulClient(conf *config.Config) hcat.Looker {
+func newWatcher(conf *config.Config) (*hcat.Watcher, error) {
 	consulConf := conf.Consul
 	transport := hcat.TransportInput{
 		SSLEnabled: *consulConf.TLS.Enabled,
@@ -44,6 +35,13 @@ func newConsulClient(conf *config.Config) hcat.Looker {
 		Transport:    transport,
 	}
 
-	cs := hcat.NewClientSet()
-	return cs.AddConsul(consul)
+	clients := hcat.NewClientSet()
+	if err := clients.AddConsul(consul); err != nil {
+		return nil, err
+	}
+
+	return hcat.NewWatcher(hcat.WatcherInput{
+		Clients: clients,
+		Cache:   hcat.NewStore(),
+	}), nil
 }
