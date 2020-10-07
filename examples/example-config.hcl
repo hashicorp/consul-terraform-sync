@@ -1,0 +1,37 @@
+#
+# WARNING: This configuration file should only be used as an example for
+# reference. Values in this configuration are nonsensical with the purpose of
+# exemplifying various configuration blocks and how they are translated into
+# Terraform configuration files.
+#
+
+log_level = "info"
+
+consul {
+  address = "consul.example.com"
+}
+
+task {
+  name = "my-task"
+  description = "automate services for website X"
+  source = "namespace/example/module"
+  version = "1.0.0"
+  providers = ["myprovider"]
+  services = ["web", "api"]
+  variable_files = ["example.module.tfvars"]
+}
+
+driver "terraform" {
+  required_providers {
+    myprovider = {
+      source = "namespace/myprovider"
+      version = "1.3.0"
+    }
+  }
+}
+
+provider "myprovider" {
+  address = "myprovider.example.com"
+  username = "admin"
+  attr = "foobar"
+}
