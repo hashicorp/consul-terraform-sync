@@ -91,7 +91,7 @@ const baseAddressStr = `
 {{- with $srv := service "%s"}}
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
-  "{{.ID}}" : {
+  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
     id              = "{{.ID}}"
     name            = "{{.Name}}"
     address         = "{{.Address}}"

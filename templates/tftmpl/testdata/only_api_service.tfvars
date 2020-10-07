@@ -11,7 +11,7 @@ testProvider = {
 }
 
 services = {
-  "api" : {
+  "api.worker-01.dc1" : {
     id              = "api"
     name            = "api"
     address         = "1.2.3.4"
@@ -20,7 +20,7 @@ services = {
     tags            = ["tag"]
     namespace       = null
     status          = "passing"
-    node            = "node-39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node            = "worker-01"
     node_id         = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
     node_address    = "127.0.0.1"
     node_datacenter = "dc1"
@@ -34,7 +34,7 @@ services = {
       consul-network-segment = ""
     }
   },
-  "api-2" : {
+  "api-2.worker-01.dc1" : {
     id              = "api-2"
     name            = "api"
     address         = "5.6.7.8"
@@ -43,8 +43,31 @@ services = {
     tags            = ["tag"]
     namespace       = null
     status          = "passing"
-    node            = "node-39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node            = "worker-01"
     node_id         = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node_address    = "127.0.0.1"
+    node_datacenter = "dc1"
+    node_tagged_addresses = {
+      lan      = "127.0.0.1"
+      lan_ipv4 = "127.0.0.1"
+      wan      = "127.0.0.1"
+      wan_ipv4 = "127.0.0.1"
+    }
+    node_meta = {
+      consul-network-segment = ""
+    }
+  },
+  "api.worker-02.dc1" : {
+    id              = "api"
+    name            = "api"
+    address         = "1.2.3.4"
+    port            = 8080
+    meta            = {}
+    tags            = ["tag"]
+    namespace       = null
+    status          = "passing"
+    node            = "worker-02"
+    node_id         = "d407a592-e93c-4d8e-8a6d-aba853d1e067"
     node_address    = "127.0.0.1"
     node_datacenter = "dc1"
     node_tagged_addresses = {

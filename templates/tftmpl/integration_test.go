@@ -95,22 +95,25 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 	// with Consul service information.
 
 	cases := []struct {
-		name         string
-		goldenFile   string
-		registerAPI  bool
-		registerAPI2 bool
-		registerWeb  bool
+		name            string
+		goldenFile      string
+		registerAPI     bool
+		registerAPI2    bool
+		registerAPISrv2 bool
+		registerWeb     bool
 	}{
 		{
 			"happy path",
 			"testdata/terraform.tfvars",
 			true,
 			true,
+			false,
 			true,
 		},
 		{
 			"no instances of any service registered",
 			"testdata/no_services.tfvars",
+			false,
 			false,
 			false,
 			false,
@@ -120,11 +123,13 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			"testdata/only_web_service.tfvars",
 			false,
 			false,
+			false,
 			true,
 		},
 		{
 			"no instances of service alphabetically last registered",
 			"testdata/only_api_service.tfvars",
+			true,
 			true,
 			true,
 			false,
@@ -142,7 +147,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 				c.Stderr = ioutil.Discard
 
 				// Hardcode node info so it doesn't change per run
-				c.NodeName = "node-39e5a7f5-2834-e16d-6925-78167c9f50d8"
+				c.NodeName = "worker-01"
 				c.NodeID = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
 			})
 			require.NoError(t, err, "failed to start consul server 1")
@@ -168,6 +173,28 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 					Port:    8080,
 				}
 				registerService(t, srv, service, testutil.HealthPassing)
+			}
+
+			// Setup another server with an identical API service
+			if tc.registerAPISrv2 {
+				srv2, err := testutil.NewTestServerConfigT(t, func(c *testutil.TestServerConfig) {
+					c.Bootstrap = false
+					c.LogLevel = "warn"
+					c.Stdout = ioutil.Discard
+					c.Stderr = ioutil.Discard
+
+					// Hardcode node info so it doesn't change per run
+					c.NodeName = "worker-02"
+					c.NodeID = "d407a592-e93c-4d8e-8a6d-aba853d1e067"
+				})
+				require.NoError(t, err, "failed to start consul server 2")
+				defer srv2.Stop()
+
+				// Join the servers together
+				srv.JoinLAN(t, srv2.LANAddr)
+
+				srv2.AddAddressableService(t, "api", testutil.HealthPassing,
+					"1.2.3.4", 8080, []string{"tag"})
 			}
 
 			// Setup watcher

@@ -11,7 +11,7 @@ testProvider = {
 }
 
 services = {
-  "web" : {
+  "web.worker-01.dc1" : {
     id              = "web"
     name            = "web"
     address         = "1.1.1.1"
@@ -20,7 +20,7 @@ services = {
     tags            = []
     namespace       = null
     status          = "passing"
-    node            = "node-39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node            = "worker-01"
     node_id         = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
     node_address    = "127.0.0.1"
     node_datacenter = "dc1"

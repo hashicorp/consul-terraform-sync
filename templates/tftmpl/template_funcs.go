@@ -11,6 +11,25 @@ var HCLTmplFuncMap = map[string]interface{}{
 	"hclString":     HCLString,
 	"hclStringList": HCLStringList,
 	"hclStringMap":  HCLStringMap,
+	"joinStrings":   JoinStrings,
+}
+
+// JoinStrings joins an optional number of strings with the separator while
+// omitting empty strings from the combined string. This is useful for
+// templating a number of strings that are not contained in a slice.
+func JoinStrings(sep string, values ...string) string {
+	if len(values) == 0 {
+		return ""
+	}
+
+	cleaned := make([]string, 0, len(values))
+	for _, v := range values {
+		if v != "" {
+			cleaned = append(cleaned, v)
+		}
+	}
+
+	return strings.Join(cleaned, sep)
 }
 
 // HCLString formats a string into HCL string with null as the default
