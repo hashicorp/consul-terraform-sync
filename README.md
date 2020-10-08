@@ -24,8 +24,8 @@ To install Sync, find the appropriate package for your system and download it as
   1. Move the binary into `$PATH`.
 
 ```shell
-$ wget https://releases.hashicorp.com/consul-terraform-sync/${VERSION}/consul-esm_${VERSION}_${OS}_${ARCH}.zip
-$ unzip consul_terraform_sync_${VERSION}_${OS}_${ARCH}.zip
+$ wget https://releases.hashicorp.com/consul-terraform-sync/${VERSION}/consul-terraform-sync_${VERSION}_${OS}_${ARCH}.zip
+$ unzip consul-terraform-sync_${VERSION}_${OS}_${ARCH}.zip
 $ mv consul-terraform-sync /usr/local/bin/consul-terraform-sync
 ```
 
