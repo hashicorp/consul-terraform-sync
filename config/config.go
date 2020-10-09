@@ -37,6 +37,7 @@ type Config struct {
 // BuildConfig builds a new Config object from the default configuration and
 // the list of config files given and returns it after validation.
 func BuildConfig(paths []string) (*Config, error) {
+	var configCount int
 	config := DefaultConfig()
 	for _, path := range paths {
 		c, err := fromPath(path)
@@ -44,7 +45,14 @@ func BuildConfig(paths []string) (*Config, error) {
 			return nil, err
 		}
 
-		config = config.Merge(c)
+		if c != nil {
+			config = config.Merge(c)
+			configCount++
+		}
+	}
+
+	if configCount == 0 {
+		return nil, fmt.Errorf("no configuration files found")
 	}
 
 	return config, nil
