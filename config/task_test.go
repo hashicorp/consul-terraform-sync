@@ -343,3 +343,85 @@ func TestTaskConfig_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestTasksConfig_Validate(t *testing.T) {
+	cases := []struct {
+		name    string
+		i       TaskConfigs
+		isValid bool
+	}{
+		{
+			"nil",
+			nil,
+			false,
+		}, {
+			"one task",
+			[]*TaskConfig{
+				{
+					Name:      String("task"),
+					Services:  []string{"serviceA", "serviceB"},
+					Source:    String("source"),
+					Providers: []string{"providerA", "providerB"},
+				},
+			},
+			true,
+		}, {
+			"two tasks",
+			[]*TaskConfig{
+				{
+					Name:      String("task"),
+					Services:  []string{"serviceA", "serviceB"},
+					Source:    String("source"),
+					Providers: []string{"providerA", "providerB"},
+				},
+				{
+					Name:      String("task2"),
+					Services:  []string{"serviceC"},
+					Source:    String("sourceC"),
+					Providers: []string{"providerC"},
+				},
+			},
+			true,
+		}, {
+			"duplicate task names",
+			[]*TaskConfig{
+				{
+					Name:      String("task"),
+					Services:  []string{"serviceA", "serviceB"},
+					Source:    String("source"),
+					Providers: []string{"providerA", "providerB"},
+				}, {
+					Name:      String("task"),
+					Services:  []string{"serviceA"},
+					Source:    String("source2"),
+					Providers: []string{"providerA"},
+				},
+			},
+			false,
+		}, {
+			"one invalid",
+			[]*TaskConfig{
+				{
+					Name:      String("task"),
+					Services:  []string{"serviceA", "serviceB"},
+					Source:    String("source"),
+					Providers: []string{"providerA", "providerB"},
+				}, {
+					Name: String("invalid"),
+				},
+			},
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.i.Validate()
+			if tc.isValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
