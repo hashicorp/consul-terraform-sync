@@ -25,7 +25,24 @@ func twoTaskConfig(consulAddr, tempDir string) string {
 // panosConfig returns a basic use case config file
 // Use for confirming specific resource / statefile output
 func panosConfig(consulAddr, tempDir string) string {
-	return panosBadCredConfig() + consulBlock(consulAddr) + terraformBlock(tempDir)
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	tfBlock := fmt.Sprintf(`
+driver "terraform" {
+	log = true
+	path = "%s"
+	working_dir = "%s"
+	required_providers {
+		panos = {
+			source = "paloaltonetworks/panos"
+		}
+	}
+}`, cwd, tempDir)
+
+	return panosBadCredConfig() + consulBlock(consulAddr) + tfBlock
 }
 
 func consulBlock(addr string) string {
