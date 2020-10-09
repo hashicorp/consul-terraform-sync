@@ -4,6 +4,8 @@
 
 Consul Terraform Sync (just Sync from here on) is a service-oriented tool for managing network infrastructure near real-time. Sync runs as a daemon and integrates the network topology maintained by your Consul cluster with your network infrastructure to dynamically secure and connect services.
 
+* Website: https://www.consul.io/docs/nia
+
 ## Community Support
 If you have questions about how `consul-terraform-sync` works, its capabilities or anything other than a bug or feature request (use github's issue tracker for those), please see our community support resources.
 
@@ -71,4 +73,4 @@ Usage of consul-terraform-sync:
 
 ## Configuration
 
-[Documentation to configure Sync](docs/config.md)
+[Documentation to configure Sync](https://consul.io/docs/nia/installation/configuration)
