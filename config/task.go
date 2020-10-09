@@ -312,14 +312,21 @@ func (c *TaskConfigs) Finalize() {
 
 // Validate validates the values and nested values of the configuration struct
 func (c *TaskConfigs) Validate() error {
-	if c == nil {
+	if c == nil || len(*c) == 0 {
 		return fmt.Errorf("missing tasks configuration")
 	}
 
+	unique := make(map[string]bool)
 	for _, t := range *c {
 		if err := t.Validate(); err != nil {
 			return err
 		}
+
+		taskName := *t.Name
+		if _, ok := unique[taskName]; ok {
+			return fmt.Errorf("duplicate task name: %s", taskName)
+		}
+		unique[taskName] = true
 	}
 
 	return nil
