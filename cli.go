@@ -113,6 +113,13 @@ func (cli *CLI) Run(args []string) int {
 		return ExitCodeRequiredFlagsError
 	}
 
+	if isVersion {
+		log.Printf("[DEBUG] (cli) version flag was given, exiting now")
+		fmt.Fprintf(cli.errStream, "%s %s\n", version.Name, version.GetHumanVersion())
+		fmt.Fprintf(cli.errStream, "Compatible with Terraform %s\n", version.CompatibleTerraformVersionConstraint)
+		return ExitCodeOK
+	}
+
 	// Build the config.
 	conf, err := config.BuildConfig([]string(configFiles))
 	if err != nil {
@@ -140,13 +147,6 @@ func (cli *CLI) Run(args []string) int {
 	// Print information on startup for debugging
 	log.Printf("[INFO] %s", version.GetHumanVersion())
 	log.Printf("[DEBUG] %s", conf.GoString())
-
-	if isVersion {
-		log.Printf("[DEBUG] (cli) version flag was given, exiting now")
-		fmt.Fprintf(cli.errStream, "%s %s\n", version.Name, version.GetHumanVersion())
-		fmt.Fprintf(cli.errStream, "Compatible with Terraform %s\n", version.CompatibleTerraformVersionConstraint)
-		return ExitCodeOK
-	}
 
 	// Set up controller
 	log.Printf("[INFO] (cli) setting up controller: readwrite")
