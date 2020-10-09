@@ -71,3 +71,8 @@ generate:
 	go generate ./...
 .PHONY: generate
 
+# temp noop command to get build pipeline working
+dev-tree:
+	@true
+.PHONY: dev-tree
+
