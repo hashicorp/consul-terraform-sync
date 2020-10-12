@@ -22,8 +22,8 @@ func twoTaskConfig(consulAddr, tempDir string) string {
 	return oneTaskConfig(consulAddr, tempDir) + webTask()
 }
 
-// panosConfig returns a basic use case config file
-// Use for confirming specific resource / statefile output
+// panosConfig returns a config file with panos provider with bad config
+// Use for testing handlers erroring out
 func panosConfig(consulAddr, tempDir string) string {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -43,6 +43,31 @@ driver "terraform" {
 }`, cwd, tempDir)
 
 	return panosBadCredConfig() + consulBlock(consulAddr) + tfBlock
+}
+
+// twoTaskCustomBackendConfig returns a basic config file with two tasks for
+// custom backend. Use for confirming resources / state file for custom backend.
+//
+// Example of customBackend:
+// `backend "local" {
+// 	path = "custom/terraform.tfstate"
+// }`
+func twoTaskCustomBackendConfig(consulAddr, tempDir, customBackend string) string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	terraformBlock := fmt.Sprintf(`
+driver "terraform" {
+	log = true
+	path = "%s"
+	working_dir = "%s"
+	%s
+}
+`, cwd, tempDir, customBackend)
+
+	return baseConfig() + consulBlock(consulAddr) +
+		terraformBlock + dbTask() + webTask()
 }
 
 func consulBlock(addr string) string {

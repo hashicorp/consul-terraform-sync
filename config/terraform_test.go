@@ -499,8 +499,12 @@ func TestTerraformValidate(t *testing.T) {
 			&TerraformConfig{},
 			false,
 		}, {
-			"valid",
+			"valid consul backend",
 			&TerraformConfig{Backend: map[string]interface{}{"consul": nil}},
+			true,
+		}, {
+			"valid local backend",
+			&TerraformConfig{Backend: map[string]interface{}{"local": nil}},
 			true,
 		}, {
 			"backend_invalid",
