@@ -15,44 +15,18 @@ services = {
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
-    id              = "{{.ID}}"
-    name            = "{{.Name}}"
-    address         = "{{.Address}}"
-    port            = {{.Port}}
-    meta            = {{hclStringMap .ServiceMeta 3}}
-    tags            = {{hclStringList .Tags}}
-    namespace       = {{hclString .Namespace}}
-    status          = "{{.Status}}"
-    node            = "{{.Node}}"
-    node_id         = "{{.NodeID}}"
-    node_address    = "{{.NodeAddress}}"
-    node_datacenter = "{{.NodeDatacenter}}"
-    node_tagged_addresses = {{hclStringMap .NodeTaggedAddresses 3}}
-    node_meta = {{hclStringMap .NodeMeta 3}}
-  }{{if (ne $i $last)}},{{- end}}
+{{ HCLService $s | indent 4 }}
+  } {{- if (ne $i $last)}},{{end}}
   {{- end}}
 {{- end}}{{- with $beforeSrv := service "tag.api@dc1"}}
-  {{- with $afterSrv := service "web@dc1"}},{{- end}}
+  {{- with $afterSrv := service "web@dc1"}},{{end}}
 {{- end}}
 {{- with $srv := service "web@dc1"}}
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
-    id              = "{{.ID}}"
-    name            = "{{.Name}}"
-    address         = "{{.Address}}"
-    port            = {{.Port}}
-    meta            = {{hclStringMap .ServiceMeta 3}}
-    tags            = {{hclStringList .Tags}}
-    namespace       = {{hclString .Namespace}}
-    status          = "{{.Status}}"
-    node            = "{{.Node}}"
-    node_id         = "{{.NodeID}}"
-    node_address    = "{{.NodeAddress}}"
-    node_datacenter = "{{.NodeDatacenter}}"
-    node_tagged_addresses = {{hclStringMap .NodeTaggedAddresses 3}}
-    node_meta = {{hclStringMap .NodeMeta 3}}
-  }{{if (ne $i $last)}},{{- end}}
+{{ HCLService $s | indent 4 }}
+  } {{- if (ne $i $last)}},{{end}}
   {{- end}}
 {{- end}}
 }
