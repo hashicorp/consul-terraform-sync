@@ -183,6 +183,7 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 		persistLog: tf.persistLog,
 		path:       tf.path,
 		workingDir: tf.workingDir,
+		retry:      defaultRetry,
 	})
 	if err != nil {
 		log.Printf("[ERR] (driver.terraform) init worker error: %s", err)
