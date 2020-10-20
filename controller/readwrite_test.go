@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewReadWrite(t *testing.T) {
@@ -34,7 +35,7 @@ func TestNewReadWrite(t *testing.T) {
 			singleTaskConfig(),
 		},
 		{
-			"unreachable consul server",
+			"unreachable consul server", // can take >63s locally
 			true,
 			singleTaskConfig(),
 		},
@@ -45,26 +46,14 @@ func TestNewReadWrite(t *testing.T) {
 				Driver: &config.DriverConfig{},
 			},
 		},
-		{
-			"handler error",
-			true,
-			&config.Config{
-				Driver: &config.DriverConfig{
-					Terraform: &config.TerraformConfig{},
-				},
-				Providers: &config.ProviderConfigs{
-					&config.ProviderConfig{
-						handler.TerraformProviderFake: "malformed-config",
-					},
-				},
-			},
-		},
 	}
 	// fake consul server
 	addr := "127.0.0.1:8500"
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, `"test"`) }))
-	ts.Listener, _ = net.Listen("tcp", addr)
+	var err error
+	ts.Listener, err = net.Listen("tcp", addr)
+	require.NoError(t, err)
 	ts.Start()
 	defer ts.Close()
 
@@ -214,18 +203,14 @@ func TestReadWriteRun(t *testing.T) {
 			d := new(mocksD.Driver)
 			d.On("ApplyTask", mock.Anything).Return(tc.applyTaskErr)
 
-			h, err := getPostApplyHandlers(tc.config)
-			assert.NoError(t, err)
-
 			controller := ReadWrite{
-				watcher:   w,
-				resolver:  r,
-				postApply: h,
+				watcher:  w,
+				resolver: r,
 			}
 			u := unit{template: tmpl, driver: d}
 			ctx := context.Background()
 
-			_, err = controller.checkApply(ctx, u)
+			_, err := controller.checkApply(ctx, u)
 			if tc.expectError {
 				if assert.Error(t, err) {
 					assert.Contains(t, err.Error(), tc.name)

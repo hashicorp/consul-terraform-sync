@@ -26,8 +26,8 @@ type Service struct {
 type Task struct {
 	Description  string
 	Name         string
-	Providers    []map[string]interface{}
-	ProviderInfo map[string]interface{}
+	Providers    []map[string]interface{} // task.providers config info
+	ProviderInfo map[string]interface{}   // driver.required_provider config info
 	Services     []Service
 	Source       string
 	VarFiles     []string
