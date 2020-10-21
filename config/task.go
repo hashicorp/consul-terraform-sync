@@ -345,3 +345,21 @@ func (c *TaskConfigs) GoString() string {
 
 	return "{" + strings.Join(s, ", ") + "}"
 }
+
+// FilterTasks filters the task configurations by task name.
+func FilterTasks(tasks *TaskConfigs, names []string) (*TaskConfigs, error) {
+	allTasks := make(map[string]*TaskConfig)
+	for _, t := range *tasks {
+		allTasks[*t.Name] = t
+	}
+
+	var filtered TaskConfigs
+	for _, name := range names {
+		tconf, ok := allTasks[name]
+		if !ok {
+			return nil, fmt.Errorf("task not found: %s", name)
+		}
+		filtered = append(filtered, tconf)
+	}
+	return &filtered, nil
+}
