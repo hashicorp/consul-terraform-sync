@@ -21,9 +21,8 @@ const (
 
 // Config is used to configure Sync
 type Config struct {
-	LogLevel    *string `mapstructure:"log_level"`
-	InspectMode *bool   `mapstructure:"inspect_mode"`
-	ClientType  *string `mapstructure:"client_type"`
+	LogLevel   *string `mapstructure:"log_level"`
+	ClientType *string `mapstructure:"client_type"`
 
 	Syslog       *SyslogConfig       `mapstructure:"syslog"`
 	Consul       *ConsulConfig       `mapstructure:"consul"`
@@ -63,7 +62,6 @@ func DefaultConfig() *Config {
 	consul := DefaultConsulConfig()
 	return &Config{
 		LogLevel:     String(DefaultLogLevel),
-		InspectMode:  Bool(false),
 		Syslog:       DefaultSyslogConfig(),
 		Consul:       consul,
 		Driver:       DefaultDriverConfig(),
@@ -83,7 +81,6 @@ func (c *Config) Copy() *Config {
 
 	return &Config{
 		LogLevel:     StringCopy(c.LogLevel),
-		InspectMode:  BoolCopy(c.InspectMode),
 		Syslog:       c.Syslog.Copy(),
 		Consul:       c.Consul.Copy(),
 		Driver:       c.Driver.Copy(),
@@ -114,10 +111,6 @@ func (c *Config) Merge(o *Config) *Config {
 
 	if o.LogLevel != nil {
 		r.LogLevel = StringCopy(o.LogLevel)
-	}
-
-	if o.InspectMode != nil {
-		r.InspectMode = BoolCopy(o.InspectMode)
 	}
 
 	if o.Syslog != nil {
@@ -240,7 +233,6 @@ func (c *Config) GoString() string {
 
 	return fmt.Sprintf("&Config{"+
 		"LogLevel:%s, "+
-		"InspectMode:%#v, "+
 		"Syslog:%s, "+
 		"Consul:%s, "+
 		"Driver:%s, "+
@@ -250,7 +242,6 @@ func (c *Config) GoString() string {
 		"BufferPeriod:%s"+
 		"}",
 		StringVal(c.LogLevel),
-		BoolVal(c.InspectMode),
 		c.Syslog.GoString(),
 		c.Consul.GoString(),
 		c.Driver.GoString(),
