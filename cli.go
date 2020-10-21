@@ -247,7 +247,7 @@ func (cli *CLI) Run(args []string) int {
 			}
 
 		case <-exitCh:
-			if isOnce {
+			if isOnce || isInspect {
 				log.Printf("[INFO] (cli) graceful shutdown")
 				return ExitCodeOK
 			}

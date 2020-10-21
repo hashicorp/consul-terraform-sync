@@ -37,6 +37,7 @@ func (ctrl *ReadOnly) Init(ctx context.Context) error {
 		return err
 	}
 
+	// Sort units for consistent ordering when inspecting tasks
 	sort.Slice(ctrl.units, func(i, j int) bool {
 		return ctrl.units[i].taskName < ctrl.units[j].taskName
 	})
