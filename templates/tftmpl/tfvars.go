@@ -5,9 +5,67 @@ import (
 	"io"
 	"log"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/zclconf/go-cty/cty"
 )
+
+type healthService struct {
+	ID        string            `hcl:"id"`
+	Name      string            `hcl:"name"`
+	Address   string            `hcl:"address"`
+	Port      int               `hcl:"port"`
+	Meta      map[string]string `hcl:"meta"`
+	Tags      []string          `hcl:"tags"`
+	Namespace cty.Value         `hcl:"namespace"`
+	Status    string            `hcl:"status"`
+
+	Node                string            `hcl:"node"`
+	NodeID              string            `hcl:"node_id"`
+	NodeAddress         string            `hcl:"node_address"`
+	NodeDatacenter      string            `hcl:"node_datacenter"`
+	NodeTaggedAddresses map[string]string `hcl:"node_tagged_addresses"`
+	NodeMeta            map[string]string `hcl:"node_meta"`
+}
+
+func newHealthService(s *dep.HealthService) healthService {
+	if s == nil {
+		return healthService{}
+	}
+
+	// Namespace is null-able
+	var namespace cty.Value
+	if s.Namespace != "" {
+		namespace = cty.StringVal(s.Namespace)
+	} else {
+		namespace = cty.NullVal(cty.String)
+	}
+
+	// Default to empty list instead of null
+	tags := []string{}
+	if s.Tags != nil {
+		tags = s.Tags
+	}
+
+	return healthService{
+		ID:        s.ID,
+		Name:      s.Name,
+		Address:   s.Address,
+		Port:      s.Port,
+		Meta:      nonNullMap(s.ServiceMeta),
+		Tags:      tags,
+		Namespace: namespace,
+		Status:    s.Status,
+
+		Node:                s.Node,
+		NodeID:              s.NodeID,
+		NodeAddress:         s.NodeAddress,
+		NodeDatacenter:      s.NodeDatacenter,
+		NodeTaggedAddresses: nonNullMap(s.NodeTaggedAddresses),
+		NodeMeta:            nonNullMap(s.NodeMeta),
+	}
+}
 
 // NewTFVarsTmpl writes content to assign values to the root module's variables
 // that is commonly placed in a .tfvars file.
@@ -85,6 +143,14 @@ func appendRawServiceTemplateValues(body *hclwrite.Body, services []*Service) {
 	body.SetAttributeRaw("services", tokens)
 }
 
+func nonNullMap(m map[string]string) map[string]string {
+	if m == nil {
+		return map[string]string{}
+	}
+
+	return m
+}
+
 // baseAddressStr is the raw template following hcat syntax for addresses of
 // Consul services.
 const baseAddressStr = `
@@ -92,21 +158,8 @@ const baseAddressStr = `
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
-    id              = "{{.ID}}"
-    name            = "{{.Name}}"
-    address         = "{{.Address}}"
-    port            = {{.Port}}
-    meta            = {{hclStringMap .ServiceMeta 3}}
-    tags            = {{hclStringList .Tags}}
-    namespace       = {{hclString .Namespace}}
-    status          = "{{.Status}}"
-    node            = "{{.Node}}"
-    node_id         = "{{.NodeID}}"
-    node_address    = "{{.NodeAddress}}"
-    node_datacenter = "{{.NodeDatacenter}}"
-    node_tagged_addresses = {{hclStringMap .NodeTaggedAddresses 3}}
-    node_meta = {{hclStringMap .NodeMeta 3}}
-  }{{if (ne $i $last)}},{{- end}}
+{{ HCLService $s | indent 4 }}
+  } {{- if (ne $i $last)}},{{end}}
   {{- end}}
 {{- end}}`
 
@@ -114,5 +167,5 @@ const baseAddressStr = `
 // different Consul services. Rendering a comma requires there to be an instance
 // of the service before and after the comma.
 const baseCommaStr = `{{- with $beforeSrv := service "%s"}}
-  {{- with $afterSrv := service "%s"}},{{- end}}
+  {{- with $afterSrv := service "%s"}},{{end}}
 {{- end}}`

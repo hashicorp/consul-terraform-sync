@@ -3,10 +3,11 @@ package tftmpl
 import (
 	"testing"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestJoinStrings(t *testing.T) {
+func TestJoinStringsFunc(t *testing.T) {
 	testCases := []struct {
 		name     string
 		content  []string
@@ -33,120 +34,111 @@ func TestJoinStrings(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := JoinStrings(".", tc.content...)
+			actual := joinStringsFunc(".", tc.content...)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }
 
-func TestHCLString(t *testing.T) {
+func TestHCLServiceFunc(t *testing.T) {
 	testCases := []struct {
 		name     string
-		content  string
+		content  *dep.HealthService
 		expected string
 	}{
 		{
-			"empty",
+			"nil",
+			nil,
 			"",
-			"null",
-		}, {
-			"string",
-			"foobar",
-			`"foobar"`,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			actual := HCLString(tc.content)
-			assert.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
-func TestHCLStringList(t *testing.T) {
-	testCases := []struct {
-		name     string
-		content  []string
-		expected string
-	}{
-		{
-			"nil",
-			nil,
-			"[]",
 		}, {
 			"empty",
-			[]string{},
-			"[]",
+			&dep.HealthService{},
+			`id                    = ""
+name                  = ""
+address               = ""
+port                  = 0
+meta                  = {}
+tags                  = []
+namespace             = null
+status                = ""
+node                  = ""
+node_id               = ""
+node_address          = ""
+node_datacenter       = ""
+node_tagged_addresses = {}
+node_meta             = {}`,
 		}, {
-			"list",
-			[]string{"foo", "foobar", "foobarbaz"},
-			`["foo", "foobar", "foobarbaz"]`,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			actual := HCLStringList(tc.content)
-			assert.Equal(t, tc.expected, actual)
-		})
-	}
+			"basic",
+			&dep.HealthService{
+				ID:             "api",
+				Name:           "api",
+				Address:        "1.2.3.4",
+				Port:           8080,
+				ServiceMeta:    map[string]string{"key": "value"},
+				Tags:           []string{"tag"},
+				Status:         "passing",
+				Node:           "worker-01",
+				NodeID:         "39e5a7f5-2834-e16d-6925-78167c9f50d8",
+				NodeAddress:    "127.0.0.1",
+				NodeDatacenter: "dc1",
+				NodeTaggedAddresses: map[string]string{
+					"lan":      "127.0.0.1",
+					"lan_ipv4": "127.0.0.1",
+					"wan":      "127.0.0.1",
+					"wan_ipv4": "127.0.0.1",
+				},
+				NodeMeta: map[string]string{
+					"consul-network-segment": "",
+				},
+			},
+			`id      = "api"
+name    = "api"
+address = "1.2.3.4"
+port    = 8080
+meta = {
+  key = "value"
 }
-
-func TestHCLStringMap(t *testing.T) {
-	testCases := []struct {
-		name     string
-		content  map[string]string
-		indent   int
-		expected string
-	}{
-		{
-			"nil",
-			nil,
-			0,
-			"{}",
-		}, {
-			"empty",
-			map[string]string{},
-			0,
-			"{}",
-		}, {
-			"map",
-			map[string]string{"foo": "bar", "foobar": "foobarbaz"},
-			0,
-			`{ foo = "bar", foobar = "foobarbaz" }`,
-		}, {
-			"map sorts",
-			map[string]string{"foobar": "foobarbaz", "foo": "bar"},
-			0,
-			`{ foo = "bar", foobar = "foobarbaz" }`,
-		}, {
-			"map with negative indent",
-			map[string]string{"foo": "bar", "foobar": "foobarbaz"},
-			-5,
-			`{ foo = "bar", foobar = "foobarbaz" }`,
-		}, {
-			"map with indent",
-			map[string]string{"foo": "bar", "foobar": "foobarbaz"},
-			1,
-			`{
-  foo    = "bar"
-  foobar = "foobarbaz"
+tags            = ["tag"]
+namespace       = null
+status          = "passing"
+node            = "worker-01"
+node_id         = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
+node_address    = "127.0.0.1"
+node_datacenter = "dc1"
+node_tagged_addresses = {
+  lan      = "127.0.0.1"
+  lan_ipv4 = "127.0.0.1"
+  wan      = "127.0.0.1"
+  wan_ipv4 = "127.0.0.1"
+}
+node_meta = {
+  consul-network-segment = ""
 }`,
 		}, {
-			"map with indents",
-			map[string]string{"foo": "bar", "foobar": "foobarbaz"},
-			3,
-			`{
-      foo    = "bar"
-      foobar = "foobarbaz"
-    }`,
+			"namespace",
+			&dep.HealthService{
+				Namespace: "namespace",
+			},
+			`id                    = ""
+name                  = ""
+address               = ""
+port                  = 0
+meta                  = {}
+tags                  = []
+namespace             = "namespace"
+status                = ""
+node                  = ""
+node_id               = ""
+node_address          = ""
+node_datacenter       = ""
+node_tagged_addresses = {}
+node_meta             = {}`,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := HCLStringMap(tc.content, tc.indent)
+			actual := hclServiceFunc(tc.content)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}
