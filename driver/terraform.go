@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/pkg/errors"
 )
@@ -44,6 +45,7 @@ type Terraform struct {
 	worker            *worker
 	backend           map[string]interface{}
 	requiredProviders map[string]interface{}
+	postApply         handler.Handler
 
 	version    string
 	clientType string
@@ -118,8 +120,8 @@ func (tf *Terraform) Version() string {
 	return tf.version
 }
 
-// InitTask initializes the task by creating the Terraform root module and
-// client to execute task.
+// InitTask initializes the task by creating the Terraform root module, creating
+// client to execute task, and retrieving post-Terraform apply handlers
 func (tf *Terraform) InitTask(task Task, force bool) error {
 	modulePath := filepath.Join(tf.workingDir, task.Name)
 	if _, err := os.Stat(modulePath); os.IsNotExist(err) {
@@ -190,6 +192,13 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 		return err
 	}
 	tf.worker = worker
+
+	h, err := getTerraformHandlers(task)
+	if err != nil {
+		return err
+	}
+	tf.postApply = h
+
 	return nil
 }
 
@@ -214,5 +223,45 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	if err := w.apply(ctx); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error tf-apply for '%s'", taskName))
 	}
+
+	if tf.postApply != nil {
+		log.Printf("[TRACE] (driver.terraform) post-apply out-of-band actions "+
+			"for '%s'", taskName)
+		if err := tf.postApply.Do(nil); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// getTerraformHandlers returns the first handler in a chain of handlers
+// for a Terraform driver.
+//
+// Returned handler may be nil even if returned err is nil. This happens when
+// no providers have a handler.
+func getTerraformHandlers(task Task) (handler.Handler, error) {
+	counter := 0
+	var next handler.Handler
+	for _, p := range task.Providers {
+		for k, v := range p {
+			h, err := handler.TerraformProviderHandler(k, v)
+			if err != nil {
+				log.Printf(
+					"[ERR] (driver.terraform) could not initialize handler for "+
+						"provider '%s': %s", k, err)
+				return nil, err
+			}
+			if h != nil {
+				counter++
+				log.Printf(
+					"[INFO] (driver.terraform) retrieved handler for provider '%s'", k)
+				h.SetNext(next)
+				next = h
+			}
+		}
+	}
+	log.Printf("[INFO] (driver.terraform) retrieved %d Terraform handlers for task '%s'",
+		counter, task.Name)
+	return next, nil
 }

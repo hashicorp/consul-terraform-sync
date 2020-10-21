@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/hcat"
 )
 
@@ -23,7 +22,6 @@ type ReadWrite struct {
 	units      []unit
 	watcher    watcher
 	resolver   resolver
-	postApply  handler.Handler
 }
 
 // unit of work per template/task
@@ -39,10 +37,6 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	h, err := getPostApplyHandlers(conf)
-	if err != nil {
-		return nil, err
-	}
 	watcher, err := newWatcher(conf)
 	if err != nil {
 		return nil, err
@@ -53,7 +47,6 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 		fileReader: ioutil.ReadFile,
 		watcher:    watcher,
 		resolver:   hcat.NewResolver(),
-		postApply:  h,
 	}, nil
 }
 
@@ -224,14 +217,6 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 		log.Printf("[INFO] (ctrl) executing task %s", taskName)
 		if err := d.ApplyTask(ctx); err != nil {
 			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
-		}
-
-		if rw.postApply != nil {
-			log.Printf("[TRACE] (ctrl) post-apply out-of-band actions")
-			// TODO: improvement to only trigger handlers for tasks that were updated
-			if err := rw.postApply.Do(nil); err != nil {
-				return false, err
-			}
 		}
 
 		log.Printf("[INFO] (ctrl) task completed %s", taskName)

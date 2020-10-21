@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/hcat"
 )
@@ -185,45 +184,4 @@ func getProvider(providers *config.ProviderConfigs, id string) map[string]interf
 	}
 
 	return map[string]interface{}{name: make(map[string]interface{})}
-}
-
-// getPostApplyHandlers returns the first handler in a chain of handlers to be
-// called post-apply for a type of driver.
-//
-// Returned handler may be nil even if returned err is nil. This happens when
-// no providers have a handler.
-func getPostApplyHandlers(conf *config.Config) (handler.Handler, error) {
-	if conf.Driver.Terraform != nil {
-		return getTerraformHandlers(conf)
-	}
-	return nil, errors.New("unsupported driver")
-}
-
-// getTerraformHandlers returns the first handler in a chain of handlers
-// for a Terraform driver.
-//
-// Returned handler may be nil even if returned err is nil. This happens when
-// no providers have a handler.
-func getTerraformHandlers(conf *config.Config) (handler.Handler, error) {
-	counter := 0
-	var next handler.Handler
-	for _, p := range *conf.Providers {
-		for k, v := range *p {
-			h, err := handler.TerraformProviderHandler(k, v)
-			if err != nil {
-				log.Printf(
-					"[ERR] (ctrl) could not initialize handler for provider '%s': %s", k, err)
-				return nil, err
-			}
-			if h != nil {
-				counter++
-				log.Printf(
-					"[INFO] (ctrl) retrieved handler for provider '%s'", k)
-				h.SetNext(next)
-				next = h
-			}
-		}
-	}
-	log.Printf("[INFO] (ctrl) retrieved %d Terraform handlers", counter)
-	return next, nil
 }
