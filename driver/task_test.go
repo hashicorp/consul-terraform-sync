@@ -161,7 +161,7 @@ func TestWorkerApply(t *testing.T) {
 				random: rand.New(rand.NewSource(1)),
 			}
 
-			err := w.apply(ctx)
+			err := w.withRetry(ctx, w.client.Apply, "apply")
 			if tc.applyErr != nil {
 				assert.Error(t, err)
 				return

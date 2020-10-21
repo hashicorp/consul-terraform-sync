@@ -13,6 +13,10 @@ type Driver interface {
 	// InitTask initializes the task that the driver executes
 	InitTask(task Task, force bool) error
 
+	// InspectTask inspects for any differences pertaining to the task between
+	// the state of Consul and network infrastructure
+	InspectTask(ctx context.Context) error
+
 	// ApplyTask applies change for the task managed by the driver
 	ApplyTask(ctx context.Context) error
 

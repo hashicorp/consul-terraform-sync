@@ -1,12 +1,158 @@
 package controller
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
+
+func TestNewControllers(t *testing.T) {
+	t.Parallel()
+
+	newCtrlFuncs := map[string]func(*config.Config) (Controller, error){
+		"readwrite": NewReadWrite,
+		"readonly":  NewReadOnly,
+	}
+
+	cases := []struct {
+		name        string
+		expectError bool
+		conf        *config.Config
+	}{
+		{
+			"happy path",
+			false,
+			singleTaskConfig(),
+		},
+		{
+			"unreachable consul server", // can take >63s locally
+			true,
+			singleTaskConfig(),
+		},
+		{
+			"unsupported driver error",
+			true,
+			&config.Config{
+				Driver: &config.DriverConfig{},
+			},
+		},
+	}
+	// fake consul server
+	addr := "127.0.0.1:8500"
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, `"test"`) }))
+	var err error
+	ts.Listener, err = net.Listen("tcp", addr)
+	require.NoError(t, err)
+	ts.Start()
+	defer ts.Close()
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.expectError == false {
+				tc.conf.Consul.Address = &addr
+				tc.conf.Finalize()
+			}
+
+			for name, newCtrlFunc := range newCtrlFuncs {
+				t.Run(name, func(t *testing.T) {
+					controller, err := newCtrlFunc(tc.conf)
+					if tc.expectError {
+						assert.Error(t, err)
+						return
+					}
+					assert.NoError(t, err)
+					assert.NotNil(t, controller)
+				})
+			}
+		})
+	}
+}
+
+func TestBaseControllerInit(t *testing.T) {
+	t.Parallel()
+
+	conf := singleTaskConfig()
+
+	cases := []struct {
+		name        string
+		expectError bool
+		initErr     error
+		initTaskErr error
+		fileReader  func(string) ([]byte, error)
+		config      *config.Config
+	}{
+		{
+			"error on driver.Init()",
+			true,
+			errors.New("error on driver.Init()"),
+			nil,
+			func(string) ([]byte, error) { return []byte{}, nil },
+			conf,
+		},
+		{
+			"error on driver.InitTask()",
+			true,
+			nil,
+			errors.New("error on driver.InitTask()"),
+			func(string) ([]byte, error) { return []byte{}, nil },
+			conf,
+		},
+		{
+			"error on newTaskTemplates()",
+			true,
+			nil,
+			nil,
+			func(string) ([]byte, error) {
+				return []byte{}, errors.New("error on newTaskTemplates()")
+			},
+			conf,
+		},
+		{
+			"happy path",
+			false,
+			nil,
+			nil,
+			func(string) ([]byte, error) { return []byte{}, nil },
+			conf,
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := new(mocksD.Driver)
+			d.On("Init", mock.Anything).Return(tc.initErr).Once()
+			d.On("InitTask", mock.Anything, mock.Anything).Return(tc.initTaskErr).Once()
+
+			baseCtrl := baseController{
+				newDriver:  func(*config.Config) driver.Driver { return d },
+				conf:       tc.config,
+				fileReader: tc.fileReader,
+			}
+
+			err := baseCtrl.init(ctx)
+
+			if tc.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.name)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestNewDriverTasks(t *testing.T) {
 	// newDriverTasks function reorganizes various user-defined configuration

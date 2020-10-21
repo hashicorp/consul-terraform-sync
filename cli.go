@@ -79,9 +79,9 @@ func (cli *CLI) Run(args []string) int {
 		"Configuration file requires an .hcl or .json extension in order to "+
 		"specify their format. This option can be specified multiple times to "+
 		"load different configuration files.")
-	// f.BoolVar(&isInspect, "inspect", false, "Run Sync in Inspect mode to "+
-	// 	"print the current and proposed state change, and then exits. No changes "+
-	// 	"are applied in this mode.")
+	f.BoolVar(&isInspect, "inspect", false, "Run Sync in Inspect mode to "+
+		"print the proposed state changes for all tasks, and then exits. No changes "+
+		"are applied in this mode.")
 	f.BoolVar(&isOnce, "once", false, "Render templates and run tasks once. "+
 		"Does not run the process as a daemon and disables buffer periods.")
 	f.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
@@ -153,9 +153,7 @@ func (cli *CLI) Run(args []string) int {
 	if isInspect {
 		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
 		log.Printf("[INFO] (cli) setting up controller: readonly")
-		fmt.Fprintln(cli.outStream, "TODO")
-		return ExitCodeOK
-		ctrl = controller.NewReadOnly(conf)
+		ctrl, err = controller.NewReadOnly(conf)
 	} else {
 		log.Printf("[INFO] (cli) setting up controller: readwrite")
 		ctrl, err = controller.NewReadWrite(conf)
