@@ -11,23 +11,19 @@ import (
 
 var (
 	jsonConfig = []byte(`{
-	"log_level": "ERR",
-	"inspect_mode": true
+	"log_level": "ERR"
 }`)
 
 	hclConfig = []byte(`
 	log_level = "ERR"
-	inspect_mode = true
 `)
 
 	testConfig = Config{
-		LogLevel:    String("ERR"),
-		InspectMode: Bool(true),
+		LogLevel: String("ERR"),
 	}
 
 	longConfig = Config{
-		LogLevel:    String("ERR"),
-		InspectMode: Bool(true),
+		LogLevel: String("ERR"),
 		Syslog: &SyslogConfig{
 			Enabled: Bool(true),
 			Name:    String("syslog"),
@@ -177,15 +173,18 @@ func TestFromPath(t *testing.T) {
 			"load file",
 			"testdata/simple.hcl",
 			&Config{
-				LogLevel:    String("ERR"),
-				InspectMode: Bool(true),
+				LogLevel: String("ERR"),
 			},
 		}, {
 			"load dir merge",
 			"testdata/simple",
 			&Config{
-				LogLevel:    String("ERR"),
-				InspectMode: Bool(true),
+				LogLevel: String("ERR"),
+				BufferPeriod: &BufferPeriodConfig{
+					Enabled: Bool(true),
+					Min:     TimeDuration(time.Duration(10 * time.Second)),
+					Max:     TimeDuration(time.Duration(30 * time.Second)),
+				},
 			},
 		}, {
 			"load dir merges tasks and services",
@@ -218,8 +217,7 @@ func TestFromPath(t *testing.T) {
 			"load dir override sorted by filename",
 			"testdata/override",
 			&Config{
-				LogLevel:    String("DEBUG"),
-				InspectMode: Bool(false),
+				LogLevel: String("DEBUG"),
 			},
 		}, {
 			"file DNE",

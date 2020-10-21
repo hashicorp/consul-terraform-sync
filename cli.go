@@ -106,18 +106,17 @@ func (cli *CLI) Run(args []string) int {
 		return ExitCodeOK
 	}
 
-	// Validate required flags
-	if !isVersion && len(configFiles) == 0 {
-		log.Printf("[ERR] config file(s) required, use --config-dir or --config-file flag options")
-		printFlags(f)
-		return ExitCodeRequiredFlagsError
-	}
-
 	if isVersion {
-		log.Printf("[DEBUG] (cli) version flag was given, exiting now")
 		fmt.Fprintf(cli.errStream, "%s %s\n", version.Name, version.GetHumanVersion())
 		fmt.Fprintf(cli.errStream, "Compatible with Terraform %s\n", version.CompatibleTerraformVersionConstraint)
 		return ExitCodeOK
+	}
+
+	// Validate required flags
+	if len(configFiles) == 0 {
+		log.Printf("[ERR] config file(s) required, use --config-dir or --config-file flag options")
+		printFlags(f)
+		return ExitCodeRequiredFlagsError
 	}
 
 	// Build the config.
@@ -149,19 +148,21 @@ func (cli *CLI) Run(args []string) int {
 	log.Printf("[DEBUG] %s", conf.GoString())
 
 	// Set up controller
-	log.Printf("[INFO] (cli) setting up controller: readwrite")
-
 	conf.ClientType = config.String(clientType)
 	var ctrl controller.Controller
-	if ctrl, err = controller.NewReadWrite(conf); err != nil {
+	if isInspect {
+		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
+		log.Printf("[INFO] (cli) setting up controller: readonly")
+		fmt.Fprintln(cli.outStream, "TODO")
+		return ExitCodeOK
+		ctrl = controller.NewReadOnly(conf)
+	} else {
+		log.Printf("[INFO] (cli) setting up controller: readwrite")
+		ctrl, err = controller.NewReadWrite(conf)
+	}
+	if err != nil {
 		log.Printf("[ERR] (cli) error setting up controller: %s", err)
 		return ExitCodeConfigError
-	}
-
-	if isInspect || *conf.InspectMode {
-		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
-		fmt.Fprintln(cli.outStream, "TODO")
-		ctrl = controller.NewReadOnly(conf)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
