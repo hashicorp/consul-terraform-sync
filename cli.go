@@ -64,7 +64,7 @@ func NewCLI(out, err io.Writer) *CLI {
 // status from the command.
 func (cli *CLI) Run(args []string) int {
 	// Handle parsing the CLI flags.
-	var configFiles config.FlagAppendSliceValue
+	var configFiles, inspectTasks config.FlagAppendSliceValue
 	var isVersion, isInspect, isOnce bool
 	var clientType string
 	var help, h bool
@@ -79,9 +79,12 @@ func (cli *CLI) Run(args []string) int {
 		"Configuration file requires an .hcl or .json extension in order to "+
 		"specify their format. This option can be specified multiple times to "+
 		"load different configuration files.")
-	// f.BoolVar(&isInspect, "inspect", false, "Run Sync in Inspect mode to "+
-	// 	"print the current and proposed state change, and then exits. No changes "+
-	// 	"are applied in this mode.")
+	f.BoolVar(&isInspect, "inspect", false, "Run Sync in Inspect mode to "+
+		"print the proposed state changes for all tasks, and then exits. No changes "+
+		"are applied in this mode.")
+	f.Var(&inspectTasks, "inspect-task", "Run Sync in Inspect mode to "+
+		"print the proposed state changes for the task, and then exits. No "+
+		"changes are applied in this mode.")
 	f.BoolVar(&isOnce, "once", false, "Render templates and run tasks once. "+
 		"Does not run the process as a daemon and disables buffer periods.")
 	f.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
@@ -147,15 +150,22 @@ func (cli *CLI) Run(args []string) int {
 	log.Printf("[INFO] %s", version.GetHumanVersion())
 	log.Printf("[DEBUG] %s", conf.GoString())
 
+	if len(inspectTasks) != 0 {
+		isInspect = true
+		conf.Tasks, err = config.FilterTasks(conf.Tasks, inspectTasks)
+		if err != nil {
+			log.Printf("[ERR] (cli) error inspecting tasks: %s", err)
+			return ExitCodeConfigError
+		}
+	}
+
 	// Set up controller
 	conf.ClientType = config.String(clientType)
 	var ctrl controller.Controller
 	if isInspect {
 		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
 		log.Printf("[INFO] (cli) setting up controller: readonly")
-		fmt.Fprintln(cli.outStream, "TODO")
-		return ExitCodeOK
-		ctrl = controller.NewReadOnly(conf)
+		ctrl, err = controller.NewReadOnly(conf)
 	} else {
 		log.Printf("[INFO] (cli) setting up controller: readwrite")
 		ctrl, err = controller.NewReadWrite(conf)
@@ -237,7 +247,7 @@ func (cli *CLI) Run(args []string) int {
 			}
 
 		case <-exitCh:
-			if isOnce {
+			if isOnce || isInspect {
 				log.Printf("[INFO] (cli) graceful shutdown")
 				return ExitCodeOK
 			}

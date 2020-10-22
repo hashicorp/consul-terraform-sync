@@ -31,8 +31,11 @@ const (
 	// to the input variables from a user that is specific to the task's module.
 	ModuleVarsFilename = "variables.module.tf"
 
-	// TFVarsTmplFilename is the file name for input variables for configured
+	// TFVarsFilename is the file name for input variables for configured
 	// Terraform providers and Consul service information.
+	TFVarsFilename = "terraform.tfvars"
+
+	// TFVarsTmplFilename is the template file for TFVarsFilename
 	TFVarsTmplFilename = "terraform.tfvars.tmpl"
 )
 

@@ -202,6 +202,33 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 	return nil
 }
 
+// InspectTask inspects for any differences pertaining to the task between
+// the state of Consul and network infrastructure using the Terraform plan command
+func (tf *Terraform) InspectTask(ctx context.Context) error {
+	w := tf.worker
+	taskName := w.task.Name
+
+	if w.inited {
+		log.Printf("[TRACE] (driver.terraform) workspace for task already "+
+			"initialized, skipping for '%s'", taskName)
+	} else {
+		log.Printf("[TRACE] (driver.terraform) initializing workspace '%s'", taskName)
+		if err := w.init(ctx); err != nil {
+			log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
+				"skipping plan for '%s'", taskName)
+			return errors.Wrap(err, fmt.Sprintf("error tf-init for '%s'", taskName))
+		}
+	}
+
+	log.Printf("[TRACE] (driver.terraform) plan '%s'", taskName)
+	desc := fmt.Sprintf("Plan %s", taskName)
+	if err := w.withRetry(ctx, w.client.Plan, desc); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error tf-plan for '%s'", taskName))
+	}
+
+	return nil
+}
+
 // ApplyTask applies the task changes.
 func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	w := tf.worker
@@ -220,7 +247,8 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	}
 
 	log.Printf("[TRACE] (driver.terraform) apply '%s'", taskName)
-	if err := w.apply(ctx); err != nil {
+	desc := fmt.Sprintf("Apply %s", taskName)
+	if err := w.withRetry(ctx, w.client.Apply, desc); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error tf-apply for '%s'", taskName))
 	}
 

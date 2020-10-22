@@ -123,13 +123,13 @@ func (w *worker) init(ctx context.Context) error {
 	return nil
 }
 
-func (w *worker) apply(ctx context.Context) error {
+func (w *worker) withRetry(ctx context.Context, f func(context.Context) error, desc string) error {
 	r := retry{
-		desc:   fmt.Sprintf("Apply %s", w.task.Name),
+		desc:   desc,
 		retry:  w.retry,
 		random: w.random,
 		fxn: func() error {
-			return w.client.Apply(ctx)
+			return f(ctx)
 		},
 	}
 

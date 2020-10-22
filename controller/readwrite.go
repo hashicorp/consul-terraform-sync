@@ -3,95 +3,33 @@ package controller
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"sync"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/hcat"
 )
 
 var _ Controller = (*ReadWrite)(nil)
 
 // ReadWrite is the controller to run in read-write mode
 type ReadWrite struct {
-	conf       *config.Config
-	newDriver  func(*config.Config) driver.Driver
-	fileReader func(string) ([]byte, error)
-	units      []unit
-	watcher    watcher
-	resolver   resolver
-}
-
-// unit of work per template/task
-type unit struct {
-	taskName string
-	driver   driver.Driver
-	template template
+	*baseController
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
-func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
-	nd, err := newDriverFunc(conf)
+func NewReadWrite(conf *config.Config) (Controller, error) {
+	baseCtrl, err := newBaseController(conf)
 	if err != nil {
 		return nil, err
 	}
-	watcher, err := newWatcher(conf)
-	if err != nil {
-		return nil, err
-	}
-	return &ReadWrite{
-		conf:       conf,
-		newDriver:  nd,
-		fileReader: ioutil.ReadFile,
-		watcher:    watcher,
-		resolver:   hcat.NewResolver(),
-	}, nil
+
+	return &ReadWrite{baseController: baseCtrl}, nil
 }
 
 // Init initializes the controller before it can be run. Ensures that
 // driver is initializes, works are created for each task.
 func (rw *ReadWrite) Init(ctx context.Context) error {
-	log.Printf("[INFO] (ctrl) initializing driver")
-
-	// TODO: separate by provider instances using workspaces.
-	// Future: improve by combining tasks into workflows.
-	log.Printf("[INFO] (ctrl) initializing all tasks")
-	tasks := newDriverTasks(rw.conf)
-	units := make([]unit, 0, len(tasks))
-
-	for _, task := range tasks {
-		d := rw.newDriver(rw.conf)
-		if err := d.Init(ctx); err != nil {
-			log.Printf("[ERR] (ctrl) error initializing driver: %s", err)
-			return err
-		}
-		log.Printf("[DEBUG] (ctrl) initializing task %q", task.Name)
-		err := d.InitTask(task, true)
-		if err != nil {
-			log.Printf("[ERR] (ctrl) error initializing task %q: %s", task.Name, err)
-			return err
-		}
-
-		template, err := newTaskTemplate(task.Name, rw.conf, rw.fileReader)
-		if err != nil {
-			log.Printf("[ERR] (ctrl) error initializing template "+
-				"for task %q: %s", task.Name, err)
-			return err
-		}
-
-		units = append(units, unit{
-			taskName: task.Name,
-			template: template,
-			driver:   d,
-		})
-	}
-
-	rw.units = units
-
-	log.Printf("[INFO] (ctrl) driver initialized")
-	return nil
+	return rw.init(ctx)
 }
 
 // Run runs the controller in read-write mode by continuously monitoring Consul

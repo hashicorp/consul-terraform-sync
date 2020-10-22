@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
-	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/terraform-exec/tfexec"
@@ -118,9 +117,7 @@ func (t *TerraformCLI) Apply(ctx context.Context) error {
 	for i, vf := range t.varFiles {
 		opts[i] = tfexec.VarFile(vf)
 	}
-
-	tfvarFile := strings.TrimRight(tftmpl.TFVarsTmplFilename, ".tmpl")
-	opts[numFiles] = tfexec.VarFile(tfvarFile)
+	opts[numFiles] = tfexec.VarFile(tftmpl.TFVarsFilename)
 
 	return t.tf.Apply(ctx, opts...)
 }
@@ -133,9 +130,7 @@ func (t *TerraformCLI) Plan(ctx context.Context) error {
 	for i, vf := range t.varFiles {
 		opts[i] = tfexec.VarFile(vf)
 	}
-
-	tfvarFile := strings.TrimRight(tftmpl.TFVarsTmplFilename, ".tmpl")
-	opts[numFiles] = tfexec.VarFile(tfvarFile)
+	opts[numFiles] = tfexec.VarFile(tftmpl.TFVarsFilename)
 
 	_, err := t.tf.Plan(ctx, opts...)
 	return err

@@ -3,9 +3,10 @@ package controller
 import (
 	"context"
 	"errors"
+	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -28,6 +29,80 @@ type Controller interface {
 
 type Oncer interface {
 	Once(ctx context.Context) error
+}
+
+// unit of work per template/task
+type unit struct {
+	taskName string
+	driver   driver.Driver
+	template template
+}
+
+type baseController struct {
+	conf       *config.Config
+	newDriver  func(*config.Config) driver.Driver
+	fileReader func(string) ([]byte, error)
+	units      []unit
+	watcher    watcher
+	resolver   resolver
+}
+
+func newBaseController(conf *config.Config) (*baseController, error) {
+	nd, err := newDriverFunc(conf)
+	if err != nil {
+		return nil, err
+	}
+	watcher, err := newWatcher(conf)
+	if err != nil {
+		return nil, err
+	}
+	return &baseController{
+		conf:       conf,
+		newDriver:  nd,
+		fileReader: ioutil.ReadFile,
+		watcher:    watcher,
+		resolver:   hcat.NewResolver(),
+	}, nil
+}
+
+func (ctrl *baseController) init(ctx context.Context) error {
+	log.Printf("[INFO] (ctrl) initializing driver")
+
+	// Future: improve by combining tasks into workflows.
+	log.Printf("[INFO] (ctrl) initializing all tasks")
+	tasks := newDriverTasks(ctrl.conf)
+	units := make([]unit, 0, len(tasks))
+
+	for _, task := range tasks {
+		d := ctrl.newDriver(ctrl.conf)
+		if err := d.Init(ctx); err != nil {
+			log.Printf("[ERR] (ctrl) error initializing driver: %s", err)
+			return err
+		}
+		log.Printf("[DEBUG] (ctrl) initializing task %q", task.Name)
+		err := d.InitTask(task, true)
+		if err != nil {
+			log.Printf("[ERR] (ctrl) error initializing task %q: %s", task.Name, err)
+			return err
+		}
+
+		template, err := newTaskTemplate(task.Name, ctrl.conf, ctrl.fileReader)
+		if err != nil {
+			log.Printf("[ERR] (ctrl) error initializing template "+
+				"for task %q: %s", task.Name, err)
+			return err
+		}
+
+		units = append(units, unit{
+			taskName: task.Name,
+			template: template,
+			driver:   d,
+		})
+	}
+	ctrl.units = units
+
+	log.Printf("[INFO] (ctrl) driver initialized")
+	return nil
 }
 
 func newDriverFunc(conf *config.Config) (func(*config.Config) driver.Driver, error) {
@@ -101,8 +176,8 @@ func newTaskTemplate(taskName string, conf *config.Config, fileReader func(strin
 		return nil, errors.New("unsupported driver to run tasks")
 	}
 
-	tmplFullpath := path.Join(*conf.Driver.Terraform.WorkingDir, taskName, tftmpl.TFVarsTmplFilename)
-	tfvarsFilepath := strings.TrimRight(tmplFullpath, ".tmpl")
+	tmplFullpath := filepath.Join(*conf.Driver.Terraform.WorkingDir, taskName, tftmpl.TFVarsTmplFilename)
+	tfvarsFilepath := filepath.Join(*conf.Driver.Terraform.WorkingDir, taskName, tftmpl.TFVarsFilename)
 
 	content, err := fileReader(tmplFullpath)
 	if err != nil {

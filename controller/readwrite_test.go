@@ -4,9 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -18,133 +15,7 @@ import (
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
-
-func TestNewReadWrite(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		name        string
-		expectError bool
-		conf        *config.Config
-	}{
-		{
-			"happy path",
-			false,
-			singleTaskConfig(),
-		},
-		{
-			"unreachable consul server", // can take >63s locally
-			true,
-			singleTaskConfig(),
-		},
-		{
-			"unsupported driver error",
-			true,
-			&config.Config{
-				Driver: &config.DriverConfig{},
-			},
-		},
-	}
-	// fake consul server
-	addr := "127.0.0.1:8500"
-	ts := httptest.NewUnstartedServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, `"test"`) }))
-	var err error
-	ts.Listener, err = net.Listen("tcp", addr)
-	require.NoError(t, err)
-	ts.Start()
-	defer ts.Close()
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if tc.expectError == false {
-				tc.conf.Consul.Address = &addr
-				tc.conf.Finalize()
-			}
-			controller, err := NewReadWrite(tc.conf)
-			if tc.expectError {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-			assert.NotNil(t, controller)
-		})
-	}
-}
-
-func TestReadWriteInit(t *testing.T) {
-	t.Parallel()
-
-	conf := singleTaskConfig()
-
-	cases := []struct {
-		name        string
-		expectError bool
-		initErr     error
-		initTaskErr error
-		fileReader  func(string) ([]byte, error)
-		config      *config.Config
-	}{
-		{
-			"error on driver.Init()",
-			true,
-			errors.New("error on driver.Init()"),
-			nil,
-			func(string) ([]byte, error) { return []byte{}, nil },
-			conf,
-		},
-		{
-			"error on driver.InitTask()",
-			true,
-			nil,
-			errors.New("error on driver.InitTask()"),
-			func(string) ([]byte, error) { return []byte{}, nil },
-			conf,
-		},
-		{
-			"error on newTaskTemplates()",
-			true,
-			nil,
-			nil,
-			func(string) ([]byte, error) { return []byte{}, errors.New("error on newTaskTemplates()") },
-			conf,
-		},
-		{
-			"happy path",
-			false,
-			nil,
-			nil,
-			func(string) ([]byte, error) { return []byte{}, nil },
-			conf,
-		},
-	}
-
-	ctx := context.Background()
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			d := new(mocksD.Driver)
-			d.On("Init", mock.Anything).Return(tc.initErr).Once()
-			d.On("InitTask", mock.Anything, mock.Anything).Return(tc.initTaskErr).Once()
-
-			controller := ReadWrite{
-				newDriver:  func(*config.Config) driver.Driver { return d },
-				conf:       tc.config,
-				fileReader: tc.fileReader,
-			}
-
-			err := controller.Init(ctx)
-
-			if tc.expectError {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tc.name)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
 
 func TestReadWriteRun(t *testing.T) {
 	t.Parallel()
@@ -203,10 +74,10 @@ func TestReadWriteRun(t *testing.T) {
 			d := new(mocksD.Driver)
 			d.On("ApplyTask", mock.Anything).Return(tc.applyTaskErr)
 
-			controller := ReadWrite{
+			controller := ReadWrite{baseController: &baseController{
 				watcher:  w,
 				resolver: r,
-			}
+			}}
 			u := unit{template: tmpl, driver: d}
 			ctx := context.Background()
 
@@ -250,13 +121,13 @@ func TestOnce(t *testing.T) {
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
 
-		rw := &ReadWrite{
+		rw := &ReadWrite{baseController: &baseController{
 			watcher:    w,
 			resolver:   r,
 			newDriver:  func(*config.Config) driver.Driver { return d },
 			conf:       conf,
 			fileReader: func(string) ([]byte, error) { return []byte{}, nil },
-		}
+		}}
 
 		ctx := context.Background()
 		rw.Init(ctx)
@@ -308,11 +179,11 @@ func TestReadWriteUnits(t *testing.T) {
 		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
 
 		u := unit{taskName: "foo", template: tmpl, driver: d}
-		controller := ReadWrite{
+		controller := ReadWrite{baseController: &baseController{
 			watcher:  w,
 			resolver: r,
 			units:    []unit{u},
-		}
+		}}
 
 		ctx := context.Background()
 		errCh := controller.runUnits(ctx)
@@ -328,11 +199,11 @@ func TestReadWriteUnits(t *testing.T) {
 		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
 
 		u := unit{taskName: "foo", template: tmpl, driver: d}
-		controller := ReadWrite{
+		controller := ReadWrite{baseController: &baseController{
 			watcher:  w,
 			resolver: r,
 			units:    []unit{u},
-		}
+		}}
 
 		ctx := context.Background()
 		errCh := controller.runUnits(ctx)
@@ -350,10 +221,10 @@ func TestReadWriteRun_context_cancel(t *testing.T) {
 	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil).
 		On("Stop").Return()
 
-	ctl := ReadWrite{
+	ctl := ReadWrite{baseController: &baseController{
 		units:   []unit{},
 		watcher: w,
-	}
+	}}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
