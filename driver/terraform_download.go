@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/version"
 	"github.com/hashicorp/go-checkpoint"
@@ -15,6 +16,53 @@ import (
 )
 
 const fallbackTFVersion = "0.13.2"
+
+// TerraformVersion is the version of Terraform CLI for the Terraform driver.
+var TerraformVersion string
+
+// InstallTerraform installs the Terraform binary to the configured path.
+// If an existing Terraform exists in the path, it is checked for compatibility.
+func InstallTerraform(ctx context.Context, path, workingDir string) error {
+	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(workingDir, workingDirPerms); err != nil {
+			log.Printf("[ERR] (driver.terraform) error creating base work directory: %s", err)
+			return err
+		}
+	}
+
+	if isTFInstalled(path) {
+		tfVersion, compatible, err := isTFCompatible(ctx, workingDir, path)
+		if err != nil {
+			if strings.Contains(err.Error(), "exec format error") {
+				return errIncompatibleTerraformBinary
+			}
+			return err
+		}
+
+		// Set the global variable to the installed version
+		version := tfVersion.String()
+		TerraformVersion = version
+		if !compatible {
+			return errUnsupportedTerraformVersion
+		}
+
+		log.Printf("[INFO] (driver.terraform) skipping install, terraform %s "+
+			"already exists at path %s/terraform", version, path)
+		return nil
+	}
+
+	log.Printf("[INFO] (driver.terraform) installing terraform to path '%s'", path)
+	version, err := installTerraform(ctx, path)
+	if err != nil {
+		log.Printf("[ERR] (driver.terraform) error installing terraform: %s", err)
+		return err
+	}
+	log.Printf("[INFO] (driver.terraform) successfully installed terraform")
+
+	// Set the global variable to the installed version
+	TerraformVersion = version
+	return nil
+}
 
 // isTFInstalled checks to see if terraform already exists at path.
 func isTFInstalled(tfPath string) bool {
@@ -67,15 +115,15 @@ func isTFCompatible(ctx context.Context, workingDir, tfPath string) (*goVersion.
 	return tfVersion, true, nil
 }
 
-// install attempts to install the latest version of Terraform into the path.
-// If the latest version is outside of the known supported range for Sync,
-// the fall back version 0.13.2 is downloaded.
-func (tf *Terraform) install(ctx context.Context) error {
+// installTerraform attempts to install the latest version of Terraform into
+// the path. If the latest version is outside of the known supported range for
+//  Sync, the fall back version 0.13.2 is downloaded.
+func installTerraform(ctx context.Context, path string) (string, error) {
 	resp, err := checkpoint.Check(&checkpoint.CheckParams{Product: "terraform"})
 	if err != nil {
 		log.Printf("[ERR] (driver.terraform) error fetching Terraform versions "+
 			"from Checkpoint: %s", err)
-		return err
+		return "", err
 	}
 
 	var v string
@@ -97,15 +145,14 @@ func (tf *Terraform) install(ctx context.Context) error {
 	}
 
 	// Create path if doesn't already exist
-	os.MkdirAll(tf.path, os.ModePerm)
+	os.MkdirAll(path, os.ModePerm)
 
-	path, err := tfinstall.ExactVersion(v, tf.path).ExecPath(ctx)
+	installedPath, err := tfinstall.ExactVersion(v, path).ExecPath(ctx)
 	if err != nil {
 		log.Printf("[ERR] (driver.terraform) error installing terraform")
-		return err
+		return "", err
 	}
 
-	tf.version = v
-	log.Printf("[DEBUG] (driver.terraform) successfully installed terraform %s: %s", v, path)
-	return nil
+	log.Printf("[DEBUG] (driver.terraform) successfully installed terraform %s: %s", v, installedPath)
+	return v, nil
 }

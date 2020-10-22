@@ -7,11 +7,8 @@ import "context"
 // Driver describes the interface for using an Sync driver to carry out changes
 // downstream to update network infrastructure.
 type Driver interface {
-	// Init initializes the driver and environment
-	Init(ctx context.Context) error
-
 	// InitTask initializes the task that the driver executes
-	InitTask(task Task, force bool) error
+	InitTask(ctx context.Context, force bool) error
 
 	// InspectTask inspects for any differences pertaining to the task between
 	// the state of Consul and network infrastructure

@@ -94,14 +94,6 @@ func TestBaseControllerInit(t *testing.T) {
 		config      *config.Config
 	}{
 		{
-			"error on driver.Init()",
-			true,
-			errors.New("error on driver.Init()"),
-			nil,
-			func(string) ([]byte, error) { return []byte{}, nil },
-			conf,
-		},
-		{
 			"error on driver.InitTask()",
 			true,
 			nil,
@@ -133,11 +125,12 @@ func TestBaseControllerInit(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			d := new(mocksD.Driver)
-			d.On("Init", mock.Anything).Return(tc.initErr).Once()
 			d.On("InitTask", mock.Anything, mock.Anything).Return(tc.initTaskErr).Once()
 
 			baseCtrl := baseController{
-				newDriver:  func(*config.Config) driver.Driver { return d },
+				newDriver: func(*config.Config, driver.Task) (driver.Driver, error) {
+					return d, nil
+				},
 				conf:       tc.config,
 				fileReader: tc.fileReader,
 			}

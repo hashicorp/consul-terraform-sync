@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
-	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/pkg/errors"
@@ -38,21 +37,22 @@ var (
 // Terraform is an Sync driver that uses the Terraform CLI to interface with
 // low-level network infrastructure.
 type Terraform struct {
-	log               bool
-	persistLog        bool
-	path              string
-	workingDir        string
-	worker            *worker
+	task              Task
 	backend           map[string]interface{}
 	requiredProviders map[string]interface{}
-	postApply         handler.Handler
 
-	version    string
+	workingDir string
+	worker     *worker
 	clientType string
+	client     client.Client
+	postApply  handler.Handler
+
+	inited bool
 }
 
 // TerraformConfig configures the Terraform driver
 type TerraformConfig struct {
+	Task              Task
 	Log               bool
 	PersistLog        bool
 	Path              string
@@ -65,71 +65,52 @@ type TerraformConfig struct {
 }
 
 // NewTerraform configures and initializes a new Terraform driver
-func NewTerraform(config *TerraformConfig) *Terraform {
+func NewTerraform(config *TerraformConfig) (*Terraform, error) {
+	if _, err := os.Stat(config.WorkingDir); os.IsNotExist(err) {
+		if err := os.Mkdir(config.WorkingDir, workingDirPerms); err != nil {
+			log.Printf("[ERR] (driver.terraform) error creating task work directory: %s", err)
+			return nil, err
+		}
+	}
+
+	tfClient, err := newClient(&clientConfig{
+		task:       config.Task,
+		clientType: config.ClientType,
+		log:        config.Log,
+		persistLog: config.PersistLog,
+		path:       config.Path,
+		workingDir: config.WorkingDir,
+	})
+	if err != nil {
+		log.Printf("[ERR] (driver.terraform) init client type '%s' error: %s", config.ClientType, err)
+		return nil, err
+	}
+
+	handler, err := getTerraformHandlers(config.Task)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Terraform{
-		log:               config.Log,
-		persistLog:        config.PersistLog,
-		path:              config.Path,
-		workingDir:        config.WorkingDir,
+		task:              config.Task,
 		backend:           config.Backend,
 		requiredProviders: config.RequiredProviders,
-		clientType:        config.ClientType,
-	}
-}
-
-// Init initializes the Terraform local environment. The Terraform binary is
-// installed to the configured path.
-func (tf *Terraform) Init(ctx context.Context) error {
-	if _, err := os.Stat(tf.workingDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(tf.workingDir, workingDirPerms); err != nil {
-			log.Printf("[ERR] (driver.terraform) error creating base work directory: %s", err)
-			return err
-		}
-	}
-
-	if isTFInstalled(tf.path) {
-		tfVersion, compatible, err := isTFCompatible(ctx, tf.workingDir, tf.path)
-		if err != nil {
-			if strings.Contains(err.Error(), "exec format error") {
-				return errIncompatibleTerraformBinary
-			}
-			return err
-		}
-
-		if !compatible {
-			return errUnsupportedTerraformVersion
-		}
-
-		tf.version = tfVersion.String()
-		log.Printf("[INFO] (driver.terraform) skipping install, terraform %s "+
-			"already exists at path %s/terraform", tf.version, tf.path)
-		return nil
-	}
-
-	log.Printf("[INFO] (driver.terraform) installing terraform to path '%s'", tf.path)
-	if err := tf.install(ctx); err != nil {
-		log.Printf("[ERR] (driver.terraform) error installing terraform: %s", err)
-		return err
-	}
-	log.Printf("[INFO] (driver.terraform) successfully installed terraform")
-	return nil
+		workingDir:        config.WorkingDir,
+		worker:            newWorker(defaultRetry),
+		client:            tfClient,
+		postApply:         handler,
+	}, nil
 }
 
 // Version returns the Terraform CLI version for the Terraform driver.
 func (tf *Terraform) Version() string {
-	return tf.version
+	return TerraformVersion
 }
 
 // InitTask initializes the task by creating the Terraform root module, creating
 // client to execute task, and retrieving post-Terraform apply handlers
-func (tf *Terraform) InitTask(task Task, force bool) error {
-	modulePath := filepath.Join(tf.workingDir, task.Name)
-	if _, err := os.Stat(modulePath); os.IsNotExist(err) {
-		if err := os.Mkdir(modulePath, workingDirPerms); err != nil {
-			log.Printf("[ERR] (driver.terraform) error creating task work directory: %s", err)
-			return err
-		}
-	}
+func (tf *Terraform) InitTask(ctx context.Context, force bool) error {
+	task := tf.task
 
 	services := make([]*tftmpl.Service, len(task.Services))
 	for i, s := range task.Services {
@@ -174,30 +155,9 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 	}
 	input.Init()
 
-	if err := tftmpl.InitRootModule(&input, modulePath, filePerms, force); err != nil {
+	if err := tftmpl.InitRootModule(&input, tf.workingDir, filePerms, force); err != nil {
 		return err
 	}
-
-	worker, err := newWorker(&workerConfig{
-		task:       task,
-		clientType: tf.clientType,
-		log:        tf.log,
-		persistLog: tf.persistLog,
-		path:       tf.path,
-		workingDir: tf.workingDir,
-		retry:      defaultRetry,
-	})
-	if err != nil {
-		log.Printf("[ERR] (driver.terraform) init worker error: %s", err)
-		return err
-	}
-	tf.worker = worker
-
-	h, err := getTerraformHandlers(task)
-	if err != nil {
-		return err
-	}
-	tf.postApply = h
 
 	return nil
 }
@@ -205,24 +165,17 @@ func (tf *Terraform) InitTask(task Task, force bool) error {
 // InspectTask inspects for any differences pertaining to the task between
 // the state of Consul and network infrastructure using the Terraform plan command
 func (tf *Terraform) InspectTask(ctx context.Context) error {
-	w := tf.worker
-	taskName := w.task.Name
+	taskName := tf.task.Name
 
-	if w.inited {
-		log.Printf("[TRACE] (driver.terraform) workspace for task already "+
-			"initialized, skipping for '%s'", taskName)
-	} else {
-		log.Printf("[TRACE] (driver.terraform) initializing workspace '%s'", taskName)
-		if err := w.init(ctx); err != nil {
-			log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
-				"skipping plan for '%s'", taskName)
-			return errors.Wrap(err, fmt.Sprintf("error tf-init for '%s'", taskName))
-		}
+	if err := tf.init(ctx); err != nil {
+		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
+			"skipping plan for '%s'", taskName)
+		return err
 	}
 
 	log.Printf("[TRACE] (driver.terraform) plan '%s'", taskName)
 	desc := fmt.Sprintf("Plan %s", taskName)
-	if err := w.withRetry(ctx, w.client.Plan, desc); err != nil {
+	if err := tf.worker.withRetry(ctx, tf.client.Plan, desc); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error tf-plan for '%s'", taskName))
 	}
 
@@ -231,24 +184,17 @@ func (tf *Terraform) InspectTask(ctx context.Context) error {
 
 // ApplyTask applies the task changes.
 func (tf *Terraform) ApplyTask(ctx context.Context) error {
-	w := tf.worker
-	taskName := w.task.Name
+	taskName := tf.task.Name
 
-	if w.inited {
-		log.Printf("[TRACE] (driver.terraform) workspace for task already "+
-			"initialized, skipping for '%s'", taskName)
-	} else {
-		log.Printf("[TRACE] (driver.terraform) initializing workspace '%s'", taskName)
-		if err := w.init(ctx); err != nil {
-			log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
-				"skipping apply for '%s'", taskName)
-			return errors.Wrap(err, fmt.Sprintf("error tf-init for '%s'", taskName))
-		}
+	if err := tf.init(ctx); err != nil {
+		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
+			"skipping apply for '%s'", taskName)
+		return err
 	}
 
 	log.Printf("[TRACE] (driver.terraform) apply '%s'", taskName)
 	desc := fmt.Sprintf("Apply %s", taskName)
-	if err := w.withRetry(ctx, w.client.Apply, desc); err != nil {
+	if err := tf.worker.withRetry(ctx, tf.client.Apply, desc); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error tf-apply for '%s'", taskName))
 	}
 
@@ -260,6 +206,25 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+// init initializes the Terraform workspace if needed
+func (tf *Terraform) init(ctx context.Context) error {
+	taskName := tf.task.Name
+
+	if tf.inited {
+		log.Printf("[TRACE] (driver.terraform) workspace for task already "+
+			"initialized, skipping for '%s'", taskName)
+		return nil
+	}
+
+	log.Printf("[TRACE] (driver.terraform) initializing workspace '%s'", taskName)
+	desc := fmt.Sprintf("Init %s", taskName)
+	if err := tf.worker.withRetry(ctx, tf.client.Init, desc); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error tf-init for '%s'", taskName))
+	}
+	tf.inited = true
 	return nil
 }
 
