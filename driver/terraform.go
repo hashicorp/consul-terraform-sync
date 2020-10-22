@@ -215,7 +215,7 @@ func (tf *Terraform) InspectTask(ctx context.Context) error {
 		log.Printf("[TRACE] (driver.terraform) initializing workspace '%s'", taskName)
 		if err := w.init(ctx); err != nil {
 			log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
-				"skipping apply for '%s'", taskName)
+				"skipping plan for '%s'", taskName)
 			return errors.Wrap(err, fmt.Sprintf("error tf-init for '%s'", taskName))
 		}
 	}

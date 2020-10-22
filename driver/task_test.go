@@ -134,7 +134,7 @@ func TestWorkerInit(t *testing.T) {
 	}
 }
 
-func TestWorkerApply(t *testing.T) {
+func TestWithRetry_client(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
