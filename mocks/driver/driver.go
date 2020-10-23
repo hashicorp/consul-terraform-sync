@@ -5,7 +5,6 @@ package mocks
 import (
 	context "context"
 
-	driver "github.com/hashicorp/consul-terraform-sync/driver"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -28,27 +27,13 @@ func (_m *Driver) ApplyTask(ctx context.Context) error {
 	return r0
 }
 
-// Init provides a mock function with given fields: ctx
-func (_m *Driver) Init(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// InitTask provides a mock function with given fields: force
+func (_m *Driver) InitTask(force bool) error {
+	ret := _m.Called(force)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// InitTask provides a mock function with given fields: task, force
-func (_m *Driver) InitTask(task driver.Task, force bool) error {
-	ret := _m.Called(task, force)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(driver.Task, bool) error); ok {
-		r0 = rf(task, force)
+	if rf, ok := ret.Get(0).(func(bool) error); ok {
+		r0 = rf(force)
 	} else {
 		r0 = ret.Error(0)
 	}

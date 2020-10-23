@@ -117,20 +117,23 @@ func TestOnce(t *testing.T) {
 		w.On("WaitCh", mock.Anything).Return(errChRc).Once()
 
 		d := new(mocksD.Driver)
-		d.On("Init", mock.Anything).Return(nil).Once()
-		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
+		d.On("InitTask", mock.Anything).Return(nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
 
 		rw := &ReadWrite{baseController: &baseController{
-			watcher:    w,
-			resolver:   r,
-			newDriver:  func(*config.Config) driver.Driver { return d },
+			watcher:  w,
+			resolver: r,
+			newDriver: func(*config.Config, driver.Task) (driver.Driver, error) {
+				return d, nil
+			},
 			conf:       conf,
 			fileReader: func(string) ([]byte, error) { return []byte{}, nil },
 		}}
 
 		ctx := context.Background()
-		rw.Init(ctx)
+		err := rw.Init(ctx)
+		assert.NoError(t, err)
+
 		// insert mock template into units
 		for i, u := range rw.units {
 			u.template = tmpl

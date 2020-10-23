@@ -40,7 +40,7 @@ type unit struct {
 
 type baseController struct {
 	conf       *config.Config
-	newDriver  func(*config.Config) driver.Driver
+	newDriver  func(*config.Config, driver.Task) (driver.Driver, error)
 	fileReader func(string) ([]byte, error)
 	units      []unit
 	watcher    watcher
@@ -74,13 +74,20 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	units := make([]unit, 0, len(tasks))
 
 	for _, task := range tasks {
-		d := ctrl.newDriver(ctrl.conf)
-		if err := d.Init(ctx); err != nil {
-			log.Printf("[ERR] (ctrl) error initializing driver: %s", err)
+		select {
+		case <-ctx.Done():
+			// Stop initializing remaining tasks if context has stopped.
+			return ctx.Err()
+		default:
+		}
+
+		log.Printf("[DEBUG] (ctrl) initializing task %q", task.Name)
+		d, err := ctrl.newDriver(ctrl.conf, task)
+		if err != nil {
 			return err
 		}
-		log.Printf("[DEBUG] (ctrl) initializing task %q", task.Name)
-		err := d.InitTask(task, true)
+
+		err = d.InitTask(true)
 		if err != nil {
 			log.Printf("[ERR] (ctrl) error initializing task %q: %s", task.Name, err)
 			return err
@@ -105,21 +112,34 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	return nil
 }
 
-func newDriverFunc(conf *config.Config) (func(*config.Config) driver.Driver, error) {
+// InstallDriver installs necessary drivers based on user configuration.
+func InstallDriver(ctx context.Context, conf *config.Config) error {
 	if conf.Driver.Terraform != nil {
-		log.Printf("[INFO] (ctrl) setting up Terraform driver")
+		tfConf := *conf.Driver.Terraform
+		return driver.InstallTerraform(ctx, *tfConf.Path, *tfConf.WorkingDir)
+	}
+	return errors.New("unsupported driver")
+}
+
+// newDriverFunc is a constructor abstraction for all of supported drivers
+func newDriverFunc(conf *config.Config) (
+	func(conf *config.Config, task driver.Task) (driver.Driver, error), error) {
+	if conf.Driver.Terraform != nil {
 		return newTerraformDriver, nil
 	}
 	return nil, errors.New("unsupported driver")
 }
 
-func newTerraformDriver(conf *config.Config) driver.Driver {
+// newTerraformDriver maps user configuration to initialize a Terraform driver
+// for a task
+func newTerraformDriver(conf *config.Config, task driver.Task) (driver.Driver, error) {
 	tfConf := *conf.Driver.Terraform
 	return driver.NewTerraform(&driver.TerraformConfig{
+		Task:              task,
 		Log:               *tfConf.Log,
 		PersistLog:        *tfConf.PersistLog,
 		Path:              *tfConf.Path,
-		WorkingDir:        *tfConf.WorkingDir,
+		WorkingDir:        filepath.Join(*tfConf.WorkingDir, task.Name),
 		Backend:           tfConf.Backend,
 		RequiredProviders: tfConf.RequiredProviders,
 		ClientType:        *conf.ClientType,

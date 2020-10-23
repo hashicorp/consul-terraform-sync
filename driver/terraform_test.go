@@ -80,13 +80,13 @@ func TestApplyTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyReturn).Once()
 
 			tf := &Terraform{
+				task: Task{Name: "ApplyTaskTest"},
 				worker: &worker{
-					client: c,
-					task:   Task{Name: "ApplyTaskTest"},
-					inited: tc.inited,
 					random: rand.New(rand.NewSource(1)),
 				},
+				client:    c,
 				postApply: tc.postApply,
+				inited:    tc.inited,
 			}
 
 			err := tf.ApplyTask(ctx)

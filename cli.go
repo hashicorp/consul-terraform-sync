@@ -150,6 +150,14 @@ func (cli *CLI) Run(args []string) int {
 	log.Printf("[INFO] %s", version.GetHumanVersion())
 	log.Printf("[DEBUG] %s", conf.GoString())
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if err := controller.InstallDriver(ctx, conf); err != nil {
+		log.Printf("[ERR] (cli) error installing driver: %s", err)
+		return ExitCodeDriverError
+	}
+
 	if len(inspectTasks) != 0 {
 		isInspect = true
 		conf.Tasks, err = config.FilterTasks(conf.Tasks, inspectTasks)
@@ -174,9 +182,6 @@ func (cli *CLI) Run(args []string) int {
 		log.Printf("[ERR] (cli) error setting up controller: %s", err)
 		return ExitCodeConfigError
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	errCh := make(chan error, 1)
 	exitCh := make(chan struct{}, 1)
@@ -214,7 +219,7 @@ func (cli *CLI) Run(args []string) int {
 			}
 		}
 
-		log.Printf("[INFO] (cli) running controller")
+		log.Printf("[INFO] (cli) running controller in daemon mode")
 		if err := ctrl.Run(ctx); err != nil {
 			if err == context.Canceled {
 				exitCh <- struct{}{}
