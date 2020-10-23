@@ -28,7 +28,7 @@ type Task struct {
 	Version      string
 }
 
-// workerConfig configures a worker
+// clientConfig configures a driver client for a task
 type clientConfig struct {
 	task       Task
 	clientType string

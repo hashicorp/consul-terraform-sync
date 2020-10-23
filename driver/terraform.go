@@ -43,7 +43,6 @@ type Terraform struct {
 
 	workingDir string
 	worker     *worker
-	clientType string
 	client     client.Client
 	postApply  handler.Handler
 
@@ -64,7 +63,8 @@ type TerraformConfig struct {
 	ClientType string
 }
 
-// NewTerraform configures and initializes a new Terraform driver
+// NewTerraform configures and initializes a new Terraform driver for a task.
+// The underlying Terraform CLI client and out-of-band handlers are prepared.
 func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 	if _, err := os.Stat(config.WorkingDir); os.IsNotExist(err) {
 		if err := os.Mkdir(config.WorkingDir, workingDirPerms); err != nil {
@@ -107,8 +107,8 @@ func (tf *Terraform) Version() string {
 	return TerraformVersion
 }
 
-// InitTask initializes the task by creating the Terraform root module, creating
-// client to execute task, and retrieving post-Terraform apply handlers
+// InitTask initializes the task by creating the Terraform root module and related
+// files to execute on.
 func (tf *Terraform) InitTask(ctx context.Context, force bool) error {
 	task := tf.task
 

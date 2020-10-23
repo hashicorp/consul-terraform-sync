@@ -10,9 +10,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// worker executes a unit of work and has a one-to-one relationship with a client
-// that will be responsible for executing the work. Currently worker is not safe for
-// concurrent use by multiple goroutines
+// worker manages execution of a function and abstracts error handling and
+// retries for the function from the caller and function implementation.
 type worker struct {
 	random *rand.Rand
 	retry  int

@@ -105,6 +105,7 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	return nil
 }
 
+// InstallDriver installs necessary drivers based on user configuration.
 func InstallDriver(ctx context.Context, conf *config.Config) error {
 	if conf.Driver.Terraform != nil {
 		tfConf := *conf.Driver.Terraform
@@ -113,6 +114,7 @@ func InstallDriver(ctx context.Context, conf *config.Config) error {
 	return errors.New("unsupported driver")
 }
 
+// newDriverFunc is a constructor abstraction for all of supported drivers
 func newDriverFunc(conf *config.Config) (
 	func(conf *config.Config, task driver.Task) (driver.Driver, error), error) {
 	if conf.Driver.Terraform != nil {
@@ -121,6 +123,8 @@ func newDriverFunc(conf *config.Config) (
 	return nil, errors.New("unsupported driver")
 }
 
+// newTerraformDriver maps user configuration to initialize a Terraform driver
+// for a task
 func newTerraformDriver(conf *config.Config, task driver.Task) (driver.Driver, error) {
 	tfConf := *conf.Driver.Terraform
 	return driver.NewTerraform(&driver.TerraformConfig{
