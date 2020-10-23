@@ -74,13 +74,20 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	units := make([]unit, 0, len(tasks))
 
 	for _, task := range tasks {
+		select {
+		case <-ctx.Done():
+			// Stop initializing remaining tasks if context has stopped.
+			return ctx.Err()
+		default:
+		}
+
 		log.Printf("[DEBUG] (ctrl) initializing task %q", task.Name)
 		d, err := ctrl.newDriver(ctrl.conf, task)
 		if err != nil {
 			return err
 		}
 
-		err = d.InitTask(ctx, true)
+		err = d.InitTask(true)
 		if err != nil {
 			log.Printf("[ERR] (ctrl) error initializing task %q: %s", task.Name, err)
 			return err

@@ -117,7 +117,7 @@ func TestOnce(t *testing.T) {
 		w.On("WaitCh", mock.Anything).Return(errChRc).Once()
 
 		d := new(mocksD.Driver)
-		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
+		d.On("InitTask", mock.Anything).Return(nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
 
 		rw := &ReadWrite{baseController: &baseController{

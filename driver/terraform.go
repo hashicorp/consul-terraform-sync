@@ -109,7 +109,7 @@ func (tf *Terraform) Version() string {
 
 // InitTask initializes the task by creating the Terraform root module and related
 // files to execute on.
-func (tf *Terraform) InitTask(ctx context.Context, force bool) error {
+func (tf *Terraform) InitTask(force bool) error {
 	task := tf.task
 
 	services := make([]*tftmpl.Service, len(task.Services))

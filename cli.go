@@ -219,7 +219,7 @@ func (cli *CLI) Run(args []string) int {
 			}
 		}
 
-		log.Printf("[INFO] (cli) running controller")
+		log.Printf("[INFO] (cli) running controller in daemon mode")
 		if err := ctrl.Run(ctx); err != nil {
 			if err == context.Canceled {
 				exitCh <- struct{}{}

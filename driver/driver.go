@@ -8,7 +8,7 @@ import "context"
 // downstream to update network infrastructure.
 type Driver interface {
 	// InitTask initializes the task that the driver executes
-	InitTask(ctx context.Context, force bool) error
+	InitTask(force bool) error
 
 	// InspectTask inspects for any differences pertaining to the task between
 	// the state of Consul and network infrastructure
