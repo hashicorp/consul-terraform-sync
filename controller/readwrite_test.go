@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestReadWriteRun(t *testing.T) {
+func TestReadWrite_CheckApply(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -26,7 +26,7 @@ func TestReadWriteRun(t *testing.T) {
 		applyTaskErr      error
 		resolverRunErr    error
 		templateRenderErr error
-		watcherWaitErr    error
+		taskName          string
 		config            *config.Config
 	}{
 		{
@@ -35,7 +35,7 @@ func TestReadWriteRun(t *testing.T) {
 			nil,
 			errors.New("error on resolver.Run()"),
 			nil,
-			nil,
+			"task_apply",
 			singleTaskConfig(),
 		},
 		{
@@ -44,7 +44,25 @@ func TestReadWriteRun(t *testing.T) {
 			errors.New("error on driver.ApplyTask()"),
 			nil,
 			nil,
+			"task_apply",
+			singleTaskConfig(),
+		},
+		{
+			"error on template.Render()",
+			true,
 			nil,
+			nil,
+			errors.New("error on template.Render()"),
+			"task_apply",
+			singleTaskConfig(),
+		},
+		{
+			"error creating new event",
+			true,
+			nil,
+			nil,
+			nil,
+			"",
 			singleTaskConfig(),
 		},
 		{
@@ -53,7 +71,7 @@ func TestReadWriteRun(t *testing.T) {
 			nil,
 			nil,
 			nil,
-			nil,
+			"task_apply",
 			singleTaskConfig(),
 		},
 	}
@@ -68,17 +86,13 @@ func TestReadWriteRun(t *testing.T) {
 			r.On("Run", mock.Anything, mock.Anything).
 				Return(hcat.ResolveEvent{Complete: true}, tc.resolverRunErr)
 
-			w := new(mocks.Watcher)
-			w.On("Wait", mock.Anything).Return(tc.watcherWaitErr)
-
 			d := new(mocksD.Driver)
 			d.On("ApplyTask", mock.Anything).Return(tc.applyTaskErr)
 
 			controller := ReadWrite{baseController: &baseController{
-				watcher:  w,
 				resolver: r,
 			}}
-			u := unit{template: tmpl, driver: d}
+			u := unit{taskName: tc.taskName, template: tmpl, driver: d}
 			ctx := context.Background()
 
 			_, err := controller.checkApply(ctx, u)

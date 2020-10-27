@@ -28,6 +28,26 @@ type Task struct {
 	Version      string
 }
 
+// ProviderNames returns the list of providers that the task has configured
+func (t *Task) ProviderNames() []string {
+	names := make([]string, len(t.Providers))
+	for ix, p := range t.Providers {
+		for name := range p {
+			names[ix] = name
+		}
+	}
+	return names
+}
+
+// ServiceNames returns the list of services that the task has configured
+func (t *Task) ServiceNames() []string {
+	names := make([]string, len(t.Services))
+	for ix, s := range t.Services {
+		names[ix] = s.Name
+	}
+	return names
+}
+
 // clientConfig configures a driver client for a task
 type clientConfig struct {
 	task       Task

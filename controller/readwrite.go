@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/event"
 )
 
 var _ Controller = (*ReadWrite)(nil)
@@ -139,11 +140,23 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 			taskName, err)
 	}
 
+	ev, err := event.NewEvent(taskName, &event.Config{
+		Providers: u.providers,
+		Services:  u.services,
+		Source:    u.source,
+	})
+	if err != nil {
+		return false, fmt.Errorf("error creating event for task %s: %s",
+			taskName, err)
+	}
+	defer ev.End(err)
+
 	// result.Complete is only `true` if the template has new data that has been
 	// completely fetched. Rendering a template for the first time may take several
 	// cycles to load all the dependencies asynchronously.
 	if result.Complete {
 		log.Printf("[DEBUG] (ctrl) change detected for task %s", taskName)
+		ev.Start()
 		rendered, err := tmpl.Render(result.Contents)
 		if err != nil {
 			return false, fmt.Errorf("error rendering template for task %s: %s",
@@ -153,7 +166,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 
 		d := u.driver
 		log.Printf("[INFO] (ctrl) executing task %s", taskName)
-		if err := d.ApplyTask(ctx); err != nil {
+		if err = d.ApplyTask(ctx); err != nil {
 			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
 		}
 

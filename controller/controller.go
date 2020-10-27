@@ -27,6 +27,7 @@ type Controller interface {
 	Run(ctx context.Context) error
 }
 
+// Oncer describes the interface a controller that can run in once mode
 type Oncer interface {
 	Once(ctx context.Context) error
 }
@@ -36,6 +37,10 @@ type unit struct {
 	taskName string
 	driver   driver.Driver
 	template template
+
+	providers []string
+	services  []string
+	source    string
 }
 
 type baseController struct {
@@ -101,9 +106,12 @@ func (ctrl *baseController) init(ctx context.Context) error {
 		}
 
 		units = append(units, unit{
-			taskName: task.Name,
-			template: template,
-			driver:   d,
+			taskName:  task.Name,
+			template:  template,
+			driver:    d,
+			providers: task.ProviderNames(),
+			services:  task.ServiceNames(),
+			source:    task.Source,
 		})
 	}
 	ctrl.units = units
