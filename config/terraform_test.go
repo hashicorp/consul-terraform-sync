@@ -507,6 +507,13 @@ func TestTerraformValidate(t *testing.T) {
 			&TerraformConfig{Backend: map[string]interface{}{"local": nil}},
 			true,
 		}, {
+			"valid kubernetes backend",
+			&TerraformConfig{Backend: map[string]interface{}{"kubernetes": map[string]interface{}{
+				"secret_suffix":    "state",
+				"load_config_file": true,
+			}}},
+			true,
+		}, {
 			"backend_invalid",
 			&TerraformConfig{Backend: map[string]interface{}{"unsupported": nil}},
 			false,

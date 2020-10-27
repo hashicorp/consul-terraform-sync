@@ -238,9 +238,20 @@ func (c *TerraformConfig) Validate() error {
 		return fmt.Errorf("missing Terraform backend configuration")
 	}
 
+	// Backend is only validated for supported backend label. The backend
+	// configuration options are verified at run time. The allowed backends
+	// for state store have state locking and workspace suppport.
 	for k := range c.Backend {
 		switch k {
-		case "consul", "local":
+		case "azurerm",
+			"consul",
+			"cos",
+			"gcs",
+			"kubernetes",
+			"local",
+			"manta",
+			"pg",
+			"s3":
 		default:
 			return fmt.Errorf("unsupported Terraform backend by Sync %q", k)
 		}
