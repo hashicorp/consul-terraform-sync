@@ -116,7 +116,12 @@ func (ctrl *baseController) init(ctx context.Context) error {
 func InstallDriver(ctx context.Context, conf *config.Config) error {
 	if conf.Driver.Terraform != nil {
 		tfConf := *conf.Driver.Terraform
-		return driver.InstallTerraform(ctx, *tfConf.Path, *tfConf.WorkingDir)
+		err := driver.InstallTerraform(ctx, *tfConf.Path, *tfConf.WorkingDir)
+		if err != nil {
+			return err
+		}
+
+		return tfConf.CheckVersionCompatibility(driver.TerraformVersion)
 	}
 	return errors.New("unsupported driver")
 }

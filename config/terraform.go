@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"path"
+
+	"github.com/hashicorp/go-version"
 )
 
 const (
@@ -294,4 +296,28 @@ func mergeMaps(c, o map[string]interface{}) map[string]interface{} {
 	}
 
 	return r
+}
+
+// CheckVersionCompatibility checks compatibility of the version of Terraform
+// with features of Consul Terraform Sync
+func (c TerraformConfig) CheckVersionCompatibility(versionStr string) error {
+	// https://github.com/hashicorp/terraform/issues/23121
+	if _, ok := c.Backend["pg"]; ok {
+		v, err := version.NewSemver(versionStr)
+		if err != nil {
+			return err
+		}
+
+		constraint, err := version.NewConstraint(">= 0.14")
+		if err != nil {
+			return err
+		}
+
+		if !constraint.Check(v) {
+			return fmt.Errorf("Consul-Terraform-Sync does not support pg " +
+				"backend in automation with Terraform <= 0.13")
+		}
+	}
+
+	return nil
 }
