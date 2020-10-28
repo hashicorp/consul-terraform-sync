@@ -482,7 +482,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 	}
 }
 
-func TestTerraformValidate(t *testing.T) {
+func TestTerraformConfig_Validate(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -507,6 +507,13 @@ func TestTerraformValidate(t *testing.T) {
 			&TerraformConfig{Backend: map[string]interface{}{"local": nil}},
 			true,
 		}, {
+			"valid kubernetes backend",
+			&TerraformConfig{Backend: map[string]interface{}{"kubernetes": map[string]interface{}{
+				"secret_suffix":    "state",
+				"load_config_file": true,
+			}}},
+			true,
+		}, {
 			"backend_invalid",
 			&TerraformConfig{Backend: map[string]interface{}{"unsupported": nil}},
 			false,
@@ -517,6 +524,49 @@ func TestTerraformValidate(t *testing.T) {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
 			err := tc.i.Validate()
 			if tc.isValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestTerraformConfig_CheckVersionCompatibility(t *testing.T) {
+	cases := []struct {
+		name       string
+		version    string
+		config     TerraformConfig
+		compatible bool
+	}{
+		{
+			"valid",
+			"0.13.2",
+			TerraformConfig{
+				Backend: make(map[string]interface{}),
+			},
+			true,
+		}, {
+			"pg backend compatible",
+			"0.14.0",
+			TerraformConfig{
+				Backend: map[string]interface{}{"pg": nil},
+			},
+			true,
+		}, {
+			"pg backend incompatible",
+			"0.13.5",
+			TerraformConfig{
+				Backend: map[string]interface{}{"pg": nil},
+			},
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.config.CheckVersionCompatibility(tc.version)
+			if tc.compatible {
 				assert.NoError(t, err)
 			} else {
 				assert.Error(t, err)

@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"path"
+
+	"github.com/hashicorp/go-version"
 )
 
 const (
@@ -238,9 +240,20 @@ func (c *TerraformConfig) Validate() error {
 		return fmt.Errorf("missing Terraform backend configuration")
 	}
 
+	// Backend is only validated for supported backend label. The backend
+	// configuration options are verified at run time. The allowed backends
+	// for state store have state locking and workspace suppport.
 	for k := range c.Backend {
 		switch k {
-		case "consul", "local":
+		case "azurerm",
+			"consul",
+			"cos",
+			"gcs",
+			"kubernetes",
+			"local",
+			"manta",
+			"pg",
+			"s3":
 		default:
 			return fmt.Errorf("unsupported Terraform backend by Sync %q", k)
 		}
@@ -283,4 +296,28 @@ func mergeMaps(c, o map[string]interface{}) map[string]interface{} {
 	}
 
 	return r
+}
+
+// CheckVersionCompatibility checks compatibility of the version of Terraform
+// with features of Consul Terraform Sync
+func (c TerraformConfig) CheckVersionCompatibility(versionStr string) error {
+	// https://github.com/hashicorp/terraform/issues/23121
+	if _, ok := c.Backend["pg"]; ok {
+		v, err := version.NewSemver(versionStr)
+		if err != nil {
+			return err
+		}
+
+		constraint, err := version.NewConstraint(">= 0.14")
+		if err != nil {
+			return err
+		}
+
+		if !constraint.Check(v) {
+			return fmt.Errorf("Consul-Terraform-Sync does not support pg " +
+				"backend in automation with Terraform <= 0.13")
+		}
+	}
+
+	return nil
 }
