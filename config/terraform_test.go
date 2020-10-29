@@ -85,6 +85,30 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{},
 		},
 		{
+			"version_overrides",
+			&TerraformConfig{Version: String("version")},
+			&TerraformConfig{Version: String("")},
+			&TerraformConfig{Version: String("")},
+		},
+		{
+			"version_empty_one",
+			&TerraformConfig{Version: String("version")},
+			&TerraformConfig{},
+			&TerraformConfig{Version: String("version")},
+		},
+		{
+			"version_empty_two",
+			&TerraformConfig{},
+			&TerraformConfig{Version: String("version")},
+			&TerraformConfig{Version: String("version")},
+		},
+		{
+			"version_same",
+			&TerraformConfig{Version: String("version")},
+			&TerraformConfig{Version: String("version")},
+			&TerraformConfig{Version: String("version")},
+		},
+		{
 			"log_overrides",
 			&TerraformConfig{Log: Bool(false)},
 			&TerraformConfig{Log: Bool(true)},

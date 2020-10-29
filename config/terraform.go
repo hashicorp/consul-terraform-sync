@@ -5,8 +5,10 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
-	"github.com/hashicorp/go-version"
+	ctsVersion "github.com/hashicorp/consul-terraform-sync/version"
+	goVersion "github.com/hashicorp/go-version"
 )
 
 const (
@@ -21,6 +23,7 @@ const (
 
 // TerraformConfig is the configuration for the Terraform driver.
 type TerraformConfig struct {
+	Version           *string                `mapstructure:"version"`
 	Log               *bool                  `mapstructure:"log"`
 	PersistLog        *bool                  `mapstructure:"persist_log"`
 	Path              *string                `mapstructure:"path"`
@@ -92,6 +95,10 @@ func (c *TerraformConfig) Copy() *TerraformConfig {
 
 	var o TerraformConfig
 
+	if c.Version != nil {
+		o.Version = StringCopy(c.Version)
+	}
+
 	if c.Log != nil {
 		o.Log = BoolCopy(c.Log)
 	}
@@ -142,6 +149,10 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 	}
 
 	r := c.Copy()
+
+	if o.Version != nil {
+		r.Version = StringCopy(o.Version)
+	}
 
 	if o.Log != nil {
 		r.Log = BoolCopy(o.Log)
@@ -196,6 +207,10 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 		log.Panic(err)
 	}
 
+	if c.Version == nil {
+		c.Version = String("")
+	}
+
 	if c.Log == nil {
 		c.Log = Bool(false)
 	}
@@ -236,6 +251,22 @@ func (c *TerraformConfig) Validate() error {
 		return fmt.Errorf("missing Terraform driver configuration")
 	}
 
+	if c.Version != nil && *c.Version != "" {
+		v, err := goVersion.NewSemver(*c.Version)
+		if err != nil {
+			return err
+		}
+
+		if len(strings.Split(*c.Version, ".")) < 3 {
+			return fmt.Errorf("provide the exact Terraform version to install: %s", *c.Version)
+		}
+
+		if !ctsVersion.TerraformConstraint.Check(v) {
+			return fmt.Errorf("Terraform version is not supported by Consul "+
+				"Terraform Sync, try updating to a newer version (>=0.13): %s", *c.Version)
+		}
+	}
+
 	if c.Backend == nil {
 		return fmt.Errorf("missing Terraform backend configuration")
 	}
@@ -269,6 +300,7 @@ func (c *TerraformConfig) GoString() string {
 	}
 
 	return fmt.Sprintf("&TerraformConfig{"+
+		"Version:%s, "+
 		"Log:%v, "+
 		"PersistLog:%v, "+
 		"Path:%s, "+
@@ -276,6 +308,7 @@ func (c *TerraformConfig) GoString() string {
 		"Backend:%+v, "+
 		"RequiredProviders:%+v"+
 		"}",
+		StringVal(c.Version),
 		BoolVal(c.Log),
 		BoolVal(c.PersistLog),
 		StringVal(c.Path),
@@ -296,28 +329,4 @@ func mergeMaps(c, o map[string]interface{}) map[string]interface{} {
 	}
 
 	return r
-}
-
-// CheckVersionCompatibility checks compatibility of the version of Terraform
-// with features of Consul Terraform Sync
-func (c TerraformConfig) CheckVersionCompatibility(versionStr string) error {
-	// https://github.com/hashicorp/terraform/issues/23121
-	if _, ok := c.Backend["pg"]; ok {
-		v, err := version.NewSemver(versionStr)
-		if err != nil {
-			return err
-		}
-
-		constraint, err := version.NewConstraint(">= 0.14")
-		if err != nil {
-			return err
-		}
-
-		if !constraint.Check(v) {
-			return fmt.Errorf("Consul-Terraform-Sync does not support pg " +
-				"backend in automation with Terraform <= 0.13")
-		}
-	}
-
-	return nil
 }

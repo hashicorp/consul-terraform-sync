@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
-const CompatibleTerraformVersionConstraint = "~>0.13.0"
+const CompatibleTerraformVersionConstraint = ">=0.13.0"
 
 var TerraformConstraint version.Constraints
 
