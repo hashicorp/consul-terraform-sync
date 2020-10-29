@@ -151,6 +151,7 @@ func TestDriverConfig_Finalize(t *testing.T) {
 			&DriverConfig{},
 			&DriverConfig{
 				Terraform: &TerraformConfig{
+					Version:           String(""),
 					Log:               Bool(false),
 					PersistLog:        Bool(false),
 					Path:              String(wd),
@@ -169,6 +170,7 @@ func TestDriverConfig_Finalize(t *testing.T) {
 			},
 			&DriverConfig{
 				Terraform: &TerraformConfig{
+					Version:           String(""),
 					Log:               Bool(true),
 					PersistLog:        Bool(false),
 					Path:              String(wd),

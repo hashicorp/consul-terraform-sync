@@ -417,6 +417,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 			&TerraformConfig{},
 			nil,
 			&TerraformConfig{
+				Version:           String(""),
 				Log:               Bool(false),
 				PersistLog:        Bool(false),
 				Path:              String(wd),
@@ -430,6 +431,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 			&TerraformConfig{},
 			consul,
 			&TerraformConfig{
+				Version:    String(""),
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
@@ -455,6 +457,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				},
 			},
 			&TerraformConfig{
+				Version:    String(""),
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
@@ -481,6 +484,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				KVPath:  String("custom-path"),
 			},
 			&TerraformConfig{
+				Version:    String(""),
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
@@ -548,49 +552,6 @@ func TestTerraformConfig_Validate(t *testing.T) {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
 			err := tc.i.Validate()
 			if tc.isValid {
-				assert.NoError(t, err)
-			} else {
-				assert.Error(t, err)
-			}
-		})
-	}
-}
-
-func TestTerraformConfig_CheckVersionCompatibility(t *testing.T) {
-	cases := []struct {
-		name       string
-		version    string
-		config     TerraformConfig
-		compatible bool
-	}{
-		{
-			"valid",
-			"0.13.2",
-			TerraformConfig{
-				Backend: make(map[string]interface{}),
-			},
-			true,
-		}, {
-			"pg backend compatible",
-			"0.14.0",
-			TerraformConfig{
-				Backend: map[string]interface{}{"pg": nil},
-			},
-			true,
-		}, {
-			"pg backend incompatible",
-			"0.13.5",
-			TerraformConfig{
-				Backend: map[string]interface{}{"pg": nil},
-			},
-			false,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := tc.config.CheckVersionCompatibility(tc.version)
-			if tc.compatible {
 				assert.NoError(t, err)
 			} else {
 				assert.Error(t, err)
