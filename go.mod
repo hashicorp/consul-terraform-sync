@@ -8,6 +8,7 @@ require (
 	github.com/hashicorp/consul/sdk v0.5.0
 	github.com/hashicorp/go-checkpoint v0.5.0
 	github.com/hashicorp/go-syslog v1.0.0
+	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.2.1
 	github.com/hashicorp/hcat v0.0.0-20201015182053-2f8b92f7986a
 	github.com/hashicorp/hcl v1.0.0

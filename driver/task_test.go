@@ -53,3 +53,71 @@ func TestNewClient(t *testing.T) {
 		})
 	}
 }
+
+func TestTask_ProviderNames(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		task     Task
+		expected []string
+	}{
+		{
+			"no provider",
+			Task{},
+			[]string{},
+		},
+		{
+			"happy path",
+			Task{
+				Providers: []map[string]interface{}{
+					{"local": map[string]interface{}{
+						"configs": "stuff",
+					}},
+					{"null": map[string]interface{}{}},
+				},
+			},
+			[]string{"local", "null"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := tc.task.ProviderNames()
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestTask_ServiceNames(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		task     Task
+		expected []string
+	}{
+		{
+			"no services",
+			Task{},
+			[]string{},
+		},
+		{
+			"happy path",
+			Task{
+				Services: []Service{
+					Service{Name: "web"},
+					Service{Name: "api"},
+				},
+			},
+			[]string{"web", "api"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := tc.task.ServiceNames()
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
