@@ -124,7 +124,7 @@ func verifyInstalledTF(ctx context.Context, conf *config.TerraformConfig) (*goVe
 		return tfVersion, false, err
 	}
 
-	if conf.Version != nil && *conf.Version != tfVersion.String() {
+	if *conf.Version != "" && *conf.Version != tfVersion.String() {
 		log.Printf("[WARN] (driver.terraform) Terraform found in path %s is "+
 			"version %q and does not match the configured version %q. Remove the "+
 			"existing Terraform to install the selected version.",
