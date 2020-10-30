@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/hashicorp/consul-terraform-sync/version"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -19,7 +20,7 @@ const (
 	// TerraformRequiredVersion is the version constraint pinned to the generated
 	// root module to ensure compatibility across Sync, Terraform, and
 	// modules.
-	TerraformRequiredVersion = "~>0.13.0"
+	TerraformRequiredVersion = version.CompatibleTerraformVersionConstraint
 
 	// RootFilename is the file name for the root module.
 	RootFilename = "main.tf"

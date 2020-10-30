@@ -2,27 +2,32 @@ package driver
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/consul-terraform-sync/version"
+	"github.com/hashicorp/consul-terraform-sync/config"
+	ctsVersion "github.com/hashicorp/consul-terraform-sync/version"
 	"github.com/hashicorp/go-checkpoint"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/hashicorp/terraform-exec/tfinstall"
 )
 
-const fallbackTFVersion = "0.13.2"
+const fallbackTFVersion = "0.13.5"
 
 // TerraformVersion is the version of Terraform CLI for the Terraform driver.
 var TerraformVersion string
 
 // InstallTerraform installs the Terraform binary to the configured path.
 // If an existing Terraform exists in the path, it is checked for compatibility.
-func InstallTerraform(ctx context.Context, path, workingDir string) error {
+func InstallTerraform(ctx context.Context, conf *config.TerraformConfig) error {
+	workingDir := *conf.WorkingDir
+	path := *conf.Path
+
 	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(workingDir, workingDirPerms); err != nil {
 			log.Printf("[ERR] (driver.terraform) error creating base work directory: %s", err)
@@ -31,7 +36,7 @@ func InstallTerraform(ctx context.Context, path, workingDir string) error {
 	}
 
 	if isTFInstalled(path) {
-		tfVersion, compatible, err := isTFCompatible(ctx, workingDir, path)
+		tfVersion, compatible, err := verifyInstalledTF(ctx, conf)
 		if err != nil {
 			if strings.Contains(err.Error(), "exec format error") {
 				return errIncompatibleTerraformBinary
@@ -52,7 +57,7 @@ func InstallTerraform(ctx context.Context, path, workingDir string) error {
 	}
 
 	log.Printf("[INFO] (driver.terraform) installing terraform to path '%s'", path)
-	version, err := installTerraform(ctx, path)
+	tfVersion, err := installTerraform(ctx, conf)
 	if err != nil {
 		log.Printf("[ERR] (driver.terraform) error installing terraform: %s", err)
 		return err
@@ -60,7 +65,7 @@ func InstallTerraform(ctx context.Context, path, workingDir string) error {
 	log.Printf("[INFO] (driver.terraform) successfully installed terraform")
 
 	// Set the global variable to the installed version
-	TerraformVersion = version
+	TerraformVersion = tfVersion.String()
 	return nil
 }
 
@@ -87,9 +92,12 @@ func isTFInstalled(tfPath string) bool {
 	return false
 }
 
-// isTFCompatible checks if the installed Terraform is compatible with the
+// verifyInstalledTF checks if the installed Terraform is compatible with the
 // current architecture and is valid within Sync version constraints.
-func isTFCompatible(ctx context.Context, workingDir, tfPath string) (*goVersion.Version, bool, error) {
+func verifyInstalledTF(ctx context.Context, conf *config.TerraformConfig) (*goVersion.Version, bool, error) {
+	workingDir := *conf.WorkingDir
+	tfPath := *conf.Path
+
 	// Verify version for existing terraform
 	tf, err := tfexec.NewTerraform(workingDir, filepath.Join(tfPath, "terraform"))
 	if err != nil {
@@ -105,54 +113,86 @@ func isTFCompatible(ctx context.Context, workingDir, tfPath string) (*goVersion.
 		return nil, false, err
 	}
 
-	if !version.TerraformConstraint.Check(tfVersion) {
+	if !ctsVersion.TerraformConstraint.Check(tfVersion) {
 		log.Printf("[ERR] (driver.terraform) Terraform found in path %s is "+
 			"version %q and does not satisfy the constraint %q.",
-			tfPath, tfVersion.String(), version.CompatibleTerraformVersionConstraint)
+			tfPath, tfVersion.String(), ctsVersion.CompatibleTerraformVersionConstraint)
 		return tfVersion, false, nil
+	}
+
+	if err := isTFCompatible(conf, tfVersion); err != nil {
+		return tfVersion, false, err
+	}
+
+	if *conf.Version != "" && *conf.Version != tfVersion.String() {
+		log.Printf("[WARN] (driver.terraform) Terraform found in path %s is "+
+			"version %q and does not match the configured version %q. Remove the "+
+			"existing Terraform to install the selected version.",
+			tfPath, tfVersion.String(), *conf.Version)
 	}
 
 	return tfVersion, true, nil
 }
 
-// installTerraform attempts to install the latest version of Terraform into
-// the path. If the latest version is outside of the known supported range for
-//  Sync, the fall back version 0.13.2 is downloaded.
-func installTerraform(ctx context.Context, path string) (string, error) {
-	resp, err := checkpoint.Check(&checkpoint.CheckParams{Product: "terraform"})
-	if err != nil {
-		log.Printf("[ERR] (driver.terraform) error fetching Terraform versions "+
-			"from Checkpoint: %s", err)
-		return "", err
-	}
+// isTFCompatible checks compatibility of the version of Terraform with the
+// features of Consul Terraform Sync
+func isTFCompatible(conf *config.TerraformConfig, version *goVersion.Version) error {
+	// https://github.com/hashicorp/terraform/issues/23121
+	if _, ok := conf.Backend["pg"]; ok {
+		pgBackendConstraint, err := goVersion.NewConstraint(">= 0.14")
+		if err != nil {
+			return err
+		}
 
-	var v string
-	if resp.CurrentVersion == "" {
-		log.Printf("[WARN] (driver.terrform) could not determine latest version "+
-			"of terraform using checkpoint, fallback to version %s", fallbackTFVersion)
-		v = fallbackTFVersion
-	} else {
-		// Check if the latest version is within support range for Sync.
-		latest := goVersion.Must(goVersion.NewVersion(resp.CurrentVersion))
-		if version.TerraformConstraint.Check(latest) {
-			v = resp.CurrentVersion
-		} else {
-			// At this point we cannot guarantee compatibility for the latest
-			// Terraform version, so we will move forward with a safe fallback
-			// version.
-			v = fallbackTFVersion
+		if !pgBackendConstraint.Check(version) {
+			return fmt.Errorf("Consul-Terraform-Sync does not support pg "+
+				"backend in automation with Terraform <= 0.13: %s", version.String())
 		}
 	}
 
-	// Create path if doesn't already exist
-	os.MkdirAll(path, os.ModePerm)
+	return nil
+}
 
-	installedPath, err := tfinstall.ExactVersion(v, path).ExecPath(ctx)
-	if err != nil {
-		log.Printf("[ERR] (driver.terraform) error installing terraform")
-		return "", err
+// installTerraform attempts to install the latest version of Terraform into
+// the path. If the latest version is outside of the known supported range for
+//  Sync, the fall back version 0.13.5 is downloaded.
+func installTerraform(ctx context.Context, conf *config.TerraformConfig) (*goVersion.Version, error) {
+	var v *goVersion.Version
+	if conf.Version != nil && *conf.Version != "" {
+		v = goVersion.Must(goVersion.NewVersion(*conf.Version))
+	} else {
+		// Fetch the latest
+		resp, err := checkpoint.Check(&checkpoint.CheckParams{Product: "terraform"})
+		if err != nil {
+			log.Printf("[ERR] (driver.terraform) error fetching Terraform versions "+
+				"from Checkpoint: %s", err)
+		} else if resp.CurrentVersion != "" {
+			v = goVersion.Must(goVersion.NewVersion(resp.CurrentVersion))
+		}
+	}
+	if v == nil || !ctsVersion.TerraformConstraint.Check(v) {
+		// Configured version shouldn't be invalid our outside of the constraint at
+		// this point if the configuration was validated.
+		//
+		// At this point we cannot guarantee compatibility of the latest Terraform
+		// version, so we will move forward with a safe fallback version.
+		log.Printf("[WARN] (driver.terrform) could not determine latest version "+
+			"of terraform using checkpoint, fallback to version %s", fallbackTFVersion)
+		v = goVersion.Must(goVersion.NewVersion(fallbackTFVersion))
 	}
 
-	log.Printf("[DEBUG] (driver.terraform) successfully installed terraform %s: %s", v, installedPath)
+	if err := isTFCompatible(conf, v); err != nil {
+		return nil, err
+	}
+
+	// Create path if doesn't already exist
+	os.MkdirAll(*conf.Path, os.ModePerm)
+
+	installedPath, err := tfinstall.ExactVersion(v.String(), *conf.Path).ExecPath(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("[DEBUG] (driver.terraform) successfully installed terraform %s: %s", v.String(), installedPath)
 	return v, nil
 }

@@ -5,7 +5,7 @@
 # may not be preserved and could be clobbered by a subsequent update.
 
 terraform {
-  required_version = "~>0.13.0"
+  required_version = ">= 0.13.0, < 0.15"
   required_providers {
     myprovider = {
       source  = "namespace/myprovider"

@@ -264,6 +264,7 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.Consul.TLS.Cert = String("")
 	expected.Consul.Transport.MaxIdleConns = Int(100)
 	expected.Driver.consul = expected.Consul
+	expected.Driver.Terraform.Version = String("")
 	expected.Driver.Terraform.PersistLog = Bool(false)
 	backend := expected.Driver.Terraform.Backend["consul"].(map[string]interface{})
 	backend["scheme"] = "https"
