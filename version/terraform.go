@@ -15,6 +15,8 @@ import (
 // and enhancements between versions.
 const CompatibleTerraformVersionConstraint = ">= 0.13.0, < 0.15"
 
+// TerraformConstraint is the go-version constraint variable for
+// CompatibleTerraformVersionConstraint
 var TerraformConstraint version.Constraints
 
 func init() {

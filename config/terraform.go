@@ -263,7 +263,8 @@ func (c *TerraformConfig) Validate() error {
 
 		if !ctsVersion.TerraformConstraint.Check(v) {
 			return fmt.Errorf("Terraform version is not supported by Consul "+
-				"Terraform Sync, try updating to a newer version (>=0.13): %s", *c.Version)
+				"Terraform Sync, try updating to a different version (%s): %s",
+				ctsVersion.CompatibleTerraformVersionConstraint, *c.Version)
 		}
 	}
 
