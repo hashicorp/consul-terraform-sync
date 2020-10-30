@@ -4,6 +4,8 @@ FEATURES:
 * Add inspect mode to view proposed state changes for tasks [[GH-124](https://github.com/hashicorp/consul-terraform-sync/pull/124)]
 * Expand usage of Terraform backends for state store [[GH-101](https://github.com/hashicorp/consul-terraform-sync/pull/101), [GH-129](https://github.com/hashicorp/consul-terraform-sync/pull/129)]
   * azurerm, cos, gcs, kubernetes, local, manta, pg, s3
+* Add configuration option to select Terraform version to install and run [[GH-131](https://github.com/hashicorp/consul-terraform-sync/pull/131)]
+  * Add support to run Terraform version 0.14
 
 IMPROVEMENTS:
 * Enable 3 retries on task execution errors [[GH-72](https://github.com/hashicorp/consul-terraform-sync/pull/72), [GH-121](https://github.com/hashicorp/consul-terraform-sync/pull/121)]
