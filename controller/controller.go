@@ -57,10 +57,13 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	log.Printf("[INFO] (ctrl) initializing Consul client and testing connection")
 	watcher, err := newWatcher(conf)
 	if err != nil {
 		return nil, err
 	}
+
 	return &baseController{
 		conf:       conf,
 		newDriver:  nd,
