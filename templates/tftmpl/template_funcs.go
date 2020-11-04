@@ -4,12 +4,16 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcat/dep"
+	"github.com/hashicorp/hcat/tfunc"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
 // HCLTmplFuncMap are template functions for rendering HCL
 var HCLTmplFuncMap = map[string]interface{}{
+	"indent":   tfunc.Helpers()["indent"],
+	"subtract": tfunc.Math()["subtract"],
+
 	"joinStrings": joinStringsFunc,
 	"HCLService":  hclServiceFunc,
 }
