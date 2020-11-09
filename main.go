@@ -1,8 +1,13 @@
 package main
 
-import "os"
+import (
+	"os"
+
+	"github.com/hashicorp/consul-terraform-sync/event"
+)
 
 func main() {
-	cli := NewCLI(os.Stdout, os.Stderr)
+	store := event.NewStore()
+	cli := NewCLI(os.Stdout, os.Stderr, store)
 	os.Exit(cli.Run(os.Args))
 }

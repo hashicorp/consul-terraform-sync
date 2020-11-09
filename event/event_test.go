@@ -187,6 +187,50 @@ func businessLogic(expectError bool) (string, error) {
 	return "mock", nil
 }
 
+func TestEvent_GoString(t *testing.T) {
+	cases := []struct {
+		name  string
+		event *Event
+	}{
+		{
+			"nil event",
+			nil,
+		},
+		{
+			"happy path",
+			&Event{
+				ID:       "123",
+				TaskName: "happy",
+				Success:  false,
+				EventError: &Error{
+					Message: "error!",
+				},
+				Config: &Config{
+					Providers: []string{"local"},
+					Services:  []string{"web", "api"},
+					Source:    "/my-module",
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.event == nil {
+				assert.Contains(t, tc.event.GoString(), "nil")
+				return
+			}
+
+			assert.Contains(t, tc.event.GoString(), "&Event")
+			assert.Contains(t, tc.event.GoString(), tc.event.ID)
+			assert.Contains(t, tc.event.GoString(), tc.event.TaskName)
+			assert.Contains(t, tc.event.GoString(), fmt.Sprintf("%t", tc.event.Success))
+			assert.Contains(t, tc.event.GoString(), fmt.Sprintf("%s", tc.event.EventError))
+			assert.Contains(t, tc.event.GoString(), fmt.Sprintf("%s", tc.event.Config))
+		})
+	}
+}
+
 func assertEqualConfig(t *testing.T, exp, act *Config) {
 	if exp == nil {
 		assert.Nil(t, act)

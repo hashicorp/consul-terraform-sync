@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/event"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -19,11 +20,6 @@ import (
 
 func TestNewControllers(t *testing.T) {
 	t.Parallel()
-
-	newCtrlFuncs := map[string]func(*config.Config) (Controller, error){
-		"readwrite": NewReadWrite,
-		"readonly":  NewReadOnly,
-	}
 
 	cases := []struct {
 		name        string
@@ -65,17 +61,24 @@ func TestNewControllers(t *testing.T) {
 				tc.conf.Finalize()
 			}
 
-			for name, newCtrlFunc := range newCtrlFuncs {
-				t.Run(name, func(t *testing.T) {
-					controller, err := newCtrlFunc(tc.conf)
-					if tc.expectError {
-						assert.Error(t, err)
-						return
-					}
-					assert.NoError(t, err)
-					assert.NotNil(t, controller)
-				})
-			}
+			t.Run("readwrite", func(t *testing.T) {
+				controller, err := NewReadWrite(tc.conf, event.NewStore())
+				if tc.expectError {
+					assert.Error(t, err)
+					return
+				}
+				assert.NoError(t, err)
+				assert.NotNil(t, controller)
+			})
+			t.Run("readonly", func(t *testing.T) {
+				controller, err := NewReadOnly(tc.conf)
+				if tc.expectError {
+					assert.Error(t, err)
+					return
+				}
+				assert.NoError(t, err)
+				assert.NotNil(t, controller)
+			})
 		})
 	}
 }

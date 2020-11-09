@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
+	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/version"
 )
@@ -48,15 +49,18 @@ type CLI struct {
 	// stopCh is an internal channel used to trigger a shutdown of the CLI.
 	stopCh  chan struct{}
 	stopped bool
+
+	store *event.Store
 }
 
 // NewCLI creates a new CLI object with the given stdout and stderr streams.
-func NewCLI(out, err io.Writer) *CLI {
+func NewCLI(out, err io.Writer, store *event.Store) *CLI {
 	return &CLI{
 		outStream: out,
 		errStream: err,
 		signalCh:  make(chan os.Signal, 1),
 		stopCh:    make(chan struct{}),
+		store:     store,
 	}
 }
 
@@ -176,7 +180,7 @@ func (cli *CLI) Run(args []string) int {
 		ctrl, err = controller.NewReadOnly(conf)
 	} else {
 		log.Printf("[INFO] (cli) setting up controller: readwrite")
-		ctrl, err = controller.NewReadWrite(conf)
+		ctrl, err = controller.NewReadWrite(conf, cli.store)
 	}
 	if err != nil {
 		log.Printf("[ERR] (cli) error setting up controller: %s", err)
