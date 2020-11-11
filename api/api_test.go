@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -43,12 +42,8 @@ func TestServe(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// find a free port
-	listener, err := net.Listen("tcp", ":0")
+	port, err := FreePort()
 	require.NoError(t, err)
-	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
-
 	api := NewAPI(event.NewStore(), port)
 	go api.Serve(ctx)
 
@@ -68,12 +63,8 @@ func TestServe(t *testing.T) {
 func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
-	// find a free port
-	listener, err := net.Listen("tcp", ":0")
+	port, err := FreePort()
 	require.NoError(t, err)
-	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
-
 	api := NewAPI(event.NewStore(), port)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -94,6 +85,31 @@ func TestServe_context_cancel(t *testing.T) {
 	case <-time.After(time.Second * 5):
 		t.Fatal("Run did not exit properly from cancelling context")
 	}
+}
+
+func TestFreePort(t *testing.T) {
+	t.Run("ports_are_not_reused", func(t *testing.T) {
+		a, err := FreePort()
+		require.NoError(t, err)
+		b, err := FreePort()
+		require.NoError(t, err)
+
+		// wait to ensure listener has freed up port
+		time.Sleep(1 * time.Second)
+		c, err := FreePort()
+		require.NoError(t, err)
+
+		time.Sleep(2 * time.Second)
+		d, err := FreePort()
+		require.NoError(t, err)
+
+		assert.NotEqual(t, a, b)
+		assert.NotEqual(t, a, c)
+		assert.NotEqual(t, a, d)
+		assert.NotEqual(t, b, c)
+		assert.NotEqual(t, b, d)
+		assert.NotEqual(t, c, d)
+	})
 }
 
 func TestJsonResponse(t *testing.T) {

@@ -8,6 +8,9 @@ import (
 const (
 	dbTaskName  = "e2e_task_api_db"
 	webTaskName = "e2e_task_api_web"
+
+	fakeSuccessTaskName = "fake_handler_success_task"
+	fakeFailureTaskName = "fake_handler_failure_task"
 )
 
 // oneTaskConfig returns a basic config file with a single task
@@ -43,6 +46,45 @@ driver "terraform" {
 }`, cwd, tempDir)
 
 	return panosBadCredConfig() + consulBlock(consulAddr) + tfBlock
+}
+
+// fakeHandlerConfig returns a config file with fake provider that has a handler
+// Use for running in development to test cases success/failed events
+func fakeHandlerConfig(consulAddr, tempDir string, port int) string {
+	fakeHandlerConfig := fmt.Sprintf(`
+port = %d
+
+terraform_provider "fake-sync" {
+	alias = "failure"
+	name = "failure"
+	err = true
+	success_first = true
+}
+
+terraform_provider "fake-sync" {
+	alias = "success"
+	name = "success"
+	err = false
+}
+
+task {
+	name = "%s"
+	description = "basic e2e task with fake handler. expected to error"
+	services = ["api"]
+	providers = ["fake-sync.failure"]
+	source = "../../test_modules/e2e_basic_task"
+}
+
+task {
+	name = "%s"
+	description = "basic e2e task with fake handler. expected to not error"
+	services = ["api"]
+	providers = ["fake-sync.success"]
+	source = "../../test_modules/e2e_basic_task"
+}
+`, port, fakeFailureTaskName, fakeSuccessTaskName)
+
+	return fakeHandlerConfig + consulBlock(consulAddr) + terraformBlock(tempDir)
 }
 
 // twoTaskCustomBackendConfig returns a basic config file with two tasks for
@@ -117,7 +159,8 @@ task {
 }
 
 func baseConfig() string {
-	return `log_level = "trace"
+	return `log_level = "INFO"
+
 # port 0 will automatically select next free port
 port = 0
 
@@ -151,7 +194,7 @@ task {
 	name = "panos-bad-cred-e2e-test"
 	description = "panos handler should error and stop sync after once"
 	source = "findkim/ngfw/panos"
-	version = "0.0.1-beta3"
+	version = "0.0.1-beta5"
 	providers = ["panos"]
 	services = ["web"]
 }
