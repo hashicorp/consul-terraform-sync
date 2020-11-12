@@ -9,22 +9,17 @@ import (
 func TestStore_Add(t *testing.T) {
 	cases := []struct {
 		name      string
-		event     *Event
+		event     Event
 		expectErr bool
 	}{
 		{
 			"happy path",
-			&Event{TaskName: "happy"},
+			Event{TaskName: "happy"},
 			false,
 		},
 		{
 			"error: no taskname",
-			&Event{},
-			true,
-		},
-		{
-			"nil even",
-			nil,
+			Event{},
 			true,
 		},
 	}
@@ -39,7 +34,7 @@ func TestStore_Add(t *testing.T) {
 				events := store.events[tc.event.TaskName]
 				assert.Equal(t, 1, len(events))
 				event := events[0]
-				assert.Equal(t, tc.event, event)
+				assert.Equal(t, tc.event, *event)
 			}
 		})
 	}
@@ -49,14 +44,14 @@ func TestStore_Add(t *testing.T) {
 		store.limit = 2
 
 		// fill store
-		store.Add(&Event{ID: "1", TaskName: "task"})
+		store.Add(Event{ID: "1", TaskName: "task"})
 		assert.Equal(t, 1, len(store.events["task"]))
 
-		store.Add(&Event{ID: "2", TaskName: "task"})
+		store.Add(Event{ID: "2", TaskName: "task"})
 		assert.Equal(t, 2, len(store.events["task"]))
 
 		// check store did not grow beyond limit
-		store.Add(&Event{ID: "3", TaskName: "task"})
+		store.Add(Event{ID: "3", TaskName: "task"})
 		assert.Equal(t, 2, len(store.events["task"]))
 
 		// confirm events in store

@@ -157,7 +157,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 	defer func() {
 		ev.End(err)
 		log.Printf("[TRACE] (ctrl) adding event %s", ev.GoString())
-		err = rw.store.Add(ev)
+		err = rw.store.Add(*ev)
 	}()
 
 	// result.Complete is only `true` if the template has new data that has been

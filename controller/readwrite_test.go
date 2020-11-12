@@ -119,7 +119,6 @@ func TestReadWrite_CheckApply(t *testing.T) {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tc.name)
 				assert.False(t, event.Success)
-				fmt.Println(event)
 				assert.NotNil(t, event.EventError.Message)
 				assert.Contains(t, event.EventError.Message, tc.name)
 			} else {

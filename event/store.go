@@ -1,7 +1,6 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 )
@@ -10,7 +9,7 @@ const defaultEventCountLimit = 5
 
 // Store stores events
 type Store struct {
-	*sync.RWMutex
+	mu *sync.RWMutex
 
 	events map[string][]*Event // taskname => events
 	limit  int
@@ -19,26 +18,23 @@ type Store struct {
 // NewStore returns a new store
 func NewStore() *Store {
 	return &Store{
-		RWMutex: &sync.RWMutex{},
-		events:  make(map[string][]*Event),
-		limit:   defaultEventCountLimit,
+		mu:     &sync.RWMutex{},
+		events: make(map[string][]*Event),
+		limit:  defaultEventCountLimit,
 	}
 }
 
 // Add adds an event and manages the limit of number of events stored per task.
-func (s *Store) Add(e *Event) error {
-	if e == nil {
-		return errors.New("error adding event: nil event")
-	}
+func (s *Store) Add(e Event) error {
 	if e.TaskName == "" {
 		return fmt.Errorf("error adding event: taskname cannot be empty %s", e.GoString())
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	events := s.events[e.TaskName]
-	events = append([]*Event{e}, events...) // prepend
+	events = append([]*Event{&e}, events...) // prepend
 	if len(events) > s.limit {
 		events = events[:len(events)-1]
 	}
@@ -49,8 +45,8 @@ func (s *Store) Add(e *Event) error {
 // Read returns events given a task name. Returned events are ordered by
 // decending end time
 func (s *Store) Read(taskName string) []Event {
-	s.RLock()
-	defer s.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	events := make([]Event, len(s.events[taskName]))
 	for ix, event := range s.events[taskName] {
