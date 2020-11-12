@@ -6,12 +6,17 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"regexp"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
 
-var _ Client = (*TerraformCLI)(nil)
+var (
+	_ Client = (*TerraformCLI)(nil)
+
+	wsFailedToSelectRegexp = regexp.MustCompile(`Failed to select workspace`)
+)
 
 // TerraformCLI is the client that wraps around terraform-exec
 // to execute Terraform cli commands
@@ -85,20 +90,43 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 // Init initializes by executing the cli command `terraform init` and
 // `terraform workspace new <name>`
 func (t *TerraformCLI) Init(ctx context.Context) error {
+	var wsCreated bool
+
+	// This is special handling for when the workspace has been detected in
+	// .terraform/environment without a non-empty state. This case is common
+	// when the state for the workspace has been deleted.
+	// https://github.com/hashicorp/terraform/issues/21393
+TF_INIT_AGAIN:
 	if err := t.tf.Init(ctx); err != nil {
+		var wsErr *tfexec.ErrNoWorkspace
+		matched := wsFailedToSelectRegexp.MatchString(err.Error())
+		if matched || errors.As(err, &wsErr) {
+			log.Printf("[INFO] (client.terraformcli) workspace was detected without state, " +
+				"creating new workspace and attempting Terraform init again")
+			if err := t.tf.WorkspaceNew(ctx, t.workspace); err != nil {
+				return err
+			}
+
+			if !wsCreated {
+				wsCreated = true
+				goto TF_INIT_AGAIN
+			}
+		}
 		return err
 	}
 
-	err := t.tf.WorkspaceNew(ctx, t.workspace)
-	if err != nil {
-		var wsErr *tfexec.ErrWorkspaceExists
-		if !errors.As(err, &wsErr) {
-			log.Printf("[ERR] (client.terraformcli) unable to create workspace: %q", t.workspace)
-			return err
+	if !wsCreated {
+		err := t.tf.WorkspaceNew(ctx, t.workspace)
+		if err != nil {
+			var wsErr *tfexec.ErrWorkspaceExists
+			if !errors.As(err, &wsErr) {
+				log.Printf("[ERR] (client.terraformcli) unable to create workspace: %q", t.workspace)
+				return err
+			}
+			log.Printf("[DEBUG] (client.terraformcli) workspace already exists: '%s'", t.workspace)
+		} else {
+			log.Printf("[TRACE] (client.terraformcli) workspace created: %q", t.workspace)
 		}
-		log.Printf("[DEBUG] (client.terraformcli) workspace already exists: '%s'", t.workspace)
-	} else {
-		log.Printf("[TRACE] (client.terraformcli) workspace created: %q", t.workspace)
 	}
 
 	if err := t.tf.WorkspaceSelect(ctx, t.workspace); err != nil {
