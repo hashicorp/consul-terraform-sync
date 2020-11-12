@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/controller"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
@@ -27,7 +28,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 		resolverRunErr    error
 		templateRenderErr error
 		taskName          string
-		config            *config.Config
+		addToStore        bool
 	}{
 		{
 			"error on resolver.Run()",
@@ -36,7 +37,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			errors.New("error on resolver.Run()"),
 			nil,
 			"task_apply",
-			singleTaskConfig(),
+			false,
 		},
 		{
 			"error on driver.ApplyTask()",
@@ -45,7 +46,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			nil,
 			nil,
 			"task_apply",
-			singleTaskConfig(),
+			true,
 		},
 		{
 			"error on template.Render()",
@@ -54,7 +55,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			nil,
 			errors.New("error on template.Render()"),
 			"task_apply",
-			singleTaskConfig(),
+			true,
 		},
 		{
 			"error creating new event",
@@ -63,7 +64,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			nil,
 			nil,
 			"",
-			singleTaskConfig(),
+			false,
 		},
 		{
 			"happy path",
@@ -72,7 +73,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			nil,
 			nil,
 			"task_apply",
-			singleTaskConfig(),
+			true,
 		},
 	}
 
@@ -89,22 +90,81 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			d := new(mocksD.Driver)
 			d.On("ApplyTask", mock.Anything).Return(tc.applyTaskErr)
 
-			controller := ReadWrite{baseController: &baseController{
-				resolver: r,
-			}}
+			controller := ReadWrite{
+				baseController: &baseController{
+					resolver: r,
+				},
+				store: event.NewStore(),
+			}
 			u := unit{taskName: tc.taskName, template: tmpl, driver: d}
 			ctx := context.Background()
 
 			_, err := controller.checkApply(ctx, u)
-			if tc.expectError {
-				if assert.Error(t, err) {
-					assert.Contains(t, err.Error(), tc.name)
-				}
+			events := controller.store.Read(tc.taskName)
+
+			if !tc.addToStore {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.name)
+				assert.Equal(t, 0, len(events))
 				return
 			}
-			assert.NoError(t, err)
+
+			assert.Equal(t, 1, len(events))
+			event := events[0]
+			assert.Equal(t, tc.taskName, event.TaskName)
+			assert.False(t, event.StartTime.IsZero())
+			assert.False(t, event.EndTime.IsZero())
+
+			if tc.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.name)
+				assert.False(t, event.Success)
+				assert.NotNil(t, event.EventError.Message)
+				assert.Contains(t, event.EventError.Message, tc.name)
+			} else {
+				assert.NoError(t, err)
+				assert.True(t, event.Success)
+			}
 		})
 	}
+}
+
+func TestReadWrite_CheckApply_Store(t *testing.T) {
+	t.Run("mult-checkapply-store", func(t *testing.T) {
+		tmpl := new(mocks.Template)
+		tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, nil)
+
+		r := new(mocks.Resolver)
+		r.On("Run", mock.Anything, mock.Anything).
+			Return(hcat.ResolveEvent{Complete: true}, nil)
+
+		d := new(mocksD.Driver)
+		d.On("ApplyTask", mock.Anything).Return(nil)
+
+		controller := ReadWrite{
+			baseController: &baseController{
+				resolver: r,
+			},
+			store: event.NewStore(),
+		}
+
+		unitA := unit{taskName: "task_a", template: tmpl, driver: d}
+		unitB := unit{taskName: "task_b", template: tmpl, driver: d}
+		ctx := context.Background()
+
+		controller.checkApply(ctx, unitA)
+		controller.checkApply(ctx, unitB)
+		controller.checkApply(ctx, unitA)
+		controller.checkApply(ctx, unitA)
+		controller.checkApply(ctx, unitA)
+		controller.checkApply(ctx, unitB)
+
+		eventsA := controller.store.Read("task_a")
+		eventsB := controller.store.Read("task_b")
+
+		assert.Equal(t, 4, len(eventsA))
+		assert.Equal(t, 2, len(eventsB))
+	})
 }
 
 func TestOnce(t *testing.T) {
@@ -134,15 +194,18 @@ func TestOnce(t *testing.T) {
 		d.On("InitTask", mock.Anything).Return(nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
 
-		rw := &ReadWrite{baseController: &baseController{
-			watcher:  w,
-			resolver: r,
-			newDriver: func(*config.Config, driver.Task) (driver.Driver, error) {
-				return d, nil
+		rw := &ReadWrite{
+			baseController: &baseController{
+				watcher:  w,
+				resolver: r,
+				newDriver: func(*config.Config, driver.Task) (driver.Driver, error) {
+					return d, nil
+				},
+				conf:       conf,
+				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
 			},
-			conf:       conf,
-			fileReader: func(string) ([]byte, error) { return []byte{}, nil },
-		}}
+			store: event.NewStore(),
+		}
 
 		ctx := context.Background()
 		err := rw.Init(ctx)
@@ -196,11 +259,14 @@ func TestReadWriteUnits(t *testing.T) {
 		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
 
 		u := unit{taskName: "foo", template: tmpl, driver: d}
-		controller := ReadWrite{baseController: &baseController{
-			watcher:  w,
-			resolver: r,
-			units:    []unit{u},
-		}}
+		controller := ReadWrite{
+			baseController: &baseController{
+				watcher:  w,
+				resolver: r,
+				units:    []unit{u},
+			},
+			store: event.NewStore(),
+		}
 
 		ctx := context.Background()
 		errCh := controller.runUnits(ctx)
@@ -216,11 +282,14 @@ func TestReadWriteUnits(t *testing.T) {
 		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
 
 		u := unit{taskName: "foo", template: tmpl, driver: d}
-		controller := ReadWrite{baseController: &baseController{
-			watcher:  w,
-			resolver: r,
-			units:    []unit{u},
-		}}
+		controller := ReadWrite{
+			baseController: &baseController{
+				watcher:  w,
+				resolver: r,
+				units:    []unit{u},
+			},
+			store: event.NewStore(),
+		}
 
 		ctx := context.Background()
 		errCh := controller.runUnits(ctx)
@@ -238,10 +307,13 @@ func TestReadWriteRun_context_cancel(t *testing.T) {
 	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil).
 		On("Stop").Return()
 
-	ctl := ReadWrite{baseController: &baseController{
-		units:   []unit{},
-		watcher: w,
-	}}
+	ctl := ReadWrite{
+		baseController: &baseController{
+			units:   []unit{},
+			watcher: w,
+		},
+		store: event.NewStore(),
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)

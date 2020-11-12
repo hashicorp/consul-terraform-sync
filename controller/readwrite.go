@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/hcat"
 )
 
 var _ Controller = (*ReadWrite)(nil)
@@ -15,16 +16,20 @@ var _ Controller = (*ReadWrite)(nil)
 // ReadWrite is the controller to run in read-write mode
 type ReadWrite struct {
 	*baseController
+	store *event.Store
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
-func NewReadWrite(conf *config.Config) (Controller, error) {
+func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
 	baseCtrl, err := newBaseController(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ReadWrite{baseController: baseCtrl}, nil
+	return &ReadWrite{
+		baseController: baseCtrl,
+		store:          store,
+	}, nil
 }
 
 // Init initializes the controller before it can be run. Ensures that
@@ -149,7 +154,11 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 		return false, fmt.Errorf("error creating event for task %s: %s",
 			taskName, err)
 	}
-	defer ev.End(err)
+	defer func() {
+		ev.End(err)
+		log.Printf("[TRACE] (ctrl) adding event %s", ev.GoString())
+		err = rw.store.Add(*ev)
+	}()
 
 	// result.Complete is only `true` if the template has new data that has been
 	// completely fetched. Rendering a template for the first time may take several
@@ -157,7 +166,8 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 	if result.Complete {
 		log.Printf("[DEBUG] (ctrl) change detected for task %s", taskName)
 		ev.Start()
-		rendered, err := tmpl.Render(result.Contents)
+		var rendered hcat.RenderResult
+		rendered, err = tmpl.Render(result.Contents)
 		if err != nil {
 			return false, fmt.Errorf("error rendering template for task %s: %s",
 				taskName, err)

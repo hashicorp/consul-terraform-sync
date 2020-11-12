@@ -2,6 +2,7 @@ package event
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -80,4 +81,29 @@ func (e *Event) End(err error) {
 	e.EventError = &Error{
 		Message: err.Error(),
 	}
+}
+
+// GoString defines the printable version of this struct.
+func (e *Event) GoString() string {
+	if e == nil {
+		return "(*Event)(nil)"
+	}
+
+	return fmt.Sprintf("&Event{"+
+		"ID:%s, "+
+		"TaskName:%s, "+
+		"Success:%t, "+
+		"StartTime:%s, "+
+		"EndTime:%s, "+
+		"EventError:%s, "+
+		"Config:%s, "+
+		"}",
+		e.ID,
+		e.TaskName,
+		e.Success,
+		e.StartTime,
+		e.EndTime,
+		e.EventError,
+		e.Config,
+	)
 }
