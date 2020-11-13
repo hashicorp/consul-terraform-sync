@@ -100,7 +100,8 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			ctx := context.Background()
 
 			_, err := controller.checkApply(ctx, u)
-			events := controller.store.Read(tc.taskName)
+			data := controller.store.Read(tc.taskName)
+			events := data[tc.taskName]
 
 			if !tc.addToStore {
 				assert.Error(t, err)
@@ -159,11 +160,10 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 		controller.checkApply(ctx, unitA)
 		controller.checkApply(ctx, unitB)
 
-		eventsA := controller.store.Read("task_a")
-		eventsB := controller.store.Read("task_b")
+		taskStatuses := controller.store.Read("")
 
-		assert.Equal(t, 4, len(eventsA))
-		assert.Equal(t, 2, len(eventsB))
+		assert.Equal(t, 4, len(taskStatuses["task_a"]))
+		assert.Equal(t, 2, len(taskStatuses["task_b"]))
 	})
 }
 

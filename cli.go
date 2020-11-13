@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -49,18 +51,15 @@ type CLI struct {
 	// stopCh is an internal channel used to trigger a shutdown of the CLI.
 	stopCh  chan struct{}
 	stopped bool
-
-	store *event.Store
 }
 
 // NewCLI creates a new CLI object with the given stdout and stderr streams.
-func NewCLI(out, err io.Writer, store *event.Store) *CLI {
+func NewCLI(out, err io.Writer) *CLI {
 	return &CLI{
 		outStream: out,
 		errStream: err,
 		signalCh:  make(chan os.Signal, 1),
 		stopCh:    make(chan struct{}),
-		store:     store,
 	}
 }
 
@@ -180,7 +179,17 @@ func (cli *CLI) Run(args []string) int {
 		ctrl, err = controller.NewReadOnly(conf)
 	} else {
 		log.Printf("[INFO] (cli) setting up controller: readwrite")
-		ctrl, err = controller.NewReadWrite(conf, cli.store)
+		store := event.NewStore()
+		ctrl, err = controller.NewReadWrite(conf, store)
+
+		// start up api at free port (for now)
+		// TODO: make port configurable with default to port 8501
+		var l net.Listener
+		l, err = net.Listen("tcp", ":0")
+		port := l.Addr().(*net.TCPAddr).Port
+		err = l.Close()
+		api := api.NewAPI(store, port)
+		api.Serve(ctx)
 	}
 	if err != nil {
 		log.Printf("[ERR] (cli) error setting up controller: %s", err)

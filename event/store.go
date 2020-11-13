@@ -42,15 +42,26 @@ func (s *Store) Add(e Event) error {
 	return nil
 }
 
-// Read returns events given a task name. Returned events are ordered by
-// decending end time
-func (s *Store) Read(taskName string) []Event {
+// Read returns events for a task name. If no task name is specified, return
+// events for all tasks. Returned events are ordered by decending end time
+func (s *Store) Read(taskName string) map[string][]Event {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	events := make([]Event, len(s.events[taskName]))
-	for ix, event := range s.events[taskName] {
-		events[ix] = *event
+	data := make(map[string][]*Event)
+	if taskName != "" {
+		data[taskName] = s.events[taskName]
+	} else {
+		data = s.events
 	}
-	return events
+
+	ret := make(map[string][]Event)
+	for k, v := range data {
+		events := make([]Event, len(v))
+		for ix, event := range v {
+			events[ix] = *event
+		}
+		ret[k] = events
+	}
+	return ret
 }
