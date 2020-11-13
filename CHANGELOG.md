@@ -13,6 +13,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 * Fix indefinite retries connecting to Consul on DNS errors [[GH-133](https://github.com/hashicorp/consul-terraform-sync/pull/133)]
+* Fix Terraform workspace selection error [[GH-134](https://github.com/hashicorp/consul-terraform-sync/issues/134)]
 
 ## 0.1.0-techpreview1 (October 09, 2020)
 
