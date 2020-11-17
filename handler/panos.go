@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"errors"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/PaloAltoNetworks/pango"
@@ -41,6 +43,7 @@ type Panos struct {
 	next         Handler
 	client       panosClient
 	providerConf pango.Client
+	adminUser    string
 	configPath   string
 }
 
@@ -58,14 +61,29 @@ func NewPanos(c map[string]interface{}) (*Panos, error) {
 		return nil, err
 	}
 
-	configPath := ""
-	for k, val := range c {
-		if k == "json_config_file" {
-			if v, ok := val.(string); ok {
-				configPath = v
-				break
-			}
+	var configPath string
+	if val, ok := c["json_config_file"]; ok {
+		if v, ok := val.(string); ok {
+			configPath = v
 		}
+	}
+
+	// Username is required to limit commiting changes to the admin user instead
+	// of all queued changes by all users.
+	var username string
+	if val, ok := c["username"]; ok {
+		if v, ok := val.(string); ok {
+			username = v
+		}
+	} else {
+		username, _ = os.LookupEnv("PANOS_USERNAME")
+	}
+	if username == "" {
+		return nil, errors.New("detected panos provider with missing username. " +
+			"Username of the admin the API key is associated with is required for " +
+			"partial commits by Consul-Terraform-Sync to limit the changes " +
+			"auto-committed to the admin user. Configure the admin username for " +
+			"the panos provider or set the PANOS_USERNAME environment variable.")
 	}
 
 	fw := &pango.Firewall{
@@ -76,6 +94,7 @@ func NewPanos(c map[string]interface{}) (*Panos, error) {
 		next:         nil,
 		client:       fw,
 		providerConf: conf,
+		adminUser:    username,
 		configPath:   configPath,
 	}, nil
 }
@@ -98,6 +117,7 @@ func (h *Panos) commit() error {
 	log.Printf("[TRACE] (handler.panos) client config after init: %s", h.client.String())
 
 	c := commit.FirewallCommit{
+		Admins:      []string{h.adminUser},
 		Description: "Consul Terraform Sync Commit",
 	}
 	job, resp, err := h.client.Commit(c.Element(), "", nil)

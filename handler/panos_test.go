@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/PaloAltoNetworks/pango"
@@ -46,6 +47,15 @@ func TestNewPanos(t *testing.T) {
 				VerifyCertificate:     true,
 			},
 			"/my/path/config.json",
+		}, {
+			"missing required username",
+			true,
+			map[string]interface{}{
+				"hostname": "10.10.10.10",
+				"api_key":  "abcd",
+			},
+			pango.Client{},
+			"",
 		},
 	}
 
@@ -62,6 +72,25 @@ func TestNewPanos(t *testing.T) {
 			assert.Equal(t, tc.expectedConfigPath, h.configPath)
 		})
 	}
+
+	t.Run("username from env", func(t *testing.T) {
+		adminUser := "admin"
+		cachedUser, ok := os.LookupEnv("PANOS_USERNAME")
+		if ok {
+			defer os.Setenv("PANOS_USERNAME", cachedUser)
+		} else {
+			defer os.Unsetenv("PANOS_USERNAME")
+		}
+		os.Setenv("PANOS_USERNAME", adminUser)
+
+		config := map[string]interface{}{
+			"hostname": "10.10.10.10",
+			"api_key":  "abcd",
+		}
+		h, err := NewPanos(config)
+		assert.NoError(t, err)
+		assert.Equal(t, adminUser, h.adminUser)
+	})
 }
 
 func TestPanosDo(t *testing.T) {
