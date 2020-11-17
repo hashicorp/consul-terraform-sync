@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -38,7 +40,6 @@ func TestServe(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer ctx.Done()
 	defer cancel()
 
 	// find a free port
@@ -58,7 +59,52 @@ func TestServe(t *testing.T) {
 			resp, err := http.Get(u)
 			require.NoError(t, err)
 			defer resp.Body.Close()
-			require.Equal(t, tc.statusCode, resp.StatusCode)
+			assert.Equal(t, tc.statusCode, resp.StatusCode)
+		})
+	}
+}
+
+func TestJsonResponse(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		code     int
+		response interface{}
+	}{
+		{
+			"task status: error",
+			http.StatusBadRequest,
+			map[string]string{
+				"error": "bad request",
+			},
+		},
+		{
+			"task status: success",
+			http.StatusOK,
+			map[string]TaskStatus{
+				"task_a": TaskStatus{
+					TaskName:  "task_a",
+					Status:    StatusDegraded,
+					Providers: []string{"local", "null", "f5"},
+					Services:  []string{"api", "web", "db"},
+					EventsURL: "/v1/status/tasks/test_task?include=events",
+				},
+				"task_b": TaskStatus{
+					TaskName:  "task_b",
+					Status:    StatusUndetermined,
+					Providers: []string{},
+					Services:  []string{},
+					EventsURL: "",
+				},
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			err := jsonResponse(w, tc.code, tc.response)
+			assert.NoError(t, err)
 		})
 	}
 }

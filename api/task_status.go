@@ -41,7 +41,7 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	taskName, err := getTaskName(r.URL.Path, h.version)
 	if err != nil {
-		log.Printf("[TRACE] (api.taskstatus) bad request: '%s'", err)
+		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
 		jsonResponse(w, http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})
@@ -118,7 +118,7 @@ func mapKeyToArray(m map[string]bool) []string {
 // successToStatus determines a status from an array of success/failures
 func successToStatus(successes []bool) string {
 	if len(successes) == 0 {
-		return statusUndetermined
+		return StatusUndetermined
 	}
 
 	total := len(successes)
@@ -133,13 +133,13 @@ func successToStatus(successes []bool) string {
 	percentSuccess := 100 * successCount / total
 	switch {
 	case percentSuccess == 100:
-		return statusHealthy
+		return StatusHealthy
 	case percentSuccess > 50:
-		return statusDegraded
+		return StatusDegraded
 	case mostRecentSuccess == true:
-		return statusDegraded
+		return StatusDegraded
 	default:
-		return statusCritical
+		return StatusCritical
 	}
 }
 

@@ -214,7 +214,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 			},
 			TaskStatus{
 				TaskName:  "test_task",
-				Status:    statusDegraded,
+				Status:    StatusDegraded,
 				Providers: []string{"local", "null", "f5"},
 				Services:  []string{"api", "web", "db"},
 				EventsURL: "/v1/status/tasks/test_task?include=events",
@@ -225,7 +225,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 			[]event.Event{},
 			TaskStatus{
 				TaskName:  "test_task",
-				Status:    statusUndetermined,
+				Status:    StatusUndetermined,
 				Providers: []string{},
 				Services:  []string{},
 				EventsURL: "",
@@ -245,7 +245,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 			},
 			TaskStatus{
 				TaskName:  "test_task",
-				Status:    statusCritical,
+				Status:    StatusCritical,
 				Providers: []string{},
 				Services:  []string{},
 				EventsURL: "/v1/status/tasks/test_task?include=events",
@@ -306,32 +306,32 @@ func TestTaskStatus_SuccessToStatus(t *testing.T) {
 		{
 			"all successes",
 			[]bool{true, true, true, true, true},
-			statusHealthy,
+			StatusHealthy,
 		},
 		{
 			"more than half success",
 			[]bool{false, false, true, true, true},
-			statusDegraded,
+			StatusDegraded,
 		},
 		{
 			"less than half success - most recent failure",
 			[]bool{false, false, false, true, true},
-			statusCritical,
+			StatusCritical,
 		},
 		{
 			"less than half success - most recent success",
 			[]bool{true, false, false, false, true},
-			statusDegraded,
+			StatusDegraded,
 		},
 		{
 			"no successes",
 			[]bool{false, false, false, false, false},
-			statusCritical,
+			StatusCritical,
 		},
 		{
 			"no data",
 			[]bool{},
-			statusUndetermined,
+			StatusUndetermined,
 		},
 	}
 
