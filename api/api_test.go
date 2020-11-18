@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,6 +62,37 @@ func TestServe(t *testing.T) {
 			defer resp.Body.Close()
 			assert.Equal(t, tc.statusCode, resp.StatusCode)
 		})
+	}
+}
+
+func TestServe_context_cancel(t *testing.T) {
+	t.Parallel()
+
+	// find a free port
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	api := NewAPI(event.NewStore(), port)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error)
+	go func() {
+		err := api.Serve(ctx)
+		if err != nil {
+			errCh <- err
+		}
+	}()
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err != context.Canceled {
+			t.Error("wanted 'context canceled', got:", err)
+		}
+	case <-time.After(time.Second * 5):
+		t.Fatal("Run did not exit properly from cancelling context")
 	}
 }
 

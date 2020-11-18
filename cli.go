@@ -172,6 +172,7 @@ func (cli *CLI) Run(args []string) int {
 
 	// Set up controller
 	conf.ClientType = config.String(clientType)
+	store := event.NewStore()
 	var ctrl controller.Controller
 	if isInspect {
 		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
@@ -179,17 +180,7 @@ func (cli *CLI) Run(args []string) int {
 		ctrl, err = controller.NewReadOnly(conf)
 	} else {
 		log.Printf("[INFO] (cli) setting up controller: readwrite")
-		store := event.NewStore()
 		ctrl, err = controller.NewReadWrite(conf, store)
-
-		// start up api at free port (for now)
-		// TODO: make port configurable with default to port 8501
-		var l net.Listener
-		l, err = net.Listen("tcp", ":0")
-		port := l.Addr().(*net.TCPAddr).Port
-		err = l.Close()
-		api := api.NewAPI(store, port)
-		api.Serve(ctx)
 	}
 	if err != nil {
 		log.Printf("[ERR] (cli) error setting up controller: %s", err)
@@ -197,7 +188,40 @@ func (cli *CLI) Run(args []string) int {
 	}
 
 	errCh := make(chan error, 1)
-	exitCh := make(chan struct{}, 1)
+	exitBufLen := 2 // exit api & controller
+	exitCh := make(chan struct{}, exitBufLen)
+
+	go func() {
+		if isOnce || isInspect {
+			return
+		}
+		// start up api at free port (for now)
+		// TODO: make port configurable with default to port 8501
+		var l net.Listener
+		l, err = net.Listen("tcp", ":0")
+		if err != nil {
+			log.Printf("[ERR] (cli) error retrieving port for server: %s", err)
+			errCh <- err
+			return
+		}
+		port := l.Addr().(*net.TCPAddr).Port
+		if err = l.Close(); err != nil {
+			log.Printf("[ERR] (cli) error retrieving port for server: %s", err)
+			errCh <- err
+			return
+		}
+
+		log.Printf("[INFO] (cli) starting up api server at port: %d", port)
+		api := api.NewAPI(store, port)
+		if err = api.Serve(ctx); err != nil {
+			if err == context.Canceled {
+				exitCh <- struct{}{}
+				return
+			}
+			errCh <- err
+			return
+		}
+	}()
 
 	go func() {
 		log.Printf("[INFO] (cli) initializing controller")
@@ -255,13 +279,21 @@ func (cli *CLI) Run(args []string) int {
 			// shutdown
 			log.Printf("[INFO] (cli) signal received to initiate graceful shutdown: %v", sig)
 			cancel()
-			select {
-			case <-exitCh:
-				log.Printf("[INFO] (cli) graceful shutdown")
-				return ExitCodeOK
-			case <-time.After(10 * time.Second):
-				log.Printf("[INFO] (cli) graceful shutdown timed out, exiting")
-				return ExitCodeInterrupt
+			counter := 0
+			start := time.Now()
+			for {
+				since := time.Since(start)
+				select {
+				case <-exitCh:
+					counter++
+					if counter >= exitBufLen {
+						log.Printf("[INFO] (cli) graceful shutdown")
+						return ExitCodeOK
+					}
+				case <-time.After(10*time.Second - since):
+					log.Printf("[INFO] (cli) graceful shutdown timed out, exiting")
+					return ExitCodeInterrupt
+				}
 			}
 
 		case <-exitCh:

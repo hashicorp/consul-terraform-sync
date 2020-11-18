@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -87,31 +88,35 @@ func NewAPI(store *event.Store, port int) *API {
 
 // Serve starts up and handles shutdown for the http server to serve
 // API requests
-func (api *API) Serve(ctx context.Context) {
-	go func() {
-		if err := api.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			// go ahead and stop cts from continuing
-			log.Fatalf("error starting api server at '%d': '%s'\n", api.port, err)
-		}
-	}()
-
-	log.Printf("[INFO] (api) server started at port %d", api.port)
-
-	ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+func (api *API) Serve(ctx context.Context) error {
+	var wg sync.WaitGroup
+	wg.Add(1)
 
 	go func() {
+		defer wg.Done()
 		for {
 			select {
 			case <-ctx.Done():
-				log.Printf("[INFO] (api) stopping api server")
+				ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+
 				if err := api.srv.Shutdown(ctxShutDown); err != nil {
 					log.Printf("[ERROR] (api) error stopping api server: '%s'", err)
+				} else {
+					log.Printf("[INFO] (api) shutdown api server")
 				}
 				return
 			}
 		}
 	}()
+
+	if err := api.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return fmt.Errorf("error starting api server at '%d': '%s'", api.port, err)
+	}
+
+	// wait for shutdown
+	wg.Wait()
+	return ctx.Err()
 }
 
 // jsonResponse adds the return response for handlers. Returns if json encode
