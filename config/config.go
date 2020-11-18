@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/consul/lib/decode"
@@ -26,6 +27,7 @@ type Config struct {
 
 	Syslog       *SyslogConfig       `mapstructure:"syslog"`
 	Consul       *ConsulConfig       `mapstructure:"consul"`
+	Vault        *VaultConfig        `mapstructure:"vault"`
 	Driver       *DriverConfig       `mapstructure:"driver"`
 	Tasks        *TaskConfigs        `mapstructure:"task"`
 	Services     *ServiceConfigs     `mapstructure:"service"`
@@ -83,6 +85,7 @@ func (c *Config) Copy() *Config {
 		LogLevel:     StringCopy(c.LogLevel),
 		Syslog:       c.Syslog.Copy(),
 		Consul:       c.Consul.Copy(),
+		Vault:        c.Vault.Copy(),
 		Driver:       c.Driver.Copy(),
 		Tasks:        c.Tasks.Copy(),
 		Services:     c.Services.Copy(),
@@ -119,6 +122,10 @@ func (c *Config) Merge(o *Config) *Config {
 
 	if o.Consul != nil {
 		r.Consul = r.Consul.Merge(o.Consul)
+	}
+
+	if o.Vault != nil {
+		r.Vault = r.Vault.Merge(o.Vault)
 	}
 
 	if o.Driver != nil {
@@ -163,6 +170,11 @@ func (c *Config) Finalize() {
 		c.Consul = DefaultConsulConfig()
 	}
 	c.Consul.Finalize()
+
+	if c.Vault == nil {
+		c.Vault = DefaultVaultConfig()
+	}
+	c.Vault.Finalize()
 
 	// Finalize driver after Consul to configure the default driver if needed
 	if c.Driver == nil {
@@ -235,6 +247,7 @@ func (c *Config) GoString() string {
 		"LogLevel:%s, "+
 		"Syslog:%s, "+
 		"Consul:%s, "+
+		"Vault:%s, "+
 		"Driver:%s, "+
 		"Tasks:%s, "+
 		"Services:%s, "+
@@ -244,6 +257,7 @@ func (c *Config) GoString() string {
 		StringVal(c.LogLevel),
 		c.Syslog.GoString(),
 		c.Consul.GoString(),
+		c.Vault.GoString(),
 		c.Driver.GoString(),
 		c.Tasks.GoString(),
 		c.Services.GoString(),
@@ -407,4 +421,38 @@ func stringFromEnv(list []string, def string) *string {
 		}
 	}
 	return String(def)
+}
+
+func stringFromFile(list []string, def string) *string {
+	for _, s := range list {
+		c, err := ioutil.ReadFile(s)
+		if err == nil {
+			return String(strings.TrimSpace(string(c)))
+		}
+	}
+	return String(def)
+}
+
+func boolFromEnv(list []string, def bool) *bool {
+	for _, s := range list {
+		if v := os.Getenv(s); v != "" {
+			b, err := strconv.ParseBool(v)
+			if err == nil {
+				return Bool(b)
+			}
+		}
+	}
+	return Bool(def)
+}
+
+func antiboolFromEnv(list []string, def bool) *bool {
+	for _, s := range list {
+		if v := os.Getenv(s); v != "" {
+			b, err := strconv.ParseBool(v)
+			if err == nil {
+				return Bool(!b)
+			}
+		}
+	}
+	return Bool(def)
 }
