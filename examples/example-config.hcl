@@ -30,7 +30,7 @@ driver "terraform" {
   }
 }
 
-provider "myprovider" {
+terraform_provider "myprovider" {
   address = "myprovider.example.com"
   username = "admin"
   attr = "foobar"

@@ -173,7 +173,7 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 		providers := make([]map[string]interface{}, len(t.Providers))
 		providerInfo := make(map[string]interface{})
 		for pi, providerID := range t.Providers {
-			providers[pi] = getProvider(conf.Providers, providerID)
+			providers[pi] = getProvider(conf.TerraformProviders, providerID)
 
 			// This is Terraform specific to pass version and source info for
 			// providers from the required_provider block
@@ -262,8 +262,8 @@ func splitProviderID(id string) (string, string) {
 // or <name>.<alias>. If a provider is not explicitly configured, it
 // assumes the default provider block that is empty.
 //
-// provider "name" { }
-func getProvider(providers *config.ProviderConfigs, id string) map[string]interface{} {
+// terraform_provider "name" { }
+func getProvider(providers *config.TerraformProviderConfigs, id string) map[string]interface{} {
 	name, alias := splitProviderID(id)
 
 	for _, p := range *providers {

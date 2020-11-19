@@ -66,7 +66,7 @@
       "description": "descriptionB"
     }
   ],
-  "provider": [
+  "terraform_provider": [
     {
       "X": {}
     }

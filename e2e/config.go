@@ -134,13 +134,13 @@ service {
     description = "database"
 }
 
-provider "local" {}
+terraform_provider "local" {}
 `
 }
 
 func panosBadCredConfig() string {
 	return `log_level = "trace"
-provider "panos" {
+terraform_provider "panos" {
 	hostname = "10.10.10.10"
 	api_key = "badapikey_1234"
 }

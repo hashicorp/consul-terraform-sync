@@ -370,7 +370,7 @@ func singleTaskConfig() *config.Config {
 				Description: config.String("descriptionB"),
 			},
 		},
-		Providers: &config.ProviderConfigs{{
+		TerraformProviders: &config.TerraformProviderConfigs{{
 			"X": map[string]interface{}{},
 			handler.TerraformProviderFake: map[string]interface{}{
 				"name": "fake-provider",

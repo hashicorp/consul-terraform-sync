@@ -66,7 +66,7 @@ service {
   description = "descriptionB"
 }
 
-provider "X" {}
+terraform_provider "X" {}
 
 task {
   name = "task"
