@@ -16,6 +16,8 @@ require (
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/terraform v0.12.29
 	github.com/hashicorp/terraform-exec v0.9.0
+	github.com/hashicorp/vault/api v1.0.5-0.20200630205458-1a16f3c699c6
+	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.5.1

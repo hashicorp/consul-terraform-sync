@@ -263,6 +263,8 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.Consul.KVNamespace = String("")
 	expected.Consul.TLS.Cert = String("")
 	expected.Consul.Transport.MaxIdleConns = Int(100)
+	expected.Vault = DefaultVaultConfig()
+	expected.Vault.Finalize()
 	expected.Driver.consul = expected.Consul
 	expected.Driver.Terraform.Version = String("")
 	expected.Driver.Terraform.PersistLog = Bool(false)
