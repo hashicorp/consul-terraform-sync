@@ -11,6 +11,8 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/templates"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/hcat"
 )
@@ -36,7 +38,7 @@ type Oncer interface {
 type unit struct {
 	taskName string
 	driver   driver.Driver
-	template template
+	template templates.Template
 
 	providers []string
 	services  []string
@@ -48,8 +50,8 @@ type baseController struct {
 	newDriver  func(*config.Config, driver.Task) (driver.Driver, error)
 	fileReader func(string) ([]byte, error)
 	units      []unit
-	watcher    watcher
-	resolver   resolver
+	watcher    templates.Watcher
+	resolver   templates.Resolver
 }
 
 func newBaseController(conf *config.Config) (*baseController, error) {
@@ -76,9 +78,22 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 func (ctrl *baseController) init(ctx context.Context) error {
 	log.Printf("[INFO] (ctrl) initializing driver")
 
+	// Load dynamic configuration
+	providerConfigs := make([]hcltmpl.NamedBlock, len(*ctrl.conf.TerraformProviders))
+	resolver := hcat.NewResolver()
+	for i, providerConf := range *ctrl.conf.TerraformProviders {
+		block, err := hcltmpl.LoadDynamicConfig(ctx, ctrl.watcher, resolver, *providerConf)
+		if err != nil {
+			log.Printf("[ERR] (ctrl) error loading dynamic configuration for provider %q: %s",
+				block.Name, err)
+			return err
+		}
+		providerConfigs[i] = block
+	}
+
 	// Future: improve by combining tasks into workflows.
 	log.Printf("[INFO] (ctrl) initializing all tasks")
-	tasks := newDriverTasks(ctrl.conf)
+	tasks := newDriverTasks(ctrl.conf, providerConfigs)
 	units := make([]unit, 0, len(tasks))
 
 	for _, task := range tasks {
@@ -158,7 +173,7 @@ func newTerraformDriver(conf *config.Config, task driver.Task) (driver.Driver, e
 
 // newDriverTasks converts user-defined task configurations to the task object
 // used by drivers.
-func newDriverTasks(conf *config.Config) []driver.Task {
+func newDriverTasks(conf *config.Config, providerConfigs []hcltmpl.NamedBlock) []driver.Task {
 	if conf == nil {
 		return []driver.Task{}
 	}
@@ -170,10 +185,10 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 			services[si] = getService(conf.Services, service)
 		}
 
-		providers := make([]map[string]interface{}, len(t.Providers))
+		providers := make([]hcltmpl.NamedBlock, len(t.Providers))
 		providerInfo := make(map[string]interface{})
 		for pi, providerID := range t.Providers {
-			providers[pi] = getProvider(conf.TerraformProviders, providerID)
+			providers[pi] = getProvider(providerConfigs, providerID)
 
 			// This is Terraform specific to pass version and source info for
 			// providers from the required_provider block
@@ -201,7 +216,7 @@ func newDriverTasks(conf *config.Config) []driver.Task {
 }
 
 // newTaskTemplate creates templates to be monitored and rendered.
-func newTaskTemplate(taskName string, conf *config.Config, fileReader func(string) ([]byte, error)) (template, error) {
+func newTaskTemplate(taskName string, conf *config.Config, fileReader func(string) ([]byte, error)) (templates.Template, error) {
 	if conf.Driver.Terraform == nil {
 		return nil, errors.New("unsupported driver to run tasks")
 	}
@@ -263,30 +278,28 @@ func splitProviderID(id string) (string, string) {
 // assumes the default provider block that is empty.
 //
 // terraform_provider "name" { }
-func getProvider(providers *config.TerraformProviderConfigs, id string) map[string]interface{} {
+func getProvider(providers []hcltmpl.NamedBlock, id string) hcltmpl.NamedBlock {
 	name, alias := splitProviderID(id)
 
-	for _, p := range *providers {
+	for _, p := range providers {
 		// Find the provider by name
-		if pRaw, ok := (*p)[name]; ok {
-			if alias == "" {
-				return *p
-			}
+		if p.Name != name {
+			continue
+		}
 
-			// Find the provider by alias
-			pConf, ok := pRaw.(map[string]interface{})
-			if !ok {
-				// Not much we can do if the provider block has unexpected structure
-				// at this point. We'll move forward with the default empty block.
-				break
-			}
+		if alias == "" {
+			return p
+		}
 
-			a, ok := pConf["alias"].(string)
-			if ok && a == alias {
-				return *p
-			}
+		// Match by alias
+		a, ok := p.Variables["alias"]
+		if ok && a.AsString() == alias {
+			return p
 		}
 	}
 
-	return map[string]interface{}{name: make(map[string]interface{})}
+	return hcltmpl.NamedBlock{
+		Name:      name,
+		Variables: make(hcltmpl.Variables),
+	}
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/handler"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/pkg/errors"
 )
@@ -112,9 +113,9 @@ func (tf *Terraform) Version() string {
 func (tf *Terraform) InitTask(force bool) error {
 	task := tf.task
 
-	services := make([]*tftmpl.Service, len(task.Services))
+	services := make([]tftmpl.Service, len(task.Services))
 	for i, s := range task.Services {
-		services[i] = &tftmpl.Service{
+		services[i] = tftmpl.Service{
 			Datacenter:  s.Datacenter,
 			Description: s.Description,
 			Name:        s.Name,
@@ -123,7 +124,7 @@ func (tf *Terraform) InitTask(force bool) error {
 		}
 	}
 
-	var vars tftmpl.Variables
+	var vars hcltmpl.Variables
 	for _, vf := range task.VarFiles {
 		tfvars, err := tftmpl.LoadModuleVariables(vf)
 		if err != nil {
@@ -237,21 +238,19 @@ func getTerraformHandlers(task Task) (handler.Handler, error) {
 	counter := 0
 	var next handler.Handler
 	for _, p := range task.Providers {
-		for k, v := range p {
-			h, err := handler.TerraformProviderHandler(k, v)
-			if err != nil {
-				log.Printf(
-					"[ERR] (driver.terraform) could not initialize handler for "+
-						"provider '%s': %s", k, err)
-				return nil, err
-			}
-			if h != nil {
-				counter++
-				log.Printf(
-					"[INFO] (driver.terraform) retrieved handler for provider '%s'", k)
-				h.SetNext(next)
-				next = h
-			}
+		h, err := handler.TerraformProviderHandler(p.Name, p.RawConfig())
+		if err != nil {
+			log.Printf(
+				"[ERR] (driver.terraform) could not initialize handler for "+
+					"provider '%s': %s", p.Name, err)
+			return nil, err
+		}
+		if h != nil {
+			counter++
+			log.Printf(
+				"[INFO] (driver.terraform) retrieved handler for provider '%s'", p.Name)
+			h.SetNext(next)
+			next = h
 		}
 	}
 	log.Printf("[INFO] (driver.terraform) retrieved %d Terraform handlers for task '%s'",

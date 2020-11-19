@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -80,9 +81,9 @@ func NewTFVarsTmpl(w io.Writer, input *RootModuleInputData) error {
 
 	hclFile := hclwrite.NewEmptyFile()
 	body := hclFile.Body()
-	appendNamedBlockValues(body, input.providers)
+	appendNamedBlockValues(body, input.Providers)
 	body.AppendNewline()
-	appendRawServiceTemplateValues(body, input.services)
+	appendRawServiceTemplateValues(body, input.Services)
 
 	_, err = hclFile.WriteTo(w)
 	return err
@@ -90,7 +91,7 @@ func NewTFVarsTmpl(w io.Writer, input *RootModuleInputData) error {
 
 // appendNamedBlockValues appends blocks that assign value to the named
 // variable blocks genernated by `appendNamedBlockVariable`
-func appendNamedBlockValues(body *hclwrite.Body, blocks []*namedBlock) {
+func appendNamedBlockValues(body *hclwrite.Body, blocks []hcltmpl.NamedBlock) {
 	lastIdx := len(blocks) - 1
 	for i, b := range blocks {
 		obj := b.ObjectVal()
@@ -111,7 +112,7 @@ func appendNamedBlockValues(body *hclwrite.Body, blocks []*namedBlock) {
 //     <attr> = {{ <template syntax> }}
 //   }
 // }
-func appendRawServiceTemplateValues(body *hclwrite.Body, services []*Service) {
+func appendRawServiceTemplateValues(body *hclwrite.Body, services []Service) {
 	if len(services) == 0 {
 		return
 	}

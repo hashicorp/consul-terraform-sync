@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 )
 
 // Service contains service configuration information
@@ -20,8 +21,8 @@ type Service struct {
 type Task struct {
 	Description  string
 	Name         string
-	Providers    []map[string]interface{} // task.providers config info
-	ProviderInfo map[string]interface{}   // driver.required_provider config info
+	Providers    []hcltmpl.NamedBlock   // task.providers config info
+	ProviderInfo map[string]interface{} // driver.required_provider config info
 	Services     []Service
 	Source       string
 	VarFiles     []string
@@ -32,9 +33,7 @@ type Task struct {
 func (t *Task) ProviderNames() []string {
 	names := make([]string, len(t.Providers))
 	for ix, p := range t.Providers {
-		for name := range p {
-			names[ix] = name
-		}
+		names[ix] = p.Name
 	}
 	return names
 }

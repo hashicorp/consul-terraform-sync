@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/zclconf/go-cty/cty"
@@ -59,8 +60,8 @@ func NewVariablesTF(w io.Writer, input *RootModuleInputData) error {
 	hclFile := hclwrite.NewEmptyFile()
 	rootBody := hclFile.Body()
 	rootBody.AppendNewline()
-	lastIdx := len(input.providers) - 1
-	for i, p := range input.providers {
+	lastIdx := len(input.Providers) - 1
+	for i, p := range input.Providers {
 		appendNamedBlockVariable(rootBody, p)
 		if i != lastIdx {
 			rootBody.AppendNewline()
@@ -76,7 +77,7 @@ func NewVariablesTF(w io.Writer, input *RootModuleInputData) error {
 
 // appendNamedBlockVariable creates an HCL file object that contains the variable
 // blocks used by the root module.
-func appendNamedBlockVariable(body *hclwrite.Body, block *namedBlock) {
+func appendNamedBlockVariable(body *hclwrite.Body, block hcltmpl.NamedBlock) {
 	pBody := body.AppendNewBlock("variable", []string{block.Name}).Body()
 	pBody.SetAttributeValue("default", cty.NullVal(*block.ObjectType()))
 	pBody.SetAttributeValue("description", cty.StringVal(fmt.Sprintf(
