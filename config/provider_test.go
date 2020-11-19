@@ -12,7 +12,7 @@ func TestProviderConfigs_Copy(t *testing.T) {
 
 	cases := []struct {
 		name string
-		a    *ProviderConfigs
+		a    *TerraformProviderConfigs
 	}{
 		{
 			"nil",
@@ -20,11 +20,11 @@ func TestProviderConfigs_Copy(t *testing.T) {
 		},
 		{
 			"empty",
-			&ProviderConfigs{},
+			&TerraformProviderConfigs{},
 		},
 		{
 			"same_enabled",
-			&ProviderConfigs{
+			&TerraformProviderConfigs{
 				{
 					"null": map[string]interface{}{
 						"attr":  "value",
@@ -43,26 +43,26 @@ func TestProviderConfigs_Copy(t *testing.T) {
 	}
 }
 
-func TestProviderConfigs_Merge(t *testing.T) {
+func TestTerraformProviderConfigs_Merge(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name string
-		a    *ProviderConfigs
-		b    *ProviderConfigs
-		r    *ProviderConfigs
+		a    *TerraformProviderConfigs
+		b    *TerraformProviderConfigs
+		r    *TerraformProviderConfigs
 	}{
 		{
 			"nil_a",
 			nil,
-			&ProviderConfigs{},
-			&ProviderConfigs{},
+			&TerraformProviderConfigs{},
+			&TerraformProviderConfigs{},
 		},
 		{
 			"nil_b",
-			&ProviderConfigs{},
+			&TerraformProviderConfigs{},
 			nil,
-			&ProviderConfigs{},
+			&TerraformProviderConfigs{},
 		},
 		{
 			"nil_both",
@@ -72,25 +72,25 @@ func TestProviderConfigs_Merge(t *testing.T) {
 		},
 		{
 			"empty",
-			&ProviderConfigs{},
-			&ProviderConfigs{},
-			&ProviderConfigs{},
+			&TerraformProviderConfigs{},
+			&TerraformProviderConfigs{},
+			&TerraformProviderConfigs{},
 		},
 		{
 			"appends",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
 				},
 			}},
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"template": map[string]interface{}{
 					"attr":  "t",
 					"count": 5,
 				},
 			}},
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
@@ -104,14 +104,14 @@ func TestProviderConfigs_Merge(t *testing.T) {
 		},
 		{
 			"empty_one",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
 				},
 			}},
-			&ProviderConfigs{},
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{},
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
@@ -120,14 +120,14 @@ func TestProviderConfigs_Merge(t *testing.T) {
 		},
 		{
 			"empty_two",
-			&ProviderConfigs{},
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{},
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
 				},
 			}},
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
@@ -149,23 +149,23 @@ func TestProviderConfigs_Finalize(t *testing.T) {
 
 	cases := []struct {
 		name string
-		i    *ProviderConfigs
-		r    *ProviderConfigs
+		i    *TerraformProviderConfigs
+		r    *TerraformProviderConfigs
 	}{
 		{
 			"empty",
-			&ProviderConfigs{},
-			&ProviderConfigs{},
+			&TerraformProviderConfigs{},
+			&TerraformProviderConfigs{},
 		},
 		{
 			"with_name",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
 				},
 			}},
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
@@ -187,7 +187,7 @@ func TestProviderConfigs_Validate(t *testing.T) {
 
 	cases := []struct {
 		name    string
-		i       *ProviderConfigs
+		i       *TerraformProviderConfigs
 		isValid bool
 	}{
 		{
@@ -197,12 +197,12 @@ func TestProviderConfigs_Validate(t *testing.T) {
 		},
 		{
 			"empty",
-			&ProviderConfigs{},
+			&TerraformProviderConfigs{},
 			true,
 		},
 		{
 			"valid",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
@@ -212,11 +212,11 @@ func TestProviderConfigs_Validate(t *testing.T) {
 		},
 		{
 			"empty provider map",
-			&ProviderConfigs{{}},
+			&TerraformProviderConfigs{{}},
 			false,
 		}, {
 			"multiple",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
@@ -229,7 +229,7 @@ func TestProviderConfigs_Validate(t *testing.T) {
 			true,
 		}, {
 			"alias",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
@@ -244,7 +244,7 @@ func TestProviderConfigs_Validate(t *testing.T) {
 			true,
 		}, {
 			"duplicate",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr":  "n",
 					"count": 10,
@@ -258,7 +258,7 @@ func TestProviderConfigs_Validate(t *testing.T) {
 			false,
 		}, {
 			"duplicate alias",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"alias": "alias",
 					"attr":  "n",
@@ -293,22 +293,22 @@ func TestProviderConfigs_GoString(t *testing.T) {
 	// only testing provider cases with one argument since map order is random
 	cases := []struct {
 		name     string
-		i        *ProviderConfigs
+		i        *TerraformProviderConfigs
 		expected string
 	}{
 		{
 			"nil",
 			nil,
-			`(*ProviderConfigs)(nil)`,
+			`(*TerraformProviderConfigs)(nil)`,
 		},
 		{
 			"empty",
-			&ProviderConfigs{},
+			&TerraformProviderConfigs{},
 			`{}`,
 		},
 		{
 			"single config",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"count": "10",
 				},
@@ -317,7 +317,7 @@ func TestProviderConfigs_GoString(t *testing.T) {
 		},
 		{
 			"multiple configs, same provider",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
 					"attr": "n",
 				},
@@ -331,7 +331,7 @@ func TestProviderConfigs_GoString(t *testing.T) {
 		},
 		{
 			"multiple configs, different provider",
-			&ProviderConfigs{{
+			&TerraformProviderConfigs{{
 				"firewall": map[string]interface{}{
 					"hostname": "127.0.0.10",
 					"username": "username",

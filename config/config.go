@@ -25,14 +25,15 @@ type Config struct {
 	LogLevel   *string `mapstructure:"log_level"`
 	ClientType *string `mapstructure:"client_type"`
 
-	Syslog       *SyslogConfig       `mapstructure:"syslog"`
-	Consul       *ConsulConfig       `mapstructure:"consul"`
-	Vault        *VaultConfig        `mapstructure:"vault"`
-	Driver       *DriverConfig       `mapstructure:"driver"`
-	Tasks        *TaskConfigs        `mapstructure:"task"`
-	Services     *ServiceConfigs     `mapstructure:"service"`
-	Providers    *ProviderConfigs    `mapstructure:"provider"`
-	BufferPeriod *BufferPeriodConfig `mapstructure:"buffer_period"`
+	Syslog              *SyslogConfig             `mapstructure:"syslog"`
+	Consul              *ConsulConfig             `mapstructure:"consul"`
+	Vault               *VaultConfig              `mapstructure:"vault"`
+	Driver              *DriverConfig             `mapstructure:"driver"`
+	Tasks               *TaskConfigs              `mapstructure:"task"`
+	Services            *ServiceConfigs           `mapstructure:"service"`
+	DeprecatedProviders *TerraformProviderConfigs `mapstructure:"provider"`
+	TerraformProviders  *TerraformProviderConfigs `mapstructure:"terraform_provider"`
+	BufferPeriod        *BufferPeriodConfig       `mapstructure:"buffer_period"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -63,14 +64,15 @@ func BuildConfig(paths []string) (*Config, error) {
 func DefaultConfig() *Config {
 	consul := DefaultConsulConfig()
 	return &Config{
-		LogLevel:     String(DefaultLogLevel),
-		Syslog:       DefaultSyslogConfig(),
-		Consul:       consul,
-		Driver:       DefaultDriverConfig(),
-		Tasks:        DefaultTaskConfigs(),
-		Services:     DefaultServiceConfigs(),
-		Providers:    DefaultProviderConfigs(),
-		BufferPeriod: DefaultBufferPeriodConfig(),
+		LogLevel:            String(DefaultLogLevel),
+		Syslog:              DefaultSyslogConfig(),
+		Consul:              consul,
+		Driver:              DefaultDriverConfig(),
+		Tasks:               DefaultTaskConfigs(),
+		Services:            DefaultServiceConfigs(),
+		DeprecatedProviders: DefaultTerraformProviderConfigs(),
+		TerraformProviders:  DefaultTerraformProviderConfigs(),
+		BufferPeriod:        DefaultBufferPeriodConfig(),
 	}
 }
 
@@ -82,15 +84,16 @@ func (c *Config) Copy() *Config {
 	}
 
 	return &Config{
-		LogLevel:     StringCopy(c.LogLevel),
-		Syslog:       c.Syslog.Copy(),
-		Consul:       c.Consul.Copy(),
-		Vault:        c.Vault.Copy(),
-		Driver:       c.Driver.Copy(),
-		Tasks:        c.Tasks.Copy(),
-		Services:     c.Services.Copy(),
-		Providers:    c.Providers.Copy(),
-		BufferPeriod: c.BufferPeriod.Copy(),
+		LogLevel:            StringCopy(c.LogLevel),
+		Syslog:              c.Syslog.Copy(),
+		Consul:              c.Consul.Copy(),
+		Vault:               c.Vault.Copy(),
+		Driver:              c.Driver.Copy(),
+		Tasks:               c.Tasks.Copy(),
+		Services:            c.Services.Copy(),
+		DeprecatedProviders: c.DeprecatedProviders.Copy(),
+		TerraformProviders:  c.TerraformProviders.Copy(),
+		BufferPeriod:        c.BufferPeriod.Copy(),
 	}
 }
 
@@ -140,8 +143,12 @@ func (c *Config) Merge(o *Config) *Config {
 		r.Services = r.Services.Merge(o.Services)
 	}
 
-	if o.Providers != nil {
-		r.Providers = r.Providers.Merge(o.Providers)
+	if o.DeprecatedProviders != nil {
+		r.DeprecatedProviders = r.DeprecatedProviders.Merge(o.DeprecatedProviders)
+	}
+
+	if o.TerraformProviders != nil {
+		r.TerraformProviders = r.TerraformProviders.Merge(o.TerraformProviders)
 	}
 
 	if o.BufferPeriod != nil {
@@ -195,10 +202,22 @@ func (c *Config) Finalize() {
 	}
 	c.Services.Finalize()
 
-	if c.Providers == nil {
-		c.Providers = DefaultProviderConfigs()
+	if c.TerraformProviders == nil {
+		c.TerraformProviders = DefaultTerraformProviderConfigs()
 	}
-	c.Providers.Finalize()
+	if c.DeprecatedProviders != nil {
+		// Merge DeprecatedProviders and use TerraformProviders from here onward.
+		if len(*c.DeprecatedProviders) > 0 {
+			c.DeprecatedProviders.Finalize()
+			c.TerraformProviders = c.TerraformProviders.Merge(c.DeprecatedProviders)
+			log.Println("[WARN] (config) The 'provider' block name is marked for " +
+				"deprecation in v0.1.0-techpreview2 and will be removed in v0.1.0-beta. " +
+				"Please update you configuration and rename 'provider' blocks to " +
+				"'terraform_provider'.")
+		}
+		c.DeprecatedProviders = nil
+	}
+	c.TerraformProviders.Finalize()
 
 	if c.BufferPeriod == nil {
 		c.BufferPeriod = DefaultBufferPeriodConfig()
@@ -224,7 +243,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	if err := c.Providers.Validate(); err != nil {
+	if err := c.TerraformProviders.Validate(); err != nil {
 		return err
 	}
 
@@ -251,7 +270,7 @@ func (c *Config) GoString() string {
 		"Driver:%s, "+
 		"Tasks:%s, "+
 		"Services:%s, "+
-		"Providers:%s, "+
+		"TerraformProviders:%s, "+
 		"BufferPeriod:%s"+
 		"}",
 		StringVal(c.LogLevel),
@@ -261,7 +280,7 @@ func (c *Config) GoString() string {
 		c.Driver.GoString(),
 		c.Tasks.GoString(),
 		c.Services.GoString(),
-		c.Providers.GoString(),
+		c.TerraformProviders.GoString(),
 		c.BufferPeriod.GoString(),
 	)
 }

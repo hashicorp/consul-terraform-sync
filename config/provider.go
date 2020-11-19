@@ -5,21 +5,21 @@ import (
 	"strings"
 )
 
-// ProviderConfigs is an array of configuration for each provider.
-type ProviderConfigs []*ProviderConfig
+// TerraformProviderConfigs is an array of configuration for each provider.
+type TerraformProviderConfigs []*TerraformProviderConfig
 
-// ProviderConfig is a map representing the configuration for a single provider
-// where the key is the name of provider and value is the configuration.
-type ProviderConfig map[string]interface{}
+// TerraformProviderConfig is a map representing the configuration for a single
+// provider where the key is the name of provider and value is the configuration.
+type TerraformProviderConfig map[string]interface{}
 
-// DefaultProviderConfigs returns a configuration that is populated with the
-// default values.
-func DefaultProviderConfigs() *ProviderConfigs {
-	return &ProviderConfigs{}
+// DefaultTerraformProviderConfigs returns a configuration that is populated
+// with the default values.
+func DefaultTerraformProviderConfigs() *TerraformProviderConfigs {
+	return &TerraformProviderConfigs{}
 }
 
 // Len is a helper method to get the length of the underlying config list
-func (c *ProviderConfigs) Len() int {
+func (c *TerraformProviderConfigs) Len() int {
 	if c == nil {
 		return 0
 	}
@@ -28,14 +28,14 @@ func (c *ProviderConfigs) Len() int {
 }
 
 // Copy returns a deep copy of this configuration.
-func (c *ProviderConfigs) Copy() *ProviderConfigs {
+func (c *TerraformProviderConfigs) Copy() *TerraformProviderConfigs {
 	if c == nil {
 		return nil
 	}
 
-	o := make(ProviderConfigs, c.Len())
+	o := make(TerraformProviderConfigs, c.Len())
 	for i, t := range *c {
-		copy := make(ProviderConfig)
+		copy := make(TerraformProviderConfig)
 		for k, v := range *t {
 			copy[k] = v
 		}
@@ -48,7 +48,7 @@ func (c *ProviderConfigs) Copy() *ProviderConfigs {
 // configuration, with values in the other configuration taking precedence.
 // Maps and slices are merged, most other values are overwritten. Complex
 // structs define their own merge functionality.
-func (c *ProviderConfigs) Merge(o *ProviderConfigs) *ProviderConfigs {
+func (c *TerraformProviderConfigs) Merge(o *TerraformProviderConfigs) *TerraformProviderConfigs {
 	if c == nil {
 		if o == nil {
 			return nil
@@ -69,14 +69,14 @@ func (c *ProviderConfigs) Merge(o *ProviderConfigs) *ProviderConfigs {
 
 // Finalize ensures the configuration has no nil pointers and sets default
 // values.
-func (c *ProviderConfigs) Finalize() {
+func (c *TerraformProviderConfigs) Finalize() {
 	if c == nil {
-		*c = *DefaultProviderConfigs()
+		*c = *DefaultTerraformProviderConfigs()
 	}
 }
 
 // Validate validates the values and nested values of the configuration struct
-func (c *ProviderConfigs) Validate() error {
+func (c *TerraformProviderConfigs) Validate() error {
 	if c == nil {
 		// Uninitialized config is invalid. Although unlikely, no providers could
 		// still be valid if all of the tasks happen to not depend on a provider.
@@ -103,9 +103,9 @@ func (c *ProviderConfigs) Validate() error {
 // GoString defines the printable version of this struct. Provider configuration
 // is completely redacted since providers will have varying arguments containing
 // secrets
-func (c *ProviderConfigs) GoString() string {
+func (c *TerraformProviderConfigs) GoString() string {
 	if c == nil {
-		return "(*ProviderConfigs)(nil)"
+		return "(*TerraformProviderConfigs)(nil)"
 	}
 
 	s := make([]string, len(*c))
@@ -119,7 +119,7 @@ func (c *ProviderConfigs) GoString() string {
 }
 
 // Validate validates the values and nested values of the configuration struct.
-func (c *ProviderConfig) Validate() error {
+func (c *TerraformProviderConfig) Validate() error {
 	if c == nil {
 		return fmt.Errorf("invalid provider configuration")
 	}
@@ -140,7 +140,7 @@ func (c *ProviderConfig) Validate() error {
 
 // id returns the unique name to represent the provider configuration. If alias is set,
 // the ID is <name>.<alias>. Otherwise, the name is used as the ID.
-func (c *ProviderConfig) id() string {
+func (c *TerraformProviderConfig) id() string {
 	if c == nil || len(*c) == 0 {
 		return ""
 	}

@@ -94,7 +94,7 @@ var (
 				Source:      String("Y"),
 			},
 		},
-		Providers: &ProviderConfigs{{
+		TerraformProviders: &TerraformProviderConfigs{{
 			"X": map[string]interface{}{},
 		}},
 		BufferPeriod: &BufferPeriodConfig{

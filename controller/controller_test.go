@@ -187,7 +187,7 @@ func TestNewDriverTasks(t *testing.T) {
 						},
 					},
 				},
-				Providers: &config.ProviderConfigs{
+				TerraformProviders: &config.TerraformProviderConfigs{
 					{"providerB": map[string]interface{}{
 						"var": "val",
 					}},
@@ -231,7 +231,7 @@ func TestNewDriverTasks(t *testing.T) {
 						},
 					},
 				},
-				Providers: &config.ProviderConfigs{
+				TerraformProviders: &config.TerraformProviderConfigs{
 					{"providerA": map[string]interface{}{
 						"alias": "alias1",
 						"foo":   "bar",
