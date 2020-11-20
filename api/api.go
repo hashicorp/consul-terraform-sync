@@ -21,6 +21,9 @@ const (
 	// Task Status: Determined by the success of a task updating. The 5 most
 	// recent task updates are stored as an ‘event’ in CTS. A task is healthy
 	// when all the stored events are successful.
+	//
+	// Overall Status: Determined by the health across all task statuses.
+	// Overall status is healthy when all task statuses are healthy.
 	StatusHealthy = "healthy"
 
 	// StatusDegraded is the degraded status. This is determined based on status
@@ -31,6 +34,10 @@ const (
 	// when more than half of the stored events are successful _or_ less than
 	// half of the stored events are successful but the most recent event is
 	// successful.
+	//
+	// Overall Status: Determined by the health across all task statuses.
+	// Overall status is degraded when at least one task status is degraded but
+	// none are critical.
 	StatusDegraded = "degraded"
 
 	// StatusCritical is the critical status. This is determined based on status
@@ -39,7 +46,10 @@ const (
 	// Task Status: Determined by the success of a task updating. The 5 most
 	// recent task updates are stored as an ‘event’ in CTS. A task is critical
 	// when less than half of the stored events are successful and the most
-	// recent event is not successful
+	// recent event is not successful.
+	//
+	// Overall Status: Determined by the health across all task statuses.
+	// Overall status is critical when at least one task status is critical.
 	StatusCritical = "critical"
 
 	// StatusUndetermined is when the status is unknown. This is determined
@@ -48,6 +58,9 @@ const (
 	// Task Status: Determined by the success of a task updating. The 5 most
 	// recent task updates are stored as an ‘event’ in CTS. A task is
 	// undetermined when no event data has been collected yet.
+	//
+	// Overall Status: Determined by the health across all task statuses.
+	// Overall status is undetermined when no task status information exists yet.
 	StatusUndetermined = "undetermined"
 )
 
@@ -63,6 +76,9 @@ type API struct {
 func NewAPI(store *event.Store, port int) *API {
 	mux := http.NewServeMux()
 
+	// retrieve overall status
+	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, overallStatusPath),
+		newOverallStatusHandler(store, defaultAPIVersion))
 	// retrieve task status for a task-name
 	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskStatusPath),
 		newTaskStatusHandler(store, defaultAPIVersion))

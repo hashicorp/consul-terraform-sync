@@ -24,9 +24,9 @@ func TestServe(t *testing.T) {
 		statusCode int
 	}{
 		{
-			"overall status TODO",
+			"overall status",
 			"status",
-			http.StatusNotFound,
+			http.StatusOK,
 		},
 		{
 			"task status: all",
@@ -130,6 +130,11 @@ func TestJsonResponse(t *testing.T) {
 					EventsURL: "",
 				},
 			},
+		},
+		{
+			"overall status: success",
+			http.StatusOK,
+			OverallStatus{Status: StatusDegraded},
 		},
 	}
 	for _, tc := range cases {
