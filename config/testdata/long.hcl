@@ -1,4 +1,5 @@
 log_level = "ERR"
+port = 8502
 
 syslog {
   enabled = true

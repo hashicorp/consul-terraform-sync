@@ -18,12 +18,16 @@ import (
 const (
 	// DefaultLogLevel is the default logging level.
 	DefaultLogLevel = "WARN"
+
+	// defaultPort is the default port to use for api server.
+	defaultPort = 8501
 )
 
 // Config is used to configure Sync
 type Config struct {
 	LogLevel   *string `mapstructure:"log_level"`
 	ClientType *string `mapstructure:"client_type"`
+	Port       *int    `mapstructure:"port"`
 
 	Syslog              *SyslogConfig             `mapstructure:"syslog"`
 	Consul              *ConsulConfig             `mapstructure:"consul"`
@@ -66,6 +70,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		LogLevel:            String(DefaultLogLevel),
 		Syslog:              DefaultSyslogConfig(),
+		Port:                Int(defaultPort),
 		Consul:              consul,
 		Driver:              DefaultDriverConfig(),
 		Tasks:               DefaultTaskConfigs(),
@@ -86,6 +91,7 @@ func (c *Config) Copy() *Config {
 	return &Config{
 		LogLevel:            StringCopy(c.LogLevel),
 		Syslog:              c.Syslog.Copy(),
+		Port:                IntCopy(c.Port),
 		Consul:              c.Consul.Copy(),
 		Vault:               c.Vault.Copy(),
 		Driver:              c.Driver.Copy(),
@@ -117,6 +123,10 @@ func (c *Config) Merge(o *Config) *Config {
 
 	if o.LogLevel != nil {
 		r.LogLevel = StringCopy(o.LogLevel)
+	}
+
+	if o.Port != nil {
+		r.Port = IntCopy(o.Port)
 	}
 
 	if o.Syslog != nil {
@@ -162,6 +172,10 @@ func (c *Config) Merge(o *Config) *Config {
 func (c *Config) Finalize() {
 	if c == nil {
 		return
+	}
+
+	if c.Port == nil {
+		c.Port = Int(defaultPort)
 	}
 
 	if c.ClientType == nil {
@@ -264,6 +278,7 @@ func (c *Config) GoString() string {
 
 	return fmt.Sprintf("&Config{"+
 		"LogLevel:%s, "+
+		"Port:%d, "+
 		"Syslog:%s, "+
 		"Consul:%s, "+
 		"Vault:%s, "+
@@ -274,6 +289,7 @@ func (c *Config) GoString() string {
 		"BufferPeriod:%s"+
 		"}",
 		StringVal(c.LogLevel),
+		IntVal(c.Port),
 		c.Syslog.GoString(),
 		c.Consul.GoString(),
 		c.Vault.GoString(),

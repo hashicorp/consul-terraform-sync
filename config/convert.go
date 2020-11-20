@@ -48,6 +48,15 @@ func IntVal(i *int) int {
 	return *i
 }
 
+// IntCopy returns a copy of the int pointer
+func IntCopy(i *int) *int {
+	if i == nil {
+		return nil
+	}
+
+	return Int(*i)
+}
+
 // String returns a pointer to the given string.
 func String(s string) *string {
 	return &s

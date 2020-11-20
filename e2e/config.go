@@ -118,6 +118,8 @@ task {
 
 func baseConfig() string {
 	return `log_level = "trace"
+# port 0 will automatically select next free port
+port = 0
 
 service {
   name = "api"
