@@ -42,7 +42,7 @@ test:
 # test-integration runs the test suite and integration tests
 test-integration:
 	@echo "==> Testing ${NAME} (test suite & integration)"
-	@go test -count=1 -timeout=60s -tags=integration -cover ./... ${TESTARGS}
+	@go test -count=1 -timeout=80s -tags=integration -cover ./... ${TESTARGS}
 .PHONY: test-all
 
 # test-e2e runs e2e tests
