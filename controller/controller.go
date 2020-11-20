@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
@@ -78,17 +80,10 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 func (ctrl *baseController) init(ctx context.Context) error {
 	log.Printf("[INFO] (ctrl) initializing driver")
 
-	// Load dynamic configuration
-	providerConfigs := make([]hcltmpl.NamedBlock, len(*ctrl.conf.TerraformProviders))
-	resolver := hcat.NewResolver()
-	for i, providerConf := range *ctrl.conf.TerraformProviders {
-		block, err := hcltmpl.LoadDynamicConfig(ctx, ctrl.watcher, resolver, *providerConf)
-		if err != nil {
-			log.Printf("[ERR] (ctrl) error loading dynamic configuration for provider %q: %s",
-				block.Name, err)
-			return err
-		}
-		providerConfigs[i] = block
+	// Load provider configuration and evaluate dynamic values
+	providerConfigs, err := ctrl.loadProviderConfigs(ctx)
+	if err != nil {
+		return err
 	}
 
 	// Future: improve by combining tasks into workflows.
@@ -136,6 +131,39 @@ func (ctrl *baseController) init(ctx context.Context) error {
 
 	log.Printf("[INFO] (ctrl) driver initialized")
 	return nil
+}
+
+// loadProviderConfigs loads provider configs and evaluates provider blocks
+// for dynamic values in parallel.
+func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]hcltmpl.NamedBlock, error) {
+	numBlocks := len(*ctrl.conf.TerraformProviders)
+	var wg sync.WaitGroup
+	wg.Add(numBlocks)
+
+	var lastErr error
+	providerConfigs := make([]hcltmpl.NamedBlock, numBlocks)
+	for i, providerConf := range *ctrl.conf.TerraformProviders {
+		go func(i int, conf map[string]interface{}) {
+			ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			defer wg.Done()
+
+			block, err := hcltmpl.LoadDynamicConfig(ctxTimeout, ctrl.watcher, ctrl.resolver, conf)
+			if err != nil {
+				log.Printf("[ERR] (ctrl) error loading dynamic configuration for provider %q: %s",
+					block.Name, err)
+				lastErr = err
+				return
+			}
+			providerConfigs[i] = block
+		}(i, *providerConf)
+	}
+
+	wg.Wait()
+	if lastErr != nil {
+		return nil, lastErr
+	}
+	return providerConfigs, nil
 }
 
 // InstallDriver installs necessary drivers based on user configuration.

@@ -109,3 +109,19 @@ func (b *NamedBlock) ObjectVal() *cty.Value {
 func (b *NamedBlock) RawConfig() map[string]interface{} {
 	return b.rawConfig
 }
+
+// NewNamedBlocksTest is used to simplify testing
+func NewNamedBlocksTest(rawBlocks []map[string]interface{}) []NamedBlock {
+	blocks := make([]NamedBlock, len(rawBlocks))
+	for i, b := range rawBlocks {
+		blocks[i] = NewNamedBlockTest(b)
+	}
+	return blocks
+}
+
+// NewNamedBlockTest is used to simplify testing
+func NewNamedBlockTest(b map[string]interface{}) NamedBlock {
+	block := NewNamedBlock(b)
+	block.rawConfig = nil
+	return block
+}

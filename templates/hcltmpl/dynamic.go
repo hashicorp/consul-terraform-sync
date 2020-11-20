@@ -130,9 +130,13 @@ func renderDynamicValue(ctx context.Context, w tmpls.Watcher,
 			return string(re.Contents), nil
 		}
 
-		err = <-w.WaitCh(ctx)
-		if err != nil {
-			return "", err
+		select {
+		case err = <-w.WaitCh(ctx):
+			if err != nil {
+				return "", err
+			}
+		case <-ctx.Done():
+			return "", ctx.Err()
 		}
 	}
 }
