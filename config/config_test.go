@@ -24,6 +24,7 @@ var (
 
 	longConfig = Config{
 		LogLevel: String("ERR"),
+		Port:     Int(8502),
 		Syslog: &SyslogConfig{
 			Enabled: Bool(true),
 			Name:    String("syslog"),
@@ -180,6 +181,7 @@ func TestFromPath(t *testing.T) {
 			"testdata/simple",
 			&Config{
 				LogLevel: String("ERR"),
+				Port:     Int(8503),
 				BufferPeriod: &BufferPeriodConfig{
 					Enabled: Bool(true),
 					Min:     TimeDuration(time.Duration(10 * time.Second)),
@@ -218,6 +220,7 @@ func TestFromPath(t *testing.T) {
 			"testdata/override",
 			&Config{
 				LogLevel: String("DEBUG"),
+				Port:     Int(8505),
 			},
 		}, {
 			"file DNE",
@@ -258,6 +261,7 @@ func TestConfig_Finalize(t *testing.T) {
 	// Backfill expected values
 	expected := longConfig.Copy()
 	expected.ClientType = String("")
+	expected.Port = Int(8502)
 	expected.Syslog.Facility = String("LOCAL0")
 	expected.BufferPeriod.Enabled = Bool(true)
 	expected.Consul.KVNamespace = String("")

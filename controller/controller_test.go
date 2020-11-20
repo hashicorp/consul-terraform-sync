@@ -45,12 +45,13 @@ func TestNewControllers(t *testing.T) {
 		},
 	}
 	// fake consul server
-	addr := "127.0.0.1:8500"
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, `"test"`) }))
 	var err error
-	ts.Listener, err = net.Listen("tcp", addr)
+	ts.Listener, err = net.Listen("tcp", ":0")
 	require.NoError(t, err)
+	port := ts.Listener.Addr().(*net.TCPAddr).Port
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	ts.Start()
 	defer ts.Close()
 
