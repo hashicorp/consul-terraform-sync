@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/handler"
-
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -117,11 +117,12 @@ func TestGetTerraformHandlers(t *testing.T) {
 			true,
 			true,
 			Task{
-				Providers: []map[string]interface{}{
-					{handler.TerraformProviderFake: map[string]interface{}{
-						"required-config": "missing",
-					}},
-				},
+				Providers: []hcltmpl.NamedBlock{
+					hcltmpl.NewNamedBlock(map[string]interface{}{
+						handler.TerraformProviderFake: map[string]interface{}{
+							"required-config": "missing",
+						},
+					})},
 			},
 		},
 		{
@@ -129,9 +130,10 @@ func TestGetTerraformHandlers(t *testing.T) {
 			false,
 			true,
 			Task{
-				Providers: []map[string]interface{}{
-					{"provider-no-handler": map[string]interface{}{}},
-				},
+				Providers: []hcltmpl.NamedBlock{
+					hcltmpl.NewNamedBlock(map[string]interface{}{
+						"provider-no-handler": map[string]interface{}{},
+					})},
 			},
 		},
 		{
@@ -139,11 +141,12 @@ func TestGetTerraformHandlers(t *testing.T) {
 			false,
 			false,
 			Task{
-				Providers: []map[string]interface{}{
-					{handler.TerraformProviderFake: map[string]interface{}{
-						"name": "happy-path",
-					}},
-				},
+				Providers: []hcltmpl.NamedBlock{
+					hcltmpl.NewNamedBlock(map[string]interface{}{
+						handler.TerraformProviderFake: map[string]interface{}{
+							"name": "happy-path",
+						},
+					})},
 			},
 		},
 	}

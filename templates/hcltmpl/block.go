@@ -61,7 +61,7 @@ func NewNamedBlock(b map[string]interface{}) NamedBlock {
 	return NamedBlock{
 		Name:      name,
 		Variables: vars,
-		rawConfig: b,
+		rawConfig: rawBlock,
 	}
 }
 

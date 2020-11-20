@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -70,12 +71,12 @@ func TestTask_ProviderNames(t *testing.T) {
 		{
 			"happy path",
 			Task{
-				Providers: []map[string]interface{}{
+				Providers: hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 					{"local": map[string]interface{}{
 						"configs": "stuff",
 					}},
 					{"null": map[string]interface{}{}},
-				},
+				}),
 			},
 			[]string{"local", "null"},
 		},

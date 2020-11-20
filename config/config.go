@@ -309,7 +309,7 @@ func (c *Config) GoString() string {
 func (c *Config) validateDynamicConfigs() error {
 	// If dynamic provider configs contain Vault dependency, verify that Vault is
 	// configured.
-	if !*c.Vault.Enabled {
+	if c.Vault != nil && !*c.Vault.Enabled {
 		for _, p := range *c.TerraformProviders {
 			if hcltmpl.ContainsVaultSecret(fmt.Sprint(*p)) {
 				return fmt.Errorf("detected dynamic configuration using Vault: missing Vault configuration")
