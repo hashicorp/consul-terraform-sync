@@ -65,25 +65,70 @@ func TestStore_Add(t *testing.T) {
 func TestStore_Read(t *testing.T) {
 	cases := []struct {
 		name     string
-		values   []*Event
-		expected []Event
+		input    string
+		values   []Event
+		expected map[string][]Event
 	}{
 		{
-			"no events",
-			[]*Event{},
+			"read all - no events",
+			"",
 			[]Event{},
+			map[string][]Event{},
 		},
 		{
-			"multiple events",
-			[]*Event{
-				&Event{TaskName: "1"},
-				&Event{TaskName: "2"},
-				&Event{TaskName: "3"},
-			},
+			"read all - happy path",
+			"",
 			[]Event{
 				Event{TaskName: "1"},
 				Event{TaskName: "2"},
+				Event{TaskName: "2"},
 				Event{TaskName: "3"},
+				Event{TaskName: "3"},
+				Event{TaskName: "3"},
+			},
+			map[string][]Event{
+				"1": []Event{
+					Event{TaskName: "1"},
+				},
+				"2": []Event{
+					Event{TaskName: "2"},
+					Event{TaskName: "2"},
+				},
+				"3": []Event{
+					Event{TaskName: "3"},
+					Event{TaskName: "3"},
+					Event{TaskName: "3"},
+				},
+			},
+		},
+		{
+			"read task - happy path",
+			"4",
+			[]Event{
+				Event{TaskName: "4"},
+				Event{TaskName: "4"},
+				Event{TaskName: "5"},
+				Event{TaskName: "5"},
+				Event{TaskName: "4"},
+				Event{TaskName: "4"},
+				Event{TaskName: "5"},
+			},
+			map[string][]Event{
+
+				"4": []Event{
+					Event{TaskName: "4"},
+					Event{TaskName: "4"},
+					Event{TaskName: "4"},
+					Event{TaskName: "4"},
+				},
+			},
+		},
+		{
+			"read task - no event",
+			"4",
+			[]Event{},
+			map[string][]Event{
+				"4": []Event{},
 			},
 		},
 	}
@@ -91,9 +136,11 @@ func TestStore_Read(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			store := NewStore()
-			store.events["key"] = tc.values
+			for _, event := range tc.values {
+				store.Add(event)
+			}
 
-			actual := store.Read("key")
+			actual := store.Read(tc.input)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}

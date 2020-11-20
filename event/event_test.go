@@ -189,12 +189,14 @@ func businessLogic(expectError bool) (string, error) {
 
 func TestEvent_GoString(t *testing.T) {
 	cases := []struct {
-		name  string
-		event *Event
+		name     string
+		event    *Event
+		expected string
 	}{
 		{
 			"nil event",
 			nil,
+			"(*Event)(nil)",
 		},
 		{
 			"happy path",
@@ -211,22 +213,17 @@ func TestEvent_GoString(t *testing.T) {
 					Source:    "/my-module",
 				},
 			},
+			"&Event{ID:123, TaskName:happy, Success:false, " +
+				"StartTime:0001-01-01 00:00:00 +0000 UTC, " +
+				"EndTime:0001-01-01 00:00:00 +0000 UTC, EventError:&{error!}, " +
+				"Config:&{[local] [web api] /my-module}}",
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.event == nil {
-				assert.Contains(t, tc.event.GoString(), "nil")
-				return
-			}
-
-			assert.Contains(t, tc.event.GoString(), "&Event")
-			assert.Contains(t, tc.event.GoString(), tc.event.ID)
-			assert.Contains(t, tc.event.GoString(), tc.event.TaskName)
-			assert.Contains(t, tc.event.GoString(), fmt.Sprintf("%t", tc.event.Success))
-			assert.Contains(t, tc.event.GoString(), fmt.Sprintf("%s", tc.event.EventError))
-			assert.Contains(t, tc.event.GoString(), fmt.Sprintf("%s", tc.event.Config))
+			actual := tc.event.GoString()
+			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }

@@ -96,7 +96,7 @@ func (e *Event) GoString() string {
 		"StartTime:%s, "+
 		"EndTime:%s, "+
 		"EventError:%s, "+
-		"Config:%s, "+
+		"Config:%s"+
 		"}",
 		e.ID,
 		e.TaskName,
