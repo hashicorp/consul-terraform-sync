@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -97,9 +98,10 @@ func TestAppendRootTerraformBlock_backend(t *testing.T) {
 			hclFile := hclwrite.NewEmptyFile()
 			body := hclFile.Body()
 
-			var backend *namedBlock
+			var backend *hcltmpl.NamedBlock
 			if tc.rawBackend != nil {
-				backend = newNamedBlock(tc.rawBackend)
+				b := hcltmpl.NewNamedBlock(tc.rawBackend)
+				backend = &b
 			}
 			appendRootTerraformBlock(body, backend, nil)
 

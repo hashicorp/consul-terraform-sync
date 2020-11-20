@@ -222,7 +222,7 @@ func appendRootTerraformBlock(body *hclwrite.Body, backend *hcltmpl.NamedBlock,
 	}
 
 	// Configure the Terraform backend within the Terraform block
-	if backend == nil {
+	if backend == nil || backend.Name == "" {
 		return
 	}
 	backendBody := tfBody.AppendNewBlock("backend", []string{backend.Name}).Body()
