@@ -145,27 +145,28 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 			taskName, err)
 	}
 
-	ev, err := event.NewEvent(taskName, &event.Config{
-		Providers: u.providers,
-		Services:  u.services,
-		Source:    u.source,
-	})
-	if err != nil {
-		return false, fmt.Errorf("error creating event for task %s: %s",
-			taskName, err)
-	}
-	defer func() {
-		ev.End(err)
-		log.Printf("[TRACE] (ctrl) adding event %s", ev.GoString())
-		err = rw.store.Add(*ev)
-	}()
-
 	// result.Complete is only `true` if the template has new data that has been
 	// completely fetched. Rendering a template for the first time may take several
 	// cycles to load all the dependencies asynchronously.
 	if result.Complete {
 		log.Printf("[DEBUG] (ctrl) change detected for task %s", taskName)
+
+		ev, err := event.NewEvent(taskName, &event.Config{
+			Providers: u.providers,
+			Services:  u.services,
+			Source:    u.source,
+		})
+		if err != nil {
+			return false, fmt.Errorf("error creating event for task %s: %s",
+				taskName, err)
+		}
 		ev.Start()
+		defer func() {
+			ev.End(err)
+			log.Printf("[TRACE] (ctrl) adding event %s", ev.GoString())
+			err = rw.store.Add(*ev)
+		}()
+
 		var rendered hcat.RenderResult
 		rendered, err = tmpl.Render(result.Contents)
 		if err != nil {

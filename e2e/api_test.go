@@ -75,7 +75,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 				},
 				fakeFailureTaskName: api.TaskStatus{
 					TaskName:  fakeFailureTaskName,
-					Status:    api.StatusDegraded,
+					Status:    api.StatusCritical,
 					Providers: []string{"fake-sync"},
 					Services:  []string{"api"},
 					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
@@ -137,7 +137,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			"overall status",
 			"status",
 			api.OverallStatus{
-				Status: api.StatusDegraded,
+				Status: api.StatusCritical,
 			},
 		},
 	}
