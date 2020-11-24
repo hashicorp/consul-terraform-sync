@@ -14,15 +14,21 @@ var _ Handler = (*Fake)(nil)
 // Fake is the handler for out-of-band actions for a fake Terraform provider.
 // Intended to be used for testing and examples.
 type Fake struct {
-	name string
-	err  bool
-	next Handler
+	name         string
+	successFirst bool
+	err          bool
+	next         Handler
+
+	// used by successFirst to determine if this is the first time the handler
+	// has been called
+	first bool
 }
 
 // NewFake configures and returns a new fake handler
 func NewFake(config map[string]interface{}) (*Fake, error) {
 	h := &Fake{
-		next: nil,
+		first: true,
+		next:  nil,
 	}
 
 	for k, val := range config {
@@ -30,6 +36,10 @@ func NewFake(config map[string]interface{}) (*Fake, error) {
 		case "name":
 			if v, ok := val.(string); ok {
 				h.name = v
+			}
+		case "success_first":
+			if v, ok := val.(bool); ok {
+				h.successFirst = v
 			}
 		case "err":
 			if v, ok := val.(bool); ok {
@@ -55,6 +65,13 @@ func (h *Fake) Do(prevErr error) error {
 	var err error = nil
 	if h.err {
 		err = fmt.Errorf("error %s", h.name)
+	}
+
+	if h.first == true {
+		h.first = false
+		if h.successFirst {
+			err = nil
+		}
 	}
 
 	return callNext(h.next, prevErr, err)

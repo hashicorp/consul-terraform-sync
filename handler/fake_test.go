@@ -17,10 +17,11 @@ func TestNewFake(t *testing.T) {
 			"happy path",
 			false,
 			map[string]interface{}{
-				"name": "1",
-				"err":  true,
+				"name":          "1",
+				"err":           true,
+				"success_first": true,
 			},
-			&Fake{name: "1", err: true},
+			&Fake{name: "1", err: true, successFirst: true, first: true},
 		},
 		{
 			"missing configuration",
@@ -36,7 +37,7 @@ func TestNewFake(t *testing.T) {
 				"extra": "stuff",
 				"count": 8,
 			},
-			&Fake{name: "1", err: false},
+			&Fake{name: "1", err: false, first: true},
 		},
 	}
 
@@ -96,6 +97,24 @@ func TestFakeDo(t *testing.T) {
 
 		})
 	}
+
+	t.Run("success_first_failure_after", func(t *testing.T) {
+		h := &Fake{
+			name:         "success then failure",
+			successFirst: true,
+			err:          true,
+			first:        true,
+		}
+		// success
+		err := h.Do(nil)
+		assert.NoError(t, err)
+
+		// failures
+		err = h.Do(nil)
+		assert.Error(t, err)
+		err = h.Do(nil)
+		assert.Error(t, err)
+	})
 }
 
 func TestFakeSetNext(t *testing.T) {
