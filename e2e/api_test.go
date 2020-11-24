@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -108,6 +109,69 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 				},
 			},
 		},
+		{
+			"all task status + events",
+			"status/tasks?include=events",
+			map[string]api.TaskStatus{
+				fakeSuccessTaskName: api.TaskStatus{
+					TaskName:  fakeSuccessTaskName,
+					Status:    api.StatusHealthy,
+					Providers: []string{"fake-sync"},
+					Services:  []string{"api"},
+					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
+					Events: []event.Event{
+						event.Event{
+							TaskName: fakeSuccessTaskName,
+							Success:  true,
+							Config: &event.Config{
+								Providers: []string{"fake-sync"},
+								Services:  []string{"api"},
+								Source:    "../../test_modules/e2e_basic_task",
+							},
+						},
+						event.Event{
+							TaskName: fakeSuccessTaskName,
+							Success:  true,
+							Config: &event.Config{
+								Providers: []string{"fake-sync"},
+								Services:  []string{"api"},
+								Source:    "../../test_modules/e2e_basic_task",
+							},
+						},
+					},
+				},
+				fakeFailureTaskName: api.TaskStatus{
+					TaskName:  fakeFailureTaskName,
+					Status:    api.StatusCritical,
+					Providers: []string{"fake-sync"},
+					Services:  []string{"api"},
+					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
+					Events: []event.Event{
+						event.Event{
+							TaskName: fakeFailureTaskName,
+							Success:  false,
+							EventError: &event.Error{
+								Message: "error failure",
+							},
+							Config: &event.Config{
+								Providers: []string{"fake-sync"},
+								Services:  []string{"api"},
+								Source:    "../../test_modules/e2e_basic_task",
+							},
+						},
+						event.Event{
+							TaskName: fakeFailureTaskName,
+							Success:  true,
+							Config: &event.Config{
+								Providers: []string{"fake-sync"},
+								Services:  []string{"api"},
+								Source:    "../../test_modules/e2e_basic_task",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range taskCases {
@@ -123,6 +187,16 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			decoder := json.NewDecoder(resp.Body)
 			err = decoder.Decode(&taskStatuses)
 			require.NoError(t, err)
+
+			// clear out some event data that we'll skip checking
+			for _, stat := range taskStatuses {
+				for ix, event := range stat.Events {
+					event.ID = ""
+					event.StartTime = time.Time{}
+					event.EndTime = time.Time{}
+					stat.Events[ix] = event
+				}
+			}
 
 			assert.Equal(t, tc.expected, taskStatuses)
 		})

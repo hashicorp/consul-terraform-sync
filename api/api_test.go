@@ -148,6 +148,48 @@ func TestJsonResponse(t *testing.T) {
 			},
 		},
 		{
+			"task status: success with events",
+			http.StatusOK,
+			map[string]TaskStatus{
+				"task_a": TaskStatus{
+					TaskName:  "task_a",
+					Status:    StatusDegraded,
+					Providers: []string{"local", "null", "f5"},
+					Services:  []string{"api", "web", "db"},
+					EventsURL: "/v1/status/tasks/test_task?include=events",
+					Events: []event.Event{
+						event.Event{
+							ID:        "123",
+							TaskName:  "task_a",
+							StartTime: time.Now(),
+							EndTime:   time.Now(),
+							Success:   true,
+							Config: &event.Config{
+								Providers: []string{"local", "null", "f5"},
+								Services:  []string{"api", "web", "db"},
+								Source:    "../../test_modules/e2e_basic_task",
+							},
+						},
+						event.Event{
+							ID:        "456",
+							TaskName:  "task_a",
+							StartTime: time.Now(),
+							EndTime:   time.Now(),
+							Success:   false,
+							EventError: &event.Error{
+								Message: "there was an error :(",
+							},
+							Config: &event.Config{
+								Providers: []string{"local", "null", "f5"},
+								Services:  []string{"api", "web", "db"},
+								Source:    "../../test_modules/e2e_basic_task",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			"overall status: success",
 			http.StatusOK,
 			OverallStatus{Status: StatusDegraded},
