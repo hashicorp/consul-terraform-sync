@@ -172,6 +172,42 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 				},
 			},
 		},
+		{
+			"all task status filtered by status and include events",
+			"status/tasks?status=critical&include=events",
+			map[string]api.TaskStatus{
+				fakeFailureTaskName: api.TaskStatus{
+					TaskName:  fakeFailureTaskName,
+					Status:    api.StatusCritical,
+					Providers: []string{"fake-sync"},
+					Services:  []string{"api"},
+					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
+					Events: []event.Event{
+						event.Event{
+							TaskName: fakeFailureTaskName,
+							Success:  false,
+							EventError: &event.Error{
+								Message: "error failure",
+							},
+							Config: &event.Config{
+								Providers: []string{"fake-sync"},
+								Services:  []string{"api"},
+								Source:    "../../test_modules/e2e_basic_task",
+							},
+						},
+						event.Event{
+							TaskName: fakeFailureTaskName,
+							Success:  true,
+							Config: &event.Config{
+								Providers: []string{"fake-sync"},
+								Services:  []string{"api"},
+								Source:    "../../test_modules/e2e_basic_task",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range taskCases {
