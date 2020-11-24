@@ -62,6 +62,39 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
+			"all task statuses with events",
+			"/v1/status/tasks?include=events",
+			http.StatusOK,
+			map[string]TaskStatus{
+				"task_a": TaskStatus{
+					TaskName:  "task_a",
+					Status:    "healthy",
+					Providers: []string{},
+					Services:  []string{},
+					EventsURL: "/v1/status/tasks/task_a?include=events",
+					Events: []event.Event{
+						event.Event{
+							TaskName: "task_a",
+							Success:  true,
+						},
+					},
+				},
+				"task_b": TaskStatus{
+					TaskName:  "task_b",
+					Status:    "critical",
+					Providers: []string{},
+					Services:  []string{},
+					EventsURL: "/v1/status/tasks/task_b?include=events",
+					Events: []event.Event{
+						event.Event{
+							TaskName: "task_b",
+							Success:  false,
+						},
+					},
+				},
+			},
+		},
+		{
 			"single task",
 			"/v1/status/tasks/task_b",
 			http.StatusOK,
@@ -72,6 +105,26 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_b?include=events",
+				},
+			},
+		},
+		{
+			"single task with events",
+			"/v1/status/tasks/task_b?include=events",
+			http.StatusOK,
+			map[string]TaskStatus{
+				"task_b": TaskStatus{
+					TaskName:  "task_b",
+					Status:    "critical",
+					Providers: []string{},
+					Services:  []string{},
+					EventsURL: "/v1/status/tasks/task_b?include=events",
+					Events: []event.Event{
+						event.Event{
+							TaskName: "task_b",
+							Success:  false,
+						},
+					},
 				},
 			},
 		},
@@ -88,6 +141,26 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					EventsURL: "",
 				},
 			},
+		},
+		{
+			"non-existent task with events",
+			"/v1/status/tasks/task_nonexistent?include=events",
+			http.StatusOK,
+			map[string]TaskStatus{
+				"task_nonexistent": TaskStatus{
+					TaskName:  "task_nonexistent",
+					Status:    "undetermined",
+					Providers: []string{},
+					Services:  []string{},
+					EventsURL: "",
+				},
+			},
+		},
+		{
+			"bad include parameter",
+			"/v1/status/tasks?include=wrongparam",
+			http.StatusBadRequest,
+			map[string]TaskStatus{},
 		},
 		{
 			"bad url path",
@@ -365,6 +438,67 @@ func TestTaskStatus_MakeEventsURL(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := makeEventsURL(tc.events, "v1", "my_task")
 			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestTaskStatus_Include(t *testing.T) {
+	cases := []struct {
+		name        string
+		path        string
+		include     bool
+		expectError bool
+	}{
+		{
+			"happy path include",
+			"/v1/status?include=events",
+			true,
+			false,
+		},
+		{
+			"happy path include with other parameters",
+			"/v1/status?include=events&status=critical",
+			true,
+			false,
+		},
+		{
+			"happy path don't include",
+			"/v1/status",
+			false,
+			false,
+		},
+		{
+			"bad include parameter",
+			"/v1/status?include=badparam",
+			false,
+			true,
+		},
+		{
+			"missing include value",
+			"/v1/status?include=",
+			false,
+			true,
+		},
+		{
+			"too many include parameters",
+			"/v1/status?include=stuff&include=morestuff",
+			false,
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", tc.path, nil)
+			require.NoError(t, err)
+
+			actual, err := include(req)
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.include, actual)
+			}
 		})
 	}
 }

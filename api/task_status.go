@@ -13,11 +13,12 @@ const taskStatusPath = "status/tasks"
 
 // TaskStatus is the status for a single task
 type TaskStatus struct {
-	TaskName  string   `json:"task_name"`
-	Status    string   `json:"status"`
-	Providers []string `json:"providers"`
-	Services  []string `json:"services"`
-	EventsURL string   `json:"events_url"`
+	TaskName  string        `json:"task_name"`
+	Status    string        `json:"status"`
+	Providers []string      `json:"providers"`
+	Services  []string      `json:"services"`
+	EventsURL string        `json:"events_url"`
+	Events    []event.Event `json:"events,omitempty"`
 }
 
 // taskStatusHandler handles the task status endpoint
@@ -48,10 +49,23 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	include, err := include(r)
+	if err != nil {
+		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
+		jsonResponse(w, http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	data := h.store.Read(taskName)
 	statuses := make(map[string]TaskStatus)
 	for taskName, events := range data {
-		statuses[taskName] = makeTaskStatus(taskName, events, h.version)
+		status := makeTaskStatus(taskName, events, h.version)
+		if include {
+			status.Events = events
+		}
+		statuses[taskName] = status
 	}
 
 	jsonResponse(w, http.StatusOK, statuses)
@@ -152,4 +166,28 @@ func makeEventsURL(events []event.Event, version, taskName string) string {
 
 	return fmt.Sprintf("/%s/%s/%s?include=events",
 		version, taskStatusPath, taskName)
+}
+
+// include determines whether or not to include events in task status payload
+func include(r *http.Request) (bool, error) {
+	// `?include=events` parameter
+	const includeKey = "include"
+	const includeValue = "events"
+
+	keys, ok := r.URL.Query()[includeKey]
+	if !ok {
+		return false, nil
+	}
+
+	if len(keys) != 1 {
+		return false, fmt.Errorf("cannot support more than one include "+
+			"parameter, got include values: %v", keys)
+	}
+
+	if keys[0] != includeValue {
+		return false, fmt.Errorf("unsupported ?include parameter value. only "+
+			"supporting 'include=events' but got 'include=%s'", keys[0])
+	}
+
+	return true, nil
 }
