@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcat"
-	"github.com/hashicorp/hcat/dep"
 )
 
 //go:generate mockery --name=Template  --filename=template.go --output=../mocks/templates
@@ -25,7 +24,7 @@ const DepSizeWarning = 128
 // https://github.com/hashicorp/hcat
 type Template interface {
 	Render(content []byte) (hcat.RenderResult, error)
-	Execute(hcat.Recaller) (*hcat.ExecuteResult, error)
+	Execute(hcat.Watcherer) ([]byte, error)
 	ID() string
 }
 
@@ -40,13 +39,12 @@ type Resolver interface {
 // used by this project
 // https://github.com/hashicorp/hcat
 type Watcher interface {
-	WaitCh(ctx context.Context) <-chan error
-	Add(d dep.Dependency) bool
-	Changed(tmplID string) bool
+	WaitCh(context.Context) <-chan error
 	Buffer(tmplID string) bool
-	Recall(id string) (interface{}, bool)
-	Register(tmplID string, deps ...dep.Dependency)
 	SetBufferPeriod(min, max time.Duration, tmplIDs ...string)
 	Size() int
 	Stop()
+	// not used but needed to meet the hcat.Watcherer interface
+	Complete(hcat.Notifier) bool
+	Recaller(hcat.Notifier) hcat.Recaller
 }
