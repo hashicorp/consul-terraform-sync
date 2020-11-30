@@ -133,16 +133,42 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 	}
 }
 
-// Single run, render, apply of a unit (task)
+// Single run, render, apply of a unit (task).
+//
+// Stores event data on error or on successful _full_ execution of task.
+// Note: We do not store event for each successful yet incomplete template fetching
+// since there could be many per full task execution i.e. when resolver.Run()
+// returns result.Complete == false, no event is stored.
 func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 	tmpl := u.template
 	taskName := u.taskName
 
-	log.Printf("[TRACE] (ctrl) checking dependencies changes for task %s", taskName)
-	result, err := rw.resolver.Run(tmpl, rw.watcher)
+	// setup to store event information
+	ev, err := event.NewEvent(taskName, &event.Config{
+		Providers: u.providers,
+		Services:  u.services,
+		Source:    u.source,
+	})
 	if err != nil {
-		return false, fmt.Errorf("error fetching template dependencies for task %s: %s",
+		return false, fmt.Errorf("error creating event for task %s: %s",
 			taskName, err)
+	}
+	var storedErr error
+	storeEvent := func() {
+		ev.End(storedErr)
+		log.Printf("[TRACE] (ctrl) adding event %s", ev.GoString())
+		if err := rw.store.Add(*ev); err != nil {
+			log.Printf("[ERROR] (ctrl) error storing event %s", ev.GoString())
+		}
+	}
+	ev.Start()
+
+	log.Printf("[TRACE] (ctrl) checking dependencies changes for task %s", taskName)
+	var result hcat.ResolveEvent
+	if result, storedErr = rw.resolver.Run(tmpl, rw.watcher); storedErr != nil {
+		defer storeEvent()
+		return false, fmt.Errorf("error fetching template dependencies for task %s: %s",
+			taskName, storedErr)
 	}
 
 	// result.Complete is only `true` if the template has new data that has been
@@ -150,35 +176,20 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 	// cycles to load all the dependencies asynchronously.
 	if result.Complete {
 		log.Printf("[DEBUG] (ctrl) change detected for task %s", taskName)
-
-		ev, err := event.NewEvent(taskName, &event.Config{
-			Providers: u.providers,
-			Services:  u.services,
-			Source:    u.source,
-		})
-		if err != nil {
-			return false, fmt.Errorf("error creating event for task %s: %s",
-				taskName, err)
-		}
-		ev.Start()
-		defer func() {
-			ev.End(err)
-			log.Printf("[TRACE] (ctrl) adding event %s", ev.GoString())
-			err = rw.store.Add(*ev)
-		}()
+		defer storeEvent()
 
 		var rendered hcat.RenderResult
-		rendered, err = tmpl.Render(result.Contents)
-		if err != nil {
+		if rendered, storedErr = tmpl.Render(result.Contents); storedErr != nil {
 			return false, fmt.Errorf("error rendering template for task %s: %s",
-				taskName, err)
+				taskName, storedErr)
 		}
 		log.Printf("[TRACE] (ctrl) template for task %q rendered: %+v", taskName, rendered)
 
 		d := u.driver
 		log.Printf("[INFO] (ctrl) executing task %s", taskName)
-		if err = d.ApplyTask(ctx); err != nil {
-			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
+		if storedErr = d.ApplyTask(ctx); storedErr != nil {
+			return false, fmt.Errorf("could not apply changes for task %s: %s",
+				taskName, storedErr)
 		}
 
 		log.Printf("[INFO] (ctrl) task completed %s", taskName)
