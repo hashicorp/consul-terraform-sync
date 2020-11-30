@@ -49,6 +49,15 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	filter, err := statusFilter(r)
+	if err != nil {
+		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
+		jsonResponse(w, http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	include, err := include(r)
 	if err != nil {
 		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
@@ -62,6 +71,9 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	statuses := make(map[string]TaskStatus)
 	for taskName, events := range data {
 		status := makeTaskStatus(taskName, events, h.version)
+		if filter != "" && status.Status != filter {
+			continue
+		}
 		if include {
 			status.Events = events
 		}
@@ -190,4 +202,32 @@ func include(r *http.Request) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// statusFilter returns a status to filter task statuses
+func statusFilter(r *http.Request) (string, error) {
+	// `?status=<health>` parameter
+	const statusKey = "status"
+
+	keys, ok := r.URL.Query()[statusKey]
+	if !ok {
+		return "", nil
+	}
+
+	if len(keys) != 1 {
+		return "", fmt.Errorf("cannot support more than one status query "+
+			"parameter, got status values: %v", keys)
+	}
+
+	value := keys[0]
+	value = strings.ToLower(value)
+	switch value {
+	case StatusHealthy, StatusDegraded, StatusCritical, StatusUndetermined:
+		return value, nil
+	default:
+		return "", fmt.Errorf("unsupported status parameter value. only "+
+			"supporting status values %s, %s, %s, and %s but got %s",
+			StatusHealthy, StatusDegraded, StatusCritical, StatusUndetermined,
+			value)
+	}
 }

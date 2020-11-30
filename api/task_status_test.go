@@ -95,6 +95,26 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
+			"all task statuses filtered by status with result",
+			"/v1/status/tasks?status=critical",
+			http.StatusOK,
+			map[string]TaskStatus{
+				"task_b": TaskStatus{
+					TaskName:  "task_b",
+					Status:    "critical",
+					Providers: []string{},
+					Services:  []string{},
+					EventsURL: "/v1/status/tasks/task_b?include=events",
+				},
+			},
+		},
+		{
+			"all task statuses filtered by status with no result",
+			"/v1/status/tasks?status=degraded",
+			http.StatusOK,
+			map[string]TaskStatus{},
+		},
+		{
 			"single task",
 			"/v1/status/tasks/task_b",
 			http.StatusOK,
@@ -159,6 +179,12 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		{
 			"bad include parameter",
 			"/v1/status/tasks?include=wrongparam",
+			http.StatusBadRequest,
+			map[string]TaskStatus{},
+		},
+		{
+			"bad status parameter",
+			"/v1/status/tasks?status=invalidparam",
 			http.StatusBadRequest,
 			map[string]TaskStatus{},
 		},
@@ -498,6 +524,67 @@ func TestTaskStatus_Include(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.include, actual)
+			}
+		})
+	}
+}
+
+func TestTaskStatus_StatusFilter(t *testing.T) {
+	cases := []struct {
+		name        string
+		path        string
+		status      string
+		expectError bool
+	}{
+		{
+			"happy path status",
+			"/v1/status/tasks?status=healthy",
+			StatusHealthy,
+			false,
+		},
+		{
+			"happy path status with other parameters",
+			"/v1/status/tasks?&status=healthy&include=events",
+			StatusHealthy,
+			false,
+		},
+		{
+			"happy path no status",
+			"/v1/status/tasks",
+			"",
+			false,
+		},
+		{
+			"not lower case",
+			"/v1/status/tasks?status=HEALTHY",
+			StatusHealthy,
+			false,
+		},
+		{
+			"unknown status",
+			"/v1/status/tasks?status=badstatus",
+			"",
+			true,
+		},
+		{
+			"too many status parameters",
+			"/v1/status/tasks?status=healthy&status=critical",
+			"",
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", tc.path, nil)
+			require.NoError(t, err)
+
+			actual, err := statusFilter(req)
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.status, actual)
 			}
 		})
 	}
