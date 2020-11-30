@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	dynamicTmplRegexp = regexp.MustCompile(`\{\{\s*(env|key|secret)\s+\\?\".+\\?\"\s*\}\}`)
-	vaultTmplRegexp   = regexp.MustCompile(`\{\{\s*secret\s+\\?\".+\\?\"\s*\}\}`)
+	dynamicTmplRegexp = regexp.MustCompile(`\{\{\s*(env|key|with secret)\s+\\?\".+\\?\"\s*\}\}`)
+	vaultTmplRegexp   = regexp.MustCompile(`\{\{\s*with secret\s+\\?\".+\\?\"\s*\}\}`)
 )
 
 // ContainsDynamicTemplate reports whether the template syntax supported by CTS

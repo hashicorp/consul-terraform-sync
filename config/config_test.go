@@ -367,7 +367,7 @@ func TestConfig_validateDynamicConfig(t *testing.T) {
 					&TerraformProviderConfig{
 						"foo": map[string]interface{}{
 							"arg":           "value",
-							"dynamic_vault": "{{ secret \"my/secret\" }}",
+							"dynamic_vault": "{{ with secret \"my/secret\" }}",
 						},
 					},
 				},
@@ -383,7 +383,7 @@ func TestConfig_validateDynamicConfig(t *testing.T) {
 					&TerraformProviderConfig{
 						"foo": map[string]interface{}{
 							"arg":           "value",
-							"dynamic_vault": "{{ secret \"my/secret\" }}",
+							"dynamic_vault": "{{ with secret \"my/secret\" }}",
 						},
 					},
 				},

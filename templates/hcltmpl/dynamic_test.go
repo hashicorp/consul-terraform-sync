@@ -41,17 +41,17 @@ func TestContainsDynamicTemplate(t *testing.T) {
 			false,
 		}, {
 			"vault secret",
-			"{{ secret \"foo/bar\" }}",
+			"{{ with secret \"foo/bar\" }}",
 			true,
 			true,
 		}, {
 			"no spacing",
-			"{{secret \"foo/bar\"}}",
+			"{{with secret \"foo/bar\"}}",
 			true,
 			true,
 		}, {
 			"extra spacing",
-			"{{		secret     \"foo/bar\"   }}",
+			"{{		with secret     \"foo/bar\"   }}",
 			true,
 			true,
 		}, {
@@ -67,6 +67,11 @@ func TestContainsDynamicTemplate(t *testing.T) {
 		}, {
 			"missing parameter",
 			"{{ key \"\" }}",
+			false,
+			false,
+		}, {
+			"vault missing with secret",
+			"{{ secret \"foo/bar\" }}",
 			false,
 			false,
 		},
