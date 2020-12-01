@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/version"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
@@ -77,8 +78,6 @@ type Service struct {
 	Tag         string
 }
 
-type Variables map[string]cty.Value
-
 // TODO incorporate namespace
 func (s Service) TemplateServiceID() string {
 	id := s.Name
@@ -97,15 +96,13 @@ func (s Service) TemplateServiceID() string {
 // RootModuleInputData is the input data used to generate the root module
 type RootModuleInputData struct {
 	Backend      map[string]interface{}
-	Providers    []map[string]interface{}
+	Providers    []hcltmpl.NamedBlock
 	ProviderInfo map[string]interface{}
-	Services     []*Service
+	Services     []Service
 	Task         Task
-	Variables    Variables
+	Variables    hcltmpl.Variables
 
-	backend   *namedBlock
-	providers []*namedBlock
-	services  []*Service
+	backend *hcltmpl.NamedBlock
 }
 
 // Init processes input data used to generate a Terraform root module. It
@@ -113,22 +110,18 @@ type RootModuleInputData struct {
 // Terraform configuration syntax.
 func (d *RootModuleInputData) Init() {
 	if d.Backend != nil {
-		d.backend = newNamedBlock(d.Backend)
+		block := hcltmpl.NewNamedBlock(d.Backend)
+		d.backend = &block
 	} else {
 		d.Backend = make(map[string]interface{})
 	}
 
-	d.providers = make([]*namedBlock, len(d.Providers))
-	for i, p := range d.Providers {
-		d.providers[i] = newNamedBlock(p)
-	}
-	sort.Slice(d.providers, func(i, j int) bool {
-		return d.providers[i].Name < d.providers[j].Name
+	sort.Slice(d.Providers, func(i, j int) bool {
+		return d.Providers[i].Name < d.Providers[j].Name
 	})
 
-	d.services = d.Services
-	sort.Slice(d.services, func(i, j int) bool {
-		return d.services[i].Name < d.services[j].Name
+	sort.Slice(d.Services, func(i, j int) bool {
+		return d.Services[i].Name < d.Services[j].Name
 	})
 }
 
@@ -198,7 +191,7 @@ func NewMainTF(w io.Writer, input *RootModuleInputData) error {
 	rootBody := hclFile.Body()
 	appendRootTerraformBlock(rootBody, input.backend, input.ProviderInfo)
 	rootBody.AppendNewline()
-	appendRootProviderBlocks(rootBody, input.providers)
+	appendRootProviderBlocks(rootBody, input.Providers)
 	rootBody.AppendNewline()
 	appendRootModuleBlock(rootBody, input.Task, input.Variables.Keys())
 
@@ -211,7 +204,7 @@ func NewMainTF(w io.Writer, input *RootModuleInputData) error {
 
 // appendRootTerraformBlock appends the Terraform block with version constraint
 // and backend.
-func appendRootTerraformBlock(body *hclwrite.Body, backend *namedBlock,
+func appendRootTerraformBlock(body *hclwrite.Body, backend *hcltmpl.NamedBlock,
 	providerInfo map[string]interface{}) {
 
 	tfBlock := body.AppendNewBlock("terraform", nil)
@@ -229,19 +222,19 @@ func appendRootTerraformBlock(body *hclwrite.Body, backend *namedBlock,
 	}
 
 	// Configure the Terraform backend within the Terraform block
-	if backend == nil {
+	if backend == nil || backend.Name == "" {
 		return
 	}
 	backendBody := tfBody.AppendNewBlock("backend", []string{backend.Name}).Body()
 	backendAttrs := backend.SortedAttributes()
 	for _, attr := range backendAttrs {
-		backendBody.SetAttributeValue(attr, backend.Block[attr])
+		backendBody.SetAttributeValue(attr, backend.Variables[attr])
 	}
 }
 
 // appendRootProviderBlocks appends Terraform provider blocks for the providers
 // the task requires.
-func appendRootProviderBlocks(body *hclwrite.Body, providers []*namedBlock) {
+func appendRootProviderBlocks(body *hclwrite.Body, providers []hcltmpl.NamedBlock) {
 	lastIdx := len(providers) - 1
 	for i, p := range providers {
 		providerBody := body.AppendNewBlock("provider", []string{p.Name}).Body()
@@ -320,15 +313,6 @@ func fileExists(name string) bool {
 func sortedKeys(m map[string]interface{}) []string {
 	sorted := make([]string, 0, len(m))
 	for key := range m {
-		sorted = append(sorted, key)
-	}
-	sort.Strings(sorted)
-	return sorted
-}
-
-func (v Variables) Keys() []string {
-	sorted := make([]string, 0, len(v))
-	for key := range v {
 		sorted = append(sorted, key)
 	}
 	sort.Strings(sorted)

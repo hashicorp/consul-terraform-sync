@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
@@ -38,13 +39,14 @@ func TestInitRootModule(t *testing.T) {
 				"path":   "consul-terraform-sync/terraform",
 			},
 		},
-		Providers: []map[string]interface{}{{
-			"testProvider": map[string]interface{}{
-				"alias": "tp",
-				"attr":  "value",
-				"count": 10,
-			},
-		}},
+		Providers: []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(
+			map[string]interface{}{
+				"testProvider": map[string]interface{}{
+					"alias": "tp",
+					"attr":  "value",
+					"count": 10,
+				},
+			})},
 		ProviderInfo: map[string]interface{}{
 			"testProvider": map[string]interface{}{
 				"version": "1.0.0",
@@ -57,7 +59,7 @@ func TestInitRootModule(t *testing.T) {
 			Source:      "namespace/consul-terraform-sync/consul//modules/test",
 			Version:     "0.0.0",
 		},
-		Variables: Variables{
+		Variables: hcltmpl.Variables{
 			"one":       cty.NumberIntVal(1),
 			"bool_true": cty.BoolVal(true),
 		},

@@ -324,3 +324,91 @@ func TestConfig_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_validateDynamicConfig(t *testing.T) {
+	testCases := []struct {
+		name    string
+		i       Config
+		isValid bool
+	}{
+		{
+			"no dynamic configs",
+			Config{},
+			true,
+		}, {
+			"provider with no dynamic configs",
+			Config{
+				TerraformProviders: &TerraformProviderConfigs{
+					&TerraformProviderConfig{
+						"foo": map[string]interface{}{
+							"arg": "value",
+						},
+					},
+				},
+			},
+			true,
+		}, {
+			"provider with dynamic configs",
+			Config{
+				TerraformProviders: &TerraformProviderConfigs{
+					&TerraformProviderConfig{
+						"foo": map[string]interface{}{
+							"arg":     "value",
+							"dynamic": "{{ key \"my/key\" }}",
+						},
+					},
+				},
+			},
+			true,
+		}, {
+			"provider with dynamic configs with vault",
+			Config{
+				TerraformProviders: &TerraformProviderConfigs{
+					&TerraformProviderConfig{
+						"foo": map[string]interface{}{
+							"arg":           "value",
+							"dynamic_vault": "{{ with secret \"my/secret\" }}",
+						},
+					},
+				},
+				Vault: &VaultConfig{
+					Address: String("vault.example.com"),
+				},
+			},
+			true,
+		}, {
+			"provider with dynamic configs missing vault",
+			Config{
+				TerraformProviders: &TerraformProviderConfigs{
+					&TerraformProviderConfig{
+						"foo": map[string]interface{}{
+							"arg":           "value",
+							"dynamic_vault": "{{ with secret \"my/secret\" }}",
+						},
+					},
+				},
+			},
+			false,
+		}, {
+			"dynamic configs unsupported outside of providers",
+			Config{
+				Tasks: &TaskConfigs{{
+					Name: String("{{ env \"NOT_SUPPORTED\" }}"),
+				}},
+			},
+			false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.i.Finalize()
+			err := tc.i.validateDynamicConfigs()
+			if tc.isValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}

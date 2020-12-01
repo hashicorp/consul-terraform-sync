@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
@@ -14,7 +15,7 @@ import (
 )
 
 // LoadModuleVariables loads Terraform input variables from a file.
-func LoadModuleVariables(filePath string) (Variables, error) {
+func LoadModuleVariables(filePath string) (hcltmpl.Variables, error) {
 	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -26,7 +27,7 @@ func LoadModuleVariables(filePath string) (Variables, error) {
 // ParseModuleVariables parses bytes representing Terraform input variables
 // for a module. It encodes the content into cty.Value types. Invalid HCL
 // syntax and unsupported Terraform variable types result in an error.
-func ParseModuleVariables(content []byte, filename string) (Variables, error) {
+func ParseModuleVariables(content []byte, filename string) (hcltmpl.Variables, error) {
 	p := hclparse.NewParser()
 
 	hclFile, diag := p.ParseHCL(content, filename)
@@ -39,7 +40,7 @@ func ParseModuleVariables(content []byte, filename string) (Variables, error) {
 		return nil, diag
 	}
 
-	variables := make(Variables)
+	variables := make(hcltmpl.Variables)
 	var diags hcl.Diagnostics
 	for k, attr := range attrs {
 		val, diag := attr.Expr.Value(&hcl.EvalContext{})

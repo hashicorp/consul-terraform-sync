@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/controller"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

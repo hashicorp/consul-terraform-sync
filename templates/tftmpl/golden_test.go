@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"
@@ -32,13 +33,14 @@ func TestNewFiles(t *testing.T) {
 						"path":   "consul-terraform-sync/terraform",
 					},
 				},
-				Providers: []map[string]interface{}{{
-					"testProvider": map[string]interface{}{
-						"alias": "tp",
-						"attr":  "value",
-						"count": 10,
-					},
-				}},
+				Providers: []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(
+					map[string]interface{}{
+						"testProvider": map[string]interface{}{
+							"alias": "tp",
+							"attr":  "value",
+							"count": 10,
+						},
+					})},
 				ProviderInfo: map[string]interface{}{
 					"testProvider": map[string]interface{}{
 						"version": "1.0.0",
@@ -51,7 +53,7 @@ func TestNewFiles(t *testing.T) {
 					Source:      "namespace/consul-terraform-sync/consul//modules/test",
 					Version:     "0.0.0",
 				},
-				Variables: Variables{
+				Variables: hcltmpl.Variables{
 					"one":       cty.NumberIntVal(1),
 					"bool_true": cty.BoolVal(true),
 				},
@@ -61,27 +63,29 @@ func TestNewFiles(t *testing.T) {
 			Func:   NewVariablesTF,
 			Golden: "testdata/variables.tf",
 			Input: RootModuleInputData{
-				Providers: []map[string]interface{}{{
-					"testProvider": map[string]interface{}{
-						"alias": "tp",
-						"attr":  "value",
-						"count": 10,
-					},
-				}},
+				Providers: []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(
+					map[string]interface{}{
+						"testProvider": map[string]interface{}{
+							"alias": "tp",
+							"attr":  "value",
+							"count": 10,
+						},
+					})},
 			},
 		}, {
 			Name:   "terraform.tfvars.tmpl",
 			Func:   NewTFVarsTmpl,
 			Golden: "testdata/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Providers: []map[string]interface{}{{
-					"testProvider": map[string]interface{}{
-						"alias": "tp",
-						"attr":  "value",
-						"count": 10,
-					},
-				}},
-				Services: []*Service{
+				Providers: []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(
+					map[string]interface{}{
+						"testProvider": map[string]interface{}{
+							"alias": "tp",
+							"attr":  "value",
+							"count": 10,
+						},
+					})},
+				Services: []Service{
 					{
 						Name:        "web",
 						Namespace:   "ns",
@@ -101,7 +105,7 @@ func TestNewFiles(t *testing.T) {
 			Func:   NewModuleVariablesTF,
 			Golden: "testdata/variables.module.tf",
 			Input: RootModuleInputData{
-				Variables: Variables{
+				Variables: hcltmpl.Variables{
 					"num": cty.NumberIntVal(10),
 					"b":   cty.BoolVal(true),
 					"key": cty.StringVal("some_key"),

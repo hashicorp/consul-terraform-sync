@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -196,12 +197,12 @@ func TestNewDriverTasks(t *testing.T) {
 			},
 			[]driver.Task{{
 				Name: "name",
-				Providers: []map[string]interface{}{
+				Providers: hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 					{"providerA": map[string]interface{}{}},
 					{"providerB": map[string]interface{}{
 						"var": "val",
 					}},
-				},
+				}),
 				ProviderInfo: map[string]interface{}{
 					"providerA": map[string]string{
 						"source": "source/providerA",
@@ -248,7 +249,7 @@ func TestNewDriverTasks(t *testing.T) {
 			},
 			[]driver.Task{{
 				Name: "name",
-				Providers: []map[string]interface{}{
+				Providers: hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 					{"providerA": map[string]interface{}{
 						"alias": "alias1",
 						"foo":   "bar",
@@ -256,7 +257,7 @@ func TestNewDriverTasks(t *testing.T) {
 					{"providerB": map[string]interface{}{
 						"var": "val",
 					}},
-				},
+				}),
 				ProviderInfo: map[string]interface{}{
 					"providerA": map[string]string{
 						"source": "source/providerA",
@@ -272,7 +273,15 @@ func TestNewDriverTasks(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.conf.Finalize()
-			tasks := newDriverTasks(tc.conf)
+
+			var providerConfigs []hcltmpl.NamedBlock
+			if tc.conf != nil && tc.conf.TerraformProviders != nil {
+				for _, pconf := range *tc.conf.TerraformProviders {
+					providerConfigs = append(providerConfigs, hcltmpl.NewNamedBlockTest(*pconf))
+				}
+			}
+
+			tasks := newDriverTasks(tc.conf, providerConfigs)
 			assert.Equal(t, tc.tasks, tasks)
 		})
 	}

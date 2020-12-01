@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul/lib/decode"
 	"github.com/hashicorp/hcl"
 	"github.com/mitchellh/mapstructure"
@@ -267,6 +268,10 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateDynamicConfigs(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -299,6 +304,28 @@ func (c *Config) GoString() string {
 		c.TerraformProviders.GoString(),
 		c.BufferPeriod.GoString(),
 	)
+}
+
+func (c *Config) validateDynamicConfigs() error {
+	// If dynamic provider configs contain Vault dependency, verify that Vault is
+	// configured.
+	if c.Vault != nil && !*c.Vault.Enabled {
+		for _, p := range *c.TerraformProviders {
+			if hcltmpl.ContainsVaultSecret(fmt.Sprint(*p)) {
+				return fmt.Errorf("detected dynamic configuration using Vault: missing Vault configuration")
+			}
+		}
+	}
+
+	// Dynamic configuration is only supported for terraform_provider blocks.
+	// Provider blocks are redacted, so using the stringified version of the
+	// config to check for templates used elsewhere.
+	if hcltmpl.ContainsDynamicTemplate(c.GoString()) {
+		return fmt.Errorf("dynamic configuration using template syntax is only supported " +
+			"for terraform_provider blocks")
+	}
+
+	return nil
 }
 
 // decodeConfig attempts to decode bytes based on the provided format and
