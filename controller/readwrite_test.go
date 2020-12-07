@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadWrite_CheckApply(t *testing.T) {
@@ -37,7 +38,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			errors.New("error on resolver.Run()"),
 			nil,
 			"task_apply",
-			false,
+			true,
 		},
 		{
 			"error on driver.ApplyTask()",
@@ -120,7 +121,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tc.name)
 				assert.False(t, event.Success)
-				assert.NotNil(t, event.EventError.Message)
+				require.NotNil(t, event.EventError)
 				assert.Contains(t, event.EventError.Message, tc.name)
 			} else {
 				assert.NoError(t, err)
