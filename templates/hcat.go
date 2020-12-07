@@ -16,6 +16,10 @@ var _ hcat.Templater = (Template)(nil)
 var _ hcat.Renderer = (Template)(nil)
 var _ Watcher = (*hcat.Watcher)(nil)
 
+// DepSizeWarning is the threshold of dependencies that we warn the user
+// of CTS potentially DDoSing their Consul cluster.
+const DepSizeWarning = 128
+
 // Template describes the interface for hashicat's Template structure
 // which implements the interfaces Templater and Renderer
 // https://github.com/hashicorp/hcat
