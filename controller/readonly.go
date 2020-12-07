@@ -51,7 +51,7 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 	log.Println("[INFO] (ctrl) inspecting all tasks")
 
 	completed := make(map[string]bool, len(ctrl.units))
-	for {
+	for i := int64(0); ; i++ {
 		done := true
 		for _, u := range ctrl.units {
 			if !completed[u.taskName] {
@@ -65,6 +65,7 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 				}
 			}
 		}
+		ctrl.logDepSize(50, i)
 		if done {
 			log.Println("[INFO] (ctrl) completed task inspections")
 			return nil

@@ -166,6 +166,19 @@ func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]hcltmpl.
 	return providerConfigs, nil
 }
 
+// logDepSize logs the watcher dependency size every nth iteration. Set the
+// iterator to a negative value to log each iteration.
+func (ctrl *baseController) logDepSize(n uint, i int64) {
+	depSize := ctrl.watcher.Size()
+	if i%int64(n) == 0 || i < 0 {
+		log.Printf("[DEBUG] (ctrl) watching %d dependencies", depSize)
+		if depSize > templates.DepSizeWarning {
+			log.Printf("[WARN] (ctrl) watching more than %d dependencies could "+
+				"DDoS your Consul cluster: %d", templates.DepSizeWarning, depSize)
+		}
+	}
+}
+
 // InstallDriver installs necessary drivers based on user configuration.
 func InstallDriver(ctx context.Context, conf *config.Config) error {
 	if conf.Driver.Terraform != nil {

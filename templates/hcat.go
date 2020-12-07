@@ -43,5 +43,6 @@ type Watcher interface {
 	Recall(id string) (interface{}, bool)
 	Register(tmplID string, deps ...dep.Dependency)
 	SetBufferPeriod(min, max time.Duration, tmplIDs ...string)
+	Size() int
 	Stop()
 }
