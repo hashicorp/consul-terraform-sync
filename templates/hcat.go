@@ -8,9 +8,9 @@ import (
 	"github.com/hashicorp/hcat/dep"
 )
 
-//go:generate mockery --name=template  --structname=Template --output=../mocks/controller
-//go:generate mockery --name=resolver --structname=Resolver --output=../mocks/controller
-//go:generate mockery --name=watcher --structname=Watcher --output=../mocks/controller
+//go:generate mockery --name=Template  --filename=template.go --output=../mocks/templates
+//go:generate mockery --name=Resolver --filename=resolver.go --output=../mocks/templates
+//go:generate mockery --name=Watcher --filename=watcher.go --output=../mocks/templates
 
 var _ hcat.Templater = (Template)(nil)
 var _ hcat.Renderer = (Template)(nil)
