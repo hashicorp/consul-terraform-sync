@@ -185,6 +185,7 @@ func (cli *CLI) Run(args []string) int {
 		log.Printf("[ERR] (cli) error setting up controller: %s", err)
 		return ExitCodeConfigError
 	}
+	defer ctrl.Stop()
 
 	errCh := make(chan error, 1)
 	exitBufLen := 2 // exit api & controller

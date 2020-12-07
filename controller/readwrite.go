@@ -60,7 +60,6 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 		case <-ctx.Done():
 			log.Printf("[INFO] (ctrl) stopping controller")
-			rw.watcher.Stop()
 			return ctx.Err()
 		}
 

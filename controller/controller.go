@@ -29,6 +29,9 @@ type Controller interface {
 
 	// Run runs the controller by monitoring Consul and triggering the driver as needed
 	Run(ctx context.Context) error
+
+	// Stop stops underlying clients and connections
+	Stop()
 }
 
 // Oncer describes the interface a controller that can run in once mode
@@ -75,6 +78,10 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 		watcher:    watcher,
 		resolver:   hcat.NewResolver(),
 	}, nil
+}
+
+func (ctrl *baseController) Stop() {
+	ctrl.watcher.Stop()
 }
 
 func (ctrl *baseController) init(ctx context.Context) error {
