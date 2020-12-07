@@ -127,8 +127,10 @@ func (api *API) Serve(ctx context.Context) error {
 		}
 	}()
 
+	log.Printf("[INFO] (api) starting server at '%d'", api.port)
 	if err := api.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("error starting api server at '%d': '%s'", api.port, err)
+		log.Printf("[ERROR] (api) serving api at '%d': %s", api.port, err)
+		return err
 	}
 
 	// wait for shutdown

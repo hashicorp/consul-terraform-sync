@@ -194,7 +194,6 @@ func (cli *CLI) Run(args []string) int {
 		if isOnce || isInspect {
 			return
 		}
-		log.Printf("[INFO] (cli) starting up api server at port: %d", conf.Port)
 		api := api.NewAPI(store, config.IntVal(conf.Port))
 		if err = api.Serve(ctx); err != nil {
 			if err == context.Canceled {
