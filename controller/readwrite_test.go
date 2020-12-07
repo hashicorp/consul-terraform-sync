@@ -190,6 +190,7 @@ func TestOnce(t *testing.T) {
 		var errChRc <-chan error = errCh
 		go func() { errCh <- nil }()
 		w.On("WaitCh", mock.Anything).Return(errChRc).Once()
+		w.On("Size").Return(5)
 
 		d := new(mocksD.Driver)
 		d.On("InitTask", mock.Anything).Return(nil).Once()
@@ -251,7 +252,8 @@ func TestReadWriteUnits(t *testing.T) {
 		Return(hcat.ResolveEvent{Complete: true}, nil)
 
 	w := new(mocks.Watcher)
-	w.On("Wait", mock.Anything).Return(nil)
+	w.On("Wait", mock.Anything).Return(nil).
+		On("Size").Return(5)
 
 	t.Run("simple-success", func(t *testing.T) {
 		d := new(mocksD.Driver)
@@ -306,6 +308,7 @@ func TestReadWriteUnits(t *testing.T) {
 func TestReadWriteRun_context_cancel(t *testing.T) {
 	w := new(mocks.Watcher)
 	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil).
+		On("Size").Return(5).
 		On("Stop").Return()
 
 	ctl := ReadWrite{

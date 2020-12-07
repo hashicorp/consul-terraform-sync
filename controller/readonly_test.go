@@ -66,7 +66,8 @@ func TestReadOnlyRun(t *testing.T) {
 				Return(hcat.ResolveEvent{Complete: true}, tc.resolverRunErr)
 
 			w := new(mocks.Watcher)
-			w.On("Wait", mock.Anything).Return(tc.watcherWaitErr)
+			w.On("Wait", mock.Anything).Return(tc.watcherWaitErr).
+				On("Size").Return(5)
 
 			d := new(mocksD.Driver)
 			d.On("InspectTask", mock.Anything).Return(tc.inspectTaskErr)
@@ -97,6 +98,7 @@ func TestReadOnlyRun_context_cancel(t *testing.T) {
 
 	w := new(mocks.Watcher)
 	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil).
+		On("Size").Return(5).
 		On("Stop").Return()
 
 	ctrl := ReadOnly{baseController: &baseController{
