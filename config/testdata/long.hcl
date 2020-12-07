@@ -33,7 +33,7 @@ consul {
     dial_timeout = "10s"
     disable_keep_alives = false
     idle_conn_timeout = "1m"
-    max_idle_conns_per_host = 5
+    max_idle_conns_per_host = 100
     tls_handshake_timeout = "10s"
   }
 }

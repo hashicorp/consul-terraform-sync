@@ -51,7 +51,7 @@ var (
 				DialTimeout:         TimeDuration(10 * time.Second),
 				DisableKeepAlives:   Bool(false),
 				IdleConnTimeout:     TimeDuration(1 * time.Minute),
-				MaxIdleConnsPerHost: Int(5),
+				MaxIdleConnsPerHost: Int(100),
 				TLSHandshakeTimeout: TimeDuration(10 * time.Second),
 			},
 		},
@@ -266,7 +266,7 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.BufferPeriod.Enabled = Bool(true)
 	expected.Consul.KVNamespace = String("")
 	expected.Consul.TLS.Cert = String("")
-	expected.Consul.Transport.MaxIdleConns = Int(100)
+	expected.Consul.Transport.MaxIdleConns = Int(0)
 	expected.Vault = DefaultVaultConfig()
 	expected.Vault.Finalize()
 	expected.Driver.consul = expected.Consul

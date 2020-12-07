@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"runtime"
 	"time"
 )
 
@@ -17,20 +16,18 @@ const (
 
 	// DefaultIdleConnTimeout is the default connection timeout for idle
 	// connections.
-	DefaultIdleConnTimeout = 90 * time.Second
+	DefaultIdleConnTimeout = 5 * time.Second
 
 	// DefaultMaxIdleConns is the default number of maximum idle connections.
-	DefaultMaxIdleConns = 100
+	DefaultMaxIdleConns = 0
+
+	// DefaultMaxIdleConnsPerHost is the default number of maximum idle
+	// connections per host.
+	DefaultMaxIdleConnsPerHost = 100
 
 	// DefaultTLSHandshakeTimeout is the amount of time to negotiate the TLS
 	// handshake.
 	DefaultTLSHandshakeTimeout = 10 * time.Second
-)
-
-var (
-	// DefaultMaxIdleConnsPerHost is the default number of idle connections to use
-	// per host.
-	DefaultMaxIdleConnsPerHost = runtime.GOMAXPROCS(0) + 1
 )
 
 // TransportConfig is the configuration to tune low-level APIs for the
@@ -54,6 +51,20 @@ type TransportConfig struct {
 
 	// MaxIdleConnsPerHost is the maximum number of idle connections per remote
 	// host.
+	//
+	// The majority of connections are established with one host, the Consul agent.
+	// To achieve the shortest latency between a Consul service update to a task
+	// execution, configure the max_idle_conns_per_host to a number proportional to
+	// the number of services in automation across all tasks.
+	//
+	// This value must be lower than the configured http_max_conns_per_client
+	// for the Consul agent. Note that requests made by Terraform subprocesses
+	// or any other process on the same host as Consul-Terraform-Sync will
+	// contribute to the Consul agent http_max_conns_per_client.
+	//
+	// If max_idle_conns_per_host or the number of services in automation is greater
+	// than the Consul agent limit, Consul-Terraform-Sync may error due to
+	// connection limits (429).
 	MaxIdleConnsPerHost *int `mapstructure:"max_idle_conns_per_host"`
 
 	// TLSHandshakeTimeout is the amount of time to wait to complete the TLS
@@ -176,12 +187,16 @@ func (c *TransportConfig) GoString() string {
 		"DialKeepAlive:%s, "+
 		"DialTimeout:%s, "+
 		"DisableKeepAlives:%t, "+
+		"IdleConnTimeout:%d, "+
+		"MaxIdleConns:%d, "+
 		"MaxIdleConnsPerHost:%d, "+
 		"TLSHandshakeTimeout:%s"+
 		"}",
 		TimeDurationVal(c.DialKeepAlive),
 		TimeDurationVal(c.DialTimeout),
 		BoolVal(c.DisableKeepAlives),
+		TimeDurationVal(c.IdleConnTimeout),
+		IntVal(c.MaxIdleConns),
 		IntVal(c.MaxIdleConnsPerHost),
 		TimeDurationVal(c.TLSHandshakeTimeout),
 	)
