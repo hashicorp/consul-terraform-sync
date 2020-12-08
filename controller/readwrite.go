@@ -47,7 +47,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	// mode so it can immediately render the first time.
 	rw.setTemplateBufferPeriods()
 
-	for {
+	for i := int64(1); ; i++ {
 		// Blocking on Wait is first as we just ran in Once mode so we want
 		// to wait for updates before re-running. Doing it the other way is
 		// basically a noop as it checks if templates have been changed but
@@ -60,7 +60,6 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 		case <-ctx.Done():
 			log.Printf("[INFO] (ctrl) stopping controller")
-			rw.watcher.Stop()
 			return ctx.Err()
 		}
 
@@ -68,6 +67,8 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 			// aggregate error collector for runUnits, just logs everything for now
 			log.Printf("[ERR] (ctrl) %s", err)
 		}
+
+		rw.logDepSize(50, i)
 	}
 }
 
@@ -102,7 +103,7 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 	log.Println("[INFO] (ctrl) executing all tasks once through")
 
 	completed := make(map[string]bool, len(rw.units))
-	for {
+	for i := int64(0); ; i++ {
 		done := true
 		for _, u := range rw.units {
 			if !completed[u.taskName] {
@@ -116,6 +117,7 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 				}
 			}
 		}
+		rw.logDepSize(50, i)
 		if done {
 			log.Println("[INFO] (ctrl) all tasks completed once")
 			return nil
@@ -163,7 +165,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 	}
 	ev.Start()
 
-	log.Printf("[TRACE] (ctrl) checking dependencies changes for task %s", taskName)
+	log.Printf("[TRACE] (ctrl) checking dependency changes for task %s", taskName)
 	var result hcat.ResolveEvent
 	if result, storedErr = rw.resolver.Run(tmpl, rw.watcher); storedErr != nil {
 		defer storeEvent()

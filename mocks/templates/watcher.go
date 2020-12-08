@@ -105,6 +105,20 @@ func (_m *Watcher) SetBufferPeriod(min time.Duration, max time.Duration, tmplIDs
 	_m.Called(_ca...)
 }
 
+// Size provides a mock function with given fields:
+func (_m *Watcher) Size() int {
+	ret := _m.Called()
+
+	var r0 int
+	if rf, ok := ret.Get(0).(func() int); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	return r0
+}
+
 // Stop provides a mock function with given fields:
 func (_m *Watcher) Stop() {
 	_m.Called()
