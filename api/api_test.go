@@ -51,11 +51,26 @@ func TestServe(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			u := fmt.Sprintf("http://localhost:%d/%s/%s",
 				port, defaultAPIVersion, tc.path)
-
 			resp, err := http.Get(u)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-			assert.Equal(t, tc.statusCode, resp.StatusCode)
+
+			statusCode := 0
+
+			if err == nil {
+				defer resp.Body.Close()
+				statusCode = resp.StatusCode
+			} else {
+				// race where http requests execute before api server is ready.
+				// wait a little and retry once.
+				require.Contains(t, err.Error(), "connect: connection refused")
+				time.Sleep(3 * time.Second)
+
+				resp2, err2 := http.Get(u)
+				require.NoError(t, err2)
+				defer resp2.Body.Close()
+				statusCode = resp2.StatusCode
+			}
+
+			assert.Equal(t, tc.statusCode, statusCode)
 		})
 	}
 }
