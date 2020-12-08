@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,7 +55,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	registerService(t, srv, service, testutil.HealthPassing)
 
 	// wait and then retrieve status
-	time.Sleep(5 * time.Second)
+	time.Sleep(7 * time.Second)
 
 	taskCases := []struct {
 		name     string
@@ -109,105 +108,6 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 				},
 			},
 		},
-		{
-			"all task status + events",
-			"status/tasks?include=events",
-			map[string]api.TaskStatus{
-				fakeSuccessTaskName: api.TaskStatus{
-					TaskName:  fakeSuccessTaskName,
-					Status:    api.StatusHealthy,
-					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
-					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
-					Events: []event.Event{
-						event.Event{
-							TaskName: fakeSuccessTaskName,
-							Success:  true,
-							Config: &event.Config{
-								Providers: []string{"fake-sync"},
-								Services:  []string{"api"},
-								Source:    "../../test_modules/e2e_basic_task",
-							},
-						},
-						event.Event{
-							TaskName: fakeSuccessTaskName,
-							Success:  true,
-							Config: &event.Config{
-								Providers: []string{"fake-sync"},
-								Services:  []string{"api"},
-								Source:    "../../test_modules/e2e_basic_task",
-							},
-						},
-					},
-				},
-				fakeFailureTaskName: api.TaskStatus{
-					TaskName:  fakeFailureTaskName,
-					Status:    api.StatusCritical,
-					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
-					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
-					Events: []event.Event{
-						event.Event{
-							TaskName: fakeFailureTaskName,
-							Success:  false,
-							EventError: &event.Error{
-								Message: "error failure",
-							},
-							Config: &event.Config{
-								Providers: []string{"fake-sync"},
-								Services:  []string{"api"},
-								Source:    "../../test_modules/e2e_basic_task",
-							},
-						},
-						event.Event{
-							TaskName: fakeFailureTaskName,
-							Success:  true,
-							Config: &event.Config{
-								Providers: []string{"fake-sync"},
-								Services:  []string{"api"},
-								Source:    "../../test_modules/e2e_basic_task",
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			"all task status filtered by status and include events",
-			"status/tasks?status=critical&include=events",
-			map[string]api.TaskStatus{
-				fakeFailureTaskName: api.TaskStatus{
-					TaskName:  fakeFailureTaskName,
-					Status:    api.StatusCritical,
-					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
-					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
-					Events: []event.Event{
-						event.Event{
-							TaskName: fakeFailureTaskName,
-							Success:  false,
-							EventError: &event.Error{
-								Message: "error failure",
-							},
-							Config: &event.Config{
-								Providers: []string{"fake-sync"},
-								Services:  []string{"api"},
-								Source:    "../../test_modules/e2e_basic_task",
-							},
-						},
-						event.Event{
-							TaskName: fakeFailureTaskName,
-							Success:  true,
-							Config: &event.Config{
-								Providers: []string{"fake-sync"},
-								Services:  []string{"api"},
-								Source:    "../../test_modules/e2e_basic_task",
-							},
-						},
-					},
-				},
-			},
-		},
 	}
 
 	for _, tc := range taskCases {
@@ -235,6 +135,45 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			}
 
 			assert.Equal(t, tc.expected, taskStatuses)
+		})
+	}
+
+	eventCases := []struct {
+		name              string
+		path              string
+		expectSuccessTask bool
+		expectFailureTask bool
+	}{
+		{
+			"events: all task statuses",
+			"status/tasks?include=events",
+			true,
+			true,
+		},
+		{
+			"events: all task statuses filtered by status",
+			"status/tasks?status=critical&include=events",
+			false,
+			true,
+		},
+	}
+
+	for _, tc := range eventCases {
+		t.Run(tc.name, func(t *testing.T) {
+			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
+			resp, err := http.Get(u)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			require.Equal(t, resp.StatusCode, http.StatusOK)
+
+			var taskStatuses map[string]api.TaskStatus
+			decoder := json.NewDecoder(resp.Body)
+			err = decoder.Decode(&taskStatuses)
+			require.NoError(t, err)
+
+			checkEvents(t, taskStatuses, fakeFailureTaskName, tc.expectFailureTask)
+			checkEvents(t, taskStatuses, fakeSuccessTaskName, tc.expectSuccessTask)
 		})
 	}
 
@@ -314,4 +253,46 @@ func registerService(t *testing.T, srv *testutil.TestServer, s testutil.TestServ
 	defer resp.Body.Close()
 
 	srv.AddCheck(t, s.ID, s.ID, testutil.HealthPassing)
+}
+
+// checkEvents does some basic checks to loosely ensure returned events in
+// responses are as expected
+func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
+	taskName string, expect bool) {
+
+	task, ok := taskStatuses[taskName]
+
+	if expect {
+		assert.True(t, ok)
+	} else {
+		assert.False(t, ok)
+		return
+	}
+
+	// there should be 2-4 events
+	msg := fmt.Sprintf("%s expected 2-4 events, got %d", taskName, len(task.Events))
+	require.True(t, 2 <= len(task.Events) && len(task.Events) <= 4, msg)
+
+	for ix, e := range task.Events {
+		assert.Equal(t, taskName, e.TaskName)
+
+		require.NotNil(t, e.Config)
+		assert.Equal(t, []string{"fake-sync"}, e.Config.Providers)
+		assert.Equal(t, []string{"api"}, e.Config.Services)
+		assert.Equal(t, "../../test_modules/e2e_basic_task", e.Config.Source)
+
+		if taskName == fakeSuccessTaskName {
+			assert.True(t, e.Success)
+		}
+
+		if taskName == fakeFailureTaskName {
+			// last event should be successful, others failure
+			msg := fmt.Sprintf("Event %d of %d: %v", ix+1, len(task.Events), e)
+			if ix == len(task.Events)-1 {
+				assert.True(t, e.Success, msg)
+			} else {
+				assert.False(t, e.Success, msg)
+			}
+		}
+	}
 }
