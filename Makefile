@@ -46,7 +46,7 @@ test-integration:
 .PHONY: test-all
 
 # test-e2e runs e2e tests
-test-e2e:
+test-e2e: dev
 	@echo "==> Testing ${NAME} (e2e)"
 	@go test ./e2e -count=1 -timeout=80s -tags=e2e -v ./... ${TESTARGS}
 .PHONY: test-e2e
