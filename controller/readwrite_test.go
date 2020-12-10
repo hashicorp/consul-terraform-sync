@@ -100,7 +100,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			u := unit{taskName: tc.taskName, template: tmpl, driver: d}
 			ctx := context.Background()
 
-			_, err := controller.checkApply(ctx, u)
+			_, err := controller.checkApply(ctx, u, false)
 			data := controller.store.Read(tc.taskName)
 			events := data[tc.taskName]
 
@@ -154,12 +154,12 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 		unitB := unit{taskName: "task_b", template: tmpl, driver: d}
 		ctx := context.Background()
 
-		controller.checkApply(ctx, unitA)
-		controller.checkApply(ctx, unitB)
-		controller.checkApply(ctx, unitA)
-		controller.checkApply(ctx, unitA)
-		controller.checkApply(ctx, unitA)
-		controller.checkApply(ctx, unitB)
+		controller.checkApply(ctx, unitA, false)
+		controller.checkApply(ctx, unitB, false)
+		controller.checkApply(ctx, unitA, false)
+		controller.checkApply(ctx, unitA, false)
+		controller.checkApply(ctx, unitA, false)
+		controller.checkApply(ctx, unitB, false)
 
 		taskStatuses := controller.store.Read("")
 
