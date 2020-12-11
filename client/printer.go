@@ -42,6 +42,13 @@ func NewPrinter(config *PrinterConfig) (*Printer, error) {
 	}, nil
 }
 
+// SetEnv logs out 'setenv'
+func (p *Printer) SetEnv(map[string]string) error {
+	p.logger.Printf("[INFO] (client.printer) setting workspace environment: "+
+		"'%s', workingdir: '%s'", p.workspace, p.workingDir)
+	return nil
+}
+
 // Init logs out 'init'
 func (p *Printer) Init(ctx context.Context) error {
 	p.logger.Printf("[INFO] (client.printer) initing workspace: '%s', workingdir: '%s'",

@@ -106,7 +106,7 @@ func (b *NamedBlock) ObjectVal() *cty.Value {
 	return b.objectValueCache
 }
 
-func (b *NamedBlock) RawConfig() map[string]interface{} {
+func (b NamedBlock) RawConfig() map[string]interface{} {
 	return b.rawConfig
 }
 

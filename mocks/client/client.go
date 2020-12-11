@@ -68,3 +68,17 @@ func (_m *Client) Plan(ctx context.Context) error {
 
 	return r0
 }
+
+// SetEnv provides a mock function with given fields: _a0
+func (_m *Client) SetEnv(_a0 map[string]string) error {
+	ret := _m.Called(_a0)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(map[string]string) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

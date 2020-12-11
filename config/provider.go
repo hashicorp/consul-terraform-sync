@@ -135,6 +135,14 @@ func (c *TerraformProviderConfig) Validate() error {
 		return fmt.Errorf("unexpected provider block labels: %s", strings.Join(labels, ","))
 	}
 
+	taskEnv, exists := (*c)["task_env"]
+	if exists {
+		_, okType := taskEnv.(map[string]string)
+		if !okType {
+			return fmt.Errorf("unexpected task_env block format")
+		}
+	}
+
 	return nil
 }
 
