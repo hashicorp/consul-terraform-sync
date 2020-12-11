@@ -1,10 +1,9 @@
-package driver
+package retry
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	"testing"
 	"time"
 
@@ -16,19 +15,15 @@ import (
 func TestWithRetry_context_cancel(t *testing.T) {
 	t.Parallel()
 
-	r := retry{
-		desc:   "fake fxn that never succeeds",
-		retry:  5,
-		random: rand.New(rand.NewSource(1)),
-		fxn: func() error {
-			return errors.New("test error")
-		},
+	r := NewRetry(5, 1)
+	fxn := func(context.Context) error {
+		return errors.New("test error")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		err := r.do(ctx)
+		err := r.Do(ctx, fxn, "fake fxn that never succeeds")
 		if err != nil {
 			errCh <- err
 		}
@@ -50,7 +45,7 @@ func TestWithRetry(t *testing.T) {
 
 	cases := []struct {
 		name      string
-		retry     int
+		retry     uint
 		successOn int
 		expected  error
 	}{
@@ -64,7 +59,7 @@ func TestWithRetry(t *testing.T) {
 			"no success on retries: retry once",
 			1,
 			100,
-			errors.New("attempt #2 failed 'error on 2': attempt #1 failed 'error on 1'"),
+			errors.New("retry attempt #1 failed 'error on 2'"),
 		},
 		{
 			"happy path: no retry",
@@ -76,7 +71,7 @@ func TestWithRetry(t *testing.T) {
 			"no retry, no success",
 			0,
 			100,
-			errors.New("attempt #1 failed 'error on 1'"),
+			errors.New("error on 1"),
 		},
 	}
 
@@ -85,7 +80,7 @@ func TestWithRetry(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// set up fake function
 			count := 0
-			fxn := func() error {
+			fxn := func(context.Context) error {
 				count++
 				if count == tc.successOn {
 					return nil
@@ -93,13 +88,8 @@ func TestWithRetry(t *testing.T) {
 				return fmt.Errorf("error on %d", count)
 			}
 
-			r := retry{
-				desc:   "test fxn",
-				retry:  tc.retry,
-				random: rand.New(rand.NewSource(1)),
-				fxn:    fxn,
-			}
-			err := r.do(ctx)
+			r := NewRetry(tc.retry, 1)
+			err := r.Do(ctx, fxn, "test fxn")
 			if tc.expected == nil {
 				assert.NoError(t, err)
 			} else {
@@ -131,11 +121,10 @@ func TestWithRetry_client(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			c := new(mocks.Client)
 			c.On("Apply", mock.Anything).Return(tc.applyErr)
-			w := worker{
-				random: rand.New(rand.NewSource(1)),
-			}
 
-			err := w.withRetry(ctx, c.Apply, "apply")
+			r := NewRetry(1, 1)
+			err := r.Do(ctx, c.Apply, "apply")
+
 			if tc.applyErr != nil {
 				assert.Error(t, err)
 				return
@@ -150,7 +139,7 @@ func TestWaitTime(t *testing.T) {
 
 	cases := []struct {
 		name      string
-		attempt   int
+		attempt   uint
 		minReturn float64
 		maxReturn float64
 	}{
@@ -176,9 +165,7 @@ func TestWaitTime(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := retry{
-				random: rand.New(rand.NewSource(1)),
-			}
+			r := NewRetry(1, 1)
 			a := r.waitTime(tc.attempt)
 
 			actual := float64(a) / float64(time.Second)

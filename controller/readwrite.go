@@ -5,18 +5,26 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/hashicorp/hcat"
 )
 
-var _ Controller = (*ReadWrite)(nil)
+var (
+	_ Controller = (*ReadWrite)(nil)
+
+	// Number of times to retry attempts
+	defaultRetry uint = 2
+)
 
 // ReadWrite is the controller to run in read-write mode
 type ReadWrite struct {
 	*baseController
 	store *event.Store
+	retry retry.Retry
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
@@ -29,6 +37,7 @@ func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
 	return &ReadWrite{
 		baseController: baseCtrl,
 		store:          store,
+		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 	}, nil
 }
 
@@ -81,7 +90,7 @@ func (rw *ReadWrite) runUnits(ctx context.Context) chan error {
 	for _, u := range rw.units {
 		wg.Add(1)
 		go func(u unit) {
-			_, err := rw.checkApply(ctx, u)
+			_, err := rw.checkApply(ctx, u, true)
 			if err != nil {
 				errCh <- err
 			}
@@ -107,7 +116,7 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 		done := true
 		for _, u := range rw.units {
 			if !completed[u.taskName] {
-				complete, err := rw.checkApply(ctx, u)
+				complete, err := rw.checkApply(ctx, u, false)
 				if err != nil {
 					return err
 				}
@@ -141,7 +150,7 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 // Note: We do not store event for each successful yet incomplete template fetching
 // since there could be many per full task execution i.e. when resolver.Run()
 // returns result.Complete == false, no event is stored.
-func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
+func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, error) {
 	tmpl := u.template
 	taskName := u.taskName
 
@@ -189,7 +198,13 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit) (bool, error) {
 
 		d := u.driver
 		log.Printf("[INFO] (ctrl) executing task %s", taskName)
-		if storedErr = d.ApplyTask(ctx); storedErr != nil {
+		if retry {
+			desc := fmt.Sprintf("ApplyTask %s", taskName)
+			storedErr = rw.retry.Do(ctx, d.ApplyTask, desc)
+		} else {
+			storedErr = d.ApplyTask(ctx)
+		}
+		if storedErr != nil {
 			return false, fmt.Errorf("could not apply changes for task %s: %s",
 				taskName, storedErr)
 		}

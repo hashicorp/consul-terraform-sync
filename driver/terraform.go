@@ -14,9 +14,6 @@ import (
 )
 
 const (
-	// Number of times to retry in addition to initial attempt
-	defaultRetry = 2
-
 	// Types of clients that are alternatives to the default Terraform CLI client
 	developmentClient = "development"
 	testClient        = "test"
@@ -43,7 +40,6 @@ type Terraform struct {
 	requiredProviders map[string]interface{}
 
 	workingDir string
-	worker     *worker
 	client     client.Client
 	postApply  handler.Handler
 
@@ -97,7 +93,6 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		backend:           config.Backend,
 		requiredProviders: config.RequiredProviders,
 		workingDir:        config.WorkingDir,
-		worker:            newWorker(defaultRetry),
 		client:            tfClient,
 		postApply:         handler,
 	}, nil
@@ -175,8 +170,7 @@ func (tf *Terraform) InspectTask(ctx context.Context) error {
 	}
 
 	log.Printf("[TRACE] (driver.terraform) plan '%s'", taskName)
-	desc := fmt.Sprintf("Plan %s", taskName)
-	if err := tf.worker.withRetry(ctx, tf.client.Plan, desc); err != nil {
+	if err := tf.client.Plan(ctx); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error tf-plan for '%s'", taskName))
 	}
 
@@ -194,8 +188,7 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	}
 
 	log.Printf("[TRACE] (driver.terraform) apply '%s'", taskName)
-	desc := fmt.Sprintf("Apply %s", taskName)
-	if err := tf.worker.withRetry(ctx, tf.client.Apply, desc); err != nil {
+	if err := tf.client.Apply(ctx); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error tf-apply for '%s'", taskName))
 	}
 
@@ -221,8 +214,7 @@ func (tf *Terraform) init(ctx context.Context) error {
 	}
 
 	log.Printf("[TRACE] (driver.terraform) initializing workspace '%s'", taskName)
-	desc := fmt.Sprintf("Init %s", taskName)
-	if err := tf.worker.withRetry(ctx, tf.client.Init, desc); err != nil {
+	if err := tf.client.Init(ctx); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error tf-init for '%s'", taskName))
 	}
 	tf.inited = true

@@ -3,7 +3,6 @@ package driver
 import (
 	"context"
 	"errors"
-	"math/rand"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/handler"
@@ -80,10 +79,7 @@ func TestApplyTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyReturn).Once()
 
 			tf := &Terraform{
-				task: Task{Name: "ApplyTaskTest"},
-				worker: &worker{
-					random: rand.New(rand.NewSource(1)),
-				},
+				task:      Task{Name: "ApplyTaskTest"},
 				client:    c,
 				postApply: tc.postApply,
 				inited:    tc.inited,
