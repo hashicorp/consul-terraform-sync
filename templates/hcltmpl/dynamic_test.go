@@ -152,6 +152,23 @@ func TestLoadDynamicConfig(t *testing.T) {
 					"list": cty.TupleVal([]cty.Value{tmplVal, cty.StringVal("item")}),
 				},
 			},
+		}, {
+			"dynamic task_env",
+			map[string]interface{}{
+				"foo": map[string]interface{}{
+					"task_env": map[string]interface{}{
+						"FOO_TOKEN": "{{ env \"CTS_FOO_TOKEN\" }}",
+					},
+				},
+			},
+			NamedBlock{
+				Name: "foo",
+				Variables: map[string]cty.Value{
+					"task_env": cty.ObjectVal(map[string]cty.Value{
+						"FOO_TOKEN": tmplVal,
+					}),
+				},
+			},
 		},
 	}
 

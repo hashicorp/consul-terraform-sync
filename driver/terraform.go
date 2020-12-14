@@ -237,13 +237,13 @@ func getTerraformHandlers(task Task) (handler.Handler, error) {
 		if err != nil {
 			log.Printf(
 				"[ERR] (driver.terraform) could not initialize handler for "+
-					"provider '%s': %s", p.Name, err)
+					"provider '%s': %s", p.Name(), err)
 			return nil, err
 		}
 		if h != nil {
 			counter++
 			log.Printf(
-				"[INFO] (driver.terraform) retrieved handler for provider '%s'", p.Name)
+				"[INFO] (driver.terraform) retrieved handler for provider '%s'", p.Name())
 			h.SetNext(next)
 			next = h
 		}

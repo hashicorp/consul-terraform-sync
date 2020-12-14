@@ -7,6 +7,7 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+// Variables are the cty value representation of HCL block arguments
 type Variables map[string]cty.Value
 
 // NamedBlock represents an HCL block with one label and an arbitrary number of
@@ -62,6 +63,20 @@ func NewNamedBlock(b map[string]interface{}) NamedBlock {
 		Name:      name,
 		Variables: vars,
 		rawConfig: rawBlock,
+	}
+}
+
+// Copy creates a copy of the NamedBlock with a shallow copy of the raw config
+func (b *NamedBlock) Copy() NamedBlock {
+	vars := make(map[string]cty.Value)
+	for k, v := range b.Variables {
+		vars[k] = v
+	}
+
+	return NamedBlock{
+		Name:      b.Name,
+		Variables: vars,
+		rawConfig: b.rawConfig,
 	}
 }
 
