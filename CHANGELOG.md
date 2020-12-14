@@ -2,6 +2,7 @@
 
 BREAKING CHANGES:
 * Deprecate `provider` block name in this release for `terraform_provider` block name, and `provider` will be removed in the following release [[GH-140](https://github.com/hashicorp/consul-terraform-sync/pull/140)]
+* Fix PAN-OS out-of-band commits to use partial commits based on the configured admin user (required when using the PAN-OS provider) instead of committing all queued changes from any user [[GH-137](https://github.com/hashicorp/consul-terraform-sync/pull/137)].
 
 FEATURES:
 * Add inspect mode to view proposed state changes for tasks [[GH-124](https://github.com/hashicorp/consul-terraform-sync/pull/124)]
