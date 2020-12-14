@@ -142,13 +142,13 @@ func (ctrl *baseController) init(ctx context.Context) error {
 
 // loadProviderConfigs loads provider configs and evaluates provider blocks
 // for dynamic values in parallel.
-func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]hcltmpl.NamedBlock, error) {
+func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]driver.TerraformProviderBlock, error) {
 	numBlocks := len(*ctrl.conf.TerraformProviders)
 	var wg sync.WaitGroup
 	wg.Add(numBlocks)
 
 	var lastErr error
-	providerConfigs := make([]hcltmpl.NamedBlock, numBlocks)
+	providerConfigs := make([]driver.TerraformProviderBlock, numBlocks)
 	for i, providerConf := range *ctrl.conf.TerraformProviders {
 		go func(i int, conf map[string]interface{}) {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -162,7 +162,7 @@ func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]hcltmpl.
 				lastErr = err
 				return
 			}
-			providerConfigs[i] = block
+			providerConfigs[i] = driver.NewTerraformProviderBlock(block)
 		}(i, *providerConf)
 	}
 
@@ -221,7 +221,7 @@ func newTerraformDriver(conf *config.Config, task driver.Task) (driver.Driver, e
 
 // newDriverTasks converts user-defined task configurations to the task object
 // used by drivers.
-func newDriverTasks(conf *config.Config, providerConfigs []hcltmpl.NamedBlock) []driver.Task {
+func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProviderBlocks) []driver.Task {
 	if conf == nil {
 		return []driver.Task{}
 	}
@@ -233,7 +233,7 @@ func newDriverTasks(conf *config.Config, providerConfigs []hcltmpl.NamedBlock) [
 			services[si] = getService(conf.Services, service)
 		}
 
-		providers := make([]hcltmpl.NamedBlock, len(t.Providers))
+		providers := make([]driver.TerraformProviderBlock, len(t.Providers))
 		providerInfo := make(map[string]interface{})
 		for pi, providerID := range t.Providers {
 			providers[pi] = getProvider(providerConfigs, providerID)
@@ -326,12 +326,12 @@ func splitProviderID(id string) (string, string) {
 // assumes the default provider block that is empty.
 //
 // terraform_provider "name" { }
-func getProvider(providers []hcltmpl.NamedBlock, id string) hcltmpl.NamedBlock {
+func getProvider(providers driver.TerraformProviderBlocks, id string) driver.TerraformProviderBlock {
 	name, alias := splitProviderID(id)
 
 	for _, p := range providers {
 		// Find the provider by name
-		if p.Name != name {
+		if p.Name() != name {
 			continue
 		}
 
@@ -340,14 +340,14 @@ func getProvider(providers []hcltmpl.NamedBlock, id string) hcltmpl.NamedBlock {
 		}
 
 		// Match by alias
-		a, ok := p.Variables["alias"]
+		a, ok := p.ProviderBlock().Variables["alias"]
 		if ok && a.AsString() == alias {
 			return p
 		}
 	}
 
-	return hcltmpl.NamedBlock{
+	return driver.NewTerraformProviderBlock(hcltmpl.NamedBlock{
 		Name:      name,
 		Variables: make(hcltmpl.Variables),
-	}
+	})
 }

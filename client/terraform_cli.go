@@ -87,6 +87,11 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	return client, nil
 }
 
+// SetEnv sets the environment for the Terraform workspace
+func (t *TerraformCLI) SetEnv(env map[string]string) error {
+	return t.tf.SetEnv(env)
+}
+
 // Init initializes by executing the cli command `terraform init` and
 // `terraform workspace new <name>`
 func (t *TerraformCLI) Init(ctx context.Context) error {

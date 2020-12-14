@@ -126,13 +126,31 @@ func (c *TerraformProviderConfig) Validate() error {
 
 	numLabels := len(*c)
 	if numLabels == 0 {
-		return fmt.Errorf("missing provider name for the provider block")
+		return fmt.Errorf("missing provider name for the terraform_provider block")
 	} else if numLabels > 1 {
 		labels := make([]string, 0, numLabels)
 		for l := range *c {
 			labels = append(labels, l)
 		}
-		return fmt.Errorf("unexpected provider block labels: %s", strings.Join(labels, ","))
+		return fmt.Errorf("unexpected terraform_provider block labels: %s", strings.Join(labels, ","))
+	}
+
+	for label := range *c {
+		// Validate block format
+		rawBlock := (*c)[label]
+		block, ok := rawBlock.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected terraform_provider block format")
+		}
+
+		// Validate task_env format if exists
+		taskEnv, exists := block["task_env"]
+		if exists {
+			_, ok := taskEnv.(map[string]string)
+			if !ok {
+				return fmt.Errorf("unexpected task_env block format")
+			}
+		}
 	}
 
 	return nil

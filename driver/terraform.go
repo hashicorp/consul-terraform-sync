@@ -82,6 +82,9 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		log.Printf("[ERR] (driver.terraform) init client type '%s' error: %s", config.ClientType, err)
 		return nil, err
 	}
+	if env := config.Task.Providers.Env(); len(env) > 0 {
+		tfClient.SetEnv(env)
+	}
 
 	handler, err := getTerraformHandlers(config.Task)
 	if err != nil {
@@ -138,7 +141,7 @@ func (tf *Terraform) InitTask(force bool) error {
 
 	input := tftmpl.RootModuleInputData{
 		Backend:      tf.backend,
-		Providers:    task.Providers,
+		Providers:    task.Providers.ProviderBlocks(),
 		ProviderInfo: task.ProviderInfo,
 		Services:     services,
 		Task: tftmpl.Task{
@@ -230,17 +233,17 @@ func getTerraformHandlers(task Task) (handler.Handler, error) {
 	counter := 0
 	var next handler.Handler
 	for _, p := range task.Providers {
-		h, err := handler.TerraformProviderHandler(p.Name, p.RawConfig())
+		h, err := handler.TerraformProviderHandler(p.Name(), p.ProviderBlock().RawConfig())
 		if err != nil {
 			log.Printf(
 				"[ERR] (driver.terraform) could not initialize handler for "+
-					"provider '%s': %s", p.Name, err)
+					"provider '%s': %s", p.Name(), err)
 			return nil, err
 		}
 		if h != nil {
 			counter++
 			log.Printf(
-				"[INFO] (driver.terraform) retrieved handler for provider '%s'", p.Name)
+				"[INFO] (driver.terraform) retrieved handler for provider '%s'", p.Name())
 			h.SetNext(next)
 			next = h
 		}

@@ -7,6 +7,9 @@ import "context"
 // Client describes the interface for a driver's client that interacts
 // with network infrastructure.
 type Client interface {
+	// Set the environment for the client
+	SetEnv(map[string]string) error
+
 	// Init initializes the client and environment
 	Init(ctx context.Context) error
 

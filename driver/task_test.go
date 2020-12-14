@@ -71,12 +71,13 @@ func TestTask_ProviderNames(t *testing.T) {
 		{
 			"happy path",
 			Task{
-				Providers: hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
-					{"local": map[string]interface{}{
-						"configs": "stuff",
-					}},
-					{"null": map[string]interface{}{}},
-				}),
+				Providers: NewTerraformProviderBlocks(
+					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
+						{"local": map[string]interface{}{
+							"configs": "stuff",
+						}},
+						{"null": map[string]interface{}{}},
+					})),
 			},
 			[]string{"local", "null"},
 		},

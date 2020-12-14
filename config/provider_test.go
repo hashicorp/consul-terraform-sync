@@ -272,11 +272,33 @@ func TestProviderConfigs_Validate(t *testing.T) {
 				},
 			}},
 			false,
+		}, {
+			"task_env",
+			&TerraformProviderConfigs{{
+				"null": map[string]interface{}{
+					"task_env": map[string]string{
+						"NULL_TOKEN": "{{ env \"MY_CTS_NULL_TOKEN\" }}",
+						"NULL_BOOL":  "true",
+						"NULL_NUM":   "10",
+					},
+				},
+			}},
+			true,
+		}, {
+			"task_env invalid",
+			&TerraformProviderConfigs{{
+				"null": map[string]interface{}{
+					"task_env": map[string]interface{}{
+						"NULL_BOOL": true,
+					},
+				},
+			}},
+			false,
 		},
 	}
 
-	for i, tc := range cases {
-		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
 			err := tc.i.Validate()
 			if tc.isValid {
 				assert.NoError(t, err)

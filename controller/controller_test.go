@@ -197,12 +197,13 @@ func TestNewDriverTasks(t *testing.T) {
 			},
 			[]driver.Task{{
 				Name: "name",
-				Providers: hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
-					{"providerA": map[string]interface{}{}},
-					{"providerB": map[string]interface{}{
-						"var": "val",
-					}},
-				}),
+				Providers: driver.NewTerraformProviderBlocks(
+					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
+						{"providerA": map[string]interface{}{}},
+						{"providerB": map[string]interface{}{
+							"var": "val",
+						}},
+					})),
 				ProviderInfo: map[string]interface{}{
 					"providerA": map[string]string{
 						"source": "source/providerA",
@@ -249,15 +250,16 @@ func TestNewDriverTasks(t *testing.T) {
 			},
 			[]driver.Task{{
 				Name: "name",
-				Providers: hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
-					{"providerA": map[string]interface{}{
-						"alias": "alias1",
-						"foo":   "bar",
-					}},
-					{"providerB": map[string]interface{}{
-						"var": "val",
-					}},
-				}),
+				Providers: driver.NewTerraformProviderBlocks(
+					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
+						{"providerA": map[string]interface{}{
+							"alias": "alias1",
+							"foo":   "bar",
+						}},
+						{"providerB": map[string]interface{}{
+							"var": "val",
+						}},
+					})),
 				ProviderInfo: map[string]interface{}{
 					"providerA": map[string]string{
 						"source": "source/providerA",
@@ -274,10 +276,11 @@ func TestNewDriverTasks(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.conf.Finalize()
 
-			var providerConfigs []hcltmpl.NamedBlock
+			var providerConfigs []driver.TerraformProviderBlock
 			if tc.conf != nil && tc.conf.TerraformProviders != nil {
 				for _, pconf := range *tc.conf.TerraformProviders {
-					providerConfigs = append(providerConfigs, hcltmpl.NewNamedBlockTest(*pconf))
+					providerBlock := driver.NewTerraformProviderBlock(hcltmpl.NewNamedBlockTest(*pconf))
+					providerConfigs = append(providerConfigs, providerBlock)
 				}
 			}
 

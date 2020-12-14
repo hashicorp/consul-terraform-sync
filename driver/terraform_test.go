@@ -113,12 +113,12 @@ func TestGetTerraformHandlers(t *testing.T) {
 			true,
 			true,
 			Task{
-				Providers: []hcltmpl.NamedBlock{
+				Providers: NewTerraformProviderBlocks([]hcltmpl.NamedBlock{
 					hcltmpl.NewNamedBlock(map[string]interface{}{
 						handler.TerraformProviderFake: map[string]interface{}{
 							"required-config": "missing",
 						},
-					})},
+					})}),
 			},
 		},
 		{
@@ -126,10 +126,10 @@ func TestGetTerraformHandlers(t *testing.T) {
 			false,
 			true,
 			Task{
-				Providers: []hcltmpl.NamedBlock{
+				Providers: NewTerraformProviderBlocks([]hcltmpl.NamedBlock{
 					hcltmpl.NewNamedBlock(map[string]interface{}{
 						"provider-no-handler": map[string]interface{}{},
-					})},
+					})}),
 			},
 		},
 		{
@@ -137,12 +137,12 @@ func TestGetTerraformHandlers(t *testing.T) {
 			false,
 			false,
 			Task{
-				Providers: []hcltmpl.NamedBlock{
+				Providers: NewTerraformProviderBlocks([]hcltmpl.NamedBlock{
 					hcltmpl.NewNamedBlock(map[string]interface{}{
 						handler.TerraformProviderFake: map[string]interface{}{
 							"name": "happy-path",
 						},
-					})},
+					})}),
 			},
 		},
 	}
