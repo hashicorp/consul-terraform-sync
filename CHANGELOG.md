@@ -16,7 +16,8 @@ FEATURES:
   * Support configuring `port` on which the api is served [[GH-141](https://github.com/hashicorp/consul-terraform-sync/pull/141)]
   * Support `include=events` parameter for task-status api to include in the response payload the information of task execution events [[GH-145](https://github.com/hashicorp/consul-terraform-sync/pull/145)]
   * Support `status=<health-status>` parameter for task-status api to only return statuses of tasks of a specified health status [[GH-147](https://github.com/hashicorp/consul-terraform-sync/pull/147)]
-* Add support to load arguments for `terraform_provider` blocks from env, Consul KV, and Vault using template syntax [[GH-143](https://github.com/hashicorp/consul-terraform-sync/pull/143)]
+* Add support to dynamically load Terraform provider arguments within the `terraform_provider` blocks from env, Consul KV, and Vault using template syntax [[GH-143](https://github.com/hashicorp/consul-terraform-sync/pull/143)]
+* Add support to set Terraform provider environment variables using the meta-argument `task_env` block to avoid rendering sensitive arguments in plain-text or to re-map environment variable names [[GH-157](https://github.com/hashicorp/consul-terraform-sync/pull/157)]
 
 IMPROVEMENTS:
 * Enable 2 retries on task execution errors when running in daemon mode [[GH-72](https://github.com/hashicorp/consul-terraform-sync/pull/72), [GH-121](https://github.com/hashicorp/consul-terraform-sync/pull/121), [GH-155](https://github.com/hashicorp/consul-terraform-sync/pull/155)]
