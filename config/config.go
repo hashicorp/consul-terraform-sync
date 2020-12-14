@@ -21,7 +21,7 @@ const (
 	DefaultLogLevel = "WARN"
 
 	// defaultPort is the default port to use for api server.
-	defaultPort = 8501
+	defaultPort = 8558
 )
 
 // Config is used to configure Sync
