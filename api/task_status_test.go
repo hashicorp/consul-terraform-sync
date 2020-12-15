@@ -47,14 +47,14 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			map[string]TaskStatus{
 				"task_a": TaskStatus{
 					TaskName:  "task_a",
-					Status:    "healthy",
+					Status:    StatusSuccessful,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_a?include=events",
 				},
 				"task_b": TaskStatus{
 					TaskName:  "task_b",
-					Status:    "critical",
+					Status:    StatusCritical,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_b?include=events",
@@ -68,7 +68,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			map[string]TaskStatus{
 				"task_a": TaskStatus{
 					TaskName:  "task_a",
-					Status:    "healthy",
+					Status:    StatusSuccessful,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_a?include=events",
@@ -110,7 +110,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		},
 		{
 			"all task statuses filtered by status with no result",
-			"/v1/status/tasks?status=degraded",
+			"/v1/status/tasks?status=errored",
 			http.StatusOK,
 			map[string]TaskStatus{},
 		},
@@ -155,7 +155,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			map[string]TaskStatus{
 				"task_nonexistent": TaskStatus{
 					TaskName:  "task_nonexistent",
-					Status:    "undetermined",
+					Status:    StatusUnknown,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "",
@@ -169,7 +169,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			map[string]TaskStatus{
 				"task_nonexistent": TaskStatus{
 					TaskName:  "task_nonexistent",
-					Status:    "undetermined",
+					Status:    StatusUnknown,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "",
@@ -313,7 +313,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 			},
 			TaskStatus{
 				TaskName:  "test_task",
-				Status:    StatusDegraded,
+				Status:    StatusErrored,
 				Providers: []string{"local", "null", "f5"},
 				Services:  []string{"api", "web", "db"},
 				EventsURL: "/v1/status/tasks/test_task?include=events",
@@ -324,7 +324,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 			[]event.Event{},
 			TaskStatus{
 				TaskName:  "test_task",
-				Status:    StatusUndetermined,
+				Status:    StatusUnknown,
 				Providers: []string{},
 				Services:  []string{},
 				EventsURL: "",
@@ -405,12 +405,12 @@ func TestTaskStatus_SuccessToStatus(t *testing.T) {
 		{
 			"all successes",
 			[]bool{true, true, true, true, true},
-			StatusHealthy,
+			StatusSuccessful,
 		},
 		{
 			"more than half success",
 			[]bool{false, false, true, true, true},
-			StatusDegraded,
+			StatusErrored,
 		},
 		{
 			"less than half success - most recent failure",
@@ -420,7 +420,7 @@ func TestTaskStatus_SuccessToStatus(t *testing.T) {
 		{
 			"less than half success - most recent success",
 			[]bool{true, false, false, false, true},
-			StatusDegraded,
+			StatusErrored,
 		},
 		{
 			"no successes",
@@ -430,7 +430,7 @@ func TestTaskStatus_SuccessToStatus(t *testing.T) {
 		{
 			"no data",
 			[]bool{},
-			StatusUndetermined,
+			StatusUnknown,
 		},
 	}
 
@@ -538,14 +538,14 @@ func TestTaskStatus_StatusFilter(t *testing.T) {
 	}{
 		{
 			"happy path status",
-			"/v1/status/tasks?status=healthy",
-			StatusHealthy,
+			"/v1/status/tasks?status=successful",
+			StatusSuccessful,
 			false,
 		},
 		{
 			"happy path status with other parameters",
-			"/v1/status/tasks?&status=healthy&include=events",
-			StatusHealthy,
+			"/v1/status/tasks?&status=successful&include=events",
+			StatusSuccessful,
 			false,
 		},
 		{
@@ -556,8 +556,8 @@ func TestTaskStatus_StatusFilter(t *testing.T) {
 		},
 		{
 			"not lower case",
-			"/v1/status/tasks?status=HEALTHY",
-			StatusHealthy,
+			"/v1/status/tasks?status=SUCCESSFUL",
+			StatusSuccessful,
 			false,
 		},
 		{
@@ -568,7 +568,7 @@ func TestTaskStatus_StatusFilter(t *testing.T) {
 		},
 		{
 			"too many status parameters",
-			"/v1/status/tasks?status=healthy&status=critical",
+			"/v1/status/tasks?status=successful&status=critical",
 			"",
 			true,
 		},

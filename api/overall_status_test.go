@@ -86,24 +86,27 @@ func TestOverallStatus_TaskStatusToOverall(t *testing.T) {
 		expected string
 	}{
 		{
-			"healthy: all healthy",
-			[]string{StatusHealthy, StatusHealthy, StatusHealthy, StatusHealthy, StatusHealthy},
-			StatusHealthy,
+			"successful: all successful",
+			[]string{StatusSuccessful, StatusSuccessful, StatusSuccessful,
+				StatusSuccessful, StatusSuccessful},
+			StatusSuccessful,
 		},
 		{
-			"degraded: mix of degraded and healthy",
-			[]string{StatusHealthy, StatusHealthy, StatusDegraded, StatusHealthy, StatusDegraded},
-			StatusDegraded,
+			"errored: mix of errored and successful",
+			[]string{StatusSuccessful, StatusSuccessful, StatusErrored,
+				StatusSuccessful, StatusErrored},
+			StatusErrored,
 		},
 		{
 			"critical: at least one critical",
-			[]string{StatusHealthy, StatusHealthy, StatusDegraded, StatusHealthy, StatusCritical},
+			[]string{StatusSuccessful, StatusSuccessful, StatusErrored,
+				StatusSuccessful, StatusCritical},
 			StatusCritical,
 		},
 		{
 			"no data",
 			[]string{},
-			StatusUndetermined,
+			StatusUnknown,
 		},
 	}
 

@@ -57,7 +57,7 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 func taskStatusToOverall(statuses []string) string {
 	total := len(statuses)
 	if total == 0 {
-		return StatusUndetermined
+		return StatusUnknown
 	}
 
 	statCount := make(map[string]int)
@@ -65,15 +65,15 @@ func taskStatusToOverall(statuses []string) string {
 		statCount[status]++
 	}
 
-	healthy := statCount[StatusHealthy]
-	degraded := statCount[StatusDegraded]
+	successful := statCount[StatusSuccessful]
+	errored := statCount[StatusErrored]
 	critical := statCount[StatusCritical]
 
 	switch {
-	case healthy == total:
-		return StatusHealthy
-	case degraded > 0 && critical == 0:
-		return StatusDegraded
+	case successful == total:
+		return StatusSuccessful
+	case errored > 0 && critical == 0:
+		return StatusErrored
 	default:
 		return StatusCritical
 	}

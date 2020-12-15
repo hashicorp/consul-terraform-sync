@@ -16,53 +16,39 @@ import (
 const (
 	defaultAPIVersion = "v1"
 
-	// StatusHealthy is the healthy status. This is determined based on status
+	// StatusSuccessful is the successful status. This is determined based on status
 	// type.
 	//
 	// Task Status: Determined by the success of a task updating. The 5 most
-	// recent task updates are stored as an ‘event’ in CTS. A task is healthy
-	// when all the stored events are successful.
-	//
-	// Overall Status: Determined by the health across all task statuses.
-	// Overall status is healthy when all task statuses are healthy.
-	StatusHealthy = "healthy"
+	// recent task updates are stored as an ‘event’ in CTS. A task is successful
+	// when the most recent stored event is successful.
+	StatusSuccessful = "successful"
 
-	// StatusDegraded is the degraded status. This is determined based on status
+	// StatusErrored is the errored status. This is determined based on status
 	// type.
 	//
 	// Task Status: Determined by the success of a task updating. The 5 most
-	// recent task updates are stored as an ‘event’ in CTS. A task is degraded
-	// when more than half of the stored events are successful _or_ less than
-	// half of the stored events are successful but the most recent event is
-	// successful.
-	//
-	// Overall Status: Determined by the health across all task statuses.
-	// Overall status is degraded when at least one task status is degraded but
-	// none are critical.
-	StatusDegraded = "degraded"
+	// recent task updates are stored as an ‘event’ in CTS. A task is errored
+	// when the most recent stored event is not successful but all prior stored
+	// events are successful.
+	StatusErrored = "errored"
 
 	// StatusCritical is the critical status. This is determined based on status
 	// type.
 	//
 	// Task Status: Determined by the success of a task updating. The 5 most
 	// recent task updates are stored as an ‘event’ in CTS. A task is critical
-	// when less than half of the stored events are successful and the most
-	// recent event is not successful.
-	//
-	// Overall Status: Determined by the health across all task statuses.
-	// Overall status is critical when at least one task status is critical.
+	// when the most recent stored event is not successful and at least one prior
+	// stored event is all not succesful.
 	StatusCritical = "critical"
 
-	// StatusUndetermined is when the status is unknown. This is determined
+	// StatusUnknown is when the status is unknown. This is determined
 	// based on status type.
 	//
 	// Task Status: Determined by the success of a task updating. The 5 most
 	// recent task updates are stored as an ‘event’ in CTS. A task is
-	// undetermined when no event data has been collected yet.
-	//
-	// Overall Status: Determined by the health across all task statuses.
-	// Overall status is undetermined when no task status information exists yet.
-	StatusUndetermined = "undetermined"
+	// unknown when no event data has been collected yet.
+	StatusUnknown = "unknown"
 )
 
 // API supports api requests to the cts biniary

@@ -148,14 +148,14 @@ func TestJsonResponse(t *testing.T) {
 			map[string]TaskStatus{
 				"task_a": TaskStatus{
 					TaskName:  "task_a",
-					Status:    StatusDegraded,
+					Status:    StatusErrored,
 					Providers: []string{"local", "null", "f5"},
 					Services:  []string{"api", "web", "db"},
 					EventsURL: "/v1/status/tasks/test_task?include=events",
 				},
 				"task_b": TaskStatus{
 					TaskName:  "task_b",
-					Status:    StatusUndetermined,
+					Status:    StatusUnknown,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "",
@@ -168,7 +168,7 @@ func TestJsonResponse(t *testing.T) {
 			map[string]TaskStatus{
 				"task_a": TaskStatus{
 					TaskName:  "task_a",
-					Status:    StatusDegraded,
+					Status:    StatusErrored,
 					Providers: []string{"local", "null", "f5"},
 					Services:  []string{"api", "web", "db"},
 					EventsURL: "/v1/status/tasks/test_task?include=events",
@@ -207,7 +207,7 @@ func TestJsonResponse(t *testing.T) {
 		{
 			"overall status: success",
 			http.StatusOK,
-			OverallStatus{Status: StatusDegraded},
+			OverallStatus{Status: StatusErrored},
 		},
 	}
 	for _, tc := range cases {
