@@ -43,7 +43,8 @@ func (s *Store) Add(e Event) error {
 }
 
 // Read returns events for a task name. If no task name is specified, return
-// events for all tasks. Returned events are ordered by decending end time
+// events for all tasks. Returned events are sorted in reverse chronological
+// order based on the end time.
 func (s *Store) Read(taskName string) map[string][]Event {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -43,7 +43,7 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 			"happy path",
 			"/v1/status",
 			http.StatusOK,
-			OverallStatus{Status: StatusCritical},
+			OverallStatus{Status: StatusErrored},
 		},
 	}
 
