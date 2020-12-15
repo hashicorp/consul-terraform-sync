@@ -144,7 +144,7 @@ func mapKeyToArray(m map[string]bool) []string {
 // successToStatus determines a status from an array of success/failures
 func successToStatus(successes []bool) string {
 	if len(successes) == 0 {
-		return StatusUndetermined
+		return StatusUnknown
 	}
 
 	total := len(successes)
@@ -159,11 +159,11 @@ func successToStatus(successes []bool) string {
 	percentSuccess := 100 * successCount / total
 	switch {
 	case percentSuccess == 100:
-		return StatusHealthy
+		return StatusSuccessful
 	case percentSuccess > 50:
-		return StatusDegraded
+		return StatusErrored
 	case mostRecentSuccess == true:
-		return StatusDegraded
+		return StatusErrored
 	default:
 		return StatusCritical
 	}
@@ -222,12 +222,12 @@ func statusFilter(r *http.Request) (string, error) {
 	value := keys[0]
 	value = strings.ToLower(value)
 	switch value {
-	case StatusHealthy, StatusDegraded, StatusCritical, StatusUndetermined:
+	case StatusSuccessful, StatusErrored, StatusCritical, StatusUnknown:
 		return value, nil
 	default:
 		return "", fmt.Errorf("unsupported status parameter value. only "+
 			"supporting status values %s, %s, %s, and %s but got %s",
-			StatusHealthy, StatusDegraded, StatusCritical, StatusUndetermined,
+			StatusSuccessful, StatusErrored, StatusCritical, StatusUnknown,
 			value)
 	}
 }

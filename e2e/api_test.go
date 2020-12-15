@@ -68,7 +68,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			map[string]api.TaskStatus{
 				fakeSuccessTaskName: api.TaskStatus{
 					TaskName:  fakeSuccessTaskName,
-					Status:    api.StatusHealthy,
+					Status:    api.StatusSuccessful,
 					Providers: []string{"fake-sync"},
 					Services:  []string{"api"},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
@@ -88,7 +88,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			map[string]api.TaskStatus{
 				fakeSuccessTaskName: api.TaskStatus{
 					TaskName:  fakeSuccessTaskName,
-					Status:    api.StatusHealthy,
+					Status:    api.StatusSuccessful,
 					Providers: []string{"fake-sync"},
 					Services:  []string{"api"},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
@@ -101,7 +101,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			map[string]api.TaskStatus{
 				"non-existing-task": api.TaskStatus{
 					TaskName:  "non-existing-task",
-					Status:    api.StatusUndetermined,
+					Status:    api.StatusUnknown,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "",
