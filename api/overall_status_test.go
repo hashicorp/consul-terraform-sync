@@ -43,16 +43,26 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 			"happy path",
 			"/v1/status",
 			http.StatusOK,
-			OverallStatus{Status: StatusErrored},
+			OverallStatus{
+				TaskSummary: TaskSummary{
+					Successful: 2,
+					Errored:    1,
+					Critical:   1,
+				},
+			},
 		},
 	}
 
 	// set up store and handler
 	store := event.NewStore()
-	eventA := event.Event{TaskName: "task_a", Success: true}
-	store.Add(eventA)
-	eventB := event.Event{TaskName: "task_b", Success: false}
-	store.Add(eventB)
+	eventsA := createTaskEvents("success_a", []bool{true})
+	addEvents(store, eventsA)
+	eventsB := createTaskEvents("success_b", []bool{true, true})
+	addEvents(store, eventsB)
+	eventsC := createTaskEvents("errored_c", []bool{false, true})
+	addEvents(store, eventsC)
+	eventsD := createTaskEvents("critical_d", []bool{false, false, true})
+	addEvents(store, eventsD)
 
 	handler := newOverallStatusHandler(store, "v1")
 
@@ -74,45 +84,6 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 			err = decoder.Decode(&actual)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
-func TestOverallStatus_TaskStatusToOverall(t *testing.T) {
-	cases := []struct {
-		name     string
-		statuses []string
-		expected string
-	}{
-		{
-			"successful: all successful",
-			[]string{StatusSuccessful, StatusSuccessful, StatusSuccessful,
-				StatusSuccessful, StatusSuccessful},
-			StatusSuccessful,
-		},
-		{
-			"errored: mix of errored and successful",
-			[]string{StatusSuccessful, StatusSuccessful, StatusErrored,
-				StatusSuccessful, StatusErrored},
-			StatusErrored,
-		},
-		{
-			"critical: at least one critical",
-			[]string{StatusSuccessful, StatusSuccessful, StatusErrored,
-				StatusSuccessful, StatusCritical},
-			StatusCritical,
-		},
-		{
-			"no data",
-			[]string{},
-			StatusUnknown,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			actual := taskStatusToOverall(tc.statuses)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}

@@ -178,16 +178,12 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	}
 
 	overallCases := []struct {
-		name     string
-		path     string
-		expected api.OverallStatus
+		name string
+		path string
 	}{
 		{
 			"overall status",
 			"status",
-			api.OverallStatus{
-				Status: api.StatusErrored,
-			},
 		},
 	}
 
@@ -205,7 +201,10 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			err = decoder.Decode(&overallStatus)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, overallStatus)
+			assert.Equal(t, 1, overallStatus.TaskSummary.Successful)
+			// failed task might be errored/critical by now depending on number of events
+			assert.Equal(t, 1, overallStatus.TaskSummary.Errored+
+				overallStatus.TaskSummary.Critical)
 		})
 	}
 

@@ -207,7 +207,13 @@ func TestJsonResponse(t *testing.T) {
 		{
 			"overall status: success",
 			http.StatusOK,
-			OverallStatus{Status: StatusErrored},
+			OverallStatus{
+				TaskSummary: TaskSummary{
+					Successful: 1,
+					Errored:    0,
+					Critical:   1,
+				},
+			},
 		},
 	}
 	for _, tc := range cases {
