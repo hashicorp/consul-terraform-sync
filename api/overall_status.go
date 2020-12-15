@@ -9,9 +9,16 @@ import (
 
 const overallStatusPath = "status"
 
-// OverallStatus is the overall status information across all the tasks
+// OverallStatus is the overall status information for cts and across all the tasks
 type OverallStatus struct {
-	Status string `json:"status"`
+	TaskSummary TaskSummary `json:"task_summary"`
+}
+
+// TaskSummary is the count of how many tasks have which status
+type TaskSummary struct {
+	Successful int `json:"successful"`
+	Errored    int `json:"errored"`
+	Critical   int `json:"critical"`
 }
 
 // overallStatusHandler handles the overall status endpoint
@@ -34,47 +41,24 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	log.Printf("[TRACE] (api.overallstatus) requesting task status '%s'", r.URL.Path)
 
 	tasks := h.store.Read("")
-	statuses := make([]string, len(tasks))
-	ix := 0
+	taskSummary := TaskSummary{}
 	for _, events := range tasks {
 		successes := make([]bool, len(events))
 		for i, event := range events {
 			successes[i] = event.Success
 		}
-
 		status := successToStatus(successes)
-		statuses[ix] = status
-		ix++
+		switch status {
+		case StatusSuccessful:
+			taskSummary.Successful++
+		case StatusErrored:
+			taskSummary.Errored++
+		case StatusCritical:
+			taskSummary.Critical++
+		}
 	}
 
 	jsonResponse(w, http.StatusOK, OverallStatus{
-		Status: taskStatusToOverall(statuses),
+		TaskSummary: taskSummary,
 	})
-}
-
-// taskStatusToOverall determines an overall status from the health of all the
-// task statuses
-func taskStatusToOverall(statuses []string) string {
-	total := len(statuses)
-	if total == 0 {
-		return StatusUnknown
-	}
-
-	statCount := make(map[string]int)
-	for _, status := range statuses {
-		statCount[status]++
-	}
-
-	successful := statCount[StatusSuccessful]
-	errored := statCount[StatusErrored]
-	critical := statCount[StatusCritical]
-
-	switch {
-	case successful == total:
-		return StatusSuccessful
-	case errored > 0 && critical == 0:
-		return StatusErrored
-	default:
-		return StatusCritical
-	}
 }
