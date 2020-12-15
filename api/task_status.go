@@ -147,26 +147,24 @@ func successToStatus(successes []bool) string {
 		return StatusUnknown
 	}
 
-	total := len(successes)
-	mostRecentSuccess := successes[0]
-	successCount := 0
-	for _, s := range successes {
-		if s {
-			successCount++
+	latest := successes[0]
+	if latest {
+		// Last event was successful
+		return StatusSuccessful
+	}
+
+	// Last event had errored, determine if the task is in critical state.
+	var errorsCount int
+	for _, success := range successes {
+		if !success {
+			errorsCount++
 		}
 	}
 
-	percentSuccess := 100 * successCount / total
-	switch {
-	case percentSuccess == 100:
-		return StatusSuccessful
-	case percentSuccess > 50:
-		return StatusErrored
-	case mostRecentSuccess == true:
-		return StatusErrored
-	default:
+	if errorsCount > 1 {
 		return StatusCritical
 	}
+	return StatusErrored
 }
 
 // makeEventsURL returns an events URL for a task. Returns an empty string
