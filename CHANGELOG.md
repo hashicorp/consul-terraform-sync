@@ -10,9 +10,9 @@ FEATURES:
   * azurerm, cos, gcs, kubernetes, local, manta, pg, s3
 * Add configuration option to select Terraform version to install and run [[GH-131](https://github.com/hashicorp/consul-terraform-sync/pull/131)]
   * Add support to run Terraform version 0.14
-* Add status api to view status information about task execution. Served by default at port 8558
-  * Task-status api for status of each task [[GH-138](https://github.com/hashicorp/consul-terraform-sync/pull/138)]
-  * Overall-status api for the overall status across tasks [[GH-142](https://github.com/hashicorp/consul-terraform-sync/pull/142)]
+* Add status api to view status information about task execution. Served by default at port 8558 [[GH-158](https://github.com/hashicorp/consul-terraform-sync/pull/158)]
+  * Task-status api for status of each task [[GH-138](https://github.com/hashicorp/consul-terraform-sync/pull/138), [GH-144](https://github.com/hashicorp/consul-terraform-sync/pull/144), [GH-148](https://github.com/hashicorp/consul-terraform-sync/pull/148), [GH-159](https://github.com/hashicorp/consul-terraform-sync/pull/159), [GH-160](https://github.com/hashicorp/consul-terraform-sync/pull/160)]
+  * Overall-status api for the overall status across tasks [[GH-142](https://github.com/hashicorp/consul-terraform-sync/pull/142), [GH-161](https://github.com/hashicorp/consul-terraform-sync/pull/161)]
   * Support configuring `port` on which the api is served [[GH-141](https://github.com/hashicorp/consul-terraform-sync/pull/141)]
   * Support `include=events` parameter for task-status api to include in the response payload the information of task execution events [[GH-145](https://github.com/hashicorp/consul-terraform-sync/pull/145)]
   * Support `status=<health-status>` parameter for task-status api to only return statuses of tasks of a specified health status [[GH-147](https://github.com/hashicorp/consul-terraform-sync/pull/147)]
