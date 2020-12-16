@@ -1,4 +1,4 @@
-## UNRELEASED
+## 0.1.0-techpreview2 (December 16, 2020)
 
 BREAKING CHANGES:
 * Deprecate `provider` block name in this release for `terraform_provider` block name, and `provider` will be removed in the following release [[GH-140](https://github.com/hashicorp/consul-terraform-sync/pull/140)]
