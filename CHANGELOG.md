@@ -1,3 +1,8 @@
+## Upcoming
+
+IMPROVEMENTS:
+* Changed default `consul.transport` options used for the Consul client to improve TCP connection reuse. [[GH-164](https://github.com/hashicorp/consul-terraform-sync/pull/164)]
+
 ## 0.1.0-techpreview2 (December 16, 2020)
 
 BREAKING CHANGES:
