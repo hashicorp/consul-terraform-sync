@@ -57,9 +57,16 @@ func DefaultTerraformBackend(consul *ConsulConfig) (map[string]interface{}, erro
 		return nil, fmt.Errorf("Consul is not configured to set the default backend for Terraform")
 	}
 
-	kvPath := DefaultTFBackendKVPath
+	kvPath := DefaultTFBackendKVPath // "consul-terraform-sync/terraform-env:<task-name>"
 	if consul.KVPath != nil && *consul.KVPath != "" {
-		kvPath = path.Join(*consul.KVPath, "terraform")
+		// Terraform Consul backend will append "-env:workspace" to the configured
+		// path. This modifies the KV path for CTS to have the same KV path structure for
+		// configured paths: "<configured-path>/terraform-env:<task-name>"
+		if !strings.HasSuffix(*consul.KVPath, "/terraform") {
+			kvPath = path.Join(*consul.KVPath, "terraform")
+		} else {
+			kvPath = *consul.KVPath
+		}
 	}
 
 	backend := map[string]interface{}{

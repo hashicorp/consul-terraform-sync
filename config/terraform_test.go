@@ -559,3 +559,95 @@ func TestTerraformConfig_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestDefaultTerraformBackend(t *testing.T) {
+	testCases := []struct {
+		name     string
+		config   *ConsulConfig
+		expected map[string]interface{}
+		err      bool
+	}{
+		{
+			"default",
+			&ConsulConfig{
+				Address: String("127.0.0.1:8500"),
+			},
+			map[string]interface{}{
+				"consul": map[string]interface{}{
+					"address": "127.0.0.1:8500",
+					"path":    DefaultTFBackendKVPath,
+					"gzip":    true,
+				},
+			},
+			false,
+		}, {
+			"nil",
+			nil,
+			nil,
+			true,
+		}, {
+			"KV path",
+			&ConsulConfig{
+				Address: String("127.0.0.1:8500"),
+				KVPath:  String("custom-path-for-terraform"),
+			},
+			map[string]interface{}{
+				"consul": map[string]interface{}{
+					"address": "127.0.0.1:8500",
+					"path":    "custom-path-for-terraform/terraform",
+					"gzip":    true,
+				},
+			},
+			false,
+		}, {
+			"KV path suffix",
+			&ConsulConfig{
+				Address: String("127.0.0.1:8500"),
+				KVPath:  String("custom-path/terraform"),
+			},
+			map[string]interface{}{
+				"consul": map[string]interface{}{
+					"address": "127.0.0.1:8500",
+					"path":    "custom-path/terraform",
+					"gzip":    true,
+				},
+			},
+			false,
+		}, {
+			"TLS sets https",
+			&ConsulConfig{
+				Address: String("127.0.0.1:8500"),
+				TLS: &TLSConfig{
+					CACert: String("ca_cert"),
+					Cert:   String("client_cert"),
+					Key:    String("client_key"),
+				},
+			},
+			map[string]interface{}{
+				"consul": map[string]interface{}{
+					"address":   "127.0.0.1:8500",
+					"path":      DefaultTFBackendKVPath,
+					"gzip":      true,
+					"scheme":    "https",
+					"ca_file":   "ca_cert",
+					"cert_file": "client_cert",
+					"key_file":  "client_key",
+				},
+			},
+			false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.config.Finalize()
+			defaultBackend, err := DefaultTerraformBackend(tc.config)
+			if tc.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expected, defaultBackend)
+		})
+	}
+}

@@ -98,7 +98,7 @@ func (t *TerraformCLI) Init(ctx context.Context) error {
 	var wsCreated bool
 
 	// This is special handling for when the workspace has been detected in
-	// .terraform/environment without a non-empty state. This case is common
+	// .terraform/environment with a non-existing state. This case is common
 	// when the state for the workspace has been deleted.
 	// https://github.com/hashicorp/terraform/issues/21393
 TF_INIT_AGAIN:
