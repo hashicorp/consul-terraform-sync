@@ -28,6 +28,9 @@ func TestServiceConfig_Copy(t *testing.T) {
 				Description: String("description"),
 				Name:        String("name"),
 				Namespace:   String("namespace"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value",
+				},
 			},
 		},
 	}
@@ -145,6 +148,30 @@ func TestServiceConfig_Merge(t *testing.T) {
 			&ServiceConfig{Namespace: String("namespace")},
 			&ServiceConfig{Namespace: String("namespace")},
 		},
+		{
+			"cts_user_defined_meta_overrides",
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "new-value"}},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "new-value"}},
+		},
+		{
+			"cts_user_defined_meta_empty_one",
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+			&ServiceConfig{},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+		},
+		{
+			"cts_user_defined_meta_empty_two",
+			&ServiceConfig{},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+		},
+		{
+			"cts_user_defined_meta_same",
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+		},
 	}
 
 	for i, tc := range cases {
@@ -167,12 +194,13 @@ func TestServiceConfig_Finalize(t *testing.T) {
 			"empty",
 			&ServiceConfig{},
 			&ServiceConfig{
-				Datacenter:  String(""),
-				Description: String(""),
-				ID:          String(""),
-				Name:        String(""),
-				Namespace:   String(""),
-				Tag:         String(""),
+				Datacenter:         String(""),
+				Description:        String(""),
+				ID:                 String(""),
+				Name:               String(""),
+				Namespace:          String(""),
+				Tag:                String(""),
+				CTSUserDefinedMeta: map[string]string{},
 			},
 		},
 		{
@@ -181,12 +209,13 @@ func TestServiceConfig_Finalize(t *testing.T) {
 				Name: String("service"),
 			},
 			&ServiceConfig{
-				Datacenter:  String(""),
-				Description: String(""),
-				ID:          String("service"),
-				Name:        String("service"),
-				Namespace:   String(""),
-				Tag:         String(""),
+				Datacenter:         String(""),
+				Description:        String(""),
+				ID:                 String("service"),
+				Name:               String("service"),
+				Namespace:          String(""),
+				Tag:                String(""),
+				CTSUserDefinedMeta: map[string]string{},
 			},
 		},
 	}

@@ -283,9 +283,11 @@ func TestConfig_Finalize(t *testing.T) {
 	(*expected.Services)[0].Namespace = String("")
 	(*expected.Services)[0].Datacenter = String("")
 	(*expected.Services)[0].Tag = String("")
+	(*expected.Services)[0].CTSUserDefinedMeta = map[string]string{}
 	(*expected.Services)[1].ID = String("serviceB")
 	(*expected.Services)[1].Datacenter = String("")
 	(*expected.Services)[1].Tag = String("")
+	(*expected.Services)[1].CTSUserDefinedMeta = map[string]string{}
 
 	c := longConfig.Copy()
 	c.Finalize()
