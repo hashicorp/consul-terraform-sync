@@ -66,7 +66,8 @@ node_id               = ""
 node_address          = ""
 node_datacenter       = ""
 node_tagged_addresses = {}
-node_meta             = {}`,
+node_meta             = {}
+cts_user_defined_meta = {}`,
 		}, {
 			"basic",
 			&dep.HealthService{
@@ -113,7 +114,8 @@ node_tagged_addresses = {
 }
 node_meta = {
   consul-network-segment = ""
-}`,
+}
+cts_user_defined_meta = {}`,
 		}, {
 			"namespace",
 			&dep.HealthService{
@@ -132,14 +134,53 @@ node_id               = ""
 node_address          = ""
 node_datacenter       = ""
 node_tagged_addresses = {}
-node_meta             = {}`,
+node_meta             = {}
+cts_user_defined_meta = {}`,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := hclServiceFunc(tc.content)
+			actual := hclServiceFunc(nil)(tc.content)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}
+}
+
+func TestHCLServiceFunc_ctsUserDefinedMeta(t *testing.T) {
+	meta := map[string]map[string]string{
+		"api": {
+			"key":        "value",
+			"foo_bar":    "baz",
+			"spaced key": "spaced value",
+		},
+	}
+	content := &dep.HealthService{
+		ID:      "api",
+		Name:    "api",
+		Address: "1.2.3.4",
+		Port:    8080,
+	}
+	expected := `id                    = "api"
+name                  = "api"
+address               = "1.2.3.4"
+port                  = 8080
+meta                  = {}
+tags                  = []
+namespace             = null
+status                = ""
+node                  = ""
+node_id               = ""
+node_address          = ""
+node_datacenter       = ""
+node_tagged_addresses = {}
+node_meta             = {}
+cts_user_defined_meta = {
+  foo_bar      = "baz"
+  key          = "value"
+  "spaced key" = "spaced value"
+}`
+
+	actual := hclServiceFunc(meta)(content)
+	assert.Equal(t, expected, actual)
 }

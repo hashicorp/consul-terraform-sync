@@ -219,7 +219,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			input := hcat.TemplateInput{
 				Contents:      string(contents),
 				ErrMissingKey: true,
-				FuncMapMerge:  HCLTmplFuncMap,
+				FuncMapMerge:  HCLTmplFuncMap(nil),
 			}
 			tmpl := hcat.NewTemplate(input)
 
