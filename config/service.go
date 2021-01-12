@@ -276,6 +276,41 @@ func (c *ServiceConfigs) Validate() error {
 	return nil
 }
 
+// CTSUserDefinedMeta generates a map of service name to user defined metadata
+// from a list of service IDs or service names.
+func (c *ServiceConfigs) CTSUserDefinedMeta(serviceList []string) map[string]map[string]string {
+	if c == nil {
+		return nil
+	}
+
+	services := make(map[string]bool)
+	for _, s := range serviceList {
+		services[s] = true
+	}
+
+	m := make(map[string]map[string]string)
+	for _, s := range *c {
+		if len(s.CTSUserDefinedMeta) == 0 {
+			continue
+		}
+
+		serviceName := *s.Name
+		if s.ID != nil && *s.ID != "" {
+			if _, ok := services[*s.ID]; ok {
+				m[serviceName] = s.CTSUserDefinedMeta
+				continue
+			}
+		}
+
+		if _, ok := services[serviceName]; ok {
+			if s.ID == nil || *s.ID == "" {
+				m[serviceName] = s.CTSUserDefinedMeta
+			}
+		}
+	}
+	return m
+}
+
 // GoString defines the printable version of this struct.
 func (c *ServiceConfigs) GoString() string {
 	if c == nil {
