@@ -16,6 +16,13 @@ import (
 var update = flag.Bool("update", false, "update golden files")
 
 func TestNewFiles(t *testing.T) {
+	task := Task{
+		Description: "user description for task named 'test'",
+		Name:        "test",
+		Source:      "namespace/consul-terraform-sync/consul//modules/test",
+		Version:     "0.0.0",
+	}
+
 	testCases := []struct {
 		Name   string
 		Func   func(io.Writer, *RootModuleInputData) error
@@ -24,7 +31,7 @@ func TestNewFiles(t *testing.T) {
 	}{
 		{
 			Name:   "main.tf",
-			Func:   NewMainTF,
+			Func:   newMainTF,
 			Golden: "testdata/main.tf",
 			Input: RootModuleInputData{
 				Backend: map[string]interface{}{
@@ -47,12 +54,7 @@ func TestNewFiles(t *testing.T) {
 						"source":  "namespace/testProvider",
 					},
 				},
-				Task: Task{
-					Description: "user description for task named 'test'",
-					Name:        "test",
-					Source:      "namespace/consul-terraform-sync/consul//modules/test",
-					Version:     "0.0.0",
-				},
+				Task: task,
 				Variables: hcltmpl.Variables{
 					"one":       cty.NumberIntVal(1),
 					"bool_true": cty.BoolVal(true),
@@ -60,7 +62,7 @@ func TestNewFiles(t *testing.T) {
 			},
 		}, {
 			Name:   "variables.tf",
-			Func:   NewVariablesTF,
+			Func:   newVariablesTF,
 			Golden: "testdata/variables.tf",
 			Input: RootModuleInputData{
 				Providers: []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(
@@ -71,10 +73,11 @@ func TestNewFiles(t *testing.T) {
 							"count": 10,
 						},
 					})},
+				Task: task,
 			},
 		}, {
 			Name:   "terraform.tfvars.tmpl",
-			Func:   NewTFVarsTmpl,
+			Func:   newTFVarsTmpl,
 			Golden: "testdata/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Providers: []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(
@@ -99,10 +102,11 @@ func TestNewFiles(t *testing.T) {
 						Tag:         "tag",
 					},
 				},
+				Task: task,
 			},
 		}, {
 			Name:   "variables.module.tf",
-			Func:   NewModuleVariablesTF,
+			Func:   newModuleVariablesTF,
 			Golden: "testdata/variables.module.tf",
 			Input: RootModuleInputData{
 				Variables: hcltmpl.Variables{
@@ -129,6 +133,7 @@ func TestNewFiles(t *testing.T) {
 						cty.BoolVal(false),
 					}),
 				},
+				Task: task,
 			},
 		},
 	}
