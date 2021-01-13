@@ -71,13 +71,22 @@ type Task struct {
 }
 
 type Service struct {
+	// Consul service information
 	Datacenter  string
 	Description string
 	Name        string
 	Namespace   string
 	Tag         string
+
+	// CTSUserDefinedMeta is user defined metadata that is configured by
+	// operators for CTS to append to Consul service information to be used for
+	// network infrastructure automation.
+	CTSUserDefinedMeta map[string]string
 }
 
+// TemplateServiceID is the formatted service identifier that satisfies hcat
+// query syntax to make Consul requests to /v1/health/service/:service
+//
 // TODO incorporate namespace
 func (s Service) TemplateServiceID() string {
 	id := s.Name

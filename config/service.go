@@ -29,6 +29,10 @@ type ServiceConfig struct {
 
 	// Tag is used to filter nodes based on the tag for the service.
 	Tag *string `mapstructure:"tag"`
+
+	// CTSUserDefinedMeta is metadata added to a service automated by CTS for
+	// network infrastructure automation.
+	CTSUserDefinedMeta map[string]string `mapstructure:"cts_user_defined_meta"`
 }
 
 // ServiceConfigs is a collection of ServiceConfig
@@ -47,6 +51,14 @@ func (c *ServiceConfig) Copy() *ServiceConfig {
 	o.Name = StringCopy(c.Name)
 	o.Namespace = StringCopy(c.Namespace)
 	o.Tag = StringCopy(c.Tag)
+
+	if c.CTSUserDefinedMeta != nil {
+		o.CTSUserDefinedMeta = make(map[string]string)
+		for k, v := range c.CTSUserDefinedMeta {
+			o.CTSUserDefinedMeta[k] = v
+		}
+	}
+
 	return &o
 }
 
@@ -92,6 +104,15 @@ func (c *ServiceConfig) Merge(o *ServiceConfig) *ServiceConfig {
 		r.Tag = StringCopy(o.Tag)
 	}
 
+	if o.CTSUserDefinedMeta != nil {
+		if r.CTSUserDefinedMeta == nil {
+			r.CTSUserDefinedMeta = make(map[string]string)
+		}
+		for k, v := range o.CTSUserDefinedMeta {
+			r.CTSUserDefinedMeta[k] = v
+		}
+	}
+
 	return r
 }
 
@@ -124,6 +145,10 @@ func (c *ServiceConfig) Finalize() {
 	if c.Tag == nil {
 		c.Tag = String("")
 	}
+
+	if c.CTSUserDefinedMeta == nil {
+		c.CTSUserDefinedMeta = make(map[string]string)
+	}
 }
 
 // Validate validates the values and nested values of the configuration struct
@@ -151,13 +176,15 @@ func (c *ServiceConfig) GoString() string {
 		"Namespace:%s, "+
 		"Datacenter:%s, "+
 		"Tag:%s, "+
-		"Description:%s"+
+		"Description:%s, "+
+		"CTSUserDefinedMeta:%s"+
 		"}",
 		StringVal(c.Name),
 		StringVal(c.Namespace),
 		StringVal(c.Datacenter),
 		StringVal(c.Tag),
 		StringVal(c.Description),
+		c.CTSUserDefinedMeta,
 	)
 }
 
@@ -247,6 +274,41 @@ func (c *ServiceConfigs) Validate() error {
 	}
 
 	return nil
+}
+
+// CTSUserDefinedMeta generates a map of service name to user defined metadata
+// from a list of service IDs or service names.
+func (c *ServiceConfigs) CTSUserDefinedMeta(serviceList []string) map[string]map[string]string {
+	if c == nil {
+		return nil
+	}
+
+	services := make(map[string]bool)
+	for _, s := range serviceList {
+		services[s] = true
+	}
+
+	m := make(map[string]map[string]string)
+	for _, s := range *c {
+		if len(s.CTSUserDefinedMeta) == 0 {
+			continue
+		}
+
+		serviceName := *s.Name
+		if StringPresent(s.ID) {
+			if _, ok := services[*s.ID]; ok {
+				m[serviceName] = s.CTSUserDefinedMeta
+				continue
+			}
+		}
+
+		if _, ok := services[serviceName]; ok {
+			if !StringPresent(s.ID) {
+				m[serviceName] = s.CTSUserDefinedMeta
+			}
+		}
+	}
+	return m
 }
 
 // GoString defines the printable version of this struct.

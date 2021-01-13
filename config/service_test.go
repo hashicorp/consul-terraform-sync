@@ -28,6 +28,9 @@ func TestServiceConfig_Copy(t *testing.T) {
 				Description: String("description"),
 				Name:        String("name"),
 				Namespace:   String("namespace"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value",
+				},
 			},
 		},
 	}
@@ -145,6 +148,30 @@ func TestServiceConfig_Merge(t *testing.T) {
 			&ServiceConfig{Namespace: String("namespace")},
 			&ServiceConfig{Namespace: String("namespace")},
 		},
+		{
+			"cts_user_defined_meta_overrides",
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "new-value"}},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "new-value"}},
+		},
+		{
+			"cts_user_defined_meta_empty_one",
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+			&ServiceConfig{},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+		},
+		{
+			"cts_user_defined_meta_empty_two",
+			&ServiceConfig{},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+		},
+		{
+			"cts_user_defined_meta_same",
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+			&ServiceConfig{CTSUserDefinedMeta: map[string]string{"key": "value"}},
+		},
 	}
 
 	for i, tc := range cases {
@@ -167,12 +194,13 @@ func TestServiceConfig_Finalize(t *testing.T) {
 			"empty",
 			&ServiceConfig{},
 			&ServiceConfig{
-				Datacenter:  String(""),
-				Description: String(""),
-				ID:          String(""),
-				Name:        String(""),
-				Namespace:   String(""),
-				Tag:         String(""),
+				Datacenter:         String(""),
+				Description:        String(""),
+				ID:                 String(""),
+				Name:               String(""),
+				Namespace:          String(""),
+				Tag:                String(""),
+				CTSUserDefinedMeta: map[string]string{},
 			},
 		},
 		{
@@ -181,12 +209,13 @@ func TestServiceConfig_Finalize(t *testing.T) {
 				Name: String("service"),
 			},
 			&ServiceConfig{
-				Datacenter:  String(""),
-				Description: String(""),
-				ID:          String("service"),
-				Name:        String("service"),
-				Namespace:   String(""),
-				Tag:         String(""),
+				Datacenter:         String(""),
+				Description:        String(""),
+				ID:                 String("service"),
+				Name:               String("service"),
+				Namespace:          String(""),
+				Tag:                String(""),
+				CTSUserDefinedMeta: map[string]string{},
 			},
 		},
 	}
@@ -239,6 +268,181 @@ func TestServiceConfig_Validate(t *testing.T) {
 			} else {
 				assert.Error(t, err)
 			}
+		})
+	}
+}
+
+func TestServiceConfigs_Validate(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		i       *ServiceConfigs
+		isValid bool
+	}{
+		{
+			"nil",
+			nil,
+			false,
+		}, {
+			"empty",
+			&ServiceConfigs{},
+			true,
+		}, {
+			"unique services",
+			&ServiceConfigs{
+				{Name: String("a")},
+				{Name: String("b")},
+				{Name: String("c"), ID: String("c1")},
+				{Name: String("c"), ID: String("c2")},
+			},
+			true,
+		}, {
+			"one invalid",
+			&ServiceConfigs{
+				{Name: String("a")},
+				{Description: String("missing name")},
+			},
+			false,
+		}, {
+			"conflicting ID and name",
+			&ServiceConfigs{
+				{Name: String("a")},
+				{Name: String("b"), ID: String("a"), Description: String("this ID conflicts with service named A")},
+			},
+			false,
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			err := tc.i.Validate()
+			if tc.isValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestServiceConfigs_CTSUserDefinedMeta(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		conf        *ServiceConfigs
+		serviceList []string
+		expected    map[string]map[string]string
+	}{
+		{
+			"nil",
+			nil,
+			[]string{"a"},
+			nil,
+		}, {
+			"empty",
+			&ServiceConfigs{},
+			[]string{"a"},
+			make(map[string]map[string]string),
+		}, {
+			"meta",
+			&ServiceConfigs{{
+				Name: String("a"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value",
+				},
+			}},
+			[]string{"a"},
+			map[string]map[string]string{
+				"a": {"key": "value"},
+			},
+		}, {
+			"no meta",
+			&ServiceConfigs{{
+				Name: String("a"),
+			}},
+			[]string{"a"},
+			map[string]map[string]string{},
+		}, {
+			"meta by id",
+			&ServiceConfigs{{
+				ID:   String("a-with-meta"),
+				Name: String("a"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value",
+				},
+			}},
+			[]string{"a-with-meta"},
+			map[string]map[string]string{
+				"a": {"key": "value"},
+			},
+		}, {
+			"service id with identical service",
+			&ServiceConfigs{{
+				ID:   String("a-with-meta"),
+				Name: String("a"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value",
+				},
+			}, {
+				Name: String("a"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "this should not be selected",
+				},
+			}},
+			[]string{"a-with-meta"},
+			map[string]map[string]string{
+				"a": {"key": "value"},
+			},
+		}, {
+			"service name with identical service",
+			&ServiceConfigs{{
+				Name: String("a"),
+				CTSUserDefinedMeta: map[string]string{
+					"a": "b",
+				},
+			}, {
+				ID:   String("a-with-meta"),
+				Name: String("a"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value",
+				},
+			}},
+			[]string{"a"},
+			map[string]map[string]string{
+				"a": {"a": "b"},
+			},
+		}, {
+			"multiple",
+			&ServiceConfigs{{
+				Name: String("a"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value a",
+				},
+			}, {
+				Name: String("b"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value b",
+				},
+			}, {
+				Name: String("c"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value c",
+				},
+			}},
+			[]string{"a", "b"},
+			map[string]map[string]string{
+				"a": {"key": "value a"},
+				"b": {"key": "value b"},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := tc.conf.CTSUserDefinedMeta(tc.serviceList)
+			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }

@@ -36,6 +36,8 @@ variable "services" {
       node_datacenter       = string
       node_tagged_addresses = map(string)
       node_meta             = map(string)
+
+      cts_user_defined_meta = map(string)
     })
   )
 }

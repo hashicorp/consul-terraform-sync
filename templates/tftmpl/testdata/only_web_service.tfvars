@@ -33,5 +33,6 @@ services = {
     node_meta = {
       consul-network-segment = ""
     }
+    cts_user_defined_meta = {}
   }
 }

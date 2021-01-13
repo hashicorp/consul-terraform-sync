@@ -13,6 +13,7 @@ import (
 )
 
 type healthService struct {
+	// Consul service information
 	ID        string            `hcl:"id"`
 	Name      string            `hcl:"name"`
 	Address   string            `hcl:"address"`
@@ -22,15 +23,19 @@ type healthService struct {
 	Namespace cty.Value         `hcl:"namespace"`
 	Status    string            `hcl:"status"`
 
+	// Consul node information for a service
 	Node                string            `hcl:"node"`
 	NodeID              string            `hcl:"node_id"`
 	NodeAddress         string            `hcl:"node_address"`
 	NodeDatacenter      string            `hcl:"node_datacenter"`
 	NodeTaggedAddresses map[string]string `hcl:"node_tagged_addresses"`
 	NodeMeta            map[string]string `hcl:"node_meta"`
+
+	// Added CTS information for a service
+	CTSUserDefinedMeta map[string]string `hcl:"cts_user_defined_meta"`
 }
 
-func newHealthService(s *dep.HealthService) healthService {
+func newHealthService(s *dep.HealthService, ctsUserDefinedMeta map[string]string) healthService {
 	if s == nil {
 		return healthService{}
 	}
@@ -65,6 +70,8 @@ func newHealthService(s *dep.HealthService) healthService {
 		NodeDatacenter:      s.NodeDatacenter,
 		NodeTaggedAddresses: nonNullMap(s.NodeTaggedAddresses),
 		NodeMeta:            nonNullMap(s.NodeMeta),
+
+		CTSUserDefinedMeta: nonNullMap(ctsUserDefinedMeta),
 	}
 }
 
@@ -108,8 +115,7 @@ func appendNamedBlockValues(body *hclwrite.Body, blocks []hcltmpl.NamedBlock) {
 //
 // services = {
 //   <service>: {
-//	   <attr> = <value>
-//     <attr> = {{ <template syntax> }}
+//	   {{ <template syntax> }}
 //   }
 // }
 func appendRawServiceTemplateValues(body *hclwrite.Body, services []Service) {

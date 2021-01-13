@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -269,6 +270,16 @@ func newTaskTemplate(taskName string, conf *config.Config, fileReader func(strin
 		return nil, errors.New("unsupported driver to run tasks")
 	}
 
+	var task *config.TaskConfig
+	for _, t := range *conf.Tasks {
+		if *t.Name == taskName {
+			task = t
+		}
+	}
+	if task == nil {
+		return nil, fmt.Errorf("configuration for task not found: %s", taskName)
+	}
+
 	tmplFullpath := filepath.Join(*conf.Driver.Terraform.WorkingDir, taskName, tftmpl.TFVarsTmplFilename)
 	tfvarsFilepath := filepath.Join(*conf.Driver.Terraform.WorkingDir, taskName, tftmpl.TFVarsFilename)
 
@@ -282,10 +293,12 @@ func newTaskTemplate(taskName string, conf *config.Config, fileReader func(strin
 		Perms: filePerm,
 	})
 
+	metaMap := conf.Services.CTSUserDefinedMeta(task.Services)
+
 	return hcat.NewTemplate(hcat.TemplateInput{
 		Contents:     string(content),
 		Renderer:     renderer,
-		FuncMapMerge: tftmpl.HCLTmplFuncMap,
+		FuncMapMerge: tftmpl.HCLTmplFuncMap(metaMap),
 	}), nil
 }
 

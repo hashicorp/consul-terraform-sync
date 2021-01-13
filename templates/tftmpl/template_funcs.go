@@ -2,6 +2,7 @@ package tftmpl
 
 import (
 	"strings"
+	"text/template"
 
 	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/hcat/tfunc"
@@ -9,13 +10,16 @@ import (
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
-// HCLTmplFuncMap are template functions for rendering HCL
-var HCLTmplFuncMap = map[string]interface{}{
-	"indent":   tfunc.Helpers()["indent"],
-	"subtract": tfunc.Math()["subtract"],
+// HCLTmplFuncMap is the map of template functions for rendering HCL
+// to their respective implementations
+func HCLTmplFuncMap(meta map[string]map[string]string) template.FuncMap {
+	return template.FuncMap{
+		"indent":   tfunc.Helpers()["indent"],
+		"subtract": tfunc.Math()["subtract"],
 
-	"joinStrings": joinStringsFunc,
-	"HCLService":  hclServiceFunc,
+		"joinStrings": joinStringsFunc,
+		"HCLService":  hclServiceFunc(meta),
+	}
 }
 
 // JoinStrings joins an optional number of strings with the separator while
@@ -36,14 +40,27 @@ func joinStringsFunc(sep string, values ...string) string {
 	return strings.Join(cleaned, sep)
 }
 
-func hclServiceFunc(sDep *dep.HealthService) string {
-	if sDep == nil {
-		return ""
+// hclServiceFunc is a wrapper of the template function to marshal Consul
+// service information into HCL. The function accepts a map representing
+// metadata for services in scope of a task.
+func hclServiceFunc(meta map[string]map[string]string) func(sDep *dep.HealthService) string {
+	return func(sDep *dep.HealthService) string {
+		if sDep == nil {
+			return ""
+		}
+
+		// Find metdata based Consul service name scoped to a task to append to
+		// that service within var.services
+		var serviceMeta map[string]string
+		if meta != nil {
+			serviceMeta = meta[sDep.Name]
+		}
+
+		// Convert the hcat type to an HCL marshal-able object
+		s := newHealthService(sDep, serviceMeta)
+
+		f := hclwrite.NewEmptyFile()
+		gohcl.EncodeIntoBody(s, f.Body())
+		return strings.TrimSpace(string(f.Bytes()))
 	}
-
-	s := newHealthService(sDep)
-
-	f := hclwrite.NewEmptyFile()
-	gohcl.EncodeIntoBody(s, f.Body())
-	return strings.TrimSpace(string(f.Bytes()))
 }

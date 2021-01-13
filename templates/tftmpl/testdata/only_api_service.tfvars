@@ -33,6 +33,7 @@ services = {
     node_meta = {
       consul-network-segment = ""
     }
+    cts_user_defined_meta = {}
   },
   "api-2.worker-01.dc1" : {
     id              = "api-2"
@@ -56,6 +57,7 @@ services = {
     node_meta = {
       consul-network-segment = ""
     }
+    cts_user_defined_meta = {}
   },
   "api.worker-02.dc1" : {
     id              = "api"
@@ -79,5 +81,6 @@ services = {
     node_meta = {
       consul-network-segment = ""
     }
+    cts_user_defined_meta = {}
   }
 }
