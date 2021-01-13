@@ -295,7 +295,7 @@ func (c *ServiceConfigs) CTSUserDefinedMeta(serviceList []string) map[string]map
 		}
 
 		serviceName := *s.Name
-		if s.ID != nil && *s.ID != "" {
+		if StringPresent(s.ID) {
 			if _, ok := services[*s.ID]; ok {
 				m[serviceName] = s.CTSUserDefinedMeta
 				continue
@@ -303,7 +303,7 @@ func (c *ServiceConfigs) CTSUserDefinedMeta(serviceList []string) map[string]map
 		}
 
 		if _, ok := services[serviceName]; ok {
-			if s.ID == nil || *s.ID == "" {
+			if !StringPresent(s.ID) {
 				m[serviceName] = s.CTSUserDefinedMeta
 			}
 		}
