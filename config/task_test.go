@@ -411,6 +411,15 @@ func TestTasksConfig_Validate(t *testing.T) {
 				},
 			},
 			false,
+		}, {
+			"duplicate provider instances",
+			[]*TaskConfig{
+				{
+					Name:      String("task"),
+					Providers: []string{"provider.A", "provider.B"},
+				},
+			},
+			false,
 		},
 	}
 

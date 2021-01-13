@@ -45,6 +45,7 @@ type Panos struct {
 	providerConf pango.Client
 	adminUser    string
 	configPath   string
+	autoCommit   bool
 }
 
 // NewPanos configures and returns a new panos handler
@@ -65,6 +66,14 @@ func NewPanos(c map[string]interface{}) (*Panos, error) {
 	if val, ok := c["json_config_file"]; ok {
 		if v, ok := val.(string); ok {
 			configPath = v
+		}
+	}
+
+	// should we auto_commit?
+	var autoCommit bool
+	if val, ok := c["auto_commit"]; ok {
+		if v, ok := val.(bool); ok && v {
+			autoCommit = true
 		}
 	}
 
@@ -96,14 +105,23 @@ func NewPanos(c map[string]interface{}) (*Panos, error) {
 		providerConf: conf,
 		adminUser:    username,
 		configPath:   configPath,
+		autoCommit:   autoCommit,
 	}, nil
 }
 
 // Do executes panos' out-of-band Commit API and calls next handler while passing
 // on relevant errors
 func (h *Panos) Do(prevErr error) error {
-	log.Printf("[INFO] (handler.panos) commit. host '%s'", h.providerConf.Hostname)
-	err := h.commit()
+	committing := "disabled"
+	if h.autoCommit {
+		committing = "enabled"
+	}
+	log.Printf("[TRACE] (handler.panos) commit %s. host '%s'",
+		committing, h.providerConf.Hostname)
+	var err error
+	if h.autoCommit {
+		err = h.commit()
+	}
 	return callNext(h.next, prevErr, err)
 }
 

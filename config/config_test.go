@@ -304,6 +304,34 @@ func TestConfig_Finalize(t *testing.T) {
 }
 
 func TestConfig_Validate(t *testing.T) {
+	valid := longConfig.Copy()
+
+	// 2 tasks using same provider w/ auto_commit enabled (should err)
+	autoCommit := valid.Copy()
+	autoCommit.TerraformProviders = &TerraformProviderConfigs{
+		&TerraformProviderConfig{"X": map[string]interface{}{"auto_commit": true}}}
+	ts := *autoCommit.Tasks
+	t2 := ts[0].Copy()
+	*t2.Name = "task2"
+	ts = append(ts, t2)
+	autoCommit.Tasks = &ts
+
+	// task configured with no providers configured (default provider)
+	noProvider := *valid.Copy()
+	noProvider.TerraformProviders = &TerraformProviderConfigs{}
+
+	// valid case with multiple tasks w/ different providers
+	validMultiTask := longConfig.Copy()
+	*validMultiTask.Tasks = append(*validMultiTask.Tasks, &TaskConfig{
+		Description: String("test task1"),
+		Name:        String("task1"),
+		Services:    []string{"serviceD"},
+		Providers:   []string{"Y"},
+		Source:      String("Z"),
+	})
+	*validMultiTask.TerraformProviders = append(*validMultiTask.TerraformProviders,
+		&TerraformProviderConfig{"Y": map[string]interface{}{}})
+
 	cases := []struct {
 		name    string
 		i       *Config
@@ -319,8 +347,20 @@ func TestConfig_Validate(t *testing.T) {
 			false,
 		}, {
 			"valid long",
-			longConfig.Copy(),
+			valid.Copy(),
 			true,
+		}, {
+			"multi-task valid",
+			validMultiTask.Copy(),
+			true,
+		}, {
+			"empty provider",
+			noProvider.Copy(),
+			true,
+		}, {
+			"autocommitting provider reuse error",
+			autoCommit.Copy(),
+			false,
 		},
 	}
 
