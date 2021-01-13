@@ -272,6 +272,60 @@ func TestServiceConfig_Validate(t *testing.T) {
 	}
 }
 
+func TestServiceConfigs_Validate(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		i       *ServiceConfigs
+		isValid bool
+	}{
+		{
+			"nil",
+			nil,
+			false,
+		}, {
+			"empty",
+			&ServiceConfigs{},
+			true,
+		}, {
+			"unique services",
+			&ServiceConfigs{
+				{Name: String("a")},
+				{Name: String("b")},
+				{Name: String("c"), ID: String("c1")},
+				{Name: String("c"), ID: String("c2")},
+			},
+			true,
+		}, {
+			"one invalid",
+			&ServiceConfigs{
+				{Name: String("a")},
+				{Description: String("missing name")},
+			},
+			false,
+		}, {
+			"conflicting ID and name",
+			&ServiceConfigs{
+				{Name: String("a")},
+				{Name: String("b"), ID: String("a"), Description: String("this ID conflicts with service named A")},
+			},
+			false,
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			err := tc.i.Validate()
+			if tc.isValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
 func TestServiceConfigs_CTSUserDefinedMeta(t *testing.T) {
 	t.Parallel()
 
