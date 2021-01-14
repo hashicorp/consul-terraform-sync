@@ -3,6 +3,9 @@
 # The HCL blocks, arguments, variables, and values are derived from the
 # operator configuration for Sync. Any manual changes to this file
 # may not be preserved and could be overwritten by a subsequent update.
+#
+# Task: test
+# Description: user description for task named 'test'
 
 # Service definition protocol v0
 variable "services" {

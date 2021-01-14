@@ -3,7 +3,6 @@ package tftmpl
 import (
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcat/dep"
@@ -75,15 +74,12 @@ func newHealthService(s *dep.HealthService, ctsUserDefinedMeta map[string]string
 	}
 }
 
-// NewTFVarsTmpl writes content to assign values to the root module's variables
+// newTFVarsTmpl writes content to assign values to the root module's variables
 // that is commonly placed in a .tfvars file.
-func NewTFVarsTmpl(w io.Writer, input *RootModuleInputData) error {
-	_, err := w.Write(RootPreamble)
+func newTFVarsTmpl(w io.Writer, input *RootModuleInputData) error {
+	err := writePreamble(w, input.Task, VarsFilename)
 	if err != nil {
-		// This isn't required for TF config files to be usable. So we'll just log
-		// the error and continue.
-		log.Printf("[WARN] (templates.tftmpl) unable to write preamble warning to %q",
-			TFVarsTmplFilename)
+		return err
 	}
 
 	hclFile := hclwrite.NewEmptyFile()

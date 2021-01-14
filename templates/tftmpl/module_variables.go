@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcl/v2"
@@ -61,13 +60,10 @@ func ParseModuleVariables(content []byte, filename string) (hcltmpl.Variables, e
 // NewModuleVariablesTF writes content used for variables.module.tf of a
 // Terraform root module. These variable defintions correspond to variables
 // that are passed as arguments within the module block.
-func NewModuleVariablesTF(w io.Writer, input *RootModuleInputData) error {
-	_, err := w.Write(RootPreamble)
+func newModuleVariablesTF(w io.Writer, input *RootModuleInputData) error {
+	err := writePreamble(w, input.Task, ModuleVarsFilename)
 	if err != nil {
-		// This isn't required for TF config files to be usable. So we'll just log
-		// the error and continue.
-		log.Printf("[WARN] (templates.tftmpl) unable to write preamble warning to %q",
-			ModuleVarsFilename)
+		return err
 	}
 
 	hclFile := hclwrite.NewEmptyFile()

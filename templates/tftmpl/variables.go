@@ -3,7 +3,6 @@ package tftmpl
 import (
 	"fmt"
 	"io"
-	"log"
 	"sort"
 	"strings"
 
@@ -43,15 +42,12 @@ variable "services" {
 }
 `)
 
-// NewVariablesTF writes content used for variables.tf of a Terraform root
+// newVariablesTF writes content used for variables.tf of a Terraform root
 // module.
-func NewVariablesTF(w io.Writer, input *RootModuleInputData) error {
-	_, err := w.Write(RootPreamble)
+func newVariablesTF(w io.Writer, input *RootModuleInputData) error {
+	err := writePreamble(w, input.Task, VarsFilename)
 	if err != nil {
-		// This isn't required for TF config files to be usable. So we'll just log
-		// the error and continue.
-		log.Printf("[WARN] (templates.tftmpl) unable to write preamble warning to %q",
-			RootFilename)
+		return err
 	}
 
 	_, err = w.Write(VariableServices)
