@@ -61,7 +61,10 @@ func ParseModuleVariables(content []byte, filename string) (hcltmpl.Variables, e
 // Terraform root module. These variable defintions correspond to variables
 // that are passed as arguments within the module block.
 func newModuleVariablesTF(w io.Writer, input *RootModuleInputData) error {
-	writePreamble(w, input.Task, ModuleVarsFilename)
+	err := writePreamble(w, input.Task, ModuleVarsFilename)
+	if err != nil {
+		return err
+	}
 
 	hclFile := hclwrite.NewEmptyFile()
 	rootBody := hclFile.Body()
@@ -89,6 +92,6 @@ func newModuleVariablesTF(w io.Writer, input *RootModuleInputData) error {
 	// Format the file before writing
 	content := hclFile.Bytes()
 	content = hclwrite.Format(content)
-	_, err := w.Write(content)
+	_, err = w.Write(content)
 	return err
 }

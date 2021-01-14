@@ -70,7 +70,10 @@ func newHealthService(s *dep.HealthService) healthService {
 // newTFVarsTmpl writes content to assign values to the root module's variables
 // that is commonly placed in a .tfvars file.
 func newTFVarsTmpl(w io.Writer, input *RootModuleInputData) error {
-	writePreamble(w, input.Task, VarsFilename)
+	err := writePreamble(w, input.Task, VarsFilename)
+	if err != nil {
+		return err
+	}
 
 	hclFile := hclwrite.NewEmptyFile()
 	body := hclFile.Body()
@@ -78,7 +81,7 @@ func newTFVarsTmpl(w io.Writer, input *RootModuleInputData) error {
 	body.AppendNewline()
 	appendRawServiceTemplateValues(body, input.Services)
 
-	_, err := hclFile.WriteTo(w)
+	_, err = hclFile.WriteTo(w)
 	return err
 }
 

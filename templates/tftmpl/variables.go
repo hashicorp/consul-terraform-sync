@@ -43,9 +43,12 @@ variable "services" {
 // newVariablesTF writes content used for variables.tf of a Terraform root
 // module.
 func newVariablesTF(w io.Writer, input *RootModuleInputData) error {
-	writePreamble(w, input.Task, VarsFilename)
+	err := writePreamble(w, input.Task, VarsFilename)
+	if err != nil {
+		return err
+	}
 
-	_, err := w.Write(VariableServices)
+	_, err = w.Write(VariableServices)
 	if err != nil {
 		return err
 	}

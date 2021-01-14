@@ -186,7 +186,10 @@ func InitRootModule(input *RootModuleInputData, modulePath string, filePerms os.
 
 // newMainTF writes content used for main.tf of a Terraform root module.
 func newMainTF(w io.Writer, input *RootModuleInputData) error {
-	writePreamble(w, input.Task, RootFilename)
+	err := writePreamble(w, input.Task, RootFilename)
+	if err != nil {
+		return err
+	}
 
 	hclFile := hclwrite.NewEmptyFile()
 	rootBody := hclFile.Body()
@@ -199,7 +202,7 @@ func newMainTF(w io.Writer, input *RootModuleInputData) error {
 	// Format the file before writing
 	content := hclFile.Bytes()
 	content = hclwrite.Format(content)
-	_, err := w.Write(content)
+	_, err = w.Write(content)
 	return err
 }
 
@@ -321,11 +324,12 @@ func sortedKeys(m map[string]interface{}) []string {
 }
 
 // writePreamble writes a preamble to the writer for generated root module
-// files. Each preamble includes task information. The preamble is not required
-// for TF config files to be usable. So any errors we'll just log and continue.
-func writePreamble(w io.Writer, task Task, filename string) {
+// files. Each preamble includes task information.
+func writePreamble(w io.Writer, task Task, filename string) error {
 	_, err := w.Write(RootPreamble)
 	if err != nil {
+		// The preamble is not required for TF config files to be usable. So any
+		// errors here we'll just log and continue.
 		log.Printf("[WARN] (templates.tftmpl) unable to write preamble warning to %q",
 			filename)
 	}
@@ -342,4 +346,5 @@ func writePreamble(w io.Writer, task Task, filename string) {
 		log.Printf("[WARN] (templates.tftmpl) unable to write task preamble warning to %q",
 			filename)
 	}
+	return err
 }
