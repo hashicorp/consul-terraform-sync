@@ -6,6 +6,9 @@ FEATURES:
 IMPROVEMENTS:
 * Changed default `consul.transport` options used for the Consul client to improve TCP connection reuse. [[GH-164](https://github.com/hashicorp/consul-terraform-sync/pull/164)]
 
+BUG FIXES:
+* Fix edge case where multiple tasks have identical `terraform.tfvars.tmpl` files causing Consul Terraform Sync to indefinitely hang. [[GH-167](https://github.com/hashicorp/consul-terraform-sync/pull/167)]
+
 ## 0.1.0-techpreview2 (December 16, 2020)
 
 BREAKING CHANGES:
