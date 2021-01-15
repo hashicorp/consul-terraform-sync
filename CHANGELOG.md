@@ -1,5 +1,8 @@
 ## Upcoming
 
+BREAKING CHANGES:
+* Remove support for `provider` block name (deprecated v0.1.0-techpreview2). Use `terraform_provider` block name instead. [[GH-169](https://github.com/hashicorp/consul-terraform-sync/pull/169)]
+
 FEATURES:
 * Add `cts_user_defined_meta` option to the `service` configuration block for appending user-defined metadata grouped by services to be used by Terraform modules. [[GH-166](https://github.com/hashicorp/consul-terraform-sync/pull/166)]
 
