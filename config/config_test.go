@@ -108,43 +108,43 @@ var (
 func TestDecodeConfig(t *testing.T) {
 	testCases := []struct {
 		name     string
-		format   string
+		file     string
 		content  []byte
 		expected *Config
 	}{
 		{
 			"hcl",
-			"hcl",
+			"config.hcl",
 			hclConfig,
 			&testConfig,
 		}, {
 			"json",
-			"json",
+			"config.json",
 			jsonConfig,
 			&testConfig,
 		}, {
 			"unsupported format",
-			"txt",
+			"config.txt",
 			hclConfig,
 			nil,
 		}, {
 			"hcl invalid",
-			"hcl",
+			"config.hcl",
 			[]byte(`log_level: "ERR"`),
 			nil,
 		}, {
 			"hcl unexpected key",
-			"hcl",
+			"config.hcl",
 			[]byte(`key = "does_not_exist"`),
 			nil,
 		}, {
 			"json invalid",
-			"json",
+			"config.json",
 			[]byte(`{"log_level" = "ERR"}`),
 			nil,
 		}, {
 			"json unexpected key",
-			"json",
+			"config.json",
 			[]byte(`{"key": "does_not_exist"}`),
 			nil,
 		},
@@ -152,16 +152,25 @@ func TestDecodeConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			c, err := decodeConfig(tc.content, tc.format)
+			c, err := decodeConfig(tc.content, tc.file)
 			if tc.expected == nil {
 				assert.Error(t, err)
 				return
 			}
 
+			assert.NoError(t, err)
 			require.NotNil(t, c)
 			assert.Equal(t, *tc.expected, *c)
 		})
 	}
+
+	t.Run("invalid provider block", func(t *testing.T) {
+		content := []byte(`provider "local" {}`)
+		c, err := decodeConfig(content, "config.hcl")
+		assert.Nil(t, c)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "terraform_provider")
+	})
 }
 
 func TestFromPath(t *testing.T) {

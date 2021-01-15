@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -30,15 +31,14 @@ type Config struct {
 	ClientType *string `mapstructure:"client_type"`
 	Port       *int    `mapstructure:"port"`
 
-	Syslog              *SyslogConfig             `mapstructure:"syslog"`
-	Consul              *ConsulConfig             `mapstructure:"consul"`
-	Vault               *VaultConfig              `mapstructure:"vault"`
-	Driver              *DriverConfig             `mapstructure:"driver"`
-	Tasks               *TaskConfigs              `mapstructure:"task"`
-	Services            *ServiceConfigs           `mapstructure:"service"`
-	DeprecatedProviders *TerraformProviderConfigs `mapstructure:"provider"`
-	TerraformProviders  *TerraformProviderConfigs `mapstructure:"terraform_provider"`
-	BufferPeriod        *BufferPeriodConfig       `mapstructure:"buffer_period"`
+	Syslog             *SyslogConfig             `mapstructure:"syslog"`
+	Consul             *ConsulConfig             `mapstructure:"consul"`
+	Vault              *VaultConfig              `mapstructure:"vault"`
+	Driver             *DriverConfig             `mapstructure:"driver"`
+	Tasks              *TaskConfigs              `mapstructure:"task"`
+	Services           *ServiceConfigs           `mapstructure:"service"`
+	TerraformProviders *TerraformProviderConfigs `mapstructure:"terraform_provider"`
+	BufferPeriod       *BufferPeriodConfig       `mapstructure:"buffer_period"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -69,16 +69,15 @@ func BuildConfig(paths []string) (*Config, error) {
 func DefaultConfig() *Config {
 	consul := DefaultConsulConfig()
 	return &Config{
-		LogLevel:            String(DefaultLogLevel),
-		Syslog:              DefaultSyslogConfig(),
-		Port:                Int(defaultPort),
-		Consul:              consul,
-		Driver:              DefaultDriverConfig(),
-		Tasks:               DefaultTaskConfigs(),
-		Services:            DefaultServiceConfigs(),
-		DeprecatedProviders: DefaultTerraformProviderConfigs(),
-		TerraformProviders:  DefaultTerraformProviderConfigs(),
-		BufferPeriod:        DefaultBufferPeriodConfig(),
+		LogLevel:           String(DefaultLogLevel),
+		Syslog:             DefaultSyslogConfig(),
+		Port:               Int(defaultPort),
+		Consul:             consul,
+		Driver:             DefaultDriverConfig(),
+		Tasks:              DefaultTaskConfigs(),
+		Services:           DefaultServiceConfigs(),
+		TerraformProviders: DefaultTerraformProviderConfigs(),
+		BufferPeriod:       DefaultBufferPeriodConfig(),
 	}
 }
 
@@ -90,17 +89,16 @@ func (c *Config) Copy() *Config {
 	}
 
 	return &Config{
-		LogLevel:            StringCopy(c.LogLevel),
-		Syslog:              c.Syslog.Copy(),
-		Port:                IntCopy(c.Port),
-		Consul:              c.Consul.Copy(),
-		Vault:               c.Vault.Copy(),
-		Driver:              c.Driver.Copy(),
-		Tasks:               c.Tasks.Copy(),
-		Services:            c.Services.Copy(),
-		DeprecatedProviders: c.DeprecatedProviders.Copy(),
-		TerraformProviders:  c.TerraformProviders.Copy(),
-		BufferPeriod:        c.BufferPeriod.Copy(),
+		LogLevel:           StringCopy(c.LogLevel),
+		Syslog:             c.Syslog.Copy(),
+		Port:               IntCopy(c.Port),
+		Consul:             c.Consul.Copy(),
+		Vault:              c.Vault.Copy(),
+		Driver:             c.Driver.Copy(),
+		Tasks:              c.Tasks.Copy(),
+		Services:           c.Services.Copy(),
+		TerraformProviders: c.TerraformProviders.Copy(),
+		BufferPeriod:       c.BufferPeriod.Copy(),
 	}
 }
 
@@ -152,10 +150,6 @@ func (c *Config) Merge(o *Config) *Config {
 
 	if o.Services != nil {
 		r.Services = r.Services.Merge(o.Services)
-	}
-
-	if o.DeprecatedProviders != nil {
-		r.DeprecatedProviders = r.DeprecatedProviders.Merge(o.DeprecatedProviders)
 	}
 
 	if o.TerraformProviders != nil {
@@ -219,18 +213,6 @@ func (c *Config) Finalize() {
 
 	if c.TerraformProviders == nil {
 		c.TerraformProviders = DefaultTerraformProviderConfigs()
-	}
-	if c.DeprecatedProviders != nil {
-		// Merge DeprecatedProviders and use TerraformProviders from here onward.
-		if len(*c.DeprecatedProviders) > 0 {
-			c.DeprecatedProviders.Finalize()
-			c.TerraformProviders = c.TerraformProviders.Merge(c.DeprecatedProviders)
-			log.Println("[WARN] (config) The 'provider' block name is marked for " +
-				"deprecation in v0.1.0-techpreview2 and will be removed in v0.1.0-beta. " +
-				"Please update you configuration and rename 'provider' blocks to " +
-				"'terraform_provider'.")
-		}
-		c.DeprecatedProviders = nil
 	}
 	c.TerraformProviders.Finalize()
 
@@ -330,11 +312,12 @@ func (c *Config) validateDynamicConfigs() error {
 
 // decodeConfig attempts to decode bytes based on the provided format and
 // returns the resulting Config struct.
-func decodeConfig(content []byte, format string) (*Config, error) {
+func decodeConfig(content []byte, file string) (*Config, error) {
 	var raw map[string]interface{}
 	var decodeHook mapstructure.DecodeHookFunc
 	var err error
 
+	format := fileFormat(file)
 	switch format {
 	case "json":
 		err = json.Unmarshal(content, &raw)
@@ -361,7 +344,7 @@ func decodeConfig(content []byte, format string) (*Config, error) {
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		DecodeHook:       decodeHook,
 		WeaklyTypedInput: true,
-		ErrorUnused:      true,
+		ErrorUnused:      false,
 		Metadata:         &md,
 		Result:           &config,
 	})
@@ -372,6 +355,10 @@ func decodeConfig(content []byte, format string) (*Config, error) {
 
 	if err := decoder.Decode(raw); err != nil {
 		log.Println("[DEBUG] (config) mapstructure decode failed")
+		return nil, err
+	}
+
+	if err := processUnusedConfigKeys(md, file); err != nil {
 		return nil, err
 	}
 
@@ -392,7 +379,7 @@ func fromFile(path string) (*Config, error) {
 		return nil, err
 	}
 
-	config, err := decodeConfig(content, format)
+	config, err := decodeConfig(content, filepath.Base(path))
 	if err != nil {
 		log.Printf("[ERR] (config) failed decoding content from file: %s\n", path)
 		return nil, err
@@ -474,6 +461,26 @@ func supportedFormat(format string) bool {
 	}
 
 	return false
+}
+
+func processUnusedConfigKeys(md mapstructure.Metadata, file string) error {
+	if len(md.Unused) == 0 {
+		return nil
+	}
+
+	sort.Strings(md.Unused)
+	err := fmt.Errorf("'%s' has invalid keys: %s", file, strings.Join(md.Unused, ", "))
+
+	for _, key := range md.Unused {
+		if key == "provider" {
+			err = fmt.Errorf(`%s
+	'provider' is an invalid key for Consul Terraform Sync configuration, try 'terraform_provider'.
+	terraform_provider configuration blocks are similar to provider blocks in Terraform but have additional features supported only by Consul Terraform Sync.
+
+`, err)
+		}
+	}
+	return err
 }
 
 func stringFromEnv(list []string, def string) *string {
