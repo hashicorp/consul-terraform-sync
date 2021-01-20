@@ -244,9 +244,11 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	// TODO: validate providers listed in tasks exist
-
 	if err := c.BufferPeriod.Validate(); err != nil {
+		return err
+	}
+
+	if err := c.validateTaskProvider(); err != nil {
 		return err
 	}
 
@@ -254,6 +256,38 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	return nil
+}
+
+// validateTaskProvider checks that task <-> provider relations are good
+func (c *Config) validateTaskProvider() error {
+	// which providers have auto_commit enabled
+	acProviders := make(map[string]bool, len(*c.TerraformProviders))
+	for _, p := range *c.TerraformProviders {
+		for name, values := range *p {
+			if a, ok := values.(map[string]interface{})["alias"]; ok {
+				name = fmt.Sprintf("%s.%s", name, a)
+			}
+			if v, ok := values.(map[string]interface{})["auto_commit"]; ok {
+				if b, ok := v.(bool); ok {
+					acProviders[name] = b
+				}
+			}
+		}
+	}
+
+	autocomUsed := make(map[string]bool)
+	for _, t := range *c.Tasks {
+		for _, pname := range t.Providers {
+			if autocom := acProviders[pname]; autocom {
+				if autocomUsed[pname] {
+					return fmt.Errorf("provider with autocommit (%s)"+
+						" cannot be used by more than one task", pname)
+				}
+				autocomUsed[pname] = true
+			}
+		}
+	}
 	return nil
 }
 

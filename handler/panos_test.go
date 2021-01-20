@@ -127,6 +127,20 @@ func TestPanosDo(t *testing.T) {
 			assert.NoError(t, h.Do(nil))
 		})
 	}
+
+	t.Run("autoCommit setting", func(t *testing.T) {
+		m := new(mocks.PanosClient)
+		m.On("InitializeUsing", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		m.On("Commit", mock.Anything, mock.Anything, mock.Anything).
+			Return(uint(1), []byte("message"), nil).Once()
+		m.On("WaitForJob", mock.Anything, mock.Anything).Return(nil).Once()
+		m.On("String").Return("client string").Once()
+		h := &Panos{client: m, autoCommit: true}
+		assert.NoError(t, h.Do(nil))
+		h.autoCommit = false
+		assert.NoError(t, h.Do(nil))
+	})
 }
 
 func TestPanosCommit(t *testing.T) {

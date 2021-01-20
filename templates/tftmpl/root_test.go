@@ -111,3 +111,61 @@ func TestAppendRootTerraformBlock_backend(t *testing.T) {
 		})
 	}
 }
+
+func TestAppendRootProviderBlocks(t *testing.T) {
+	testCases := []struct {
+		name       string
+		rawBackend map[string]interface{}
+		expected   string
+	}{
+		{
+			"nil",
+			nil,
+			`provider "" {
+}
+`,
+		}, {
+			"empty",
+			map[string]interface{}{"empty": map[string]interface{}{}},
+			`provider "empty" {
+}
+`,
+		}, {
+			"internal alias leak",
+			map[string]interface{}{"foo": map[string]interface{}{
+				"alias": "bar",
+			}},
+			`provider "foo" {
+}
+`,
+		}, {
+			"internal auto_commit leak",
+			map[string]interface{}{"foo": map[string]interface{}{
+				"auto_commit": "true",
+			}},
+			`provider "foo" {
+}
+`,
+		}, {
+			"invalid structure",
+			map[string]interface{}{"invalid": "unexpected type"},
+			`provider "" {
+}
+`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			hclFile := hclwrite.NewEmptyFile()
+			body := hclFile.Body()
+
+			backend := []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(tc.rawBackend)}
+			appendRootProviderBlocks(body, backend)
+
+			content := hclFile.Bytes()
+			content = hclwrite.Format(content)
+			assert.Equal(t, tc.expected, string(content))
+		})
+	}
+}
