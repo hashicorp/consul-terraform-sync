@@ -262,6 +262,10 @@ func appendRootProviderBlocks(body *hclwrite.Body, providers []hcltmpl.NamedBloc
 			if attr == "alias" {
 				continue
 			}
+			// auto_commit is an internal setting
+			if attr == "auto_commit" {
+				continue
+			}
 
 			providerBody.SetAttributeTraversal(attr, hcl.Traversal{
 				hcl.TraverseRoot{Name: "var"},
