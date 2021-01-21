@@ -252,9 +252,13 @@ func appendRootProviderBlocks(body *hclwrite.Body, providers []hcltmpl.NamedBloc
 	for i, p := range providers {
 		providerBody := body.AppendNewBlock("provider", []string{p.Name}).Body()
 
-		// Convert user provider attr+values to provider block arguments from variables
-		// and sort the attributes for consistency
+		// Convert user provider config to provider block arguments from variables
+		// and sort the attributes / sub-attributes for consistency. Format
+		// depends on if attribute is type object or not:
 		// attr = var.<providerName>.<attr>
+		// objAttr {
+		//    subAttr = var.<providerName>.<objAttr>.<subAttr>
+		// }
 		providerAttrs := p.SortedAttributes()
 		for _, attr := range providerAttrs {
 			// Drop the alias meta attribute. Each provider instance will be ran as
@@ -264,6 +268,25 @@ func appendRootProviderBlocks(body *hclwrite.Body, providers []hcltmpl.NamedBloc
 			}
 			// auto_commit is an internal setting
 			if attr == "auto_commit" {
+				continue
+			}
+
+			val := p.Variables[attr]
+			if val.Type().IsObjectType() {
+				subAttrs := make(map[string]interface{})
+				for k := range val.AsValueMap() {
+					subAttrs[k] = true
+				}
+
+				objProviderBody := providerBody.AppendNewBlock(attr, nil).Body()
+				for _, subAttr := range sortedKeys(subAttrs) {
+					objProviderBody.SetAttributeTraversal(subAttr, hcl.Traversal{
+						hcl.TraverseRoot{Name: "var"},
+						hcl.TraverseAttr{Name: p.Name},
+						hcl.TraverseAttr{Name: attr},
+						hcl.TraverseAttr{Name: subAttr},
+					})
+				}
 				continue
 			}
 

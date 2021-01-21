@@ -24,6 +24,10 @@ terraform {
 provider "testProvider" {
   attr  = var.testProvider.attr
   count = var.testProvider.count
+  obj {
+    id       = var.testProvider.obj.id
+    username = var.testProvider.obj.username
+  }
 }
 
 # user description for task named 'test'

@@ -40,5 +40,9 @@ variable "testProvider" {
     alias = string
     attr  = string
     count = number
+    obj = object({
+      id       = string
+      username = string
+    })
   })
 }

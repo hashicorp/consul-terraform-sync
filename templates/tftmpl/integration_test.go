@@ -43,6 +43,10 @@ func TestInitRootModule(t *testing.T) {
 			map[string]interface{}{
 				"testProvider": map[string]interface{}{
 					"alias": "tp",
+					"obj": map[string]interface{}{
+						"username": "name",
+						"id":       "123",
+					},
 					"attr":  "value",
 					"count": 10,
 				},
