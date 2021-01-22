@@ -14,6 +14,7 @@ variable "services" {
     object({
       id        = string
       name      = string
+      kind      = string
       address   = string
       port      = number
       meta      = map(string)
