@@ -17,6 +17,7 @@ services = {
   "web.worker-01.dc1" : {
     id              = "web"
     name            = "web"
+    kind            = ""
     address         = "1.1.1.1"
     port            = 8000
     meta            = {}

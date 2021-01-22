@@ -55,6 +55,7 @@ func TestHCLServiceFunc(t *testing.T) {
 			&dep.HealthService{},
 			`id                    = ""
 name                  = ""
+kind                  = ""
 address               = ""
 port                  = 0
 meta                  = {}
@@ -94,6 +95,7 @@ cts_user_defined_meta = {}`,
 			},
 			`id      = "api"
 name    = "api"
+kind    = ""
 address = "1.2.3.4"
 port    = 8080
 meta = {
@@ -117,12 +119,14 @@ node_meta = {
 }
 cts_user_defined_meta = {}`,
 		}, {
-			"namespace",
+			"namespace-n-kind",
 			&dep.HealthService{
 				Namespace: "namespace",
+				Kind:      "mykind",
 			},
 			`id                    = ""
 name                  = ""
+kind                  = "mykind"
 address               = ""
 port                  = 0
 meta                  = {}
@@ -163,6 +167,7 @@ func TestHCLServiceFunc_ctsUserDefinedMeta(t *testing.T) {
 	}
 	expected := `id                    = "api"
 name                  = "api"
+kind                  = ""
 address               = "1.2.3.4"
 port                  = 8080
 meta                  = {}

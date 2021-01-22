@@ -15,6 +15,7 @@ type healthService struct {
 	// Consul service information
 	ID        string            `hcl:"id"`
 	Name      string            `hcl:"name"`
+	Kind      string            `hcl:"kind"`
 	Address   string            `hcl:"address"`
 	Port      int               `hcl:"port"`
 	Meta      map[string]string `hcl:"meta"`
@@ -56,6 +57,7 @@ func newHealthService(s *dep.HealthService, ctsUserDefinedMeta map[string]string
 	return healthService{
 		ID:        s.ID,
 		Name:      s.Name,
+		Kind:      s.Kind,
 		Address:   s.Address,
 		Port:      s.Port,
 		Meta:      nonNullMap(s.ServiceMeta),

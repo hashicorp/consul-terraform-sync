@@ -17,6 +17,7 @@ services = {
   "api.worker-01.dc1" : {
     id              = "api"
     name            = "api"
+    kind            = ""
     address         = "1.2.3.4"
     port            = 8080
     meta            = {}
@@ -41,6 +42,7 @@ services = {
   "api-2.worker-01.dc1" : {
     id              = "api-2"
     name            = "api"
+    kind            = ""
     address         = "5.6.7.8"
     port            = 8080
     meta            = {}
@@ -65,6 +67,7 @@ services = {
   "api.worker-02.dc1" : {
     id              = "api"
     name            = "api"
+    kind            = ""
     address         = "1.2.3.4"
     port            = 8080
     meta            = {}
