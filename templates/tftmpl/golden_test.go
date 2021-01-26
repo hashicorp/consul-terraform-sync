@@ -99,8 +99,6 @@ func TestNewFiles(t *testing.T) {
 				Services: []Service{
 					{
 						Name:        "web",
-						Namespace:   "ns",
-						Datacenter:  "dc1",
 						Description: "web service",
 					}, {
 						Name:        "api",

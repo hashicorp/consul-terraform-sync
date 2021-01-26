@@ -22,9 +22,9 @@ services = {
   } {{- if (ne $i $last)}},{{end}}
   {{- end}}
 {{- end}}{{- with $beforeSrv := service "api" "dc=dc1" "\"tag\" in Service.Tags" }}
-  {{- with $afterSrv := service "web" "dc=dc1" "ns=ns" }},{{end}}
+  {{- with $afterSrv := service "web" }},{{end}}
 {{- end}}
-{{- with $srv := service "web" "dc=dc1" "ns=ns" }}
+{{- with $srv := service "web" }}
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
