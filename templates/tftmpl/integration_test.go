@@ -239,7 +239,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 				}
 
 				err = <-w.WaitCh(ctx)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
