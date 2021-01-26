@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/version"
@@ -91,22 +92,28 @@ type Service struct {
 	CTSUserDefinedMeta map[string]string
 }
 
-// TemplateServiceID is the formatted service identifier that satisfies hcat
+// hcatQuery prepares formatted parameters that satisfies hcat
 // query syntax to make Consul requests to /v1/health/service/:service
-//
-// TODO incorporate namespace
-func (s Service) TemplateServiceID() string {
-	id := s.Name
-
-	if s.Tag != "" {
-		id = fmt.Sprintf("%s.%s", s.Tag, s.Name)
-	}
+func (s Service) hcatQuery() string {
+	var opts []string
 
 	if s.Datacenter != "" {
-		id = fmt.Sprintf("%s@%s", id, s.Datacenter)
+		opts = append(opts, fmt.Sprintf(`dc=\"%s\"`, s.Datacenter))
 	}
 
-	return id
+	if s.Namespace != "" {
+		opts = append(opts, fmt.Sprintf(`ns=\"%s\"`, s.Namespace))
+	}
+
+	if s.Tag != "" {
+		opts = append(opts, fmt.Sprintf(`\"%s\" in Service.Tags`, s.Tag))
+	}
+
+	query := fmt.Sprintf("%q", s.Name)
+	if len(opts) > 0 {
+		query = query + ` "` + strings.Join(opts, `" "`) + `"`
+	}
+	return query
 }
 
 // RootModuleInputData is the input data used to generate the root module
