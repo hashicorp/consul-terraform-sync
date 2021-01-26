@@ -98,11 +98,11 @@ func (s Service) hcatQuery() string {
 	var opts []string
 
 	if s.Datacenter != "" {
-		opts = append(opts, fmt.Sprintf(`dc=\"%s\"`, s.Datacenter))
+		opts = append(opts, fmt.Sprintf("dc=%s", s.Datacenter))
 	}
 
 	if s.Namespace != "" {
-		opts = append(opts, fmt.Sprintf(`ns=\"%s\"`, s.Namespace))
+		opts = append(opts, fmt.Sprintf("ns=%s", s.Namespace))
 	}
 
 	if s.Tag != "" {

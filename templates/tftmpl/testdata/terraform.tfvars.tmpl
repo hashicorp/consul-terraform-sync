@@ -14,17 +14,17 @@ testProvider = {
 }
 
 services = {
-{{- with $srv := service "api" "dc=\"dc1\"" "\"tag\" in Service.Tags" }}
+{{- with $srv := service "api" "dc=dc1" "\"tag\" in Service.Tags" }}
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
 {{ HCLService $s | indent 4 }}
   } {{- if (ne $i $last)}},{{end}}
   {{- end}}
-{{- end}}{{- with $beforeSrv := service "api" "dc=\"dc1\"" "\"tag\" in Service.Tags" }}
-  {{- with $afterSrv := service "web" "dc=\"dc1\"" "ns=\"ns\"" }},{{end}}
+{{- end}}{{- with $beforeSrv := service "api" "dc=dc1" "\"tag\" in Service.Tags" }}
+  {{- with $afterSrv := service "web" "dc=dc1" "ns=ns" }},{{end}}
 {{- end}}
-{{- with $srv := service "web" "dc=\"dc1\"" "ns=\"ns\"" }}
+{{- with $srv := service "web" "dc=dc1" "ns=ns" }}
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {

@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.2.1
-	github.com/hashicorp/hcat v0.0.0-20210122002113-a06a4c3ec618
+	github.com/hashicorp/hcat v0.0.0-20210126174106-fbb1851663ad
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/hcl/v2 v2.6.0
 	github.com/hashicorp/logutils v1.0.0
@@ -36,8 +36,6 @@ require (
 )
 
 replace (
-	github.com/hashicorp/hcat => ../hcat
-
 	// Terraform imports a pre-go-mod version of Vault. These replace directives
 	// resolves the ambiguous import between the package `vault/api` and
 	// `vault/api` nested go module.
