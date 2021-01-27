@@ -14,6 +14,7 @@ services = {
   "api.worker-01.dc1" : {
     id              = "api"
     name            = "api"
+    kind            = ""
     address         = "1.1.1.2"
     port            = 8000
     meta            = {}
@@ -33,10 +34,12 @@ services = {
     node_meta = {
       consul-network-segment = ""
     }
+    cts_user_defined_meta = {}
   },
   "web.worker-01.dc1" : {
     id              = "web"
     name            = "web"
+    kind            = ""
     address         = "127.0.0.1"
     port            = 80
     meta            = {}
@@ -56,5 +59,6 @@ services = {
     node_meta = {
       consul-network-segment = ""
     }
+    cts_user_defined_meta = {}
   }
 }
