@@ -2,7 +2,10 @@
 #
 # The HCL blocks, arguments, variables, and values are derived from the
 # operator configuration for Sync. Any manual changes to this file
-# may not be preserved and could be clobbered by a subsequent update.
+# may not be preserved and could be overwritten by a subsequent update.
+#
+# Task: my-task
+# Description: automate services for website X
 
 myprovider = {
   address  = "myprovider.example.com"
@@ -15,44 +18,18 @@ services = {
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
-    id              = "{{.ID}}"
-    name            = "{{.Name}}"
-    address         = "{{.Address}}"
-    port            = {{.Port}}
-    meta            = {{hclStringMap .ServiceMeta 3}}
-    tags            = {{hclStringList .Tags}}
-    namespace       = {{hclString .Namespace}}
-    status          = "{{.Status}}"
-    node            = "{{.Node}}"
-    node_id         = "{{.NodeID}}"
-    node_address    = "{{.NodeAddress}}"
-    node_datacenter = "{{.NodeDatacenter}}"
-    node_tagged_addresses = {{hclStringMap .NodeTaggedAddresses 3}}
-    node_meta = {{hclStringMap .NodeMeta 3}}
-  }{{if (ne $i $last)}},{{- end}}
+{{ HCLService $s | indent 4 }}
+  } {{- if (ne $i $last)}},{{end}}
   {{- end}}
 {{- end}}{{- with $beforeSrv := service "api"}}
-  {{- with $afterSrv := service "web"}},{{- end}}
+  {{- with $afterSrv := service "web"}},{{end}}
 {{- end}}
 {{- with $srv := service "web"}}
   {{- $last := len $srv | subtract 1}}
   {{- range $i, $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
-    id              = "{{.ID}}"
-    name            = "{{.Name}}"
-    address         = "{{.Address}}"
-    port            = {{.Port}}
-    meta            = {{hclStringMap .ServiceMeta 3}}
-    tags            = {{hclStringList .Tags}}
-    namespace       = {{hclString .Namespace}}
-    status          = "{{.Status}}"
-    node            = "{{.Node}}"
-    node_id         = "{{.NodeID}}"
-    node_address    = "{{.NodeAddress}}"
-    node_datacenter = "{{.NodeDatacenter}}"
-    node_tagged_addresses = {{hclStringMap .NodeTaggedAddresses 3}}
-    node_meta = {{hclStringMap .NodeMeta 3}}
-  }{{if (ne $i $last)}},{{- end}}
+{{ HCLService $s | indent 4 }}
+  } {{- if (ne $i $last)}},{{end}}
   {{- end}}
 {{- end}}
 }
