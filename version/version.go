@@ -13,6 +13,10 @@ var (
 	GitCommit   string
 	GitDescribe string
 
+	// GitDirty is dirty if the working tree has local modifications from HEAD.
+	// These will be filled in by the compiler.
+	GitDirty string
+
 	// The main version number that is being run at the moment.
 	//
 	// Version must conform to the format expected by
@@ -41,7 +45,9 @@ func GetHumanVersion() string {
 		version += fmt.Sprintf("-%s", release)
 	}
 
-	if GitCommit != "" {
+	if GitCommit != "" && GitDirty != "" {
+		version += fmt.Sprintf(" (%s dirty)", GitCommit)
+	} else if GitCommit != "" {
 		version += fmt.Sprintf(" (%s)", GitCommit)
 	}
 

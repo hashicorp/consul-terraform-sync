@@ -14,6 +14,7 @@ PROJECT := $(shell go list -m)
 NAME := $(notdir $(PROJECT))
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
 GIT_DESCRIBE ?= $(shell git describe --tags --always)
+GIT_DIRTY ?= $(shell git diff --stat)
 VERSION := $(shell awk -F\" '/Version/ { print $$2; exit }' "${CURRENT_DIR}/version/version.go")
 
 # Tags specific for building
@@ -24,7 +25,8 @@ LD_FLAGS ?= \
 	-w \
 	-X '${PROJECT}/version.Name=${NAME}' \
 	-X '${PROJECT}/version.GitCommit=${GIT_COMMIT}' \
-	-X '${PROJECT}/version.GitDescribe=${GIT_DESCRIBE}'
+	-X '${PROJECT}/version.GitDescribe=${GIT_DESCRIBE}' \
+	-X '${PROJECT}/version.GitDirty=${GIT_DIRTY}'
 
 # dev builds and installs the project locally to $GOPATH/bin.
 dev:
