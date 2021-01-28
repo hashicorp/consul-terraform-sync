@@ -6,9 +6,11 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/PaloAltoNetworks/pango"
 	"github.com/PaloAltoNetworks/pango/commit"
+	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -19,6 +21,9 @@ const (
 	// Users with custom roles currently return an error for an empty commit with
 	// this server response prefix. See GH-73 for more details.
 	emptyCommitServerRespPrefix = `<response status="success" code="13">`
+
+	// max number of retries
+	maxRetris = 4
 )
 
 //go:generate mockery --name=panosClient  --structname=PanosClient --output=../mocks/handler
@@ -47,6 +52,7 @@ type Panos struct {
 	adminUser    string
 	configPath   string
 	autoCommit   bool
+	retry        retry.Retry
 }
 
 // NewPanos configures and returns a new panos handler
@@ -107,6 +113,7 @@ func NewPanos(c map[string]interface{}) (*Panos, error) {
 		adminUser:    username,
 		configPath:   configPath,
 		autoCommit:   autoCommit,
+		retry:        retry.NewRetry(maxRetris, time.Now().UnixNano()),
 	}, nil
 }
 
@@ -121,13 +128,13 @@ func (h *Panos) Do(ctx context.Context, prevErr error) error {
 		committing, h.providerConf.Hostname)
 	var err error
 	if h.autoCommit {
-		err = h.commit()
+		err = h.commit(ctx)
 	}
 	return callNext(ctx, h.next, prevErr, err)
 }
 
 // commit calls panos' InitializeUsing & Commit SDK
-func (h *Panos) commit() error {
+func (h *Panos) commit(ctx context.Context) error {
 	if err := h.client.InitializeUsing(h.configPath, true); err != nil {
 		// potential optimizations to call Initialize() once / less frequently
 		log.Printf("[ERR] (handler.panos) error initializing panos client: %s", err)
@@ -139,17 +146,30 @@ func (h *Panos) commit() error {
 		Admins:      []string{h.adminUser},
 		Description: "Consul Terraform Sync Commit",
 	}
-	job, resp, err := h.client.Commit(c.Element(), "", nil)
-	if emptyCommit(job, resp, err) {
+	tryCommit := func(ctx context.Context) error {
+		job, resp, err := h.client.Commit(c.Element(), "", nil)
+		if emptyCommit(job, resp, err) {
+			return nil
+		}
+		if err != nil {
+			log.Printf("[ERR] (handler.panos) error committing: %s. Server response: '%s'", err, resp)
+			return err
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
+		if err := h.client.WaitForJob(job, nil); err != nil {
+			log.Printf("[ERR] (handler.panos) error waiting for panos commit to finish: %s", err)
+			return err
+		}
 		return nil
 	}
-	if err != nil {
-		log.Printf("[ERR] (handler.panos) error committing: %s. Server response: '%s'", err, resp)
-		return err
-	}
 
-	if err := h.client.WaitForJob(job, nil); err != nil {
-		log.Printf("[ERR] (handler.panos) error waiting for panos commit to finish: %s", err)
+	if err := h.retry.Do(ctx, tryCommit, "panos commit"); err != nil {
 		return err
 	}
 

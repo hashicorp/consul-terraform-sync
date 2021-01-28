@@ -8,6 +8,7 @@ import (
 
 	"github.com/PaloAltoNetworks/pango"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/handler"
+	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -137,7 +138,8 @@ func TestPanosDo(t *testing.T) {
 			Return(uint(1), []byte("message"), nil).Once()
 		m.On("WaitForJob", mock.Anything, mock.Anything).Return(nil).Once()
 		m.On("String").Return("client string").Once()
-		h := &Panos{client: m, autoCommit: true}
+
+		h := &Panos{client: m, autoCommit: true, retry: retry.NewTestRetry(1)}
 		assert.NoError(t, h.Do(context.Background(), nil))
 		h.autoCommit = false
 		assert.NoError(t, h.Do(context.Background(), nil))
@@ -146,13 +148,13 @@ func TestPanosDo(t *testing.T) {
 
 func TestPanosCommit(t *testing.T) {
 	cases := []struct {
-		name       string
-		initReturn error
-		commitJob  uint
-		commitResp []byte
-		commitErr  error
-		waitReturn error
-		expectErr  bool
+		name         string
+		initReturn   error
+		commitJob    uint
+		commitResp   []byte
+		commitReturn error
+		waitReturn   error
+		expectErr    bool
 	}{
 		{
 			"happy path",
@@ -207,18 +209,39 @@ func TestPanosCommit(t *testing.T) {
 			m.On("InitializeUsing", mock.Anything, mock.Anything, mock.Anything).
 				Return(tc.initReturn).Once()
 			m.On("Commit", mock.Anything, mock.Anything, mock.Anything).
-				Return(tc.commitJob, tc.commitResp, tc.commitErr).Once()
+				Return(tc.commitJob, tc.commitResp, tc.commitReturn)
 			m.On("WaitForJob", mock.Anything, mock.Anything).
-				Return(tc.waitReturn).Once()
+				Return(tc.waitReturn)
 			m.On("String").Return("client string").Once()
 
-			h := &Panos{client: m}
-			err := h.commit()
+			h := &Panos{client: m, retry: retry.NewTestRetry(1)}
+			err := h.commit(context.Background())
 			if tc.expectErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
+
+			expectedRetries := func() (commitTries int, waitTries int) {
+				i, j := tc.initReturn == nil, tc.commitJob != 0
+				c, w := tc.commitReturn == nil, tc.waitReturn == nil
+				switch {
+				case !i: // init fails, others not reached
+					return 0, 0
+				case !j: // job 0, commit called but not needed (skip waiting)
+					return 1, 0
+				case !c: // commit fails, wait never reached
+					return 2, 0
+				case c && w: // everyone happy
+					return 1, 1
+				case c && !w: // wait fails
+					return 2, 2
+				}
+				return -1, -1 // never reached
+			}
+			commitTries, waitTries := expectedRetries()
+			m.AssertNumberOfCalls(t, "Commit", commitTries)
+			m.AssertNumberOfCalls(t, "WaitForJob", waitTries)
 		})
 	}
 }
