@@ -10,10 +10,11 @@ require (
 	github.com/hashicorp/consul v1.8.0
 	github.com/hashicorp/consul/sdk v0.5.0
 	github.com/hashicorp/go-checkpoint v0.5.0
+	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.2.1
-	github.com/hashicorp/hcat v0.0.0-20210122002113-a06a4c3ec618
+	github.com/hashicorp/hcat v0.0.0-20210126174106-fbb1851663ad
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/hcl/v2 v2.6.0
 	github.com/hashicorp/logutils v1.0.0
@@ -24,7 +25,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	github.com/tidwall/pretty v1.0.2 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect

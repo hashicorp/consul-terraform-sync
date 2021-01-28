@@ -4,6 +4,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/hcat/tfunc"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -13,13 +14,12 @@ import (
 // HCLTmplFuncMap is the map of template functions for rendering HCL
 // to their respective implementations
 func HCLTmplFuncMap(meta map[string]map[string]string) template.FuncMap {
-	return template.FuncMap{
-		"indent":   tfunc.Helpers()["indent"],
-		"subtract": tfunc.Math()["subtract"],
-
-		"joinStrings": joinStringsFunc,
-		"HCLService":  hclServiceFunc(meta),
-	}
+	tmplFuncs := hcat.FuncMapConsulV1()
+	tmplFuncs["indent"] = tfunc.Helpers()["indent"]
+	tmplFuncs["subtract"] = tfunc.Math()["subtract"]
+	tmplFuncs["joinStrings"] = joinStringsFunc
+	tmplFuncs["HCLService"] = hclServiceFunc(meta)
+	return tmplFuncs
 }
 
 // JoinStrings joins an optional number of strings with the separator while

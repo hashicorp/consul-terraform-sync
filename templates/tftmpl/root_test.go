@@ -169,3 +169,55 @@ func TestAppendRootProviderBlocks(t *testing.T) {
 		})
 	}
 }
+
+func TestService_hcatQuery(t *testing.T) {
+	testCases := []struct {
+		name     string
+		service  Service
+		expected string
+	}{
+		{
+			"empty",
+			Service{},
+			`""`,
+		}, {
+			"base",
+			Service{Name: "app"},
+			`"app"`,
+		}, {
+			"datacenter",
+			Service{
+				Name:       "app",
+				Datacenter: "dc1",
+			},
+			`"app" "dc=dc1"`,
+		}, {
+			"namespace",
+			Service{
+				Name:      "app",
+				Namespace: "namespace",
+			},
+			`"app" "ns=namespace"`,
+		}, {
+			"tag",
+			Service{
+				Name: "app",
+				Tag:  "my-tag",
+			},
+			`"app" "\"my-tag\" in Service.Tags"`,
+		}, {
+			"all",
+			Service{
+				Name:       "app",
+				Datacenter: "dc1",
+				Namespace:  "namespace",
+				Tag:        "my-tag",
+			},
+			`"app" "dc=dc1" "ns=namespace" "\"my-tag\" in Service.Tags"`,
+		},
+	}
+	for _, tc := range testCases {
+		actual := tc.service.hcatQuery()
+		assert.Equal(t, tc.expected, actual)
+	}
+}
