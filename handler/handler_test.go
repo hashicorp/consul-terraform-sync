@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -117,7 +118,7 @@ func ExampleTerraformProviderHandler() {
 			}
 		}
 	}
-	fmt.Println("Handler Errors:", next.Do(nil))
+	fmt.Println("Handler Errors:", next.Do(context.Background(), nil))
 	// Output:
 	// FakeHandler: '1'
 	// FakeHandler: '2'
@@ -152,7 +153,7 @@ func TestCallNext(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			fmt.Println("fake: ", tc.nextH, " equal? ", tc.nextH == nil)
-			err := callNext(tc.nextH, nil, nil)
+			err := callNext(context.Background(), tc.nextH, nil, nil)
 			if tc.nextErr {
 				assert.Error(t, err)
 			} else {

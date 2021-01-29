@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -14,7 +15,7 @@ type Handler interface {
 
 	// Do executes the handler. Receives previous error and returns previous
 	// error wrapped in any new errors.
-	Do(error) error
+	Do(context.Context, error) error
 
 	// SetNext sets the next handler that should be called
 	SetNext(Handler)
@@ -43,11 +44,15 @@ func TerraformProviderHandler(providerName string, config interface{}) (Handler,
 }
 
 // callNext should be called by a handler's Do() to call the next handler
-func callNext(nextH Handler, prevErr, err error) error {
+func callNext(ctx context.Context, nextH Handler, prevErr, err error) error {
 	nextErr := nextError(prevErr, err)
-
 	if nextH != nil {
-		return nextH.Do(nextErr)
+		select {
+		case <-ctx.Done():
+			return nextErr
+		default:
+		}
+		return nextH.Do(ctx, nextErr)
 	}
 	return nextErr
 }

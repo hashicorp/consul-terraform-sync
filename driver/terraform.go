@@ -198,7 +198,7 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	if tf.postApply != nil {
 		log.Printf("[TRACE] (driver.terraform) post-apply out-of-band actions "+
 			"for '%s'", taskName)
-		if err := tf.postApply.Do(nil); err != nil {
+		if err := tf.postApply.Do(ctx, nil); err != nil {
 			return err
 		}
 	}
