@@ -12,11 +12,13 @@ import (
 
 // Retry handles executing and retrying a function
 type Retry struct {
-	maxRetry uint
+	maxRetry uint // doesn't count initial try
 	random   *rand.Rand
+	testMode bool
 }
 
 // NewRetry initializes a retry handler
+// maxRetry is *retries*, so maxRetry of 2 means 3 total tries.
 func NewRetry(maxRetry uint, seed int64) Retry {
 	return Retry{
 		maxRetry: maxRetry,
@@ -25,7 +27,7 @@ func NewRetry(maxRetry uint, seed int64) Retry {
 }
 
 // Do calls a function with exponential retry with a random delay.
-func (r *Retry) Do(ctx context.Context, f func(context.Context) error, desc string) error {
+func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc string) error {
 	var errs error
 
 	err := f(ctx)
@@ -72,7 +74,10 @@ func (r *Retry) Do(ctx context.Context, f func(context.Context) error, desc stri
 
 // waitTime calculates the wait time based off the attempt number based off
 // exponential backoff with a random delay.
-func (r *Retry) waitTime(attempt uint) int {
+func (r Retry) waitTime(attempt uint) int {
+	if r.testMode {
+		return 1
+	}
 	a := float64(attempt)
 	baseTimeSeconds := a * a
 	nextTimeSeconds := (a + 1) * (a + 1)
@@ -80,4 +85,12 @@ func (r *Retry) waitTime(attempt uint) int {
 	delay := r.random.Float64() * delayRange
 	total := (baseTimeSeconds + delay) * float64(time.Second)
 	return int(total)
+}
+
+// Test version, returns retry in test mode (nanosecond retry delay).
+func NewTestRetry(maxRetry uint) Retry {
+	return Retry{
+		maxRetry: maxRetry,
+		testMode: true,
+	}
 }
