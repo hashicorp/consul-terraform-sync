@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"log"
 	"os"
@@ -111,7 +112,7 @@ func NewPanos(c map[string]interface{}) (*Panos, error) {
 
 // Do executes panos' out-of-band Commit API and calls next handler while passing
 // on relevant errors
-func (h *Panos) Do(prevErr error) error {
+func (h *Panos) Do(ctx context.Context, prevErr error) error {
 	committing := "disabled"
 	if h.autoCommit {
 		committing = "enabled"
@@ -122,7 +123,7 @@ func (h *Panos) Do(prevErr error) error {
 	if h.autoCommit {
 		err = h.commit()
 	}
-	return callNext(h.next, prevErr, err)
+	return callNext(ctx, h.next, prevErr, err)
 }
 
 // commit calls panos' InitializeUsing & Commit SDK

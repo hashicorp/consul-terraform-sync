@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"os"
 	"testing"
@@ -124,7 +125,7 @@ func TestPanosDo(t *testing.T) {
 				h.SetNext(next)
 			}
 
-			assert.NoError(t, h.Do(nil))
+			assert.NoError(t, h.Do(context.Background(), nil))
 		})
 	}
 
@@ -137,9 +138,9 @@ func TestPanosDo(t *testing.T) {
 		m.On("WaitForJob", mock.Anything, mock.Anything).Return(nil).Once()
 		m.On("String").Return("client string").Once()
 		h := &Panos{client: m, autoCommit: true}
-		assert.NoError(t, h.Do(nil))
+		assert.NoError(t, h.Do(context.Background(), nil))
 		h.autoCommit = false
-		assert.NoError(t, h.Do(nil))
+		assert.NoError(t, h.Do(context.Background(), nil))
 	})
 }
 

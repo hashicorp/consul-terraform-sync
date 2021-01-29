@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -59,7 +60,7 @@ func NewFake(config map[string]interface{}) (*Fake, error) {
 // Do executes fake handler, which fmt.Print-s the fake handler's name which
 // is the output inspected by handler example. It returns an error if configured
 // to do so.
-func (h *Fake) Do(prevErr error) error {
+func (h *Fake) Do(ctx context.Context, prevErr error) error {
 	fmt.Printf("FakeHandler: '%s'\n", h.name)
 
 	var err error = nil
@@ -74,7 +75,7 @@ func (h *Fake) Do(prevErr error) error {
 		}
 	}
 
-	return callNext(h.next, prevErr, err)
+	return callNext(ctx, h.next, prevErr, err)
 }
 
 // SetNext sets the next handler that should be called

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,7 +89,7 @@ func TestFakeDo(t *testing.T) {
 				h.err = true
 			}
 
-			err := h.Do(nil)
+			err := h.Do(context.Background(), nil)
 			if tc.expectErr {
 				assert.Error(t, err)
 			} else {
@@ -106,13 +107,13 @@ func TestFakeDo(t *testing.T) {
 			first:        true,
 		}
 		// success
-		err := h.Do(nil)
+		err := h.Do(context.Background(), nil)
 		assert.NoError(t, err)
 
 		// failures
-		err = h.Do(nil)
+		err = h.Do(context.Background(), nil)
 		assert.Error(t, err)
-		err = h.Do(nil)
+		err = h.Do(context.Background(), nil)
 		assert.Error(t, err)
 	})
 }
