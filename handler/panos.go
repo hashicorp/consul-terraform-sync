@@ -23,7 +23,7 @@ const (
 	emptyCommitServerRespPrefix = `<response status="success" code="13">`
 
 	// max number of retries
-	maxRetris = 4
+	maxRetries = 4
 )
 
 //go:generate mockery --name=panosClient  --structname=PanosClient --output=../mocks/handler
@@ -113,7 +113,7 @@ func NewPanos(c map[string]interface{}) (*Panos, error) {
 		adminUser:    username,
 		configPath:   configPath,
 		autoCommit:   autoCommit,
-		retry:        retry.NewRetry(maxRetris, time.Now().UnixNano()),
+		retry:        retry.NewRetry(maxRetries, time.Now().UnixNano()),
 	}, nil
 }
 
