@@ -103,7 +103,7 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 
 // Version returns the Terraform CLI version for the Terraform driver.
 func (tf *Terraform) Version() string {
-	return TerraformVersion
+	return TerraformVersion.String()
 }
 
 // InitTask initializes the task by creating the Terraform root module and related
@@ -140,10 +140,11 @@ func (tf *Terraform) InitTask(force bool) error {
 	}
 
 	input := tftmpl.RootModuleInputData{
-		Backend:      tf.backend,
-		Providers:    task.Providers.ProviderBlocks(),
-		ProviderInfo: task.ProviderInfo,
-		Services:     services,
+		TerraformVersion: TerraformVersion,
+		Backend:          tf.backend,
+		Providers:        task.Providers.ProviderBlocks(),
+		ProviderInfo:     task.ProviderInfo,
+		Services:         services,
 		Task: tftmpl.Task{
 			Description: task.Description,
 			Name:        task.Name,

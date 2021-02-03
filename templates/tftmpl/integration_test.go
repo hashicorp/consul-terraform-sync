@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/hashicorp/hcat"
+	goVersion "github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"
@@ -33,6 +34,7 @@ func TestInitRootModule(t *testing.T) {
 	expectedPerm := os.FileMode(0660)
 
 	input := RootModuleInputData{
+		TerraformVersion: goVersion.Must(goVersion.NewSemver("0.14.2")),
 		Backend: map[string]interface{}{
 			"consul": map[string]interface{}{
 				"scheme": "https",

@@ -37,6 +37,7 @@ variable "services" {
 variable "testProvider" {
   default     = null
   description = "Configuration object for testProvider"
+  sensitive   = true
   type = object({
     alias = string
     attr  = string

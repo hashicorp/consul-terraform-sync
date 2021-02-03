@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	goVersion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,6 +70,7 @@ func TestNewFiles(t *testing.T) {
 			Func:   newVariablesTF,
 			Golden: "testdata/variables.tf",
 			Input: RootModuleInputData{
+				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.14.2")),
 				Providers: []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(
 					map[string]interface{}{
 						"testProvider": map[string]interface{}{
