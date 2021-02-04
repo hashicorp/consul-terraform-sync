@@ -20,7 +20,7 @@ import (
 const fallbackTFVersion = "0.13.5"
 
 // TerraformVersion is the version of Terraform CLI for the Terraform driver.
-var TerraformVersion string
+var TerraformVersion *goVersion.Version
 
 // InstallTerraform installs the Terraform binary to the configured path.
 // If an existing Terraform exists in the path, it is checked for compatibility.
@@ -45,14 +45,13 @@ func InstallTerraform(ctx context.Context, conf *config.TerraformConfig) error {
 		}
 
 		// Set the global variable to the installed version
-		version := tfVersion.String()
-		TerraformVersion = version
+		TerraformVersion = tfVersion
 		if !compatible {
 			return errUnsupportedTerraformVersion
 		}
 
 		log.Printf("[INFO] (driver.terraform) skipping install, terraform %s "+
-			"already exists at path %s/terraform", version, path)
+			"already exists at path %s/terraform", tfVersion.String(), path)
 		return nil
 	}
 
@@ -65,7 +64,7 @@ func InstallTerraform(ctx context.Context, conf *config.TerraformConfig) error {
 	log.Printf("[INFO] (driver.terraform) successfully installed terraform")
 
 	// Set the global variable to the installed version
-	TerraformVersion = tfVersion.String()
+	TerraformVersion = tfVersion
 	return nil
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/version"
+	goVersion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -118,12 +119,13 @@ func (s Service) hcatQuery() string {
 
 // RootModuleInputData is the input data used to generate the root module
 type RootModuleInputData struct {
-	Backend      map[string]interface{}
-	Providers    []hcltmpl.NamedBlock
-	ProviderInfo map[string]interface{}
-	Services     []Service
-	Task         Task
-	Variables    hcltmpl.Variables
+	TerraformVersion *goVersion.Version
+	Backend          map[string]interface{}
+	Providers        []hcltmpl.NamedBlock
+	ProviderInfo     map[string]interface{}
+	Services         []Service
+	Task             Task
+	Variables        hcltmpl.Variables
 
 	backend *hcltmpl.NamedBlock
 }

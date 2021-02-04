@@ -3,9 +3,99 @@ package tftmpl
 import (
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	goVersion "github.com/hashicorp/go-version"
+	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/stretchr/testify/assert"
 	"github.com/zclconf/go-cty/cty"
 )
+
+func TestAppendNamedBlockVariable(t *testing.T) {
+	block := hcltmpl.NewNamedBlock(map[string]interface{}{
+		"foo": map[string]interface{}{
+			"address": "127.0.0.1",
+			"token":   "foobar",
+		},
+	})
+	testCases := []struct {
+		name     string
+		hclBlock hcltmpl.NamedBlock
+		expected string
+	}{
+		{
+			"empty",
+			hcltmpl.NamedBlock{},
+			`variable "" {
+  default     = null
+  description = "Configuration object for "
+  sensitive   = true
+  type        = object({})
+}
+`,
+		}, {
+			"simple",
+			block,
+			`variable "foo" {
+  default     = null
+  description = "Configuration object for foo"
+  sensitive   = true
+  type = object({
+    address = string
+    token   = string
+  })
+}
+`,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			hclFile := hclwrite.NewFile()
+			body := hclFile.Body()
+			appendNamedBlockVariable(body, tc.hclBlock, tfVersionSensitive, true)
+			content := hclwrite.Format(hclFile.Bytes())
+
+			assert.Equal(t, tc.expected, string(content))
+		})
+	}
+
+	t.Run("sensitive disabled", func(t *testing.T) {
+		hclFile := hclwrite.NewFile()
+		body := hclFile.Body()
+		appendNamedBlockVariable(body, block, tfVersionSensitive, false)
+		content := hclwrite.Format(hclFile.Bytes())
+
+		expected := `variable "foo" {
+  default     = null
+  description = "Configuration object for foo"
+  type = object({
+    address = string
+    token   = string
+  })
+}
+`
+		assert.Equal(t, expected, string(content))
+	})
+
+	t.Run("sensitive unsupported", func(t *testing.T) {
+		tfVersion := goVersion.Must(goVersion.NewSemver("0.13.5"))
+
+		hclFile := hclwrite.NewFile()
+		body := hclFile.Body()
+		appendNamedBlockVariable(body, block, tfVersion, true)
+		content := hclwrite.Format(hclFile.Bytes())
+
+		expected := `variable "foo" {
+  default     = null
+  description = "Configuration object for foo"
+  type = object({
+    address = string
+    token   = string
+  })
+}
+`
+		assert.Equal(t, expected, string(content))
+	})
+}
 
 func TestVariableTypeString(t *testing.T) {
 	testCases := []struct {

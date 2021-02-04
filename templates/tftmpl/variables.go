@@ -7,10 +7,15 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	goVersion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/zclconf/go-cty/cty"
 )
+
+// tfVersionSensitive is the first version to support the sensitive argument
+// for variables
+var tfVersionSensitive = goVersion.Must(goVersion.NewSemver("0.14.0"))
 
 // VariableServices is versioned to track compatibility with the generated
 // root module with modules.
@@ -61,7 +66,7 @@ func newVariablesTF(w io.Writer, input *RootModuleInputData) error {
 	rootBody.AppendNewline()
 	lastIdx := len(input.Providers) - 1
 	for i, p := range input.Providers {
-		appendNamedBlockVariable(rootBody, p)
+		appendNamedBlockVariable(rootBody, p, input.TerraformVersion, true)
 		if i != lastIdx {
 			rootBody.AppendNewline()
 		}
@@ -76,11 +81,18 @@ func newVariablesTF(w io.Writer, input *RootModuleInputData) error {
 
 // appendNamedBlockVariable creates an HCL file object that contains the variable
 // blocks used by the root module.
-func appendNamedBlockVariable(body *hclwrite.Body, block hcltmpl.NamedBlock) {
+func appendNamedBlockVariable(body *hclwrite.Body, block hcltmpl.NamedBlock,
+	tfVersion *goVersion.Version, sensitive bool) {
 	pBody := body.AppendNewBlock("variable", []string{block.Name}).Body()
 	pBody.SetAttributeValue("default", cty.NullVal(*block.ObjectType()))
 	pBody.SetAttributeValue("description", cty.StringVal(fmt.Sprintf(
 		"Configuration object for %s", block.Name)))
+
+	if sensitive {
+		if tfVersion != nil && tfVersionSensitive.LessThanOrEqual(tfVersion) {
+			pBody.SetAttributeValue("sensitive", cty.BoolVal(true))
+		}
+	}
 
 	v := block.ObjectVal()
 	rawTypeAttr := fmt.Sprintf("type = %s", variableTypeString(*v, v.Type()))
