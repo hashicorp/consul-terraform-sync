@@ -10,6 +10,7 @@ FEATURES:
 IMPROVEMENTS:
 * Changed default `consul.transport` options used for the Consul client to improve TCP connection reuse. [[GH-164](https://github.com/hashicorp/consul-terraform-sync/pull/164)]
 * Mark generated provider variables as [sensitive for Terraform 0.14+](https://www.hashicorp.com/blog/terraform-0-14-adds-the-ability-to-redact-sensitive-values-in-console-output) [[GH-181](https://github.com/hashicorp/consul-terraform-sync/pull/181)]
+* Separate provider-related variables into a different file from services [[GH-182](https://github.com/hashicorp/consul-terraform-sync/pull/182), [GH-183](https://github.com/hashicorp/consul-terraform-sync/pull/183)]
 
 BUG FIXES:
 * Fix edge case where multiple tasks have identical `terraform.tfvars.tmpl` files causing Consul Terraform Sync to indefinitely hang. [[GH-167](https://github.com/hashicorp/consul-terraform-sync/pull/167)]
