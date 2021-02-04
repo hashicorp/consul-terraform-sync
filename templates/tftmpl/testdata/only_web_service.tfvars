@@ -7,12 +7,6 @@
 # Task: test
 # Description: user description for task named 'test'
 
-testProvider = {
-  alias = "tp"
-  attr  = "value"
-  count = 10
-}
-
 services = {
   "web.worker-01.dc1" : {
     id              = "web"

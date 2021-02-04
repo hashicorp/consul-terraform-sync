@@ -7,7 +7,6 @@
 # Task: test
 # Description: user description for task named 'test'
 
-
 variable "b" {
   default = null
   type    = bool

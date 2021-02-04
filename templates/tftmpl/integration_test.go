@@ -18,8 +18,8 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul/sdk/testutil"
-	"github.com/hashicorp/hcat"
 	goVersion "github.com/hashicorp/go-version"
+	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"

@@ -7,7 +7,6 @@
 # Task: my-task
 # Description: automate services for website X
 
-
 variable "count" {
   default = null
   type    = number

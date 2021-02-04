@@ -7,12 +7,6 @@
 # Task: my-task
 # Description: automate services for website X
 
-myprovider = {
-  address  = "myprovider.example.com"
-  attr     = "foobar"
-  username = "admin"
-}
-
 services = {
   "api.worker-01.dc1" : {
     id              = "api"
