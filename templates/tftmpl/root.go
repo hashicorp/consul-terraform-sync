@@ -28,19 +28,28 @@ const (
 	// RootFilename is the file name for the root module.
 	RootFilename = "main.tf"
 
-	// VarsFilename is the file name for the variable definitions in the root module
+	// VarsFilename is the file name for the variable definitions in the root
+	// module. This includes the required services variable and generated
+	// provider variables based on CTS user configuration for the task.
 	VarsFilename = "variables.tf"
 
 	// ModuleVarsFilename is the file name for the variable definitions corresponding
 	// to the input variables from a user that is specific to the task's module.
 	ModuleVarsFilename = "variables.module.tf"
 
-	// TFVarsFilename is the file name for input variables for configured
-	// Terraform providers and Consul service information.
+	// TFVarsFilename is the file name where the required Consul services input
+	// variable is written to.
 	TFVarsFilename = "terraform.tfvars"
 
-	// TFVarsTmplFilename is the template file for TFVarsFilename
+	// TFVarsTmplFilename is the template file for TFVarsFilename. This is used
+	// by hcat for monitoring service changes from Consul.
 	TFVarsTmplFilename = "terraform.tfvars.tmpl"
+
+	// ProviderTFVarsFilename is the file name for input variables for
+	// configured Terraform providers. Generated provider input variables are
+	// written in a separate file from terraform.tfvars because it may contain
+	// sensitive or secret values.
+	ProvidersTFVarsFilename = "providers.tfvars"
 )
 
 var (
@@ -62,11 +71,12 @@ var (
 
 `
 
-	rootFileFuncs = map[string]func(io.Writer, *RootModuleInputData) error{
-		RootFilename:       newMainTF,
-		VarsFilename:       newVariablesTF,
-		ModuleVarsFilename: newModuleVariablesTF,
-		TFVarsTmplFilename: newTFVarsTmpl,
+	rootFileFuncs = map[string]func(io.Writer, string, *RootModuleInputData) error{
+		RootFilename:            newMainTF,
+		VarsFilename:            newVariablesTF,
+		ModuleVarsFilename:      newModuleVariablesTF,
+		TFVarsTmplFilename:      newTFVarsTmpl,
+		ProvidersTFVarsFilename: newProvidersTFVars,
 	}
 )
 
@@ -189,7 +199,7 @@ func InitRootModule(input *RootModuleInputData, modulePath string, filePerms os.
 				return err
 			}
 
-			if err := newFileFunc(f, input); err != nil {
+			if err := newFileFunc(f, filename, input); err != nil {
 				log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
 					"root module for %q: %s", filename, input.Task.Name, err)
 				return err
@@ -203,8 +213,8 @@ func InitRootModule(input *RootModuleInputData, modulePath string, filePerms os.
 }
 
 // newMainTF writes content used for main.tf of a Terraform root module.
-func newMainTF(w io.Writer, input *RootModuleInputData) error {
-	err := writePreamble(w, input.Task, RootFilename)
+func newMainTF(w io.Writer, filename string, input *RootModuleInputData) error {
+	err := writePreamble(w, input.Task, filename)
 	if err != nil {
 		return err
 	}

@@ -7,12 +7,6 @@
 # Task: test
 # Description: user description for task named 'test'
 
-testProvider = {
-  alias = "tp"
-  attr  = "value"
-  count = 10
-}
-
 services = {
 {{- with $srv := service "api" "dc=dc1" "\"tag\" in Service.Tags" }}
   {{- $last := len $srv | subtract 1}}

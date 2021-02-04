@@ -48,10 +48,11 @@ variable "services" {
 }
 `)
 
-// newVariablesTF writes content used for variables.tf of a Terraform root
-// module.
-func newVariablesTF(w io.Writer, input *RootModuleInputData) error {
-	err := writePreamble(w, input.Task, VarsFilename)
+// newVariablesTF writes variable definitions to a file. This includes the
+// required services variable and generated provider variables based on CTS
+// user configuration for the task.
+func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) error {
+	err := writePreamble(w, input.Task, filename)
 	if err != nil {
 		return err
 	}

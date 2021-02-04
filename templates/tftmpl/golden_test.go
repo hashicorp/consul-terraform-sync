@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	goVersion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	goVersion "github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"
@@ -26,7 +26,7 @@ func TestNewFiles(t *testing.T) {
 
 	testCases := []struct {
 		Name   string
-		Func   func(io.Writer, *RootModuleInputData) error
+		Func   func(io.Writer, string, *RootModuleInputData) error
 		Golden string
 		Input  RootModuleInputData
 	}{
@@ -113,6 +113,21 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
+			Name:   "providers.tfvars",
+			Func:   newProvidersTFVars,
+			Golden: "testdata/providers.tfvars",
+			Input: RootModuleInputData{
+				Providers: []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(
+					map[string]interface{}{
+						"testProvider": map[string]interface{}{
+							"alias": "tp",
+							"attr":  "value",
+							"count": 10,
+						},
+					})},
+				Task: task,
+			},
+		}, {
 			Name:   "variables.module.tf",
 			Func:   newModuleVariablesTF,
 			Golden: "testdata/variables.module.tf",
@@ -151,7 +166,7 @@ func TestNewFiles(t *testing.T) {
 			input := tc.Input
 			input.Init()
 			b := new(bytes.Buffer)
-			err := tc.Func(b, &input)
+			err := tc.Func(b, tc.Name, &input)
 			require.NoError(t, err)
 			checkGoldenFile(t, tc.Golden, b.Bytes())
 		})

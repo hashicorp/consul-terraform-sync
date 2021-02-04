@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -76,35 +75,43 @@ func newHealthService(s *dep.HealthService, ctsUserDefinedMeta map[string]string
 	}
 }
 
-// newTFVarsTmpl writes content to assign values to the root module's variables
-// that is commonly placed in a .tfvars file.
-func newTFVarsTmpl(w io.Writer, input *RootModuleInputData) error {
-	err := writePreamble(w, input.Task, VarsFilename)
+// newTFVarsTmpl writes the hcat services template to a .tfvars file. This is used
+// by hcat for monitoring service changes from Consul.
+func newTFVarsTmpl(w io.Writer, filename string, input *RootModuleInputData) error {
+	err := writePreamble(w, input.Task, filename)
 	if err != nil {
 		return err
 	}
 
 	hclFile := hclwrite.NewEmptyFile()
 	body := hclFile.Body()
-	appendNamedBlockValues(body, input.Providers)
-	body.AppendNewline()
 	appendRawServiceTemplateValues(body, input.Services)
 
 	_, err = hclFile.WriteTo(w)
 	return err
 }
 
-// appendNamedBlockValues appends blocks that assign value to the named
-// variable blocks genernated by `appendNamedBlockVariable`
-func appendNamedBlockValues(body *hclwrite.Body, blocks []hcltmpl.NamedBlock) {
-	lastIdx := len(blocks) - 1
-	for i, b := range blocks {
-		obj := b.ObjectVal()
-		body.SetAttributeValue(b.Name, *obj)
+// newProvidersTFVars writes input variables for configured Terraform providers.
+func newProvidersTFVars(w io.Writer, filename string, input *RootModuleInputData) error {
+	err := writePreamble(w, input.Task, filename)
+	if err != nil {
+		return err
+	}
+
+	hclFile := hclwrite.NewEmptyFile()
+	body := hclFile.Body()
+
+	lastIdx := len(input.Providers) - 1
+	for i, p := range input.Providers {
+		obj := p.ObjectVal()
+		body.SetAttributeValue(p.Name, *obj)
 		if i != lastIdx {
 			body.AppendNewline()
 		}
 	}
+
+	_, err = hclFile.WriteTo(w)
+	return err
 }
 
 // appendRawServiceTemplateValues appends raw lines representing blocks that

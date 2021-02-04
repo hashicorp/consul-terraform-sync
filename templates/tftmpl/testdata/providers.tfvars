@@ -7,5 +7,8 @@
 # Task: test
 # Description: user description for task named 'test'
 
-services = {
+testProvider = {
+  alias = "tp"
+  attr  = "value"
+  count = 10
 }
