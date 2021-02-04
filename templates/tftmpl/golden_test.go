@@ -70,7 +70,7 @@ func TestNewFiles(t *testing.T) {
 			Func:   newVariablesTF,
 			Golden: "testdata/variables.tf",
 			Input: RootModuleInputData{
-				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.14.2")),
+				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
 				Providers: []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(
 					map[string]interface{}{
 						"testProvider": map[string]interface{}{

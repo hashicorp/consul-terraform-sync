@@ -34,7 +34,7 @@ func TestInitRootModule(t *testing.T) {
 	expectedPerm := os.FileMode(0660)
 
 	input := RootModuleInputData{
-		TerraformVersion: goVersion.Must(goVersion.NewSemver("0.14.2")),
+		TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
 		Backend: map[string]interface{}{
 			"consul": map[string]interface{}{
 				"scheme": "https",
