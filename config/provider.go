@@ -146,9 +146,14 @@ func (c *TerraformProviderConfig) Validate() error {
 		// Validate task_env format if exists
 		taskEnv, exists := block["task_env"]
 		if exists {
-			_, ok := taskEnv.(map[string]string)
+			taskEnvMap, ok := taskEnv.(map[string]interface{})
 			if !ok {
-				return fmt.Errorf("unexpected task_env block format")
+				return fmt.Errorf("unexpected task_env block format: task_env should be a map of strings")
+			}
+			for k, v := range taskEnvMap {
+				if _, ok := v.(string); !ok {
+					return fmt.Errorf("unexpected task_env block format: value for %q should be a string", k)
+				}
 			}
 		}
 	}
