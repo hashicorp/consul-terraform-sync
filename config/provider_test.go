@@ -276,7 +276,7 @@ func TestProviderConfigs_Validate(t *testing.T) {
 			"task_env",
 			&TerraformProviderConfigs{{
 				"null": map[string]interface{}{
-					"task_env": map[string]string{
+					"task_env": map[string]interface{}{
 						"NULL_TOKEN": "{{ env \"MY_CTS_NULL_TOKEN\" }}",
 						"NULL_BOOL":  "true",
 						"NULL_NUM":   "10",
