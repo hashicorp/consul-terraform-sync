@@ -3,10 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"log"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -16,11 +13,8 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
-	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/hcat"
 )
-
-const filePerm = os.FileMode(0640)
 
 // Controller describes the interface for monitoring Consul for relevant changes
 // and triggering the driver to update network infrastructure.
@@ -44,7 +38,6 @@ type Oncer interface {
 type unit struct {
 	taskName string
 	driver   driver.Driver
-	template templates.Template
 
 	providers []string
 	services  []string
@@ -52,12 +45,11 @@ type unit struct {
 }
 
 type baseController struct {
-	conf       *config.Config
-	newDriver  func(*config.Config, driver.Task) (driver.Driver, error)
-	fileReader func(string) ([]byte, error)
-	units      []unit
-	watcher    templates.Watcher
-	resolver   templates.Resolver
+	conf      *config.Config
+	newDriver func(*config.Config, driver.Task) (driver.Driver, error)
+	units     []unit
+	watcher   templates.Watcher
+	resolver  templates.Resolver
 }
 
 func newBaseController(conf *config.Config) (*baseController, error) {
@@ -73,11 +65,10 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 	}
 
 	return &baseController{
-		conf:       conf,
-		newDriver:  nd,
-		fileReader: ioutil.ReadFile,
-		watcher:    watcher,
-		resolver:   hcat.NewResolver(),
+		conf:      conf,
+		newDriver: nd,
+		watcher:   watcher,
+		resolver:  hcat.NewResolver(),
 	}, nil
 }
 
@@ -119,16 +110,8 @@ func (ctrl *baseController) init(ctx context.Context) error {
 			return err
 		}
 
-		template, err := newTaskTemplate(task.Name, ctrl.conf, ctrl.fileReader)
-		if err != nil {
-			log.Printf("[ERR] (ctrl) error initializing template "+
-				"for task %q: %s", task.Name, err)
-			return err
-		}
-
 		units = append(units, unit{
 			taskName:  task.Name,
-			template:  template,
 			driver:    d,
 			providers: task.ProviderNames(),
 			services:  task.ServiceNames(),
@@ -250,56 +233,19 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 		}
 
 		tasks[i] = driver.Task{
-			Description:  *t.Description,
-			Name:         *t.Name,
-			Providers:    providers,
-			ProviderInfo: providerInfo,
-			Services:     services,
-			Source:       *t.Source,
-			VarFiles:     t.VarFiles,
-			Version:      *t.Version,
+			Description:     *t.Description,
+			Name:            *t.Name,
+			Providers:       providers,
+			ProviderInfo:    providerInfo,
+			Services:        services,
+			Source:          *t.Source,
+			VarFiles:        t.VarFiles,
+			Version:         *t.Version,
+			UserDefinedMeta: conf.Services.CTSUserDefinedMeta(t.Services),
 		}
 	}
 
 	return tasks
-}
-
-// newTaskTemplate creates templates to be monitored and rendered.
-func newTaskTemplate(taskName string, conf *config.Config, fileReader func(string) ([]byte, error)) (templates.Template, error) {
-	if conf.Driver.Terraform == nil {
-		return nil, errors.New("unsupported driver to run tasks")
-	}
-
-	var task *config.TaskConfig
-	for _, t := range *conf.Tasks {
-		if *t.Name == taskName {
-			task = t
-		}
-	}
-	if task == nil {
-		return nil, fmt.Errorf("configuration for task not found: %s", taskName)
-	}
-
-	tmplFullpath := filepath.Join(*conf.Driver.Terraform.WorkingDir, taskName, tftmpl.TFVarsTmplFilename)
-	tfvarsFilepath := filepath.Join(*conf.Driver.Terraform.WorkingDir, taskName, tftmpl.TFVarsFilename)
-
-	content, err := fileReader(tmplFullpath)
-	if err != nil {
-		return nil, err
-	}
-
-	renderer := hcat.NewFileRenderer(hcat.FileRendererInput{
-		Path:  tfvarsFilepath,
-		Perms: filePerm,
-	})
-
-	metaMap := conf.Services.CTSUserDefinedMeta(task.Services)
-
-	return hcat.NewTemplate(hcat.TemplateInput{
-		Contents:     string(content),
-		Renderer:     renderer,
-		FuncMapMerge: tftmpl.HCLTmplFuncMap(metaMap),
-	}), nil
 }
 
 // getService is a helper to find and convert a user-defined service

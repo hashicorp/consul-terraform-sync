@@ -7,9 +7,86 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
+	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
+
+func TestRenderTemplate(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name           string
+		expectError    bool
+		expectRendered bool
+		renderErr      error
+		runErr         error
+		runResult      hcat.ResolveEvent
+	}{
+		{
+			"happy path",
+			false,
+			true,
+			nil,
+			nil,
+			hcat.ResolveEvent{Complete: true},
+		},
+		{
+			"data not completely fetched",
+			false,
+			false,
+			nil,
+			nil,
+			hcat.ResolveEvent{Complete: false},
+		},
+		{
+			"error on resolver.Run()",
+			true,
+			false,
+			nil,
+			errors.New("error on resolver.Run()"),
+			hcat.ResolveEvent{Complete: true},
+		},
+		{
+			"error on template.Render()",
+			true,
+			false,
+			errors.New("error on template.Render()"),
+			nil,
+			hcat.ResolveEvent{Complete: true},
+		},
+	}
+	ctx := context.Background()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			r := new(mocksTmpl.Resolver)
+			r.On("Run", mock.Anything, mock.Anything).
+				Return(tc.runResult, tc.runErr).Once()
+
+			tmpl := new(mocksTmpl.Template)
+			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.renderErr).Once()
+
+			tf := &Terraform{
+				task:     Task{Name: "RenderTemplateTest"},
+				resolver: r,
+				template: tmpl,
+			}
+
+			actual, err := tf.RenderTemplate(ctx, new(mocksTmpl.Watcher))
+			assert.Equal(t, tc.expectRendered, actual)
+
+			if tc.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.name)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestApplyTask(t *testing.T) {
 	t.Parallel()
@@ -90,6 +167,43 @@ func TestApplyTask(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestInitTaskTemplates(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		expectError bool
+		fileReader  func(string) ([]byte, error)
+	}{
+		{
+			"error on reading file",
+			true,
+			func(string) ([]byte, error) {
+				return []byte{}, errors.New("error on newTaskTemplates()")
+			},
+		},
+		{
+			"happy path",
+			false,
+			func(string) ([]byte, error) { return []byte{}, nil },
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tf := &Terraform{
+				fileReader: tc.fileReader,
+			}
+			err := tf.initTaskTemplate()
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

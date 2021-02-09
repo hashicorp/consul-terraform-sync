@@ -84,29 +84,22 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 }
 
 func (ctrl *ReadOnly) checkInspect(ctx context.Context, u unit) (bool, error) {
-	tmpl := u.template
 	taskName := u.taskName
 
 	log.Printf("[TRACE] (ctrl) checking dependencies changes for task %s", taskName)
-	result, err := ctrl.resolver.Run(tmpl, ctrl.watcher)
+
+	d := u.driver
+	rendered, err := d.RenderTemplate(ctx, ctrl.watcher)
 	if err != nil {
-		return false, fmt.Errorf("error fetching template dependencies for task %s: %s",
+		return false, fmt.Errorf("error rendering template for task %s: %s",
 			taskName, err)
 	}
 
-	// result.Complete is only `true` if the template has new data that has been
-	// completely fetched. Rendering a template for the first time may take several
-	// cycles to load all the dependencies asynchronously.
-	if result.Complete {
-		log.Printf("[DEBUG] (ctrl) change detected for task %s", taskName)
-		rendered, err := tmpl.Render(result.Contents)
-		if err != nil {
-			return false, fmt.Errorf("error rendering template for task %s: %s",
-				taskName, err)
-		}
+	// rendering a template may take several cycles in order to completely fetch
+	// new data
+	if rendered {
 		log.Printf("[TRACE] (ctrl) template for task %q rendered: %+v", taskName, rendered)
 
-		d := u.driver
 		log.Printf("[INFO] (ctrl) inspecting task %s", taskName)
 		if err := d.InspectTask(ctx); err != nil {
 			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
@@ -115,5 +108,5 @@ func (ctrl *ReadOnly) checkInspect(ctx context.Context, u unit) (bool, error) {
 		log.Printf("[INFO] (ctrl) inspected task %s", taskName)
 	}
 
-	return result.Complete, nil
+	return rendered, nil
 }

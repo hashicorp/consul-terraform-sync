@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/retry"
-	"github.com/hashicorp/hcat"
 )
 
 var (
@@ -147,11 +146,11 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 // Single run, render, apply of a unit (task).
 //
 // Stores event data on error or on successful _full_ execution of task.
-// Note: We do not store event for each successful yet incomplete template fetching
-// since there could be many per full task execution i.e. when resolver.Run()
-// returns result.Complete == false, no event is stored.
+// Note: We do not store event when a template has not completely rendered since
+// driver.RenderTemplate() may be called many times per full task execution
+// since there could be many per full task execution i.e. when driver.RenderTemplate()
+// returns false, no event is stored.
 func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, error) {
-	tmpl := u.template
 	taskName := u.taskName
 
 	// setup to store event information
@@ -174,30 +173,21 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, 
 	}
 	ev.Start()
 
-	log.Printf("[TRACE] (ctrl) checking dependency changes for task %s", taskName)
-	var result hcat.ResolveEvent
-	if result, storedErr = rw.resolver.Run(tmpl, rw.watcher); storedErr != nil {
+	d := u.driver
+	var rendered bool
+	rendered, storedErr = d.RenderTemplate(ctx, rw.watcher)
+	if storedErr != nil {
 		defer storeEvent()
-		return false, fmt.Errorf("error fetching template dependencies for task %s: %s",
+		return false, fmt.Errorf("error rendering template for task %s: %s",
 			taskName, storedErr)
 	}
 
-	// result.Complete is only `true` if the template has new data that has been
-	// completely fetched. Rendering a template for the first time may take several
-	// cycles to load all the dependencies asynchronously.
-	if result.Complete {
-		log.Printf("[DEBUG] (ctrl) change detected for task %s", taskName)
+	// rendering a template may take several cycles in order to completely fetch
+	// new data
+	if rendered {
+		log.Printf("[INFO] (ctrl) executing task %s", taskName)
 		defer storeEvent()
 
-		var rendered hcat.RenderResult
-		if rendered, storedErr = tmpl.Render(result.Contents); storedErr != nil {
-			return false, fmt.Errorf("error rendering template for task %s: %s",
-				taskName, storedErr)
-		}
-		log.Printf("[TRACE] (ctrl) template for task %q rendered: %+v", taskName, rendered)
-
-		d := u.driver
-		log.Printf("[INFO] (ctrl) executing task %s", taskName)
 		if retry {
 			desc := fmt.Sprintf("ApplyTask %s", taskName)
 			storedErr = rw.retry.Do(ctx, d.ApplyTask, desc)
@@ -212,7 +202,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, 
 		log.Printf("[INFO] (ctrl) task completed %s", taskName)
 	}
 
-	return result.Complete, nil
+	return rendered, nil
 }
 
 // setTemplateBufferPeriods applies the task buffer period config to its template
@@ -230,9 +220,9 @@ func (rw *ReadWrite) setTemplateBufferPeriods() {
 	for _, u := range rw.units {
 		taskConfig := taskConfigs[u.taskName]
 		if buffPeriod := *taskConfig.BufferPeriod; *buffPeriod.Enabled {
-			rw.watcher.SetBufferPeriod(*buffPeriod.Min, *buffPeriod.Max, u.template.ID())
+			rw.watcher.SetBufferPeriod(*buffPeriod.Min, *buffPeriod.Max, u.driver.TemplateID())
 		} else {
-			unsetIDs = append(unsetIDs, u.template.ID())
+			unsetIDs = append(unsetIDs, u.driver.TemplateID())
 		}
 	}
 

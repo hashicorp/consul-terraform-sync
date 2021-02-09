@@ -93,35 +93,19 @@ func TestBaseControllerInit(t *testing.T) {
 	cases := []struct {
 		name        string
 		expectError bool
-		initErr     error
 		initTaskErr error
-		fileReader  func(string) ([]byte, error)
 		config      *config.Config
 	}{
 		{
 			"error on driver.InitTask()",
 			true,
-			nil,
 			errors.New("error on driver.InitTask()"),
-			func(string) ([]byte, error) { return []byte{}, nil },
-			conf,
-		},
-		{
-			"error on newTaskTemplates()",
-			true,
-			nil,
-			nil,
-			func(string) ([]byte, error) {
-				return []byte{}, errors.New("error on newTaskTemplates()")
-			},
 			conf,
 		},
 		{
 			"happy path",
 			false,
 			nil,
-			nil,
-			func(string) ([]byte, error) { return []byte{}, nil },
 			conf,
 		},
 	}
@@ -136,8 +120,7 @@ func TestBaseControllerInit(t *testing.T) {
 				newDriver: func(*config.Config, driver.Task) (driver.Driver, error) {
 					return d, nil
 				},
-				conf:       tc.config,
-				fileReader: tc.fileReader,
+				conf: tc.config,
 			}
 
 			err := baseCtrl.init(ctx)
@@ -209,9 +192,10 @@ func TestNewDriverTasks(t *testing.T) {
 						"source": "source/providerA",
 					},
 				},
-				Services: []driver.Service{},
-				Source:   "source",
-				VarFiles: []string{},
+				Services:        []driver.Service{},
+				Source:          "source",
+				VarFiles:        []string{},
+				UserDefinedMeta: map[string]map[string]string{},
 			}},
 		}, {
 			// Fetches correct provider and required_providers blocks from config
@@ -265,9 +249,10 @@ func TestNewDriverTasks(t *testing.T) {
 						"source": "source/providerA",
 					},
 				},
-				Services: []driver.Service{},
-				Source:   "source",
-				VarFiles: []string{},
+				Services:        []driver.Service{},
+				Source:          "source",
+				VarFiles:        []string{},
+				UserDefinedMeta: map[string]map[string]string{},
 			}},
 		},
 	}
