@@ -116,11 +116,6 @@ func (tf *Terraform) Version() string {
 	return TerraformVersion.String()
 }
 
-// TemplateID returns the template ID
-func (tf *Terraform) TemplateID() string {
-	return tf.template.ID()
-}
-
 // InitTask initializes the task by creating the Terraform root module and related
 // files to execute on.
 func (tf *Terraform) InitTask(force bool) error {
@@ -179,6 +174,28 @@ func (tf *Terraform) InitTask(force bool) error {
 	}
 
 	return nil
+}
+
+// SetBufferPeriod sets the buffer period for the task. Do not set this when
+// task needs to immediately render a template and run.
+func (tf *Terraform) SetBufferPeriod(watcher templates.Watcher) {
+	taskName := tf.task.Name
+
+	if tf.template == nil {
+		log.Printf("[WARN] (driver.terraform) attempted to set buffer for "+
+			"'%s' which does not have a template", taskName)
+		return
+	}
+
+	bp := tf.task.BufferPeriod
+	if bp == nil {
+		log.Printf("[TRACE] (driver.terraform) no buffer period for '%s'", taskName)
+		return
+	}
+
+	log.Printf("[TRACE] (driver.terraform) set buffer period for '%s': %v",
+		taskName, bp)
+	watcher.SetBufferPeriod(bp.Min, bp.Max, tf.template.ID())
 }
 
 // RenderTemplate fetches data for the template. If the data is complete fetched,

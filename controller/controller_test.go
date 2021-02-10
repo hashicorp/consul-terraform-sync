@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
@@ -196,6 +197,10 @@ func TestNewDriverTasks(t *testing.T) {
 				Source:          "source",
 				VarFiles:        []string{},
 				UserDefinedMeta: map[string]map[string]string{},
+				BufferPeriod: &driver.BufferPeriod{
+					Min: 5 * time.Second,
+					Max: 20 * time.Second,
+				},
 			}},
 		}, {
 			// Fetches correct provider and required_providers blocks from config
@@ -253,6 +258,10 @@ func TestNewDriverTasks(t *testing.T) {
 				Source:          "source",
 				VarFiles:        []string{},
 				UserDefinedMeta: map[string]map[string]string{},
+				BufferPeriod: &driver.BufferPeriod{
+					Min: 5 * time.Second,
+					Max: 20 * time.Second,
+				},
 			}},
 		},
 	}
@@ -273,4 +282,88 @@ func TestNewDriverTasks(t *testing.T) {
 			assert.Equal(t, tc.tasks, tasks)
 		})
 	}
+}
+
+func TestGetTemplateBufferPeriods(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		conf     *config.Config
+		task     *config.TaskConfig
+		expected *driver.BufferPeriod
+	}{
+		{
+			"task config override default values",
+			&config.Config{
+				BufferPeriod: &config.BufferPeriodConfig{
+					Enabled: config.Bool(true),
+					Min:     config.TimeDuration(2 * time.Second),
+					Max:     config.TimeDuration(10 * time.Second),
+				},
+			},
+			&config.TaskConfig{
+				BufferPeriod: &config.BufferPeriodConfig{
+					Enabled: config.Bool(true),
+					Min:     config.TimeDuration(5 * time.Second),
+					Max:     config.TimeDuration(7 * time.Second),
+				},
+			},
+			&driver.BufferPeriod{
+				Min: 5 * time.Second,
+				Max: 7 * time.Second,
+			},
+		},
+		{
+			"use default values",
+			&config.Config{
+				BufferPeriod: &config.BufferPeriodConfig{
+					Enabled: config.Bool(true),
+					Min:     config.TimeDuration(2 * time.Second),
+					Max:     config.TimeDuration(10 * time.Second),
+				},
+			},
+			&config.TaskConfig{
+				BufferPeriod: &config.BufferPeriodConfig{
+					Enabled: config.Bool(false),
+				},
+			},
+			&driver.BufferPeriod{
+				Min: 2 * time.Second,
+				Max: 10 * time.Second,
+			},
+		},
+		{
+			"nil default config",
+			nil,
+			&config.TaskConfig{
+				BufferPeriod: &config.BufferPeriodConfig{
+					Enabled: config.Bool(false),
+				},
+			},
+			nil,
+		},
+		{
+			"both disabled",
+			&config.Config{
+				BufferPeriod: &config.BufferPeriodConfig{
+					Enabled: config.Bool(false),
+				},
+			},
+			&config.TaskConfig{
+				BufferPeriod: &config.BufferPeriodConfig{
+					Enabled: config.Bool(false),
+				},
+			},
+			nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := getTemplateBufferPeriod(tc.conf, tc.task)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+
 }

@@ -14,6 +14,9 @@ type Driver interface {
 	// InitTask initializes the task that the driver executes
 	InitTask(force bool) error
 
+	// SetBufferPeriod sets the task's buffer period on the watcher
+	SetBufferPeriod(watcher templates.Watcher)
+
 	// RenderTemplate renders a template. Returns if template rendering
 	// completed or not
 	RenderTemplate(ctx context.Context, watcher templates.Watcher) (bool, error)
@@ -27,7 +30,4 @@ type Driver interface {
 
 	// Version returns the version of the driver.
 	Version() string
-
-	// TemplateID returns the id of the template that the driver uses.
-	TemplateID() string
 }

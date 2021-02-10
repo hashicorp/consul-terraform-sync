@@ -78,18 +78,9 @@ func (_m *Driver) RenderTemplate(ctx context.Context, watcher templates.Watcher)
 	return r0, r1
 }
 
-// TemplateID provides a mock function with given fields:
-func (_m *Driver) TemplateID() string {
-	ret := _m.Called()
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func() string); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
+// SetBufferPeriod provides a mock function with given fields: watcher
+func (_m *Driver) SetBufferPeriod(watcher templates.Watcher) {
+	_m.Called(watcher)
 }
 
 // Version provides a mock function with given fields:
