@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
-	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -23,21 +22,19 @@ func TestReadWrite_CheckApply(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name              string
-		expectError       bool
-		applyTaskErr      error
-		resolverRunErr    error
-		templateRenderErr error
-		taskName          string
-		addToStore        bool
+		name          string
+		expectError   bool
+		applyTaskErr  error
+		renderTmplErr error
+		taskName      string
+		addToStore    bool
 	}{
 		{
-			"error on resolver.Run()",
+			"error on driver.RenderTemplate()",
 			true,
 			nil,
-			errors.New("error on resolver.Run()"),
-			nil,
-			"task_apply",
+			errors.New("error on driver.RenderTemplate()"),
+			"task_render_tmpl",
 			true,
 		},
 		{
@@ -45,23 +42,12 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			true,
 			errors.New("error on driver.ApplyTask()"),
 			nil,
-			nil,
-			"task_apply",
-			true,
-		},
-		{
-			"error on template.Render()",
-			true,
-			nil,
-			nil,
-			errors.New("error on template.Render()"),
 			"task_apply",
 			true,
 		},
 		{
 			"error creating new event",
 			true,
-			nil,
 			nil,
 			nil,
 			"",
@@ -72,7 +58,6 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			false,
 			nil,
 			nil,
-			nil,
 			"task_apply",
 			true,
 		},
@@ -80,24 +65,16 @@ func TestReadWrite_CheckApply(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-
-			tmpl := new(mocks.Template)
-			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.templateRenderErr).Once()
-
-			r := new(mocks.Resolver)
-			r.On("Run", mock.Anything, mock.Anything).
-				Return(hcat.ResolveEvent{Complete: true}, tc.resolverRunErr)
-
 			d := new(mocksD.Driver)
+			d.On("RenderTemplate", mock.Anything, mock.Anything).
+				Return(true, tc.renderTmplErr)
 			d.On("ApplyTask", mock.Anything).Return(tc.applyTaskErr)
 
 			controller := ReadWrite{
-				baseController: &baseController{
-					resolver: r,
-				},
-				store: event.NewStore(),
+				baseController: &baseController{},
+				store:          event.NewStore(),
 			}
-			u := unit{taskName: tc.taskName, template: tmpl, driver: d}
+			u := unit{taskName: tc.taskName, driver: d}
 			ctx := context.Background()
 
 			_, err := controller.checkApply(ctx, u, false)
@@ -133,25 +110,17 @@ func TestReadWrite_CheckApply(t *testing.T) {
 
 func TestReadWrite_CheckApply_Store(t *testing.T) {
 	t.Run("mult-checkapply-store", func(t *testing.T) {
-		tmpl := new(mocks.Template)
-		tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, nil)
-
-		r := new(mocks.Resolver)
-		r.On("Run", mock.Anything, mock.Anything).
-			Return(hcat.ResolveEvent{Complete: true}, nil)
-
 		d := new(mocksD.Driver)
+		d.On("RenderTemplate", mock.Anything, mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(nil)
 
 		controller := ReadWrite{
-			baseController: &baseController{
-				resolver: r,
-			},
-			store: event.NewStore(),
+			baseController: &baseController{},
+			store:          event.NewStore(),
 		}
 
-		unitA := unit{taskName: "task_a", template: tmpl, driver: d}
-		unitB := unit{taskName: "task_b", template: tmpl, driver: d}
+		unitA := unit{taskName: "task_a", driver: d}
+		unitB := unit{taskName: "task_b", driver: d}
 		ctx := context.Background()
 
 		controller.checkApply(ctx, unitA, false)
@@ -171,20 +140,6 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 func TestOnce(t *testing.T) {
 	t.Run("init-wraps-units", func(t *testing.T) {
 		conf := singleTaskConfig()
-
-		tmpl := new(mocks.Template)
-		tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, nil).Once()
-
-		r := new(mocks.Resolver)
-		var tf bool
-		falseThenTrue := func(hcat.Templater, hcat.Watcherer) hcat.ResolveEvent {
-			if !tf {
-				defer func() { tf = true }()
-			}
-			return hcat.ResolveEvent{Complete: tf}
-		}
-		r.On("Run", mock.Anything, mock.Anything).Return(falseThenTrue, nil).Twice()
-
 		w := new(mocks.Watcher)
 		errCh := make(chan error)
 		var errChRc <-chan error = errCh
@@ -193,18 +148,18 @@ func TestOnce(t *testing.T) {
 		w.On("Size").Return(5)
 
 		d := new(mocksD.Driver)
+		d.On("RenderTemplate", mock.Anything, mock.Anything).Return(false, nil).Once()
+		d.On("RenderTemplate", mock.Anything, mock.Anything).Return(true, nil).Once()
 		d.On("InitTask", mock.Anything).Return(nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
 
 		rw := &ReadWrite{
 			baseController: &baseController{
-				watcher:  w,
-				resolver: r,
+				watcher: w,
 				newDriver: func(*config.Config, driver.Task) (driver.Driver, error) {
 					return d, nil
 				},
-				conf:       conf,
-				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
+				conf: conf,
 			},
 			store: event.NewStore(),
 		}
@@ -212,12 +167,6 @@ func TestOnce(t *testing.T) {
 		ctx := context.Background()
 		err := rw.Init(ctx)
 		assert.NoError(t, err)
-
-		// insert mock template into units
-		for i, u := range rw.units {
-			u.template = tmpl
-			rw.units[i] = u
-		}
 
 		// testing really starts here...
 		once := Oncer(rw)
@@ -236,37 +185,23 @@ func TestOnce(t *testing.T) {
 		}
 
 		// Not sure about these... to far into the "test implementation" zone?
-		tmpl.AssertExpectations(t)
-		r.AssertExpectations(t)
 		w.AssertExpectations(t)
 		d.AssertExpectations(t)
 	})
 }
 
 func TestReadWriteUnits(t *testing.T) {
-	tmpl := new(mocks.Template)
-	tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, nil)
-
-	r := new(mocks.Resolver)
-	r.On("Run", mock.Anything, mock.Anything).
-		Return(hcat.ResolveEvent{Complete: true}, nil)
-
-	w := new(mocks.Watcher)
-	w.On("Wait", mock.Anything).Return(nil).
-		On("Size").Return(5)
-
 	t.Run("simple-success", func(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("InitWork", mock.Anything).Return(nil)
+		d.On("RenderTemplate", mock.Anything, mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(nil)
 		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
 
-		u := unit{taskName: "foo", template: tmpl, driver: d}
+		u := unit{taskName: "foo", driver: d}
 		controller := ReadWrite{
 			baseController: &baseController{
-				watcher:  w,
-				resolver: r,
-				units:    []unit{u},
+				units: []unit{u},
 			},
 			store: event.NewStore(),
 		}
@@ -282,14 +217,13 @@ func TestReadWriteUnits(t *testing.T) {
 	t.Run("apply-error", func(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("InitWork", mock.Anything).Return(nil)
+		d.On("RenderTemplate", mock.Anything, mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
 
-		u := unit{taskName: "foo", template: tmpl, driver: d}
+		u := unit{taskName: "foo", driver: d}
 		controller := ReadWrite{
 			baseController: &baseController{
-				watcher:  w,
-				resolver: r,
-				units:    []unit{u},
+				units: []unit{u},
 			},
 			store: event.NewStore(),
 		}

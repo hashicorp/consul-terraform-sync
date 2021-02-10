@@ -18,29 +18,23 @@ func TestReadOnlyRun(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name              string
-		expectError       bool
-		inspectTaskErr    error
-		resolverRunErr    error
-		templateRenderErr error
-		watcherWaitErr    error
-		config            *config.Config
+		name           string
+		expectError    bool
+		inspectTaskErr error
+		renderTmplErr  error
+		config         *config.Config
 	}{
 		{
-			"error on resolver.Run()",
+			"error on driver.RenderTemplate()",
 			true,
 			nil,
-			errors.New("error on resolver.Run()"),
-			nil,
-			nil,
+			errors.New("error on driver.RenderTemplate()"),
 			singleTaskConfig(),
 		},
 		{
 			"error on driver.InspectTask()",
 			true,
 			errors.New("error on driver.InspectTask()"),
-			nil,
-			nil,
 			nil,
 			singleTaskConfig(),
 		},
@@ -49,33 +43,23 @@ func TestReadOnlyRun(t *testing.T) {
 			false,
 			nil,
 			nil,
-			nil,
-			nil,
 			singleTaskConfig(),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-
-			tmpl := new(mocks.Template)
-			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.templateRenderErr).Once()
-
-			r := new(mocks.Resolver)
-			r.On("Run", mock.Anything, mock.Anything).
-				Return(hcat.ResolveEvent{Complete: true}, tc.resolverRunErr)
-
 			w := new(mocks.Watcher)
-			w.On("Wait", mock.Anything).Return(tc.watcherWaitErr).
-				On("Size").Return(5)
+			w.On("Size").Return(5)
 
 			d := new(mocksD.Driver)
+			d.On("RenderTemplate", mock.Anything, mock.Anything).
+				Return(true, tc.renderTmplErr)
 			d.On("InspectTask", mock.Anything).Return(tc.inspectTaskErr)
 
 			ctrl := ReadOnly{baseController: &baseController{
-				watcher:  w,
-				resolver: r,
-				units:    []unit{{template: tmpl, driver: d}},
+				watcher: w,
+				units:   []unit{{driver: d}},
 			}}
 			ctx := context.Background()
 
@@ -101,10 +85,12 @@ func TestReadOnlyRun_context_cancel(t *testing.T) {
 		On("Size").Return(5).
 		On("Stop").Return()
 
+	d := new(mocksD.Driver)
+	d.On("RenderTemplate", mock.Anything, mock.Anything).Return(false, nil)
 	ctrl := ReadOnly{baseController: &baseController{
 		watcher:  w,
 		resolver: r,
-		units:    []unit{{template: new(mocks.Template)}},
+		units:    []unit{{driver: d}},
 	}}
 
 	ctx, cancel := context.WithCancel(context.Background())

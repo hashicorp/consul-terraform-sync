@@ -3,13 +3,17 @@ package driver
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/handler"
+	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
+	"github.com/hashicorp/hcat"
 	"github.com/pkg/errors"
 )
 
@@ -38,6 +42,10 @@ type Terraform struct {
 	task              Task
 	backend           map[string]interface{}
 	requiredProviders map[string]interface{}
+
+	resolver   templates.Resolver
+	template   templates.Template
+	fileReader func(string) ([]byte, error)
 
 	workingDir string
 	client     client.Client
@@ -98,12 +106,19 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		workingDir:        config.WorkingDir,
 		client:            tfClient,
 		postApply:         handler,
+		resolver:          hcat.NewResolver(),
+		fileReader:        ioutil.ReadFile,
 	}, nil
 }
 
 // Version returns the Terraform CLI version for the Terraform driver.
 func (tf *Terraform) Version() string {
 	return TerraformVersion.String()
+}
+
+// TemplateID returns the template ID
+func (tf *Terraform) TemplateID() string {
+	return tf.template.ID()
 }
 
 // InitTask initializes the task by creating the Terraform root module and related
@@ -159,7 +174,48 @@ func (tf *Terraform) InitTask(force bool) error {
 		return err
 	}
 
+	if err := tf.initTaskTemplate(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// RenderTemplate fetches data for the template. If the data is complete fetched,
+// renders the template. Rendering a template for the first time may take several
+// cycles to load all the dependencies asynchronously. Returns a boolean whether
+// the template was rendered
+func (tf *Terraform) RenderTemplate(ctx context.Context, watcher templates.Watcher) (bool, error) {
+	taskName := tf.task.Name
+	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
+
+	var err error
+	var result hcat.ResolveEvent
+	if result, err = tf.resolver.Run(tf.template, watcher); err != nil {
+		log.Printf("[ERROR] (driver.terraform) checking dependency changes "+
+			"for '%s': %s", taskName, err)
+
+		return false, fmt.Errorf("error fetching template dependencies for task %s: %s",
+			tf.task.Name, err)
+	}
+
+	// result.Complete is only `true` if the template has new data that has been
+	// completely fetched.
+	if result.Complete {
+		log.Printf("[DEBUG] (driver.terraform) change detected for task %s", taskName)
+
+		var rendered hcat.RenderResult
+		if rendered, err = tf.template.Render(result.Contents); err != nil {
+			log.Printf("[ERR] (driver.terraform) rendering template for '%s': %s",
+				taskName, err)
+
+			return false, err
+		}
+		log.Printf("[TRACE] (driver.terraform) template for task %q rendered: %+v",
+			taskName, rendered)
+	}
+
+	return result.Complete, nil
 }
 
 // InspectTask inspects for any differences pertaining to the task between
@@ -222,6 +278,32 @@ func (tf *Terraform) init(ctx context.Context) error {
 		return errors.Wrap(err, fmt.Sprintf("error tf-init for '%s'", taskName))
 	}
 	tf.inited = true
+	return nil
+}
+
+// initTaskTemplate creates templates to be monitored and rendered.
+func (tf *Terraform) initTaskTemplate() error {
+	tmplFullpath := filepath.Join(tf.workingDir, tftmpl.TFVarsTmplFilename)
+	tfvarsFilepath := filepath.Join(tf.workingDir, tftmpl.TFVarsFilename)
+
+	content, err := tf.fileReader(tmplFullpath)
+	if err != nil {
+		log.Printf("[ERR] (driver.terraform) unable to read file for '%s': %s",
+			tf.task.Name, err)
+		return err
+	}
+
+	renderer := hcat.NewFileRenderer(hcat.FileRendererInput{
+		Path:  tfvarsFilepath,
+		Perms: filePerms,
+	})
+
+	tf.template = hcat.NewTemplate(hcat.TemplateInput{
+		Contents:     string(content),
+		Renderer:     renderer,
+		FuncMapMerge: tftmpl.HCLTmplFuncMap(tf.task.UserDefinedMeta),
+	})
+
 	return nil
 }
 

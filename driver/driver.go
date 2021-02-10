@@ -1,6 +1,10 @@
 package driver
 
-import "context"
+import (
+	"context"
+
+	"github.com/hashicorp/consul-terraform-sync/templates"
+)
 
 //go:generate mockery --name=Driver --filename=driver.go  --output=../mocks/driver
 
@@ -9,6 +13,10 @@ import "context"
 type Driver interface {
 	// InitTask initializes the task that the driver executes
 	InitTask(force bool) error
+
+	// RenderTemplate renders a template. Returns if template rendering
+	// completed or not
+	RenderTemplate(ctx context.Context, watcher templates.Watcher) (bool, error)
 
 	// InspectTask inspects for any differences pertaining to the task between
 	// the state of Consul and network infrastructure
@@ -19,4 +27,7 @@ type Driver interface {
 
 	// Version returns the version of the driver.
 	Version() string
+
+	// TemplateID returns the id of the template that the driver uses.
+	TemplateID() string
 }

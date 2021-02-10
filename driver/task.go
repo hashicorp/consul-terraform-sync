@@ -18,14 +18,15 @@ type Service struct {
 
 // Task contains task configuration information
 type Task struct {
-	Description  string
-	Name         string
-	Providers    TerraformProviderBlocks // task.providers config info
-	ProviderInfo map[string]interface{}  // driver.required_provider config info
-	Services     []Service
-	Source       string
-	VarFiles     []string
-	Version      string
+	Description     string
+	Name            string
+	Providers       TerraformProviderBlocks // task.providers config info
+	ProviderInfo    map[string]interface{}  // driver.required_provider config info
+	Services        []Service
+	Source          string
+	VarFiles        []string
+	Version         string
+	UserDefinedMeta map[string]map[string]string
 }
 
 // ProviderNames returns the list of providers that the task has configured
