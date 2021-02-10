@@ -53,7 +53,9 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 func (rw *ReadWrite) Run(ctx context.Context) error {
 	// Only initialize buffer periods for running the full loop and not for Once
 	// mode so it can immediately render the first time.
-	rw.setTemplateBufferPeriods()
+	for _, u := range rw.units {
+		u.driver.SetBufferPeriod(rw.watcher)
+	}
 
 	for i := int64(1); ; i++ {
 		// Blocking on Wait is first as we just ran in Once mode so we want
@@ -203,31 +205,4 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, 
 	}
 
 	return rendered, nil
-}
-
-// setTemplateBufferPeriods applies the task buffer period config to its template
-func (rw *ReadWrite) setTemplateBufferPeriods() {
-	if rw.watcher == nil || rw.conf == nil {
-		return
-	}
-
-	taskConfigs := make(map[string]*config.TaskConfig)
-	for _, t := range *rw.conf.Tasks {
-		taskConfigs[*t.Name] = t
-	}
-
-	var unsetIDs []string
-	for _, u := range rw.units {
-		taskConfig := taskConfigs[u.taskName]
-		if buffPeriod := *taskConfig.BufferPeriod; *buffPeriod.Enabled {
-			rw.watcher.SetBufferPeriod(*buffPeriod.Min, *buffPeriod.Max, u.driver.TemplateID())
-		} else {
-			unsetIDs = append(unsetIDs, u.driver.TemplateID())
-		}
-	}
-
-	// Set default buffer period for unset templates
-	if buffPeriod := *rw.conf.BufferPeriod; *buffPeriod.Enabled {
-		rw.watcher.SetBufferPeriod(*buffPeriod.Min, *buffPeriod.Max, unsetIDs...)
-	}
 }

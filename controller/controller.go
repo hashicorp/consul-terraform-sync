@@ -242,6 +242,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			VarFiles:        t.VarFiles,
 			Version:         *t.Version,
 			UserDefinedMeta: conf.Services.CTSUserDefinedMeta(t.Services),
+			BufferPeriod:    getTemplateBufferPeriod(conf, t),
 		}
 	}
 
@@ -309,4 +310,30 @@ func getProvider(providers driver.TerraformProviderBlocks, id string) driver.Ter
 		Name:      name,
 		Variables: make(hcltmpl.Variables),
 	})
+}
+
+// getTemplateBufferPeriod applies the task buffer period config to its template
+func getTemplateBufferPeriod(conf *config.Config,
+	taskConfig *config.TaskConfig) *driver.BufferPeriod {
+
+	if buffPeriod := taskConfig.BufferPeriod; *buffPeriod.Enabled {
+		return &driver.BufferPeriod{
+			Min: *buffPeriod.Min,
+			Max: *buffPeriod.Max,
+		}
+	}
+
+	if conf == nil {
+		return nil
+	}
+
+	// Set default buffer period
+	if buffPeriod := conf.BufferPeriod; *buffPeriod.Enabled {
+		return &driver.BufferPeriod{
+			Min: *buffPeriod.Min,
+			Max: *buffPeriod.Max,
+		}
+	}
+
+	return nil
 }

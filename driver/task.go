@@ -2,6 +2,7 @@ package driver
 
 import (
 	"log"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
@@ -16,6 +17,13 @@ type Service struct {
 	Tag         string
 }
 
+// BufferPeriod contains the task's buffer period configuration information
+// if enabled
+type BufferPeriod struct {
+	Min time.Duration
+	Max time.Duration
+}
+
 // Task contains task configuration information
 type Task struct {
 	Description     string
@@ -27,6 +35,7 @@ type Task struct {
 	VarFiles        []string
 	Version         string
 	UserDefinedMeta map[string]map[string]string
+	BufferPeriod    *BufferPeriod // nil when disabled
 }
 
 // ProviderNames returns the list of providers that the task has configured
