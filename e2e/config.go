@@ -112,6 +112,20 @@ driver "terraform" {
 		terraformBlock + dbTask() + webTask()
 }
 
+// disabledTaskConfig returns a config file with a task that is disabled
+func disabledTaskConfig(consulAddr, tempDir string) string {
+	disabledTask := `
+task {
+	name = "disabled_task"
+	description = "task is configured as disabled"
+	enabled = false
+	services = ["api", "db"]
+	providers = ["local"]
+	source = "../../test_modules/e2e_basic_task"
+}`
+	return baseConfig() + consulBlock(consulAddr) + terraformBlock(tempDir) + disabledTask
+}
+
 func consulBlock(addr string) string {
 	return fmt.Sprintf(`
 consul {

@@ -218,6 +218,40 @@ func TestE2ELocalBackend(t *testing.T) {
 	}
 }
 
+func TestE2EDisabledTask(t *testing.T) {
+	t.Parallel()
+
+	srv, err := newTestConsulServer(t)
+	require.NoError(t, err, "failed to start consul server")
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disabled_task")
+	err = makeTempDir(tempDir)
+	// no defer to delete directory: only delete at end of test if no errors
+	require.NoError(t, err)
+
+	configPath := filepath.Join(tempDir, configFile)
+	err = makeConfig(configPath, disabledTaskConfig(srv.HTTPAddr, tempDir))
+	require.NoError(t, err)
+
+	// running sync in long-running mode vs. once mode since long-running mode
+	// has additional functions that may execute unexpectedly on disabled tasks
+	err = runSync(configPath, 8*time.Second)
+	require.NoError(t, err)
+
+	// Confirm that terraform files were not generated
+	fileInfos, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, "disabled_task"))
+	require.NoError(t, err)
+	require.Equal(t, len(fileInfos), 0)
+
+	// Confirm that resources were not created
+	_, err = ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, resourcesDir))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no such file or directory")
+
+	removeDir(tempDir)
+}
+
 func newTestConsulServer(t *testing.T) (*testutil.TestServer, error) {
 	log.SetOutput(ioutil.Discard)
 	srv, err := testutil.NewTestServerConfig(func(c *testutil.TestServerConfig) {

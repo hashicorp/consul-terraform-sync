@@ -235,6 +235,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 		tasks[i] = driver.Task{
 			Description:     *t.Description,
 			Name:            *t.Name,
+			Enabled:         *t.Enabled,
 			Providers:       providers,
 			ProviderInfo:    providerInfo,
 			Services:        services,

@@ -119,6 +119,12 @@ func (tf *Terraform) Version() string {
 // InitTask initializes the task by creating the Terraform root module and related
 // files to execute on.
 func (tf *Terraform) InitTask(force bool) error {
+	if !tf.task.Enabled {
+		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
+			"initializing", tf.task.Name)
+		return nil
+	}
+
 	task := tf.task
 
 	services := make([]tftmpl.Service, len(task.Services))
@@ -179,6 +185,12 @@ func (tf *Terraform) InitTask(force bool) error {
 // SetBufferPeriod sets the buffer period for the task. Do not set this when
 // task needs to immediately render a template and run.
 func (tf *Terraform) SetBufferPeriod(watcher templates.Watcher) {
+	if !tf.task.Enabled {
+		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
+			"setting buffer period", tf.task.Name)
+		return
+	}
+
 	taskName := tf.task.Name
 
 	if tf.template == nil {
@@ -203,6 +215,12 @@ func (tf *Terraform) SetBufferPeriod(watcher templates.Watcher) {
 // cycles to load all the dependencies asynchronously. Returns a boolean whether
 // the template was rendered
 func (tf *Terraform) RenderTemplate(ctx context.Context, watcher templates.Watcher) (bool, error) {
+	if !tf.task.Enabled {
+		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
+			"rendering template", tf.task.Name)
+		return true, nil
+	}
+
 	taskName := tf.task.Name
 	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
 
@@ -238,6 +256,12 @@ func (tf *Terraform) RenderTemplate(ctx context.Context, watcher templates.Watch
 // InspectTask inspects for any differences pertaining to the task between
 // the state of Consul and network infrastructure using the Terraform plan command
 func (tf *Terraform) InspectTask(ctx context.Context) error {
+	if !tf.task.Enabled {
+		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
+			"inspecting", tf.task.Name)
+		return nil
+	}
+
 	taskName := tf.task.Name
 
 	if err := tf.init(ctx); err != nil {
@@ -256,6 +280,12 @@ func (tf *Terraform) InspectTask(ctx context.Context) error {
 
 // ApplyTask applies the task changes.
 func (tf *Terraform) ApplyTask(ctx context.Context) error {
+	if !tf.task.Enabled {
+		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
+			"applying", tf.task.Name)
+		return nil
+	}
+
 	taskName := tf.task.Name
 
 	if err := tf.init(ctx); err != nil {

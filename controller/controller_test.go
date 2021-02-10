@@ -180,7 +180,8 @@ func TestNewDriverTasks(t *testing.T) {
 				},
 			},
 			[]driver.Task{{
-				Name: "name",
+				Name:    "name",
+				Enabled: true,
 				Providers: driver.NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"providerA": map[string]interface{}{}},
@@ -238,7 +239,8 @@ func TestNewDriverTasks(t *testing.T) {
 				},
 			},
 			[]driver.Task{{
-				Name: "name",
+				Name:    "name",
+				Enabled: true,
 				Providers: driver.NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"providerA": map[string]interface{}{
