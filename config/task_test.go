@@ -29,6 +29,7 @@ func TestTaskConfig_Copy(t *testing.T) {
 				Services:    []string{"service"},
 				Source:      String("source"),
 				Version:     String("0.0.0"),
+				Enabled:     Bool(true),
 			},
 		},
 	}
@@ -204,6 +205,30 @@ func TestTaskConfig_Merge(t *testing.T) {
 			&TaskConfig{Version: String("0.0.0")},
 			&TaskConfig{Version: String("0.0.0")},
 		},
+		{
+			"enabled_overrides",
+			&TaskConfig{Enabled: Bool(false)},
+			&TaskConfig{Enabled: Bool(true)},
+			&TaskConfig{Enabled: Bool(true)},
+		},
+		{
+			"enabled_empty_one",
+			&TaskConfig{Enabled: Bool(false)},
+			&TaskConfig{},
+			&TaskConfig{Enabled: Bool(false)},
+		},
+		{
+			"enabled_empty_two",
+			&TaskConfig{},
+			&TaskConfig{Enabled: Bool(false)},
+			&TaskConfig{Enabled: Bool(false)},
+		},
+		{
+			"enabled_same",
+			&TaskConfig{Enabled: Bool(false)},
+			&TaskConfig{Enabled: Bool(false)},
+			&TaskConfig{Enabled: Bool(false)},
+		},
 	}
 
 	for i, tc := range cases {
@@ -232,6 +257,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				VarFiles:     []string{},
 				Version:      String(""),
 				BufferPeriod: DefaultTaskBufferPeriodConfig(),
+				Enabled:      Bool(true),
 			},
 		},
 		{
@@ -248,6 +274,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				VarFiles:     []string{},
 				Version:      String(""),
 				BufferPeriod: DefaultTaskBufferPeriodConfig(),
+				Enabled:      Bool(true),
 			},
 		},
 	}

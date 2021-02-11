@@ -46,6 +46,10 @@ type TaskConfig struct {
 
 	// BufferPeriod configures per-task buffer timers.
 	BufferPeriod *BufferPeriodConfig `mapstructure:"buffer_period"`
+
+	// Enabled determines if the task is enabled or not. Enabled by default.
+	// If not enabled, this task will not make any changes to resources.
+	Enabled *bool `mapstructure:"enabled"`
 }
 
 // TaskConfigs is a collection of TaskConfig
@@ -78,6 +82,8 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.Version = StringCopy(c.Version)
 
 	o.BufferPeriod = c.BufferPeriod.Copy()
+
+	o.Enabled = BoolCopy(c.Enabled)
 
 	return &o
 }
@@ -132,6 +138,10 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.BufferPeriod = r.BufferPeriod.Merge(o.BufferPeriod)
 	}
 
+	if o.Enabled != nil {
+		r.Enabled = BoolCopy(o.Enabled)
+	}
+
 	return r
 }
 
@@ -173,6 +183,10 @@ func (c *TaskConfig) Finalize() {
 		c.BufferPeriod = DefaultTaskBufferPeriodConfig()
 	}
 	c.BufferPeriod.Finalize()
+
+	if c.Enabled == nil {
+		c.Enabled = Bool(true)
+	}
 }
 
 // Validate validates the values and required options. This method is recommended
@@ -235,6 +249,7 @@ func (c *TaskConfig) GoString() string {
 		"VarFiles:%s, "+
 		"Version:%s, "+
 		"BufferPeriod:%s"+
+		"Enabled:%t"+
 		"}",
 		StringVal(c.Name),
 		StringVal(c.Description),
@@ -244,6 +259,7 @@ func (c *TaskConfig) GoString() string {
 		c.VarFiles,
 		StringVal(c.Version),
 		c.BufferPeriod.GoString(),
+		BoolVal(c.Enabled),
 	)
 }
 

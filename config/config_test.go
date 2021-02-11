@@ -285,6 +285,7 @@ func TestConfig_Finalize(t *testing.T) {
 	backend["scheme"] = "https"
 	backend["ca_file"] = "ca_cert"
 	backend["key_file"] = "key"
+	(*expected.Tasks)[0].Enabled = Bool(true)
 	(*expected.Tasks)[0].VarFiles = []string{}
 	(*expected.Tasks)[0].Version = String("")
 	(*expected.Tasks)[0].BufferPeriod = DefaultTaskBufferPeriodConfig()
