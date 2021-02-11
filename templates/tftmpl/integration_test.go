@@ -229,14 +229,26 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			}
 			tmpl := hcat.NewTemplate(input)
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
 			defer cancel()
+
+			gld, err := ioutil.ReadFile(tc.goldenFile)
+			if err != nil {
+				require.NoError(t, err)
+			}
+			retry := 0
 			for {
 				re, err := r.Run(tmpl, w)
 				require.NoError(t, err)
 
 				if re.Complete {
-					checkGoldenFile(t, tc.goldenFile, re.Contents)
+					// there may be a race with the consul services registering
+					// let's retry once.
+					if (string(gld) != string(re.Contents)) && retry < 1 {
+						retry++
+						continue
+					}
+					assert.Equal(t, string(gld), string(re.Contents))
 					break
 				}
 
