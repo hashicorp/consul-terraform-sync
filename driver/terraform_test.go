@@ -70,7 +70,7 @@ func TestRenderTemplate(t *testing.T) {
 			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.renderErr).Once()
 
 			tf := &Terraform{
-				task:     Task{Name: "RenderTemplateTest"},
+				task:     Task{Name: "RenderTemplateTest", Enabled: true},
 				resolver: r,
 				template: tmpl,
 			}
@@ -156,7 +156,7 @@ func TestApplyTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyReturn).Once()
 
 			tf := &Terraform{
-				task:      Task{Name: "ApplyTaskTest"},
+				task:      Task{Name: "ApplyTaskTest", Enabled: true},
 				client:    c,
 				postApply: tc.postApply,
 				inited:    tc.inited,
@@ -276,6 +276,35 @@ func TestGetTerraformHandlers(t *testing.T) {
 			assert.NotNil(t, h)
 		})
 	}
+}
+
+func TestDisabledTask(t *testing.T) {
+	t.Run("disabled-tasks", func(t *testing.T) {
+		// tests that disabled tasks don't require mocking any calls and does
+		// not throw any errors
+
+		tf := &Terraform{
+			task: Task{Name: "disabled_task", Enabled: false},
+		}
+
+		w := new(mocksTmpl.Watcher)
+		ctx := context.Background()
+
+		err := tf.InitTask(true)
+		assert.NoError(t, err)
+
+		tf.SetBufferPeriod(w)
+
+		actual, err := tf.RenderTemplate(ctx, w)
+		assert.NoError(t, err)
+		assert.True(t, actual)
+
+		err = tf.InspectTask(ctx)
+		assert.NoError(t, err)
+
+		err = tf.ApplyTask(ctx)
+		assert.NoError(t, err)
+	})
 }
 
 // testHandler returns a fake handler that can return an error or not on Do()
