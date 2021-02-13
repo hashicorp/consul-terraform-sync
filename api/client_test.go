@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
 	"github.com/stretchr/testify/assert"
@@ -113,7 +114,7 @@ func TestStatus(t *testing.T) {
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	api := NewAPI(store, port)
+	api := NewAPI(store, map[string]driver.Driver{}, port)
 	go api.Serve(ctx)
 	time.Sleep(3 * time.Second) // in case tests run before server is ready
 

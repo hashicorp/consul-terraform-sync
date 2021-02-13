@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/driver"
 )
 
 var _ Controller = (*ReadOnly)(nil)
@@ -32,9 +33,10 @@ func NewReadOnly(conf *config.Config) (Controller, error) {
 }
 
 // Init initializes the controller before it can be run
-func (ctrl *ReadOnly) Init(ctx context.Context) error {
-	if err := ctrl.init(ctx); err != nil {
-		return err
+func (ctrl *ReadOnly) Init(ctx context.Context) (map[string]driver.Driver, error) {
+	drivers, err := ctrl.init(ctx)
+	if err != nil {
+		return map[string]driver.Driver{}, err
 	}
 
 	// Sort units for consistent ordering when inspecting tasks
@@ -42,7 +44,7 @@ func (ctrl *ReadOnly) Init(ctx context.Context) error {
 		return ctrl.units[i].taskName < ctrl.units[j].taskName
 	})
 
-	return nil
+	return drivers, nil
 }
 
 // Run runs the controller in read-only mode by checking Consul catalog once for

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 )
 
@@ -54,13 +55,14 @@ const (
 // API supports api requests to the cts biniary
 type API struct {
 	store   *event.Store
+	drivers map[string]driver.Driver
 	port    int
 	version string
 	srv     *http.Server
 }
 
 // NewAPI create a new API object
-func NewAPI(store *event.Store, port int) *API {
+func NewAPI(store *event.Store, drivers map[string]driver.Driver, port int) *API {
 	mux := http.NewServeMux()
 
 	// retrieve overall status
@@ -83,6 +85,7 @@ func NewAPI(store *event.Store, port int) *API {
 
 	return &API{
 		port:    port,
+		drivers: drivers,
 		store:   store,
 		version: defaultAPIVersion,
 		srv:     srv,
