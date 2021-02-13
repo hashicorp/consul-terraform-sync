@@ -132,61 +132,7 @@ func (tf *Terraform) InitTask(force bool) error {
 		return nil
 	}
 
-	task := tf.task
-
-	services := make([]tftmpl.Service, len(task.Services))
-	for i, s := range task.Services {
-		services[i] = tftmpl.Service{
-			Datacenter:  s.Datacenter,
-			Description: s.Description,
-			Name:        s.Name,
-			Namespace:   s.Namespace,
-			Tag:         s.Tag,
-		}
-	}
-
-	var vars hcltmpl.Variables
-	for _, vf := range task.VarFiles {
-		tfvars, err := tftmpl.LoadModuleVariables(vf)
-		if err != nil {
-			return err
-		}
-
-		if len(vars) == 0 {
-			vars = tfvars
-			continue
-		}
-
-		for k, v := range tfvars {
-			vars[k] = v
-		}
-	}
-
-	input := tftmpl.RootModuleInputData{
-		TerraformVersion: TerraformVersion,
-		Backend:          tf.backend,
-		Providers:        task.Providers.ProviderBlocks(),
-		ProviderInfo:     task.ProviderInfo,
-		Services:         services,
-		Task: tftmpl.Task{
-			Description: task.Description,
-			Name:        task.Name,
-			Source:      task.Source,
-			Version:     task.Version,
-		},
-		Variables: vars,
-	}
-	input.Init()
-
-	if err := tftmpl.InitRootModule(&input, tf.workingDir, filePerms, force); err != nil {
-		return err
-	}
-
-	if err := tf.initTaskTemplate(); err != nil {
-		return err
-	}
-
-	return nil
+	return tf.initTask(force)
 }
 
 // SetBufferPeriod sets the buffer period for the task. Do not set this when
@@ -329,6 +275,27 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	return nil
 }
 
+// UpdateTask updates the task on the driver. Makes any calls to re-init
+// depending on the fields updated.
+func (tf *Terraform) UpdateTask(patch PatchTask) error {
+	tf.mu.Lock()
+	defer tf.mu.Unlock()
+
+	reinit := false
+
+	if tf.task.Enabled != patch.Enabled {
+		tf.task.Enabled = patch.Enabled
+		reinit = true
+	}
+
+	if reinit {
+		tf.inited = false
+		return tf.initTask(true)
+	}
+
+	return nil
+}
+
 // init initializes the Terraform workspace if needed
 func (tf *Terraform) init(ctx context.Context) error {
 	taskName := tf.task.Name
@@ -344,6 +311,65 @@ func (tf *Terraform) init(ctx context.Context) error {
 		return errors.Wrap(err, fmt.Sprintf("error tf-init for '%s'", taskName))
 	}
 	tf.inited = true
+	return nil
+}
+
+// initTask initializes the task
+func (tf *Terraform) initTask(force bool) error {
+	task := tf.task
+
+	services := make([]tftmpl.Service, len(task.Services))
+	for i, s := range task.Services {
+		services[i] = tftmpl.Service{
+			Datacenter:  s.Datacenter,
+			Description: s.Description,
+			Name:        s.Name,
+			Namespace:   s.Namespace,
+			Tag:         s.Tag,
+		}
+	}
+
+	var vars hcltmpl.Variables
+	for _, vf := range task.VarFiles {
+		tfvars, err := tftmpl.LoadModuleVariables(vf)
+		if err != nil {
+			return err
+		}
+
+		if len(vars) == 0 {
+			vars = tfvars
+			continue
+		}
+
+		for k, v := range tfvars {
+			vars[k] = v
+		}
+	}
+
+	input := tftmpl.RootModuleInputData{
+		TerraformVersion: TerraformVersion,
+		Backend:          tf.backend,
+		Providers:        task.Providers.ProviderBlocks(),
+		ProviderInfo:     task.ProviderInfo,
+		Services:         services,
+		Task: tftmpl.Task{
+			Description: task.Description,
+			Name:        task.Name,
+			Source:      task.Source,
+			Version:     task.Version,
+		},
+		Variables: vars,
+	}
+	input.Init()
+
+	if err := tftmpl.InitRootModule(&input, tf.workingDir, filePerms, force); err != nil {
+		return err
+	}
+
+	if err := tf.initTaskTemplate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

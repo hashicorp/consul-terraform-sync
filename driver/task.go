@@ -8,6 +8,12 @@ import (
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 )
 
+// PatchTask holds the information to patch update a task. It will only include
+// fields that we support updating at this time
+type PatchTask struct {
+	Enabled bool
+}
+
 // Service contains service configuration information
 type Service struct {
 	Datacenter  string
