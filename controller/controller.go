@@ -19,8 +19,9 @@ import (
 // Controller describes the interface for monitoring Consul for relevant changes
 // and triggering the driver to update network infrastructure.
 type Controller interface {
-	// Init initializes elements needed by controller
-	Init(ctx context.Context) error
+	// Init initializes elements needed by controller. Returns a map of
+	// taskname to driver
+	Init(ctx context.Context) (map[string]driver.Driver, error)
 
 	// Run runs the controller by monitoring Consul and triggering the driver as needed
 	Run(ctx context.Context) error
@@ -76,38 +77,39 @@ func (ctrl *baseController) Stop() {
 	ctrl.watcher.Stop()
 }
 
-func (ctrl *baseController) init(ctx context.Context) error {
+func (ctrl *baseController) init(ctx context.Context) (map[string]driver.Driver, error) {
 	log.Printf("[INFO] (ctrl) initializing driver")
 
 	// Load provider configuration and evaluate dynamic values
 	providerConfigs, err := ctrl.loadProviderConfigs(ctx)
 	if err != nil {
-		return err
+		return map[string]driver.Driver{}, err
 	}
 
 	// Future: improve by combining tasks into workflows.
 	log.Printf("[INFO] (ctrl) initializing all tasks")
 	tasks := newDriverTasks(ctrl.conf, providerConfigs)
 	units := make([]unit, 0, len(tasks))
+	drivers := make(map[string]driver.Driver)
 
 	for _, task := range tasks {
 		select {
 		case <-ctx.Done():
 			// Stop initializing remaining tasks if context has stopped.
-			return ctx.Err()
+			return map[string]driver.Driver{}, ctx.Err()
 		default:
 		}
 
 		log.Printf("[DEBUG] (ctrl) initializing task %q", task.Name)
 		d, err := ctrl.newDriver(ctrl.conf, task)
 		if err != nil {
-			return err
+			return map[string]driver.Driver{}, err
 		}
 
 		err = d.InitTask(true)
 		if err != nil {
 			log.Printf("[ERR] (ctrl) error initializing task %q: %s", task.Name, err)
-			return err
+			return map[string]driver.Driver{}, err
 		}
 
 		units = append(units, unit{
@@ -117,11 +119,13 @@ func (ctrl *baseController) init(ctx context.Context) error {
 			services:  task.ServiceNames(),
 			source:    task.Source,
 		})
+
+		drivers[task.Name] = d
 	}
 	ctrl.units = units
 
 	log.Printf("[INFO] (ctrl) driver initialized")
-	return nil
+	return drivers, nil
 }
 
 // loadProviderConfigs loads provider configs and evaluates provider blocks

@@ -165,7 +165,7 @@ func TestOnce(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		err := rw.Init(ctx)
+		_, err := rw.Init(ctx)
 		assert.NoError(t, err)
 
 		// testing really starts here...

@@ -192,23 +192,9 @@ func (cli *CLI) Run(args []string) int {
 	exitCh := make(chan struct{}, exitBufLen)
 
 	go func() {
-		if isOnce || isInspect {
-			return
-		}
-		api := api.NewAPI(store, config.IntVal(conf.Port))
-		if err = api.Serve(ctx); err != nil {
-			if err == context.Canceled {
-				exitCh <- struct{}{}
-				return
-			}
-			errCh <- err
-			return
-		}
-	}()
-
-	go func() {
 		log.Printf("[INFO] (cli) initializing controller")
-		if err = ctrl.Init(ctx); err != nil {
+		drivers, err := ctrl.Init(ctx)
+		if err != nil {
 			if err == context.Canceled {
 				exitCh <- struct{}{}
 				return
@@ -238,6 +224,21 @@ func (cli *CLI) Run(args []string) int {
 				return
 			}
 		}
+
+		go func() {
+			if isInspect {
+				return
+			}
+			api := api.NewAPI(store, drivers, config.IntVal(conf.Port))
+			if err = api.Serve(ctx); err != nil {
+				if err == context.Canceled {
+					exitCh <- struct{}{}
+					return
+				}
+				errCh <- err
+				return
+			}
+		}()
 
 		log.Printf("[INFO] (cli) running controller in daemon mode")
 		if err := ctrl.Run(ctx); err != nil {

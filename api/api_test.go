@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 )
 
@@ -44,7 +45,7 @@ func TestServe(t *testing.T) {
 
 	port, err := FreePort()
 	require.NoError(t, err)
-	api := NewAPI(event.NewStore(), port)
+	api := NewAPI(event.NewStore(), map[string]driver.Driver{}, port)
 	go api.Serve(ctx)
 
 	for _, tc := range cases {
@@ -80,7 +81,7 @@ func TestServe_context_cancel(t *testing.T) {
 
 	port, err := FreePort()
 	require.NoError(t, err)
-	api := NewAPI(event.NewStore(), port)
+	api := NewAPI(event.NewStore(), map[string]driver.Driver{}, port)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)

@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/handler"
@@ -70,6 +71,7 @@ func TestRenderTemplate(t *testing.T) {
 			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.renderErr).Once()
 
 			tf := &Terraform{
+				mu:       &sync.RWMutex{},
 				task:     Task{Name: "RenderTemplateTest", Enabled: true},
 				resolver: r,
 				template: tmpl,
@@ -156,6 +158,7 @@ func TestApplyTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyReturn).Once()
 
 			tf := &Terraform{
+				mu:        &sync.RWMutex{},
 				task:      Task{Name: "ApplyTaskTest", Enabled: true},
 				client:    c,
 				postApply: tc.postApply,
@@ -284,6 +287,7 @@ func TestDisabledTask(t *testing.T) {
 		// not throw any errors
 
 		tf := &Terraform{
+			mu:   &sync.RWMutex{},
 			task: Task{Name: "disabled_task", Enabled: false},
 		}
 
