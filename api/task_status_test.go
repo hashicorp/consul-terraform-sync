@@ -237,58 +237,6 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 
 }
 
-func TestTaskStatus_GetTaskName(t *testing.T) {
-	cases := []struct {
-		name      string
-		path      string
-		expectErr bool
-		expected  string
-	}{
-		{
-			"all task statuses",
-			"/v1/status/tasks",
-			false,
-			"",
-		},
-		{
-			"task status for a specific task",
-			"/v1/status/tasks/my_specific_task",
-			false,
-			"my_specific_task",
-		},
-		{
-			"empty task name",
-			"/v1/status/tasks/",
-			false,
-			"",
-		},
-		{
-			"tasks task name",
-			"/v1/status/tasks/tasks",
-			false,
-			"tasks",
-		},
-		{
-			"invalid name",
-			"/v1/status/tasks/mytask/stuff",
-			true,
-			"",
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			actual, err := getTaskName(tc.path, "v1")
-			if tc.expectErr {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-			assert.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
 func TestTaskStatus_MakeStatus(t *testing.T) {
 	cases := []struct {
 		name     string
