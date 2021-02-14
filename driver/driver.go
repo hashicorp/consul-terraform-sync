@@ -31,6 +31,8 @@ type Driver interface {
 	// UpdateTask supports updating certain fields of a task
 	UpdateTask(task PatchTask) error
 
+	Task() Task
+
 	// Version returns the version of the driver.
 	Version() string
 }

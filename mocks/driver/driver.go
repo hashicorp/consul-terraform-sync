@@ -84,6 +84,20 @@ func (_m *Driver) SetBufferPeriod(watcher templates.Watcher) {
 	_m.Called(watcher)
 }
 
+// Task provides a mock function with given fields:
+func (_m *Driver) Task() driver.Task {
+	ret := _m.Called()
+
+	var r0 driver.Task
+	if rf, ok := ret.Get(0).(func() driver.Task); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(driver.Task)
+	}
+
+	return r0
+}
+
 // UpdateTask provides a mock function with given fields: task
 func (_m *Driver) UpdateTask(task driver.PatchTask) error {
 	ret := _m.Called(task)
