@@ -2,9 +2,11 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -48,14 +50,16 @@ func NewClient(c *ClientConfig, httpClient httpClient) *Client {
 //
 // path: relative path with no preceding '/' e.g. "status/tasks"
 // query: URL encoded query string with no preceding '?'. See QueryParam.Encode()
-func (c *Client) request(method, path, query string) (*http.Response, error) {
+func (c *Client) request(method, path, query, body string) (*http.Response, error) {
 	url := url.URL{
 		Scheme:   "http",
 		Host:     fmt.Sprintf("localhost:%d", c.port),
 		Path:     fmt.Sprintf("%s/%s", c.version, path),
 		RawQuery: query,
 	}
-	req, err := http.NewRequest(method, url.String(), nil)
+
+	r := strings.NewReader(body)
+	req, err := http.NewRequest(method, url.String(), r)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +124,7 @@ func (c *Client) Status() *Status {
 func (s *Status) Overall() (OverallStatus, error) {
 	var overallStatus OverallStatus
 
-	resp, err := s.c.request(http.MethodGet, overallStatusPath, "")
+	resp, err := s.c.request(http.MethodGet, overallStatusPath, "", "")
 	if err != nil {
 		return overallStatus, err
 	}
@@ -150,7 +154,7 @@ func (s *Status) Task(name string, q *QueryParam) (map[string]TaskStatus, error)
 		q = &QueryParam{}
 	}
 
-	resp, err := s.c.request(http.MethodGet, path, q.Encode())
+	resp, err := s.c.request(http.MethodGet, path, q.Encode(), "")
 	if err != nil {
 		return taskStatuses, err
 	}
@@ -162,4 +166,45 @@ func (s *Status) Task(name string, q *QueryParam) (map[string]TaskStatus, error)
 	}
 
 	return taskStatuses, nil
+}
+
+// Task can be used to query the task endpoints
+type Task struct {
+	c *Client
+}
+
+// Task returns a handle to the task endpoints
+func (c *Client) Task() *Task {
+	return &Task{c}
+}
+
+// Update is used to patch update task
+func (t *Task) Update(name string, config UpdateTaskConfig) error {
+	b, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("%s/%s", taskPath, name)
+	resp, err := t.c.request(http.MethodPatch, path, "", string(b))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
+
+	errPayload := make(map[string]string)
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(&errPayload); err != nil {
+		return err
+	}
+
+	if errMsg := errPayload["error"]; errMsg != "" {
+		return errors.New(errMsg)
+	} else {
+		return errors.New("Unable to retrieve error message :/")
+	}
 }

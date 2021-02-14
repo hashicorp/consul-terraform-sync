@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
@@ -82,7 +85,7 @@ func TestRequest(t *testing.T) {
 			hc.On("Do", mock.Anything).Return(mockResp, tc.httpError).Once()
 
 			c := NewClient(&ClientConfig{Port: 8558}, hc)
-			resp, err := c.request("GET", "v1/some/endpoint", "test=true")
+			resp, err := c.request("GET", "v1/some/endpoint", "test=true", "body")
 			if tc.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, resp)
@@ -244,4 +247,64 @@ func TestStatus(t *testing.T) {
 			})
 		}
 	})
+}
+
+func Test_Task_Update(t *testing.T) {
+	t.Parallel()
+
+	// start up server
+	port, err := FreePort()
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	drivers := make(map[string]driver.Driver)
+	api := NewAPI(event.NewStore(), drivers, port)
+	go api.Serve(ctx)
+	time.Sleep(3 * time.Second) // in case tests run before server is ready
+
+	c := NewClient(&ClientConfig{Port: port}, nil)
+
+	t.Run("disable-then-enable", func(t *testing.T) {
+		// setup temp dir
+		tempDir := "disable-enable"
+		makeTempDir(tempDir)
+		defer removeDir(tempDir)
+
+		// add a driver
+		d, err := driver.NewTerraform(&driver.TerraformConfig{
+			Task:       driver.Task{Enabled: true},
+			WorkingDir: tempDir,
+			ClientType: "test",
+		})
+		require.NoError(t, err)
+		drivers["task_a"] = d
+
+		assert.True(t, d.Task().Enabled)
+		err = c.Task().Update("task_a", UpdateTaskConfig{Enabled: config.Bool(false)})
+		require.NoError(t, err)
+		assert.False(t, d.Task().Enabled)
+	})
+	t.Run("task-not-found-error", func(t *testing.T) { // setup temp dir
+		err = c.Task().Update("non-existent-task", UpdateTaskConfig{
+			Enabled: config.Bool(false)},
+		)
+		require.Error(t, err)
+	})
+}
+
+// makeTempDir creates a directory for a test
+func makeTempDir(tempDir string) error {
+	_, err := os.Stat(tempDir)
+	if !os.IsNotExist(err) {
+		log.Printf("[WARN] temp dir %s was not cleared out after last test. Deleting.", tempDir)
+		if err = removeDir(tempDir); err != nil {
+			return err
+		}
+	}
+	return os.Mkdir(tempDir, os.ModePerm)
+}
+
+// removeDir removes temporary directory created for a test
+func removeDir(tempDir string) error {
+	return os.RemoveAll(tempDir)
 }
