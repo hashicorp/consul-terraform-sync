@@ -76,6 +76,10 @@ func NewAPI(store *event.Store, drivers map[string]driver.Driver, port int) *API
 	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, taskStatusPath),
 		newTaskStatusHandler(store, defaultAPIVersion))
 
+	// crud task
+	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskPath),
+		newTaskHandler(store, drivers, defaultAPIVersion))
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
 		WriteTimeout: time.Second * 15,
