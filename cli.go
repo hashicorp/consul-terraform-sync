@@ -8,11 +8,15 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	mcli "github.com/mitchellh/cli"
+
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -105,15 +109,36 @@ func (cli *CLI) Run(args []string) int {
 		return ExitCodeParseFlagsError
 	}
 
-	if help || h {
-		fmt.Printf("Usage of %s:\n", os.Args[0])
-		printFlags(f)
-		return ExitCodeOK
-	}
-
 	if isVersion {
 		fmt.Fprintf(cli.errStream, "%s %s\n", version.Name, version.GetHumanVersion())
 		fmt.Fprintf(cli.errStream, "Compatible with Terraform %s\n", version.CompatibleTerraformVersionConstraint)
+		return ExitCodeOK
+	}
+
+	// Are we running the binary or a CLI command?
+	// If the first unused argument isn't a flag, then assume subcommand
+	unused := f.Args()
+	if len(unused) > 0 && !strings.HasPrefix(unused[0], "-") {
+		subcommands := &mcli.CLI{
+			Name:     "consul-terraform-sync",
+			Args:     args[1:],
+			Commands: command.Commands(),
+		}
+
+		exitCode, err := subcommands.Run()
+		if err != nil {
+			log.Printf("[ERROR] running the CLI command '%s': %s",
+				strings.Join(args, " "), err)
+		}
+		return exitCode
+	}
+
+	// running the binary!
+
+	// Print out binary's help info
+	if help || h {
+		fmt.Printf("Usage of %s:\n", os.Args[0])
+		printFlags(f)
 		return ExitCodeOK
 	}
 
@@ -123,6 +148,11 @@ func (cli *CLI) Run(args []string) int {
 		printFlags(f)
 		return ExitCodeRequiredFlagsError
 	}
+	return cli.runBinary(configFiles, inspectTasks, isInspect, isOnce, clientType)
+}
+
+func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
+	isInspect, isOnce bool, clientType string) int {
 
 	// Build the config.
 	conf, err := config.BuildConfig([]string(configFiles))
