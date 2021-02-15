@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
@@ -47,6 +48,12 @@ func (p *Printer) SetEnv(map[string]string) error {
 	p.logger.Printf("[INFO] (client.printer) setting workspace environment: "+
 		"'%s', workingdir: '%s'", p.workspace, p.workingDir)
 	return nil
+}
+
+// SetStdout logs out 'set standard out'
+func (p *Printer) SetStdout(w io.Writer) {
+	p.logger.Printf("[INFO] (client.printer) setting standard out for workspace: "+
+		"'%s', workingdir: '%s'", p.workspace, p.workingDir)
 }
 
 // Init logs out 'init'

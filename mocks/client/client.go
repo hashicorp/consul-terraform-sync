@@ -4,6 +4,7 @@ package mocks
 
 import (
 	context "context"
+	io "io"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -81,4 +82,9 @@ func (_m *Client) SetEnv(_a0 map[string]string) error {
 	}
 
 	return r0
+}
+
+// SetStdout provides a mock function with given fields: w
+func (_m *Client) SetStdout(w io.Writer) {
+	_m.Called(w)
 }

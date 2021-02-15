@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -52,6 +53,7 @@ type Terraform struct {
 
 	workingDir string
 	client     client.Client
+	logClient  bool
 	postApply  handler.Handler
 
 	inited bool
@@ -109,6 +111,7 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		requiredProviders: config.RequiredProviders,
 		workingDir:        config.WorkingDir,
 		client:            tfClient,
+		logClient:         config.Log,
 		postApply:         handler,
 		resolver:          hcat.NewResolver(),
 		fileReader:        ioutil.ReadFile,
@@ -200,7 +203,8 @@ func (tf *Terraform) InspectTask(ctx context.Context) error {
 		return nil
 	}
 
-	return tf.inspectTask(ctx)
+	_, err := tf.inspectTask(ctx, false)
+	return err
 }
 
 // ApplyTask applies the task changes.
@@ -349,22 +353,36 @@ func (tf *Terraform) renderTemplate(ctx context.Context, watcher templates.Watch
 	return result.Complete, nil
 }
 
-// inspectTask inspects the task changes
-func (tf *Terraform) inspectTask(ctx context.Context) error {
+// inspectTask inspects the task changes. Option to log inspection details to
+// standard out
+func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (string, error) {
 	taskName := tf.task.Name
 
 	if err := tf.init(ctx); err != nil {
 		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
 			"skipping plan for '%s'", taskName)
-		return err
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if returnPlan {
+		tf.client.SetStdout(&buf)
+
+		var logger *log.Logger
+		if tf.logClient {
+			logger = log.New(log.Writer(), "", log.Flags())
+		} else {
+			logger = log.New(ioutil.Discard, "", 0)
+		}
+		defer tf.client.SetStdout(logger.Writer())
 	}
 
 	log.Printf("[TRACE] (driver.terraform) plan '%s'", taskName)
 	if err := tf.client.Plan(ctx); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error tf-plan for '%s'", taskName))
+		return "", errors.Wrap(err, fmt.Sprintf("error tf-plan for '%s'", taskName))
 	}
 
-	return nil
+	return buf.String(), nil
 }
 
 // applyTask applies the task changes.
