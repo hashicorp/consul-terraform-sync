@@ -185,36 +185,7 @@ func (tf *Terraform) RenderTemplate(ctx context.Context, watcher templates.Watch
 		return true, nil
 	}
 
-	taskName := tf.task.Name
-	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
-
-	var err error
-	var result hcat.ResolveEvent
-	if result, err = tf.resolver.Run(tf.template, watcher); err != nil {
-		log.Printf("[ERROR] (driver.terraform) checking dependency changes "+
-			"for '%s': %s", taskName, err)
-
-		return false, fmt.Errorf("error fetching template dependencies for task %s: %s",
-			tf.task.Name, err)
-	}
-
-	// result.Complete is only `true` if the template has new data that has been
-	// completely fetched.
-	if result.Complete {
-		log.Printf("[DEBUG] (driver.terraform) change detected for task %s", taskName)
-
-		var rendered hcat.RenderResult
-		if rendered, err = tf.template.Render(result.Contents); err != nil {
-			log.Printf("[ERR] (driver.terraform) rendering template for '%s': %s",
-				taskName, err)
-
-			return false, err
-		}
-		log.Printf("[TRACE] (driver.terraform) template for task %q rendered: %+v",
-			taskName, rendered)
-	}
-
-	return result.Complete, nil
+	return tf.renderTemplate(ctx, watcher)
 }
 
 // InspectTask inspects for any differences pertaining to the task between
@@ -229,20 +200,7 @@ func (tf *Terraform) InspectTask(ctx context.Context) error {
 		return nil
 	}
 
-	taskName := tf.task.Name
-
-	if err := tf.init(ctx); err != nil {
-		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
-			"skipping plan for '%s'", taskName)
-		return err
-	}
-
-	log.Printf("[TRACE] (driver.terraform) plan '%s'", taskName)
-	if err := tf.client.Plan(ctx); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error tf-plan for '%s'", taskName))
-	}
-
-	return nil
+	return tf.inspectTask(ctx)
 }
 
 // ApplyTask applies the task changes.
@@ -256,28 +214,7 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 		return nil
 	}
 
-	taskName := tf.task.Name
-
-	if err := tf.init(ctx); err != nil {
-		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
-			"skipping apply for '%s'", taskName)
-		return err
-	}
-
-	log.Printf("[TRACE] (driver.terraform) apply '%s'", taskName)
-	if err := tf.client.Apply(ctx); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error tf-apply for '%s'", taskName))
-	}
-
-	if tf.postApply != nil {
-		log.Printf("[TRACE] (driver.terraform) post-apply out-of-band actions "+
-			"for '%s'", taskName)
-		if err := tf.postApply.Do(ctx, nil); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return tf.applyTask(ctx)
 }
 
 // UpdateTask updates the task on the driver. Makes any calls to re-init
@@ -373,6 +310,84 @@ func (tf *Terraform) initTask(force bool) error {
 
 	if err := tf.initTaskTemplate(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// renderTemplate attempts to render the hashicat template
+func (tf *Terraform) renderTemplate(ctx context.Context, watcher templates.Watcher) (bool, error) {
+	taskName := tf.task.Name
+	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
+
+	var err error
+	var result hcat.ResolveEvent
+	if result, err = tf.resolver.Run(tf.template, watcher); err != nil {
+		log.Printf("[ERROR] (driver.terraform) checking dependency changes "+
+			"for '%s': %s", taskName, err)
+
+		return false, fmt.Errorf("error fetching template dependencies for task %s: %s",
+			tf.task.Name, err)
+	}
+
+	// result.Complete is only `true` if the template has new data that has been
+	// completely fetched.
+	if result.Complete {
+		log.Printf("[DEBUG] (driver.terraform) change detected for task %s", taskName)
+
+		var rendered hcat.RenderResult
+		if rendered, err = tf.template.Render(result.Contents); err != nil {
+			log.Printf("[ERR] (driver.terraform) rendering template for '%s': %s",
+				taskName, err)
+
+			return false, err
+		}
+		log.Printf("[TRACE] (driver.terraform) template for task %q rendered: %+v",
+			taskName, rendered)
+	}
+
+	return result.Complete, nil
+}
+
+// inspectTask inspects the task changes
+func (tf *Terraform) inspectTask(ctx context.Context) error {
+	taskName := tf.task.Name
+
+	if err := tf.init(ctx); err != nil {
+		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
+			"skipping plan for '%s'", taskName)
+		return err
+	}
+
+	log.Printf("[TRACE] (driver.terraform) plan '%s'", taskName)
+	if err := tf.client.Plan(ctx); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error tf-plan for '%s'", taskName))
+	}
+
+	return nil
+}
+
+// applyTask applies the task changes.
+func (tf *Terraform) applyTask(ctx context.Context) error {
+	taskName := tf.task.Name
+
+	if err := tf.init(ctx); err != nil {
+		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
+			"skipping apply for '%s'", taskName)
+		return err
+	}
+
+	log.Printf("[TRACE] (driver.terraform) apply '%s'", taskName)
+	if err := tf.client.Apply(ctx); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error tf-apply for '%s'", taskName))
+	}
+
+	if tf.postApply != nil {
+		log.Printf("[TRACE] (driver.terraform) post-apply out-of-band actions "+
+			"for '%s'", taskName)
+		if err := tf.postApply.Do(ctx, nil); err != nil {
+			return err
+		}
 	}
 
 	return nil
