@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -116,7 +117,10 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		patch.Enabled = config.BoolVal(conf.Enabled)
 	}
 
-	err = d.UpdateTask(patch)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	_, err = d.UpdateTask(ctx, patch) // TODO: consume plan in next commit
 	if err != nil {
 		log.Printf("[TRACE] (api.task) error while updating task: %s", err)
 		jsonResponse(w, http.StatusInternalServerError, map[string]string{

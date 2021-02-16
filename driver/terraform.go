@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
@@ -224,8 +225,17 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 }
 
 // UpdateTask updates the task on the driver. Makes any calls to re-init
-// depending on the fields updated.
-func (tf *Terraform) UpdateTask(patch PatchTask) error {
+// depending on the fields updated. If update task is requested with the inspect
+// run option, then returns the inspected plan
+func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (string, error) {
+	switch patch.RunOption {
+	case "", RunOptionInspect, RunOptionNow:
+		// valid options
+	default:
+		return "", fmt.Errorf("Invalid run option '%s'. Please select a valid "+
+			"option", patch.RunOption)
+	}
+
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
@@ -233,15 +243,60 @@ func (tf *Terraform) UpdateTask(patch PatchTask) error {
 
 	if tf.task.Enabled != patch.Enabled {
 		tf.task.Enabled = patch.Enabled
-		reinit = true
+		if tf.task.Enabled {
+			reinit = true
+		}
+	}
+
+	// identify cases where resources are not impacted and we can return early
+	switch {
+	case patch.Enabled == false:
+		return "", nil
+	default:
+		// onward!
 	}
 
 	if reinit {
+		if err := tf.initTask(true); err != nil {
+			return "", fmt.Errorf("Error updating task '%s'. Unable to init "+
+				"task: %s", tf.task.Name, err)
+		}
 		tf.inited = false
-		return tf.initTask(true)
+
+		for i := int64(0); ; i++ {
+			rendered, err := tf.renderTemplate(ctx)
+			if err != nil {
+				return "", fmt.Errorf("Error updating task '%s'. Unable to "+
+					"render template for task: %s", tf.task.Name, err)
+			}
+			if rendered {
+				break
+			}
+			tf.logDepSize(50, i)
+		}
 	}
 
-	return nil
+	if patch.RunOption == RunOptionInspect {
+		log.Printf("[TRACE] (driver.terraform) update task '%s'. inspect run "+
+			"option", tf.task.Name)
+		plan, err := tf.inspectTask(ctx, true)
+		if err != nil {
+			return "", fmt.Errorf("Error updating task '%s'. Unable to inspect "+
+				"task: %s", tf.task.Name, err)
+		}
+
+		plan = strings.ReplaceAll(plan, "Terraform", "CTS")
+		return plan, nil
+	}
+
+	if patch.RunOption == RunOptionNow {
+		log.Printf("[TRACE] (driver.terraform) update task '%s'. run now "+
+			"option", tf.task.Name)
+		return "", tf.applyTask(ctx)
+	}
+
+	// allow the task to update naturally!
+	return "", nil
 }
 
 // init initializes the Terraform workspace if needed
@@ -437,6 +492,22 @@ func (tf *Terraform) initTaskTemplate() error {
 	})
 
 	return nil
+}
+
+// logDepSize logs the watcher dependency size every nth iteration. Set the
+// iterator to a negative value to log each iteration.
+//
+// This is the same as the controller.logDepSize(). TODO: consider consolidating
+func (tf *Terraform) logDepSize(n uint, i int64) {
+	depSize := tf.watcher.Size()
+	if i%int64(n) == 0 || i < 0 {
+		log.Printf("[DEBUG] (driver.terraform) watching %d dependencies", depSize)
+		if depSize > templates.DepSizeWarning {
+			log.Printf("[WARN] (driver.terraform) watching more than %d "+
+				"dependencies could DDoS your Consul cluster: %d",
+				templates.DepSizeWarning, depSize)
+		}
+	}
 }
 
 // getTerraformHandlers returns the first handler in a chain of handlers

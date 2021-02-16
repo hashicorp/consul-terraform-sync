@@ -96,18 +96,25 @@ func (_m *Driver) Task() driver.Task {
 	return r0
 }
 
-// UpdateTask provides a mock function with given fields: task
-func (_m *Driver) UpdateTask(task driver.PatchTask) error {
-	ret := _m.Called(task)
+// UpdateTask provides a mock function with given fields: ctx, task
+func (_m *Driver) UpdateTask(ctx context.Context, task driver.PatchTask) (string, error) {
+	ret := _m.Called(ctx, task)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(driver.PatchTask) error); ok {
-		r0 = rf(task)
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context, driver.PatchTask) string); ok {
+		r0 = rf(ctx, task)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(string)
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, driver.PatchTask) error); ok {
+		r1 = rf(ctx, task)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // Version provides a mock function with given fields:
