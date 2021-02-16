@@ -120,6 +120,11 @@ func (tf *Terraform) Version() string {
 	return TerraformVersion.String()
 }
 
+// Task returns the task config info
+func (tf *Terraform) Task() Task {
+	return tf.task
+}
+
 // InitTask initializes the task by creating the Terraform root module and related
 // files to execute on.
 func (tf *Terraform) InitTask(force bool) error {
