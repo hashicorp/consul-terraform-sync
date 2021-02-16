@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +30,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "status_endpoints")
-	err = makeTempDir(tempDir)
+	delete, err := testutils.MakeTempDir(tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 	require.NoError(t, err)
 
@@ -210,7 +211,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 	err = stopCommand(cmd)
 	require.NoError(t, err)
-	removeDir(tempDir)
+	delete()
 }
 
 // runSyncDevMode runs the daemon in development which does not run or download

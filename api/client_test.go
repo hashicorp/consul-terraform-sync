@@ -6,9 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -16,6 +14,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -267,8 +266,9 @@ func Test_Task_Update(t *testing.T) {
 	t.Run("disable-then-enable", func(t *testing.T) {
 		// setup temp dir
 		tempDir := "disable-enable"
-		makeTempDir(tempDir)
-		defer removeDir(tempDir)
+		delete, err := testutils.MakeTempDir(tempDir)
+		require.NoError(t, err)
+		defer delete()
 
 		// add a driver
 		d, err := driver.NewTerraform(&driver.TerraformConfig{
@@ -290,21 +290,4 @@ func Test_Task_Update(t *testing.T) {
 		)
 		require.Error(t, err)
 	})
-}
-
-// makeTempDir creates a directory for a test
-func makeTempDir(tempDir string) error {
-	_, err := os.Stat(tempDir)
-	if !os.IsNotExist(err) {
-		log.Printf("[WARN] temp dir %s was not cleared out after last test. Deleting.", tempDir)
-		if err = removeDir(tempDir); err != nil {
-			return err
-		}
-	}
-	return os.Mkdir(tempDir, os.ModePerm)
-}
-
-// removeDir removes temporary directory created for a test
-func removeDir(tempDir string) error {
-	return os.RemoveAll(tempDir)
 }
