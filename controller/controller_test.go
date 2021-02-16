@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -118,7 +119,7 @@ func TestBaseControllerInit(t *testing.T) {
 			d.On("InitTask", mock.Anything, mock.Anything).Return(tc.initTaskErr).Once()
 
 			baseCtrl := baseController{
-				newDriver: func(*config.Config, driver.Task) (driver.Driver, error) {
+				newDriver: func(*config.Config, driver.Task, templates.Watcher) (driver.Driver, error) {
 					return d, nil
 				},
 				conf: tc.config,

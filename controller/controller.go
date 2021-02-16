@@ -47,7 +47,7 @@ type unit struct {
 
 type baseController struct {
 	conf      *config.Config
-	newDriver func(*config.Config, driver.Task) (driver.Driver, error)
+	newDriver func(*config.Config, driver.Task, templates.Watcher) (driver.Driver, error)
 	units     []unit
 	watcher   templates.Watcher
 	resolver  templates.Resolver
@@ -101,7 +101,7 @@ func (ctrl *baseController) init(ctx context.Context) (map[string]driver.Driver,
 		}
 
 		log.Printf("[DEBUG] (ctrl) initializing task %q", task.Name)
-		d, err := ctrl.newDriver(ctrl.conf, task)
+		d, err := ctrl.newDriver(ctrl.conf, task, ctrl.watcher)
 		if err != nil {
 			return map[string]driver.Driver{}, err
 		}
@@ -184,7 +184,7 @@ func InstallDriver(ctx context.Context, conf *config.Config) error {
 
 // newDriverFunc is a constructor abstraction for all of supported drivers
 func newDriverFunc(conf *config.Config) (
-	func(conf *config.Config, task driver.Task) (driver.Driver, error), error) {
+	func(conf *config.Config, task driver.Task, w templates.Watcher) (driver.Driver, error), error) {
 	if conf.Driver.Terraform != nil {
 		return newTerraformDriver, nil
 	}
@@ -193,10 +193,11 @@ func newDriverFunc(conf *config.Config) (
 
 // newTerraformDriver maps user configuration to initialize a Terraform driver
 // for a task
-func newTerraformDriver(conf *config.Config, task driver.Task) (driver.Driver, error) {
+func newTerraformDriver(conf *config.Config, task driver.Task, w templates.Watcher) (driver.Driver, error) {
 	tfConf := *conf.Driver.Terraform
 	return driver.NewTerraform(&driver.TerraformConfig{
 		Task:              task,
+		Watcher:           w,
 		Log:               *tfConf.Log,
 		PersistLog:        *tfConf.PersistLog,
 		Path:              *tfConf.Path,

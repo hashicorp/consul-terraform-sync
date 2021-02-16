@@ -49,6 +49,7 @@ type Terraform struct {
 
 	resolver   templates.Resolver
 	template   templates.Template
+	watcher    templates.Watcher
 	fileReader func(string) ([]byte, error)
 
 	workingDir string
@@ -68,7 +69,7 @@ type TerraformConfig struct {
 	WorkingDir        string
 	Backend           map[string]interface{}
 	RequiredProviders map[string]interface{}
-
+	Watcher           templates.Watcher
 	// empty/unknown string will default to TerraformCLI client
 	ClientType string
 }
@@ -114,6 +115,7 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		logClient:         config.Log,
 		postApply:         handler,
 		resolver:          hcat.NewResolver(),
+		watcher:           config.Watcher,
 		fileReader:        ioutil.ReadFile,
 	}, nil
 }
