@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/consul-terraform-sync/driver"
@@ -21,21 +25,36 @@ func TestServe(t *testing.T) {
 	cases := []struct {
 		name       string
 		path       string
+		method     string
+		body       string
 		statusCode int
 	}{
 		{
 			"overall status",
 			"status",
+			http.MethodGet,
+			"",
 			http.StatusOK,
 		},
 		{
 			"task status: all",
 			"status/tasks",
+			http.MethodGet,
+			"",
 			http.StatusOK,
 		},
 		{
 			"task status: single",
 			"status/tasks/task_b",
+			http.MethodGet,
+			"",
+			http.StatusOK,
+		},
+		{
+			"update task (patch)",
+			"tasks/task_b",
+			http.MethodPatch,
+			`{"enabled": true}`,
 			http.StatusOK,
 		},
 	}
@@ -45,14 +64,24 @@ func TestServe(t *testing.T) {
 
 	port, err := FreePort()
 	require.NoError(t, err)
-	api := NewAPI(event.NewStore(), map[string]driver.Driver{}, port)
+
+	drivers := make(map[string]driver.Driver)
+	d := new(mocks.Driver)
+	d.On("UpdateTask", mock.Anything).Return(nil).Once()
+	drivers["task_b"] = d
+
+	api := NewAPI(event.NewStore(), drivers, port)
 	go api.Serve(ctx)
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			u := fmt.Sprintf("http://localhost:%d/%s/%s",
 				port, defaultAPIVersion, tc.path)
-			resp, err := http.Get(u)
+			r := strings.NewReader(tc.body)
+			req, err := http.NewRequest(tc.method, u, r)
+			require.NoError(t, err)
+
+			resp, err := http.DefaultClient.Do(req)
 
 			statusCode := 0
 
@@ -222,6 +251,60 @@ func TestJsonResponse(t *testing.T) {
 			w := httptest.NewRecorder()
 			err := jsonResponse(w, tc.code, tc.response)
 			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestGetTaskName(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		path      string
+		expectErr bool
+		expected  string
+	}{
+		{
+			"all task statuses",
+			"/v1/status/tasks",
+			false,
+			"",
+		},
+		{
+			"task status for a specific task",
+			"/v1/status/tasks/my_specific_task",
+			false,
+			"my_specific_task",
+		},
+		{
+			"empty task name",
+			"/v1/status/tasks/",
+			false,
+			"",
+		},
+		{
+			"tasks task name",
+			"/v1/status/tasks/tasks",
+			false,
+			"tasks",
+		},
+		{
+			"invalid name",
+			"/v1/status/tasks/mytask/stuff",
+			true,
+			"",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := getTaskName(tc.path, taskStatusPath, "v1")
+			if tc.expectErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }

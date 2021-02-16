@@ -28,6 +28,9 @@ type Driver interface {
 	// ApplyTask applies change for the task managed by the driver
 	ApplyTask(ctx context.Context) error
 
+	// UpdateTask supports updating certain fields of a task
+	UpdateTask(task PatchTask) error
+
 	// Version returns the version of the driver.
 	Version() string
 }

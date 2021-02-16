@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -74,6 +75,10 @@ func NewAPI(store *event.Store, drivers map[string]driver.Driver, port int) *API
 	// retrieve all task statuses
 	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, taskStatusPath),
 		newTaskStatusHandler(store, defaultAPIVersion))
+
+	// crud task
+	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskPath),
+		newTaskHandler(store, drivers, defaultAPIVersion))
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
@@ -147,4 +152,23 @@ func jsonResponse(w http.ResponseWriter, code int, response interface{}) error {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(code)
 	return json.NewEncoder(w).Encode(response)
+}
+
+// getTaskName retrieves the taskname from the url. Returns empty string if no
+// taskname is specified
+func getTaskName(reqPath, apiPath, version string) (string, error) {
+	taskPathNoID := fmt.Sprintf("/%s/%s", version, apiPath)
+	if reqPath == taskPathNoID {
+		return "", nil
+	}
+
+	taskPathWithID := taskPathNoID + "/"
+	taskName := strings.TrimPrefix(reqPath, taskPathWithID)
+	if invalid := strings.ContainsRune(taskName, '/'); invalid {
+		return "", fmt.Errorf("unsupported path '%s'. request must be format "+
+			"'path/{task-name}'. task name cannot have '/ ' and api "+
+			"does not support further resources", reqPath)
+	}
+
+	return taskName, nil
 }

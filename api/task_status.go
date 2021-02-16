@@ -40,7 +40,7 @@ func newTaskStatusHandler(store *event.Store, version string) *taskStatusHandler
 func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[TRACE] (api.taskstatus) requesting task status '%s'", r.URL.Path)
 
-	taskName, err := getTaskName(r.URL.Path, h.version)
+	taskName, err := getTaskName(r.URL.Path, taskStatusPath, h.version)
 	if err != nil {
 		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
 		jsonResponse(w, http.StatusBadRequest, map[string]string{
@@ -81,25 +81,6 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, http.StatusOK, statuses)
-}
-
-// getTaskName retrieves the taskname from the url. Returns empty string if no
-// taskname is specified
-func getTaskName(path, version string) (string, error) {
-	taskPathNoID := fmt.Sprintf("/%s/%s", version, taskStatusPath)
-	if path == taskPathNoID {
-		return "", nil
-	}
-
-	taskPathWithID := taskPathNoID + "/"
-	taskName := strings.TrimPrefix(path, taskPathWithID)
-	if invalid := strings.ContainsRune(taskName, '/'); invalid {
-		return "", fmt.Errorf("unsupported path '%s'. request must be format "+
-			"'/status/tasks/{task-name}'. task name cannot have '/ ' and api "+
-			"does not support further resources", path)
-	}
-
-	return taskName, nil
 }
 
 // makeTaskStatus takes event data for a task and returns an overall task status

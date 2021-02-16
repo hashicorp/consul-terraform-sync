@@ -5,6 +5,7 @@ package mocks
 import (
 	context "context"
 
+	driver "github.com/hashicorp/consul-terraform-sync/driver"
 	mock "github.com/stretchr/testify/mock"
 
 	templates "github.com/hashicorp/consul-terraform-sync/templates"
@@ -81,6 +82,20 @@ func (_m *Driver) RenderTemplate(ctx context.Context, watcher templates.Watcher)
 // SetBufferPeriod provides a mock function with given fields: watcher
 func (_m *Driver) SetBufferPeriod(watcher templates.Watcher) {
 	_m.Called(watcher)
+}
+
+// UpdateTask provides a mock function with given fields: task
+func (_m *Driver) UpdateTask(task driver.PatchTask) error {
+	ret := _m.Called(task)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(driver.PatchTask) error); ok {
+		r0 = rf(task)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // Version provides a mock function with given fields:
