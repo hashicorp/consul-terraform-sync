@@ -92,6 +92,15 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	runOp, err := runOption(r)
+	if err != nil {
+		log.Printf("[TRACE] (api.task) unsupported run option: %s", err)
+		jsonResponse(w, http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("[TRACE] (api.task) unable to read request body: %s", err)
@@ -110,7 +119,9 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	patch := driver.PatchTask{}
+	patch := driver.PatchTask{
+		RunOption: runOp,
+	}
 	if conf.Enabled != nil {
 		log.Printf("[INFO] (api.task) Updating task to be enabled=%t",
 			config.BoolVal(conf.Enabled))
@@ -119,7 +130,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
-	_, err = d.UpdateTask(ctx, patch) // TODO: consume plan in next commit
+	plan, err := d.UpdateTask(ctx, patch)
 	if err != nil {
 		log.Printf("[TRACE] (api.task) error while updating task: %s", err)
 		jsonResponse(w, http.StatusInternalServerError, map[string]string{
@@ -128,7 +139,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse(w, http.StatusOK, "")
+	jsonResponse(w, http.StatusOK, plan)
 }
 
 func decodeBody(body []byte) (UpdateTaskConfig, error) {
@@ -163,4 +174,31 @@ func decodeBody(body []byte) (UpdateTaskConfig, error) {
 	}
 
 	return config, nil
+}
+
+// runOption returns a run option for updating the task
+func runOption(r *http.Request) (string, error) {
+	// `?run=<option>` parameter
+	const runKey = "run"
+
+	keys, ok := r.URL.Query()[runKey]
+	if !ok {
+		return "", nil
+	}
+
+	if len(keys) != 1 {
+		return "", fmt.Errorf("cannot support more than one run query "+
+			"parameter, got run values: %v", keys)
+	}
+
+	value := keys[0]
+	value = strings.ToLower(value)
+	switch value {
+	case driver.RunOptionNow, driver.RunOptionInspect:
+		return value, nil
+	default:
+		return "", fmt.Errorf("unsupported run parameter value. only "+
+			"supporting run values %s and %s but got %s",
+			driver.RunOptionNow, driver.RunOptionInspect, value)
+	}
 }
