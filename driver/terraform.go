@@ -147,7 +147,7 @@ func (tf *Terraform) InitTask(force bool) error {
 
 // SetBufferPeriod sets the buffer period for the task. Do not set this when
 // task needs to immediately render a template and run.
-func (tf *Terraform) SetBufferPeriod(watcher templates.Watcher) {
+func (tf *Terraform) SetBufferPeriod() {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
@@ -173,14 +173,14 @@ func (tf *Terraform) SetBufferPeriod(watcher templates.Watcher) {
 
 	log.Printf("[TRACE] (driver.terraform) set buffer period for '%s': %v",
 		taskName, bp)
-	watcher.SetBufferPeriod(bp.Min, bp.Max, tf.template.ID())
+	tf.watcher.SetBufferPeriod(bp.Min, bp.Max, tf.template.ID())
 }
 
 // RenderTemplate fetches data for the template. If the data is complete fetched,
 // renders the template. Rendering a template for the first time may take several
 // cycles to load all the dependencies asynchronously. Returns a boolean whether
 // the template was rendered
-func (tf *Terraform) RenderTemplate(ctx context.Context, watcher templates.Watcher) (bool, error) {
+func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
@@ -190,7 +190,7 @@ func (tf *Terraform) RenderTemplate(ctx context.Context, watcher templates.Watch
 		return true, nil
 	}
 
-	return tf.renderTemplate(ctx, watcher)
+	return tf.renderTemplate(ctx)
 }
 
 // InspectTask inspects for any differences pertaining to the task between
@@ -322,13 +322,13 @@ func (tf *Terraform) initTask(force bool) error {
 }
 
 // renderTemplate attempts to render the hashicat template
-func (tf *Terraform) renderTemplate(ctx context.Context, watcher templates.Watcher) (bool, error) {
+func (tf *Terraform) renderTemplate(ctx context.Context) (bool, error) {
 	taskName := tf.task.Name
 	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
 
 	var err error
 	var result hcat.ResolveEvent
-	if result, err = tf.resolver.Run(tf.template, watcher); err != nil {
+	if result, err = tf.resolver.Run(tf.template, tf.watcher); err != nil {
 		log.Printf("[ERROR] (driver.terraform) checking dependency changes "+
 			"for '%s': %s", taskName, err)
 

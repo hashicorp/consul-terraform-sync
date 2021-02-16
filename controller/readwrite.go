@@ -55,7 +55,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	// Only initialize buffer periods for running the full loop and not for Once
 	// mode so it can immediately render the first time.
 	for _, u := range rw.units {
-		u.driver.SetBufferPeriod(rw.watcher)
+		u.driver.SetBufferPeriod()
 	}
 
 	for i := int64(1); ; i++ {
@@ -178,7 +178,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, 
 
 	d := u.driver
 	var rendered bool
-	rendered, storedErr = d.RenderTemplate(ctx, rw.watcher)
+	rendered, storedErr = d.RenderTemplate(ctx)
 	if storedErr != nil {
 		defer storeEvent()
 		return false, fmt.Errorf("error rendering template for task %s: %s",

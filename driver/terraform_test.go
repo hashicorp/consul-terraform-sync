@@ -75,9 +75,10 @@ func TestRenderTemplate(t *testing.T) {
 				task:     Task{Name: "RenderTemplateTest", Enabled: true},
 				resolver: r,
 				template: tmpl,
+				watcher:  new(mocksTmpl.Watcher),
 			}
 
-			actual, err := tf.RenderTemplate(ctx, new(mocksTmpl.Watcher))
+			actual, err := tf.RenderTemplate(ctx)
 			assert.Equal(t, tc.expectRendered, actual)
 
 			if tc.expectError {
@@ -287,19 +288,19 @@ func TestDisabledTask(t *testing.T) {
 		// not throw any errors
 
 		tf := &Terraform{
-			mu:   &sync.RWMutex{},
-			task: Task{Name: "disabled_task", Enabled: false},
+			mu:      &sync.RWMutex{},
+			task:    Task{Name: "disabled_task", Enabled: false},
+			watcher: new(mocksTmpl.Watcher),
 		}
 
-		w := new(mocksTmpl.Watcher)
 		ctx := context.Background()
 
 		err := tf.InitTask(true)
 		assert.NoError(t, err)
 
-		tf.SetBufferPeriod(w)
+		tf.SetBufferPeriod()
 
-		actual, err := tf.RenderTemplate(ctx, w)
+		actual, err := tf.RenderTemplate(ctx)
 		assert.NoError(t, err)
 		assert.True(t, actual)
 

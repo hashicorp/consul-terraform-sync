@@ -91,7 +91,7 @@ func (ctrl *ReadOnly) checkInspect(ctx context.Context, u unit) (bool, error) {
 	log.Printf("[TRACE] (ctrl) checking dependencies changes for task %s", taskName)
 
 	d := u.driver
-	rendered, err := d.RenderTemplate(ctx, ctrl.watcher)
+	rendered, err := d.RenderTemplate(ctx)
 	if err != nil {
 		return false, fmt.Errorf("error rendering template for task %s: %s",
 			taskName, err)

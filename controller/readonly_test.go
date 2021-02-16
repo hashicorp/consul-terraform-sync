@@ -53,7 +53,7 @@ func TestReadOnlyRun(t *testing.T) {
 			w.On("Size").Return(5)
 
 			d := new(mocksD.Driver)
-			d.On("RenderTemplate", mock.Anything, mock.Anything).
+			d.On("RenderTemplate", mock.Anything).
 				Return(true, tc.renderTmplErr)
 			d.On("InspectTask", mock.Anything).Return(tc.inspectTaskErr)
 
@@ -86,7 +86,7 @@ func TestReadOnlyRun_context_cancel(t *testing.T) {
 		On("Stop").Return()
 
 	d := new(mocksD.Driver)
-	d.On("RenderTemplate", mock.Anything, mock.Anything).Return(false, nil)
+	d.On("RenderTemplate", mock.Anything).Return(false, nil)
 	ctrl := ReadOnly{baseController: &baseController{
 		watcher:  w,
 		resolver: r,
