@@ -95,6 +95,7 @@ func (c *Client) request(method, path, query, body string) (*http.Response, erro
 type QueryParam struct {
 	IncludeEvents bool
 	Status        string
+	Run           string
 }
 
 // Encode returns QueryParameter values as a URL encoded string. No preceding '?'
@@ -106,6 +107,9 @@ func (q *QueryParam) Encode() string {
 	}
 	if q.Status != "" {
 		val.Set("status", q.Status)
+	}
+	if q.Run != "" {
+		val.Set("run", q.Run)
 	}
 	return val.Encode()
 }
@@ -179,32 +183,42 @@ func (c *Client) Task() *Task {
 }
 
 // Update is used to patch update task
-func (t *Task) Update(name string, config UpdateTaskConfig) error {
+func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (string, error) {
 	b, err := json.Marshal(config)
 	if err != nil {
-		return err
+		return "", err
+	}
+
+	if q == nil {
+		q = &QueryParam{}
 	}
 
 	path := fmt.Sprintf("%s/%s", taskPath, name)
-	resp, err := t.c.request(http.MethodPatch, path, "", string(b))
+	resp, err := t.c.request(http.MethodPatch, path, q.Encode(), string(b))
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		return nil
+		decoder := json.NewDecoder(resp.Body)
+		var plan string
+		if err = decoder.Decode(&plan); err != nil {
+			return "", err
+		}
+
+		return plan, nil
 	}
 
 	errPayload := make(map[string]string)
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(&errPayload); err != nil {
-		return err
+		return "", err
 	}
 
 	if errMsg := errPayload["error"]; errMsg != "" {
-		return errors.New(errMsg)
-	} else {
-		return errors.New("Unable to retrieve error message :/")
+		return "", errors.New(errMsg)
 	}
+	return "", fmt.Errorf("Request %s %s?%s -data='%s' errored but did not "+
+		"return an error message", http.MethodPatch, path, q.Encode(), b)
 }

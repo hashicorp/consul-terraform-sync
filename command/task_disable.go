@@ -64,9 +64,9 @@ func (c *taskDisableCommand) Run(args []string) int {
 	c.UI.Output("")
 
 	client := c.meta.client()
-	err := client.Task().Update(taskName, api.UpdateTaskConfig{
+	_, err := client.Task().Update(taskName, api.UpdateTaskConfig{
 		Enabled: config.Bool(false),
-	})
+	}, nil)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to disable '%s'", taskName))
 
