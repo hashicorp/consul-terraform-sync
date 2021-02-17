@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -41,7 +42,7 @@ func TestE2EBasic(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "basic")
-	err = makeTempDir(tempDir)
+	delete, err := testutils.MakeTempDir(tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 	require.NoError(t, err)
 
@@ -77,7 +78,7 @@ func TestE2EBasic(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, status)
 
-	removeDir(tempDir)
+	delete()
 }
 
 func TestE2ERestartSync(t *testing.T) {
@@ -88,7 +89,7 @@ func TestE2ERestartSync(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "restart")
-	err = makeTempDir(tempDir)
+	delete, err := testutils.MakeTempDir(tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 	require.NoError(t, err)
 
@@ -103,7 +104,7 @@ func TestE2ERestartSync(t *testing.T) {
 	err = runSync(configPath, 8*time.Second)
 	require.NoError(t, err)
 
-	removeDir(tempDir)
+	delete()
 }
 
 func TestE2EPanosHandlerError(t *testing.T) {
@@ -114,7 +115,7 @@ func TestE2EPanosHandlerError(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "panos_handler")
-	err = makeTempDir(tempDir)
+	delete, err := testutils.MakeTempDir(tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 	require.NoError(t, err)
 
@@ -125,7 +126,7 @@ func TestE2EPanosHandlerError(t *testing.T) {
 	err = runSyncOnce(configPath)
 	require.Error(t, err)
 
-	removeDir(tempDir)
+	delete()
 }
 
 func TestE2ELocalBackend(t *testing.T) {
@@ -192,7 +193,7 @@ func TestE2ELocalBackend(t *testing.T) {
 			defer srv.Stop()
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.tempDirPrefix)
-			err = makeTempDir(tempDir)
+			delete, err := testutils.MakeTempDir(tempDir)
 			// no defer to delete directory: only delete at end of test if no errors
 			require.NoError(t, err)
 
@@ -213,7 +214,7 @@ func TestE2ELocalBackend(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, exists)
 
-			removeDir(tempDir)
+			delete()
 		})
 	}
 }
@@ -226,7 +227,7 @@ func TestE2EDisabledTask(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disabled_task")
-	err = makeTempDir(tempDir)
+	delete, err := testutils.MakeTempDir(tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 	require.NoError(t, err)
 
@@ -249,7 +250,7 @@ func TestE2EDisabledTask(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no such file or directory")
 
-	removeDir(tempDir)
+	delete()
 }
 
 func newTestConsulServer(t *testing.T) (*testutil.TestServer, error) {
@@ -271,17 +272,6 @@ func newTestConsulServer(t *testing.T) (*testutil.TestServer, error) {
 	srv.AddAddressableService(t, "db", testutil.HealthPassing,
 		"10.10.10.10", 8000, []string{})
 	return srv, nil
-}
-
-func makeTempDir(tempDir string) error {
-	_, err := os.Stat(tempDir)
-	if !os.IsNotExist(err) {
-		log.Printf("[WARN] temp dir %s was not cleared out after last test. Deleting.", tempDir)
-		if err = removeDir(tempDir); err != nil {
-			return err
-		}
-	}
-	return os.Mkdir(tempDir, os.ModePerm)
 }
 
 func makeConfig(configPath, contents string) error {
@@ -316,11 +306,6 @@ func runSyncOnce(configPath string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
-}
-
-// removeDir removes temporary directory created for a test
-func removeDir(tempDir string) error {
-	return os.RemoveAll(tempDir)
 }
 
 func checkStateFile(consulAddr, taskname string) (int, error) {
