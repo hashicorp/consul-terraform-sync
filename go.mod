@@ -10,7 +10,6 @@ require (
 	github.com/hashicorp/consul v1.8.0
 	github.com/hashicorp/consul/sdk v0.5.0
 	github.com/hashicorp/go-checkpoint v0.5.0
-	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.2.1
@@ -22,7 +21,9 @@ require (
 	github.com/hashicorp/terraform-exec v0.9.0
 	github.com/hashicorp/vault v1.4.2
 	github.com/hashicorp/vault/api v1.0.5-0.20200630205458-1a16f3c699c6
+	github.com/mitchellh/cli v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/mitchellh/go-wordwrap v1.0.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.6.1
