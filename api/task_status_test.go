@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,6 +59,20 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	drivers["task_b"] = d
 	drivers["task_c"] = d
 
+	disabledD := new(mocks.Driver)
+	disabledD.On("Task").Return(driver.Task{
+		Name:    "task_d",
+		Enabled: false,
+		Providers: driver.NewTerraformProviderBlocks(
+			hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
+				{"null": map[string]interface{}{}},
+			})),
+		Services: []driver.Service{
+			driver.Service{Name: "web"},
+		},
+	})
+	drivers["task_d"] = disabledD
+
 	handler := newTaskStatusHandler(store, drivers, "v1")
 
 	cases := []struct {
@@ -95,6 +110,14 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_c?include=events",
 				},
+				"task_d": TaskStatus{
+					TaskName:  "task_d",
+					Status:    StatusUnknown,
+					Enabled:   false,
+					Providers: []string{"null"},
+					Services:  []string{"web"},
+					EventsURL: "",
+				},
 			},
 		},
 		{
@@ -129,10 +152,19 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					EventsURL: "/v1/status/tasks/task_c?include=events",
 					Events:    eventsC,
 				},
+				"task_d": TaskStatus{
+					TaskName:  "task_d",
+					Status:    StatusUnknown,
+					Enabled:   false,
+					Providers: []string{"null"},
+					Services:  []string{"web"},
+					EventsURL: "",
+					Events:    nil,
+				},
 			},
 		},
 		{
-			"all task statuses filtered by status with result",
+			"all task statuses filtered by status critical",
 			"/v1/status/tasks?status=critical",
 			http.StatusOK,
 			map[string]TaskStatus{
@@ -147,10 +179,19 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
-			"all task statuses filtered by status with no result",
+			"all task statuses filtered by status unknown",
 			"/v1/status/tasks?status=unknown",
 			http.StatusOK,
-			map[string]TaskStatus{},
+			map[string]TaskStatus{
+				"task_d": TaskStatus{
+					TaskName:  "task_d",
+					Status:    StatusUnknown,
+					Enabled:   false,
+					Providers: []string{"null"},
+					Services:  []string{"web"},
+					EventsURL: "",
+				},
+			},
 		},
 		{
 			"single task",

@@ -88,10 +88,30 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		statuses[taskName] = status
 	}
 
+	// if user requested a specific task that does not have events, check if
+	// a driver exists
+	if taskName != "" {
+		if _, ok := data[taskName]; !ok {
+			if d, ok := h.drivers[taskName]; ok {
+				statuses[taskName] = makeTaskStatusUnknown(d.Task())
+			}
+		}
+	}
+
+	// if user requested all tasks and status filter applicable, check driver
+	// for tasks without events
+	if taskName == "" && (filter == "" || filter == StatusUnknown) {
+		for tN, d := range h.drivers {
+			if _, ok := data[tN]; !ok {
+				statuses[tN] = makeTaskStatusUnknown(d.Task())
+			}
+		}
+	}
+
 	jsonResponse(w, http.StatusOK, statuses)
 }
 
-// makeTaskStatus takes event data for a task and returns an overall task status
+// makeTaskStatus takes event data for a task and returns a task status
 func makeTaskStatus(taskName string, events []event.Event, task driver.Task,
 	version string) TaskStatus {
 
@@ -119,6 +139,19 @@ func makeTaskStatus(taskName string, events []event.Event, task driver.Task,
 		Providers: mapKeyToArray(uniqProviders),
 		Services:  mapKeyToArray(uniqServices),
 		EventsURL: makeEventsURL(events, version, taskName),
+	}
+}
+
+// makeTaskStatusUnknown returns a task status for tasks that do not have events
+// but still exist within CTS. Example: a task that has been disabled from the start
+func makeTaskStatusUnknown(task driver.Task) TaskStatus {
+	return TaskStatus{
+		TaskName:  task.Name,
+		Status:    StatusUnknown,
+		Enabled:   task.Enabled,
+		Providers: task.ProviderNames(),
+		Services:  task.ServiceNames(),
+		EventsURL: "",
 	}
 }
 
