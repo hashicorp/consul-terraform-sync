@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 )
 
@@ -15,6 +16,7 @@ const taskStatusPath = "status/tasks"
 type TaskStatus struct {
 	TaskName  string        `json:"task_name"`
 	Status    string        `json:"status"`
+	Enabled   bool          `json:"enabled"`
 	Providers []string      `json:"providers"`
 	Services  []string      `json:"services"`
 	EventsURL string        `json:"events_url"`
@@ -24,13 +26,15 @@ type TaskStatus struct {
 // taskStatusHandler handles the task status endpoint
 type taskStatusHandler struct {
 	store   *event.Store
+	drivers map[string]driver.Driver
 	version string
 }
 
 // newTaskStatusHandler returns a new TaskStatusHandler
-func newTaskStatusHandler(store *event.Store, version string) *taskStatusHandler {
+func newTaskStatusHandler(store *event.Store, drivers map[string]driver.Driver, version string) *taskStatusHandler {
 	return &taskStatusHandler{
 		store:   store,
+		drivers: drivers,
 		version: version,
 	}
 }
@@ -64,7 +68,17 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	data := h.store.Read(taskName)
 	statuses := make(map[string]TaskStatus)
 	for taskName, events := range data {
-		status := makeTaskStatus(taskName, events, h.version)
+		d, ok := h.drivers[taskName]
+		if !ok {
+			err := fmt.Errorf("task '%s' does not exist", taskName)
+			log.Printf("[TRACE] (api.updatetask) %s", err)
+			jsonResponse(w, http.StatusNotFound, map[string]string{
+				"error": err.Error(),
+			})
+			return
+		}
+		status := makeTaskStatus(taskName, events, d.Task(), h.version)
+
 		if filter != "" && status.Status != filter {
 			continue
 		}
@@ -78,7 +92,9 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // makeTaskStatus takes event data for a task and returns an overall task status
-func makeTaskStatus(taskName string, events []event.Event, version string) TaskStatus {
+func makeTaskStatus(taskName string, events []event.Event, task driver.Task,
+	version string) TaskStatus {
+
 	successes := make([]bool, len(events))
 	uniqProviders := make(map[string]bool)
 	uniqServices := make(map[string]bool)
@@ -99,6 +115,7 @@ func makeTaskStatus(taskName string, events []event.Event, version string) TaskS
 	return TaskStatus{
 		TaskName:  taskName,
 		Status:    successToStatus(successes),
+		Enabled:   task.Enabled,
 		Providers: mapKeyToArray(uniqProviders),
 		Services:  mapKeyToArray(uniqServices),
 		EventsURL: makeEventsURL(events, version, taskName),
