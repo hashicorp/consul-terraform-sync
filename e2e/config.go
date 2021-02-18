@@ -11,6 +11,7 @@ const (
 
 	fakeSuccessTaskName = "fake_handler_success_task"
 	fakeFailureTaskName = "fake_handler_failure_task"
+	disabledTaskName    = "disabled_task"
 )
 
 // oneTaskConfig returns a basic config file with a single task
@@ -82,7 +83,16 @@ task {
 	providers = ["fake-sync.success"]
 	source = "../../test_modules/e2e_basic_task"
 }
-`, port, fakeFailureTaskName, fakeSuccessTaskName)
+
+task {
+	name = "%s"
+	description = "disabled task"
+	enabled = false
+	services = ["api"]
+	providers = ["fake-sync.success"]
+	source = "../../test_modules/e2e_basic_task"
+}
+`, port, fakeFailureTaskName, fakeSuccessTaskName, disabledTaskName)
 
 	return fakeHandlerConfig + consulBlock(consulAddr) + terraformBlock(tempDir)
 }

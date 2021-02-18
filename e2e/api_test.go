@@ -85,6 +85,14 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					Services:  []string{"api"},
 					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
 				},
+				disabledTaskName: api.TaskStatus{
+					TaskName:  disabledTaskName,
+					Status:    api.StatusUnknown,
+					Enabled:   false,
+					Providers: []string{"fake-sync"},
+					Services:  []string{"api"},
+					EventsURL: "",
+				},
 			},
 		},
 		{
@@ -143,14 +151,16 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	}
 
 	eventCases := []struct {
-		name              string
-		path              string
-		expectSuccessTask bool
-		expectFailureTask bool
+		name               string
+		path               string
+		expectSuccessTask  bool
+		expectFailureTask  bool
+		expectDisabledTask bool
 	}{
 		{
 			"events: all task statuses",
 			"status/tasks?include=events",
+			true,
 			true,
 			true,
 		},
@@ -159,6 +169,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			"status/tasks?status=errored&include=events",
 			false,
 			true,
+			false,
 		},
 	}
 
@@ -178,6 +189,14 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 			checkEvents(t, taskStatuses, fakeFailureTaskName, tc.expectFailureTask)
 			checkEvents(t, taskStatuses, fakeSuccessTaskName, tc.expectSuccessTask)
+
+			task, ok := taskStatuses[disabledTaskName]
+			if tc.expectDisabledTask {
+				require.True(t, ok)
+				assert.Nil(t, task.Events)
+			} else {
+				require.False(t, ok)
+			}
 		})
 	}
 
