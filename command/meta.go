@@ -76,3 +76,44 @@ func (m *meta) client() *api.Client {
 		Port: *m.port,
 	}, nil)
 }
+
+// requestUserApproval returns an exit code and boolean describing if the user
+// approved. If the user did not approve (false is returned), exit code is provided.
+func (m *meta) requestUserApproval(taskName string) (int, bool) {
+	m.UI.Info("Enabling the task will perform the actions described above.")
+	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
+	m.UI.Output(" - This action cannot be undone.")
+	m.UI.Output(" - CTS cannot guarantee that these exact actions will be performed if")
+	m.UI.Output("   monitored services have changed.\n")
+	m.UI.Output("Only 'yes' will be accepted to approve.\n")
+	v, err := m.UI.Ask(fmt.Sprintf("Enter a value:"))
+	m.UI.Output("")
+
+	if err != nil {
+		m.UI.Error(fmt.Sprintf("Error asking for approval: %s", err))
+		return ExitCodeError, false
+	}
+	if v != "yes" {
+		m.UI.Output(fmt.Sprintf("Cancelled enabling task '%s'", taskName))
+		return ExitCodeOK, false
+	}
+
+	return 0, true
+}
+
+// changesDetected attempts to detect if a change plan has been generated.
+// Does a few string parse checks to try to prevent a false negative
+func (m *meta) changesDetected(plan string) bool {
+	plan = strings.TrimSpace(plan)
+
+	// look for phrases that there are changes
+	if strings.HasPrefix(plan, "An execution plan has been generated") {
+		return true
+	}
+	if strings.HasPrefix(plan, "CTS will perform the following actions:") {
+		return true
+	}
+
+	// look for phrases that there are no changes
+	return !strings.Contains(plan, "No changes. Infrastructure is up-to-date.")
+}
