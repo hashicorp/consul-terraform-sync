@@ -68,7 +68,7 @@ func NewAPI(store *event.Store, drivers map[string]driver.Driver, port int) *API
 
 	// retrieve overall status
 	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, overallStatusPath),
-		newOverallStatusHandler(store, defaultAPIVersion))
+		newOverallStatusHandler(store, drivers, defaultAPIVersion))
 	// retrieve task status for a task-name
 	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskStatusPath),
 		newTaskStatusHandler(store, drivers, defaultAPIVersion))

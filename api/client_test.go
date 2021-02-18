@@ -134,9 +134,15 @@ func TestStatus(t *testing.T) {
 		require.NoError(t, err)
 		expect := OverallStatus{
 			TaskSummary: TaskSummary{
-				Successful: 1,
-				Errored:    0,
-				Critical:   2,
+				Status: StatusSummary{
+					Successful: 1,
+					Errored:    0,
+					Critical:   2,
+				},
+				Enabled: EnabledSummary{
+					True:  3,
+					False: 0,
+				},
 			},
 		}
 		assert.Equal(t, expect, actual)
