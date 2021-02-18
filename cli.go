@@ -13,8 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	mcli "github.com/mitchellh/cli"
-
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -22,6 +20,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/version"
+	mcli "github.com/mitchellh/cli"
 )
 
 // Exit codes are int values that represent an exit code for a particular error.
