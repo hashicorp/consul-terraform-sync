@@ -271,7 +271,6 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (string, e
 			if rendered {
 				break
 			}
-			tf.logDepSize(50, i)
 		}
 	}
 
@@ -496,22 +495,6 @@ func (tf *Terraform) initTaskTemplate() error {
 	})
 
 	return nil
-}
-
-// logDepSize logs the watcher dependency size every nth iteration. Set the
-// iterator to a negative value to log each iteration.
-//
-// This is the same as the controller.logDepSize(). TODO: consider consolidating
-func (tf *Terraform) logDepSize(n uint, i int64) {
-	depSize := tf.watcher.Size()
-	if i%int64(n) == 0 || i < 0 {
-		log.Printf("[DEBUG] (driver.terraform) watching %d dependencies", depSize)
-		if depSize > templates.DepSizeWarning {
-			log.Printf("[WARN] (driver.terraform) watching more than %d "+
-				"dependencies could DDoS your Consul cluster: %d",
-				templates.DepSizeWarning, depSize)
-		}
-	}
 }
 
 // getTerraformHandlers returns the first handler in a chain of handlers
