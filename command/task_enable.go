@@ -103,9 +103,9 @@ func (c *taskEnableCommand) Run(args []string) int {
 		return ExitCodeError
 	}
 
-	c.UI.Output(plan)
+	c.UI.Output(plan.Plan)
 
-	if detected := c.meta.changesDetected(plan); !detected {
+	if !plan.ChangesPresent {
 		c.UI.Info(fmt.Sprintf("'%s' enable complete!", taskName))
 		return ExitCodeOK
 	}

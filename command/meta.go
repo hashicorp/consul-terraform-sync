@@ -100,20 +100,3 @@ func (m *meta) requestUserApproval(taskName string) (int, bool) {
 
 	return 0, true
 }
-
-// changesDetected attempts to detect if a change plan has been generated.
-// Does a few string parse checks to try to prevent a false negative
-func (m *meta) changesDetected(plan string) bool {
-	plan = strings.TrimSpace(plan)
-
-	// look for phrases that there are changes
-	if strings.HasPrefix(plan, "An execution plan has been generated") {
-		return true
-	}
-	if strings.HasPrefix(plan, "CTS will perform the following actions:") {
-		return true
-	}
-
-	// look for phrases that there are no changes
-	return !strings.Contains(plan, "No changes. Infrastructure is up-to-date.")
-}
