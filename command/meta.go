@@ -20,12 +20,12 @@ type meta struct {
 	UI cli.Ui
 
 	helpOptions []string
-	port        int
+	port        *int
 }
 
 func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
-	flags.IntVar(&m.port, "port", config.DefaultPort, "The port to use for the Consul Terraform Sync API server")
+	m.port = flags.Int("port", config.DefaultPort, "The port to use for the Consul Terraform Sync API server")
 	flags.SetOutput(ioutil.Discard)
 
 	flags.VisitAll(func(f *flag.Flag) {
@@ -73,6 +73,6 @@ func (m *meta) oneArgCheck(name string, args []string) bool {
 
 func (m *meta) client() *api.Client {
 	return api.NewClient(&api.ClientConfig{
-		Port: m.port,
+		Port: *m.port,
 	}, nil)
 }
