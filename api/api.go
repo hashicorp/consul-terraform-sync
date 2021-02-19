@@ -154,6 +154,10 @@ func jsonResponse(w http.ResponseWriter, code int, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
 
+func jsonErrorResponse(w http.ResponseWriter, code int, err error) error {
+	return jsonResponse(w, code, NewErrorResponse(err))
+}
+
 // getTaskName retrieves the taskname from the url. Returns empty string if no
 // taskname is specified
 func getTaskName(reqPath, apiPath, version string) (string, error) {

@@ -47,9 +47,7 @@ func (h *taskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := fmt.Errorf("'%s' in an unsupported method. The task API "+
 			"currently supports the method(s): '%s'", r.Method, http.MethodPatch)
 		log.Printf("[TRACE] (api.task) unsupported method: %s", err)
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusMethodNotAllowed, err)
 	}
 }
 
@@ -64,9 +62,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	taskName, err := getTaskName(r.URL.Path, taskPath, h.version)
 	if err != nil {
 		log.Printf("[TRACE] (api.task) bad request: %s", err)
-		jsonResponse(w, http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusBadRequest, err)
 
 		return
 	}
@@ -75,9 +71,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		err := fmt.Errorf("No taskname was included in the api request. " +
 			"Updating a task requires the taskname: '/v1/tasks/:task_name'")
 		log.Printf("[TRACE] (api.task) bad request: %s", err)
-		jsonResponse(w, http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -86,36 +80,28 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		err := fmt.Errorf("A task with the name '%s' does not exist or has not "+
 			"been initialized yet", taskName)
 		log.Printf("[TRACE] (api.task) task not found: %s", err)
-		jsonResponse(w, http.StatusNotFound, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusNotFound, err)
 		return
 	}
 
 	runOp, err := runOption(r)
 	if err != nil {
 		log.Printf("[TRACE] (api.task) unsupported run option: %s", err)
-		jsonResponse(w, http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("[TRACE] (api.task) unable to read request body: %s", err)
-		jsonResponse(w, http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	conf, err := decodeBody(body)
 	if err != nil {
 		log.Printf("[TRACE] (api.task) problem decoding body: %s", err)
-		jsonResponse(w, http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -133,9 +119,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	plan, err := d.UpdateTask(ctx, patch)
 	if err != nil {
 		log.Printf("[TRACE] (api.task) error while updating task: %s", err)
-		jsonResponse(w, http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
