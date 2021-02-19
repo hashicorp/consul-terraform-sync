@@ -117,8 +117,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		patch.Enabled = config.BoolVal(conf.Enabled)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := context.Background()
 
 	_, err = d.UpdateTask(ctx, patch) // TODO: consume plan in next commit
 	if err != nil {
