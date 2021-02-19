@@ -296,8 +296,10 @@ func Test_Task_Update(t *testing.T) {
 		assert.Empty(t, plan)
 	})
 	t.Run("task-run-option", func(t *testing.T) {
-		expectedPlan := "plan!"
-
+		expectedPlan := driver.InspectPlan{
+			ChangesPresent: true,
+			Plan:           "plan!",
+		}
 		// add a driver
 		d := new(mocksD.Driver)
 		d.On("UpdateTask", mock.Anything, mock.Anything).

@@ -239,7 +239,7 @@ func TestTerraformCLIPlan(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			client := NewTestTerraformCLI(tc.config, nil)
 			ctx := context.Background()
-			err := client.Plan(ctx)
+			_, err := client.Plan(ctx)
 
 			if tc.expectError {
 				assert.Error(t, err)

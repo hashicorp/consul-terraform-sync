@@ -23,7 +23,7 @@ type Client interface {
 	Apply(ctx context.Context) error
 
 	// Plan makes a request to generate a plan of proposed changes
-	Plan(ctx context.Context) error
+	Plan(ctx context.Context) (bool, error)
 
 	// GoString defines the printable version of the client
 	GoString() string

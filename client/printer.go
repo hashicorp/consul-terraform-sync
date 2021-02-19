@@ -71,10 +71,10 @@ func (p *Printer) Apply(ctx context.Context) error {
 }
 
 // Plan logs out 'plan'
-func (p *Printer) Plan(ctx context.Context) error {
+func (p *Printer) Plan(ctx context.Context) (bool, error) {
 	p.logger.Printf("[INFO] (client.printer) planning workspace: '%s', workingdir: '%s'",
 		p.workspace, p.workingDir)
-	return nil
+	return true, nil
 }
 
 // GoString defines the printable version of this struct.
