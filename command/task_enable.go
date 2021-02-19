@@ -1,6 +1,7 @@
 package command
 
 import (
+	"flag"
 	"fmt"
 	"strings"
 
@@ -10,19 +11,30 @@ import (
 	"github.com/mitchellh/go-wordwrap"
 )
 
+const cmdTaskEnableName = "task enable"
+
 // taskEnableCommand handles the `task enable` command
 type taskEnableCommand struct {
 	meta
+	flags *flag.FlagSet
+}
+
+func newTaskEnableCommand(m meta) *taskEnableCommand {
+	flags := m.defaultFlagSet(cmdTaskEnableName)
+	return &taskEnableCommand{
+		meta:  m,
+		flags: flags,
+	}
 }
 
 // Name returns the subcommand
 func (c *taskEnableCommand) Name() string {
-	return "task enable"
+	return cmdTaskEnableName
 }
 
 // Help returns the command's usage, list of flags, and examples
 func (c *taskEnableCommand) Help() string {
-	helpText := `
+	helpText := fmt.Sprintf(`
 Usage: consul-terraform-sync task enable [options] <task name>
 
   Task Enable is used to enable existing tasks. Once enabled, a task will
@@ -31,7 +43,7 @@ Usage: consul-terraform-sync task enable [options] <task name>
   approval.
 
 Options:
-  No options are currently available
+%s
 
 Example:
 
@@ -48,12 +60,10 @@ Example:
 
       Only 'yes' will be accepted to approve.
 
-Enter a value: yes
+  Enter a value: yes
 
-==> Enabling and running 'my_task'...
-
-==> 'my_task' enable complete!
-`
+  // ... output continues
+`, strings.Join(c.meta.helpOptions, "\n"))
 	return strings.TrimSpace(helpText)
 }
 
@@ -64,14 +74,14 @@ func (c *taskEnableCommand) Synopsis() string {
 
 // Run runs the command
 func (c *taskEnableCommand) Run(args []string) int {
-	flags := c.meta.defaultFlagSet(c, args)
+	c.meta.setFlagsUsage(c.flags, args, c.Help())
 
-	if err := flags.Parse(args); err != nil {
+	if err := c.flags.Parse(args); err != nil {
 		return ExitCodeParseFlagsError
 	}
 
-	args = flags.Args()
-	if ok := c.meta.oneArgCheck(c, args); !ok {
+	args = c.flags.Args()
+	if ok := c.meta.oneArgCheck(c.Name(), args); !ok {
 		return ExitCodeRequiredFlagsError
 	}
 
