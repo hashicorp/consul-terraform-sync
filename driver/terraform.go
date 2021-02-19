@@ -261,7 +261,6 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (string, e
 			return "", fmt.Errorf("Error updating task '%s'. Unable to init "+
 				"task: %s", tf.task.Name, err)
 		}
-		tf.inited = false
 
 		for i := int64(0); ; i++ {
 			rendered, err := tf.renderTemplate(ctx)
@@ -372,6 +371,11 @@ func (tf *Terraform) initTask(force bool) error {
 	if err := tf.initTaskTemplate(); err != nil {
 		return err
 	}
+
+	// initTask() can be called more than once. It's very likely initializing a
+	// task will require re-initializing terraform. Reset to false so terraform
+	// will reinit
+	tf.inited = false
 
 	return nil
 }
