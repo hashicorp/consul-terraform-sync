@@ -246,37 +246,37 @@ func TestTask_RunOption(t *testing.T) {
 	}{
 		{
 			"happy path run now",
-			"/v1/tasks?run=now",
+			"/v1/tasks/task_a?run=now",
 			driver.RunOptionNow,
 			false,
 		},
 		{
 			"happy path run inspect",
-			"/v1/tasks?run=inspect",
+			"/v1/tasks/task_a?run=inspect",
 			driver.RunOptionInspect,
 			false,
 		},
 		{
 			"happy path no run option",
-			"/v1/tasks",
+			"/v1/tasks/task_a",
 			"",
 			false,
 		},
 		{
 			"not lower case",
-			"/v1/tasks?run=INSPECT",
+			"/v1/tasks/task_a?run=INSPECT",
 			driver.RunOptionInspect,
 			false,
 		},
 		{
 			"unknown run option",
-			"/v1/tasks?run=badoption",
+			"/v1/tasks/task_a?run=badoption",
 			"",
 			true,
 		},
 		{
 			"too many run parameters",
-			"/v1/tasks?run=now&run=inspect",
+			"/v1/tasks/task_a?run=now&run=inspect",
 			"",
 			true,
 		},
