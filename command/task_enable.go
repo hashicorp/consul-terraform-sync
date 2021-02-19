@@ -55,8 +55,8 @@ Example:
   ==> Enabling the task will perform the actions described above.
       Do you want to perform these actions for 'my_task'?
        - This action cannot be undone.
-       - CTS cannot guarantee that these exact actions will be performed if
-         monitored services have changed.
+       - Consul Terraform Sync cannot guarantee that these exact actions will be
+	     performed if monitored services have changed.
 
       Only 'yes' will be accepted to approve.
 
@@ -89,7 +89,7 @@ func (c *taskEnableCommand) Run(args []string) int {
 
 	c.UI.Info(fmt.Sprintf("Inspecting changes to resource if enabling '%s'...\n",
 		taskName))
-	c.UI.Output("Generating plan that CTS will use Terraform to execute\n")
+	c.UI.Output("Generating plan that Consul Terraform Sync will use Terraform to execute\n")
 
 	client := c.meta.client()
 	plan, err := client.Task().Update(taskName, api.UpdateTaskConfig{
