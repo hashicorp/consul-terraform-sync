@@ -270,7 +270,7 @@ func TestUpdateTask(t *testing.T) {
 			c := new(mocks.Client)
 			if tc.callInspect {
 				c.On("Init", ctx).Return(nil).Once()
-				c.On("Plan", ctx).Return(nil).Once()
+				c.On("Plan", ctx).Return(true, nil).Once()
 				c.On("SetStdout", mock.Anything).Twice()
 			}
 			if tc.callApply {
@@ -375,7 +375,7 @@ func TestUpdateTask(t *testing.T) {
 
 			c := new(mocks.Client)
 			c.On("Init", ctx).Return(nil).Once()
-			c.On("Plan", ctx).Return(tc.planErr).Once()
+			c.On("Plan", ctx).Return(true, tc.planErr).Once()
 			c.On("SetStdout", mock.Anything).Twice()
 			c.On("Apply", ctx).Return(tc.applyErr).Once()
 
