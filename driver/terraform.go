@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
@@ -282,8 +281,6 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (string, e
 			return "", fmt.Errorf("Error updating task '%s'. Unable to inspect "+
 				"task: %s", tf.task.Name, err)
 		}
-
-		plan = strings.ReplaceAll(plan, "Terraform", "CTS")
 		return plan, nil
 	}
 
