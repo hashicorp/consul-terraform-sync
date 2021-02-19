@@ -109,8 +109,8 @@ func (cli *CLI) Run(args []string) int {
 	}
 
 	if isVersion {
-		fmt.Fprintf(cli.errStream, "%s %s\n", version.Name, version.GetHumanVersion())
-		fmt.Fprintf(cli.errStream, "Compatible with Terraform %s\n", version.CompatibleTerraformVersionConstraint)
+		fmt.Fprintf(cli.outStream, "%s %s\n", version.Name, version.GetHumanVersion())
+		fmt.Fprintf(cli.outStream, "Compatible with Terraform %s\n", version.CompatibleTerraformVersionConstraint)
 		return ExitCodeOK
 	}
 
