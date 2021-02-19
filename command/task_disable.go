@@ -1,6 +1,7 @@
 package command
 
 import (
+	"flag"
 	"fmt"
 	"strings"
 
@@ -9,26 +10,38 @@ import (
 	"github.com/mitchellh/go-wordwrap"
 )
 
+const cmdTaskDisableName = "task disable"
+
 // TaskDisableCommand handles the `task disable` command
 type taskDisableCommand struct {
 	meta
+
+	flags *flag.FlagSet
+}
+
+func newTaskDisableCommand(m meta) *taskDisableCommand {
+	flags := m.defaultFlagSet(cmdTaskDisableName)
+	return &taskDisableCommand{
+		meta:  m,
+		flags: flags,
+	}
 }
 
 // Name returns the subcommand
-func (c *taskDisableCommand) Name() string {
-	return "task disable"
+func (c taskDisableCommand) Name() string {
+	return cmdTaskDisableName
 }
 
 // Help returns the command's usage, list of flags, and examples
 func (c *taskDisableCommand) Help() string {
-	helpText := `
+	helpText := fmt.Sprintf(`
 Usage: consul-terraform-sync task disable [options] <task name>
 
   Task Disable is used to disable existing tasks. Once disabled, a task will no
   longer run and make changes to your network infrastructure resources.
 
 Options:
-  No options are currently available
+%s
 
 Example:
 
@@ -36,7 +49,7 @@ Example:
     ==> Waiting to disable 'Test_2'...
 
     ==> 'Test_2' disable complete!
-`
+`, strings.Join(c.meta.helpOptions, "\n"))
 	return strings.TrimSpace(helpText)
 }
 
@@ -47,14 +60,14 @@ func (c *taskDisableCommand) Synopsis() string {
 
 // Run runs the command
 func (c *taskDisableCommand) Run(args []string) int {
-	flags := c.meta.defaultFlagSet(c, args)
+	c.meta.setFlagsUsage(c.flags, args, c.Help())
 
-	if err := flags.Parse(args); err != nil {
+	if err := c.flags.Parse(args); err != nil {
 		return ExitCodeParseFlagsError
 	}
 
-	args = flags.Args()
-	if ok := c.meta.oneArgCheck(c, args); !ok {
+	args = c.flags.Args()
+	if ok := c.meta.oneArgCheck(c.Name(), args); !ok {
 		return ExitCodeRequiredFlagsError
 	}
 

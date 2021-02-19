@@ -21,8 +21,8 @@ const (
 	// DefaultLogLevel is the default logging level.
 	DefaultLogLevel = "WARN"
 
-	// defaultPort is the default port to use for api server.
-	defaultPort = 8558
+	// DefaultPort is the default port to use for api server.
+	DefaultPort = 8558
 )
 
 // Config is used to configure Sync
@@ -71,7 +71,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		LogLevel:           String(DefaultLogLevel),
 		Syslog:             DefaultSyslogConfig(),
-		Port:               Int(defaultPort),
+		Port:               Int(DefaultPort),
 		Consul:             consul,
 		Driver:             DefaultDriverConfig(),
 		Tasks:              DefaultTaskConfigs(),
@@ -170,7 +170,7 @@ func (c *Config) Finalize() {
 	}
 
 	if c.Port == nil {
-		c.Port = Int(defaultPort)
+		c.Port = Int(DefaultPort)
 	}
 
 	if c.ClientType == nil {
