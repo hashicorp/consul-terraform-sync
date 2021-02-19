@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"io"
 
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
@@ -14,6 +15,7 @@ var _ terraformExec = (*tfexec.Terraform)(nil)
 // Terraform CLI: https://github.com/hashicorp/terraform-exec
 type terraformExec interface {
 	SetEnv(env map[string]string) error
+	SetStdout(w io.Writer)
 	Init(ctx context.Context, opts ...tfexec.InitOption) error
 	Apply(ctx context.Context, opts ...tfexec.ApplyOption) error
 	Plan(ctx context.Context, opts ...tfexec.PlanOption) (bool, error)

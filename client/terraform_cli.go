@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"path/filepath"
 	"regexp"
@@ -90,6 +91,11 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 // SetEnv sets the environment for the Terraform workspace
 func (t *TerraformCLI) SetEnv(env map[string]string) error {
 	return t.tf.SetEnv(env)
+}
+
+// SetStdout sets the standard out for Terraform
+func (t *TerraformCLI) SetStdout(w io.Writer) {
+	t.tf.SetStdout(w)
 }
 
 // Init initializes by executing the cli command `terraform init` and

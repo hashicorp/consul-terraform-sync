@@ -62,7 +62,7 @@ func TestTask_ServeHTTP(t *testing.T) {
 
 	drivers := make(map[string]driver.Driver)
 	patchUpdateD := new(mocks.Driver)
-	patchUpdateD.On("UpdateTask", mock.Anything).Return(nil).Once()
+	patchUpdateD.On("UpdateTask", mock.Anything, mock.Anything).Return("", nil).Once()
 	drivers["task_patch_update"] = patchUpdateD
 
 	handler := newTaskHandler(event.NewStore(), drivers, "v1")
@@ -138,7 +138,8 @@ func TestTask_updateTask(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			drivers := make(map[string]driver.Driver)
 			d := new(mocks.Driver)
-			d.On("UpdateTask", mock.Anything).Return(tc.updateTaskRet).Once()
+			d.On("UpdateTask", mock.Anything, mock.Anything).
+				Return("", tc.updateTaskRet).Once()
 			drivers["task_a"] = d
 
 			handler := newTaskHandler(event.NewStore(), drivers, "v1")

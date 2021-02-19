@@ -1,6 +1,9 @@
 package client
 
-import "context"
+import (
+	"context"
+	"io"
+)
 
 //go:generate mockery --name=Client --filename=client.go  --output=../mocks/client
 
@@ -9,6 +12,9 @@ import "context"
 type Client interface {
 	// Set the environment for the client
 	SetEnv(map[string]string) error
+
+	// Set the standard out for the client
+	SetStdout(w io.Writer)
 
 	// Init initializes the client and environment
 	Init(ctx context.Context) error

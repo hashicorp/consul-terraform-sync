@@ -8,9 +8,20 @@ import (
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 )
 
+const (
+	// RunOptionNow runs the task immediate (now) once the task has been updated
+	RunOptionNow = "now"
+	// RunOptionInspect does a dry-run task update and returns dry-run info
+	RunOptionInspect = "inspect"
+)
+
 // PatchTask holds the information to patch update a task. It will only include
 // fields that we support updating at this time
 type PatchTask struct {
+	// RunOption is a set of options on how to handle the patch update
+	// current options are "now" and "inspect". See constants for more details
+	RunOption string
+
 	Enabled bool
 }
 

@@ -10,9 +10,11 @@ import (
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRenderTemplate(t *testing.T) {
@@ -75,9 +77,10 @@ func TestRenderTemplate(t *testing.T) {
 				task:     Task{Name: "RenderTemplateTest", Enabled: true},
 				resolver: r,
 				template: tmpl,
+				watcher:  new(mocksTmpl.Watcher),
 			}
 
-			actual, err := tf.RenderTemplate(ctx, new(mocksTmpl.Watcher))
+			actual, err := tf.RenderTemplate(ctx)
 			assert.Equal(t, tc.expectRendered, actual)
 
 			if tc.expectError {
@@ -171,6 +174,226 @@ func TestApplyTask(t *testing.T) {
 			} else {
 				assert.Error(t, err)
 			}
+		})
+	}
+}
+
+func TestUpdateTask(t *testing.T) {
+	t.Parallel()
+
+	// this set of cases tests that the mocks are appropriately called
+	mockCases := []struct {
+		name        string
+		dirName     string
+		orig        PatchTask
+		patch       PatchTask
+		callInit    bool
+		callRender  bool
+		callInspect bool
+		callApply   bool
+	}{
+		{
+			"disabling a task. no run ops",
+			"disable-no-run-ops",
+			PatchTask{Enabled: true},
+			PatchTask{Enabled: false},
+			false,
+			false,
+			false,
+			false,
+		},
+		{
+			"disabling a task. run=now",
+			"disable-run-now",
+			PatchTask{Enabled: true},
+			PatchTask{Enabled: false, RunOption: RunOptionNow},
+			false,
+			false,
+			false,
+			false,
+		},
+		{
+			"disabling a task. run=inspect",
+			"disable-run-inspect",
+			PatchTask{Enabled: true},
+			PatchTask{Enabled: false, RunOption: RunOptionInspect},
+			false,
+			false,
+			false,
+			false,
+		},
+		{
+			"enabling a task. no run ops",
+			"enable-no-run-ops",
+			PatchTask{Enabled: false},
+			PatchTask{Enabled: true},
+			true,
+			true,
+			false,
+			false,
+		},
+		{
+			"enabling a task. run=now",
+			"enable-run-now",
+			PatchTask{Enabled: false},
+			PatchTask{Enabled: true, RunOption: RunOptionNow},
+			true,
+			true,
+			false,
+			true,
+		},
+		{
+			"enabling a task. run=inspect",
+			"enable-run-inspect",
+			PatchTask{Enabled: false},
+			PatchTask{Enabled: true, RunOption: RunOptionInspect},
+			true,
+			true,
+			true,
+			false,
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range mockCases {
+		t.Run(tc.name, func(t *testing.T) {
+			delete, err := testutils.MakeTempDir(tc.dirName)
+			require.NoError(t, err)
+			defer delete()
+
+			r := new(mocksTmpl.Resolver)
+			if tc.callRender {
+				r.On("Run", mock.Anything, mock.Anything).
+					Return(hcat.ResolveEvent{Complete: true}, nil).Once()
+			}
+
+			c := new(mocks.Client)
+			if tc.callInspect {
+				c.On("Init", ctx).Return(nil).Once()
+				c.On("Plan", ctx).Return(nil).Once()
+				c.On("SetStdout", mock.Anything).Twice()
+			}
+			if tc.callApply {
+				c.On("Init", ctx).Return(nil).Once()
+				c.On("Apply", ctx).Return(nil).Once()
+			}
+
+			w := new(mocksTmpl.Watcher)
+			tf := &Terraform{
+				mu:         &sync.RWMutex{},
+				workingDir: tc.dirName,
+				task:       Task{Name: "test_task", Enabled: tc.orig.Enabled},
+				client:     c,
+				resolver:   r,
+				watcher:    w,
+			}
+
+			if tc.callInit {
+				tf.fileReader = func(string) ([]byte, error) { return []byte{}, nil }
+			}
+
+			_, err = tf.UpdateTask(ctx, tc.patch)
+			require.NoError(t, err)
+
+			// check that mocks were called as expected
+			r.AssertExpectations(t)
+			c.AssertExpectations(t)
+		})
+	}
+
+	// this set of cases tests error handling
+	errorCases := []struct {
+		name          string
+		dirName       string
+		patch         PatchTask
+		fileReaderErr error
+		resolverErr   error
+		planErr       error
+		applyErr      error
+		expectErr     bool
+	}{
+		{
+			"invalid run option",
+			"invalid-run-ops-err",
+			PatchTask{Enabled: true, RunOption: "invalid run option"},
+			nil,
+			nil,
+			nil,
+			nil,
+			true,
+		},
+		{
+			"init task template error: file reader err",
+			"init-task-err",
+			PatchTask{Enabled: true},
+			errors.New("filereader err"),
+			nil,
+			nil,
+			nil,
+			true,
+		},
+		{
+			"render template error: resolver err",
+			"render-templ-err",
+			PatchTask{Enabled: true},
+			nil,
+			errors.New("resolver err"),
+			nil,
+			nil,
+			true,
+		},
+		{
+			"inspect task error: plan err",
+			"inspect-task-err",
+			PatchTask{Enabled: true, RunOption: RunOptionInspect},
+			nil,
+			nil,
+			errors.New("plan err"),
+			nil,
+			true,
+		},
+		{
+			"apply task error",
+			"apply-task-err",
+			PatchTask{Enabled: true, RunOption: RunOptionNow},
+			nil,
+			nil,
+			nil,
+			errors.New("apply err"),
+			true,
+		},
+	}
+	for _, tc := range errorCases {
+		t.Run(tc.name, func(t *testing.T) {
+			delete, err := testutils.MakeTempDir(tc.dirName)
+			require.NoError(t, err)
+			defer delete()
+
+			r := new(mocksTmpl.Resolver)
+			r.On("Run", mock.Anything, mock.Anything).
+				Return(hcat.ResolveEvent{Complete: true}, tc.resolverErr).Once()
+
+			c := new(mocks.Client)
+			c.On("Init", ctx).Return(nil).Once()
+			c.On("Plan", ctx).Return(tc.planErr).Once()
+			c.On("SetStdout", mock.Anything).Twice()
+			c.On("Apply", ctx).Return(tc.applyErr).Once()
+
+			w := new(mocksTmpl.Watcher)
+			tf := &Terraform{
+				mu:         &sync.RWMutex{},
+				workingDir: tc.dirName,
+				task:       Task{Name: "test_task", Enabled: false},
+				client:     c,
+				resolver:   r,
+				watcher:    w,
+				fileReader: func(string) ([]byte, error) {
+					return []byte{}, tc.fileReaderErr
+				},
+			}
+
+			_, err = tf.UpdateTask(ctx, tc.patch)
+			require.Error(t, err)
 		})
 	}
 }
@@ -287,19 +510,19 @@ func TestDisabledTask(t *testing.T) {
 		// not throw any errors
 
 		tf := &Terraform{
-			mu:   &sync.RWMutex{},
-			task: Task{Name: "disabled_task", Enabled: false},
+			mu:      &sync.RWMutex{},
+			task:    Task{Name: "disabled_task", Enabled: false},
+			watcher: new(mocksTmpl.Watcher),
 		}
 
-		w := new(mocksTmpl.Watcher)
 		ctx := context.Background()
 
 		err := tf.InitTask(true)
 		assert.NoError(t, err)
 
-		tf.SetBufferPeriod(w)
+		tf.SetBufferPeriod()
 
-		actual, err := tf.RenderTemplate(ctx, w)
+		actual, err := tf.RenderTemplate(ctx)
 		assert.NoError(t, err)
 		assert.True(t, actual)
 

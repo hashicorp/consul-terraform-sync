@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
+	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -66,7 +67,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			d := new(mocksD.Driver)
-			d.On("RenderTemplate", mock.Anything, mock.Anything).
+			d.On("RenderTemplate", mock.Anything).
 				Return(true, tc.renderTmplErr)
 			d.On("ApplyTask", mock.Anything).Return(tc.applyTaskErr)
 
@@ -111,7 +112,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 func TestReadWrite_CheckApply_Store(t *testing.T) {
 	t.Run("mult-checkapply-store", func(t *testing.T) {
 		d := new(mocksD.Driver)
-		d.On("RenderTemplate", mock.Anything, mock.Anything).Return(true, nil)
+		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(nil)
 
 		controller := ReadWrite{
@@ -148,15 +149,15 @@ func TestOnce(t *testing.T) {
 		w.On("Size").Return(5)
 
 		d := new(mocksD.Driver)
-		d.On("RenderTemplate", mock.Anything, mock.Anything).Return(false, nil).Once()
-		d.On("RenderTemplate", mock.Anything, mock.Anything).Return(true, nil).Once()
+		d.On("RenderTemplate", mock.Anything).Return(false, nil).Once()
+		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 		d.On("InitTask", mock.Anything).Return(nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
 
 		rw := &ReadWrite{
 			baseController: &baseController{
 				watcher: w,
-				newDriver: func(*config.Config, driver.Task) (driver.Driver, error) {
+				newDriver: func(*config.Config, driver.Task, templates.Watcher) (driver.Driver, error) {
 					return d, nil
 				},
 				conf: conf,
@@ -194,7 +195,7 @@ func TestReadWriteUnits(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("InitWork", mock.Anything).Return(nil)
-		d.On("RenderTemplate", mock.Anything, mock.Anything).Return(true, nil)
+		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(nil)
 		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
 
@@ -217,7 +218,7 @@ func TestReadWriteUnits(t *testing.T) {
 	t.Run("apply-error", func(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("InitWork", mock.Anything).Return(nil)
-		d.On("RenderTemplate", mock.Anything, mock.Anything).Return(true, nil)
+		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
 
 		u := unit{taskName: "foo", driver: d}
