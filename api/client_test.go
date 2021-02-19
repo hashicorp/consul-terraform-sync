@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
+	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -280,14 +281,34 @@ func Test_Task_Update(t *testing.T) {
 		drivers["task_a"] = d
 
 		assert.True(t, d.Task().Enabled)
-		err = c.Task().Update("task_a", UpdateTaskConfig{Enabled: config.Bool(false)})
+		plan, err := c.Task().Update("task_a", UpdateTaskConfig{
+			Enabled: config.Bool(false),
+		}, nil)
 		require.NoError(t, err)
 		assert.False(t, d.Task().Enabled)
+		assert.Empty(t, plan)
 	})
-	t.Run("task-not-found-error", func(t *testing.T) { // setup temp dir
-		err = c.Task().Update("non-existent-task", UpdateTaskConfig{
-			Enabled: config.Bool(false)},
-		)
+	t.Run("task-not-found-error", func(t *testing.T) {
+		plan, err := c.Task().Update("non-existent-task", UpdateTaskConfig{
+			Enabled: config.Bool(false),
+		}, nil)
 		require.Error(t, err)
+		assert.Empty(t, plan)
+	})
+	t.Run("task-run-option", func(t *testing.T) {
+		expectedPlan := "plan!"
+
+		// add a driver
+		d := new(mocksD.Driver)
+		d.On("UpdateTask", mock.Anything, mock.Anything).
+			Return(expectedPlan, nil).Once()
+		drivers["task_a"] = d
+
+		actualPlan, err := c.Task().Update("task_a", UpdateTaskConfig{
+			Enabled: config.Bool(false),
+		}, &QueryParam{Run: driver.RunOptionInspect})
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedPlan, actualPlan)
 	})
 }

@@ -9,14 +9,13 @@ import (
 	"testing"
 	"time"
 
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 )
 
 func TestServe(t *testing.T) {

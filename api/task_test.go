@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -88,13 +89,31 @@ func TestTask_updateTask(t *testing.T) {
 		path          string
 		body          string
 		statusCode    int
-		updateTaskRet error
+		updateTaskRet string
+		updateTaskErr error
 	}{
 		{
 			"happy path",
 			"/v1/tasks/task_a",
 			`{"enabled": true}`,
 			http.StatusOK,
+			"",
+			nil,
+		},
+		{
+			"happy path - inspect option",
+			"/v1/tasks/task_a?run=inspect",
+			`{"enabled": true}`,
+			http.StatusOK,
+			"my plan!",
+			nil,
+		},
+		{
+			"happy path - run now option",
+			"/v1/tasks/task_a?run=now",
+			`{"enabled": true}`,
+			http.StatusOK,
+			"",
 			nil,
 		},
 		{
@@ -102,6 +121,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task/a",
 			`{"enabled": true}`,
 			http.StatusBadRequest,
+			"",
 			nil,
 		},
 		{
@@ -109,6 +129,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks",
 			`{"enabled": true}`,
 			http.StatusBadRequest,
+			"",
 			nil,
 		},
 		{
@@ -116,6 +137,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task_b",
 			`{"enabled": true}`,
 			http.StatusNotFound,
+			"",
 			nil,
 		},
 		{
@@ -123,6 +145,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task_a",
 			`...???`,
 			http.StatusBadRequest,
+			"",
 			nil,
 		},
 		{
@@ -130,6 +153,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task_a",
 			`{"enabled": true}`,
 			http.StatusInternalServerError,
+			"",
 			errors.New("error updating task"),
 		},
 	}
@@ -139,7 +163,7 @@ func TestTask_updateTask(t *testing.T) {
 			drivers := make(map[string]driver.Driver)
 			d := new(mocks.Driver)
 			d.On("UpdateTask", mock.Anything, mock.Anything).
-				Return("", tc.updateTaskRet).Once()
+				Return(tc.updateTaskRet, tc.updateTaskErr).Once()
 			drivers["task_a"] = d
 
 			handler := newTaskHandler(event.NewStore(), drivers, "v1")
@@ -151,6 +175,15 @@ func TestTask_updateTask(t *testing.T) {
 
 			handler.updateTask(resp, req)
 			require.Equal(t, tc.statusCode, resp.Code)
+
+			if tc.updateTaskRet != "" {
+				decoder := json.NewDecoder(resp.Body)
+				var actual string
+				err = decoder.Decode(&actual)
+				require.NoError(t, err)
+
+				assert.Equal(t, tc.updateTaskRet, actual)
+			}
 		})
 	}
 }
@@ -199,6 +232,67 @@ func TestTask_decodeJSON(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestTask_RunOption(t *testing.T) {
+	cases := []struct {
+		name        string
+		path        string
+		option      string
+		expectError bool
+	}{
+		{
+			"happy path run now",
+			"/v1/tasks/task_a?run=now",
+			driver.RunOptionNow,
+			false,
+		},
+		{
+			"happy path run inspect",
+			"/v1/tasks/task_a?run=inspect",
+			driver.RunOptionInspect,
+			false,
+		},
+		{
+			"happy path no run option",
+			"/v1/tasks/task_a",
+			"",
+			false,
+		},
+		{
+			"not lower case",
+			"/v1/tasks/task_a?run=INSPECT",
+			driver.RunOptionInspect,
+			false,
+		},
+		{
+			"unknown run option",
+			"/v1/tasks/task_a?run=badoption",
+			"",
+			true,
+		},
+		{
+			"too many run parameters",
+			"/v1/tasks/task_a?run=now&run=inspect",
+			"",
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodPatch, tc.path, nil)
+			require.NoError(t, err)
+
+			actual, err := runOption(req)
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.option, actual)
 			}
 		})
 	}
