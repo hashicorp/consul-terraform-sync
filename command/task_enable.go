@@ -77,8 +77,9 @@ func (c *taskEnableCommand) Run(args []string) int {
 
 	taskName := args[0]
 
-	c.UI.Info(fmt.Sprintf("Inspecting changes to resource if enabling task "+
-		"'%s' now...\n", taskName))
+	c.UI.Info(fmt.Sprintf("Inspecting changes to resource if enabling '%s'...\n",
+		taskName))
+	c.UI.Output("Generating plan that CTS will use Terraform to execute\n")
 
 	client := c.meta.client()
 	plan, err := client.Task().Update(taskName, api.UpdateTaskConfig{

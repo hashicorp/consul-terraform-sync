@@ -83,7 +83,7 @@ func (m *meta) requestUserApproval(taskName string) (int, bool) {
 	m.UI.Info("Enabling the task will perform the actions described above.")
 	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
 	m.UI.Output(" - This action cannot be undone.")
-	m.UI.Output(" - CTS cannot guarantee that these exact actions will be performed if")
+	m.UI.Output(" - CTS cannot guarantee Terraform will perform these exact actions if")
 	m.UI.Output("   monitored services have changed.\n")
 	m.UI.Output("Only 'yes' will be accepted to approve.\n")
 	v, err := m.UI.Ask(fmt.Sprintf("Enter a value:"))
