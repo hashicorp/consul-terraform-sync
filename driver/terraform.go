@@ -223,15 +223,21 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	return tf.applyTask(ctx)
 }
 
+// InspectPlan stores return the information about what
+type InspectPlan struct {
+	ChangesPresent bool
+	Plan           string
+}
+
 // UpdateTask updates the task on the driver. Makes any calls to re-init
 // depending on the fields updated. If update task is requested with the inspect
 // run option, then returns the inspected plan
-func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (string, error) {
+func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPlan, error) {
 	switch patch.RunOption {
 	case "", RunOptionInspect, RunOptionNow:
 		// valid options
 	default:
-		return "", fmt.Errorf("Invalid run option '%s'. Please select a valid "+
+		return InspectPlan{}, fmt.Errorf("Invalid run option '%s'. Please select a valid "+
 			"option", patch.RunOption)
 	}
 
@@ -250,21 +256,21 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (string, e
 	// identify cases where resources are not impacted and we can return early
 	switch {
 	case patch.Enabled == false:
-		return "", nil
+		return InspectPlan{}, nil
 	default:
 		// onward!
 	}
 
 	if reinit {
 		if err := tf.initTask(true); err != nil {
-			return "", fmt.Errorf("Error updating task '%s'. Unable to init "+
+			return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to init "+
 				"task: %s", tf.task.Name, err)
 		}
 
 		for i := int64(0); ; i++ {
 			rendered, err := tf.renderTemplate(ctx)
 			if err != nil {
-				return "", fmt.Errorf("Error updating task '%s'. Unable to "+
+				return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to "+
 					"render template for task: %s", tf.task.Name, err)
 			}
 			if rendered {
@@ -278,7 +284,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (string, e
 			"option", tf.task.Name)
 		plan, err := tf.inspectTask(ctx, true)
 		if err != nil {
-			return "", fmt.Errorf("Error updating task '%s'. Unable to inspect "+
+			return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to inspect "+
 				"task: %s", tf.task.Name, err)
 		}
 		return plan, nil
@@ -287,11 +293,11 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (string, e
 	if patch.RunOption == RunOptionNow {
 		log.Printf("[TRACE] (driver.terraform) update task '%s'. run now "+
 			"option", tf.task.Name)
-		return "", tf.applyTask(ctx)
+		return InspectPlan{}, tf.applyTask(ctx)
 	}
 
 	// allow the task to update naturally!
-	return "", nil
+	return InspectPlan{}, nil
 }
 
 // init initializes the Terraform workspace if needed
@@ -410,15 +416,15 @@ func (tf *Terraform) renderTemplate(ctx context.Context) (bool, error) {
 	return result.Complete, nil
 }
 
-// inspectTask inspects the task changes. Option to log inspection details to
-// standard out
-func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (string, error) {
+// inspectTask inspects the task changes. Option to return inspection plan
+// details rather than logging out
+func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (InspectPlan, error) {
 	taskName := tf.task.Name
 
 	if err := tf.init(ctx); err != nil {
 		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
 			"skipping plan for '%s'", taskName)
-		return "", err
+		return InspectPlan{}, err
 	}
 
 	var buf bytes.Buffer
@@ -435,11 +441,16 @@ func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (string, 
 	}
 
 	log.Printf("[TRACE] (driver.terraform) plan '%s'", taskName)
-	if err := tf.client.Plan(ctx); err != nil {
-		return "", errors.Wrap(err, fmt.Sprintf("error tf-plan for '%s'", taskName))
+	c, err := tf.client.Plan(ctx)
+	if err != nil {
+		return InspectPlan{}, errors.Wrap(err,
+			fmt.Sprintf("error tf-plan for '%s'", taskName))
 	}
 
-	return buf.String(), nil
+	return InspectPlan{
+		ChangesPresent: c,
+		Plan:           buf.String(),
+	}, nil
 }
 
 // applyTask applies the task changes.

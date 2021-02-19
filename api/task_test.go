@@ -63,7 +63,8 @@ func TestTask_ServeHTTP(t *testing.T) {
 
 	drivers := make(map[string]driver.Driver)
 	patchUpdateD := new(mocks.Driver)
-	patchUpdateD.On("UpdateTask", mock.Anything, mock.Anything).Return("", nil).Once()
+	patchUpdateD.On("UpdateTask", mock.Anything, mock.Anything).
+		Return(driver.InspectPlan{}, nil).Once()
 	drivers["task_patch_update"] = patchUpdateD
 
 	handler := newTaskHandler(event.NewStore(), drivers, "v1")
@@ -89,7 +90,7 @@ func TestTask_updateTask(t *testing.T) {
 		path          string
 		body          string
 		statusCode    int
-		updateTaskRet string
+		updateTaskRet driver.InspectPlan
 		updateTaskErr error
 	}{
 		{
@@ -97,7 +98,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task_a",
 			`{"enabled": true}`,
 			http.StatusOK,
-			"",
+			driver.InspectPlan{},
 			nil,
 		},
 		{
@@ -105,7 +106,10 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task_a?run=inspect",
 			`{"enabled": true}`,
 			http.StatusOK,
-			"my plan!",
+			driver.InspectPlan{
+				ChangesPresent: true,
+				Plan:           "my plan!",
+			},
 			nil,
 		},
 		{
@@ -113,7 +117,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task_a?run=now",
 			`{"enabled": true}`,
 			http.StatusOK,
-			"",
+			driver.InspectPlan{},
 			nil,
 		},
 		{
@@ -121,7 +125,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task/a",
 			`{"enabled": true}`,
 			http.StatusBadRequest,
-			"",
+			driver.InspectPlan{},
 			nil,
 		},
 		{
@@ -129,7 +133,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks",
 			`{"enabled": true}`,
 			http.StatusBadRequest,
-			"",
+			driver.InspectPlan{},
 			nil,
 		},
 		{
@@ -137,7 +141,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task_b",
 			`{"enabled": true}`,
 			http.StatusNotFound,
-			"",
+			driver.InspectPlan{},
 			nil,
 		},
 		{
@@ -145,7 +149,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task_a",
 			`...???`,
 			http.StatusBadRequest,
-			"",
+			driver.InspectPlan{},
 			nil,
 		},
 		{
@@ -153,7 +157,7 @@ func TestTask_updateTask(t *testing.T) {
 			"/v1/tasks/task_a",
 			`{"enabled": true}`,
 			http.StatusInternalServerError,
-			"",
+			driver.InspectPlan{},
 			errors.New("error updating task"),
 		},
 	}
@@ -176,14 +180,12 @@ func TestTask_updateTask(t *testing.T) {
 			handler.updateTask(resp, req)
 			require.Equal(t, tc.statusCode, resp.Code)
 
-			if tc.updateTaskRet != "" {
-				decoder := json.NewDecoder(resp.Body)
-				var actual string
-				err = decoder.Decode(&actual)
-				require.NoError(t, err)
+			decoder := json.NewDecoder(resp.Body)
+			var actual driver.InspectPlan
+			err = decoder.Decode(&actual)
+			require.NoError(t, err)
 
-				assert.Equal(t, tc.updateTaskRet, actual)
-			}
+			assert.Equal(t, tc.updateTaskRet, actual)
 		})
 	}
 }

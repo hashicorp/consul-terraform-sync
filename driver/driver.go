@@ -27,7 +27,7 @@ type Driver interface {
 	ApplyTask(ctx context.Context) error
 
 	// UpdateTask supports updating certain fields of a task
-	UpdateTask(ctx context.Context, task PatchTask) (string, error)
+	UpdateTask(ctx context.Context, task PatchTask) (InspectPlan, error)
 
 	// Task returns the task information of the driver
 	Task() Task
