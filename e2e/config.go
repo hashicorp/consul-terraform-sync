@@ -123,17 +123,25 @@ driver "terraform" {
 }
 
 // disabledTaskConfig returns a config file with a task that is disabled
-func disabledTaskConfig(consulAddr, tempDir string) string {
-	disabledTask := `
+func disabledTaskConfig(consulAddr, tempDir string, port int) string {
+	disabledTask := fmt.Sprintf(`
+port = %d
+
 task {
-	name = "disabled_task"
+	name = "%s"
 	description = "task is configured as disabled"
 	enabled = false
-	services = ["api", "db"]
+	services = ["api"]
 	providers = ["local"]
 	source = "../../test_modules/e2e_basic_task"
-}`
-	return baseConfig() + consulBlock(consulAddr) + terraformBlock(tempDir) + disabledTask
+}
+
+service {
+	name = "api"
+	description = "backend"
+}
+`, port, disabledTaskName)
+	return consulBlock(consulAddr) + terraformBlock(tempDir) + disabledTask
 }
 
 func consulBlock(addr string) string {
