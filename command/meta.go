@@ -76,3 +76,27 @@ func (m *meta) client() *api.Client {
 		Port: *m.port,
 	}, nil)
 }
+
+// requestUserApproval returns an exit code and boolean describing if the user
+// approved. If the user did not approve (false is returned), exit code is provided.
+func (m *meta) requestUserApproval(taskName string) (int, bool) {
+	m.UI.Info("Enabling the task will perform the actions described above.")
+	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
+	m.UI.Output(" - This action cannot be undone.")
+	m.UI.Output(" - Consul Terraform Sync cannot guarantee Terraform will perform")
+	m.UI.Output("   these exact actions if monitored services have changed.\n")
+	m.UI.Output("Only 'yes' will be accepted to approve.\n")
+	v, err := m.UI.Ask(fmt.Sprintf("Enter a value:"))
+	m.UI.Output("")
+
+	if err != nil {
+		m.UI.Error(fmt.Sprintf("Error asking for approval: %s", err))
+		return ExitCodeError, false
+	}
+	if v != "yes" {
+		m.UI.Output(fmt.Sprintf("Cancelled enabling task '%s'", taskName))
+		return ExitCodeOK, false
+	}
+
+	return 0, true
+}

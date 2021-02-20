@@ -35,6 +35,9 @@ func Commands() map[string]cli.CommandFactory {
 		"task disable": func() (cli.Command, error) {
 			return newTaskDisableCommand(m), nil
 		},
+		"task enable": func() (cli.Command, error) {
+			return newTaskEnableCommand(m), nil
+		},
 	}
 
 	return all
