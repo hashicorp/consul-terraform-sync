@@ -224,10 +224,16 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			err = decoder.Decode(&overallStatus)
 			require.NoError(t, err)
 
-			assert.Equal(t, 1, overallStatus.TaskSummary.Successful)
+			// check status values
+			assert.Equal(t, 1, overallStatus.TaskSummary.Status.Successful)
+			assert.Equal(t, 1, overallStatus.TaskSummary.Status.Unknown)
 			// failed task might be errored/critical by now depending on number of events
-			assert.Equal(t, 1, overallStatus.TaskSummary.Errored+
-				overallStatus.TaskSummary.Critical)
+			assert.Equal(t, 1, overallStatus.TaskSummary.Status.Errored+
+				overallStatus.TaskSummary.Status.Critical)
+
+			// check enabled values
+			assert.Equal(t, 2, overallStatus.TaskSummary.Enabled.True)
+			assert.Equal(t, 1, overallStatus.TaskSummary.Enabled.False)
 		})
 	}
 

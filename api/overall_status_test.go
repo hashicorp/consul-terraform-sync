@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +25,7 @@ func TestOverallStatus_New(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := newOverallStatusHandler(event.NewStore(), tc.version)
+			h := newOverallStatusHandler(event.NewStore(), nil, tc.version)
 			assert.Equal(t, tc.version, h.version)
 		})
 	}
@@ -45,9 +46,16 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 			http.StatusOK,
 			OverallStatus{
 				TaskSummary: TaskSummary{
-					Successful: 2,
-					Errored:    1,
-					Critical:   1,
+					Status: StatusSummary{
+						Successful: 2,
+						Errored:    1,
+						Critical:   1,
+						Unknown:    1,
+					},
+					Enabled: EnabledSummary{
+						True:  4,
+						False: 1,
+					},
 				},
 			},
 		},
@@ -64,7 +72,15 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 	eventsD := createTaskEvents("critical_d", []bool{false, false, true})
 	addEvents(store, eventsD)
 
-	handler := newOverallStatusHandler(store, "v1")
+	// set up driver
+	drivers := make(map[string]driver.Driver)
+	drivers["success_a"] = createDriver("success_a", true)
+	drivers["success_b"] = createDriver("success_b", true)
+	drivers["errored_c"] = createDriver("errored_c", true)
+	drivers["critical_d"] = createDriver("critical_d", true)
+	drivers["disabled_e"] = createDriver("disabled_e", false)
+
+	handler := newOverallStatusHandler(store, drivers, "v1")
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

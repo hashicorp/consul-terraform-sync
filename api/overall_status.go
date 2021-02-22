@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 )
 
@@ -14,23 +15,38 @@ type OverallStatus struct {
 	TaskSummary TaskSummary `json:"task_summary"`
 }
 
-// TaskSummary is the count of how many tasks have which status
+// TaskSummary holds data that summarizes the tasks configured with CTS
 type TaskSummary struct {
+	Status  StatusSummary  `json:"status"`
+	Enabled EnabledSummary `json:"enabled"`
+}
+
+// StatusSummary is the count of how many tasks have which status
+type StatusSummary struct {
 	Successful int `json:"successful"`
 	Errored    int `json:"errored"`
 	Critical   int `json:"critical"`
+	Unknown    int `json:"unknown"`
+}
+
+// EnabledSummary is the count of how many tasks are enabled vs. disabled
+type EnabledSummary struct {
+	True  int `json:"true"`
+	False int `json:"false"`
 }
 
 // overallStatusHandler handles the overall status endpoint
 type overallStatusHandler struct {
 	store   *event.Store
+	drivers map[string]driver.Driver
 	version string
 }
 
 // newOverallStatusHandler returns a new overall status handler
-func newOverallStatusHandler(store *event.Store, version string) *overallStatusHandler {
+func newOverallStatusHandler(store *event.Store, drivers map[string]driver.Driver, version string) *overallStatusHandler {
 	return &overallStatusHandler{
 		store:   store,
+		drivers: drivers,
 		version: version,
 	}
 }
@@ -40,9 +56,9 @@ func newOverallStatusHandler(store *event.Store, version string) *overallStatusH
 func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[TRACE] (api.overallstatus) requesting task status '%s'", r.URL.Path)
 
-	tasks := h.store.Read("")
+	data := h.store.Read("")
 	taskSummary := TaskSummary{}
-	for _, events := range tasks {
+	for _, events := range data {
 		successes := make([]bool, len(events))
 		for i, event := range events {
 			successes[i] = event.Success
@@ -50,11 +66,24 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		status := successToStatus(successes)
 		switch status {
 		case StatusSuccessful:
-			taskSummary.Successful++
+			taskSummary.Status.Successful++
 		case StatusErrored:
-			taskSummary.Errored++
+			taskSummary.Status.Errored++
 		case StatusCritical:
-			taskSummary.Critical++
+			taskSummary.Status.Critical++
+		}
+	}
+
+	for taskName, d := range h.drivers {
+		// look for any tasks that have a driver but no events
+		if _, ok := data[taskName]; !ok {
+			taskSummary.Status.Unknown++
+		}
+
+		if d.Task().Enabled {
+			taskSummary.Enabled.True++
+		} else {
+			taskSummary.Enabled.False++
 		}
 	}
 

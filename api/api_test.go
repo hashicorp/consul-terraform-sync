@@ -240,9 +240,15 @@ func TestJsonResponse(t *testing.T) {
 			http.StatusOK,
 			OverallStatus{
 				TaskSummary: TaskSummary{
-					Successful: 1,
-					Errored:    0,
-					Critical:   1,
+					Status: StatusSummary{
+						Successful: 1,
+						Errored:    0,
+						Critical:   1,
+					},
+					Enabled: EnabledSummary{
+						True:  2,
+						False: 5,
+					},
 				},
 			},
 		},
