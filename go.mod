@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/DataDog/zstd v1.4.5 // indirect
-	github.com/PaloAltoNetworks/pango v0.4.1-0.20200904214627-5b4d88ba9b10
+	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/hashicorp/consul v1.8.0
