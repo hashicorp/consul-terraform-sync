@@ -114,9 +114,9 @@ func TestStatus(t *testing.T) {
 
 	// setup drivers
 	drivers := make(map[string]driver.Driver)
-	drivers["task_a"] = createEnabledDriver("task_a")
-	drivers["task_b"] = createEnabledDriver("task_b")
-	drivers["task_c"] = createEnabledDriver("task_c")
+	drivers["task_a"] = createDriver("task_a", true)
+	drivers["task_b"] = createDriver("task_b", true)
+	drivers["task_c"] = createDriver("task_c", true)
 
 	// start up server
 	port, err := FreePort()

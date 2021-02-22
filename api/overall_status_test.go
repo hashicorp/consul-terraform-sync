@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -74,16 +73,11 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 
 	// set up driver
 	drivers := make(map[string]driver.Driver)
-	enabledD := new(mocks.Driver)
-	enabledD.On("Task").Return(driver.Task{Enabled: true})
-	drivers["success_a"] = enabledD
-	drivers["success_b"] = enabledD
-	drivers["errored_c"] = enabledD
-	drivers["critical_d"] = enabledD
-
-	disabledD := new(mocks.Driver)
-	disabledD.On("Task").Return(driver.Task{Enabled: false})
-	drivers["disabled_e"] = disabledD
+	drivers["success_a"] = createDriver("success_a", true)
+	drivers["success_b"] = createDriver("success_b", true)
+	drivers["errored_c"] = createDriver("errored_c", true)
+	drivers["critical_d"] = createDriver("critical_d", true)
+	drivers["disabled_e"] = createDriver("disabled_e", false)
 
 	handler := newOverallStatusHandler(store, drivers, "v1")
 
