@@ -33,7 +33,7 @@ var _ panosClient = (*pango.Firewall)(nil)
 type panosClient interface {
 	InitializeUsing(filename string, chkenv bool) error
 	Commit(cmd interface{}, action string, extras interface{}) (uint, []byte, error)
-	WaitForJob(id uint, resp interface{}) error
+	WaitForJob(id uint, sleep time.Duration, resp interface{}) error
 	String() string
 }
 
@@ -162,7 +162,7 @@ func (h *Panos) commit(ctx context.Context) error {
 		default:
 		}
 
-		if err := h.client.WaitForJob(job, nil); err != nil {
+		if err := h.client.WaitForJob(job, time.Millisecond, nil); err != nil {
 			log.Printf("[ERR] (handler.panos) error waiting for panos commit to finish: %s", err)
 			return err
 		}

@@ -117,7 +117,8 @@ func TestPanosDo(t *testing.T) {
 				Return(nil)
 			m.On("Commit", mock.Anything, mock.Anything, mock.Anything).
 				Return(uint(1), []byte("message"), nil)
-			m.On("WaitForJob", mock.Anything, mock.Anything).Return(nil)
+			m.On("WaitForJob", mock.Anything, mock.Anything, mock.Anything).
+				Return(nil)
 			m.On("String").Return("client string")
 
 			h := &Panos{client: m}
@@ -136,7 +137,8 @@ func TestPanosDo(t *testing.T) {
 			Return(nil).Once()
 		m.On("Commit", mock.Anything, mock.Anything, mock.Anything).
 			Return(uint(1), []byte("message"), nil).Once()
-		m.On("WaitForJob", mock.Anything, mock.Anything).Return(nil).Once()
+		m.On("WaitForJob", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
 		m.On("String").Return("client string").Once()
 
 		h := &Panos{client: m, autoCommit: true, retry: retry.NewTestRetry(1)}
@@ -210,7 +212,7 @@ func TestPanosCommit(t *testing.T) {
 				Return(tc.initReturn).Once()
 			m.On("Commit", mock.Anything, mock.Anything, mock.Anything).
 				Return(tc.commitJob, tc.commitResp, tc.commitReturn)
-			m.On("WaitForJob", mock.Anything, mock.Anything).
+			m.On("WaitForJob", mock.Anything, mock.Anything, mock.Anything).
 				Return(tc.waitReturn)
 			m.On("String").Return("client string").Once()
 
