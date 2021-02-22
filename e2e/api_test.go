@@ -59,17 +59,20 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	time.Sleep(7 * time.Second)
 
 	taskCases := []struct {
-		name     string
-		path     string
-		expected map[string]api.TaskStatus
+		name       string
+		path       string
+		statusCode int
+		expected   map[string]api.TaskStatus
 	}{
 		{
 			"all task statuses",
 			"status/tasks",
+			http.StatusOK,
 			map[string]api.TaskStatus{
 				fakeSuccessTaskName: api.TaskStatus{
 					TaskName:  fakeSuccessTaskName,
 					Status:    api.StatusSuccessful,
+					Enabled:   true,
 					Providers: []string{"fake-sync"},
 					Services:  []string{"api"},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
@@ -77,19 +80,30 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 				fakeFailureTaskName: api.TaskStatus{
 					TaskName:  fakeFailureTaskName,
 					Status:    api.StatusErrored,
+					Enabled:   true,
 					Providers: []string{"fake-sync"},
 					Services:  []string{"api"},
 					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
+				},
+				disabledTaskName: api.TaskStatus{
+					TaskName:  disabledTaskName,
+					Status:    api.StatusUnknown,
+					Enabled:   false,
+					Providers: []string{"fake-sync"},
+					Services:  []string{"api"},
+					EventsURL: "",
 				},
 			},
 		},
 		{
 			"existing single task status",
 			"status/tasks/" + fakeSuccessTaskName,
+			http.StatusOK,
 			map[string]api.TaskStatus{
 				fakeSuccessTaskName: api.TaskStatus{
 					TaskName:  fakeSuccessTaskName,
 					Status:    api.StatusSuccessful,
+					Enabled:   true,
 					Providers: []string{"fake-sync"},
 					Services:  []string{"api"},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
@@ -99,15 +113,8 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 		{
 			"non-existing single task status",
 			"status/tasks/" + "non-existing-task",
-			map[string]api.TaskStatus{
-				"non-existing-task": api.TaskStatus{
-					TaskName:  "non-existing-task",
-					Status:    api.StatusUnknown,
-					Providers: []string{},
-					Services:  []string{},
-					EventsURL: "",
-				},
-			},
+			http.StatusNotFound,
+			map[string]api.TaskStatus{},
 		},
 	}
 
@@ -118,7 +125,11 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			require.Equal(t, resp.StatusCode, http.StatusOK)
+			assert.Equal(t, tc.statusCode, resp.StatusCode)
+
+			if tc.statusCode != http.StatusOK {
+				return
+			}
 
 			var taskStatuses map[string]api.TaskStatus
 			decoder := json.NewDecoder(resp.Body)
@@ -140,14 +151,16 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	}
 
 	eventCases := []struct {
-		name              string
-		path              string
-		expectSuccessTask bool
-		expectFailureTask bool
+		name               string
+		path               string
+		expectSuccessTask  bool
+		expectFailureTask  bool
+		expectDisabledTask bool
 	}{
 		{
 			"events: all task statuses",
 			"status/tasks?include=events",
+			true,
 			true,
 			true,
 		},
@@ -156,6 +169,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			"status/tasks?status=errored&include=events",
 			false,
 			true,
+			false,
 		},
 	}
 
@@ -175,6 +189,14 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 			checkEvents(t, taskStatuses, fakeFailureTaskName, tc.expectFailureTask)
 			checkEvents(t, taskStatuses, fakeSuccessTaskName, tc.expectSuccessTask)
+
+			task, ok := taskStatuses[disabledTaskName]
+			if tc.expectDisabledTask {
+				assert.True(t, ok)
+				assert.Nil(t, task.Events)
+			} else {
+				assert.False(t, ok)
+			}
 		})
 	}
 

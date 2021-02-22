@@ -112,12 +112,18 @@ func TestStatus(t *testing.T) {
 	eventsC := createTaskEvents("task_c", []bool{false, false, true})
 	addEvents(store, eventsC)
 
+	// setup drivers
+	drivers := make(map[string]driver.Driver)
+	drivers["task_a"] = createEnabledDriver("task_a")
+	drivers["task_b"] = createEnabledDriver("task_b")
+	drivers["task_c"] = createEnabledDriver("task_c")
+
 	// start up server
 	port, err := FreePort()
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	api := NewAPI(store, map[string]driver.Driver{}, port)
+	api := NewAPI(store, drivers, port)
 	go api.Serve(ctx)
 	time.Sleep(3 * time.Second) // in case tests run before server is ready
 
@@ -152,6 +158,7 @@ func TestStatus(t *testing.T) {
 				map[string]TaskStatus{
 					"task_a": TaskStatus{
 						TaskName:  "task_a",
+						Enabled:   true,
 						Status:    StatusSuccessful,
 						Providers: []string{},
 						Services:  []string{},
@@ -159,6 +166,7 @@ func TestStatus(t *testing.T) {
 					},
 					"task_b": TaskStatus{
 						TaskName:  "task_b",
+						Enabled:   true,
 						Status:    StatusCritical,
 						Providers: []string{},
 						Services:  []string{},
@@ -166,6 +174,7 @@ func TestStatus(t *testing.T) {
 					},
 					"task_c": TaskStatus{
 						TaskName:  "task_c",
+						Enabled:   true,
 						Status:    StatusCritical,
 						Providers: []string{},
 						Services:  []string{},
@@ -181,6 +190,7 @@ func TestStatus(t *testing.T) {
 				map[string]TaskStatus{
 					"task_a": TaskStatus{
 						TaskName:  "task_a",
+						Enabled:   true,
 						Status:    StatusSuccessful,
 						Providers: []string{},
 						Services:  []string{},
@@ -197,6 +207,7 @@ func TestStatus(t *testing.T) {
 					"task_b": TaskStatus{
 						TaskName:  "task_b",
 						Status:    StatusCritical,
+						Enabled:   true,
 						Providers: []string{},
 						Services:  []string{},
 						EventsURL: "/v1/status/tasks/task_b?include=events",
@@ -212,6 +223,7 @@ func TestStatus(t *testing.T) {
 				map[string]TaskStatus{
 					"task_b": TaskStatus{
 						TaskName:  "task_b",
+						Enabled:   true,
 						Status:    StatusCritical,
 						Providers: []string{},
 						Services:  []string{},
@@ -219,6 +231,7 @@ func TestStatus(t *testing.T) {
 					},
 					"task_c": TaskStatus{
 						TaskName:  "task_c",
+						Enabled:   true,
 						Status:    StatusCritical,
 						Providers: []string{},
 						Services:  []string{},

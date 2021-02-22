@@ -68,6 +68,7 @@ func TestServe(t *testing.T) {
 	d := new(mocks.Driver)
 	d.On("UpdateTask", mock.Anything, mock.Anything).
 		Return(driver.InspectPlan{}, nil).Once()
+	d.On("Task").Return(driver.Task{Enabled: true})
 	drivers["task_b"] = d
 
 	api := NewAPI(event.NewStore(), drivers, port)

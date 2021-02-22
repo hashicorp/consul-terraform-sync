@@ -25,6 +25,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 	cases := []struct {
 		name          string
 		expectError   bool
+		enabledTask   bool
 		applyTaskErr  error
 		renderTmplErr error
 		taskName      string
@@ -32,6 +33,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 	}{
 		{
 			"error on driver.RenderTemplate()",
+			true,
 			true,
 			nil,
 			errors.New("error on driver.RenderTemplate()"),
@@ -41,6 +43,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 		{
 			"error on driver.ApplyTask()",
 			true,
+			true,
 			errors.New("error on driver.ApplyTask()"),
 			nil,
 			"task_apply",
@@ -49,14 +52,25 @@ func TestReadWrite_CheckApply(t *testing.T) {
 		{
 			"error creating new event",
 			true,
+			true,
 			nil,
 			nil,
 			"",
 			false,
 		},
 		{
+			"disabled task",
+			false,
+			false,
+			nil,
+			nil,
+			"disabled_task",
+			false,
+		},
+		{
 			"happy path",
 			false,
+			true,
 			nil,
 			nil,
 			"task_apply",
@@ -67,9 +81,14 @@ func TestReadWrite_CheckApply(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			d := new(mocksD.Driver)
-			d.On("RenderTemplate", mock.Anything).
-				Return(true, tc.renderTmplErr)
-			d.On("ApplyTask", mock.Anything).Return(tc.applyTaskErr)
+			if !tc.enabledTask {
+				d.On("Task").Return(driver.Task{Enabled: false})
+			} else {
+				d.On("Task").Return(driver.Task{Enabled: true})
+				d.On("RenderTemplate", mock.Anything).
+					Return(true, tc.renderTmplErr)
+				d.On("ApplyTask", mock.Anything).Return(tc.applyTaskErr)
+			}
 
 			controller := ReadWrite{
 				baseController: &baseController{},
@@ -83,8 +102,10 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			events := data[tc.taskName]
 
 			if !tc.addToStore {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tc.name)
+				if tc.expectError {
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), tc.name)
+				}
 				assert.Equal(t, 0, len(events))
 				return
 			}
@@ -112,8 +133,12 @@ func TestReadWrite_CheckApply(t *testing.T) {
 func TestReadWrite_CheckApply_Store(t *testing.T) {
 	t.Run("mult-checkapply-store", func(t *testing.T) {
 		d := new(mocksD.Driver)
+		d.On("Task").Return(driver.Task{Enabled: true})
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(nil)
+
+		disabledD := new(mocksD.Driver)
+		disabledD.On("Task").Return(driver.Task{Enabled: false})
 
 		controller := ReadWrite{
 			baseController: &baseController{},
@@ -122,19 +147,23 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 
 		unitA := unit{taskName: "task_a", driver: d}
 		unitB := unit{taskName: "task_b", driver: d}
+		unitC := unit{taskName: "task_c", driver: disabledD}
 		ctx := context.Background()
 
 		controller.checkApply(ctx, unitA, false)
 		controller.checkApply(ctx, unitB, false)
+		controller.checkApply(ctx, unitC, false)
 		controller.checkApply(ctx, unitA, false)
 		controller.checkApply(ctx, unitA, false)
 		controller.checkApply(ctx, unitA, false)
 		controller.checkApply(ctx, unitB, false)
+		controller.checkApply(ctx, unitC, false)
 
 		taskStatuses := controller.store.Read("")
 
 		assert.Equal(t, 4, len(taskStatuses["task_a"]))
 		assert.Equal(t, 2, len(taskStatuses["task_b"]))
+		assert.Equal(t, 0, len(taskStatuses["task_c"]))
 	})
 }
 
@@ -149,6 +178,7 @@ func TestOnce(t *testing.T) {
 		w.On("Size").Return(5)
 
 		d := new(mocksD.Driver)
+		d.On("Task").Return(driver.Task{Enabled: true}).Twice()
 		d.On("RenderTemplate", mock.Anything).Return(false, nil).Once()
 		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 		d.On("InitTask", mock.Anything).Return(nil).Once()
@@ -194,6 +224,7 @@ func TestOnce(t *testing.T) {
 func TestReadWriteUnits(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
 		d := new(mocksD.Driver)
+		d.On("Task").Return(driver.Task{Enabled: true})
 		d.On("InitWork", mock.Anything).Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(nil)
@@ -217,6 +248,7 @@ func TestReadWriteUnits(t *testing.T) {
 
 	t.Run("apply-error", func(t *testing.T) {
 		d := new(mocksD.Driver)
+		d.On("Task").Return(driver.Task{Enabled: true})
 		d.On("InitWork", mock.Anything).Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))

@@ -155,6 +155,11 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 // returns false, no event is stored.
 func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, error) {
 	taskName := u.taskName
+	d := u.driver
+	if !d.Task().Enabled {
+		log.Printf("[TRACE] (ctrl) skipping disabled task '%s'", taskName)
+		return true, nil
+	}
 
 	// setup to store event information
 	ev, err := event.NewEvent(taskName, &event.Config{
@@ -176,7 +181,6 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, 
 	}
 	ev.Start()
 
-	d := u.driver
 	var rendered bool
 	rendered, storedErr = d.RenderTemplate(ctx)
 	if storedErr != nil {

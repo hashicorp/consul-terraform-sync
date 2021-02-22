@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 )
 
@@ -15,6 +16,7 @@ const taskStatusPath = "status/tasks"
 type TaskStatus struct {
 	TaskName  string        `json:"task_name"`
 	Status    string        `json:"status"`
+	Enabled   bool          `json:"enabled"`
 	Providers []string      `json:"providers"`
 	Services  []string      `json:"services"`
 	EventsURL string        `json:"events_url"`
@@ -24,13 +26,15 @@ type TaskStatus struct {
 // taskStatusHandler handles the task status endpoint
 type taskStatusHandler struct {
 	store   *event.Store
+	drivers map[string]driver.Driver
 	version string
 }
 
 // newTaskStatusHandler returns a new TaskStatusHandler
-func newTaskStatusHandler(store *event.Store, version string) *taskStatusHandler {
+func newTaskStatusHandler(store *event.Store, drivers map[string]driver.Driver, version string) *taskStatusHandler {
 	return &taskStatusHandler{
 		store:   store,
+		drivers: drivers,
 		version: version,
 	}
 }
@@ -64,7 +68,15 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	data := h.store.Read(taskName)
 	statuses := make(map[string]TaskStatus)
 	for taskName, events := range data {
-		status := makeTaskStatus(taskName, events, h.version)
+		d, ok := h.drivers[taskName]
+		if !ok {
+			err := fmt.Errorf("task '%s' does not exist", taskName)
+			log.Printf("[TRACE] (api.updatetask) %s", err)
+			jsonErrorResponse(w, http.StatusNotFound, err)
+			return
+		}
+		status := makeTaskStatus(events, d.Task(), h.version)
+
 		if filter != "" && status.Status != filter {
 			continue
 		}
@@ -74,11 +86,33 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		statuses[taskName] = status
 	}
 
+	// if user requested a specific task that does not have events, check if
+	// a driver exists
+	if taskName != "" {
+		if _, ok := data[taskName]; !ok {
+			if d, ok := h.drivers[taskName]; ok {
+				statuses[taskName] = makeTaskStatusUnknown(d.Task())
+			}
+		}
+	}
+
+	// if user requested all tasks and status filter applicable, check driver
+	// for tasks without events
+	if taskName == "" && (filter == "" || filter == StatusUnknown) {
+		for tN, d := range h.drivers {
+			if _, ok := data[tN]; !ok {
+				statuses[tN] = makeTaskStatusUnknown(d.Task())
+			}
+		}
+	}
+
 	jsonResponse(w, http.StatusOK, statuses)
 }
 
-// makeTaskStatus takes event data for a task and returns an overall task status
-func makeTaskStatus(taskName string, events []event.Event, version string) TaskStatus {
+// makeTaskStatus takes event data for a task and returns a task status
+func makeTaskStatus(events []event.Event, task driver.Task,
+	version string) TaskStatus {
+
 	successes := make([]bool, len(events))
 	uniqProviders := make(map[string]bool)
 	uniqServices := make(map[string]bool)
@@ -97,11 +131,25 @@ func makeTaskStatus(taskName string, events []event.Event, version string) TaskS
 	}
 
 	return TaskStatus{
-		TaskName:  taskName,
+		TaskName:  task.Name,
 		Status:    successToStatus(successes),
+		Enabled:   task.Enabled,
 		Providers: mapKeyToArray(uniqProviders),
 		Services:  mapKeyToArray(uniqServices),
-		EventsURL: makeEventsURL(events, version, taskName),
+		EventsURL: makeEventsURL(events, version, task.Name),
+	}
+}
+
+// makeTaskStatusUnknown returns a task status for tasks that do not have events
+// but still exist within CTS. Example: a task that has been disabled from the start
+func makeTaskStatusUnknown(task driver.Task) TaskStatus {
+	return TaskStatus{
+		TaskName:  task.Name,
+		Status:    StatusUnknown,
+		Enabled:   task.Enabled,
+		Providers: task.ProviderNames(),
+		Services:  task.ServiceNames(),
+		EventsURL: "",
 	}
 }
 

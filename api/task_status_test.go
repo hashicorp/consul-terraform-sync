@@ -7,8 +7,12 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +29,7 @@ func TestTaskStatus_New(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := newTaskStatusHandler(event.NewStore(), tc.version)
+			h := newTaskStatusHandler(event.NewStore(), nil, tc.version)
 			assert.Equal(t, tc.version, h.version)
 		})
 	}
@@ -49,7 +53,26 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	eventsC := createTaskEvents("task_c", []bool{false, true, true})
 	addEvents(store, eventsC)
 
-	handler := newTaskStatusHandler(store, "v1")
+	drivers := make(map[string]driver.Driver)
+	drivers["task_a"] = createEnabledDriver("task_a")
+	drivers["task_b"] = createEnabledDriver("task_b")
+	drivers["task_c"] = createEnabledDriver("task_c")
+
+	disabledD := new(mocks.Driver)
+	disabledD.On("Task").Return(driver.Task{
+		Name:    "task_d",
+		Enabled: false,
+		Providers: driver.NewTerraformProviderBlocks(
+			hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
+				{"null": map[string]interface{}{}},
+			})),
+		Services: []driver.Service{
+			driver.Service{Name: "web"},
+		},
+	})
+	drivers["task_d"] = disabledD
+
+	handler := newTaskStatusHandler(store, drivers, "v1")
 
 	cases := []struct {
 		name       string
@@ -65,6 +88,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 				"task_a": TaskStatus{
 					TaskName:  "task_a",
 					Status:    StatusSuccessful,
+					Enabled:   true,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_a?include=events",
@@ -72,6 +96,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 				"task_b": TaskStatus{
 					TaskName:  "task_b",
 					Status:    StatusCritical,
+					Enabled:   true,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_b?include=events",
@@ -79,9 +104,18 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 				"task_c": TaskStatus{
 					TaskName:  "task_c",
 					Status:    StatusErrored,
+					Enabled:   true,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_c?include=events",
+				},
+				"task_d": TaskStatus{
+					TaskName:  "task_d",
+					Status:    StatusUnknown,
+					Enabled:   false,
+					Providers: []string{"null"},
+					Services:  []string{"web"},
+					EventsURL: "",
 				},
 			},
 		},
@@ -93,6 +127,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 				"task_a": TaskStatus{
 					TaskName:  "task_a",
 					Status:    StatusSuccessful,
+					Enabled:   true,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_a?include=events",
@@ -101,6 +136,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 				"task_b": TaskStatus{
 					TaskName:  "task_b",
 					Status:    StatusCritical,
+					Enabled:   true,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_b?include=events",
@@ -109,21 +145,32 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 				"task_c": TaskStatus{
 					TaskName:  "task_c",
 					Status:    StatusErrored,
+					Enabled:   true,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_c?include=events",
 					Events:    eventsC,
 				},
+				"task_d": TaskStatus{
+					TaskName:  "task_d",
+					Status:    StatusUnknown,
+					Enabled:   false,
+					Providers: []string{"null"},
+					Services:  []string{"web"},
+					EventsURL: "",
+					Events:    nil,
+				},
 			},
 		},
 		{
-			"all task statuses filtered by status with result",
+			"all task statuses filtered by status critical",
 			"/v1/status/tasks?status=critical",
 			http.StatusOK,
 			map[string]TaskStatus{
 				"task_b": TaskStatus{
 					TaskName:  "task_b",
 					Status:    StatusCritical,
+					Enabled:   true,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_b?include=events",
@@ -131,10 +178,19 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
-			"all task statuses filtered by status with no result",
+			"all task statuses filtered by status unknown",
 			"/v1/status/tasks?status=unknown",
 			http.StatusOK,
-			map[string]TaskStatus{},
+			map[string]TaskStatus{
+				"task_d": TaskStatus{
+					TaskName:  "task_d",
+					Status:    StatusUnknown,
+					Enabled:   false,
+					Providers: []string{"null"},
+					Services:  []string{"web"},
+					EventsURL: "",
+				},
+			},
 		},
 		{
 			"single task",
@@ -144,6 +200,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 				"task_b": TaskStatus{
 					TaskName:  "task_b",
 					Status:    StatusCritical,
+					Enabled:   true,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_b?include=events",
@@ -158,6 +215,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 				"task_b": TaskStatus{
 					TaskName:  "task_b",
 					Status:    StatusCritical,
+					Enabled:   true,
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_b?include=events",
@@ -168,30 +226,14 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		{
 			"non-existent task",
 			"/v1/status/tasks/task_nonexistent",
-			http.StatusOK,
-			map[string]TaskStatus{
-				"task_nonexistent": TaskStatus{
-					TaskName:  "task_nonexistent",
-					Status:    StatusUnknown,
-					Providers: []string{},
-					Services:  []string{},
-					EventsURL: "",
-				},
-			},
+			http.StatusNotFound,
+			map[string]TaskStatus{},
 		},
 		{
 			"non-existent task with events",
 			"/v1/status/tasks/task_nonexistent?include=events",
-			http.StatusOK,
-			map[string]TaskStatus{
-				"task_nonexistent": TaskStatus{
-					TaskName:  "task_nonexistent",
-					Status:    StatusUnknown,
-					Providers: []string{},
-					Services:  []string{},
-					EventsURL: "",
-				},
-			},
+			http.StatusNotFound,
+			map[string]TaskStatus{},
 		},
 		{
 			"bad include parameter",
@@ -241,6 +283,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 	cases := []struct {
 		name     string
 		events   []event.Event
+		task     driver.Task
 		expected TaskStatus
 	}{
 		{
@@ -267,8 +310,10 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 					},
 				},
 			},
+			driver.Task{Name: "test_task", Enabled: true},
 			TaskStatus{
 				TaskName:  "test_task",
+				Enabled:   true,
 				Status:    StatusSuccessful,
 				Providers: []string{"local", "null", "f5"},
 				Services:  []string{"api", "web", "db"},
@@ -278,8 +323,10 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 		{
 			"no events",
 			[]event.Event{},
+			driver.Task{Name: "test_task", Enabled: true},
 			TaskStatus{
 				TaskName:  "test_task",
+				Enabled:   true,
 				Status:    StatusUnknown,
 				Providers: []string{},
 				Services:  []string{},
@@ -298,11 +345,34 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 					Config:  nil,
 				},
 			},
+			driver.Task{Name: "test_task", Enabled: true},
 			TaskStatus{
 				TaskName:  "test_task",
+				Enabled:   true,
 				Status:    StatusCritical,
 				Providers: []string{},
 				Services:  []string{},
+				EventsURL: "/v1/status/tasks/test_task?include=events",
+			},
+		},
+		{
+			"disabled task",
+			[]event.Event{
+				event.Event{
+					Success: true,
+					Config: &event.Config{
+						Providers: []string{"local"},
+						Services:  []string{"api"},
+					},
+				},
+			},
+			driver.Task{Name: "test_task", Enabled: false},
+			TaskStatus{
+				TaskName:  "test_task",
+				Enabled:   false,
+				Status:    StatusSuccessful,
+				Providers: []string{"local"},
+				Services:  []string{"api"},
 				EventsURL: "/v1/status/tasks/test_task?include=events",
 			},
 		},
@@ -310,7 +380,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := makeTaskStatus("test_task", tc.events, "v1")
+			actual := makeTaskStatus(tc.events, tc.task, "v1")
 			sort.Strings(tc.expected.Providers)
 			sort.Strings(tc.expected.Services)
 			sort.Strings(actual.Providers)
@@ -563,4 +633,14 @@ func addEvents(store *event.Store, events []event.Event) {
 	for i := len(events) - 1; i >= 0; i-- {
 		store.Add(events[i])
 	}
+}
+
+func createEnabledDriver(taskName string) driver.Driver {
+	d := new(mocks.Driver)
+	d.On("UpdateTask", mock.Anything, mock.Anything).Return("", nil).Once()
+	d.On("Task").Return(driver.Task{
+		Name:    taskName,
+		Enabled: true,
+	})
+	return d
 }
