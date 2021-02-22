@@ -14,16 +14,18 @@ const (
 	disabledTaskName    = "disabled_task"
 )
 
-// oneTaskConfig returns a basic config file with a single task
-// Use for testing runtime errors
-func oneTaskConfig(consulAddr, tempDir string) string {
-	return baseConfig() + consulBlock(consulAddr) + terraformBlock(tempDir) + dbTask()
+// oneTaskConfig returns a basic config file with a single task. Passing in a
+// port value of 0 will automatically select the next free port
+func oneTaskConfig(consulAddr, tempDir string, port int) string {
+	portConfig := fmt.Sprintf("port = %d", port)
+
+	return portConfig + consulBlock(consulAddr) + terraformBlock(tempDir) + dbTask()
 }
 
 // twoTaskConfig returns a basic use case config file
 // Use for confirming specific resource / statefile output
 func twoTaskConfig(consulAddr, tempDir string) string {
-	return oneTaskConfig(consulAddr, tempDir) + webTask()
+	return oneTaskConfig(consulAddr, tempDir, 0) + webTask()
 }
 
 // panosConfig returns a config file with panos provider with bad config
