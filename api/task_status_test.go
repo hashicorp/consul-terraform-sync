@@ -227,7 +227,6 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		{
 			"non-existent task",
 			"/v1/status/tasks/task_nonexistent",
-			// http.StatusOK,
 			http.StatusNotFound,
 			map[string]TaskStatus{},
 		},
