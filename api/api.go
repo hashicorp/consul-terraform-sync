@@ -41,7 +41,7 @@ const (
 	// Task Status: Determined by the success of a task updating. The 5 most
 	// recent task updates are stored as an ‘event’ in CTS. A task is critical
 	// when the most recent stored event is not successful and at least one prior
-	// stored event is all not succesful.
+	// stored event is all not successful.
 	StatusCritical = "critical"
 
 	// StatusUnknown is when the status is unknown. This is determined
@@ -53,7 +53,7 @@ const (
 	StatusUnknown = "unknown"
 )
 
-// API supports api requests to the cts biniary
+// API supports api requests to the cts binary
 type API struct {
 	store   *event.Store
 	drivers map[string]driver.Driver

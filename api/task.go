@@ -68,8 +68,8 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if taskName == "" {
-		err := fmt.Errorf("No taskname was included in the api request. " +
-			"Updating a task requires the taskname: '/v1/tasks/:task_name'")
+		err := fmt.Errorf("No task name was included in the api request. " +
+			"Updating a task requires the task name: '/v1/tasks/:task_name'")
 		log.Printf("[TRACE] (api.task) bad request: %s", err)
 		jsonErrorResponse(w, http.StatusBadRequest, err)
 		return
@@ -93,14 +93,16 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("[TRACE] (api.task) unable to read request body: %s", err)
+		log.Printf("[TRACE] (api.task) unable to read request body from update "+
+			"request for task '%s': %s", taskName, err)
 		jsonErrorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	conf, err := decodeBody(body)
 	if err != nil {
-		log.Printf("[TRACE] (api.task) problem decoding body: %s", err)
+		log.Printf("[TRACE] (api.task) problem decoding body from update request "+
+			"for task '%s': %s", taskName, err)
 		jsonErrorResponse(w, http.StatusBadRequest, err)
 		return
 	}
@@ -109,8 +111,8 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		RunOption: runOp,
 	}
 	if conf.Enabled != nil {
-		log.Printf("[INFO] (api.task) Updating task to be enabled=%t",
-			config.BoolVal(conf.Enabled))
+		log.Printf("[INFO] (api.task) Updating task '%s' to be enabled=%t",
+			taskName, config.BoolVal(conf.Enabled))
 		patch.Enabled = config.BoolVal(conf.Enabled)
 	}
 
@@ -118,7 +120,8 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 
 	plan, err := d.UpdateTask(ctx, patch)
 	if err != nil {
-		log.Printf("[TRACE] (api.task) error while updating task: %s", err)
+		log.Printf("[TRACE] (api.task) error while updating task '%s': %s",
+			taskName, err)
 		jsonErrorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
