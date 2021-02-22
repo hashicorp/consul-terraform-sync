@@ -225,8 +225,8 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 
 // InspectPlan stores return the information about what
 type InspectPlan struct {
-	ChangesPresent bool
-	Plan           string
+	ChangesPresent bool   `json:"changes_present"`
+	Plan           string `json:"plan"`
 }
 
 // UpdateTask updates the task on the driver. Makes any calls to re-init
