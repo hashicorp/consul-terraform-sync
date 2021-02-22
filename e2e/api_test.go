@@ -8,14 +8,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
@@ -213,8 +216,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	for _, tc := range overallCases {
 		t.Run(tc.name, func(t *testing.T) {
 			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
-			resp, err := http.Get(u)
-			require.NoError(t, err)
+			resp := apiRequest(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
 			require.Equal(t, resp.StatusCode, http.StatusOK)
@@ -242,11 +244,114 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	delete()
 }
 
+func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
+	t.Parallel()
+	// Test enabling and disabling a task
+	// 1. Start with disabled task. Confirm task not initialized, resources not created
+	// 2. API to inspect enabling task. Confirm plan looks good, resources not created
+	// 3. API to actually enable task. Confirm resources are created
+	// 4. API to disable task. Delete resources. Register new service. Confirm
+	// new service registering does not trigger creating resources
+
+	srv, err := newTestConsulServer(t)
+	require.NoError(t, err, "failed to start consul server")
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disabled_task")
+	delete, err := testutils.MakeTempDir(tempDir)
+	// no defer to delete directory: only delete at end of test if no errors
+	require.NoError(t, err)
+
+	port, err := api.FreePort()
+	require.NoError(t, err)
+
+	configPath := filepath.Join(tempDir, configFile)
+	err = makeConfig(configPath, disabledTaskConfig(srv.HTTPAddr, tempDir, port))
+	require.NoError(t, err)
+
+	cmd, err := runSync(configPath)
+	defer stopCommand(cmd)
+	require.NoError(t, err)
+	time.Sleep(5 * time.Second)
+
+	// Confirm that terraform files were not generated for a disabled task
+	fileInfos, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, "disabled_task"))
+	require.NoError(t, err)
+	require.Equal(t, len(fileInfos), 0)
+
+	// Confirm that resources were not created
+	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
+	confirmDirNotFound(t, resourcesPath)
+
+	// Update Task API: enable task with inspect run option
+	baseUrl := fmt.Sprintf("http://localhost:%d/%s/tasks/%s",
+		port, "v1", disabledTaskName)
+	u := fmt.Sprintf("%s?run=inspect", baseUrl)
+	resp := apiRequest(t, http.MethodPatch, u, `{"enabled":true}`)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var inspectPlan driver.InspectPlan
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&inspectPlan)
+	require.NoError(t, err)
+
+	// Confirm inspect plan response: changes present, plan not empty
+	assert.True(t, inspectPlan.ChangesPresent)
+	assert.NotEmpty(t, inspectPlan.Plan)
+
+	// Confirm that resources were not generated during inspect mode
+	confirmDirNotFound(t, resourcesPath)
+
+	// Update Task API: enable task with run now option
+	u = fmt.Sprintf("%s?run=now", baseUrl)
+	resp1 := apiRequest(t, http.MethodPatch, u, `{"enabled":true}`)
+	defer resp1.Body.Close()
+
+	// Confirm that resources are generated
+	_, err = ioutil.ReadDir(resourcesPath)
+	require.NoError(t, err)
+
+	// Update Task API: disable task
+	resp2 := apiRequest(t, http.MethodPatch, baseUrl, `{"enabled":false}`)
+	defer resp2.Body.Close()
+
+	// Delete Resources
+	err = os.RemoveAll(resourcesPath)
+	require.NoError(t, err)
+
+	// Register a new service
+	service := testutil.TestService{
+		ID:      "api-2",
+		Name:    "api",
+		Address: "5.6.7.8",
+		Port:    8080,
+	}
+	registerService(t, srv, service, testutil.HealthPassing)
+	time.Sleep(3 * time.Second)
+
+	// Confirm that resources are not recreated for disabled task
+	confirmDirNotFound(t, resourcesPath)
+
+	delete()
+}
+
 // runSyncDevMode runs the daemon in development which does not run or download
 // Terraform.
 func runSyncDevMode(configPath string) (*exec.Cmd, error) {
 	cmd := exec.Command("consul-terraform-sync",
 		fmt.Sprintf("--config-file=%s", configPath), "--client-type=development")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return cmd, nil
+}
+
+func runSync(configPath string) (*exec.Cmd, error) {
+	cmd := exec.Command("consul-terraform-sync",
+		fmt.Sprintf("--config-file=%s", configPath))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
@@ -323,4 +428,21 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 			}
 		}
 	}
+}
+
+// apiRequest makes an api request. caller is responsible for closing response
+func apiRequest(t *testing.T, method, url, body string) *http.Response {
+	r := strings.NewReader(body)
+	req, err := http.NewRequest(method, url, r)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	return resp
+}
+
+func confirmDirNotFound(t *testing.T, dir string) {
+	_, err := ioutil.ReadDir(dir)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no such file or directory")
 }
