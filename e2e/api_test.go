@@ -246,6 +246,12 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	t.Parallel()
+	// Test enabling and disabling a task
+	// 1. Start with disabled task. Confirm task not initialized, resources not created
+	// 2. API to inspect enabling task. Confirm plan looks good, resources not created
+	// 3. API to actually enable task. Confirm resources are created
+	// 4. API to disable task. Delete resources. Register new service. Confirm
+	// new service registering does not trigger creating resources
 
 	srv, err := newTestConsulServer(t)
 	require.NoError(t, err, "failed to start consul server")
