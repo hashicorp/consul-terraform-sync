@@ -43,27 +43,21 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	taskName, err := getTaskName(r.URL.Path, taskStatusPath, h.version)
 	if err != nil {
 		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
-		jsonResponse(w, http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
 	filter, err := statusFilter(r)
 	if err != nil {
 		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
-		jsonResponse(w, http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
 	include, err := include(r)
 	if err != nil {
 		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
-		jsonResponse(w, http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+		jsonErrorResponse(w, http.StatusBadRequest, err)
 		return
 	}
 

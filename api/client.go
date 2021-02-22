@@ -76,13 +76,13 @@ func (c *Client) request(method, path, query, body string) (*http.Response, erro
 	if resp.StatusCode != http.StatusOK {
 		defer resp.Body.Close()
 
-		var errResp map[string]string
+		var errResp ErrorResponse
 		decoder := json.NewDecoder(resp.Body)
 		if err = decoder.Decode(&errResp); err != nil {
 			return nil, err
 		}
 
-		if msg := errResp["error"]; msg != "" {
+		if msg, ok := errResp.ErrorMessage(); ok && msg != "" {
 			return nil, fmt.Errorf("request returned %d status code with error: %s",
 				resp.StatusCode, msg)
 		}
@@ -212,15 +212,16 @@ func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (driv
 		return plan, nil
 	}
 
-	errPayload := make(map[string]string)
+	var errPayload ErrorResponse
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(&errPayload); err != nil {
 		return driver.InspectPlan{}, err
 	}
 
-	if errMsg := errPayload["error"]; errMsg != "" {
+	if errMsg, ok := errPayload.ErrorMessage(); ok && errMsg != "" {
 		return driver.InspectPlan{}, errors.New(errMsg)
 	}
+
 	return driver.InspectPlan{}, fmt.Errorf("Request %s %s?%s -data='%s' errored but did not "+
 		"return an error message", http.MethodPatch, path, q.Encode(), b)
 }
