@@ -3,7 +3,6 @@
 package e2e
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -50,7 +49,7 @@ func TestE2EBasic(t *testing.T) {
 	err = makeConfig(configPath, twoTaskConfig(srv.HTTPAddr, tempDir))
 	require.NoError(t, err)
 
-	err = runSync(configPath, 20*time.Second)
+	err = runSyncStop(configPath, 20*time.Second)
 	require.NoError(t, err)
 
 	files, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, resourcesDir))
@@ -97,11 +96,11 @@ func TestE2ERestartSync(t *testing.T) {
 	err = makeConfig(configPath, oneTaskConfig(srv.HTTPAddr, tempDir))
 	require.NoError(t, err)
 
-	err = runSync(configPath, 8*time.Second)
+	err = runSyncStop(configPath, 8*time.Second)
 	require.NoError(t, err)
 
 	// rerun sync. confirm no errors e.g. recreating workspaces
-	err = runSync(configPath, 8*time.Second)
+	err = runSyncStop(configPath, 8*time.Second)
 	require.NoError(t, err)
 
 	delete()
@@ -251,20 +250,13 @@ func makeConfig(configPath, contents string) error {
 	return err
 }
 
-func runSync(configPath string, dur time.Duration) error {
-	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
+func runSyncStop(configPath string, dur time.Duration) error {
+	cmd, err := runSync(configPath)
+	if err != nil {
 		return err
 	}
 	time.Sleep(dur)
-	cmd.Process.Signal(os.Interrupt)
-	sigintErr := errors.New("signal: interrupt")
-	if err := cmd.Wait(); err != nil && err != sigintErr {
-		return err
-	}
-	return nil
+	return stopCommand(cmd)
 }
 
 func runSyncOnce(configPath string) error {

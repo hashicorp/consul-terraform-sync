@@ -263,7 +263,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	err = makeConfig(configPath, disabledTaskConfig(srv.HTTPAddr, tempDir, port))
 	require.NoError(t, err)
 
-	cmd, err := runSyncLongMode(configPath)
+	cmd, err := runSync(configPath)
 	defer stopCommand(cmd)
 	require.NoError(t, err)
 	time.Sleep(5 * time.Second)
@@ -343,8 +343,7 @@ func runSyncDevMode(configPath string) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
-// runSyncLongMode - placeholder name
-func runSyncLongMode(configPath string) (*exec.Cmd, error) {
+func runSync(configPath string) (*exec.Cmd, error) {
 	cmd := exec.Command("consul-terraform-sync",
 		fmt.Sprintf("--config-file=%s", configPath))
 	cmd.Stdout = os.Stdout
