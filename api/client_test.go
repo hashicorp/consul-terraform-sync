@@ -114,12 +114,9 @@ func TestStatus(t *testing.T) {
 
 	// setup drivers
 	drivers := make(map[string]driver.Driver)
-	d := new(mocksD.Driver)
-	d.On("UpdateTask", mock.Anything, mock.Anything).Return("", nil).Once()
-	d.On("Task").Return(driver.Task{Enabled: true})
-	drivers["task_a"] = d
-	drivers["task_b"] = d
-	drivers["task_c"] = d
+	drivers["task_a"] = createEnabledDriver("task_a")
+	drivers["task_b"] = createEnabledDriver("task_b")
+	drivers["task_c"] = createEnabledDriver("task_c")
 
 	// start up server
 	port, err := FreePort()

@@ -12,6 +12,7 @@ import (
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,11 +54,9 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	addEvents(store, eventsC)
 
 	drivers := make(map[string]driver.Driver)
-	d := new(mocks.Driver)
-	d.On("Task").Return(driver.Task{Enabled: true})
-	drivers["task_a"] = d
-	drivers["task_b"] = d
-	drivers["task_c"] = d
+	drivers["task_a"] = createEnabledDriver("task_a")
+	drivers["task_b"] = createEnabledDriver("task_b")
+	drivers["task_c"] = createEnabledDriver("task_c")
 
 	disabledD := new(mocks.Driver)
 	disabledD.On("Task").Return(driver.Task{
@@ -311,7 +310,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 					},
 				},
 			},
-			driver.Task{Enabled: true},
+			driver.Task{Name: "test_task", Enabled: true},
 			TaskStatus{
 				TaskName:  "test_task",
 				Enabled:   true,
@@ -324,7 +323,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 		{
 			"no events",
 			[]event.Event{},
-			driver.Task{Enabled: true},
+			driver.Task{Name: "test_task", Enabled: true},
 			TaskStatus{
 				TaskName:  "test_task",
 				Enabled:   true,
@@ -346,7 +345,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 					Config:  nil,
 				},
 			},
-			driver.Task{Enabled: true},
+			driver.Task{Name: "test_task", Enabled: true},
 			TaskStatus{
 				TaskName:  "test_task",
 				Enabled:   true,
@@ -367,7 +366,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 					},
 				},
 			},
-			driver.Task{Enabled: false},
+			driver.Task{Name: "test_task", Enabled: false},
 			TaskStatus{
 				TaskName:  "test_task",
 				Enabled:   false,
@@ -381,7 +380,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := makeTaskStatus("test_task", tc.events, tc.task, "v1")
+			actual := makeTaskStatus(tc.events, tc.task, "v1")
 			sort.Strings(tc.expected.Providers)
 			sort.Strings(tc.expected.Services)
 			sort.Strings(actual.Providers)
@@ -634,4 +633,14 @@ func addEvents(store *event.Store, events []event.Event) {
 	for i := len(events) - 1; i >= 0; i-- {
 		store.Add(events[i])
 	}
+}
+
+func createEnabledDriver(taskName string) driver.Driver {
+	d := new(mocks.Driver)
+	d.On("UpdateTask", mock.Anything, mock.Anything).Return("", nil).Once()
+	d.On("Task").Return(driver.Task{
+		Name:    taskName,
+		Enabled: true,
+	})
+	return d
 }

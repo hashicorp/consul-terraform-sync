@@ -75,7 +75,7 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			jsonErrorResponse(w, http.StatusNotFound, err)
 			return
 		}
-		status := makeTaskStatus(taskName, events, d.Task(), h.version)
+		status := makeTaskStatus(events, d.Task(), h.version)
 
 		if filter != "" && status.Status != filter {
 			continue
@@ -110,7 +110,7 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // makeTaskStatus takes event data for a task and returns a task status
-func makeTaskStatus(taskName string, events []event.Event, task driver.Task,
+func makeTaskStatus(events []event.Event, task driver.Task,
 	version string) TaskStatus {
 
 	successes := make([]bool, len(events))
@@ -131,12 +131,12 @@ func makeTaskStatus(taskName string, events []event.Event, task driver.Task,
 	}
 
 	return TaskStatus{
-		TaskName:  taskName,
+		TaskName:  task.Name,
 		Status:    successToStatus(successes),
 		Enabled:   task.Enabled,
 		Providers: mapKeyToArray(uniqProviders),
 		Services:  mapKeyToArray(uniqServices),
-		EventsURL: makeEventsURL(events, version, taskName),
+		EventsURL: makeEventsURL(events, version, task.Name),
 	}
 }
 
