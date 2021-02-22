@@ -72,9 +72,7 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			err := fmt.Errorf("task '%s' does not exist", taskName)
 			log.Printf("[TRACE] (api.updatetask) %s", err)
-			jsonResponse(w, http.StatusNotFound, map[string]string{
-				"error": err.Error(),
-			})
+			jsonErrorResponse(w, http.StatusNotFound, err)
 			return
 		}
 		status := makeTaskStatus(taskName, events, d.Task(), h.version)
