@@ -125,7 +125,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			require.Equal(t, tc.statusCode, resp.StatusCode)
+			assert.Equal(t, tc.statusCode, resp.StatusCode)
 
 			if tc.statusCode != http.StatusOK {
 				return
@@ -192,10 +192,10 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 			task, ok := taskStatuses[disabledTaskName]
 			if tc.expectDisabledTask {
-				require.True(t, ok)
+				assert.True(t, ok)
 				assert.Nil(t, task.Events)
 			} else {
-				require.False(t, ok)
+				assert.False(t, ok)
 			}
 		})
 	}
