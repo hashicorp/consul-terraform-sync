@@ -50,6 +50,7 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 						Successful: 2,
 						Errored:    1,
 						Critical:   1,
+						Unknown:    1,
 					},
 					Enabled: EnabledSummary{
 						True:  4,

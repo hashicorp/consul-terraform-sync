@@ -26,6 +26,7 @@ type StatusSummary struct {
 	Successful int `json:"successful"`
 	Errored    int `json:"errored"`
 	Critical   int `json:"critical"`
+	Unknown    int `json:"unknown"`
 }
 
 // EnabledSummary is the count of how many tasks are enabled vs. disabled
@@ -55,9 +56,9 @@ func newOverallStatusHandler(store *event.Store, drivers map[string]driver.Drive
 func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[TRACE] (api.overallstatus) requesting task status '%s'", r.URL.Path)
 
-	tasks := h.store.Read("")
+	data := h.store.Read("")
 	taskSummary := TaskSummary{}
-	for _, events := range tasks {
+	for _, events := range data {
 		successes := make([]bool, len(events))
 		for i, event := range events {
 			successes[i] = event.Success
@@ -73,7 +74,12 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	for _, d := range h.drivers {
+	for taskName, d := range h.drivers {
+		// look for any tasks that have a driver but no events
+		if _, ok := data[taskName]; !ok {
+			taskSummary.Status.Unknown++
+		}
+
 		if d.Task().Enabled {
 			taskSummary.Enabled.True++
 		} else {

@@ -226,6 +226,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 			// check status values
 			assert.Equal(t, 1, overallStatus.TaskSummary.Status.Successful)
+			assert.Equal(t, 1, overallStatus.TaskSummary.Status.Unknown)
 			// failed task might be errored/critical by now depending on number of events
 			assert.Equal(t, 1, overallStatus.TaskSummary.Status.Errored+
 				overallStatus.TaskSummary.Status.Critical)
