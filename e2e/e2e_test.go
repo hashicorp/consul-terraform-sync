@@ -93,7 +93,7 @@ func TestE2ERestartSync(t *testing.T) {
 	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
-	err = makeConfig(configPath, oneTaskConfig(srv.HTTPAddr, tempDir))
+	err = makeConfig(configPath, oneTaskConfig(srv.HTTPAddr, tempDir, 0))
 	require.NoError(t, err)
 
 	err = runSyncStop(configPath, 8*time.Second)
