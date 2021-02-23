@@ -219,12 +219,14 @@ func TestE2ELocalBackend(t *testing.T) {
 }
 
 func newTestConsulServer(t *testing.T) (*testutil.TestServer, error) {
+	tb := &testutils.TestingTB{}
 	log.SetOutput(ioutil.Discard)
-	srv, err := testutil.NewTestServerConfig(func(c *testutil.TestServerConfig) {
-		c.LogLevel = "warn"
-		c.Stdout = ioutil.Discard
-		c.Stderr = ioutil.Discard
-	})
+	srv, err := testutil.NewTestServerConfigT(tb,
+		func(c *testutil.TestServerConfig) {
+			c.LogLevel = "warn"
+			c.Stdout = ioutil.Discard
+			c.Stderr = ioutil.Discard
+		})
 	if err != nil {
 		return nil, err
 	}

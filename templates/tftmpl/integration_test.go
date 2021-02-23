@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/hcat"
@@ -145,19 +146,21 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		tb := &testutils.TestingTB{}
 		t.Run(tc.name, func(t *testing.T) {
 
 			// Setup Consul server
 			log.SetOutput(ioutil.Discard)
-			srv, err := testutil.NewTestServerConfig(func(c *testutil.TestServerConfig) {
-				c.LogLevel = "warn"
-				c.Stdout = ioutil.Discard
-				c.Stderr = ioutil.Discard
+			srv, err := testutil.NewTestServerConfigT(tb,
+				func(c *testutil.TestServerConfig) {
+					c.LogLevel = "warn"
+					c.Stdout = ioutil.Discard
+					c.Stderr = ioutil.Discard
 
-				// Hardcode node info so it doesn't change per run
-				c.NodeName = "worker-01"
-				c.NodeID = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
-			})
+					// Hardcode node info so it doesn't change per run
+					c.NodeName = "worker-01"
+					c.NodeID = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
+				})
 			require.NoError(t, err, "failed to start consul server 1")
 			defer srv.Stop()
 
@@ -185,16 +188,17 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 
 			// Setup another server with an identical API service
 			if tc.registerAPISrv2 {
-				srv2, err := testutil.NewTestServerConfigT(t, func(c *testutil.TestServerConfig) {
-					c.Bootstrap = false
-					c.LogLevel = "warn"
-					c.Stdout = ioutil.Discard
-					c.Stderr = ioutil.Discard
+				srv2, err := testutil.NewTestServerConfigT(t,
+					func(c *testutil.TestServerConfig) {
+						c.Bootstrap = false
+						c.LogLevel = "warn"
+						c.Stdout = ioutil.Discard
+						c.Stderr = ioutil.Discard
 
-					// Hardcode node info so it doesn't change per run
-					c.NodeName = "worker-02"
-					c.NodeID = "d407a592-e93c-4d8e-8a6d-aba853d1e067"
-				})
+						// Hardcode node info so it doesn't change per run
+						c.NodeName = "worker-02"
+						c.NodeID = "d407a592-e93c-4d8e-8a6d-aba853d1e067"
+					})
 				require.NoError(t, err, "failed to start consul server 2")
 				defer srv2.Stop()
 

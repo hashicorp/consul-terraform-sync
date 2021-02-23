@@ -6,6 +6,9 @@ package testutils
 import (
 	"log"
 	"os"
+	"sync"
+
+	"github.com/hashicorp/consul/sdk/testutil"
 )
 
 // MakeTempDir creates a directory in the current path for a test. Caller is
@@ -26,4 +29,35 @@ func MakeTempDir(tempDir string) (func() error, error) {
 		return os.RemoveAll(tempDir)
 
 	}, nil
+}
+
+// Meets consul/sdk/testutil/TestingTB interface
+// Required for any initialization of the test consul server as it requires
+// one of these as an argument.
+var _ testutil.TestingTB = (*TestingTB)(nil)
+
+type TestingTB struct {
+	cleanup func()
+	sync.Mutex
+}
+
+func (t *TestingTB) DoCleanup() {
+	t.Lock()
+	defer t.Unlock()
+	t.cleanup()
+}
+
+func (*TestingTB) Failed() bool                { return false }
+func (*TestingTB) Logf(string, ...interface{}) {}
+func (*TestingTB) Name() string                { return "TestingTB" }
+func (t *TestingTB) Cleanup(f func()) {
+	t.Lock()
+	defer t.Unlock()
+	prev := t.cleanup
+	t.cleanup = func() {
+		f()
+		if prev != nil {
+			prev()
+		}
+	}
 }
