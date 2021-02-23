@@ -3,16 +3,25 @@
 BREAKING CHANGES:
 * Remove support for `provider` block name (deprecated v0.1.0-techpreview2). Use `terraform_provider` block name instead. [[GH-169](https://github.com/hashicorp/consul-terraform-sync/pull/169)]
 * Change version output from stderr to stdout. [[GH-199](https://github.com/hashicorp/consul-terraform-sync/pull/199)]
-* Change API error structure from string to object for future flexiblity. [[GH-201](https://github.com/hashicorp/consul-terraform-sync/pull/201)]
+* Change API error structure from string to object for future flexibility. [[GH-201](https://github.com/hashicorp/consul-terraform-sync/pull/201)]
+* Change Overall Status API response payload's `task_summary` from a map of status values to counts to a map of objects in order to allow returning other types of summary information. [[GH-203](https://github.com/hashicorp/consul-terraform-sync/pull/203)]
 
 FEATURES:
 * Add `cts_user_defined_meta` option to the `service` configuration block for appending user-defined metadata grouped by services to be used by Terraform modules. [[GH-166](https://github.com/hashicorp/consul-terraform-sync/pull/166)]
 * Add support for querying service by namespace for Consul Enterprise. [[GH-175](https://github.com/hashicorp/consul-terraform-sync/pull/175)]
+* Add `enabled` boolean field to task configuration which configures a task to run or not. [[GH-188](https://github.com/hashicorp/consul-terraform-sync/pull/188), [GH-189](https://github.com/hashicorp/consul-terraform-sync/pull/189)]
+* Add a Disable Task CLI which will stop a task from running and updating resources until re-enabled. [[GH-194](https://github.com/hashicorp/consul-terraform-sync/pull/194)]
+* Add an Enable Task CLI which will start a task so that it runs and updates resources. [[GH-198](https://github.com/hashicorp/consul-terraform-sync/pull/198)]
+* Add support for a CLI `-port` flag to set the API port that the CLI should use if not default port 8558. [[GH-197](https://github.com/hashicorp/consul-terraform-sync/pull/197)]
+* Add an Update Task API to support patch updating a task's enabled state. [[GH-191](https://github.com/hashicorp/consul-terraform-sync/pull/191)]
+* Add a run parameter to Update Task API which can dry-run a task with updates and return an inspect plan (?run=inspect) or update a task run it immediately as opposed to run at the natural CTS cadence (?run=now). [[GH-196](https://github.com/hashicorp/consul-terraform-sync/pull/196)]
 
 IMPROVEMENTS:
 * Changed default `consul.transport` options used for the Consul client to improve TCP connection reuse. [[GH-164](https://github.com/hashicorp/consul-terraform-sync/pull/164)]
 * Mark generated provider variables as [sensitive for Terraform 0.14+](https://www.hashicorp.com/blog/terraform-0-14-adds-the-ability-to-redact-sensitive-values-in-console-output) [[GH-181](https://github.com/hashicorp/consul-terraform-sync/pull/181)]
 * Separate provider-related variables into a different file from services [[GH-182](https://github.com/hashicorp/consul-terraform-sync/pull/182), [GH-183](https://github.com/hashicorp/consul-terraform-sync/pull/183)]
+* Update the Overall Status API response to return count of enabled and disabled tasks and to return count of tasks with no event data as status value 'unknown'. [[GH-203](https://github.com/hashicorp/consul-terraform-sync/pull/203)]
+* Update the Task Status API response to include a new 'enabled' boolean field to indicate if task is enabled or disabled. [[GH-202](https://github.com/hashicorp/consul-terraform-sync/pull/202)]
 
 BUG FIXES:
 * Fix edge case where multiple tasks have identical `terraform.tfvars.tmpl` files causing Consul Terraform Sync to indefinitely hang. [[GH-167](https://github.com/hashicorp/consul-terraform-sync/pull/167)]
