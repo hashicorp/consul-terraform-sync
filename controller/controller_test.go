@@ -183,6 +183,9 @@ func TestNewDriverTasks(t *testing.T) {
 			[]driver.Task{{
 				Name:    "name",
 				Enabled: true,
+				Env: map[string]string{
+					"CONSUL_HTTP_ADDR": "localhost:8500",
+				},
 				Providers: driver.NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"providerA": map[string]interface{}{}},
@@ -242,6 +245,9 @@ func TestNewDriverTasks(t *testing.T) {
 			[]driver.Task{{
 				Name:    "name",
 				Enabled: true,
+				Env: map[string]string{
+					"CONSUL_HTTP_ADDR": "localhost:8500",
+				},
 				Providers: driver.NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"providerA": map[string]interface{}{

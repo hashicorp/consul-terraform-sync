@@ -96,7 +96,7 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		log.Printf("[ERR] (driver.terraform) init client type '%s' error: %s", config.ClientType, err)
 		return nil, err
 	}
-	if env := config.Task.Providers.Env(); len(env) > 0 {
+	if env := config.Task.Env; len(env) > 0 {
 		tfClient.SetEnv(env)
 	}
 
@@ -171,7 +171,7 @@ func (tf *Terraform) SetBufferPeriod() {
 		return
 	}
 
-	log.Printf("[TRACE] (driver.terraform) set buffer period for '%s': %v",
+	log.Printf("[TRACE] (driver.terraform) set buffer period for '%s': %+v",
 		taskName, bp)
 	tf.watcher.SetBufferPeriod(bp.Min, bp.Max, tf.template.ID())
 }

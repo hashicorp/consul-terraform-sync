@@ -46,6 +46,7 @@ type Task struct {
 	Description     string
 	Name            string
 	Enabled         bool
+	Env             map[string]string
 	Providers       TerraformProviderBlocks // task.providers config info
 	ProviderInfo    map[string]interface{}  // driver.required_provider config info
 	Services        []Service
