@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/hashicorp/hcat"
 	vaultAPI "github.com/hashicorp/vault/api"
@@ -83,12 +84,14 @@ func TestLoadDynamicConfig_Env(t *testing.T) {
 }
 
 func TestLoadDynamicConfig_ConsulKV(t *testing.T) {
+	tb := &testutils.TestingTB{}
 	// Setup Consul server and write to KV
-	srv, err := testutil.NewTestServerConfig(func(c *testutil.TestServerConfig) {
-		c.LogLevel = "warn"
-		c.Stdout = ioutil.Discard
-		c.Stderr = ioutil.Discard
-	})
+	srv, err := testutil.NewTestServerConfigT(tb,
+		func(c *testutil.TestServerConfig) {
+			c.LogLevel = "warn"
+			c.Stdout = ioutil.Discard
+			c.Stderr = ioutil.Discard
+		})
 	require.NoError(t, err)
 	clients := hcat.NewClientSet()
 	err = clients.AddConsul(hcat.ConsulInput{Address: srv.HTTPAddr})
