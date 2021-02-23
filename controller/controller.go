@@ -238,19 +238,11 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			}
 		}
 
-		// Setup the task environment
-		env := providers.Env()
-		if conf.Driver.Terraform.IsConsulBackend() {
-			for k, v := range conf.Consul.Env() {
-				env[k] = v
-			}
-		}
-
 		tasks[i] = driver.Task{
 			Description:     *t.Description,
 			Name:            *t.Name,
 			Enabled:         *t.Enabled,
-			Env:             env,
+			Env:             buildTaskEnv(conf, providers.Env()),
 			Providers:       providers,
 			ProviderInfo:    providerInfo,
 			Services:        services,
@@ -352,4 +344,25 @@ func getTemplateBufferPeriod(conf *config.Config,
 	}
 
 	return nil
+}
+
+func buildTaskEnv(conf *config.Config, customEnv map[string]string) map[string]string {
+	consulEnv := conf.Consul.Env()
+	if len(customEnv) == 0 && len(consulEnv) == 0 {
+		return nil
+	}
+
+	// Merge the Consul environment if Consul KV is used as the Terraform backend
+	env := make(map[string]string)
+	if conf.Driver.Terraform.IsConsulBackend() {
+		for k, v := range consulEnv {
+			env[k] = v
+		}
+	}
+
+	for k, v := range customEnv {
+		env[k] = v
+	}
+
+	return env
 }

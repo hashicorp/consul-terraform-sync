@@ -200,6 +200,10 @@ func (c *ConsulConfig) GoString() string {
 
 // Env returns an environment map of supported Consul configuration
 func (c *ConsulConfig) Env() map[string]string {
+	if c == nil {
+		return nil
+	}
+
 	env := make(map[string]string)
 	if val := StringVal(c.Address); val != "" {
 		env["CONSUL_HTTP_ADDR"] = val
