@@ -26,7 +26,8 @@ IMPROVEMENTS:
 BUG FIXES:
 * Fix edge case where multiple tasks have identical `terraform.tfvars.tmpl` files causing Consul Terraform Sync to indefinitely hang. [[GH-167](https://github.com/hashicorp/consul-terraform-sync/pull/167)]
 * Handle case where provider configuration used nested blocks, which was causing an unsupported argument error. [[GH-173](https://github.com/hashicorp/consul-terraform-sync/pull/173)]
-* Fix `task_env` config validation causing the feature to be unusable [[GH-184](https://github.com/hashicorp/consul-terraform-sync/pull/184)]
+* Fix `task_env` config validation causing the feature to be unusable. [[GH-184](https://github.com/hashicorp/consul-terraform-sync/pull/184)]
+* Fix how CTS configures the Consul KV backend for Terraform remote state store to default with configuration from the Consul block. [[GH-213](https://github.com/hashicorp/consul-terraform-sync/pull/213)]
 
 ## 0.1.0-techpreview2 (December 16, 2020)
 
