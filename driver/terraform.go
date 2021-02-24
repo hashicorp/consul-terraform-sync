@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
@@ -96,7 +97,17 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		log.Printf("[ERR] (driver.terraform) init client type '%s' error: %s", config.ClientType, err)
 		return nil, err
 	}
-	if env := config.Task.Providers.Env(); len(env) > 0 {
+
+	if taskEnv := config.Task.Env; len(taskEnv) > 0 {
+		// Terraform init requires discovering git in the PATH env.
+		//
+		// The terraform-exec package disables inheriting from the os environment
+		// when using tfexec.SetEnv(). So for CTS purposes, we'll force inheritance
+		// to allow Terraform commands to use the os environment as necessary.
+		env := envMap(os.Environ())
+		for k, v := range taskEnv {
+			env[k] = v
+		}
 		tfClient.SetEnv(env)
 	}
 
@@ -171,7 +182,7 @@ func (tf *Terraform) SetBufferPeriod() {
 		return
 	}
 
-	log.Printf("[TRACE] (driver.terraform) set buffer period for '%s': %v",
+	log.Printf("[TRACE] (driver.terraform) set buffer period for '%s': %+v",
 		taskName, bp)
 	tf.watcher.SetBufferPeriod(bp.Min, bp.Max, tf.template.ID())
 }
@@ -532,4 +543,21 @@ func getTerraformHandlers(task Task) (handler.Handler, error) {
 	log.Printf("[INFO] (driver.terraform) retrieved %d Terraform handlers for task '%s'",
 		counter, task.Name)
 	return next, nil
+}
+
+func envMap(environ []string) map[string]string {
+	env := map[string]string{}
+	for _, ev := range environ {
+		parts := strings.SplitN(ev, "=", 2)
+		if len(parts) == 0 {
+			continue
+		}
+		k := parts[0]
+		v := ""
+		if len(parts) == 2 {
+			v = parts[1]
+		}
+		env[k] = v
+	}
+	return env
 }

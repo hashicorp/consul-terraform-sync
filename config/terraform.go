@@ -326,6 +326,17 @@ func (c *TerraformConfig) GoString() string {
 	)
 }
 
+// IsConsulBackend returns if the Terraform backend is using Consul KV for
+// remote state store.
+func (c *TerraformConfig) IsConsulBackend() bool {
+	if c.Backend == nil {
+		return false
+	}
+
+	_, ok := c.Backend["consul"]
+	return ok
+}
+
 func mergeMaps(c, o map[string]interface{}) map[string]interface{} {
 	r := make(map[string]interface{})
 	for k, v := range c {

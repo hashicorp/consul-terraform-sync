@@ -183,6 +183,9 @@ func TestNewDriverTasks(t *testing.T) {
 			[]driver.Task{{
 				Name:    "name",
 				Enabled: true,
+				Env: map[string]string{
+					"CONSUL_HTTP_ADDR": "localhost:8500",
+				},
 				Providers: driver.NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"providerA": map[string]interface{}{}},
@@ -242,6 +245,9 @@ func TestNewDriverTasks(t *testing.T) {
 			[]driver.Task{{
 				Name:    "name",
 				Enabled: true,
+				Env: map[string]string{
+					"CONSUL_HTTP_ADDR": "localhost:8500",
+				},
 				Providers: driver.NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"providerA": map[string]interface{}{
@@ -257,6 +263,56 @@ func TestNewDriverTasks(t *testing.T) {
 						"source": "source/providerA",
 					},
 				},
+				Services:        []driver.Service{},
+				Source:          "source",
+				VarFiles:        []string{},
+				UserDefinedMeta: map[string]map[string]string{},
+				BufferPeriod: &driver.BufferPeriod{
+					Min: 5 * time.Second,
+					Max: 20 * time.Second,
+				},
+			}},
+		}, {
+			// Task env is fetched from providers and Consul config when using
+			// default backend
+			"task env",
+			&config.Config{
+				Consul: &config.ConsulConfig{
+					Address: config.String("my.consul.address"),
+					Token:   config.String("TEST_CONSUL_TOKEN"),
+				},
+				Tasks: &config.TaskConfigs{
+					{
+						Name:      config.String("name"),
+						Providers: []string{"providerA"},
+						Source:    config.String("source"),
+					},
+				},
+				TerraformProviders: &config.TerraformProviderConfigs{
+					{"providerA": map[string]interface{}{
+						"task_env": map[string]interface{}{
+							"PROVIDER_TOKEN": "TEST_PROVIDER_TOKEN",
+						},
+					}},
+				},
+			},
+			[]driver.Task{{
+				Name:    "name",
+				Enabled: true,
+				Env: map[string]string{
+					"CONSUL_HTTP_ADDR":  "my.consul.address",
+					"CONSUL_HTTP_TOKEN": "TEST_CONSUL_TOKEN",
+					"PROVIDER_TOKEN":    "TEST_PROVIDER_TOKEN",
+				},
+				Providers: driver.NewTerraformProviderBlocks(
+					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
+						{"providerA": map[string]interface{}{
+							"task_env": map[string]interface{}{
+								"PROVIDER_TOKEN": "TEST_PROVIDER_TOKEN",
+							},
+						}},
+					})),
+				ProviderInfo:    map[string]interface{}{},
 				Services:        []driver.Service{},
 				Source:          "source",
 				VarFiles:        []string{},

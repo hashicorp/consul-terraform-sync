@@ -197,3 +197,25 @@ func (c *ConsulConfig) GoString() string {
 		c.Transport.GoString(),
 	)
 }
+
+// Env returns an environment map of supported Consul configuration
+func (c *ConsulConfig) Env() map[string]string {
+	if c == nil {
+		return nil
+	}
+
+	env := make(map[string]string)
+	if val := StringVal(c.Address); val != "" {
+		env["CONSUL_HTTP_ADDR"] = val
+	}
+	if val := StringVal(c.Token); val != "" {
+		env["CONSUL_HTTP_TOKEN"] = val
+	}
+	if c.TLS != nil {
+		for k, v := range c.TLS.ConsulEnv() {
+			env[k] = v
+		}
+	}
+
+	return env
+}

@@ -161,3 +161,34 @@ func (c *TLSConfig) GoString() string {
 		BoolVal(c.Verify),
 	)
 }
+
+// ConsulEnv returns an environment map of the TLS configuration for Consul
+func (c *TLSConfig) ConsulEnv() map[string]string {
+	env := make(map[string]string)
+
+	if !BoolVal(c.Enabled) {
+		return env
+	}
+
+	if val := StringVal(c.Cert); val != "" {
+		env["CONSUL_CLIENT_CERT"] = val
+	}
+
+	if val := StringVal(c.CACert); val != "" {
+		env["CONSUL_CACERT"] = val
+	}
+
+	if val := StringVal(c.CAPath); val != "" {
+		env["CONSUL_CAPATH"] = val
+	}
+
+	if val := StringVal(c.Key); val != "" {
+		env["CONSUL_CLIENT_KEY"] = val
+	}
+
+	if val := StringVal(c.ServerName); val != "" {
+		env["CONSUL_TLS_SERVER_NAME"] = val
+	}
+
+	return env
+}

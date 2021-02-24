@@ -214,6 +214,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 	if conf == nil {
 		return []driver.Task{}
 	}
+
 	tasks := make([]driver.Task, len(*conf.Tasks))
 	for i, t := range *conf.Tasks {
 
@@ -222,7 +223,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			services[si] = getService(conf.Services, service)
 		}
 
-		providers := make([]driver.TerraformProviderBlock, len(t.Providers))
+		providers := make(driver.TerraformProviderBlocks, len(t.Providers))
 		providerInfo := make(map[string]interface{})
 		for pi, providerID := range t.Providers {
 			providers[pi] = getProvider(providerConfigs, providerID)
@@ -241,6 +242,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			Description:     *t.Description,
 			Name:            *t.Name,
 			Enabled:         *t.Enabled,
+			Env:             buildTaskEnv(conf, providers.Env()),
 			Providers:       providers,
 			ProviderInfo:    providerInfo,
 			Services:        services,
@@ -342,4 +344,25 @@ func getTemplateBufferPeriod(conf *config.Config,
 	}
 
 	return nil
+}
+
+func buildTaskEnv(conf *config.Config, customEnv map[string]string) map[string]string {
+	consulEnv := conf.Consul.Env()
+	if len(customEnv) == 0 && len(consulEnv) == 0 {
+		return nil
+	}
+
+	// Merge the Consul environment if Consul KV is used as the Terraform backend
+	env := make(map[string]string)
+	if conf.Driver.Terraform.IsConsulBackend() {
+		for k, v := range consulEnv {
+			env[k] = v
+		}
+	}
+
+	for k, v := range customEnv {
+		env[k] = v
+	}
+
+	return env
 }
