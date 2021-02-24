@@ -8,8 +8,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/consul-terraform-sync/driver"
 )
 
 //go:generate mockery --name=httpClient  --structname=HttpClient --output=../mocks/api
@@ -185,10 +183,10 @@ func (c *Client) Task() *Task {
 }
 
 // Update is used to patch update task
-func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (driver.InspectPlan, error) {
+func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (UpdateTaskResponse, error) {
 	b, err := json.Marshal(config)
 	if err != nil {
-		return driver.InspectPlan{}, err
+		return UpdateTaskResponse{}, err
 	}
 
 	if q == nil {
@@ -198,15 +196,15 @@ func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (driv
 	path := fmt.Sprintf("%s/%s", taskPath, name)
 	resp, err := t.c.request(http.MethodPatch, path, q.Encode(), string(b))
 	if err != nil {
-		return driver.InspectPlan{}, err
+		return UpdateTaskResponse{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		decoder := json.NewDecoder(resp.Body)
-		var plan driver.InspectPlan
+		var plan UpdateTaskResponse
 		if err = decoder.Decode(&plan); err != nil {
-			return driver.InspectPlan{}, err
+			return UpdateTaskResponse{}, err
 		}
 
 		return plan, nil
@@ -215,13 +213,13 @@ func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (driv
 	var errPayload ErrorResponse
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(&errPayload); err != nil {
-		return driver.InspectPlan{}, err
+		return UpdateTaskResponse{}, err
 	}
 
 	if errMsg, ok := errPayload.ErrorMessage(); ok && errMsg != "" {
-		return driver.InspectPlan{}, errors.New(errMsg)
+		return UpdateTaskResponse{}, errors.New(errMsg)
 	}
 
-	return driver.InspectPlan{}, fmt.Errorf("Request %s %s?%s -data='%s' errored but did not "+
+	return UpdateTaskResponse{}, fmt.Errorf("Request %s %s?%s -data='%s' errored but did not "+
 		"return an error message", http.MethodPatch, path, q.Encode(), b)
 }

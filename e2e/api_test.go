@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
-	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
@@ -291,14 +290,15 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var inspectPlan driver.InspectPlan
+	var r api.UpdateTaskResponse
 	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(&inspectPlan)
+	err = decoder.Decode(&r)
 	require.NoError(t, err)
 
 	// Confirm inspect plan response: changes present, plan not empty
-	assert.True(t, inspectPlan.ChangesPresent)
-	assert.NotEmpty(t, inspectPlan.Plan)
+	assert.NotNil(t, r.Inspect)
+	assert.True(t, r.Inspect.ChangesPresent)
+	assert.NotEmpty(t, r.Inspect.Plan)
 
 	// Confirm that resources were not generated during inspect mode
 	confirmDirNotFound(t, resourcesPath)

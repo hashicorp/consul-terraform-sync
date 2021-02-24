@@ -92,7 +92,7 @@ func (c *taskEnableCommand) Run(args []string) int {
 	c.UI.Output("Generating plan that Consul Terraform Sync will use Terraform to execute\n")
 
 	client := c.meta.client()
-	plan, err := client.Task().Update(taskName, api.UpdateTaskConfig{
+	resp, err := client.Task().Update(taskName, api.UpdateTaskConfig{
 		Enabled: config.Bool(true),
 	}, &api.QueryParam{Run: driver.RunOptionInspect})
 	if err != nil {
@@ -102,10 +102,14 @@ func (c *taskEnableCommand) Run(args []string) int {
 
 		return ExitCodeError
 	}
+	if resp.Inspect == nil {
+		c.UI.Error(fmt.Sprintf("Error: unable to retrieve a plan for '%s'", taskName))
+		return ExitCodeError
+	}
 
-	c.UI.Output(plan.Plan)
+	c.UI.Output(resp.Inspect.Plan)
 
-	if !plan.ChangesPresent {
+	if !resp.Inspect.ChangesPresent {
 		c.UI.Info(fmt.Sprintf("'%s' enable complete!", taskName))
 		return ExitCodeOK
 	}

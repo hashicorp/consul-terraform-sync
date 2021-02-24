@@ -252,6 +252,16 @@ func TestJsonResponse(t *testing.T) {
 				},
 			},
 		},
+		{
+			"update task inspect",
+			http.StatusOK,
+			UpdateTaskResponse{
+				Inspect: &driver.InspectPlan{
+					ChangesPresent: true,
+					Plan:           "plan!",
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
