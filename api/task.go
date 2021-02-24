@@ -57,6 +57,10 @@ type UpdateTaskConfig struct {
 	Enabled *bool `mapstructure:"enabled"`
 }
 
+type UpdateTaskResponse struct {
+	Inspect *driver.InspectPlan `json:"inspect,omitempty"`
+}
+
 // updateTask does a patch update to an existing task
 func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	taskName, err := getTaskName(r.URL.Path, taskPath, h.version)
@@ -126,7 +130,12 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse(w, http.StatusOK, plan)
+	if runOp != driver.RunOptionInspect {
+		jsonResponse(w, http.StatusOK, UpdateTaskResponse{})
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, UpdateTaskResponse{&plan})
 }
 
 func decodeBody(body []byte) (UpdateTaskConfig, error) {

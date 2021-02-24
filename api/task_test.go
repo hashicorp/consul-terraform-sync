@@ -181,11 +181,16 @@ func TestTask_updateTask(t *testing.T) {
 			require.Equal(t, tc.statusCode, resp.Code)
 
 			decoder := json.NewDecoder(resp.Body)
-			var actual driver.InspectPlan
+			var actual UpdateTaskResponse
 			err = decoder.Decode(&actual)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.updateTaskRet, actual)
+			emptyPlan := driver.InspectPlan{}
+			if tc.updateTaskRet == emptyPlan {
+				assert.Nil(t, actual.Inspect)
+			} else {
+				assert.Equal(t, tc.updateTaskRet, *actual.Inspect)
+			}
 		})
 	}
 }

@@ -325,11 +325,11 @@ func Test_Task_Update(t *testing.T) {
 			Return(expectedPlan, nil).Once()
 		drivers["task_a"] = d
 
-		actualPlan, err := c.Task().Update("task_a", UpdateTaskConfig{
+		actual, err := c.Task().Update("task_a", UpdateTaskConfig{
 			Enabled: config.Bool(false),
 		}, &QueryParam{Run: driver.RunOptionInspect})
 
 		require.NoError(t, err)
-		assert.Equal(t, expectedPlan, actualPlan)
+		assert.Equal(t, expectedPlan, *actual.Inspect)
 	})
 }
