@@ -17,6 +17,7 @@ FEATURES:
 * Add a run parameter to Update Task API which can dry-run a task with updates and return an inspect plan (?run=inspect) or update a task run it immediately as opposed to run at the natural CTS cadence (?run=now). [[GH-196](https://github.com/hashicorp/consul-terraform-sync/pull/196)]
 * Configurable PAN-OS out-of-band commits [[GH-170](https://github.com/hashicorp/consul-terraform-sync/pull/170)]
 * PAN-OS commit retry with exponential backoff [[GH-178](https://github.com/hashicorp/consul-terraform-sync/pull/178)]
+* Add support for CTS to communicate with the local Consul agent over HTTP/2 to improve the efficiency of TCP connections for monitoring the Consul catalog [[GH-146](https://github.com/hashicorp/consul-terraform-sync/issues/146), [GH-207](https://github.com/hashicorp/consul-terraform-sync/pull/207)].
 
 IMPROVEMENTS:
 * Changed default `consul.transport` options used for the Consul client to improve TCP connection reuse. [[GH-164](https://github.com/hashicorp/consul-terraform-sync/pull/164)]
