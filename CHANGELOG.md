@@ -13,7 +13,7 @@ FEATURES:
 * Add a Disable Task CLI which will stop a task from running and updating resources until re-enabled. [[GH-194](https://github.com/hashicorp/consul-terraform-sync/pull/194)]
 * Add an Enable Task CLI which will start a task so that it runs and updates resources. [[GH-198](https://github.com/hashicorp/consul-terraform-sync/pull/198)]
 * Add support for a CLI `-port` flag to set the API port that the CLI should use if not default port 8558. [[GH-197](https://github.com/hashicorp/consul-terraform-sync/pull/197)]
-* Add an Update Task API to support patch updating a task's enabled state. [[GH-191](https://github.com/hashicorp/consul-terraform-sync/pull/191)]
+* Add an Update Task API to support patch updating a task's enabled state. [[GH-191](https://github.com/hashicorp/consul-terraform-sync/pull/191), [GH-214](https://github.com/hashicorp/consul-terraform-sync/pull/214)]
 * Add a run parameter to Update Task API which can dry-run a task with updates and return an inspect plan (?run=inspect) or update a task run it immediately as opposed to run at the natural CTS cadence (?run=now). [[GH-196](https://github.com/hashicorp/consul-terraform-sync/pull/196)]
 
 IMPROVEMENTS:
