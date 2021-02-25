@@ -5,8 +5,7 @@
 # We don't rebuild the software because we want the exact checksums and
 # binary signatures to match the software and our builds aren't fully
 # reproducible currently.
-ARG BASE_ARCH
-FROM ${BASE_ARCH}/alpine:3.11
+FROM alpine:3.13
 
 # NAME and VERSION are the name of the software in releases.hashicorp.com
 # and the version to download. Example: NAME=consul VERSION=1.2.3.
