@@ -18,6 +18,7 @@ FEATURES:
 * Configurable PAN-OS out-of-band commits [[GH-170](https://github.com/hashicorp/consul-terraform-sync/pull/170)]
 * PAN-OS commit retry with exponential backoff [[GH-178](https://github.com/hashicorp/consul-terraform-sync/pull/178)]
 * Add support for CTS to communicate with the local Consul agent over HTTP/2 to improve the efficiency of TCP connections for monitoring the Consul catalog [[GH-146](https://github.com/hashicorp/consul-terraform-sync/issues/146), [GH-207](https://github.com/hashicorp/consul-terraform-sync/pull/207)].
+* Official docker image [[GH-215](https://github.com/hashicorp/consul-terraform-sync/pull/215)]
 
 IMPROVEMENTS:
 * Changed default `consul.transport` options used for the Consul client to improve TCP connection reuse. [[GH-164](https://github.com/hashicorp/consul-terraform-sync/pull/164)]
