@@ -15,6 +15,8 @@ FEATURES:
 * Add support for a CLI `-port` flag to set the API port that the CLI should use if not default port 8558. [[GH-197](https://github.com/hashicorp/consul-terraform-sync/pull/197)]
 * Add an Update Task API to support patch updating a task's enabled state. [[GH-191](https://github.com/hashicorp/consul-terraform-sync/pull/191), [GH-214](https://github.com/hashicorp/consul-terraform-sync/pull/214)]
 * Add a run parameter to Update Task API which can dry-run a task with updates and return an inspect plan (?run=inspect) or update a task run it immediately as opposed to run at the natural CTS cadence (?run=now). [[GH-196](https://github.com/hashicorp/consul-terraform-sync/pull/196)]
+* Configurable PAN-OS out-of-band commits [[GH-170](https://github.com/hashicorp/consul-terraform-sync/pull/170)]
+* PAN-OS commit retry with exponential backoff [[GH-178](https://github.com/hashicorp/consul-terraform-sync/pull/178)]
 
 IMPROVEMENTS:
 * Changed default `consul.transport` options used for the Consul client to improve TCP connection reuse. [[GH-164](https://github.com/hashicorp/consul-terraform-sync/pull/164)]
@@ -22,6 +24,7 @@ IMPROVEMENTS:
 * Separate provider-related variables into a different file from services [[GH-182](https://github.com/hashicorp/consul-terraform-sync/pull/182), [GH-183](https://github.com/hashicorp/consul-terraform-sync/pull/183)]
 * Update the Overall Status API response to return count of enabled and disabled tasks and to return count of tasks with no event data as status value 'unknown'. [[GH-203](https://github.com/hashicorp/consul-terraform-sync/pull/203)]
 * Update the Task Status API response to include a new 'enabled' boolean field to indicate if task is enabled or disabled. [[GH-202](https://github.com/hashicorp/consul-terraform-sync/pull/202)]
+* Include service kind in module input [[GH-168](https://github.com/hashicorp/consul-terraform-sync/issues/168), [GH-174](https://github.com/hashicorp/consul-terraform-sync/pull/174)]
 
 BUG FIXES:
 * Avoid appending duplicate `terraform` suffix to the KV path for Consul backend. [[GH-165](https://github.com/hashicorp/consul-terraform-sync/pull/165)]
