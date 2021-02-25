@@ -24,6 +24,7 @@ IMPROVEMENTS:
 * Update the Task Status API response to include a new 'enabled' boolean field to indicate if task is enabled or disabled. [[GH-202](https://github.com/hashicorp/consul-terraform-sync/pull/202)]
 
 BUG FIXES:
+* Avoid appending duplicate `terraform` suffix to the KV path for Consul backend. [[GH-165](https://github.com/hashicorp/consul-terraform-sync/pull/165)]
 * Fix edge case where multiple tasks have identical `terraform.tfvars.tmpl` files causing Consul Terraform Sync to indefinitely hang. [[GH-167](https://github.com/hashicorp/consul-terraform-sync/pull/167)]
 * Handle case where provider configuration used nested blocks, which was causing an unsupported argument error. [[GH-173](https://github.com/hashicorp/consul-terraform-sync/pull/173)]
 * Fix `task_env` config validation causing the feature to be unusable. [[GH-184](https://github.com/hashicorp/consul-terraform-sync/pull/184)]
