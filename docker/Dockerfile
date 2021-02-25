@@ -28,7 +28,7 @@ RUN addgroup ${NAME} && \
 
 # Set up certificates, base tools, and software.
 RUN set -eux && \
-    apk add --no-cache dumb-init && \
+    apk add --no-cache dumb-init git && \
     apk add --no-cache ca-certificates curl gnupg libcap openssl su-exec iputils && \
     BUILD_GPGKEY=91A6E7F85D05C65630BEF18951852D87348FFC4C; \
     found=''; \
