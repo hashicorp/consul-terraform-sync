@@ -1,4 +1,4 @@
-## Upcoming
+## 0.1.0-beta (February 25, 2021)
 
 BREAKING CHANGES:
 * Remove support for `provider` block name (deprecated v0.1.0-techpreview2). Use `terraform_provider` block name instead. [[GH-169](https://github.com/hashicorp/consul-terraform-sync/pull/169)]
