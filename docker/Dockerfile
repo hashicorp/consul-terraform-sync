@@ -63,9 +63,11 @@ RUN set -eux && \
     rm -rf /root/.gnupg
 
 ### Added for CTS
-RUN mkdir -p /consul-terraform-sync/config
+RUN mkdir -p /consul-terraform-sync/config \
+        && chown -R ${NAME}:${NAME} /consul-terraform-sync
 VOLUME /consul-terraform-sync/config
 COPY docker-entrypoint.sh /bin/docker-entrypoint.sh
+WORKDIR /consul-terraform-sync
 ENTRYPOINT ["/bin/docker-entrypoint.sh"]
 ###
 
