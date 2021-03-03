@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 )
 
 func TestServe(t *testing.T) {
@@ -78,12 +78,8 @@ func TestServe(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			u := fmt.Sprintf("http://localhost:%d/%s/%s",
 				port, defaultAPIVersion, tc.path)
-			r := strings.NewReader(tc.body)
-			req, err := http.NewRequest(tc.method, u, r)
-			require.NoError(t, err)
 
-			resp, err := http.DefaultClient.Do(req)
-
+			resp := testutils.RequestHTTP(t, tc.method, u, tc.body)
 			statusCode := 0
 
 			if err == nil {
@@ -95,8 +91,7 @@ func TestServe(t *testing.T) {
 				require.Contains(t, err.Error(), "connect: connection refused")
 				time.Sleep(3 * time.Second)
 
-				resp2, err2 := http.Get(u)
-				require.NoError(t, err2)
+				resp2 := testutils.RequestHTTP(t, http.MethodGet, u, "")
 				defer resp2.Body.Close()
 				statusCode = resp2.StatusCode
 			}

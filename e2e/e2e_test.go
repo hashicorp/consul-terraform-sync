@@ -68,12 +68,10 @@ func TestE2EBasic(t *testing.T) {
 	require.Equal(t, "10.10.10.10", string(contents))
 
 	// check statefiles exist
-	status, err := checkStateFile(srv.HTTPAddr, dbTaskName)
-	require.NoError(t, err)
+	status := checkStateFile(t, srv.HTTPAddr, dbTaskName)
 	require.Equal(t, http.StatusOK, status)
 
-	status, err = checkStateFile(srv.HTTPAddr, webTaskName)
-	require.NoError(t, err)
+	status = checkStateFile(t, srv.HTTPAddr, webTaskName)
 	require.Equal(t, http.StatusOK, status)
 
 	delete()
@@ -264,15 +262,11 @@ func runSyncOnce(configPath string) error {
 	return cmd.Run()
 }
 
-func checkStateFile(consulAddr, taskname string) (int, error) {
+func checkStateFile(t *testing.T, consulAddr, taskname string) int {
 	u := fmt.Sprintf("http://%s/v1/kv/%s-env:%s", consulAddr, config.DefaultTFBackendKVPath, taskname)
-
-	resp, err := http.Get(u)
-	if err != nil {
-		return 0, err
-	}
+	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 	defer resp.Body.Close()
-	return resp.StatusCode, nil
+	return resp.StatusCode
 }
 
 // checkStateFileLocally returns whether or not a statefile exists

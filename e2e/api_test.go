@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -120,8 +119,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	for _, tc := range taskCases {
 		t.Run(tc.name, func(t *testing.T) {
 			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
-			resp, err := http.Get(u)
-			require.NoError(t, err)
+			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
 			assert.Equal(t, tc.statusCode, resp.StatusCode)
@@ -175,8 +173,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	for _, tc := range eventCases {
 		t.Run(tc.name, func(t *testing.T) {
 			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
-			resp, err := http.Get(u)
-			require.NoError(t, err)
+			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
 			require.Equal(t, resp.StatusCode, http.StatusOK)
@@ -212,7 +209,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	for _, tc := range overallCases {
 		t.Run(tc.name, func(t *testing.T) {
 			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
-			resp := apiRequest(t, http.MethodGet, u, "")
+			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
 			require.Equal(t, resp.StatusCode, http.StatusOK)
@@ -282,7 +279,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	baseUrl := fmt.Sprintf("http://localhost:%d/%s/tasks/%s",
 		port, "v1", disabledTaskName)
 	u := fmt.Sprintf("%s?run=inspect", baseUrl)
-	resp := apiRequest(t, http.MethodPatch, u, `{"enabled":true}`)
+	resp := testutils.RequestHTTP(t, http.MethodPatch, u, `{"enabled":true}`)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -301,7 +298,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	// Update Task API: enable task with run now option
 	u = fmt.Sprintf("%s?run=now", baseUrl)
-	resp1 := apiRequest(t, http.MethodPatch, u, `{"enabled":true}`)
+	resp1 := testutils.RequestHTTP(t, http.MethodPatch, u, `{"enabled":true}`)
 	defer resp1.Body.Close()
 
 	// Confirm that resources are generated
@@ -309,7 +306,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	require.NoError(t, err)
 
 	// Update Task API: disable task
-	resp2 := apiRequest(t, http.MethodPatch, baseUrl, `{"enabled":false}`)
+	resp2 := testutils.RequestHTTP(t, http.MethodPatch, baseUrl, `{"enabled":false}`)
 	defer resp2.Body.Close()
 
 	// Delete Resources
@@ -405,17 +402,6 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 			}
 		}
 	}
-}
-
-// apiRequest makes an api request. caller is responsible for closing response
-func apiRequest(t *testing.T, method, url, body string) *http.Response {
-	r := strings.NewReader(body)
-	req, err := http.NewRequest(method, url, r)
-	require.NoError(t, err)
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	return resp
 }
 
 func confirmDirNotFound(t *testing.T, dir string) {

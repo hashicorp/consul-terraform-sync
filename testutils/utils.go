@@ -7,10 +7,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -48,14 +48,22 @@ func RegisterConsulService(t *testing.T, srv *testutil.TestServer,
 	require.NoError(t, enc.Encode(&s))
 
 	u := fmt.Sprintf("http://%s/v1/agent/service/register", srv.HTTPAddr)
-	req, err := http.NewRequest("PUT", u, io.Reader(&body))
+	resp := RequestHTTP(t, http.MethodPut, u, body.String())
+	defer resp.Body.Close()
+
+	srv.AddCheck(t, s.ID, s.ID, testutil.HealthPassing)
+}
+
+// RequestHTTP makes an http request. The caller is responsible for closing
+// the response.
+func RequestHTTP(t *testing.T, method, url, body string) *http.Response {
+	r := strings.NewReader(body)
+	req, err := http.NewRequest(method, url, r)
 	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	srv.AddCheck(t, s.ID, s.ID, testutil.HealthPassing)
+	return resp
 }
 
 // Meets consul/sdk/testutil/TestingTB interface
