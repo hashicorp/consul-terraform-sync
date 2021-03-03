@@ -10,10 +10,9 @@ import (
 func TestMakeTempDir(t *testing.T) {
 	t.Run("happy-path", func(t *testing.T) {
 		tempDir := "test-temp"
-		delete, err := MakeTempDir(tempDir)
-		require.NoError(t, err)
+		delete := MakeTempDir(t, tempDir)
 
-		_, err = ioutil.ReadDir(tempDir)
+		_, err := ioutil.ReadDir(tempDir)
 		require.NoError(t, err)
 
 		delete()

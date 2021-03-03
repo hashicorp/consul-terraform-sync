@@ -3,17 +3,14 @@
 package e2e
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -32,9 +29,8 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "status_endpoints")
-	delete, err := testutils.MakeTempDir(tempDir)
+	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
 
@@ -55,7 +51,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 		Address: "5.6.7.8",
 		Port:    8080,
 	}
-	registerService(t, srv, service, testutil.HealthPassing)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
 
 	// wait and then retrieve status
 	time.Sleep(7 * time.Second)
@@ -123,8 +119,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	for _, tc := range taskCases {
 		t.Run(tc.name, func(t *testing.T) {
 			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
-			resp, err := http.Get(u)
-			require.NoError(t, err)
+			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
 			assert.Equal(t, tc.statusCode, resp.StatusCode)
@@ -178,8 +173,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	for _, tc := range eventCases {
 		t.Run(tc.name, func(t *testing.T) {
 			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
-			resp, err := http.Get(u)
-			require.NoError(t, err)
+			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
 			require.Equal(t, resp.StatusCode, http.StatusOK)
@@ -215,7 +209,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	for _, tc := range overallCases {
 		t.Run(tc.name, func(t *testing.T) {
 			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
-			resp := apiRequest(t, http.MethodGet, u, "")
+			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
 			require.Equal(t, resp.StatusCode, http.StatusOK)
@@ -257,9 +251,8 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disabled_task")
-	delete, err := testutils.MakeTempDir(tempDir)
+	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	require.NoError(t, err)
 
 	port, err := api.FreePort()
 	require.NoError(t, err)
@@ -286,7 +279,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	baseUrl := fmt.Sprintf("http://localhost:%d/%s/tasks/%s",
 		port, "v1", disabledTaskName)
 	u := fmt.Sprintf("%s?run=inspect", baseUrl)
-	resp := apiRequest(t, http.MethodPatch, u, `{"enabled":true}`)
+	resp := testutils.RequestHTTP(t, http.MethodPatch, u, `{"enabled":true}`)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -305,7 +298,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	// Update Task API: enable task with run now option
 	u = fmt.Sprintf("%s?run=now", baseUrl)
-	resp1 := apiRequest(t, http.MethodPatch, u, `{"enabled":true}`)
+	resp1 := testutils.RequestHTTP(t, http.MethodPatch, u, `{"enabled":true}`)
 	defer resp1.Body.Close()
 
 	// Confirm that resources are generated
@@ -313,7 +306,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	require.NoError(t, err)
 
 	// Update Task API: disable task
-	resp2 := apiRequest(t, http.MethodPatch, baseUrl, `{"enabled":false}`)
+	resp2 := testutils.RequestHTTP(t, http.MethodPatch, baseUrl, `{"enabled":false}`)
 	defer resp2.Body.Close()
 
 	// Delete Resources
@@ -327,7 +320,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 		Address: "5.6.7.8",
 		Port:    8080,
 	}
-	registerService(t, srv, service, testutil.HealthPassing)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
 	time.Sleep(3 * time.Second)
 
 	// Confirm that resources are not recreated for disabled task
@@ -367,25 +360,6 @@ func stopCommand(cmd *exec.Cmd) error {
 		return err
 	}
 	return nil
-}
-
-// registerService is a helper function to regsiter a service to the Consul
-// Catalog. The Consul sdk/testutil package currently does not support a method
-// to register multiple service instances, distinguished by their IDs.
-func registerService(t *testing.T, srv *testutil.TestServer, s testutil.TestService, health string) {
-	var body bytes.Buffer
-	enc := json.NewEncoder(&body)
-	require.NoError(t, enc.Encode(&s))
-
-	u := fmt.Sprintf("http://%s/v1/agent/service/register", srv.HTTPAddr)
-	req, err := http.NewRequest("PUT", u, io.Reader(&body))
-	require.NoError(t, err)
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	srv.AddCheck(t, s.ID, s.ID, testutil.HealthPassing)
 }
 
 // checkEvents does some basic checks to loosely ensure returned events in
@@ -428,17 +402,6 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 			}
 		}
 	}
-}
-
-// apiRequest makes an api request. caller is responsible for closing response
-func apiRequest(t *testing.T, method, url, body string) *http.Response {
-	r := strings.NewReader(body)
-	req, err := http.NewRequest(method, url, r)
-	require.NoError(t, err)
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	return resp
 }
 
 func confirmDirNotFound(t *testing.T, dir string) {

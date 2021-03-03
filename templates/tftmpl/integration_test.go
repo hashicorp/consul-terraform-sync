@@ -3,14 +3,9 @@
 package tftmpl
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -183,7 +178,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 					Address: "5.6.7.8",
 					Port:    8080,
 				}
-				registerService(t, srv, service, testutil.HealthPassing)
+				testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
 			}
 
 			// Setup another server with an identical API service
@@ -261,23 +256,4 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			}
 		})
 	}
-}
-
-// registerService is a helper function to regsiter a service to the Consul
-// Catalog. The Consul sdk/testutil package currently does not support a method
-// to register multiple service instances, distinguished by their IDs.
-func registerService(t *testing.T, srv *testutil.TestServer, s testutil.TestService, health string) {
-	var body bytes.Buffer
-	enc := json.NewEncoder(&body)
-	require.NoError(t, enc.Encode(&s))
-
-	u := fmt.Sprintf("http://%s/v1/agent/service/register", srv.HTTPAddr)
-	req, err := http.NewRequest("PUT", u, io.Reader(&body))
-	require.NoError(t, err)
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	srv.AddCheck(t, s.ID, s.ID, testutil.HealthPassing)
 }
