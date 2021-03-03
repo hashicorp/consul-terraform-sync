@@ -7,28 +7,29 @@ import (
 	"log"
 	"os"
 	"sync"
+	"testing"
 
 	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 // MakeTempDir creates a directory in the current path for a test. Caller is
 // responsible for managing the uniqueness of the directory name. Returns a
 // function for the caller to delete the temporary directory.
-func MakeTempDir(tempDir string) (func() error, error) {
+func MakeTempDir(t *testing.T, tempDir string) func() error {
 	_, err := os.Stat(tempDir)
 	if !os.IsNotExist(err) {
 		log.Printf("[WARN] temp dir %s was not cleared out after last test. "+
 			"Deleting.", tempDir)
-		if err = os.RemoveAll(tempDir); err != nil {
-			return nil, err
-		}
+		err = os.RemoveAll(tempDir)
+		require.NoError(t, err)
 	}
 	os.Mkdir(tempDir, os.ModePerm)
 
 	return func() error {
 		return os.RemoveAll(tempDir)
 
-	}, nil
+	}
 }
 
 // Meets consul/sdk/testutil/TestingTB interface

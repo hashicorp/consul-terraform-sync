@@ -32,9 +32,8 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "status_endpoints")
-	delete, err := testutils.MakeTempDir(tempDir)
+	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
 
@@ -257,9 +256,8 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disabled_task")
-	delete, err := testutils.MakeTempDir(tempDir)
+	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	require.NoError(t, err)
 
 	port, err := api.FreePort()
 	require.NoError(t, err)

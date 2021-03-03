@@ -257,8 +257,7 @@ func TestUpdateTask(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range mockCases {
 		t.Run(tc.name, func(t *testing.T) {
-			delete, err := testutils.MakeTempDir(tc.dirName)
-			require.NoError(t, err)
+			delete := testutils.MakeTempDir(t, tc.dirName)
 			defer delete()
 
 			r := new(mocksTmpl.Resolver)
@@ -292,7 +291,7 @@ func TestUpdateTask(t *testing.T) {
 				tf.fileReader = func(string) ([]byte, error) { return []byte{}, nil }
 			}
 
-			_, err = tf.UpdateTask(ctx, tc.patch)
+			_, err := tf.UpdateTask(ctx, tc.patch)
 			require.NoError(t, err)
 
 			// check that mocks were called as expected
@@ -365,8 +364,7 @@ func TestUpdateTask(t *testing.T) {
 	}
 	for _, tc := range errorCases {
 		t.Run(tc.name, func(t *testing.T) {
-			delete, err := testutils.MakeTempDir(tc.dirName)
-			require.NoError(t, err)
+			delete := testutils.MakeTempDir(t, tc.dirName)
 			defer delete()
 
 			r := new(mocksTmpl.Resolver)
@@ -392,7 +390,7 @@ func TestUpdateTask(t *testing.T) {
 				},
 			}
 
-			_, err = tf.UpdateTask(ctx, tc.patch)
+			_, err := tf.UpdateTask(ctx, tc.patch)
 			require.Error(t, err)
 		})
 	}

@@ -41,9 +41,8 @@ func TestE2EBasic(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "basic")
-	delete, err := testutils.MakeTempDir(tempDir)
+	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
 	err = makeConfig(configPath, twoTaskConfig(srv.HTTPAddr, tempDir))
@@ -88,9 +87,8 @@ func TestE2ERestartSync(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "restart")
-	delete, err := testutils.MakeTempDir(tempDir)
+	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
 	err = makeConfig(configPath, oneTaskConfig(srv.HTTPAddr, tempDir, 0))
@@ -114,9 +112,8 @@ func TestE2EPanosHandlerError(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "panos_handler")
-	delete, err := testutils.MakeTempDir(tempDir)
+	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
 	err = makeConfig(configPath, panosConfig(srv.HTTPAddr, tempDir))
@@ -192,9 +189,8 @@ func TestE2ELocalBackend(t *testing.T) {
 			defer srv.Stop()
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.tempDirPrefix)
-			delete, err := testutils.MakeTempDir(tempDir)
+			delete := testutils.MakeTempDir(t, tempDir)
 			// no defer to delete directory: only delete at end of test if no errors
-			require.NoError(t, err)
 
 			configPath := filepath.Join(tempDir, configFile)
 			err = makeConfig(configPath,

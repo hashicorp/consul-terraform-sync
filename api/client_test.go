@@ -286,8 +286,7 @@ func Test_Task_Update(t *testing.T) {
 	t.Run("disable-then-enable", func(t *testing.T) {
 		// setup temp dir
 		tempDir := "disable-enable"
-		delete, err := testutils.MakeTempDir(tempDir)
-		require.NoError(t, err)
+		delete := testutils.MakeTempDir(t, tempDir)
 		defer delete()
 
 		// add a driver

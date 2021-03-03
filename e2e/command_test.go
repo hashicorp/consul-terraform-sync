@@ -25,9 +25,8 @@ func TestE2E_MetaCOmmandErrors(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "meta_errs")
-	delete, err := testutils.MakeTempDir(tempDir)
+	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
 
@@ -94,9 +93,8 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "enable_cmd")
-	delete, err := testutils.MakeTempDir(tempDir)
+	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
 
@@ -159,9 +157,8 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disable_cmd")
-	delete, err := testutils.MakeTempDir(tempDir)
+	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
 
