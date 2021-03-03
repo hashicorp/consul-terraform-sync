@@ -71,20 +71,29 @@ func RequestHTTP(t *testing.T, method, url, body string) *http.Response {
 // one of these as an argument.
 var _ testutil.TestingTB = (*TestingTB)(nil)
 
+// TestingTB implements Consul's testutil.TestingTB
 type TestingTB struct {
 	cleanup func()
 	sync.Mutex
 }
 
+// DoCleanup implements Consul's testutil.TestingTB's DoCleanup()
 func (t *TestingTB) DoCleanup() {
 	t.Lock()
 	defer t.Unlock()
 	t.cleanup()
 }
 
-func (*TestingTB) Failed() bool                { return false }
+// Failed implements Consul's testutil.TestingTB's Failed()
+func (*TestingTB) Failed() bool { return false }
+
+// Logf implements Consul's testutil.TestingTB's Logf()
 func (*TestingTB) Logf(string, ...interface{}) {}
-func (*TestingTB) Name() string                { return "TestingTB" }
+
+// Name implements Consul's testutil.TestingTB's Name()
+func (*TestingTB) Name() string { return "TestingTB" }
+
+// Cleanup implements Consul's testutil.TestingTB's Cleanup()
 func (t *TestingTB) Cleanup(f func()) {
 	t.Lock()
 	defer t.Unlock()
