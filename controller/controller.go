@@ -21,7 +21,7 @@ import (
 type Controller interface {
 	// Init initializes elements needed by controller. Returns a map of
 	// taskname to driver
-	Init(ctx context.Context) (map[string]driver.Driver, error)
+	Init(ctx context.Context) (*driver.Drivers, error)
 
 	// Run runs the controller by monitoring Consul and triggering the driver as needed
 	Run(ctx context.Context) error
@@ -77,39 +77,39 @@ func (ctrl *baseController) Stop() {
 	ctrl.watcher.Stop()
 }
 
-func (ctrl *baseController) init(ctx context.Context) (map[string]driver.Driver, error) {
+func (ctrl *baseController) init(ctx context.Context) (*driver.Drivers, error) {
 	log.Printf("[INFO] (ctrl) initializing driver")
 
 	// Load provider configuration and evaluate dynamic values
 	providerConfigs, err := ctrl.loadProviderConfigs(ctx)
 	if err != nil {
-		return map[string]driver.Driver{}, err
+		return nil, err
 	}
 
 	// Future: improve by combining tasks into workflows.
 	log.Printf("[INFO] (ctrl) initializing all tasks")
 	tasks := newDriverTasks(ctrl.conf, providerConfigs)
 	units := make([]unit, 0, len(tasks))
-	drivers := make(map[string]driver.Driver)
+	drivers := driver.NewDrivers()
 
 	for _, task := range tasks {
 		select {
 		case <-ctx.Done():
 			// Stop initializing remaining tasks if context has stopped.
-			return map[string]driver.Driver{}, ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 
 		log.Printf("[DEBUG] (ctrl) initializing task %q", task.Name)
 		d, err := ctrl.newDriver(ctrl.conf, task, ctrl.watcher)
 		if err != nil {
-			return map[string]driver.Driver{}, err
+			return nil, err
 		}
 
 		err = d.InitTask(true)
 		if err != nil {
 			log.Printf("[ERR] (ctrl) error initializing task %q: %s", task.Name, err)
-			return map[string]driver.Driver{}, err
+			return nil, err
 		}
 
 		units = append(units, unit{
@@ -120,7 +120,7 @@ func (ctrl *baseController) init(ctx context.Context) (map[string]driver.Driver,
 			source:    task.Source,
 		})
 
-		drivers[task.Name] = d
+		drivers.Add(task.Name, d)
 	}
 	ctrl.units = units
 

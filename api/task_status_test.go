@@ -53,10 +53,10 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	eventsC := createTaskEvents("task_c", []bool{false, true, true})
 	addEvents(store, eventsC)
 
-	drivers := make(map[string]driver.Driver)
-	drivers["task_a"] = createDriver("task_a", true)
-	drivers["task_b"] = createDriver("task_b", true)
-	drivers["task_c"] = createDriver("task_c", true)
+	drivers := driver.NewDrivers()
+	drivers.Add("task_a", createDriver("task_a", true))
+	drivers.Add("task_b", createDriver("task_b", true))
+	drivers.Add("task_c", createDriver("task_c", true))
 
 	disabledD := new(mocks.Driver)
 	disabledD.On("Task").Return(driver.Task{
@@ -70,7 +70,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			driver.Service{Name: "web"},
 		},
 	})
-	drivers["task_d"] = disabledD
+	drivers.Add("task_d", disabledD)
 
 	handler := newTaskStatusHandler(store, drivers, "v1")
 

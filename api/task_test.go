@@ -30,7 +30,7 @@ func TestTask_New(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := newTaskHandler(event.NewStore(), map[string]driver.Driver{}, tc.version)
+			h := newTaskHandler(event.NewStore(), driver.NewDrivers(), tc.version)
 			assert.Equal(t, tc.version, h.version)
 		})
 	}
@@ -61,11 +61,11 @@ func TestTask_ServeHTTP(t *testing.T) {
 		},
 	}
 
-	drivers := make(map[string]driver.Driver)
+	drivers := driver.NewDrivers()
 	patchUpdateD := new(mocks.Driver)
 	patchUpdateD.On("UpdateTask", mock.Anything, mock.Anything).
 		Return(driver.InspectPlan{}, nil).Once()
-	drivers["task_patch_update"] = patchUpdateD
+	drivers.Add("task_patch_update", patchUpdateD)
 
 	handler := newTaskHandler(event.NewStore(), drivers, "v1")
 
@@ -164,11 +164,11 @@ func TestTask_updateTask(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			drivers := make(map[string]driver.Driver)
+			drivers := driver.NewDrivers()
 			d := new(mocks.Driver)
 			d.On("UpdateTask", mock.Anything, mock.Anything).
 				Return(tc.updateTaskRet, tc.updateTaskErr).Once()
-			drivers["task_a"] = d
+			drivers.Add("task_a", d)
 
 			handler := newTaskHandler(event.NewStore(), drivers, "v1")
 

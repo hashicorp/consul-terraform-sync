@@ -64,12 +64,12 @@ func TestServe(t *testing.T) {
 	port, err := FreePort()
 	require.NoError(t, err)
 
-	drivers := make(map[string]driver.Driver)
+	drivers := driver.NewDrivers()
 	d := new(mocks.Driver)
 	d.On("UpdateTask", mock.Anything, mock.Anything).
 		Return(driver.InspectPlan{}, nil).Once()
 	d.On("Task").Return(driver.Task{Enabled: true})
-	drivers["task_b"] = d
+	drivers.Add("task_b", d)
 
 	api := NewAPI(event.NewStore(), drivers, port)
 	go api.Serve(ctx)
@@ -106,7 +106,7 @@ func TestServe_context_cancel(t *testing.T) {
 
 	port, err := FreePort()
 	require.NoError(t, err)
-	api := NewAPI(event.NewStore(), map[string]driver.Driver{}, port)
+	api := NewAPI(event.NewStore(), driver.NewDrivers(), port)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)

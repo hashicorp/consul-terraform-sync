@@ -56,14 +56,14 @@ const (
 // API supports api requests to the cts binary
 type API struct {
 	store   *event.Store
-	drivers map[string]driver.Driver
+	drivers *driver.Drivers
 	port    int
 	version string
 	srv     *http.Server
 }
 
 // NewAPI create a new API object
-func NewAPI(store *event.Store, drivers map[string]driver.Driver, port int) *API {
+func NewAPI(store *event.Store, drivers *driver.Drivers, port int) *API {
 	mux := http.NewServeMux()
 
 	// retrieve overall status
