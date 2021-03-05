@@ -61,7 +61,7 @@ func (d *Drivers) Map() map[string]Driver {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	copy := make(map[string]Driver)
+	copy := make(map[string]Driver, len(d.drivers))
 	for k, v := range d.drivers {
 		copy[k] = v
 	}
