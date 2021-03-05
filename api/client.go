@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -45,8 +44,10 @@ func NewClient(c *ClientConfig, httpClient httpClient) *Client {
 	}
 }
 
-// request makes the http request on behalf of the client. Caller must close
-// returned response with `defer resp.Body.Close()` if error is nil.
+// request makes the http request on behalf of the client. Handles status code
+// check and any necessary error parsing. Returns a response body only if status
+// code is OK. Caller is responsible for closing returned response if error is
+// nil i.e. `defer resp.Body.Close()`
 //
 // path: relative path with no preceding '/' e.g. "status/tasks"
 // query: URL encoded query string with no preceding '?'. See QueryParam.Encode()
@@ -200,26 +201,11 @@ func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (Upda
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK {
-		decoder := json.NewDecoder(resp.Body)
-		var plan UpdateTaskResponse
-		if err = decoder.Decode(&plan); err != nil {
-			return UpdateTaskResponse{}, err
-		}
-
-		return plan, nil
-	}
-
-	var errPayload ErrorResponse
 	decoder := json.NewDecoder(resp.Body)
-	if err = decoder.Decode(&errPayload); err != nil {
+	var plan UpdateTaskResponse
+	if err = decoder.Decode(&plan); err != nil {
 		return UpdateTaskResponse{}, err
 	}
 
-	if errMsg, ok := errPayload.ErrorMessage(); ok && errMsg != "" {
-		return UpdateTaskResponse{}, errors.New(errMsg)
-	}
-
-	return UpdateTaskResponse{}, fmt.Errorf("Request %s %s?%s -data='%s' errored but did not "+
-		"return an error message", http.MethodPatch, path, q.Encode(), b)
+	return plan, nil
 }
