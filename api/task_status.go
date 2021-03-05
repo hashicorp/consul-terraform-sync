@@ -26,12 +26,12 @@ type TaskStatus struct {
 // taskStatusHandler handles the task status endpoint
 type taskStatusHandler struct {
 	store   *event.Store
-	drivers map[string]driver.Driver
+	drivers *driver.Drivers
 	version string
 }
 
 // newTaskStatusHandler returns a new TaskStatusHandler
-func newTaskStatusHandler(store *event.Store, drivers map[string]driver.Driver, version string) *taskStatusHandler {
+func newTaskStatusHandler(store *event.Store, drivers *driver.Drivers, version string) *taskStatusHandler {
 	return &taskStatusHandler{
 		store:   store,
 		drivers: drivers,
@@ -68,7 +68,7 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	data := h.store.Read(taskName)
 	statuses := make(map[string]TaskStatus)
 	for taskName, events := range data {
-		d, ok := h.drivers[taskName]
+		d, ok := h.drivers.Get(taskName)
 		if !ok {
 			err := fmt.Errorf("task '%s' does not exist", taskName)
 			log.Printf("[TRACE] (api.updatetask) %s", err)
@@ -90,7 +90,7 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// a driver exists
 	if taskName != "" {
 		if _, ok := data[taskName]; !ok {
-			if d, ok := h.drivers[taskName]; ok {
+			if d, ok := h.drivers.Get(taskName); ok {
 				statuses[taskName] = makeTaskStatusUnknown(d.Task())
 			}
 		}
@@ -99,7 +99,7 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// if user requested all tasks and status filter applicable, check driver
 	// for tasks without events
 	if taskName == "" && (filter == "" || filter == StatusUnknown) {
-		for tN, d := range h.drivers {
+		for tN, d := range h.drivers.Map() {
 			if _, ok := data[tN]; !ok {
 				statuses[tN] = makeTaskStatusUnknown(d.Task())
 			}

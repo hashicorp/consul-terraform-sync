@@ -33,10 +33,10 @@ func NewReadOnly(conf *config.Config) (Controller, error) {
 }
 
 // Init initializes the controller before it can be run
-func (ctrl *ReadOnly) Init(ctx context.Context) (map[string]driver.Driver, error) {
+func (ctrl *ReadOnly) Init(ctx context.Context) (*driver.Drivers, error) {
 	drivers, err := ctrl.init(ctx)
 	if err != nil {
-		return map[string]driver.Driver{}, err
+		return nil, err
 	}
 
 	// Sort units for consistent ordering when inspecting tasks

@@ -38,12 +38,12 @@ type EnabledSummary struct {
 // overallStatusHandler handles the overall status endpoint
 type overallStatusHandler struct {
 	store   *event.Store
-	drivers map[string]driver.Driver
+	drivers *driver.Drivers
 	version string
 }
 
 // newOverallStatusHandler returns a new overall status handler
-func newOverallStatusHandler(store *event.Store, drivers map[string]driver.Driver, version string) *overallStatusHandler {
+func newOverallStatusHandler(store *event.Store, drivers *driver.Drivers, version string) *overallStatusHandler {
 	return &overallStatusHandler{
 		store:   store,
 		drivers: drivers,
@@ -74,7 +74,7 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	for taskName, d := range h.drivers {
+	for taskName, d := range h.drivers.Map() {
 		// look for any tasks that have a driver but no events
 		if _, ok := data[taskName]; !ok {
 			taskSummary.Status.Unknown++

@@ -113,10 +113,10 @@ func TestStatus(t *testing.T) {
 	addEvents(store, eventsC)
 
 	// setup drivers
-	drivers := make(map[string]driver.Driver)
-	drivers["task_a"] = createDriver("task_a", true)
-	drivers["task_b"] = createDriver("task_b", true)
-	drivers["task_c"] = createDriver("task_c", true)
+	drivers := driver.NewDrivers()
+	drivers.Add("task_a", createDriver("task_a", true))
+	drivers.Add("task_b", createDriver("task_b", true))
+	drivers.Add("task_c", createDriver("task_c", true))
 
 	// start up server
 	port, err := FreePort()
@@ -276,7 +276,7 @@ func Test_Task_Update(t *testing.T) {
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	drivers := make(map[string]driver.Driver)
+	drivers := driver.NewDrivers()
 	api := NewAPI(event.NewStore(), drivers, port)
 	go api.Serve(ctx)
 	time.Sleep(3 * time.Second) // in case tests run before server is ready
@@ -296,7 +296,7 @@ func Test_Task_Update(t *testing.T) {
 			ClientType: "test",
 		})
 		require.NoError(t, err)
-		drivers["task_a"] = d
+		drivers.Add("task_a", d)
 
 		assert.True(t, d.Task().Enabled)
 		plan, err := c.Task().Update("task_a", UpdateTaskConfig{
@@ -322,9 +322,9 @@ func Test_Task_Update(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("UpdateTask", mock.Anything, mock.Anything).
 			Return(expectedPlan, nil).Once()
-		drivers["task_a"] = d
+		drivers.Add("task_b", d)
 
-		actual, err := c.Task().Update("task_a", UpdateTaskConfig{
+		actual, err := c.Task().Update("task_b", UpdateTaskConfig{
 			Enabled: config.Bool(false),
 		}, &QueryParam{Run: driver.RunOptionInspect})
 

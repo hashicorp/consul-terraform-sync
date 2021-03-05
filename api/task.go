@@ -21,12 +21,12 @@ const taskPath = "tasks"
 // taskHandler handles the tasks endpoint
 type taskHandler struct {
 	store   *event.Store
-	drivers map[string]driver.Driver
+	drivers *driver.Drivers
 	version string
 }
 
 // newTaskHandler returns a new taskHandler
-func newTaskHandler(store *event.Store, drivers map[string]driver.Driver,
+func newTaskHandler(store *event.Store, drivers *driver.Drivers,
 	version string) *taskHandler {
 
 	return &taskHandler{
@@ -79,7 +79,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d, ok := h.drivers[taskName]
+	d, ok := h.drivers.Get(taskName)
 	if !ok {
 		err := fmt.Errorf("A task with the name '%s' does not exist or has not "+
 			"been initialized yet", taskName)
