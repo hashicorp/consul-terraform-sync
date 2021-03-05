@@ -224,6 +224,21 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
+			"single task that has no event data",
+			"/v1/status/tasks/task_d",
+			http.StatusOK,
+			map[string]TaskStatus{
+				"task_d": TaskStatus{
+					TaskName:  "task_d",
+					Status:    StatusUnknown,
+					Enabled:   false,
+					Providers: []string{"null"},
+					Services:  []string{"web"},
+					EventsURL: "",
+				},
+			},
+		},
+		{
 			"non-existent task",
 			"/v1/status/tasks/task_nonexistent",
 			http.StatusNotFound,

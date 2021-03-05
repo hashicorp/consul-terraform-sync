@@ -70,7 +70,7 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for taskName, events := range data {
 		d, ok := h.drivers.Get(taskName)
 		if !ok {
-			err := fmt.Errorf("task '%s' does not exist", taskName)
+			err := fmt.Errorf("task '%s' does not have a driver", taskName)
 			log.Printf("[TRACE] (api.updatetask) %s", err)
 			jsonErrorResponse(w, http.StatusNotFound, err)
 			return
@@ -92,6 +92,10 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if _, ok := data[taskName]; !ok {
 			if d, ok := h.drivers.Get(taskName); ok {
 				statuses[taskName] = makeTaskStatusUnknown(d.Task())
+			} else {
+				err := fmt.Errorf("task '%s' does not exist", taskName)
+				log.Printf("[TRACE] (api.updatetask) %s", err)
+				jsonErrorResponse(w, http.StatusNotFound, err)
 			}
 		}
 	}
