@@ -51,7 +51,9 @@ func (s *Store) Read(taskName string) map[string][]Event {
 
 	data := make(map[string][]*Event)
 	if taskName != "" {
-		data[taskName] = s.events[taskName]
+		if e, ok := s.events[taskName]; ok {
+			data[taskName] = e
+		}
 	} else {
 		data = s.events
 	}

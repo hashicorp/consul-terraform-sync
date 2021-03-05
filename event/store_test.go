@@ -114,7 +114,6 @@ func TestStore_Read(t *testing.T) {
 				Event{TaskName: "5"},
 			},
 			map[string][]Event{
-
 				"4": []Event{
 					Event{TaskName: "4"},
 					Event{TaskName: "4"},
@@ -127,9 +126,7 @@ func TestStore_Read(t *testing.T) {
 			"read task - no event",
 			"4",
 			[]Event{},
-			map[string][]Event{
-				"4": []Event{},
-			},
+			map[string][]Event{},
 		},
 	}
 
