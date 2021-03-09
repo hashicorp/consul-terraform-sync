@@ -65,6 +65,34 @@ func DefaultTestPrinter(buf *bytes.Buffer) (*Printer, error) {
 	return printer, nil
 }
 
+func TestPrinterSetEnv(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	p, err := DefaultTestPrinter(&buf)
+	assert.NoError(t, err)
+
+	p.SetEnv(make(map[string]string))
+	assert.NotEmpty(t, buf.String())
+	assert.Contains(t, buf.String(), "client.printer")
+	assert.Contains(t, buf.String(), "set")
+	assert.Contains(t, buf.String(), "env")
+}
+
+func TestPrinterSetStdout(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	p, err := DefaultTestPrinter(&buf)
+	assert.NoError(t, err)
+
+	p.SetStdout(&buf)
+	assert.NotEmpty(t, buf.String())
+	assert.Contains(t, buf.String(), "client.printer")
+	assert.Contains(t, buf.String(), "set")
+	assert.Contains(t, buf.String(), "standard out")
+}
+
 func TestPrinterInit(t *testing.T) {
 	t.Parallel()
 

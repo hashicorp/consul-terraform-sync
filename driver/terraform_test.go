@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
@@ -392,6 +393,77 @@ func TestUpdateTask(t *testing.T) {
 
 			_, err := tf.UpdateTask(ctx, tc.patch)
 			require.Error(t, err)
+		})
+	}
+}
+
+func TestSetBufferPeriod(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		setTmpl bool
+		task    Task
+	}{
+		{
+			"happy path",
+			true,
+			Task{
+				Enabled: true,
+				Name:    "happy_task",
+				BufferPeriod: &BufferPeriod{
+					Min: 2 * time.Second,
+					Max: 5 * time.Second,
+				},
+			},
+		},
+		{
+			"disabled task",
+			false,
+			Task{
+				Enabled: false,
+				Name:    "disabled_task",
+			},
+		},
+		{
+			"no buffer period",
+			true,
+			Task{
+				Enabled: true,
+				Name:    "no_buf_period_task",
+			},
+		},
+		{
+			"no template",
+			false,
+			Task{
+				Enabled: true,
+				Name:    "task_a",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tf := &Terraform{
+				mu:   &sync.RWMutex{},
+				task: tc.task,
+			}
+
+			if tc.setTmpl {
+				tmpl := new(mocksTmpl.Template)
+				tmpl.On("ID").Return("abcd").Once()
+				tf.template = tmpl
+			}
+
+			if tc.task.BufferPeriod != nil {
+				w := new(mocksTmpl.Watcher)
+				w.On("SetBufferPeriod", mock.Anything, mock.Anything, mock.Anything)
+				tf.watcher = w
+			}
+
+			tf.SetBufferPeriod()
+			// no errors to check. just testing coverage and no failures
 		})
 	}
 }
