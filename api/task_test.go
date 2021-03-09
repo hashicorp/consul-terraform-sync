@@ -160,6 +160,14 @@ func TestTask_updateTask(t *testing.T) {
 			driver.InspectPlan{},
 			errors.New("error updating task"),
 		},
+		{
+			"invalid run option",
+			"/v1/tasks/task_a?run=bad-run-option",
+			`{"enabled": true}`,
+			http.StatusBadRequest,
+			driver.InspectPlan{},
+			nil,
+		},
 	}
 
 	for _, tc := range cases {
