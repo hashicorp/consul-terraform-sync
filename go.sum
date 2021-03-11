@@ -600,6 +600,7 @@ github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brv
 github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY2I=
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/go-azure-helpers v0.12.0/go.mod h1:Zc3v4DNeX6PDdy7NljlYpnrdac1++qNW0I4U+ofGwpg=
+github.com/hashicorp/go-bexpr v0.1.2 h1:ijMXI4qERbzxbCnkxmfUtwMyjrrk3y+Vt0MxojNCbBs=
 github.com/hashicorp/go-bexpr v0.1.2/go.mod h1:ANbpTX1oAql27TZkKVeW8p1w8NTdnyzPe/0qqPCKohU=
 github.com/hashicorp/go-bexpr v0.1.4 h1:vyQpuKqqc+Ywb8tf6vZSlkf5qhYkgrNSWURtQggCfLE=
 github.com/hashicorp/go-bexpr v0.1.4/go.mod h1:ey7VZGNrY1PnLlYp6Nf3RLEizPo0B9W4yw2MnDkcK3M=
@@ -704,6 +705,8 @@ github.com/hashicorp/golang-lru v0.5.4 h1:YDjusn29QI/Das2iO9M0BHnIbxPeyuCHsjMW+l
 github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
 github.com/hashicorp/hcat v0.0.0-20210218010241-b58d6b50b196 h1:mKV1rKXc3AkMUZJ4t/Iv8urG/rjOM8j14Szu8gsm+KY=
 github.com/hashicorp/hcat v0.0.0-20210218010241-b58d6b50b196/go.mod h1:AJ2fdGudt/27fXjQBl9srE7mOV9fGZnjVxua/CpjT3I=
+github.com/hashicorp/hcat v0.0.0-20210311164221-2d0b18ae5095 h1:9U7RR1G48H/OLuHZnppwbqzxE4Vc3dDGsV69AkDEar8=
+github.com/hashicorp/hcat v0.0.0-20210311164221-2d0b18ae5095/go.mod h1:AJ2fdGudt/27fXjQBl9srE7mOV9fGZnjVxua/CpjT3I=
 github.com/hashicorp/hcl v0.0.0-20170504190234-a4b07c25de5f/go.mod h1:oZtUIOe8dh44I2q6ScRibXws4Ajl+d+nod3AaR9vL5w=
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
