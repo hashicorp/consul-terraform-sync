@@ -16,7 +16,7 @@ fi
 
 # If user is trying to run consul-terraform-sync with no arguments (daemon-mode),
 # then $1 will default to '/bin/sh'. In this case, do not pass along default arguments.
-if [ "$1" = '/bin/sh' ]
+if [ "$*" = '/bin/sh -c /bin/${NAME}' ]
 then
     set -- /bin/consul-terraform-sync
 fi
