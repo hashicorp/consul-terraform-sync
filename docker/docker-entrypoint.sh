@@ -14,6 +14,14 @@ then
     set -- /bin/consul-terraform-sync "$@"
 fi
 
+# If user is trying to run consul-terraform-sync with no arguments (daemon-mode),
+# docker will run '/bin/sh -c /bin/${NAME}'. Check for the full command since
+# running 'bin/sh' is a common pattern
+if [ "$*" = '/bin/sh -c /bin/${NAME}' ]
+then
+    set -- /bin/consul-terraform-sync
+fi
+
 # Matches VOLUME in the Dockerfile, for importing config files into image
 CTS_CONFIG_DIR=/consul-terraform-sync/config
 
