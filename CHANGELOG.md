@@ -3,6 +3,7 @@
 BUG FIXES:
 * Fix Task Status API response which was incorrectly returning empty providers and services information when requesting a task with no event data. [[GH-219](https://github.com/hashicorp/consul-terraform-sync/pull/219)]
 * Fix service filtering with tag containing `=`. [[GH-222](https://github.com/hashicorp/consul-terraform-sync/pull/222)]
+* Fix Docker image to pass in configuration when running in daemon-mode. [[GH-221](https://github.com/hashicorp/consul-terraform-sync/pull/221)]
 
 ## 0.1.0-beta (February 25, 2021)
 
