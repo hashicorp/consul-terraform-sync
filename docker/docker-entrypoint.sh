@@ -15,7 +15,8 @@ then
 fi
 
 # If user is trying to run consul-terraform-sync with no arguments (daemon-mode),
-# then $1 will default to '/bin/sh'. In this case, do not pass along default arguments.
+# docker will run '/bin/sh -c /bin/${NAME}'. Check for the full command since
+# running 'bin/sh' is a common pattern
 if [ "$*" = '/bin/sh -c /bin/${NAME}' ]
 then
     set -- /bin/consul-terraform-sync
