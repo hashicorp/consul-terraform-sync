@@ -27,9 +27,7 @@ func MakeTempDir(t testing.TB, tempDir string) func() error {
 		log.Printf("[WARN] temp dir %s was not cleared out after last test. "+
 			"Deleting.", tempDir)
 		err = os.RemoveAll(tempDir)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 	os.Mkdir(tempDir, os.ModePerm)
 
