@@ -21,7 +21,7 @@ import (
 // MakeTempDir creates a directory in the current path for a test. Caller is
 // responsible for managing the uniqueness of the directory name. Returns a
 // function for the caller to delete the temporary directory.
-func MakeTempDir(t *testing.T, tempDir string) func() error {
+func MakeTempDir(t testing.TB, tempDir string) func() error {
 	_, err := os.Stat(tempDir)
 	if !os.IsNotExist(err) {
 		log.Printf("[WARN] temp dir %s was not cleared out after last test. "+
