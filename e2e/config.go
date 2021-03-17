@@ -3,6 +3,11 @@ package e2e
 import (
 	"fmt"
 	"os"
+	"strings"
+	"testing"
+
+	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -14,49 +19,109 @@ const (
 	disabledTaskName    = "disabled_task"
 )
 
-// oneTaskConfig returns a basic config file with a single task. Passing in a
-// port value of 0 will automatically select the next free port
-func oneTaskConfig(consulAddr, tempDir string, port int) string {
-	portConfig := fmt.Sprintf("port = %d", port)
+type hclConfig string
 
-	return portConfig + consulBlock(consulAddr) + terraformBlock(tempDir) + dbTask()
+func (c hclConfig) appendString(s string) hclConfig {
+	return hclConfig(string(c) + s)
 }
 
-// twoTaskConfig returns a basic use case config file
-// Use for confirming specific resource / statefile output
-func twoTaskConfig(consulAddr, tempDir string) string {
-	return oneTaskConfig(consulAddr, tempDir, 0) + webTask()
+func (c hclConfig) write(tb testing.TB, path string) {
+	f, err := os.Create(path)
+	require.NoError(tb, err)
+	defer f.Close()
+	_, err = f.Write([]byte(c))
+	require.NoError(tb, err)
 }
 
-// panosConfig returns a config file with panos provider with bad config
-// Use for testing handlers erroring out
-func panosConfig(consulAddr, tempDir string) string {
+func (c hclConfig) appendPort(port int) hclConfig {
+	return c.appendString(fmt.Sprintf("port = %d", port))
+}
+
+func (c hclConfig) appendConsulBlock(consul *testutil.TestServer) hclConfig {
+	return c.appendString(fmt.Sprintf(`
+consul {
+  address = "%s"
+  tls {
+    enabled = true
+    ca_cert = "%s"
+  }
+}
+`, consul.HTTPSAddr, consul.Config.CertFile))
+}
+
+func (c hclConfig) appendTerraformBlock(dir string, opts ...string) hclConfig {
 	cwd, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
 
-	tfBlock := fmt.Sprintf(`
+	var optsConfig string
+	if len(opts) > 0 {
+		optsConfig = "\n" + strings.Join(opts, "\n")
+	}
+
+	return c.appendString(fmt.Sprintf(`
 driver "terraform" {
 	log = true
 	path = "%s"
-	working_dir = "%s"
-	required_providers {
-		panos = {
-			source = "paloaltonetworks/panos"
-		}
-	}
-}`, cwd, tempDir)
+	working_dir = "%s"%s
+}
+`, cwd, dir, optsConfig))
+}
 
-	return panosBadCredConfig() + consulBlock(consulAddr) + tfBlock
+func (c hclConfig) appendDBTask() hclConfig {
+	return c.appendString(fmt.Sprintf(`
+task {
+	name = "%s"
+	description = "basic read-write e2e task for api & db"
+	services = ["api", "db"]
+	providers = ["local"]
+	source = "../../test_modules/e2e_basic_task"
+}
+`, dbTaskName))
+}
+
+func (c hclConfig) appendWebTask() hclConfig {
+	return c.appendString(fmt.Sprintf(`
+task {
+	name = "%s"
+	description = "basic read-write e2e task api & web"
+	services = ["api", "web"]
+	providers = ["local"]
+	source = "../../test_modules/e2e_basic_task"
+}
+`, webTaskName))
+}
+
+func baseConfig() hclConfig {
+	return `log_level = "INFO"
+
+# port 0 will automatically select next free port
+port = 0
+
+service {
+  name = "api"
+  description = "backend"
+}
+
+service {
+  name = "web"
+  description = "frontend"
+}
+
+service {
+    name = "db"
+    description = "database"
+}
+
+terraform_provider "local" {}
+`
 }
 
 // fakeHandlerConfig returns a config file with fake provider that has a handler
 // Use for running in development to test cases success/failed events
-func fakeHandlerConfig(consulAddr, tempDir string, port int) string {
-	fakeHandlerConfig := fmt.Sprintf(`
-port = %d
-
+func fakeHandlerConfig() hclConfig {
+	return hclConfig(fmt.Sprintf(`
 terraform_provider "fake-sync" {
 	alias = "failure"
 	name = "failure"
@@ -94,41 +159,12 @@ task {
 	providers = ["fake-sync.success"]
 	source = "../../test_modules/e2e_basic_task"
 }
-`, port, fakeFailureTaskName, fakeSuccessTaskName, disabledTaskName)
-
-	return fakeHandlerConfig + consulBlock(consulAddr) + terraformBlock(tempDir)
-}
-
-// twoTaskCustomBackendConfig returns a basic config file with two tasks for
-// custom backend. Use for confirming resources / state file for custom backend.
-//
-// Example of customBackend:
-// `backend "local" {
-// 	path = "custom/terraform.tfstate"
-// }`
-func twoTaskCustomBackendConfig(consulAddr, tempDir, customBackend string) string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	terraformBlock := fmt.Sprintf(`
-driver "terraform" {
-	log = true
-	path = "%s"
-	working_dir = "%s"
-	%s
-}
-`, cwd, tempDir, customBackend)
-
-	return baseConfig() + consulBlock(consulAddr) +
-		terraformBlock + dbTask() + webTask()
+`, fakeFailureTaskName, fakeSuccessTaskName, disabledTaskName))
 }
 
 // disabledTaskConfig returns a config file with a task that is disabled
-func disabledTaskConfig(consulAddr, tempDir string, port int) string {
-	disabledTask := fmt.Sprintf(`
-port = %d
-
+func disabledTaskConfig() hclConfig {
+	return hclConfig(fmt.Sprintf(`
 task {
 	name = "%s"
 	description = "task is configured as disabled"
@@ -142,82 +178,10 @@ service {
 	name = "api"
 	description = "backend"
 }
-`, port, disabledTaskName)
-	return consulBlock(consulAddr) + terraformBlock(tempDir) + disabledTask
+`, disabledTaskName))
 }
 
-func consulBlock(addr string) string {
-	return fmt.Sprintf(`
-consul {
-    address = "%s"
-}
-`, addr)
-}
-
-func terraformBlock(dir string) string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	return fmt.Sprintf(`
-driver "terraform" {
-	log = true
-	path = "%s"
-	working_dir = "%s"
-}
-`, cwd, dir)
-}
-
-func dbTask() string {
-	return fmt.Sprintf(`
-task {
-	name = "%s"
-	description = "basic read-write e2e task for api & db"
-	services = ["api", "db"]
-	providers = ["local"]
-	source = "../../test_modules/e2e_basic_task"
-}
-`, dbTaskName)
-}
-
-func webTask() string {
-	return fmt.Sprintf(`
-task {
-	name = "%s"
-	description = "basic read-write e2e task api & web"
-	services = ["api", "web"]
-	providers = ["local"]
-	source = "../../test_modules/e2e_basic_task"
-}
-`, webTaskName)
-}
-
-func baseConfig() string {
-	return `log_level = "INFO"
-
-# port 0 will automatically select next free port
-port = 0
-
-service {
-  name = "api"
-  description = "backend"
-}
-
-service {
-  name = "web"
-  description = "frontend"
-}
-
-service {
-    name = "db"
-    description = "database"
-}
-
-terraform_provider "local" {}
-`
-}
-
-func panosBadCredConfig() string {
+func panosBadCredConfig() hclConfig {
 	return `log_level = "trace"
 terraform_provider "panos" {
 	hostname = "10.10.10.10"

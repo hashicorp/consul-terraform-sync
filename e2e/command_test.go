@@ -20,21 +20,20 @@ func TestE2E_MetaCOmmandErrors(t *testing.T) {
 	// test cases that cross subcommands that coded in the command meta object
 	t.Parallel()
 
-	srv, err := newTestConsulServer(t)
-	require.NoError(t, err, "failed to start consul server")
+	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "meta_errs")
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	configPath := filepath.Join(tempDir, configFile)
-
 	port, err := api.FreePort()
 	require.NoError(t, err)
 
-	err = makeConfig(configPath, fakeHandlerConfig(srv.HTTPAddr, tempDir, port))
-	require.NoError(t, err)
+	configPath := filepath.Join(tempDir, configFile)
+	config := fakeHandlerConfig().appendPort(port).
+		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config.write(t, configPath)
 
 	cmd, err := runSyncDevMode(configPath)
 	defer stopCommand(cmd)
@@ -88,21 +87,20 @@ func TestE2E_MetaCOmmandErrors(t *testing.T) {
 func TestE2E_EnableTaskCommand(t *testing.T) {
 	t.Parallel()
 
-	srv, err := newTestConsulServer(t)
-	require.NoError(t, err, "failed to start consul server")
+	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "enable_cmd")
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	configPath := filepath.Join(tempDir, configFile)
-
 	port, err := api.FreePort()
 	require.NoError(t, err)
 
-	err = makeConfig(configPath, disabledTaskConfig(srv.HTTPAddr, tempDir, port))
-	require.NoError(t, err)
+	configPath := filepath.Join(tempDir, configFile)
+	config := disabledTaskConfig().appendPort(port).
+		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config.write(t, configPath)
 
 	cmd, err := runSyncDevMode(configPath)
 	defer stopCommand(cmd)
@@ -152,21 +150,19 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 func TestE2E_DisableTaskCommand(t *testing.T) {
 	t.Parallel()
 
-	srv, err := newTestConsulServer(t)
-	require.NoError(t, err, "failed to start consul server")
+	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disable_cmd")
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	configPath := filepath.Join(tempDir, configFile)
-
 	port, err := api.FreePort()
 	require.NoError(t, err)
 
-	err = makeConfig(configPath, oneTaskConfig(srv.HTTPAddr, tempDir, port))
-	require.NoError(t, err)
+	configPath := filepath.Join(tempDir, configFile)
+	config := baseConfig().appendPort(port).appendConsulBlock(srv).appendDBTask()
+	config.write(t, configPath)
 
 	cmd, err := runSyncDevMode(configPath)
 	defer stopCommand(cmd)
