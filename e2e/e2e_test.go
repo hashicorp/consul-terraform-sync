@@ -5,7 +5,6 @@ package e2e
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -36,8 +35,7 @@ func TestE2EBasic(t *testing.T) {
 	// since e2e test running simultaneously will download Terraform into shared
 	// directory causes some flakiness. All other e2e tests, should have t.Parallel()
 
-	srv, err := newTestConsulServer(t)
-	require.NoError(t, err, "failed to start consul server")
+	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "basic")
@@ -45,10 +43,11 @@ func TestE2EBasic(t *testing.T) {
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
-	err = makeConfig(configPath, twoTaskConfig(srv.HTTPAddr, tempDir))
-	require.NoError(t, err)
+	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+		appendDBTask().appendWebTask()
+	config.write(t, configPath)
 
-	err = runSyncStop(configPath, 20*time.Second)
+	err := runSyncStop(configPath, 20*time.Second)
 	require.NoError(t, err)
 
 	files, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, resourcesDir))
@@ -80,8 +79,7 @@ func TestE2EBasic(t *testing.T) {
 func TestE2ERestartSync(t *testing.T) {
 	t.Parallel()
 
-	srv, err := newTestConsulServer(t)
-	require.NoError(t, err, "failed to start consul server")
+	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "restart")
@@ -89,10 +87,10 @@ func TestE2ERestartSync(t *testing.T) {
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
-	err = makeConfig(configPath, oneTaskConfig(srv.HTTPAddr, tempDir, 0))
-	require.NoError(t, err)
+	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).appendDBTask()
+	config.write(t, configPath)
 
-	err = runSyncStop(configPath, 8*time.Second)
+	err := runSyncStop(configPath, 8*time.Second)
 	require.NoError(t, err)
 
 	// rerun sync. confirm no errors e.g. recreating workspaces
@@ -105,19 +103,25 @@ func TestE2ERestartSync(t *testing.T) {
 func TestE2EPanosHandlerError(t *testing.T) {
 	t.Parallel()
 
-	srv, err := newTestConsulServer(t)
-	require.NoError(t, err, "failed to start consul server")
+	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "panos_handler")
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
+	requiredProviders := `required_providers {
+  panos = {
+    source = "paloaltonetworks/panos"
+  }
+}
+`
 	configPath := filepath.Join(tempDir, configFile)
-	err = makeConfig(configPath, panosConfig(srv.HTTPAddr, tempDir))
-	require.NoError(t, err)
+	config := panosBadCredConfig().appendConsulBlock(srv).
+		appendTerraformBlock(tempDir, requiredProviders)
+	config.write(t, configPath)
 
-	err = runSyncOnce(configPath)
+	err := runSyncOnce(configPath)
 	require.Error(t, err)
 
 	delete()
@@ -182,20 +186,21 @@ func TestE2ELocalBackend(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			srv, err := newTestConsulServer(t)
-			require.NoError(t, err, "failed to start consul server")
+			srv := newTestConsulServer(t)
 			defer srv.Stop()
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.tempDirPrefix)
 			delete := testutils.MakeTempDir(t, tempDir)
 			// no defer to delete directory: only delete at end of test if no errors
 
-			configPath := filepath.Join(tempDir, configFile)
-			err = makeConfig(configPath,
-				twoTaskCustomBackendConfig(srv.HTTPAddr, tempDir, tc.backendConfig))
-			require.NoError(t, err)
+			config := baseConfig().appendConsulBlock(srv).
+				appendTerraformBlock(tempDir, tc.backendConfig).
+				appendDBTask().appendWebTask()
 
-			err = runSyncOnce(configPath)
+			configPath := filepath.Join(tempDir, configFile)
+			config.write(t, configPath)
+
+			err := runSyncOnce(configPath)
 			require.NoError(t, err)
 
 			// check that statefile was created locally
@@ -212,18 +217,8 @@ func TestE2ELocalBackend(t *testing.T) {
 	}
 }
 
-func newTestConsulServer(t *testing.T) (*testutil.TestServer, error) {
-	tb := &testutils.TestingTB{}
-	log.SetOutput(ioutil.Discard)
-	srv, err := testutil.NewTestServerConfigT(tb,
-		func(c *testutil.TestServerConfig) {
-			c.LogLevel = "warn"
-			c.Stdout = ioutil.Discard
-			c.Stderr = ioutil.Discard
-		})
-	if err != nil {
-		return nil, err
-	}
+func newTestConsulServer(t *testing.T) *testutil.TestServer {
+	srv := testutils.NewTestConsulServerHTTPS(t, "../testutils")
 
 	// Register services
 	srv.AddAddressableService(t, "api", testutil.HealthPassing,
@@ -232,18 +227,7 @@ func newTestConsulServer(t *testing.T) (*testutil.TestServer, error) {
 		"5.6.7.8", 8000, []string{})
 	srv.AddAddressableService(t, "db", testutil.HealthPassing,
 		"10.10.10.10", 8000, []string{})
-	return srv, nil
-}
-
-func makeConfig(configPath, contents string) error {
-	f, err := os.Create(configPath)
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-	config := []byte(contents)
-	_, err = f.Write(config)
-	return err
+	return srv
 }
 
 func runSyncStop(configPath string, dur time.Duration) error {

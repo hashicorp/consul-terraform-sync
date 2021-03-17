@@ -24,21 +24,20 @@ import (
 func TestE2E_StatusEndpoints(t *testing.T) {
 	t.Parallel()
 
-	srv, err := newTestConsulServer(t)
-	require.NoError(t, err, "failed to start consul server")
+	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "status_endpoints")
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	configPath := filepath.Join(tempDir, configFile)
-
 	port, err := api.FreePort()
 	require.NoError(t, err)
 
-	err = makeConfig(configPath, fakeHandlerConfig(srv.HTTPAddr, tempDir, port))
-	require.NoError(t, err)
+	configPath := filepath.Join(tempDir, configFile)
+	config := fakeHandlerConfig().appendPort(port).
+		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config.write(t, configPath)
 
 	cmd, err := runSyncDevMode(configPath)
 	require.NoError(t, err)
@@ -246,8 +245,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	// 4. API to disable task. Delete resources. Register new service. Confirm
 	// new service registering does not trigger creating resources
 
-	srv, err := newTestConsulServer(t)
-	require.NoError(t, err, "failed to start consul server")
+	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disabled_task")
@@ -258,8 +256,9 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
-	err = makeConfig(configPath, disabledTaskConfig(srv.HTTPAddr, tempDir, port))
-	require.NoError(t, err)
+	config := disabledTaskConfig().appendPort(port).
+		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config.write(t, configPath)
 
 	cmd, err := runSync(configPath)
 	defer stopCommand(cmd)

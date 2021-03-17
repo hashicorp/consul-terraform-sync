@@ -6,12 +6,12 @@ package benchmarks
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
+	"github.com/hashicorp/consul/sdk/testutil"
 )
 
 func BenchmarkCtrl_t01_s01(b *testing.B) {
@@ -47,12 +47,7 @@ func benchmarkCtrl(b *testing.B, numTasks int, numServices int) {
 	// ReadOnlyController.Run involves rendering the template file and executing
 	// Terraform init and Terraform plan serially across all tasks.
 
-	basePath, err := filepath.Abs("../../testutils")
-	if err != nil {
-		b.Fatalf("unable to get current working directory for Consul test certs: %s", err)
-	}
-
-	srv := testutils.NewTestConsulServerHTTPS(b, basePath)
+	srv := testutils.NewTestConsulServerHTTPS(b, "../../testutils")
 	defer srv.Stop()
 
 	tempDir := b.Name()
@@ -61,8 +56,7 @@ func benchmarkCtrl(b *testing.B, numTasks int, numServices int) {
 
 	ctx := context.Background()
 	conf := generateConf(benchmarkConfig{
-		consulAddr:  srv.HTTPSAddr,
-		certPath:    filepath.Join(basePath, "cert.pem"),
+		consul:      srv,
 		tempDir:     tempDir,
 		numTasks:    numTasks,
 		numServices: numServices,
@@ -93,8 +87,7 @@ func benchmarkCtrl(b *testing.B, numTasks int, numServices int) {
 }
 
 type benchmarkConfig struct {
-	consulAddr  string
-	certPath    string
+	consul      *testutil.TestServer
 	tempDir     string
 	numTasks    int
 	numServices int
@@ -117,14 +110,14 @@ func generateConf(bConf benchmarkConfig) *config.Config {
 
 	conf := config.DefaultConfig()
 	conf.Tasks = &taskConfigs
-	conf.Consul.Address = config.String(bConf.consulAddr)
+	conf.Consul.Address = config.String(bConf.consul.HTTPSAddr)
 	conf.Consul.TLS = &config.TLSConfig{
 		Enabled: config.Bool(true),
 		Verify:  config.Bool(false),
 
 		// This is needed for Terraform Consul backend when CTS is
 		// connecting over HTTP/2 using TLS.
-		CACert: config.String(bConf.certPath),
+		CACert: config.String(bConf.consul.Config.CertFile),
 	}
 	conf.Finalize()
 	conf.Driver.Terraform.WorkingDir = config.String(bConf.tempDir)

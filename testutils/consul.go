@@ -7,11 +7,14 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/stretchr/testify/require"
 )
 
-func NewTestConsulServerHTTPS(tb testing.TB, path string) *testutil.TestServer {
+func NewTestConsulServerHTTPS(tb testing.TB, relPath string) *testutil.TestServer {
 	log.SetOutput(ioutil.Discard)
 
+	path, err := filepath.Abs(relPath)
+	require.NoError(tb, err, "unable to get absolute path of test certs")
 	certFile := filepath.Join(path, "cert.pem")
 	keyFile := filepath.Join(path, "key.pem")
 
@@ -26,9 +29,7 @@ func NewTestConsulServerHTTPS(tb testing.TB, path string) *testutil.TestServer {
 			c.CertFile = certFile
 			c.KeyFile = keyFile
 		})
-	if err != nil {
-		tb.Fatalf("unable to start Consul test server: %s", err)
-	}
+	require.NoError(tb, err, "unable to start Consul server")
 
 	return srv
 }
