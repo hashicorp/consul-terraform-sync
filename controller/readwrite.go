@@ -25,6 +25,9 @@ type ReadWrite struct {
 	*baseController
 	store *event.Store
 	retry retry.Retry
+
+	testMode bool
+	taskNotify chan string
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
@@ -38,6 +41,7 @@ func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
 		baseController: baseCtrl,
 		store:          store,
 		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		taskNotify: make(chan string, len(*conf.Tasks)),
 	}, nil
 }
 
@@ -92,9 +96,13 @@ func (rw *ReadWrite) runUnits(ctx context.Context) chan error {
 	for _, u := range rw.units {
 		wg.Add(1)
 		go func(u unit) {
-			_, err := rw.checkApply(ctx, u, true)
+			complete, err := rw.checkApply(ctx, u, true)
 			if err != nil {
 				errCh <- err
+			}
+
+			if rw.testMode && complete {
+				rw.taskNotify <- u.taskName
 			}
 			wg.Done()
 		}(u)
@@ -210,4 +218,18 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, 
 	}
 
 	return rendered, nil
+}
+
+func (rw *ReadWrite) EnableTestMode() {
+	rw.testMode = true
+}
+
+// TaskNotifyChannel returns a read only channel. The channel should only be
+// consumed by one reader.
+func (rw *ReadWrite) TaskNotifyChannel() (<-chan string, error) {
+	if !rw.testMode {
+		// This may change in the future, but for it errors
+		return nil, fmt.Errorf("TaskNotifyChannel is only for testing purposes")
+	}
+	return rw.taskNotify, nil
 }

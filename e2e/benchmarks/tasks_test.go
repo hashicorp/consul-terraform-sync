@@ -12,33 +12,34 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/controller"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/stretchr/testify/require"
 )
 
-func BenchmarkCtrl_t01_s01(b *testing.B) {
-	benchmarkCtrl(b, 1, 1)
+func BenchmarkTasks_t01_s01(b *testing.B) {
+	benchmarkTasks(b, 1, 1)
 }
 
-func BenchmarkCtrl_t01_s50(b *testing.B) {
-	benchmarkCtrl(b, 1, 50)
+func BenchmarkTasks_t01_s50(b *testing.B) {
+	benchmarkTasks(b, 1, 50)
 }
 
-func BenchmarkCtrl_t10_s01(b *testing.B) {
-	benchmarkCtrl(b, 10, 1)
+func BenchmarkTasks_t10_s01(b *testing.B) {
+	benchmarkTasks(b, 10, 1)
 }
 
-func BenchmarkCtrl_t10_s50(b *testing.B) {
-	benchmarkCtrl(b, 10, 50)
+func BenchmarkTasks_t10_s50(b *testing.B) {
+	benchmarkTasks(b, 10, 50)
 }
 
-func BenchmarkCtrl_t50_s01(b *testing.B) {
-	benchmarkCtrl(b, 50, 1)
+func BenchmarkTasks_t50_s01(b *testing.B) {
+	benchmarkTasks(b, 50, 1)
 }
 
-func BenchmarkCtrl_t50_s50(b *testing.B) {
-	benchmarkCtrl(b, 50, 50)
+func BenchmarkTasks_t50_s50(b *testing.B) {
+	benchmarkTasks(b, 50, 50)
 }
 
-func benchmarkCtrl(b *testing.B, numTasks int, numServices int) {
+func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 	// Benchmarks Init and Run for the ReadOnly controller
 	//
 	// ReadOnlyController.Init involves creating auto-generated Terraform files
@@ -64,23 +65,19 @@ func benchmarkCtrl(b *testing.B, numTasks int, numServices int) {
 
 	b.Run("ReadOnlyCtrl", func(b *testing.B) {
 		ctrl, err := controller.NewReadOnly(conf)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 
 		b.Run("task setup", func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				_, err = ctrl.Init(ctx)
-				if err != nil {
-					b.Fatal(err)
-				}
+				require.NoError(b, err)
 			}
 		})
 
 		b.Run("task execution", func(b *testing.B) {
-			err = ctrl.Run(ctx)
-			if err != nil {
-				b.Fatal(err)
+			for n := 0; n < b.N; n++ {
+				err = ctrl.Run(ctx)
+				require.NoError(b, err)
 			}
 		})
 	})
@@ -109,6 +106,7 @@ func generateConf(bConf benchmarkConfig) *config.Config {
 	}
 
 	conf := config.DefaultConfig()
+	conf.BufferPeriod.Enabled = config.Bool(false)
 	conf.Tasks = &taskConfigs
 	conf.Consul.Address = config.String(bConf.consul.HTTPSAddr)
 	conf.Consul.TLS = &config.TLSConfig{

@@ -40,23 +40,25 @@ func MakeTempDir(t testing.TB, tempDir string) func() error {
 // RegisterConsulService regsiters a service to the Consul Catalog. The Consul
 // sdk/testutil package currently does not support a method to register multiple
 // service instances, distinguished by their IDs.
-func RegisterConsulService(t *testing.T, srv *testutil.TestServer,
+func RegisterConsulService(tb testing.TB, srv *testutil.TestServer,
 	s testutil.TestService, health string) {
 
 	var body bytes.Buffer
 	enc := json.NewEncoder(&body)
-	require.NoError(t, enc.Encode(&s))
+	require.NoError(tb, enc.Encode(&s))
 
 	u := fmt.Sprintf("http://%s/v1/agent/service/register", srv.HTTPAddr)
-	resp := RequestHTTP(t, http.MethodPut, u, body.String())
+	resp := RequestHTTP(tb, http.MethodPut, u, body.String())
 	defer resp.Body.Close()
 
-	srv.AddCheck(t, s.ID, s.ID, testutil.HealthPassing)
+	if t, ok := tb.(*testing.T); ok {
+		srv.AddCheck(t, s.ID, s.ID, testutil.HealthPassing)
+	}
 }
 
 // RequestHTTP makes an http request. The caller is responsible for closing
 // the response.
-func RequestHTTP(t *testing.T, method, url, body string) *http.Response {
+func RequestHTTP(t testing.TB, method, url, body string) *http.Response {
 	r := strings.NewReader(body)
 	req, err := http.NewRequest(method, url, r)
 	require.NoError(t, err)
