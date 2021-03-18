@@ -1,4 +1,4 @@
-package main
+package command
 
 import (
 	"context"
@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
-	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -121,7 +120,7 @@ func (cli *CLI) Run(args []string) int {
 		subcommands := &mcli.CLI{
 			Name:     "consul-terraform-sync",
 			Args:     args[1:],
-			Commands: command.Commands(),
+			Commands: Commands(),
 		}
 
 		exitCode, err := subcommands.Run()
