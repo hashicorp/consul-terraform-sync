@@ -6,16 +6,6 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-// Exit codes match the main cli's exit code
-const (
-	ExitCodeOK int = 0
-
-	ExitCodeError = 10 + iota
-	ExitCodeInterrupt
-	ExitCodeRequiredFlagsError
-	ExitCodeParseFlagsError
-)
-
 // Commands returns the mapping of CLI commands for CTS. The meta
 // parameter lets you set meta options for all commands.
 func Commands() map[string]cli.CommandFactory {

@@ -2,9 +2,11 @@ package main
 
 import (
 	"os"
+
+	"github.com/hashicorp/consul-terraform-sync/command"
 )
 
 func main() {
-	cli := NewCLI(os.Stdout, os.Stderr)
+	cli := command.NewCLI(os.Stdout, os.Stderr)
 	os.Exit(cli.Run(os.Args))
 }
