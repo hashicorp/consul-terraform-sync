@@ -74,7 +74,7 @@ func (cli *CLI) Run(args []string) int {
 	var help, h bool
 
 	// Parse the flags
-	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	f.Var(&configFiles, "config-dir", "A directory to load files for "+
 		"configuring Sync. Configuration files require an .hcl or .json "+
 		"file extention in order to specify their format. This option can be "+
@@ -102,7 +102,7 @@ func (cli *CLI) Run(args []string) int {
 		"consul-terraform-sync binary. Defaults to Terraform client if empty or"+
 		"unknown value. Values can also be 'development' or 'test'.")
 
-	err := f.Parse(os.Args[1:])
+	err := f.Parse(args[1:])
 	if err != nil {
 		return ExitCodeParseFlagsError
 	}
@@ -135,7 +135,7 @@ func (cli *CLI) Run(args []string) int {
 
 	// Print out binary's help info
 	if help || h {
-		fmt.Printf("Usage of %s:\n", os.Args[0])
+		fmt.Printf("Usage of %s:\n", args[0])
 		printFlags(f)
 		return ExitCodeOK
 	}
