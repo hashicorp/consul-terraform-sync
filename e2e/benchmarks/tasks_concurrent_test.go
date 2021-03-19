@@ -99,7 +99,7 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 			}
 			testutils.RegisterConsulService(b, srv, service, testutil.HealthPassing)
 
-			ctxTimeout, _ := context.WithTimeout(context.Background(), 4*time.Minute)
+			ctxTimeout, _ := context.WithTimeout(context.Background(), 30*time.Second)
 			completedTasks := make(map[string]bool, len(*conf.Tasks))
 			for {
 				select {
