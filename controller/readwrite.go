@@ -220,6 +220,9 @@ func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, 
 	return rendered, nil
 }
 
+// EnableTestMode is a helper for testing which tasks were triggered and
+// executed. Callers of this method must consume from TaskNotifyChannel to
+// prevent the buffered channel from filling and causing a dead lock.
 func (rw *ReadWrite) EnableTestMode() {
 	rw.testMode = true
 }
