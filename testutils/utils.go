@@ -14,6 +14,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/testutils/sdk"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -51,9 +52,7 @@ func RegisterConsulService(tb testing.TB, srv *testutil.TestServer,
 	resp := RequestHTTP(tb, http.MethodPut, u, body.String())
 	defer resp.Body.Close()
 
-	if t, ok := tb.(*testing.T); ok {
-		srv.AddCheck(t, s.ID, s.ID, testutil.HealthPassing)
-	}
+	sdk.AddCheck(srv, tb, s.ID, s.ID, testutil.HealthPassing)
 }
 
 // RequestHTTP makes an http request. The caller is responsible for closing
