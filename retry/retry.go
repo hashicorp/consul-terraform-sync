@@ -37,7 +37,7 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 	}
 
 	var attempt uint
-	wait := r.waitTime(attempt)
+	wait := r.WaitTime(attempt)
 	interval := time.NewTicker(time.Duration(wait))
 	defer interval.Stop()
 
@@ -64,7 +64,7 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 				errs = errors.Wrap(errs, err.Error())
 			}
 
-			wait := r.waitTime(attempt)
+			wait := r.WaitTime(attempt)
 			interval = time.NewTicker(time.Duration(wait))
 		}
 		if attempt >= r.maxRetry {
@@ -73,9 +73,9 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 	}
 }
 
-// waitTime calculates the wait time based off the attempt number based off
+// WaitTime calculates the wait time based off the attempt number based off
 // exponential backoff with a random delay.
-func (r Retry) waitTime(attempt uint) int {
+func (r Retry) WaitTime(attempt uint) int {
 	if r.testMode {
 		return 1
 	}

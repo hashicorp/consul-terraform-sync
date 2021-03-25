@@ -166,7 +166,7 @@ func TestWaitTime(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := NewRetry(1, 1)
-			a := r.waitTime(tc.attempt)
+			a := r.WaitTime(tc.attempt)
 
 			actual := float64(a) / float64(time.Second)
 			assert.GreaterOrEqual(t, actual, tc.minReturn)
