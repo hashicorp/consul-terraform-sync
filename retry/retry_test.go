@@ -146,20 +146,20 @@ func TestWaitTime(t *testing.T) {
 		{
 			"first attempt",
 			0,
-			0,
-			0.5,
+			1,
+			1.5,
 		},
 		{
 			"second attempt",
 			1,
-			1,
-			2.5,
+			2,
+			3,
 		},
 		{
 			"third attempt",
 			2,
 			4,
-			6.5,
+			6,
 		},
 	}
 

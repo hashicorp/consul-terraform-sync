@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"time"
 
@@ -79,8 +80,8 @@ func (r Retry) waitTime(attempt uint) int {
 		return 1
 	}
 	a := float64(attempt)
-	baseTimeSeconds := a * a
-	nextTimeSeconds := (a + 1) * (a + 1)
+	baseTimeSeconds := math.Exp2(a)
+	nextTimeSeconds := math.Exp2(a + 1)
 	delayRange := (nextTimeSeconds - baseTimeSeconds) / 2
 	delay := r.random.Float64() * delayRange
 	total := (baseTimeSeconds + delay) * float64(time.Second)
