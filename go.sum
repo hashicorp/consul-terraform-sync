@@ -604,8 +604,6 @@ github.com/hashicorp/go-bexpr v0.1.2 h1:ijMXI4qERbzxbCnkxmfUtwMyjrrk3y+Vt0MxojNC
 github.com/hashicorp/go-bexpr v0.1.2/go.mod h1:ANbpTX1oAql27TZkKVeW8p1w8NTdnyzPe/0qqPCKohU=
 github.com/hashicorp/go-bexpr v0.1.4 h1:vyQpuKqqc+Ywb8tf6vZSlkf5qhYkgrNSWURtQggCfLE=
 github.com/hashicorp/go-bexpr v0.1.4/go.mod h1:ey7VZGNrY1PnLlYp6Nf3RLEizPo0B9W4yw2MnDkcK3M=
-github.com/hashicorp/go-bexpr v0.1.7 h1:z48qzCgJkvdnMO/LDy3XHNyCyxnHiFGx9uTKLv0jW2Y=
-github.com/hashicorp/go-bexpr v0.1.7/go.mod h1:oxlubA2vC/gFVfX1A6JGp7ls7uCDlfJn732ehYYg+g0=
 github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible/go.mod h1:+IrDq36jUYG0q6TsDY9uO2p77C8f8S5y+RbYHr2UI+U=
 github.com/hashicorp/go-checkpoint v0.5.0 h1:MFYpPZCnQqQTE18jFwSII6eUQrD/oxMFp3mlgcqk5mU=
 github.com/hashicorp/go-checkpoint v0.5.0/go.mod h1:7nfLNL10NsxqO4iWuW6tWW0HjZuDrwkBuEQsVcpCOgg=
@@ -703,10 +701,8 @@ github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ
 github.com/hashicorp/golang-lru v0.5.3/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
 github.com/hashicorp/golang-lru v0.5.4 h1:YDjusn29QI/Das2iO9M0BHnIbxPeyuCHsjMW+lJfyTc=
 github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
-github.com/hashicorp/hcat v0.0.0-20210218010241-b58d6b50b196 h1:mKV1rKXc3AkMUZJ4t/Iv8urG/rjOM8j14Szu8gsm+KY=
-github.com/hashicorp/hcat v0.0.0-20210218010241-b58d6b50b196/go.mod h1:AJ2fdGudt/27fXjQBl9srE7mOV9fGZnjVxua/CpjT3I=
-github.com/hashicorp/hcat v0.0.0-20210311164221-2d0b18ae5095 h1:9U7RR1G48H/OLuHZnppwbqzxE4Vc3dDGsV69AkDEar8=
-github.com/hashicorp/hcat v0.0.0-20210311164221-2d0b18ae5095/go.mod h1:AJ2fdGudt/27fXjQBl9srE7mOV9fGZnjVxua/CpjT3I=
+github.com/hashicorp/hcat v0.0.0-20210326153635-0d29726683e4 h1:c0+e33iz6wzftqP7V87A9cBeCj7RbMXq9CauD8+sCcY=
+github.com/hashicorp/hcat v0.0.0-20210326153635-0d29726683e4/go.mod h1:AJ2fdGudt/27fXjQBl9srE7mOV9fGZnjVxua/CpjT3I=
 github.com/hashicorp/hcl v0.0.0-20170504190234-a4b07c25de5f/go.mod h1:oZtUIOe8dh44I2q6ScRibXws4Ajl+d+nod3AaR9vL5w=
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
@@ -1015,8 +1011,6 @@ github.com/mitchellh/pointerstructure v1.0.0 h1:ATSdz4NWrmWPOF1CeCBU4sMCno2hgqdb
 github.com/mitchellh/pointerstructure v1.0.0/go.mod h1:k4XwG94++jLVsSiTxo7qdIfXA9pj9EAeo0QsNNJOLZ8=
 github.com/mitchellh/pointerstructure v1.1.0 h1:6RI+cKHSIOOuMhKALJyMIpGOHsmBGGwS0ZSMCPFn/jM=
 github.com/mitchellh/pointerstructure v1.1.0/go.mod h1:zoQzmW5t87ncZZuJWXEyhr0///POW/WQEeFG4RRVKEs=
-github.com/mitchellh/pointerstructure v1.2.0 h1:O+i9nHnXS3l/9Wu7r4NrEdwA2VFTicjUEN1uBnDo34A=
-github.com/mitchellh/pointerstructure v1.2.0/go.mod h1:BRAsLI5zgXmw97Lf6s25bs8ohIXc3tViBH44KcwB2g4=
 github.com/mitchellh/prefixedio v0.0.0-20190213213902-5733675afd51/go.mod h1:kB1naBgV9ORnkiTVeyJOI1DavaJkG4oNIq0Af6ZVKUo=
 github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/mitchellh/reflectwalk v1.0.1 h1:FVzMWA5RllMAKIdUSC8mdWo3XtwoecrH79BY70sEEpE=
