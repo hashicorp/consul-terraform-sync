@@ -55,6 +55,12 @@ func RegisterConsulService(tb testing.TB, srv *testutil.TestServer,
 	sdk.AddCheck(srv, tb, s.ID, s.ID, testutil.HealthPassing)
 }
 
+func DeregisterConsulService(tb testing.TB, srv *testutil.TestServer, id string) {
+	u := fmt.Sprintf("http://%s/v1/agent/service/deregister/%s", srv.HTTPAddr, id)
+	resp := RequestHTTP(tb, http.MethodPut, u, "")
+	defer resp.Body.Close()
+}
+
 // RequestHTTP makes an http request. The caller is responsible for closing
 // the response.
 func RequestHTTP(t testing.TB, method, url, body string) *http.Response {
