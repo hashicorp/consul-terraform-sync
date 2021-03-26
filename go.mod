@@ -20,14 +20,14 @@ require (
 	github.com/hashicorp/consul/sdk v0.7.0
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0
-	github.com/hashicorp/go-cleanhttp v0.5.2
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-getter v1.5.2 // indirect
 	github.com/hashicorp/go-hclog v0.15.0 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.2.1
-	github.com/hashicorp/hcat v0.0.0-20210311164221-2d0b18ae5095
+	github.com/hashicorp/hcat v0.0.0-20210326153635-0d29726683e4
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/hcl/v2 v2.8.2
 	github.com/hashicorp/logutils v1.0.0
