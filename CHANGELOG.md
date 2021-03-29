@@ -6,6 +6,7 @@ BUG FIXES:
 * Fix Docker image to pass in configuration when running in daemon-mode. [[GH-221](https://github.com/hashicorp/consul-terraform-sync/pull/221)]
 * Mitigate task execution on partial data when monitoring a large number of services. [[GH-232](https://github.com/hashicorp/consul-terraform-sync/pull/232)]
 * Fix tasks that are watching the same services from going stale after a couple executions. [[GH-234](https://github.com/hashicorp/consul-terraform-sync/issues/234), [GH-237](https://github.com/hashicorp/consul-terraform-sync/pull/237)]
+* Fix exponential backoff retry, which was incorrectly implementing x^2 instead of 2^x. Used to retry PANOS commit and Terraform. [[GH-235](https://github.com/hashicorp/consul-terraform-sync/pull/235)]
 
 ## 0.1.0-beta (February 25, 2021)
 
