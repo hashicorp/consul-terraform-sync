@@ -5,6 +5,7 @@ BUG FIXES:
 * Fix service filtering with tag containing `=`. [[GH-222](https://github.com/hashicorp/consul-terraform-sync/pull/222)]
 * Fix Docker image to pass in configuration when running in daemon-mode. [[GH-221](https://github.com/hashicorp/consul-terraform-sync/pull/221)]
 * Mitigate task execution on partial data when monitoring a large number of services. [[GH-232](https://github.com/hashicorp/consul-terraform-sync/pull/232)]
+* Fix tasks that are watching the same services from going stale after a couple executions. [[GH-234](https://github.com/hashicorp/consul-terraform-sync/issues/234), [GH-237](https://github.com/hashicorp/consul-terraform-sync/pull/237)]
 
 ## 0.1.0-beta (February 25, 2021)
 
