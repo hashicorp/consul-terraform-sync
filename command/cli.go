@@ -125,7 +125,7 @@ func (cli *CLI) Run(args []string) int {
 
 		exitCode, err := subcommands.Run()
 		if err != nil {
-			log.Printf("[ERROR] running the CLI command '%s': %s",
+			fmt.Fprintf(cli.errStream, "Error running the CLI command '%s': %s",
 				strings.Join(args, " "), err)
 		}
 		return exitCode
@@ -135,14 +135,14 @@ func (cli *CLI) Run(args []string) int {
 
 	// Print out binary's help info
 	if help || h {
-		fmt.Printf("Usage of %s:\n", args[0])
+		fmt.Fprintf(cli.outStream, "Usage of %s:\n", args[0])
 		printFlags(f)
 		return ExitCodeOK
 	}
 
 	// Validate required flags
 	if len(configFiles) == 0 {
-		log.Printf("[ERR] config file(s) required, use --config-dir or --config-file flag options")
+		fmt.Fprintf(cli.errStream, "Error: config file(s) required, use --config-dir or --config-file flag options")
 		printFlags(f)
 		return ExitCodeRequiredFlagsError
 	}

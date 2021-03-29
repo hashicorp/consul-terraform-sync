@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	Name string
+	Name = "consul-terraform-sync"
 
 	// GitCommit is the git commit that was compiled. These will be filled in by
 	// the compiler.
