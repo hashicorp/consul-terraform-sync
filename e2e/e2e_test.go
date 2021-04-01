@@ -218,7 +218,9 @@ func TestE2ELocalBackend(t *testing.T) {
 }
 
 func newTestConsulServer(t *testing.T) *testutil.TestServer {
-	srv := testutils.NewTestConsulServerHTTPS(t, "../testutils")
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
 
 	// Register services
 	srv.AddAddressableService(t, "api", testutil.HealthPassing,
