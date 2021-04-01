@@ -143,14 +143,9 @@ func makeConfig(t testing.TB, services []string, addr string, tls bool,
 ) (string, func() error) {
 	tmpDir := fmt.Sprintf("%s%s", tempDirPrefix, "test_services")
 	cleanup := testutils.MakeTempDir(t, tmpDir)
-	modDir := filepath.Join(tmpDir, "module")
-	testutils.MakeTempDir(t, modDir)
 
 	configPath := filepath.Join(tmpDir, configFile)
-	err := writeConfig(configPath, configContents(addr, tmpDir, tls, services))
-	require.NoError(t, err)
-	modulePath := filepath.Join(modDir, "main.tf")
-	err = writeConfig(modulePath, nullModuleContents())
+	err := writeConfig(configPath, configContents(addr, tls, services))
 	require.NoError(t, err)
 
 	return configPath, cleanup
@@ -169,7 +164,7 @@ func writeConfig(configPath, contents string) error {
 }
 
 // returns templated contents of config file
-func configContents(address, dir string, tls bool, services []string) string {
+func configContents(address string, tls bool, services []string) string {
 	sservices := `["` + strings.Join(services, `","`) + `"]`
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -195,45 +190,12 @@ terraform_provider "local" {}
 
 task {
   name = "test-services-task"
-  source = "../../%s/module"
+  source = "../../../test_modules/null_resource"
   providers = ["local"]
   services = %s
 }
 
-`, address, tls, pwd, dir, sservices)
-}
-
-// null resource, services module
-func nullModuleContents() string {
-	return `
-resource "null_resource" "address" {}
-
-variable "services" {
-  description = "Consul services monitored by Consul Terraform Sync"
-  type = map(
-    object({
-      id        = string
-      name      = string
-      kind      = string
-      address   = string
-      port      = number
-      meta      = map(string)
-      tags      = list(string)
-      namespace = string
-      status    = string
-
-      node                  = string
-      node_id               = string
-      node_address          = string
-      node_datacenter       = string
-      node_tagged_addresses = map(string)
-      node_meta             = map(string)
-
-      cts_user_defined_meta = map(string)
-    })
-  )
-}
-`
+`, address, tls, pwd, sservices)
 }
 
 // ---------------------------------------------------------------------------
