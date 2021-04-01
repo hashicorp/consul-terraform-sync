@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -100,6 +102,53 @@ func TestE2ERestartSync(t *testing.T) {
 	delete()
 }
 
+func TestE2ERestartConsul(t *testing.T) {
+	// Test that when Consul restarts, CTS is able to reconnect and react to
+	// changes in Consul catalog.
+	t.Parallel()
+
+	consul := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "restart_consul")
+	cleanup := testutils.MakeTempDir(t, tempDir) // cleanup at end if no errors
+
+	configPath := filepath.Join(tempDir, configFile)
+	config := baseConfig().appendConsulBlock(consul).
+		appendTerraformBlock(tempDir).appendDBTask()
+	config.write(t, configPath)
+
+	// start CTS
+	cmd, err := runSync(configPath)
+	require.NoError(t, err)
+	defer stopCommand(cmd)
+	time.Sleep(5 * time.Second)
+
+	// stop Consul
+	consul.Stop()
+	time.Sleep(2 * time.Second)
+
+	// restart Consul
+	consul = testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+		PortHTTPS:    parsePort(t, consul.HTTPSAddr),
+	})
+	defer consul.Stop()
+	time.Sleep(5 * time.Second)
+
+	// register a new service
+	apiInstance := testutil.TestService{ID: "api_new", Name: "api"}
+	testutils.RegisterConsulService(t, consul, apiInstance, testutil.HealthPassing)
+	time.Sleep(8 * time.Second)
+
+	// confirm that CTS reconnected with Consul and created resource for latest service
+	_, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_api_new.txt", tempDir, resourcesDir))
+	require.NoError(t, err)
+
+	cleanup()
+}
+
 func TestE2EPanosHandlerError(t *testing.T) {
 	t.Parallel()
 
@@ -125,6 +174,16 @@ func TestE2EPanosHandlerError(t *testing.T) {
 	require.Error(t, err)
 
 	delete()
+}
+
+// parsePort returns port as an integer from a address like "127.0.0.1:8500"
+func parsePort(t *testing.T, addr string) int {
+	parts := strings.Split(addr, ":")
+	require.Equal(t, 2, len(parts))
+	port := parts[1]
+	portInt, err := strconv.Atoi(port)
+	require.NoError(t, err)
+	return portInt
 }
 
 func TestE2ELocalBackend(t *testing.T) {
