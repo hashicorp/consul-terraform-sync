@@ -26,7 +26,7 @@ type ReadWrite struct {
 	store *event.Store
 	retry retry.Retry
 
-	testMode bool
+	testMode   bool
 	taskNotify chan string
 }
 
@@ -41,7 +41,7 @@ func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
 		baseController: baseCtrl,
 		store:          store,
 		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
-		taskNotify: make(chan string, len(*conf.Tasks)),
+		taskNotify:     make(chan string, len(*conf.Tasks)),
 	}, nil
 }
 
@@ -71,6 +71,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		case err := <-rw.watcher.WaitCh(ctx):
 			if err != nil {
 				log.Printf("[ERR] (ctrl) error watching template dependencies: %s", err)
+				return err
 			}
 
 		case <-ctx.Done():
