@@ -176,10 +176,12 @@ func TestE2EPanosHandlerError(t *testing.T) {
 	delete()
 }
 
-// parsePort returns port as an integer from a address like "127.0.0.1:8500"
+// parsePort parses the port as an integer from an address string
+// e.g. "127.0.0.1:8500"
 func parsePort(t *testing.T, addr string) int {
 	parts := strings.Split(addr, ":")
 	require.Equal(t, 2, len(parts))
+
 	port := parts[1]
 	portInt, err := strconv.Atoi(port)
 	require.NoError(t, err)
