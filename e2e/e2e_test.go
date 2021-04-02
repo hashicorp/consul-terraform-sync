@@ -9,8 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -132,7 +130,7 @@ func TestE2ERestartConsul(t *testing.T) {
 	// restart Consul
 	consul = testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
-		PortHTTPS:    parsePort(t, consul.HTTPSAddr),
+		PortHTTPS:    consul.Config.Ports.HTTPS,
 	})
 	defer consul.Stop()
 	time.Sleep(5 * time.Second)
@@ -174,18 +172,6 @@ func TestE2EPanosHandlerError(t *testing.T) {
 	require.Error(t, err)
 
 	delete()
-}
-
-// parsePort parses the port as an integer from an address string
-// e.g. "127.0.0.1:8500"
-func parsePort(t *testing.T, addr string) int {
-	parts := strings.Split(addr, ":")
-	require.Equal(t, 2, len(parts))
-
-	port := parts[1]
-	portInt, err := strconv.Atoi(port)
-	require.NoError(t, err)
-	return portInt
 }
 
 func TestE2ELocalBackend(t *testing.T) {
