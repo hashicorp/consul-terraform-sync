@@ -37,7 +37,7 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 	}
 
 	var attempt uint
-	wait := r.WaitTime(attempt)
+	wait := r.waitTime(attempt)
 	interval := time.NewTicker(time.Duration(wait))
 	defer interval.Stop()
 
@@ -64,7 +64,7 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 				errs = errors.Wrap(errs, err.Error())
 			}
 
-			wait := r.WaitTime(attempt)
+			wait := r.waitTime(attempt)
 			interval = time.NewTicker(time.Duration(wait))
 		}
 		if attempt >= r.maxRetry {
@@ -73,17 +73,21 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 	}
 }
 
-// WaitTime calculates the wait time based off the attempt number based off
-// exponential backoff with a random delay.
-func (r Retry) WaitTime(attempt uint) int {
+func (r Retry) waitTime(attempt uint) int {
 	if r.testMode {
 		return 1
 	}
+	return WaitTime(attempt, r.random)
+}
+
+// WaitTime calculates the wait time based off the attempt number based off
+// exponential backoff with a random delay.
+func WaitTime(attempt uint, random *rand.Rand) int {
 	a := float64(attempt)
 	baseTimeSeconds := math.Exp2(a)
 	nextTimeSeconds := math.Exp2(a + 1)
 	delayRange := (nextTimeSeconds - baseTimeSeconds) / 2
-	delay := r.random.Float64() * delayRange
+	delay := random.Float64() * delayRange
 	total := (baseTimeSeconds + delay) * float64(time.Second)
 	return int(total)
 }

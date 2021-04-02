@@ -2,6 +2,7 @@ package controller
 
 import (
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -69,8 +70,8 @@ func retryConsul(retryCount int) (bool, time.Duration) {
 		return false, 0 * time.Second
 	}
 
-	r := retry.NewRetry(0, time.Now().UnixNano()) // 0 is not used
-	wait := r.WaitTime(uint(retryCount))
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	wait := retry.WaitTime(uint(retryCount), random)
 	dur := time.Duration(wait)
 	log.Printf("[WARN] (hcat) error connecting with Consul. Waiting %v to retry"+
 		" attempt #%d", dur, retryCount+1)
