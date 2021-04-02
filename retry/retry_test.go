@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -165,8 +166,8 @@ func TestWaitTime(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := NewRetry(1, 1)
-			a := r.waitTime(tc.attempt)
+			random := rand.New(rand.NewSource(time.Now().UnixNano()))
+			a := WaitTime(tc.attempt, random)
 
 			actual := float64(a) / float64(time.Second)
 			assert.GreaterOrEqual(t, actual, tc.minReturn)

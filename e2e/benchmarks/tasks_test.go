@@ -48,7 +48,9 @@ func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 	// ReadOnlyController.Run involves rendering the template file and executing
 	// Terraform init and Terraform plan serially across all tasks.
 
-	srv := testutils.NewTestConsulServerHTTPS(b, "../../testutils")
+	srv := testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../../testutils",
+	})
 	defer srv.Stop()
 
 	tempDir := b.Name()

@@ -37,7 +37,10 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 	// Benchmarks Run for the ReadWrite controller
 	//
 	// ReadWriteController.Run involves executing Terraform apply concurrently
-	srv := testutils.NewTestConsulServerHTTPS(b, "../../testutils")
+	srv := testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../../testutils",
+	})
+
 	defer srv.Stop()
 
 	tempDir := b.Name()

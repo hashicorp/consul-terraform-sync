@@ -35,7 +35,9 @@ func Benchmark1000Instances(b *testing.B) {
 	benchmarkInstances(b, 1000)
 }
 func benchmarkInstances(b *testing.B, N int) {
-	srv := testutils.NewTestConsulServerHTTPS(b, "../../testutils")
+	srv := testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../../testutils",
+	})
 	defer srv.Stop()
 	path, cleanup := setupServiceInstances(b, srv, N)
 	defer cleanup() // comment out if you want to keep the config files
@@ -58,7 +60,9 @@ func Benchmark1000Service(b *testing.B) {
 	benchmarkServices(b, 1000)
 }
 func benchmarkServices(b *testing.B, N int) {
-	srv := testutils.NewTestConsulServerHTTPS(b, "../../testutils")
+	srv := testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../../testutils",
+	})
 	defer srv.Stop()
 	path, cleanup := setupMultiServices(b, srv, N)
 	defer cleanup() // comment out if you want to keep the config files

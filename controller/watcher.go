@@ -1,7 +1,12 @@
 package controller
 
 import (
+	"log"
+	"math/rand"
+	"time"
+
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/hashicorp/hcat"
 )
 
@@ -46,9 +51,31 @@ func newWatcher(conf *config.Config) (*hcat.Watcher, error) {
 	}
 
 	return hcat.NewWatcher(hcat.WatcherInput{
-		Clients: clients,
-		Cache:   hcat.NewStore(),
+		Clients:         clients,
+		Cache:           hcat.NewStore(),
+		ConsulRetryFunc: retryConsul,
 	}), nil
+}
+
+// retryConsul will be used by hashicat watcher to retry polling Consul for
+// catalog changes. If polling Consul fails after retries, CTS will actually
+// exit.
+//
+// retryCount parameter is passed in by hcat. It starts at 0 (there have been
+// zero retries).
+func retryConsul(retryCount int) (bool, time.Duration) {
+	max := 8 // 8+1 retries. total wait of 8.5-12.8 min
+	if retryCount > max {
+		log.Printf("[ERR] (hcat) error connecting with Consul even after retries")
+		return false, 0 * time.Second
+	}
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	wait := retry.WaitTime(uint(retryCount), random)
+	dur := time.Duration(wait)
+	log.Printf("[WARN] (hcat) error connecting with Consul. Waiting %v to retry"+
+		" attempt #%d", dur, retryCount+1)
+	return true, dur
 }
 
 func setVaultClient(clients *hcat.ClientSet, conf *config.Config) error {

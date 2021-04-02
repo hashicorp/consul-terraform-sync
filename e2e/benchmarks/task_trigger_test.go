@@ -22,7 +22,9 @@ func BenchmarkTaskTrigger(b *testing.B) {
 	// Benchmarks the time for a Consul catalog change to trigger and re-render
 	// templates used for tasks. This does not benchmark task execution time.
 
-	srv := testutils.NewTestConsulServerHTTPS(b, "../../testutils")
+	srv := testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../../testutils",
+	})
 	defer srv.Stop()
 
 	tempDir := b.Name()
