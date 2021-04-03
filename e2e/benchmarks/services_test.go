@@ -6,10 +6,7 @@
 package benchmarks
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -102,44 +99,24 @@ func runSyncOnce(configPath string) error {
 	}
 }
 
-// Sets up consul and config to test setup with N service instances
+// Sets up consul and config with N service instances of the same service
 func setupServiceInstances(t testing.TB, srv *testutil.TestServer, N int) (string, func() error) {
-	services := make([]string, 1)
-	for _, s := range generateServices(N, true) {
-		testutils.RegisterConsulService(t, srv, s, testutil.HealthPassing)
-		services[0] = s.Name
-	}
+	testInstances := testutils.TestInstances(N)
+	testutils.AddServices(t, srv, testInstances)
+	services := []string{testInstances[0].Name} // shared name
 	return makeConfig(t, services, srv.HTTPAddr, false)
 }
 
-// add generated services as separte services
+// Sets up consul and config with N unique services
 func setupMultiServices(t testing.TB, srv *testutil.TestServer, N int) (string, func() error) {
+	testServices := testutils.TestServices(N)
+	testutils.AddServices(t, srv, testServices)
+
 	services := make([]string, N)
-	for i, s := range generateServices(N, false) {
-		testutils.RegisterConsulService(t, srv, s, testutil.HealthPassing)
+	for i, s := range testServices {
 		services[i] = s.Name
 	}
 	return makeConfig(t, services, srv.HTTPSAddr, true)
-}
-
-// generate service instance entries
-func generateServices(n int, instances bool) []testutil.TestService {
-	baseport := 30000
-	services := make([]testutil.TestService, n)
-	for i := 0; i < n; i++ {
-		name, id := "test_service", fmt.Sprintf("svc_%d", i)
-		if !instances {
-			name = id
-		}
-		services[i] = testutil.TestService{
-			Name:    name,
-			ID:      id,
-			Address: "127.0.0.2",
-			Port:    int(baseport + i),
-			Tags:    []string{},
-		}
-	}
-	return services
 }
 
 // writes the config files out to disk, returns path to them and cleanup func
@@ -200,46 +177,4 @@ task {
 }
 
 `, address, tls, pwd, sservices)
-}
-
-// ---------------------------------------------------------------------------
-// The below functions are not used but handy to keep around for when you need
-// to check on what data Consul has.
-
-// All registered services
-func showMeServices(t testing.TB, srv *testutil.TestServer) {
-	u := fmt.Sprintf("http://%s/v1/agent/services", srv.HTTPAddr)
-	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(b))
-	defer resp.Body.Close()
-}
-
-// Health status for all services
-func showMeHealth(t testing.TB, srv *testutil.TestServer) {
-	// get the node
-	u := fmt.Sprintf("http://%s/v1/health/service/%s", srv.HTTPAddr, "svc_0")
-	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	resp.Body.Close()
-	nodes := []struct{ Node struct{ Node string } }{}
-	json.Unmarshal(b, &nodes)
-	node := nodes[0].Node.Node
-
-	// all services on that node
-	u = fmt.Sprintf("http://%s/v1/health/node/%s", srv.HTTPAddr, node)
-	resp = testutils.RequestHTTP(t, http.MethodGet, u, "")
-	b, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	resp.Body.Close()
-
-	fmt.Println(string(b))
 }
