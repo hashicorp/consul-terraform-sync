@@ -9,10 +9,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+// defaultTFBackendKVPath is the same as config package. Duplicating to avoid
+// import cycles
+const defaultTFBackendKVPath = "consul-terraform-sync/terraform"
 
 // TestConsulServerConfig configures a test Consul server
 type TestConsulServerConfig struct {
@@ -144,7 +147,7 @@ func ShowMeHealth(t testing.TB, srv *testutil.TestServer, svcName string) {
 // CheckStateFile checks statefile in the default Terraform backend ConsulKV.
 func CheckStateFile(t *testing.T, consulAddr, taskname string) {
 	u := fmt.Sprintf("http://%s/v1/kv/%s-env:%s", consulAddr,
-		config.DefaultTFBackendKVPath, taskname)
+		defaultTFBackendKVPath, taskname)
 	resp := RequestHTTP(t, http.MethodGet, u, "")
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode, "Unable to find statefile"+
