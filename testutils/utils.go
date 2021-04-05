@@ -51,6 +51,15 @@ func CheckDir(t testing.TB, exists bool, dir string) []os.FileInfo {
 	return []os.FileInfo{}
 }
 
+// WriteFile write a content to a file path.
+func WriteFile(t testing.TB, path, content string) {
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+	_, err = f.Write([]byte(content))
+	require.NoError(t, err)
+}
+
 // RegisterConsulService regsiters a service to the Consul Catalog. The Consul
 // sdk/testutil package currently does not support a method to register multiple
 // service instances, distinguished by their IDs.

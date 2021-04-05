@@ -126,22 +126,10 @@ func makeConfig(t testing.TB, services []string, addr string, tls bool,
 	cleanup := testutils.MakeTempDir(t, tmpDir)
 
 	configPath := filepath.Join(tmpDir, configFile)
-	err := writeConfig(configPath, configContents(addr, tls, services))
+	err := testutils.WriteFile(configPath, configContents(addr, tls, services))
 	require.NoError(t, err)
 
 	return configPath, cleanup
-}
-
-// write the (config) contents to the path
-func writeConfig(configPath, contents string) error {
-	f, err := os.Create(configPath)
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-	config := []byte(contents)
-	_, err = f.Write(config)
-	return err
 }
 
 // returns templated contents of config file
