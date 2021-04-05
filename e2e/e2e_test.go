@@ -5,14 +5,12 @@ package e2e
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
@@ -66,11 +64,8 @@ func TestE2EBasic(t *testing.T) {
 	require.Equal(t, "10.10.10.10", string(contents))
 
 	// check statefiles exist
-	status := checkStateFile(t, srv.HTTPAddr, dbTaskName)
-	require.Equal(t, http.StatusOK, status)
-
-	status = checkStateFile(t, srv.HTTPAddr, webTaskName)
-	require.Equal(t, http.StatusOK, status)
+	testutils.CheckStateFile(t, srv.HTTPAddr, dbTaskName)
+	testutils.CheckStateFile(t, srv.HTTPAddr, webTaskName)
 
 	delete()
 }
@@ -287,13 +282,6 @@ func runSyncOnce(configPath string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
-}
-
-func checkStateFile(t *testing.T, consulAddr, taskname string) int {
-	u := fmt.Sprintf("http://%s/v1/kv/%s-env:%s", consulAddr, config.DefaultTFBackendKVPath, taskname)
-	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
-	defer resp.Body.Close()
-	return resp.StatusCode
 }
 
 // checkStateFileLocally checks if statefile exists

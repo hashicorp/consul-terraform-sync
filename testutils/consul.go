@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -138,4 +139,14 @@ func ShowMeHealth(t testing.TB, srv *testutil.TestServer, svcName string) {
 	resp.Body.Close()
 
 	fmt.Println(string(b))
+}
+
+// CheckStateFile checks statefile in the default Terraform backend ConsulKV.
+func CheckStateFile(t *testing.T, consulAddr, taskname string) {
+	u := fmt.Sprintf("http://%s/v1/kv/%s-env:%s", consulAddr,
+		config.DefaultTFBackendKVPath, taskname)
+	resp := RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode, "Unable to find statefile"+
+		" in Consul KV")
 }
