@@ -169,19 +169,19 @@ func TestNewFiles(t *testing.T) {
 			b := new(bytes.Buffer)
 			err := tc.Func(b, tc.Name, &input)
 			require.NoError(t, err)
-			checkGoldenFile(t, tc.Golden, b.Bytes())
+			checkGoldenFile(t, tc.Golden, b.String())
 		})
 	}
 }
 
-func checkGoldenFile(t *testing.T, goldenFile string, actual []byte) {
+func checkGoldenFile(t *testing.T, goldenFile string, actual string) {
 	// update golden files if necessary
 	if *update {
-		if err := ioutil.WriteFile(goldenFile, actual, 0644); err != nil {
+		if err := ioutil.WriteFile(goldenFile, []byte(actual), 0644); err != nil {
 			require.NoError(t, err)
 		}
 	}
 
 	gld := testutils.CheckFile(t, true, goldenFile, "")
-	assert.Equal(t, string(gld), string(actual))
+	assert.Equal(t, gld, actual)
 }
