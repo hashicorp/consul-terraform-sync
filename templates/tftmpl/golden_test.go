@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -181,10 +182,6 @@ func checkGoldenFile(t *testing.T, goldenFile string, actual []byte) {
 		}
 	}
 
-	gld, err := ioutil.ReadFile(goldenFile)
-	if err != nil {
-		require.NoError(t, err)
-	}
-
+	gld := testutils.CheckFile(t, true, goldenFile, "")
 	assert.Equal(t, string(gld), string(actual))
 }

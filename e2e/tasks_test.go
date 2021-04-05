@@ -4,7 +4,6 @@ package e2e
 
 import (
 	"fmt"
-	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -131,12 +130,11 @@ task {
 func loadTFVarsServiceIDs(t *testing.T, file string) []string {
 	// This is a bit hacky using regex but simpler than re-implementing syntax
 	// parsing for Terraform variables
-	content, err := ioutil.ReadFile(file)
-	require.NoError(t, err)
+	content := testutils.CheckFile(t, true, file, "")
 
 	var ids []string
 	re := regexp.MustCompile(`\s+id\s+\= \"([^"]+)`)
-	matches := re.FindAllSubmatch(content, -1)
+	matches := re.FindAllSubmatch([]byte(content), -1)
 	for _, match := range matches {
 		ids = append(ids, string(match[1]))
 	}

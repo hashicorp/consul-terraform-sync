@@ -4,7 +4,6 @@ package e2e
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,19 +47,17 @@ func TestE2EBasic(t *testing.T) {
 	err := runSyncStop(configPath, 20*time.Second)
 	require.NoError(t, err)
 
-	files := testutils.CheckDir(t, true, fmt.Sprintf("%s/%s", tempDir, resourcesDir))
+	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
+	files := testutils.CheckDir(t, true, resourcesPath)
 	require.Equal(t, 3, len(files))
 
-	contents, err := ioutil.ReadFile(fmt.Sprintf("%s/%s/api.txt", tempDir, resourcesDir))
-	require.NoError(t, err)
+	contents := testutils.CheckFile(t, true, resourcesPath, "api.txt")
 	require.Equal(t, "1.2.3.4", string(contents))
 
-	contents, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/web.txt", tempDir, resourcesDir))
-	require.NoError(t, err)
+	contents = testutils.CheckFile(t, true, resourcesPath, "web.txt")
 	require.Equal(t, "5.6.7.8", string(contents))
 
-	contents, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/db.txt", tempDir, resourcesDir))
-	require.NoError(t, err)
+	contents = testutils.CheckFile(t, true, resourcesPath, "db.txt")
 	require.Equal(t, "10.10.10.10", string(contents))
 
 	// check statefiles exist
@@ -135,8 +132,7 @@ func TestE2ERestartConsul(t *testing.T) {
 	time.Sleep(8 * time.Second)
 
 	// confirm that CTS reconnected with Consul and created resource for latest service
-	_, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/api_new.txt", tempDir, resourcesDir))
-	require.NoError(t, err)
+	testutils.CheckFile(t, true, fmt.Sprintf("%s/%s", tempDir, resourcesDir), "api_new.txt")
 
 	cleanup()
 }
