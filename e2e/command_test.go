@@ -159,7 +159,8 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig().appendPort(port).appendConsulBlock(srv).appendDBTask()
+	config := baseConfig().appendPort(port).appendTerraformBlock(tempDir).
+		appendConsulBlock(srv).appendDBTask()
 	config.write(t, configPath)
 
 	stop := testutils.StartCTS(t, configPath, testutils.CTSDevModeFlag)
