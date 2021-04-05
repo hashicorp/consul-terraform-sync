@@ -4,11 +4,9 @@ package e2e
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -38,8 +36,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 		appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cmd, err := runSyncDevMode(configPath)
-	require.NoError(t, err)
+	stopCTS := testutils.StartCTS(t, configPath, testutils.CTSDevModeFlag)
 
 	// wait to run once before registering another instance to collect another event
 	time.Sleep(7 * time.Second)
@@ -230,8 +227,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 		})
 	}
 
-	err = stopCommand(cmd)
-	require.NoError(t, err)
+	stopCTS(t)
 	delete()
 }
 
@@ -259,9 +255,8 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 		appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cmd, err := runSync(configPath)
-	defer stopCommand(cmd)
-	require.NoError(t, err)
+	stop := testutils.StartCTS(t, configPath)
+	defer stop(t)
 	time.Sleep(5 * time.Second)
 
 	// Confirm that terraform files were not generated for a disabled task
@@ -323,39 +318,6 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	testutils.CheckDir(t, false, resourcesPath)
 
 	delete()
-}
-
-// runSyncDevMode runs the daemon in development which does not run or download
-// Terraform.
-func runSyncDevMode(configPath string) (*exec.Cmd, error) {
-	cmd := exec.Command("consul-terraform-sync",
-		fmt.Sprintf("--config-file=%s", configPath), "--client-type=development")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return cmd, nil
-}
-
-func runSync(configPath string) (*exec.Cmd, error) {
-	cmd := exec.Command("consul-terraform-sync",
-		fmt.Sprintf("--config-file=%s", configPath))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return cmd, nil
-}
-
-func stopCommand(cmd *exec.Cmd) error {
-	cmd.Process.Signal(os.Interrupt)
-	sigintErr := errors.New("signal: interrupt")
-	if err := cmd.Wait(); err != nil && err != sigintErr {
-		return err
-	}
-	return nil
 }
 
 // checkEvents does some basic checks to loosely ensure returned events in

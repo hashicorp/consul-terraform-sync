@@ -4,8 +4,6 @@ package e2e
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -44,8 +42,7 @@ func TestE2EBasic(t *testing.T) {
 		appendDBTask().appendWebTask()
 	config.write(t, configPath)
 
-	err := runSyncStop(configPath, 20*time.Second)
-	require.NoError(t, err)
+	runSyncStop(t, configPath, 20*time.Second)
 
 	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
 	files := testutils.CheckDir(t, true, resourcesPath)
@@ -81,12 +78,10 @@ func TestE2ERestartSync(t *testing.T) {
 	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).appendDBTask()
 	config.write(t, configPath)
 
-	err := runSyncStop(configPath, 8*time.Second)
-	require.NoError(t, err)
+	runSyncStop(t, configPath, 8*time.Second)
 
 	// rerun sync. confirm no errors e.g. recreating workspaces
-	err = runSyncStop(configPath, 8*time.Second)
-	require.NoError(t, err)
+	runSyncStop(t, configPath, 8*time.Second)
 
 	delete()
 }
@@ -109,9 +104,8 @@ func TestE2ERestartConsul(t *testing.T) {
 	config.write(t, configPath)
 
 	// start CTS
-	cmd, err := runSync(configPath)
-	require.NoError(t, err)
-	defer stopCommand(cmd)
+	stop := testutils.StartCTS(t, configPath)
+	defer stop(t)
 	time.Sleep(5 * time.Second)
 
 	// stop Consul
@@ -158,8 +152,7 @@ func TestE2EPanosHandlerError(t *testing.T) {
 		appendTerraformBlock(tempDir, requiredProviders)
 	config.write(t, configPath)
 
-	err := runSyncOnce(configPath)
-	require.Error(t, err)
+	testutils.StartCTS(t, configPath, testutils.CTSOnceModeFlag)
 
 	delete()
 }
@@ -237,8 +230,7 @@ func TestE2ELocalBackend(t *testing.T) {
 			configPath := filepath.Join(tempDir, configFile)
 			config.write(t, configPath)
 
-			err := runSyncOnce(configPath)
-			require.NoError(t, err)
+			testutils.StartCTS(t, configPath, testutils.CTSOnceModeFlag)
 
 			// check that statefile was created locally
 			checkStateFileLocally(t, tc.dbStateFilePath)
@@ -264,20 +256,10 @@ func newTestConsulServer(t *testing.T) *testutil.TestServer {
 	return srv
 }
 
-func runSyncStop(configPath string, dur time.Duration) error {
-	cmd, err := runSync(configPath)
-	if err != nil {
-		return err
-	}
+func runSyncStop(t *testing.T, configPath string, dur time.Duration) {
+	stop := testutils.StartCTS(t, configPath)
 	time.Sleep(dur)
-	return stopCommand(cmd)
-}
-
-func runSyncOnce(configPath string) error {
-	cmd := exec.Command("consul-terraform-sync", "-once", fmt.Sprintf("--config-file=%s", configPath))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	stop(t)
 }
 
 // checkStateFileLocally checks if statefile exists

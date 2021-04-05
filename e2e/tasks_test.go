@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTasksUpdate(t *testing.T) {
@@ -44,11 +43,8 @@ task {
 		appendDBTask().appendWebTask().appendString(apiTask)
 	config.write(t, configPath)
 
-	cmd, err := runSync(configPath)
-	require.NoError(t, err)
-
-	// Stop CTS then stop the Consul agent
-	defer stopCommand(cmd)
+	stop := testutils.StartCTS(t, configPath)
+	defer stop(t)
 
 	t.Run("once mode", func(t *testing.T) {
 		// Wait for tasks to execute once
