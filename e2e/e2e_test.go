@@ -50,8 +50,7 @@ func TestE2EBasic(t *testing.T) {
 	err := runSyncStop(configPath, 20*time.Second)
 	require.NoError(t, err)
 
-	files, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, resourcesDir))
-	require.NoError(t, err)
+	files := testutils.CheckDir(t, true, fmt.Sprintf("%s/%s", tempDir, resourcesDir))
 	require.Equal(t, 3, len(files))
 
 	contents, err := ioutil.ReadFile(fmt.Sprintf("%s/%s/api.txt", tempDir, resourcesDir))
@@ -251,13 +250,8 @@ func TestE2ELocalBackend(t *testing.T) {
 			require.NoError(t, err)
 
 			// check that statefile was created locally
-			exists, err := checkStateFileLocally(tc.dbStateFilePath)
-			require.NoError(t, err)
-			require.True(t, exists)
-
-			exists, err = checkStateFileLocally(tc.webStateFilePath)
-			require.NoError(t, err)
-			require.True(t, exists)
+			checkStateFileLocally(t, tc.dbStateFilePath)
+			checkStateFileLocally(t, tc.webStateFilePath)
 
 			delete()
 		})
@@ -302,21 +296,11 @@ func checkStateFile(t *testing.T, consulAddr, taskname string) int {
 	return resp.StatusCode
 }
 
-// checkStateFileLocally returns whether or not a statefile exists
-func checkStateFileLocally(stateFilePath string) (bool, error) {
-	files, err := ioutil.ReadDir(stateFilePath)
-	if err != nil {
-		return false, err
-	}
-
-	if len(files) != 1 {
-		return false, nil
-	}
+// checkStateFileLocally checks if statefile exists
+func checkStateFileLocally(t *testing.T, stateFilePath string) {
+	files := testutils.CheckDir(t, true, stateFilePath)
+	require.Equal(t, 1, len(files))
 
 	stateFile := files[0]
-	if stateFile.Name() != "terraform.tfstate" {
-		return false, nil
-	}
-
-	return true, nil
+	require.Equal(t, "terraform.tfstate", stateFile.Name())
 }

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -34,8 +35,20 @@ func MakeTempDir(t testing.TB, tempDir string) func() error {
 
 	return func() error {
 		return os.RemoveAll(tempDir)
-
 	}
+}
+
+// CheckDir checks whether or not a directory exists. If it exists, returns the
+// file infos for further checking.
+func CheckDir(t testing.TB, exists bool, dir string) []os.FileInfo {
+	files, err := ioutil.ReadDir(dir)
+	if exists {
+		require.NoError(t, err)
+		return files
+	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no such file or directory")
+	return []os.FileInfo{}
 }
 
 // RegisterConsulService regsiters a service to the Consul Catalog. The Consul
