@@ -54,15 +54,15 @@ func TestE2EBasic(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 3, len(files))
 
-	contents, err := ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_api.txt", tempDir, resourcesDir))
+	contents, err := ioutil.ReadFile(fmt.Sprintf("%s/%s/api.txt", tempDir, resourcesDir))
 	require.NoError(t, err)
 	require.Equal(t, "1.2.3.4", string(contents))
 
-	contents, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_web.txt", tempDir, resourcesDir))
+	contents, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/web.txt", tempDir, resourcesDir))
 	require.NoError(t, err)
 	require.Equal(t, "5.6.7.8", string(contents))
 
-	contents, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_db.txt", tempDir, resourcesDir))
+	contents, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/db.txt", tempDir, resourcesDir))
 	require.NoError(t, err)
 	require.Equal(t, "10.10.10.10", string(contents))
 
@@ -141,7 +141,7 @@ func TestE2ERestartConsul(t *testing.T) {
 	time.Sleep(8 * time.Second)
 
 	// confirm that CTS reconnected with Consul and created resource for latest service
-	_, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_api_new.txt", tempDir, resourcesDir))
+	_, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/api_new.txt", tempDir, resourcesDir))
 	require.NoError(t, err)
 
 	cleanup()
