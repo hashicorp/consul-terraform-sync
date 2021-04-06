@@ -230,6 +230,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 
 			gld := testutils.CheckFile(t, true, tc.goldenFile, "")
 			retry := 0
+			var cachedContents string
 			for {
 				re, err := r.Run(tmpl, w)
 				require.NoError(t, err)
@@ -237,11 +238,17 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 				if re.Complete {
 					// there may be a race with the consul services registering
 					// let's retry once.
-					if (string(gld) != string(re.Contents)) && retry < 1 {
+					contents := string(re.Contents)
+					if (string(gld) != contents) && retry == 0 {
+						cachedContents = contents
 						retry++
 						continue
 					}
-					assert.Equal(t, string(gld), string(re.Contents))
+					assert.Equal(t, string(gld), contents)
+					break
+				}
+				if retry > 0 {
+					assert.Equal(t, string(gld), cachedContents, "retried once")
 					break
 				}
 

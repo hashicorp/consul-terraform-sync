@@ -57,5 +57,5 @@ services = {
       consul-network-segment = ""
     }
     cts_user_defined_meta = {}
-  }
+  },
 }

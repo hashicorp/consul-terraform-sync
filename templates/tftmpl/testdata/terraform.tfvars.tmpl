@@ -9,21 +9,17 @@
 
 services = {
 {{- with $srv := service "api" "dc=dc1" "\"tag\" in Service.Tags" }}
-  {{- $last := len $srv | subtract 1}}
-  {{- range $i, $s := $srv}}
+  {{- range $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
 {{ HCLService $s | indent 4 }}
-  } {{- if (ne $i $last)}},{{end}}
+  },
   {{- end}}
-{{- end}}{{- with $beforeSrv := service "api" "dc=dc1" "\"tag\" in Service.Tags" }}
-  {{- with $afterSrv := service "web" }},{{end}}
 {{- end}}
 {{- with $srv := service "web" }}
-  {{- $last := len $srv | subtract 1}}
-  {{- range $i, $s := $srv}}
+  {{- range $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
 {{ HCLService $s | indent 4 }}
-  } {{- if (ne $i $last)}},{{end}}
+  },
   {{- end}}
 {{- end}}
 }
