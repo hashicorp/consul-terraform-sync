@@ -84,8 +84,7 @@ func TestInitRootModule(t *testing.T) {
 	}
 
 	for _, f := range files {
-		actual, err := ioutil.ReadFile(f.ActualFile)
-		require.NoError(t, err)
+		actual := testutils.CheckFile(t, true, f.ActualFile, "")
 		checkGoldenFile(t, f.GoldenFile, actual)
 
 		info, err := os.Stat(f.ActualFile)
@@ -218,9 +217,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			r := hcat.NewResolver()
 
 			// Load template from disk and render
-			contents, err := ioutil.ReadFile("testdata/terraform.tfvars.tmpl")
-			require.NoError(t, err)
-
+			contents := testutils.CheckFile(t, true, "testdata", "terraform.tfvars.tmpl")
 			input := hcat.TemplateInput{
 				Contents:      string(contents),
 				ErrMissingKey: true,
@@ -231,10 +228,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
 			defer cancel()
 
-			gld, err := ioutil.ReadFile(tc.goldenFile)
-			if err != nil {
-				require.NoError(t, err)
-			}
+			gld := testutils.CheckFile(t, true, tc.goldenFile, "")
 			retry := 0
 			for {
 				re, err := r.Run(tmpl, w)

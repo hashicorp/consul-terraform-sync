@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -26,11 +26,7 @@ func (c hclConfig) appendString(s string) hclConfig {
 }
 
 func (c hclConfig) write(tb testing.TB, path string) {
-	f, err := os.Create(path)
-	require.NoError(tb, err)
-	defer f.Close()
-	_, err = f.Write([]byte(c))
-	require.NoError(tb, err)
+	testutils.WriteFile(tb, path, string(c))
 }
 
 func (c hclConfig) appendPort(port int) hclConfig {

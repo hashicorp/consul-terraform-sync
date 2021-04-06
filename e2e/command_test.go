@@ -35,9 +35,8 @@ func TestE2E_MetaCOmmandErrors(t *testing.T) {
 		appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cmd, err := runSyncDevMode(configPath)
-	defer stopCommand(cmd)
-	require.NoError(t, err)
+	stop := testutils.StartCTS(t, configPath, testutils.CTSDevModeFlag)
+	defer stop(t)
 	time.Sleep(5 * time.Second)
 
 	cases := []struct {
@@ -102,9 +101,8 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 		appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cmd, err := runSyncDevMode(configPath)
-	defer stopCommand(cmd)
-	require.NoError(t, err)
+	stop := testutils.StartCTS(t, configPath, testutils.CTSDevModeFlag)
+	defer stop(t)
 	time.Sleep(5 * time.Second)
 
 	cases := []struct {
@@ -161,12 +159,12 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	require.NoError(t, err)
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig().appendPort(port).appendConsulBlock(srv).appendDBTask()
+	config := baseConfig().appendPort(port).appendTerraformBlock(tempDir).
+		appendConsulBlock(srv).appendDBTask()
 	config.write(t, configPath)
 
-	cmd, err := runSyncDevMode(configPath)
-	defer stopCommand(cmd)
-	require.NoError(t, err)
+	stop := testutils.StartCTS(t, configPath, testutils.CTSDevModeFlag)
+	defer stop(t)
 	time.Sleep(5 * time.Second)
 
 	cases := []struct {

@@ -4,7 +4,6 @@ package e2e
 
 import (
 	"fmt"
-	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -14,7 +13,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTasksUpdate(t *testing.T) {
@@ -45,11 +43,8 @@ task {
 		appendDBTask().appendWebTask().appendString(apiTask)
 	config.write(t, configPath)
 
-	cmd, err := runSync(configPath)
-	require.NoError(t, err)
-
-	// Stop CTS then stop the Consul agent
-	defer stopCommand(cmd)
+	stop := testutils.StartCTS(t, configPath)
+	defer stop(t)
 
 	t.Run("once mode", func(t *testing.T) {
 		// Wait for tasks to execute once
@@ -131,12 +126,11 @@ task {
 func loadTFVarsServiceIDs(t *testing.T, file string) []string {
 	// This is a bit hacky using regex but simpler than re-implementing syntax
 	// parsing for Terraform variables
-	content, err := ioutil.ReadFile(file)
-	require.NoError(t, err)
+	content := testutils.CheckFile(t, true, file, "")
 
 	var ids []string
 	re := regexp.MustCompile(`\s+id\s+\= \"([^"]+)`)
-	matches := re.FindAllSubmatch(content, -1)
+	matches := re.FindAllSubmatch([]byte(content), -1)
 	for _, match := range matches {
 		ids = append(ids, string(match[1]))
 	}

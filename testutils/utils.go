@@ -7,9 +7,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -34,8 +36,44 @@ func MakeTempDir(t testing.TB, tempDir string) func() error {
 
 	return func() error {
 		return os.RemoveAll(tempDir)
-
 	}
+}
+
+// CheckDir checks whether or not a directory exists. If it exists, returns the
+// file infos for further checking.
+func CheckDir(t testing.TB, exists bool, dir string) []os.FileInfo {
+	files, err := ioutil.ReadDir(dir)
+	if exists {
+		require.NoError(t, err)
+		return files
+	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no such file or directory")
+	return []os.FileInfo{}
+}
+
+// WriteFile write a content to a file path.
+func WriteFile(t testing.TB, path, content string) {
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+	_, err = f.Write([]byte(content))
+	require.NoError(t, err)
+}
+
+// CheckFile checks whether a file exists or not. If it exists, returns the
+// contents for further checking. If path parameter already includes filename,
+// leave filename parameter as an empty string.
+func CheckFile(t testing.TB, exists bool, path, filename string) string {
+	fp := filepath.Join(path, filename) // handles if filename is empty
+	content, err := ioutil.ReadFile(fp)
+	if !exists {
+		require.Error(t, err)
+		return ""
+	}
+
+	require.NoError(t, err)
+	return string(content)
 }
 
 // RegisterConsulService regsiters a service to the Consul Catalog. The Consul

@@ -4,12 +4,9 @@ package e2e
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -39,8 +36,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 		appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cmd, err := runSyncDevMode(configPath)
-	require.NoError(t, err)
+	stopCTS := testutils.StartCTS(t, configPath, testutils.CTSDevModeFlag)
 
 	// wait to run once before registering another instance to collect another event
 	time.Sleep(7 * time.Second)
@@ -231,8 +227,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 		})
 	}
 
-	err = stopCommand(cmd)
-	require.NoError(t, err)
+	stopCTS(t)
 	delete()
 }
 
@@ -260,19 +255,17 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 		appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cmd, err := runSync(configPath)
-	defer stopCommand(cmd)
-	require.NoError(t, err)
+	stop := testutils.StartCTS(t, configPath)
+	defer stop(t)
 	time.Sleep(5 * time.Second)
 
 	// Confirm that terraform files were not generated for a disabled task
-	fileInfos, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, "disabled_task"))
-	require.NoError(t, err)
-	require.Equal(t, len(fileInfos), 0)
+	files := testutils.CheckDir(t, true, fmt.Sprintf("%s/%s", tempDir, "disabled_task"))
+	require.Equal(t, len(files), 0)
 
 	// Confirm that resources were not created
 	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
-	confirmDirNotFound(t, resourcesPath)
+	testutils.CheckDir(t, false, resourcesPath)
 
 	// Update Task API: enable task with inspect run option
 	baseUrl := fmt.Sprintf("http://localhost:%d/%s/tasks/%s",
@@ -293,7 +286,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	assert.NotEmpty(t, r.Inspect.Plan)
 
 	// Confirm that resources were not generated during inspect mode
-	confirmDirNotFound(t, resourcesPath)
+	testutils.CheckDir(t, false, resourcesPath)
 
 	// Update Task API: enable task with run now option
 	u = fmt.Sprintf("%s?run=now", baseUrl)
@@ -301,8 +294,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	defer resp1.Body.Close()
 
 	// Confirm that resources are generated
-	_, err = ioutil.ReadDir(resourcesPath)
-	require.NoError(t, err)
+	testutils.CheckDir(t, true, resourcesPath)
 
 	// Update Task API: disable task
 	resp2 := testutils.RequestHTTP(t, http.MethodPatch, baseUrl, `{"enabled":false}`)
@@ -323,42 +315,9 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	// Confirm that resources are not recreated for disabled task
-	confirmDirNotFound(t, resourcesPath)
+	testutils.CheckDir(t, false, resourcesPath)
 
 	delete()
-}
-
-// runSyncDevMode runs the daemon in development which does not run or download
-// Terraform.
-func runSyncDevMode(configPath string) (*exec.Cmd, error) {
-	cmd := exec.Command("consul-terraform-sync",
-		fmt.Sprintf("--config-file=%s", configPath), "--client-type=development")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return cmd, nil
-}
-
-func runSync(configPath string) (*exec.Cmd, error) {
-	cmd := exec.Command("consul-terraform-sync",
-		fmt.Sprintf("--config-file=%s", configPath))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return cmd, nil
-}
-
-func stopCommand(cmd *exec.Cmd) error {
-	cmd.Process.Signal(os.Interrupt)
-	sigintErr := errors.New("signal: interrupt")
-	if err := cmd.Wait(); err != nil && err != sigintErr {
-		return err
-	}
-	return nil
 }
 
 // checkEvents does some basic checks to loosely ensure returned events in
@@ -401,10 +360,4 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 			}
 		}
 	}
-}
-
-func confirmDirNotFound(t *testing.T, dir string) {
-	_, err := ioutil.ReadDir(dir)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "no such file or directory")
 }
