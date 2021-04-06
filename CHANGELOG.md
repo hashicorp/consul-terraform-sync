@@ -1,3 +1,8 @@
+## UNRELEASED
+
+BUG FIXES:
+* Fix issue where CTS does not reconnect with Consul if it stops and restarts by adding retries for up to 8-12 minutes and then exiting if retries are unsuccessful. [[GH-233](https://github.com/hashicorp/consul-terraform-sync/issues/233), [GH-242](https://github.com/hashicorp/consul-terraform-sync/pull/242)]
+
 ## 0.1.0 (March 29, 2021)
 
 BUG FIXES:
