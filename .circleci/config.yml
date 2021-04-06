@@ -3,9 +3,10 @@ jobs:
   unit_integration_tests:
     environment:
       GO111MODULE: "on"
+      GO_VERSION: "1.16"
       CONSUL_VERSION: 1.8.0
     docker:
-      - image: docker.mirror.hashicorp.services/circleci/golang:latest
+      - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
@@ -25,9 +26,10 @@ jobs:
   e2e_tests:
     environment:
       GO111MODULE: "on"
+      GO_VERSION: "1.16"
       CONSUL_VERSION: 1.8.0
     docker:
-      - image: docker.mirror.hashicorp.services/circleci/golang:latest
+      - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout

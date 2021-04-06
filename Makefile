@@ -9,7 +9,7 @@ GOPATH=$(shell go env GOPATH)
 GOPATH := $(lastword $(subst :, ,${GOPATH}))# use last GOPATH entry
 
 # Project information
-GOVERSION := 1.14
+GOVERSION := 1.16
 PROJECT := $(shell go list -m)
 NAME := $(notdir $(PROJECT))
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
