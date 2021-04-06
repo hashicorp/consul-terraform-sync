@@ -7,29 +7,19 @@
 # Task: my-task
 # Description: automate services for website X
 
-myprovider = {
-  address  = "myprovider.example.com"
-  attr     = "foobar"
-  username = "admin"
-}
-
 services = {
 {{- with $srv := service "api"}}
-  {{- $last := len $srv | subtract 1}}
-  {{- range $i, $s := $srv}}
+  {{- range $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
 {{ HCLService $s | indent 4 }}
-  } {{- if (ne $i $last)}},{{end}}
+  },
   {{- end}}
-{{- end}}{{- with $beforeSrv := service "api"}}
-  {{- with $afterSrv := service "web"}},{{end}}
 {{- end}}
 {{- with $srv := service "web"}}
-  {{- $last := len $srv | subtract 1}}
-  {{- range $i, $s := $srv}}
+  {{- range $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
 {{ HCLService $s | indent 4 }}
-  } {{- if (ne $i $last)}},{{end}}
+  },
   {{- end}}
 {{- end}}
 }
