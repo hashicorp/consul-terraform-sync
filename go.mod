@@ -9,7 +9,6 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/agext/levenshtein v1.2.3 // indirect
-	github.com/aws/aws-sdk-go v1.37.16 // indirect
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/fatih/color v1.10.0 // indirect
@@ -28,13 +27,13 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.2.1
 	github.com/hashicorp/hcat v0.0.0-20210401143330-8f813cb572a8
-	github.com/hashicorp/hcl v1.0.0
+	github.com/hashicorp/hcl v1.0.1-vault
 	github.com/hashicorp/hcl/v2 v2.8.2
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/terraform v0.14.7
 	github.com/hashicorp/terraform-exec v0.13.0
 	github.com/hashicorp/vault v1.4.2
-	github.com/hashicorp/vault/api v1.0.5-0.20200717191844-f687267c8086
+	github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457
 	github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351 // indirect
 	github.com/klauspost/compress v1.11.7 // indirect
 	github.com/mitchellh/cli v1.1.2
@@ -67,8 +66,8 @@ replace (
 	// Terraform imports a pre-go-mod version of Vault. These replace directives
 	// resolves the ambiguous import between the package `vault/api` and
 	// `vault/api` nested go module.
-	github.com/hashicorp/vault => github.com/hashicorp/vault v1.5.5
+	github.com/hashicorp/vault => github.com/hashicorp/vault v1.7.0
 	github.com/hashicorp/vault/api => github.com/hashicorp/vault/api v1.0.5-0.20200805123347-1ef507638af6
-	github.com/hashicorp/vault/http => github.com/hashicorp/vault/http v1.5.5
-	github.com/hashicorp/vault/vault => github.com/hashicorp/vault/vault v1.5.5
+	github.com/hashicorp/vault/http => github.com/hashicorp/vault/http v1.7.0
+	github.com/hashicorp/vault/vault => github.com/hashicorp/vault/vault v1.7.0
 )
