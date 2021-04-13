@@ -84,9 +84,6 @@ jobs:
             consul version
             terraform version
       - run:
-          name: Fetch Go modules
-          command: go mod download
-      - run:
           name: Run benchmark suite
           no_output_timeout: << parameters.no_output_timeout >>
           command:
@@ -106,6 +103,7 @@ workflows:
       - benchmarks
     triggers:
       - schedule:
+          # 02:10 UTC every night
           cron: 10 2 * * *
           filters:
             branches:
