@@ -104,3 +104,10 @@ workflows:
   nightly-benchmarks:
     jobs:
       - benchmarks
+    triggers:
+      - schedule:
+          cron: 10 2 * * *
+          filters:
+            branches:
+              only:
+              - master
