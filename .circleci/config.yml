@@ -47,9 +47,60 @@ jobs:
           paths:
             - /go/pkg/mod
 
+  benchmarks:
+    parameters:
+      no_output_timeout:
+        type: string
+        description: the job times out after this duration with no output
+        default: 30m
+    environment:
+      GO_VERSION: "1.16"
+      CONSUL_VERSION: "1.8.0"
+      TERRAFORM_VERSION: "0.14.10"
+    docker:
+      - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
+    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    steps:
+      - checkout
+      - run:
+          name: Install Consul
+          command: |
+            curl -sLo consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
+            unzip consul.zip
+            sudo cp consul /usr/local/bin/
+      - run:
+          name: Install Terraform
+          command: |
+            curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+            unzip terraform.zip
+            sudo cp terraform /usr/local/bin/
+      - run:
+          name: Copy terraform to benchmark directory
+          command: /bin/cp /usr/local/bin/terraform ./e2e/
+      - run:
+          name: Version Check
+          command: |
+            go version
+            consul version
+            terraform version
+      - run:
+          name: Fetch Go modules
+          command: go mod download
+      - run:
+          name: Run benchmark suite
+          no_output_timeout: << parameters.no_output_timeout >>
+          command:
+            go test -json ./e2e/benchmarks -timeout 2h -bench=. -tags e2e | /usr/bin/tee /tmp/benchmarks.json
+      - store_artifacts:
+          path: /tmp/benchmarks.json
+          destination: benchmarks.json
+
 workflows:
   version: 2
   build-test:
     jobs:
       - unit_integration_tests
       - e2e_tests
+  nightly-benchmarks:
+    jobs:
+      - benchmarks
