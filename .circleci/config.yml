@@ -98,13 +98,13 @@ workflows:
     jobs:
       - unit_integration_tests
       - e2e_tests
-  nightly-benchmarks:
+  weekly-benchmarks:
     jobs:
       - benchmarks
     triggers:
       - schedule:
-          # 02:10 UTC every night
-          cron: 10 2 * * *
+          # 02:10 UTC every Wednesday
+          cron: 10 2 * * 3
           filters:
             branches:
               only:
