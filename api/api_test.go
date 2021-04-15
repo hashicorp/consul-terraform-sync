@@ -73,6 +73,7 @@ func TestServe(t *testing.T) {
 
 	api := NewAPI(event.NewStore(), drivers, port)
 	go api.Serve(ctx)
+	time.Sleep(3 * time.Second)
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -80,23 +81,8 @@ func TestServe(t *testing.T) {
 				port, defaultAPIVersion, tc.path)
 
 			resp := testutils.RequestHTTP(t, tc.method, u, tc.body)
-			statusCode := 0
-
-			if err == nil {
-				defer resp.Body.Close()
-				statusCode = resp.StatusCode
-			} else {
-				// race where http requests execute before api server is ready.
-				// wait a little and retry once.
-				require.Contains(t, err.Error(), "connect: connection refused")
-				time.Sleep(3 * time.Second)
-
-				resp2 := testutils.RequestHTTP(t, http.MethodGet, u, "")
-				defer resp2.Body.Close()
-				statusCode = resp2.StatusCode
-			}
-
-			assert.Equal(t, tc.statusCode, statusCode)
+			defer resp.Body.Close()
+			assert.Equal(t, tc.statusCode, resp.StatusCode)
 		})
 	}
 }
