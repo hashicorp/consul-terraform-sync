@@ -31,7 +31,17 @@ func DefaultConditionConfig() ConditionConfig {
 // both the type and value. Not needed for checking a ConditionConfig
 // implementation i.e. isNil(ConditionConfig), servicesConditionConfig == nil
 func isNil(c ConditionConfig) bool {
-	return c == nil || reflect.ValueOf(c).IsNil()
+	var result bool
+	// switching on type is a performance enhancement
+	switch v := c.(type) {
+	case *ServicesConditionConfig:
+		result = v == nil
+	case *CatalogServicesConditionConfig:
+		result = v == nil
+	default:
+		return c == nil || reflect.ValueOf(c).IsNil()
+	}
+	return c == nil || result
 }
 
 // conditionToTypeFunc is a decode hook function to decode a ConditionConfig
