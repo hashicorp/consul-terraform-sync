@@ -75,4 +75,14 @@ task {
   services = ["serviceA", "serviceB", "serviceC"]
   providers = ["X"]
   source = "Y"
+  condition "catalog-services" {
+    regexp = ".*"
+    enable_tf_var = true
+    namespace = "ns2"
+    datacenter = "dc2"
+    node_meta {
+      "key1" = "value1"
+      "key2" = "value2"
+    }
+  }
 }

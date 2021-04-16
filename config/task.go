@@ -50,6 +50,10 @@ type TaskConfig struct {
 	// Enabled determines if the task is enabled or not. Enabled by default.
 	// If not enabled, this task will not make any changes to resources.
 	Enabled *bool `mapstructure:"enabled"`
+
+	// Condition optionally configures a single run condition under which the
+	// task will start executing
+	Condition ConditionConfig `mapstructure:"condition"`
 }
 
 // TaskConfigs is a collection of TaskConfig
@@ -84,6 +88,10 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.BufferPeriod = c.BufferPeriod.Copy()
 
 	o.Enabled = BoolCopy(c.Enabled)
+
+	if !isNil(c.Condition) {
+		o.Condition = c.Condition.Copy()
+	}
 
 	return &o
 }
@@ -142,6 +150,14 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Enabled = BoolCopy(o.Enabled)
 	}
 
+	if !isNil(o.Condition) {
+		if isNil(r.Condition) {
+			r.Condition = o.Condition.Copy()
+		} else {
+			r.Condition = r.Condition.Merge(o.Condition)
+		}
+	}
+
 	return r
 }
 
@@ -187,6 +203,11 @@ func (c *TaskConfig) Finalize() {
 	if c.Enabled == nil {
 		c.Enabled = Bool(true)
 	}
+
+	if isNil(c.Condition) {
+		c.Condition = DefaultConditionConfig()
+	}
+	c.Condition.Finalize(c.Services)
 }
 
 // Validate validates the values and required options. This method is recommended
@@ -230,6 +251,12 @@ func (c *TaskConfig) Validate() error {
 		return err
 	}
 
+	if !isNil(c.Condition) {
+		if err := c.Condition.Validate(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -248,8 +275,9 @@ func (c *TaskConfig) GoString() string {
 		"Source:%s, "+
 		"VarFiles:%s, "+
 		"Version:%s, "+
-		"BufferPeriod:%s"+
-		"Enabled:%t"+
+		"BufferPeriod:%s, "+
+		"Enabled:%t, "+
+		"Condition:%v"+
 		"}",
 		StringVal(c.Name),
 		StringVal(c.Description),
@@ -260,6 +288,7 @@ func (c *TaskConfig) GoString() string {
 		StringVal(c.Version),
 		c.BufferPeriod.GoString(),
 		BoolVal(c.Enabled),
+		c.Condition.GoString(),
 	)
 }
 
