@@ -1,5 +1,7 @@
 // +build e2e
 
+// BenchmarkTasksConcurrent executes the ReadWrite controller directly to
+// benchmark tasks running concurrently. This emulates CTS in daemon mode.
 // $ go test ./e2e/benchmarks -bench=BenchmarkTasksConcurrent_ -tags e2e
 package benchmarks
 

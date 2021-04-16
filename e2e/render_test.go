@@ -16,6 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestServicesRenderRace tests that the template file terraform.tfvars.tmpl
+// renders all services to terraform.tfvars before executing Terraform.
+//
 // issues GH-236 and GH-239
 func TestServicesRenderRace(t *testing.T) {
 	const NumberOfServices = 100

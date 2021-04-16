@@ -25,6 +25,12 @@ const resourcesDir = "resources"
 // configFile is the name of the sync config file
 const configFile = "config.hcl"
 
+// TestE2EBasic runs the CTS binary in daemon mode with a configuration with 2
+// tasks and a test module that writes IP addresses to disk. This tests for CTS
+// executing the 2 tasks upon startup and verifies the correct module resources
+// for each task were created for services ("api", "web", "db"). It verifies
+// the Terraform statefiles are written to Consul KV, the default Terraform
+// backend for CTS.
 func TestE2EBasic(t *testing.T) {
 	// Note: no t.Parallel() for this particular test. Choosing this test to run 'first'
 	// since e2e test running simultaneously will download Terraform into shared
@@ -64,6 +70,9 @@ func TestE2EBasic(t *testing.T) {
 	delete()
 }
 
+// TestE2ERestartSync runs the CTS binary in daemon mode and tests restarting
+// CTS results in no errors and can continue running based on the same config
+// and Consul storing state.
 func TestE2ERestartSync(t *testing.T) {
 	t.Parallel()
 
@@ -86,9 +95,10 @@ func TestE2ERestartSync(t *testing.T) {
 	delete()
 }
 
+// TestE2ERestartConsul tests CTS is able to reconnect to Consul after the
+// Consul agent had restarted, and CTS resumes monitoring changes to the
+// Consul catalog.
 func TestE2ERestartConsul(t *testing.T) {
-	// Test that when Consul restarts, CTS is able to reconnect and react to
-	// changes in Consul catalog.
 	t.Parallel()
 
 	consul := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
@@ -131,6 +141,8 @@ func TestE2ERestartConsul(t *testing.T) {
 	cleanup()
 }
 
+// TestE2EPanosHandlerError tests that CTS stops upon an error for a task with
+// invalid PANOS credentials.
 func TestE2EPanosHandlerError(t *testing.T) {
 	t.Parallel()
 
@@ -157,6 +169,8 @@ func TestE2EPanosHandlerError(t *testing.T) {
 	delete()
 }
 
+// TestE2ELocalBackend tests CTS configured with the Terraform driver using
+// the local backend.
 func TestE2ELocalBackend(t *testing.T) {
 	t.Parallel()
 

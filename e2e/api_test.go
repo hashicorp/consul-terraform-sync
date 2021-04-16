@@ -1,5 +1,6 @@
 // +build e2e
 
+// Tests CTS API endpoints /v1/status and /v1/tasks
 package e2e
 
 import (
@@ -18,6 +19,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestE2E_StatusEndpoints tests all of the CTS status endpoints and query
+// parameters. This runs a Consul server and the CTS binary in daemon mode.
+//	GET	/v1/status/tasks
+// 	GET	/v1/status/tasks/:task_name
+//	GET	/v1/status
 func TestE2E_StatusEndpoints(t *testing.T) {
 	t.Parallel()
 
@@ -231,6 +237,9 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	delete()
 }
 
+// TestE2E_TaskEndpoints_UpdateEnableDisable tests the tasks endpoints. This
+// runs a Consul server and the CTS binary in daemon mode.
+//	PATCH	/v1/tasks/:task_name
 func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	t.Parallel()
 	// Test enabling and disabling a task

@@ -15,9 +15,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestTasksUpdate tests multiple tasks are triggered on service registration
+// and de-registration by verifying the content of terraform.tfvars
 func TestTasksUpdate(t *testing.T) {
-	// Tests multiple tasks are triggered on service registration and de-registration
-	// by verifying the content of terraform.tfvars
 	t.Parallel()
 
 	srv := newTestConsulServer(t)

@@ -1,5 +1,6 @@
 // +build e2e
 
+// Tests CTS CLI commands interacting with a running CTS in daemon mode.
 package e2e
 
 import (
@@ -16,8 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestE2E_MetaCOmmandErrors(t *testing.T) {
-	// test cases that cross subcommands that coded in the command meta object
+// TestE2E_MetaCommandErrors tests cases that cross subcommands coded in
+// the command meta object. This starts up a local Consul server and runs
+// CTS in dev mode.
+func TestE2E_MetaCommandErrors(t *testing.T) {
 	t.Parallel()
 
 	srv := newTestConsulServer(t)
@@ -67,7 +70,7 @@ func TestE2E_MetaCOmmandErrors(t *testing.T) {
 	}
 
 	for _, lifecycle := range []string{"disable", "enable"} {
-		// run through all the test cases for each task lifcycle command
+		// run through all the test cases for each task lifecycle command
 		for _, tc := range cases {
 			t.Run(fmt.Sprintf("%s/%s", lifecycle, tc.name), func(t *testing.T) {
 				subcmd := []string{"task", lifecycle}
@@ -83,6 +86,8 @@ func TestE2E_MetaCOmmandErrors(t *testing.T) {
 	delete()
 }
 
+// TestE2E_EnableTaskCommand tests the CLI to enable a disabled task. This starts
+// up a local Consul server and runs CTS in dev mode.
 func TestE2E_EnableTaskCommand(t *testing.T) {
 	t.Parallel()
 
@@ -145,6 +150,8 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 	delete()
 }
 
+// TestE2E_DisableTaskCommand tests the CLI to disable an enabled task. This
+// starts up a local Consul server and runs CTS in dev mode.
 func TestE2E_DisableTaskCommand(t *testing.T) {
 	t.Parallel()
 
