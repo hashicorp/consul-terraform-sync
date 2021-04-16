@@ -1,8 +1,7 @@
 // +build e2e
 
-// Runs benchmarks using the Null provider and working with Consul setup with
-// multiple Services or Service Instances.
-
+// Runs benchmarks executing CTS in once mode with one task. The task uses the
+// Null provider and Consul setup with multiple services or service instances.
 package benchmarks
 
 import (

@@ -1,6 +1,16 @@
 // +build e2e
 
-// $ go test ./e2e/benchmarks -bench=. -tags e2e
+// BenchmarkTasks benchmarks CTS in inspect mode.
+//
+// Runs the ReadOnly controller directly and benchmarks Init and Run.
+//
+// ReadOnlyController.Init involves creating auto-generated Terraform files
+// and the hcat template file for each task.
+//
+// ReadOnlyController.Run involves rendering the template file and executing
+// Terraform init and Terraform plan serially across all tasks.
+//
+// $ go test ./e2e/benchmarks -bench=BenchmarkTasks_ -tags e2e
 package benchmarks
 
 import (
@@ -40,14 +50,6 @@ func BenchmarkTasks_t50_s50(b *testing.B) {
 }
 
 func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
-	// Benchmarks Init and Run for the ReadOnly controller
-	//
-	// ReadOnlyController.Init involves creating auto-generated Terraform files
-	// and the hcat template file for each task.
-	//
-	// ReadOnlyController.Run involves rendering the template file and executing
-	// Terraform init and Terraform plan serially across all tasks.
-
 	srv := testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../../testutils",
 	})

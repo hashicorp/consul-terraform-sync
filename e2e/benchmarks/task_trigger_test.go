@@ -1,5 +1,8 @@
 // +build e2e
 
+// BenchmarkTaskTrigger benchmarks the time for a Consul catalog change to
+// trigger and re-render templates used for tasks. This does not benchmark
+// task execution time.
 // $ go test ./e2e/benchmarks/ -bench BenchmarkTaskTrigger -benchtime=10s -tags e2e
 package benchmarks
 
@@ -19,9 +22,6 @@ import (
 )
 
 func BenchmarkTaskTrigger(b *testing.B) {
-	// Benchmarks the time for a Consul catalog change to trigger and re-render
-	// templates used for tasks. This does not benchmark task execution time.
-
 	srv := testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../../testutils",
 	})
