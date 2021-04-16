@@ -17,6 +17,6 @@
           run: |
             backport-assistant backport
           env:
-            BACKPORT_LABEL_REGEXP: "backport/(?P<target>\\d+\\.\\d+\\.\\w+)"
-            BACKPORT_TARGET_TEMPLATE: "releases/{{.target}}"
+            BACKPORT_LABEL_REGEXP: "backport/(?P<target>\\d+\\.\\d+)"
+            BACKPORT_TARGET_TEMPLATE: "release/{{.target}}.x"
             GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
