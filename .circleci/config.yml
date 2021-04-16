@@ -87,7 +87,7 @@ jobs:
           name: Run benchmark suite
           no_output_timeout: << parameters.no_output_timeout >>
           command:
-            go test -json ./e2e/benchmarks -timeout 2h -bench=. -tags e2e | /usr/bin/tee /tmp/benchmarks.json
+            make test-benchmarks | /usr/bin/tee /tmp/benchmarks.json
       - store_artifacts:
           path: /tmp/benchmarks.json
           destination: benchmarks.json
@@ -98,13 +98,13 @@ workflows:
     jobs:
       - unit_integration_tests
       - e2e_tests
-  nightly-benchmarks:
+  weekly-benchmarks:
     jobs:
       - benchmarks
     triggers:
       - schedule:
-          # 02:10 UTC every night
-          cron: 10 2 * * *
+          # 02:10 UTC every Wednesday
+          cron: 10 2 * * 3
           filters:
             branches:
               only:

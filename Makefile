@@ -62,6 +62,12 @@ test-setup-e2e: dev
 test-e2e-cirecleci: test-setup-e2e test-e2e
 .PHONY: test-e2e-cirecleci
 
+# test-benchmarks requires Terraform in the path of execution and Consul in $PATH.
+test-benchmarks:
+	@echo "==> Running benchmarks for ${NAME}"
+	@go test -json ./e2e/benchmarks -timeout 2h -bench=. -tags e2e
+.PHONY: test-benchmarks
+
 # delete any cruft
 clean:
 	rm -f ./e2e/terraform
