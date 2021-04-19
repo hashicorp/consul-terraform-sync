@@ -25,13 +25,13 @@ func (c *ServicesConditionConfig) Copy() ConditionConfig {
 // structs define their own merge functionality.
 func (c *ServicesConditionConfig) Merge(o ConditionConfig) ConditionConfig {
 	if c == nil {
-		if isNil(o) { // o is interface, use isNil()
+		if isConditionNil(o) { // o is interface, use isConditionNil()
 			return nil
 		}
 		return o.Copy()
 	}
 
-	if isNil(o) {
+	if isConditionNil(o) {
 		return c.Copy()
 	}
 

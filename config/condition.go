@@ -27,10 +27,11 @@ func DefaultConditionConfig() ConditionConfig {
 	return &ServicesConditionConfig{}
 }
 
-// isNil can be used to check if a ConditionConfig interface is nil by checking
-// both the type and value. Not needed for checking a ConditionConfig
-// implementation i.e. isNil(ConditionConfig), servicesConditionConfig == nil
-func isNil(c ConditionConfig) bool {
+// isConditionNil can be used to check if a ConditionConfig interface is nil by
+// checking both the type and value. Not needed for checking a ConditionConfig
+// implementation i.e. isConditionNil(ConditionConfig),
+// servicesConditionConfig == nil
+func isConditionNil(c ConditionConfig) bool {
 	var result bool
 	// switching on type is a performance enhancement
 	switch v := c.(type) {

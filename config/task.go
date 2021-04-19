@@ -89,7 +89,7 @@ func (c *TaskConfig) Copy() *TaskConfig {
 
 	o.Enabled = BoolCopy(c.Enabled)
 
-	if !isNil(c.Condition) {
+	if !isConditionNil(c.Condition) {
 		o.Condition = c.Condition.Copy()
 	}
 
@@ -150,8 +150,8 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Enabled = BoolCopy(o.Enabled)
 	}
 
-	if !isNil(o.Condition) {
-		if isNil(r.Condition) {
+	if !isConditionNil(o.Condition) {
+		if isConditionNil(r.Condition) {
 			r.Condition = o.Condition.Copy()
 		} else {
 			r.Condition = r.Condition.Merge(o.Condition)
@@ -204,7 +204,7 @@ func (c *TaskConfig) Finalize() {
 		c.Enabled = Bool(true)
 	}
 
-	if isNil(c.Condition) {
+	if isConditionNil(c.Condition) {
 		c.Condition = DefaultConditionConfig()
 	}
 	c.Condition.Finalize(c.Services)
@@ -251,7 +251,7 @@ func (c *TaskConfig) Validate() error {
 		return err
 	}
 
-	if !isNil(c.Condition) {
+	if !isConditionNil(c.Condition) {
 		if err := c.Condition.Validate(); err != nil {
 			return err
 		}
