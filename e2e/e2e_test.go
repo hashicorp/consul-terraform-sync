@@ -116,7 +116,8 @@ func TestE2ERestartConsul(t *testing.T) {
 	// start CTS
 	stop := testutils.StartCTS(t, configPath)
 	defer stop(t)
-	time.Sleep(5 * time.Second)
+	// wait enough for cts to cycle through once-mode successfully
+	time.Sleep(12 * time.Second)
 
 	// stop Consul
 	consul.Stop()
