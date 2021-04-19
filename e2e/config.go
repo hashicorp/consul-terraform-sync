@@ -96,9 +96,6 @@ task {
 func baseConfig() hclConfig {
 	return `log_level = "INFO"
 
-# port 0 will automatically select next free port
-port = 0
-
 service {
   name = "api"
   description = "backend"
