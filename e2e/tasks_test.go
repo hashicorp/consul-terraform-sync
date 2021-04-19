@@ -11,8 +11,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/testutils"
+	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestTasksUpdate tests multiple tasks are triggered on service registration
@@ -43,12 +45,13 @@ task {
 		appendDBTask().appendWebTask().appendString(apiTask)
 	config.write(t, configPath)
 
-	stop := testutils.StartCTS(t, configPath)
+	cts, stop := ctsTestClient.StartCTS(t, configPath)
 	defer stop(t)
 
 	t.Run("once mode", func(t *testing.T) {
 		// Wait for tasks to execute once
-		time.Sleep(15 * time.Second)
+		err := cts.WaitForAPI(15 * time.Second)
+		require.NoError(t, err)
 
 		// Verify Catalog information is reflected in terraform.tfvars
 		expectedTaskServices := map[string][]string{

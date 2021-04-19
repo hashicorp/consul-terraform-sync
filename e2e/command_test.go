@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
+	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,17 +30,14 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	port, err := api.FreePort()
-	require.NoError(t, err)
-
 	configPath := filepath.Join(tempDir, configFile)
-	config := fakeHandlerConfig().appendPort(port).
-		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := fakeHandlerConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	stop := testutils.StartCTS(t, configPath, testutils.CTSDevModeFlag)
+	cts, stop := ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSDevModeFlag)
 	defer stop(t)
-	time.Sleep(5 * time.Second)
+	err := cts.WaitForAPI(5 * time.Second)
+	require.NoError(t, err)
 
 	cases := []struct {
 		name           string
@@ -59,12 +56,12 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 		},
 		{
 			"non-existing task",
-			[]string{fmt.Sprintf("-port=%d", port), "non-existent-task"},
+			[]string{fmt.Sprintf("-port=%d", cts.Port()), "non-existent-task"},
 			"does not exist or has not been initialized yet",
 		},
 		{
 			"out of order arguments",
-			[]string{fakeFailureTaskName, fmt.Sprintf("-port %d", port)},
+			[]string{fakeFailureTaskName, fmt.Sprintf("-port %d", cts.Port())},
 			"All flags are required to appear before positional arguments",
 		},
 	}
@@ -98,17 +95,14 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	port, err := api.FreePort()
-	require.NoError(t, err)
-
 	configPath := filepath.Join(tempDir, configFile)
-	config := disabledTaskConfig().appendPort(port).
-		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := disabledTaskConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	stop := testutils.StartCTS(t, configPath, testutils.CTSDevModeFlag)
+	cts, stop := ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSDevModeFlag)
 	defer stop(t)
-	time.Sleep(5 * time.Second)
+	err := cts.WaitForAPI(5 * time.Second)
+	require.NoError(t, err)
 
 	cases := []struct {
 		name           string
@@ -118,13 +112,13 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 	}{
 		{
 			"happy path",
-			[]string{fmt.Sprintf("-port=%d", port), disabledTaskName},
+			[]string{fmt.Sprintf("-port=%d", cts.Port()), disabledTaskName},
 			"yes\n",
 			"enable complete!",
 		},
 		{
 			"user does not approve plan",
-			[]string{fmt.Sprintf("-port=%d", port), disabledTaskName},
+			[]string{fmt.Sprintf("-port=%d", cts.Port()), disabledTaskName},
 			"no\n",
 			"Cancelled enabling task",
 		},
@@ -162,17 +156,15 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	port, err := api.FreePort()
-	require.NoError(t, err)
-
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig().appendPort(port).appendTerraformBlock(tempDir).
+	config := baseConfig().appendTerraformBlock(tempDir).
 		appendConsulBlock(srv).appendDBTask()
 	config.write(t, configPath)
 
-	stop := testutils.StartCTS(t, configPath, testutils.CTSDevModeFlag)
+	cts, stop := ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSDevModeFlag)
 	defer stop(t)
-	time.Sleep(5 * time.Second)
+	err := cts.WaitForAPI(10 * time.Second)
+	require.NoError(t, err)
 
 	cases := []struct {
 		name           string
@@ -181,7 +173,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	}{
 		{
 			"happy path",
-			[]string{fmt.Sprintf("-port=%d", port), dbTaskName},
+			[]string{fmt.Sprintf("-port=%d", cts.Port()), dbTaskName},
 			"disable complete!",
 		},
 		{

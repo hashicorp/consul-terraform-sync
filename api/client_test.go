@@ -125,9 +125,10 @@ func TestStatus(t *testing.T) {
 	defer cancel()
 	api := NewAPI(store, drivers, port)
 	go api.Serve(ctx)
-	time.Sleep(3 * time.Second) // in case tests run before server is ready
 
 	c := NewClient(&ClientConfig{Port: port}, nil)
+	err = c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
+	require.NoError(t, err)
 
 	t.Run("overall-status", func(t *testing.T) {
 		actual, err := c.Status().Overall()
@@ -279,9 +280,10 @@ func Test_Task_Update(t *testing.T) {
 	drivers := driver.NewDrivers()
 	api := NewAPI(event.NewStore(), drivers, port)
 	go api.Serve(ctx)
-	time.Sleep(3 * time.Second) // in case tests run before server is ready
 
 	c := NewClient(&ClientConfig{Port: port}, nil)
+	err = c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
+	require.NoError(t, err)
 
 	t.Run("disable-then-enable", func(t *testing.T) {
 		// setup temp dir
@@ -330,5 +332,30 @@ func Test_Task_Update(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, expectedPlan, *actual.Inspect)
+	})
+}
+
+func TestWaitForAPI(t *testing.T) {
+	t.Parallel()
+
+	t.Run("timeout", func(t *testing.T) {
+		cts := NewClient(&ClientConfig{Port: 0}, nil)
+		err := cts.WaitForAPI(time.Second)
+		assert.Error(t, err, "No CTS API server running, test is expected to timeout")
+	})
+
+	t.Run("available", func(t *testing.T) {
+		// start up server
+		port, err := FreePort()
+		require.NoError(t, err)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		drivers := driver.NewDrivers()
+		api := NewAPI(event.NewStore(), drivers, port)
+		go api.Serve(ctx)
+
+		cts := NewClient(&ClientConfig{Port: port}, nil)
+		err = cts.WaitForAPI(3 * time.Second)
+		assert.NoError(t, err, "CTS API server should be available")
 	})
 }
