@@ -93,6 +93,16 @@ var (
 				Services:    []string{"serviceA", "serviceB", "serviceC"},
 				Providers:   []string{"X"},
 				Source:      String("Y"),
+				Condition: &CatalogServicesConditionConfig{
+					Regexp:      String(".*"),
+					EnableTfVar: Bool(true),
+					Datacenter:  String("dc2"),
+					Namespace:   String("ns2"),
+					NodeMeta: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
 			},
 		},
 		TerraformProviders: &TerraformProviderConfigs{{
@@ -329,6 +339,7 @@ func TestConfig_Validate(t *testing.T) {
 		Services:    []string{"serviceD"},
 		Providers:   []string{"Y"},
 		Source:      String("Z"),
+		Condition:   &ServicesConditionConfig{},
 	})
 	*validMultiTask.TerraformProviders = append(*validMultiTask.TerraformProviders,
 		&TerraformProviderConfig{"Y": map[string]interface{}{}})

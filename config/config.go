@@ -356,12 +356,14 @@ func decodeConfig(content []byte, file string) (*Config, error) {
 	case "json":
 		err = json.Unmarshal(content, &raw)
 		decodeHook = mapstructure.ComposeDecodeHookFunc(
+			conditionToTypeFunc(),
 			mapstructure.StringToTimeDurationHookFunc(),
 			decode.HookTranslateKeys,
 		)
 	case "hcl":
 		err = hcl.Decode(&raw, string(content))
 		decodeHook = mapstructure.ComposeDecodeHookFunc(
+			conditionToTypeFunc(),
 			decode.HookWeakDecodeFromSlice,
 			mapstructure.StringToTimeDurationHookFunc(),
 			decode.HookTranslateKeys)

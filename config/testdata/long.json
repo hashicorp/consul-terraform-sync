@@ -78,7 +78,19 @@
       "description": "automate services for X to do Y",
       "services": ["serviceA", "serviceB", "serviceC"],
       "providers": ["X"],
-      "source": "Y"
+      "source": "Y",
+      "condition": {
+        "catalog-services": {
+          "regexp": ".*",
+          "enable_tf_var": true,
+          "datacenter": "dc2",
+          "namespace": "ns2",
+          "node_meta": {
+            "key1": "value1",
+            "key2": "value2"
+          }
+        }
+      }  
     }
   ]
 }

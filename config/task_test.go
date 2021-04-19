@@ -30,6 +30,15 @@ func TestTaskConfig_Copy(t *testing.T) {
 				Source:      String("source"),
 				Version:     String("0.0.0"),
 				Enabled:     Bool(true),
+				Condition: &CatalogServicesConditionConfig{
+					Regexp:      String(".*"),
+					EnableTfVar: Bool(true),
+					Datacenter:  String("dc2"),
+					Namespace:   String("ns2"),
+					NodeMeta: map[string]string{
+						"key": "value",
+					},
+				},
 			},
 		},
 	}
@@ -229,6 +238,30 @@ func TestTaskConfig_Merge(t *testing.T) {
 			&TaskConfig{Enabled: Bool(false)},
 			&TaskConfig{Enabled: Bool(false)},
 		},
+		{
+			"condition_overrides",
+			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String(".*")}},
+			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String("")}},
+			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String("")}},
+		},
+		{
+			"condition_empty_one",
+			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String(".*")}},
+			&TaskConfig{},
+			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String(".*")}},
+		},
+		{
+			"condition_empty_two",
+			&TaskConfig{},
+			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String(".*")}},
+			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String(".*")}},
+		},
+		{
+			"condition_same",
+			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String(".*")}},
+			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String(".*")}},
+			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String(".*")}},
+		},
 	}
 
 	for i, tc := range cases {
@@ -258,6 +291,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Version:      String(""),
 				BufferPeriod: DefaultTaskBufferPeriodConfig(),
 				Enabled:      Bool(true),
+				Condition:    DefaultConditionConfig(),
 			},
 		},
 		{
@@ -275,6 +309,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Version:      String(""),
 				BufferPeriod: DefaultTaskBufferPeriodConfig(),
 				Enabled:      Bool(true),
+				Condition:    DefaultConditionConfig(),
 			},
 		},
 	}
@@ -305,6 +340,17 @@ func TestTaskConfig_Validate(t *testing.T) {
 		},
 		{
 			"valid",
+			&TaskConfig{
+				Name:      String("task"),
+				Services:  []string{"serviceA", "serviceB"},
+				Source:    String("source"),
+				Providers: []string{"providerA", "providerB"},
+				Condition: DefaultConditionConfig(),
+			},
+			true,
+		},
+		{
+			"valid (missing condition)",
 			&TaskConfig{
 				Name:      String("task"),
 				Services:  []string{"serviceA", "serviceB"},
