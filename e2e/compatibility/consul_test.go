@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
+	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	capi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/go-getter"
 	"github.com/stretchr/testify/assert"
@@ -101,9 +102,10 @@ func testConsulBackendCompatibility(t *testing.T, port int) {
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
-	stop := testutils.StartCTS(t, configPath)
+	cts, stop := ctsTestClient.StartCTS(t, configPath)
 	defer stop(t)
-	time.Sleep(6 * time.Second)
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
 
 	// Test: ConsulKV backend
 	// Register a service and confirm that TF state file is stored in ConsulKV
@@ -126,9 +128,10 @@ func testServiceInstanceCompatibility(t *testing.T, port int) {
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
-	stop := testutils.StartCTS(t, configPath)
+	cts, stop := ctsTestClient.StartCTS(t, configPath)
 	defer stop(t)
-	time.Sleep(6 * time.Second)
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
 
 	// Test adding and removing service instances
 	// 0. Confirm no resources created yet
@@ -182,9 +185,10 @@ func testServiceValuesCompatibility(t *testing.T, port int) {
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
-	stop := testutils.StartCTS(t, configPath)
+	cts, stop := ctsTestClient.StartCTS(t, configPath)
 	defer stop(t)
-	time.Sleep(6 * time.Second)
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
 
 	// Test updating service-related values
 	// 0. Confirm no services exist in terraform.tfvars
@@ -285,9 +289,10 @@ func testTagQueryCompatibility(t *testing.T, port int) {
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
-	stop := testutils.StartCTS(t, configPath)
+	cts, stop := ctsTestClient.StartCTS(t, configPath)
 	defer stop(t)
-	time.Sleep(6 * time.Second)
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
 
 	// Test that filtering by tags
 	// 0. Confirm no resources created yet
@@ -326,9 +331,10 @@ func testNodeValuesCompatibility(t *testing.T, port int) {
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
-	stop := testutils.StartCTS(t, configPath)
+	cts, stop := ctsTestClient.StartCTS(t, configPath)
 	defer stop(t)
-	time.Sleep(6 * time.Second)
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
 
 	// Test updating node-related values
 	// 0. Confirm no services exist in terraform.tfvars

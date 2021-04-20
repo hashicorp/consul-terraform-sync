@@ -44,6 +44,43 @@ func NewClient(c *ClientConfig, httpClient httpClient) *Client {
 	}
 }
 
+func (c *Client) Port() int {
+	return c.port
+}
+
+// WaitForAPI polls the /v1/status endpoint to check when the CTS API is
+// available. The API is started when CTS is run as a daemon and completes
+// all tasks once.
+func (c *Client) WaitForAPI(timeout time.Duration) error {
+	polling := make(chan struct{})
+	stopPolling := make(chan struct{})
+	statusAPI := c.Status()
+
+	go func() {
+		var err error
+		for {
+			select {
+			case <-stopPolling:
+				return
+			default:
+				_, err = statusAPI.Overall()
+				if err == nil {
+					polling <- struct{}{}
+					return
+				}
+			}
+		}
+	}()
+
+	select {
+	case <-polling:
+		return nil
+	case <-time.After(timeout):
+		close(stopPolling)
+		return fmt.Errorf("client timed out waiting for CTS API to start: %v", timeout)
+	}
+}
+
 // request makes the http request on behalf of the client. Handles status code
 // check and any necessary error parsing. Returns a response body only if status
 // code is OK. Caller is responsible for closing returned response if error is

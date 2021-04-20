@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/testutils"
+	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -114,10 +115,11 @@ func TestE2ERestartConsul(t *testing.T) {
 	config.write(t, configPath)
 
 	// start CTS
-	stop := testutils.StartCTS(t, configPath)
+	cts, stop := ctsTestClient.StartCTS(t, configPath)
 	defer stop(t)
 	// wait enough for cts to cycle through once-mode successfully
-	time.Sleep(12 * time.Second)
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
 
 	// stop Consul
 	consul.Stop()
@@ -165,7 +167,7 @@ func TestE2EPanosHandlerError(t *testing.T) {
 		appendTerraformBlock(tempDir, requiredProviders)
 	config.write(t, configPath)
 
-	testutils.StartCTS(t, configPath, testutils.CTSOnceModeFlag)
+	ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSOnceModeFlag)
 
 	delete()
 }
@@ -245,7 +247,7 @@ func TestE2ELocalBackend(t *testing.T) {
 			configPath := filepath.Join(tempDir, configFile)
 			config.write(t, configPath)
 
-			testutils.StartCTS(t, configPath, testutils.CTSOnceModeFlag)
+			ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSOnceModeFlag)
 
 			// check that statefile was created locally
 			checkStateFileLocally(t, tc.dbStateFilePath)
@@ -272,8 +274,8 @@ func newTestConsulServer(t *testing.T) *testutil.TestServer {
 }
 
 func runSyncStop(t *testing.T, configPath string, dur time.Duration) {
-	stop := testutils.StartCTS(t, configPath)
-	time.Sleep(dur)
+	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts.WaitForAPI(dur)
 	stop(t)
 }
 

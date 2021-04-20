@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
+	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,18 +35,15 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	port, err := api.FreePort()
-	require.NoError(t, err)
-
 	configPath := filepath.Join(tempDir, configFile)
-	config := fakeHandlerConfig().appendPort(port).
-		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := fakeHandlerConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	stopCTS := testutils.StartCTS(t, configPath, testutils.CTSDevModeFlag)
+	cts, stopCTS := ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSDevModeFlag)
 
 	// wait to run once before registering another instance to collect another event
-	time.Sleep(7 * time.Second)
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
 	service := testutil.TestService{
 		ID:      "api-2",
 		Name:    "api",
@@ -119,7 +117,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 	for _, tc := range taskCases {
 		t.Run(tc.name, func(t *testing.T) {
-			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
+			u := fmt.Sprintf("http://localhost:%d/%s/%s", cts.Port(), "v1", tc.path)
 			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
@@ -173,7 +171,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 	for _, tc := range eventCases {
 		t.Run(tc.name, func(t *testing.T) {
-			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
+			u := fmt.Sprintf("http://localhost:%d/%s/%s", cts.Port(), "v1", tc.path)
 			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
@@ -209,7 +207,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 	for _, tc := range overallCases {
 		t.Run(tc.name, func(t *testing.T) {
-			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
+			u := fmt.Sprintf("http://localhost:%d/%s/%s", cts.Port(), "v1", tc.path)
 			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
@@ -256,17 +254,14 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	port, err := api.FreePort()
-	require.NoError(t, err)
-
 	configPath := filepath.Join(tempDir, configFile)
-	config := disabledTaskConfig().appendPort(port).
-		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := disabledTaskConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	stop := testutils.StartCTS(t, configPath)
+	cts, stop := ctsTestClient.StartCTS(t, configPath)
 	defer stop(t)
-	time.Sleep(5 * time.Second)
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
 
 	// Confirm that terraform files were not generated for a disabled task
 	files := testutils.CheckDir(t, true, fmt.Sprintf("%s/%s", tempDir, "disabled_task"))
@@ -278,7 +273,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	// Update Task API: enable task with inspect run option
 	baseUrl := fmt.Sprintf("http://localhost:%d/%s/tasks/%s",
-		port, "v1", disabledTaskName)
+		cts.Port(), "v1", disabledTaskName)
 	u := fmt.Sprintf("%s?run=inspect", baseUrl)
 	resp := testutils.RequestHTTP(t, http.MethodPatch, u, `{"enabled":true}`)
 	defer resp.Body.Close()
