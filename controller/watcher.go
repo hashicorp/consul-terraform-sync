@@ -73,7 +73,7 @@ func retryConsul(retryCount int) (bool, time.Duration) {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	wait := retry.WaitTime(uint(retryCount), random)
 	dur := time.Duration(wait)
-	log.Printf("[WARN] (hcat) error connecting with Consul. Waiting %v to retry"+
+	log.Printf("[DEBUG] (hcat) error connecting with Consul. Waiting %v to retry"+
 		" attempt #%d", dur, retryCount+1)
 	return true, dur
 }
