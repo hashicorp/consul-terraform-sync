@@ -202,6 +202,7 @@ func TestNewDriverTasks(t *testing.T) {
 				Source:          "source",
 				VarFiles:        []string{},
 				UserDefinedMeta: map[string]map[string]string{},
+				Condition:       &config.ServicesConditionConfig{},
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
@@ -267,6 +268,7 @@ func TestNewDriverTasks(t *testing.T) {
 				Source:          "source",
 				VarFiles:        []string{},
 				UserDefinedMeta: map[string]map[string]string{},
+				Condition:       &config.ServicesConditionConfig{},
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
@@ -317,6 +319,7 @@ func TestNewDriverTasks(t *testing.T) {
 				Source:          "source",
 				VarFiles:        []string{},
 				UserDefinedMeta: map[string]map[string]string{},
+				Condition:       &config.ServicesConditionConfig{},
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,

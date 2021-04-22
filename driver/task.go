@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
+	"github.com/hashicorp/consul-terraform-sync/config"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 )
 
@@ -55,6 +56,7 @@ type Task struct {
 	Version         string
 	UserDefinedMeta map[string]map[string]string
 	BufferPeriod    *BufferPeriod // nil when disabled
+	Condition       config.ConditionConfig
 }
 
 // ProviderNames returns the list of providers that the task has configured
