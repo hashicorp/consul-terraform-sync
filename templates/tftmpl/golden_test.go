@@ -87,18 +87,33 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl",
+			Name:   "terraform.tfvars.tmpl (services condition)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Providers: []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(
-					map[string]interface{}{
-						"testProvider": map[string]interface{}{
-							"alias": "tp",
-							"attr":  "value",
-							"count": 10,
-						},
-					})},
+				Condition: &ServicesCondition{},
+				Services: []Service{
+					{
+						Name:        "web",
+						Description: "web service",
+					}, {
+						Name:        "api",
+						Namespace:   "",
+						Datacenter:  "dc1",
+						Description: "api service for web",
+						Tag:         "tag",
+					},
+				},
+				Task: task,
+			},
+		}, {
+			Name:   "terraform.tfvars.tmpl (catalog-services condition)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/terraform_cs.tfvars.tmpl",
+			Input: RootModuleInputData{
+				Condition: &CatalogServicesCondition{
+					Regexp: ".*",
+				},
 				Services: []Service{
 					{
 						Name:        "web",
