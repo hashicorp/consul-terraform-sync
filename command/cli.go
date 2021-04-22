@@ -197,6 +197,15 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 		}
 	}
 
+	switch {
+	case isInspect:
+		log.Printf("[INFO] (cli) running controller in inspect mode")
+	case isOnce:
+		log.Printf("[INFO] (cli) running controller in once mode")
+	default:
+		log.Printf("[INFO] (cli) running controller in daemon mode")
+	}
+
 	// Set up controller
 	conf.ClientType = config.String(clientType)
 	store := event.NewStore()
@@ -232,9 +241,6 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 			return
 		}
 
-		if isOnce {
-			log.Printf("[INFO] (cli) running controller in Once mode")
-		}
 		switch c := ctrl.(type) {
 		case controller.Oncer:
 			if err := c.Once(ctx); err != nil {
@@ -268,7 +274,6 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 			}
 		}()
 
-		log.Printf("[INFO] (cli) running controller in daemon mode")
 		if err := ctrl.Run(ctx); err != nil {
 			if err == context.Canceled {
 				exitCh <- struct{}{}
