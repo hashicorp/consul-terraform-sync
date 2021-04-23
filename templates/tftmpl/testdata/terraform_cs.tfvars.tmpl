@@ -15,14 +15,14 @@
 services = {
 {{- with $srv := service "api" "dc=dc1" "\"tag\" in Service.Tags" }}
   {{- range $s := $srv}}
-  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
+  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
 {{ HCLService $s | indent 4 }}
   },
   {{- end}}
 {{- end}}
 {{- with $srv := service "web" }}
   {{- range $s := $srv}}
-  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
+  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
 {{ HCLService $s | indent 4 }}
   },
   {{- end}}
