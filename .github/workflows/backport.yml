@@ -15,7 +15,7 @@
       steps:
         - name: Run Backport Assistant
           run: |
-            backport-assistant backport
+            backport-assistant backport -automerge
           env:
             BACKPORT_LABEL_REGEXP: "backport/(?P<target>\\d+\\.\\d+)"
             BACKPORT_TARGET_TEMPLATE: "release/{{.target}}.x"
