@@ -163,7 +163,7 @@ func nonNullMap(m map[string]string) map[string]string {
 const serviceBaseTmpl = `
 {{- with $srv := service %s }}
   {{- range $s := $srv}}
-  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" : {
+  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
 {{ HCLService $s | indent 4 }}
   },
   {{- end}}

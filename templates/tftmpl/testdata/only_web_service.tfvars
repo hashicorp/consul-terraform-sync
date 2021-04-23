@@ -8,7 +8,7 @@
 # Description: user description for task named 'test'
 
 services = {
-  "web.worker-01.dc1" : {
+  "web.worker-01.dc1" = {
     id              = "web"
     name            = "web"
     kind            = ""

@@ -8,7 +8,7 @@
 # Description: automate services for website X
 
 services = {
-  "api.worker-01.dc1" : {
+  "api.worker-01.dc1" = {
     id              = "api"
     name            = "api"
     kind            = ""
@@ -33,7 +33,7 @@ services = {
     }
     cts_user_defined_meta = {}
   },
-  "web.worker-01.dc1" : {
+  "web.worker-01.dc1" = {
     id              = "web"
     name            = "web"
     kind            = ""
