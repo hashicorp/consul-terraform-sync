@@ -136,6 +136,7 @@ type RootModuleInputData struct {
 	Services         []Service
 	Task             Task
 	Variables        hcltmpl.Variables
+	Condition        Condition
 
 	backend *hcltmpl.NamedBlock
 }

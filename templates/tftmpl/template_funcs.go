@@ -19,6 +19,8 @@ func HCLTmplFuncMap(meta map[string]map[string]string) template.FuncMap {
 	tmplFuncs["subtract"] = tfunc.Math()["subtract"]
 	tmplFuncs["joinStrings"] = joinStringsFunc
 	tmplFuncs["HCLService"] = hclServiceFunc(meta)
+	// catalog-services condition
+	tmplFuncs["regexMatch"] = tfunc.Helpers()["regexMatch"]
 	return tmplFuncs
 }
 

@@ -61,6 +61,7 @@ func TestInitRootModule(t *testing.T) {
 			Source:      "namespace/consul-terraform-sync/consul//modules/test",
 			Version:     "0.0.0",
 		},
+		Condition: &ServicesCondition{},
 		Variables: hcltmpl.Variables{
 			"one":       cty.NumberIntVal(1),
 			"bool_true": cty.BoolVal(true),
@@ -100,6 +101,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 	cases := []struct {
 		name            string
 		goldenFile      string
+		templateFile    string
 		registerAPI     bool
 		registerAPI2    bool
 		registerAPISrv2 bool
@@ -108,6 +110,16 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		{
 			"happy path",
 			"testdata/terraform.tfvars",
+			"testdata/terraform.tfvars.tmpl",
+			true,
+			true,
+			false,
+			true,
+		},
+		{
+			"happy path (catalog-services condition)",
+			"testdata/terraform.tfvars",
+			"testdata/terraform_cs.tfvars.tmpl",
 			true,
 			true,
 			false,
@@ -116,6 +128,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		{
 			"no instances of any service registered",
 			"testdata/no_services.tfvars",
+			"testdata/terraform.tfvars.tmpl",
 			false,
 			false,
 			false,
@@ -124,6 +137,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		{
 			"no instances of service alphabetically first registered",
 			"testdata/only_web_service.tfvars",
+			"testdata/terraform.tfvars.tmpl",
 			false,
 			false,
 			false,
@@ -132,6 +146,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		{
 			"no instances of service alphabetically last registered",
 			"testdata/only_api_service.tfvars",
+			"testdata/terraform.tfvars.tmpl",
 			true,
 			true,
 			true,
@@ -217,7 +232,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			r := hcat.NewResolver()
 
 			// Load template from disk and render
-			contents := testutils.CheckFile(t, true, "testdata", "terraform.tfvars.tmpl")
+			contents := testutils.CheckFile(t, true, tc.templateFile, "")
 			input := hcat.TemplateInput{
 				Contents:      string(contents),
 				ErrMissingKey: true,

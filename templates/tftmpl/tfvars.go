@@ -75,19 +75,27 @@ func newHealthService(s *dep.HealthService, ctsUserDefinedMeta map[string]string
 	}
 }
 
-// newTFVarsTmpl writes the hcat services template to a .tfvars file. This is used
-// by hcat for monitoring service changes from Consul.
+// newTFVarsTmpl writes the hcat services template to a .tfvars file. This is
+// used by hcat for and for monitoring service changes from Consul evaluating a
+// run condition to trigger a condition.
 func newTFVarsTmpl(w io.Writer, filename string, input *RootModuleInputData) error {
-	err := writePreamble(w, input.Task, filename)
-	if err != nil {
+	if err := writePreamble(w, input.Task, filename); err != nil {
 		return err
 	}
 
+	// run condition templating
+	if input.Condition != nil {
+		if err := input.Condition.appendTemplate(w); err != nil {
+			return err
+		}
+	}
+
+	// monitoring services template
 	hclFile := hclwrite.NewEmptyFile()
 	body := hclFile.Body()
 	appendRawServiceTemplateValues(body, input.Services)
 
-	_, err = hclFile.WriteTo(w)
+	_, err := hclFile.WriteTo(w)
 	return err
 }
 

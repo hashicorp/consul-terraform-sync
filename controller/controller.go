@@ -251,6 +251,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			Version:         *t.Version,
 			UserDefinedMeta: conf.Services.CTSUserDefinedMeta(t.Services),
 			BufferPeriod:    getTemplateBufferPeriod(conf, t),
+			Condition:       t.Condition,
 		}
 	}
 

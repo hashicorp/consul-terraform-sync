@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
@@ -361,6 +362,25 @@ func (tf *Terraform) initTask(force bool) error {
 		}
 	}
 
+	var condition tftmpl.Condition
+	switch v := task.Condition.(type) {
+	case *config.CatalogServicesConditionConfig:
+		condition = &tftmpl.CatalogServicesCondition{
+			Regexp:      *v.Regexp,
+			EnableTfVar: *v.EnableTfVar,
+			Datacenter:  *v.Datacenter,
+			Namespace:   *v.Namespace,
+			NodeMeta:    v.NodeMeta,
+		}
+	case *config.ServicesConditionConfig:
+		condition = &tftmpl.ServicesCondition{}
+	default:
+		// expected only for test scenarios
+		log.Printf("[WARN] (driver.terraform) task '%s' condition config unset."+
+			" defaulting to services condition", task.Name)
+		condition = &tftmpl.ServicesCondition{}
+	}
+
 	input := tftmpl.RootModuleInputData{
 		TerraformVersion: TerraformVersion,
 		Backend:          tf.backend,
@@ -374,6 +394,7 @@ func (tf *Terraform) initTask(force bool) error {
 			Version:     task.Version,
 		},
 		Variables: vars,
+		Condition: condition,
 	}
 	input.Init()
 
