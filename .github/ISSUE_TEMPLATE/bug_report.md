@@ -13,8 +13,8 @@ A clear and concise description of what the bug is.
 ### Versions
 **Consul Terraform Sync**
 ```
-consul-nia 8885a20 (8885a20)
-Compatible with Terraform ~>0.13.0
+consul-terraform-sync v0.1.1 (4dc13b5)
+Compatible with Terraform >= 0.13.0, < 0.15
 ```
 
 **Consul Version**
@@ -24,7 +24,7 @@ Consul 1.8.4
 
 **Terraform Version**
 ```
-Terraform v0.13.3
+Terraform v0.15.0
 ```
 
 ### Configuration File(s)
