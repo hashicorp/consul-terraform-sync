@@ -6,13 +6,16 @@ import (
 	"log"
 )
 
+var (
+	_ Condition = (*ServicesCondition)(nil)
+	_ Condition = (*CatalogServicesCondition)(nil)
+)
+
 // Condition handles appending a run condition's templating to the tfvars.tmpl
 // file
 type Condition interface {
 	appendTemplate(io.Writer) error
 }
-
-var _ Condition = (*ServicesCondition)(nil)
 
 // ServicesCondition handles appending templating for the services run condition
 // This is the default run condition
@@ -23,8 +26,6 @@ func (c *ServicesCondition) appendTemplate(w io.Writer) error {
 	// templating. it relies on the monitoring template as the run condition
 	return nil
 }
-
-var _ Condition = (*CatalogServicesCondition)(nil)
 
 // CatalogServicesCondition handles appending templating for the catalog-service
 // run condition
