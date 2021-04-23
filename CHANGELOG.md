@@ -1,3 +1,8 @@
+## UNRELEASED
+
+SECURITY:
+* Update `tfinstall` to verify downloaded versions of Terraform with the rotated HashiCorp PGP signing key ([HCSEC-2021-12](https://discuss.hashicorp.com/t/hcsec-2021-12-codecov-security-event-and-hashicorp-gpg-key-exposure/23512)) [[GH-263](https://github.com/hashicorp/consul-terraform-sync/pull/263)]
+
 ## 0.1.1 (April 21, 2021)
 
 BUG FIXES:
