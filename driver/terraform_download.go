@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-exec/tfinstall"
 )
 
-const fallbackTFVersion = "0.13.5"
+const fallbackTFVersion = "0.13.7"
 
 // TerraformVersion is the version of Terraform CLI for the Terraform driver.
 var TerraformVersion *goVersion.Version
