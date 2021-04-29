@@ -19,10 +19,10 @@ func TestCondition_DecodeConfig(t *testing.T) {
 			"catalog-services: happy path",
 			false,
 			&CatalogServicesConditionConfig{
-				Regexp:      String(".*"),
-				EnableTfVar: Bool(true),
-				Datacenter:  String("dc2"),
-				Namespace:   String("ns2"),
+				Regexp:            String(".*"),
+				SourceIncludesVar: Bool(true),
+				Datacenter:        String("dc2"),
+				Namespace:         String("ns2"),
 				NodeMeta: map[string]string{
 					"key1": "value1",
 					"key2": "value2",
@@ -36,7 +36,7 @@ task {
 	services = ["api"]
 	condition "catalog-services" {
 		regexp = ".*"
-		enable_tf_var = true
+		source_includes_var = true
 		namespace = "ns2"
 		datacenter = "dc2"
 		node_meta {
@@ -50,11 +50,11 @@ task {
 			"catalog-services: unconfigured",
 			false,
 			&CatalogServicesConditionConfig{
-				Regexp:      String("^api$"),
-				EnableTfVar: Bool(false),
-				Datacenter:  String(""),
-				Namespace:   String(""),
-				NodeMeta:    map[string]string{},
+				Regexp:            String("^api$"),
+				SourceIncludesVar: Bool(false),
+				Datacenter:        String(""),
+				Namespace:         String(""),
+				NodeMeta:          map[string]string{},
 			},
 			"config.hcl",
 			`
@@ -136,7 +136,7 @@ task {
 	}
 	condition "catalog-services" {
 		regexp = ".*"
-		enable_tf_var = false
+		source_includes_var = false
 	}
 }`,
 		},
@@ -158,10 +158,10 @@ task {
 			"json happy path",
 			false,
 			&CatalogServicesConditionConfig{
-				Regexp:      String(".*"),
-				EnableTfVar: Bool(true),
-				Datacenter:  String("dc2"),
-				Namespace:   String("ns2"),
+				Regexp:            String(".*"),
+				SourceIncludesVar: Bool(true),
+				Datacenter:        String("dc2"),
+				Namespace:         String("ns2"),
 				NodeMeta: map[string]string{
 					"key1": "value1",
 					"key2": "value2",
@@ -180,7 +180,7 @@ task {
 		  "condition": {
 			"catalog-services": {
 			  "regexp": ".*",
-			  "enable_tf_var": true,
+			  "source_includes_var": true,
 			  "datacenter": "dc2",
 			  "namespace": "ns2",
 			  "node_meta": {

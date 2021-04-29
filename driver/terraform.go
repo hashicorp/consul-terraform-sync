@@ -366,11 +366,11 @@ func (tf *Terraform) initTask(force bool) error {
 	switch v := task.Condition.(type) {
 	case *config.CatalogServicesConditionConfig:
 		condition = &tftmpl.CatalogServicesCondition{
-			Regexp:      *v.Regexp,
-			EnableTfVar: *v.EnableTfVar,
-			Datacenter:  *v.Datacenter,
-			Namespace:   *v.Namespace,
-			NodeMeta:    v.NodeMeta,
+			Regexp:            *v.Regexp,
+			SourceIncludesVar: *v.SourceIncludesVar,
+			Datacenter:        *v.Datacenter,
+			Namespace:         *v.Namespace,
+			NodeMeta:          v.NodeMeta,
 		}
 	case *config.ServicesConditionConfig:
 		condition = &tftmpl.ServicesCondition{}

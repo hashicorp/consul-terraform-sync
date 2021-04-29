@@ -82,7 +82,7 @@
       "condition": {
         "catalog-services": {
           "regexp": ".*",
-          "enable_tf_var": true,
+          "source_includes_var": true,
           "datacenter": "dc2",
           "namespace": "ns2",
           "node_meta": {
