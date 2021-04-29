@@ -77,7 +77,7 @@ task {
   source = "Y"
   condition "catalog-services" {
     regexp = ".*"
-    enable_tf_var = true
+    source_includes_var = true
     namespace = "ns2"
     datacenter = "dc2"
     node_meta {

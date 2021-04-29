@@ -30,11 +30,11 @@ func (c *ServicesCondition) appendTemplate(w io.Writer) error {
 // CatalogServicesCondition handles appending templating for the catalog-service
 // run condition
 type CatalogServicesCondition struct {
-	Regexp      string
-	EnableTfVar bool
-	Datacenter  string
-	Namespace   string
-	NodeMeta    map[string]string
+	Regexp            string
+	SourceIncludesVar bool
+	Datacenter        string
+	Namespace         string
+	NodeMeta          map[string]string
 }
 
 func (c *CatalogServicesCondition) appendTemplate(w io.Writer) error {

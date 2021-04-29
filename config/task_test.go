@@ -31,10 +31,10 @@ func TestTaskConfig_Copy(t *testing.T) {
 				Version:     String("0.0.0"),
 				Enabled:     Bool(true),
 				Condition: &CatalogServicesConditionConfig{
-					Regexp:      String(".*"),
-					EnableTfVar: Bool(true),
-					Datacenter:  String("dc2"),
-					Namespace:   String("ns2"),
+					Regexp:            String(".*"),
+					SourceIncludesVar: Bool(true),
+					Datacenter:        String("dc2"),
+					Namespace:         String("ns2"),
 					NodeMeta: map[string]string{
 						"key": "value",
 					},

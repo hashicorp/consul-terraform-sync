@@ -14,11 +14,11 @@ var _ ConditionConfig = (*CatalogServicesConditionConfig)(nil)
 // of type 'catalog-services'. A catalog-services condition is triggered by
 // that occur to services in the catalog-services api.
 type CatalogServicesConditionConfig struct {
-	Regexp      *string           `mapstructure:"regexp"`
-	EnableTfVar *bool             `mapstructure:"enable_tf_var"`
-	Datacenter  *string           `mapstructure:"datacenter"`
-	Namespace   *string           `mapstructure:"namespace"`
-	NodeMeta    map[string]string `mapstructure:"node_meta"`
+	Regexp            *string           `mapstructure:"regexp"`
+	SourceIncludesVar *bool             `mapstructure:"source_includes_var"`
+	Datacenter        *string           `mapstructure:"datacenter"`
+	Namespace         *string           `mapstructure:"namespace"`
+	NodeMeta          map[string]string `mapstructure:"node_meta"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -30,7 +30,7 @@ func (c *CatalogServicesConditionConfig) Copy() ConditionConfig {
 	var o CatalogServicesConditionConfig
 
 	o.Regexp = StringCopy(c.Regexp)
-	o.EnableTfVar = BoolCopy(c.EnableTfVar)
+	o.SourceIncludesVar = BoolCopy(c.SourceIncludesVar)
 	o.Datacenter = StringCopy(c.Datacenter)
 	o.Namespace = StringCopy(c.Namespace)
 
@@ -72,8 +72,8 @@ func (c *CatalogServicesConditionConfig) Merge(o ConditionConfig) ConditionConfi
 		r2.Regexp = StringCopy(o2.Regexp)
 	}
 
-	if o2.EnableTfVar != nil {
-		r2.EnableTfVar = BoolCopy(o2.EnableTfVar)
+	if o2.SourceIncludesVar != nil {
+		r2.SourceIncludesVar = BoolCopy(o2.SourceIncludesVar)
 	}
 
 	if o2.Datacenter != nil {
@@ -118,8 +118,8 @@ func (c *CatalogServicesConditionConfig) Finalize(services []string) {
 		}
 	}
 
-	if c.EnableTfVar == nil {
-		c.EnableTfVar = Bool(false)
+	if c.SourceIncludesVar == nil {
+		c.SourceIncludesVar = Bool(false)
 	}
 
 	if c.Datacenter == nil {
@@ -156,13 +156,13 @@ func (c *CatalogServicesConditionConfig) GoString() string {
 
 	return fmt.Sprintf("&CatalogServicesConditionConfig{"+
 		"Regexp:%s, "+
-		"EnableTfVar:%v, "+
+		"SourceIncludesVar:%v, "+
 		"Datacenter:%v, "+
 		"Namespace:%v, "+
 		"NodeMeta:%s"+
 		"}",
 		StringVal(c.Regexp),
-		BoolVal(c.EnableTfVar),
+		BoolVal(c.SourceIncludesVar),
 		StringVal(c.Datacenter),
 		StringVal(c.Namespace),
 		c.NodeMeta,
