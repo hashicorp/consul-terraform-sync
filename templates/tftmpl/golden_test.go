@@ -87,6 +87,18 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
+			Name:   "variables.tf (catalog-services condition - source_includes_var)",
+			Func:   newVariablesTF,
+			Golden: "testdata/catalog-services-condition/variables_include.tf",
+			Input: RootModuleInputData{
+				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
+				Condition: &CatalogServicesCondition{
+					Regexp:            ".*",
+					SourceIncludesVar: true,
+				},
+				Task: task,
+			},
+		}, {
 			Name:   "terraform.tfvars.tmpl (services condition)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/terraform.tfvars.tmpl",
@@ -109,7 +121,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "terraform.tfvars.tmpl (catalog-services condition)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/terraform_cs.tfvars.tmpl",
+			Golden: "testdata/catalog-services-condition/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
 					Regexp: ".*",
