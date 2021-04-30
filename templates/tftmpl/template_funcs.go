@@ -1,6 +1,8 @@
 package tftmpl
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -21,6 +23,7 @@ func HCLTmplFuncMap(meta map[string]map[string]string) template.FuncMap {
 	tmplFuncs["HCLService"] = hclServiceFunc(meta)
 	// catalog-services condition
 	tmplFuncs["regexMatch"] = tfunc.Helpers()["regexMatch"]
+	tmplFuncs["HCLServices"] = hclServicesFunc()
 	return tmplFuncs
 }
 
@@ -40,6 +43,22 @@ func joinStringsFunc(sep string, values ...string) string {
 	}
 
 	return strings.Join(cleaned, sep)
+}
+
+// hclServicesFunc is a wrapper of the template function to marshal Consul
+// catalog service tag information into HCL. It returns the list of tags with
+// formatted like: "["tag1", "tag2"]". It returns an empty array string "[]"
+// when no tags
+func hclServicesFunc() func(tags *dep.ServiceTags) string {
+	return func(tags *dep.ServiceTags) string {
+		t := make([]string, len(*tags))
+		for ix, tag := range *tags {
+			t[ix] = fmt.Sprintf("\"%s\"", tag)
+		}
+		sort.Strings(t)
+
+		return fmt.Sprintf("[%s]", strings.Join(t, ", "))
+	}
 }
 
 // hclServiceFunc is a wrapper of the template function to marshal Consul
