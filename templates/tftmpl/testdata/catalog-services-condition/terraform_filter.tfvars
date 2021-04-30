@@ -7,57 +7,12 @@
 # Task: test
 # Description: user description for task named 'test'
 
+catalog_services = {
+  "api" = ["tag"]
+  "consul" = []
+}
+
 services = {
-  "api.worker-01.dc1" = {
-    id              = "api"
-    name            = "api"
-    kind            = ""
-    address         = "1.2.3.4"
-    port            = 8080
-    meta            = {}
-    tags            = ["tag"]
-    namespace       = null
-    status          = "passing"
-    node            = "worker-01"
-    node_id         = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
-    node_address    = "127.0.0.1"
-    node_datacenter = "dc1"
-    node_tagged_addresses = {
-      lan      = "127.0.0.1"
-      lan_ipv4 = "127.0.0.1"
-      wan      = "127.0.0.1"
-      wan_ipv4 = "127.0.0.1"
-    }
-    node_meta = {
-      consul-network-segment = ""
-    }
-    cts_user_defined_meta = {}
-  },
-  "api-2.worker-01.dc1" = {
-    id              = "api-2"
-    name            = "api"
-    kind            = ""
-    address         = "5.6.7.8"
-    port            = 8080
-    meta            = {}
-    tags            = ["tag"]
-    namespace       = null
-    status          = "passing"
-    node            = "worker-01"
-    node_id         = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
-    node_address    = "127.0.0.1"
-    node_datacenter = "dc1"
-    node_tagged_addresses = {
-      lan      = "127.0.0.1"
-      lan_ipv4 = "127.0.0.1"
-      wan      = "127.0.0.1"
-      wan_ipv4 = "127.0.0.1"
-    }
-    node_meta = {
-      consul-network-segment = ""
-    }
-    cts_user_defined_meta = {}
-  },
   "api.worker-02.dc1" = {
     id              = "api"
     name            = "api"
@@ -81,6 +36,31 @@ services = {
     node_meta = {
       consul-network-segment = ""
       k                      = "v"
+    }
+    cts_user_defined_meta = {}
+  },
+  "web.worker-01.dc1" = {
+    id              = "web"
+    name            = "web"
+    kind            = ""
+    address         = "1.1.1.1"
+    port            = 8000
+    meta            = {}
+    tags            = ["tag_a", "tag_b"]
+    namespace       = null
+    status          = "passing"
+    node            = "worker-01"
+    node_id         = "39e5a7f5-2834-e16d-6925-78167c9f50d8"
+    node_address    = "127.0.0.1"
+    node_datacenter = "dc1"
+    node_tagged_addresses = {
+      lan      = "127.0.0.1"
+      lan_ipv4 = "127.0.0.1"
+      wan      = "127.0.0.1"
+      wan_ipv4 = "127.0.0.1"
+    }
+    node_meta = {
+      consul-network-segment = ""
     }
     cts_user_defined_meta = {}
   },
