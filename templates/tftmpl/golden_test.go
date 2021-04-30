@@ -67,6 +67,18 @@ func TestNewFiles(t *testing.T) {
 				},
 			},
 		}, {
+			Name:   "main.tf (catalog-services condition - source_includes_var)",
+			Func:   newMainTF,
+			Golden: "testdata/catalog-services-condition/main_include.tf",
+			Input: RootModuleInputData{
+				Backend: map[string]interface{}{},
+				Condition: &CatalogServicesCondition{
+					Regexp:            ".*",
+					SourceIncludesVar: true,
+				},
+				Task: task,
+			},
+		}, {
 			Name:   "variables.tf",
 			Func:   newVariablesTF,
 			Golden: "testdata/variables.tf",
