@@ -153,6 +153,29 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
+			Name:   "terraform.tfvars.tmpl (catalog-services condition - source_includes_var)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/catalog-services-condition/terraform_include.tfvars.tmpl",
+			Input: RootModuleInputData{
+				Condition: &CatalogServicesCondition{
+					Regexp:            ".*",
+					SourceIncludesVar: true,
+				},
+				Services: []Service{
+					{
+						Name:        "web",
+						Description: "web service",
+					}, {
+						Name:        "api",
+						Namespace:   "",
+						Datacenter:  "dc1",
+						Description: "api service for web",
+						Tag:         "tag",
+					},
+				},
+				Task: task,
+			},
+		}, {
 			Name:   "providers.tfvars",
 			Func:   newProvidersTFVars,
 			Golden: "testdata/providers.tfvars",
