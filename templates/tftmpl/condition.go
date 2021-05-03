@@ -67,7 +67,7 @@ const catalogServicesConditionIncludesVarTmpl = `catalog_services = {
 {{- with $allCatalogServices := services }}
   {{- range $cs := $allCatalogServices }}
     {{- if regexMatch "%s" $cs.Name }}
-  "{{ $cs.Name }}" = {{ HCLServices $cs.Tags }}
+  "{{ $cs.Name }}" = {{ HCLServiceTags $cs.Tags }}
 {{- end}}{{- end}}{{- end}}
 }
 
