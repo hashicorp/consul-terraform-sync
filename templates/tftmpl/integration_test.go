@@ -135,6 +135,15 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			true,
 		},
 		{
+			"happy path (catalog-services condition - with filtering)",
+			"testdata/catalog-services-condition/terraform_filter.tfvars",
+			"testdata/catalog-services-condition/terraform_filter.tfvars.tmpl",
+			false,
+			false,
+			true,
+			true,
+		},
+		{
 			"no instances of any service registered",
 			"testdata/no_services.tfvars",
 			"testdata/terraform.tfvars.tmpl",
@@ -216,6 +225,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 						// Hardcode node info so it doesn't change per run
 						c.NodeName = "worker-02"
 						c.NodeID = "d407a592-e93c-4d8e-8a6d-aba853d1e067"
+						c.NodeMeta = map[string]string{"k": "v"}
 					})
 				require.NoError(t, err, "failed to start consul server 2")
 				defer srv2.Stop()
