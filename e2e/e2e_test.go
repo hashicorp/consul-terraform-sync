@@ -265,11 +265,11 @@ func newTestConsulServer(t *testing.T) *testutil.TestServer {
 
 	// Register services
 	srv.AddAddressableService(t, "api", testutil.HealthPassing,
-		"1.2.3.4", 8080, []string{})
+		"1.2.3.4", 8080, []string{"tag1"})
 	srv.AddAddressableService(t, "web", testutil.HealthPassing,
-		"5.6.7.8", 8000, []string{})
+		"5.6.7.8", 8000, []string{"tag2"})
 	srv.AddAddressableService(t, "db", testutil.HealthPassing,
-		"10.10.10.10", 8000, []string{})
+		"10.10.10.10", 8000, []string{"tag3", "tag4"})
 	return srv
 }
 

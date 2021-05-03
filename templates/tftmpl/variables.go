@@ -48,6 +48,17 @@ variable "services" {
 }
 `)
 
+// VariableCatalogServices is required for modules that include catalog-services
+// information. It is versioned to track compatibility between the generated
+// root module and modules that include catalog-services.
+var VariableCatalogServices = []byte(`
+# Catalog Services definition protocol v0
+variable "catalog_services" {
+  description = "Consul catalog service names and list of all known tags for a given service"
+  type = map(list(string))
+}
+`)
+
 // newVariablesTF writes variable definitions to a file. This includes the
 // required services variable and generated provider variables based on CTS
 // user configuration for the task.
@@ -57,20 +68,21 @@ func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) er
 		return err
 	}
 
-	_, err = w.Write(VariableServices)
-	if err != nil {
+	if _, err = w.Write(VariableServices); err != nil {
 		return err
+	}
+
+	if v, ok := input.Condition.(*CatalogServicesCondition); ok && v.SourceIncludesVar {
+		if _, err = w.Write(VariableCatalogServices); err != nil {
+			return err
+		}
 	}
 
 	hclFile := hclwrite.NewEmptyFile()
 	rootBody := hclFile.Body()
-	rootBody.AppendNewline()
-	lastIdx := len(input.Providers) - 1
-	for i, p := range input.Providers {
+	for _, p := range input.Providers {
+		rootBody.AppendNewline()
 		appendNamedBlockVariable(rootBody, p, input.TerraformVersion, true)
-		if i != lastIdx {
-			rootBody.AppendNewline()
-		}
 	}
 
 	// Format the file before writing

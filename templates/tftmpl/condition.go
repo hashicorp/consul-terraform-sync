@@ -38,18 +38,37 @@ type CatalogServicesCondition struct {
 }
 
 func (c *CatalogServicesCondition) appendTemplate(w io.Writer) error {
-	_, err := fmt.Fprintf(w, catalogServicesRunConditionTmpl, c.Regexp)
+	if c.SourceIncludesVar {
+		_, err := fmt.Fprintf(w, catalogServicesConditionIncludesVarTmpl, c.Regexp)
+		if err != nil {
+			log.Printf("[WARN] (templates.tftmpl) unable to write catalog-service" +
+				" template to include variable")
+			return err
+		}
+		return nil
+	}
+	_, err := fmt.Fprintf(w, catalogServicesConditionTmpl, c.Regexp)
 	if err != nil {
 		log.Printf("[WARN] (templates.tftmpl) unable to write catalog-service" +
-			" trigger condition to template")
+			" empty template")
 		return err
 	}
 	return nil
 }
 
-const catalogServicesRunConditionTmpl = `{{- with $allCatalogServices := services }}
+const catalogServicesConditionTmpl = `{{- with $allCatalogServices := services }}
   {{- range $cs := $allCatalogServices }}
     {{- if regexMatch "%s" $cs.Name }}{{/* Empty template. Detects changes in catalog-services */}}
 {{- end}}{{- end}}{{- end}}
+
+`
+
+const catalogServicesConditionIncludesVarTmpl = `catalog_services = {
+{{- with $allCatalogServices := services }}
+  {{- range $cs := $allCatalogServices }}
+    {{- if regexMatch "%s" $cs.Name }}
+  "{{ $cs.Name }}" = {{ HCLServiceTags $cs.Tags }}
+{{- end}}{{- end}}{{- end}}
+}
 
 `

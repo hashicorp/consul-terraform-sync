@@ -226,7 +226,8 @@ func newMainTF(w io.Writer, filename string, input *RootModuleInputData) error {
 	rootBody.AppendNewline()
 	appendRootProviderBlocks(rootBody, input.Providers)
 	rootBody.AppendNewline()
-	appendRootModuleBlock(rootBody, input.Task, input.Variables.Keys())
+	appendRootModuleBlock(rootBody, input.Task, input.Condition,
+		input.Variables.Keys())
 
 	// Format the file before writing
 	content := hclFile.Bytes()
@@ -323,7 +324,9 @@ func appendRootProviderBlocks(body *hclwrite.Body, providers []hcltmpl.NamedBloc
 }
 
 // appendRootModuleBlock appends a Terraform module block for the task
-func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string) {
+func appendRootModuleBlock(body *hclwrite.Body, task Task, cond Condition,
+	varNames []string) {
+
 	// Add user description for task above the module block
 	if task.Description != "" {
 		appendComment(body, task.Description)
@@ -340,6 +343,13 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string) {
 		hcl.TraverseRoot{Name: "var"},
 		hcl.TraverseAttr{Name: "services"},
 	})
+
+	if v, ok := cond.(*CatalogServicesCondition); ok && v.SourceIncludesVar {
+		moduleBody.SetAttributeTraversal("catalog_services", hcl.Traversal{
+			hcl.TraverseRoot{Name: "var"},
+			hcl.TraverseAttr{Name: "catalog_services"},
+		})
+	}
 
 	if len(varNames) != 0 {
 		moduleBody.AppendNewline()

@@ -117,9 +117,18 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			true,
 		},
 		{
-			"happy path (catalog-services condition)",
+			"happy path (catalog-services condition - default values)",
 			"testdata/terraform.tfvars",
-			"testdata/terraform_cs.tfvars.tmpl",
+			"testdata/catalog-services-condition/terraform.tfvars.tmpl",
+			true,
+			true,
+			false,
+			true,
+		},
+		{
+			"happy path (catalog-services condition - source_includes_var)",
+			"testdata/catalog-services-condition/terraform_include.tfvars",
+			"testdata/catalog-services-condition/terraform_include.tfvars.tmpl",
 			true,
 			true,
 			false,
@@ -180,7 +189,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			}
 			if tc.registerWeb {
 				srv.AddAddressableService(t, "web", testutil.HealthPassing,
-					"1.1.1.1", 8000, []string{})
+					"1.1.1.1", 8000, []string{"tag_a", "tag_b"})
 			}
 
 			// Register another api service instance (with unique ID)
