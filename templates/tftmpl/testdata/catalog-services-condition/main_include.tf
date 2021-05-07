@@ -8,7 +8,7 @@
 # Description: user description for task named 'test'
 
 terraform {
-  required_version = ">= 0.13.0, < 0.15"
+  required_version = ">= 0.13.0, < 0.16"
 }
 
 
