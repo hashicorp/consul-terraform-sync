@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/tmplfunc"
 	"github.com/hashicorp/hcat"
 	"github.com/pkg/errors"
 )
@@ -531,7 +532,7 @@ func (tf *Terraform) initTaskTemplate() error {
 	tf.template = hcat.NewTemplate(hcat.TemplateInput{
 		Contents:     string(content),
 		Renderer:     renderer,
-		FuncMapMerge: tftmpl.HCLTmplFuncMap(tf.task.UserDefinedMeta),
+		FuncMapMerge: tmplfunc.HCLMap(tf.task.UserDefinedMeta),
 	})
 
 	return nil
