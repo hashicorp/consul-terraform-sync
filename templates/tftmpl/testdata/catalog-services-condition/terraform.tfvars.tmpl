@@ -7,10 +7,10 @@
 # Task: test
 # Description: user description for task named 'test'
 
-{{- with $allCatalogServices := services }}
-  {{- range $cs := $allCatalogServices }}
-    {{- if regexMatch ".*" $cs.Name }}{{/* Empty template. Detects changes in catalog-services */}}
-{{- end}}{{- end}}{{- end}}
+{{- with $catalogServices := catalogServicesRegistration "regexp=.*" }}
+  {{- range $cs := $catalogServices }}
+    {{- /* Empty template. Detects changes in catalog-services */ -}}
+{{- end}}{{- end}}
 
 services = {
 {{- with $srv := service "api" "dc=dc1" "\"tag\" in Service.Tags" }}

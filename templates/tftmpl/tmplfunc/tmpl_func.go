@@ -15,12 +15,11 @@ import (
 // to their respective implementations
 func HCLMap(meta map[string]map[string]string) template.FuncMap {
 	tmplFuncs := hcat.FuncMapConsulV1()
+	tmplFuncs["catalogServicesRegistration"] = catalogServicesRegistrationFunc
 	tmplFuncs["indent"] = tfunc.Helpers()["indent"]
 	tmplFuncs["subtract"] = tfunc.Math()["subtract"]
 	tmplFuncs["joinStrings"] = joinStringsFunc
 	tmplFuncs["HCLService"] = hclServiceFunc(meta)
-	// catalog-services condition
-	tmplFuncs["regexMatch"] = tfunc.Helpers()["regexMatch"]
 	tmplFuncs["HCLServiceTags"] = hclServiceTagsFunc()
 	return tmplFuncs
 }
