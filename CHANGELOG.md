@@ -1,5 +1,9 @@
 ## UNRELEASED
 
+FEATURES:
+* Add support for Terraform v0.15 [[GH-277](https://github.com/hashicorp/consul-terraform-sync/pull/277)]
+
+
 ## 0.1.2 (April 28, 2021)
 
 SECURITY:
