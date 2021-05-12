@@ -1,5 +1,8 @@
 terraform
 vendor/
+.terraform*
+terraform.tfstate
+examples-runnable/sync-tasks
 
 # ignore builds
 /pkg
