@@ -19,7 +19,7 @@ task {
   version = "1.0.0"
   providers = ["myprovider"]
   services = ["web", "api"]
-  variable_files = ["example.module.tfvars"]
+  variable_files = ["/path/to/example.module.tfvars"]
 }
 
 driver "terraform" {

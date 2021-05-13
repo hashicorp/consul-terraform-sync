@@ -1,0 +1,67 @@
+# Example Consul Terraform Sync Compatible Module
+
+This is an example of a module that is compatible with Consul Terraform Sync, which means it contains a root module (`main.tf`) and a `services` input variable, as specified in `variables.tf`.
+
+## Features
+
+This module writes to a file the name, id, and IP address for all the consul services. It also writes a metadata value if provided for the service.
+
+## Requirements
+### Terraform Providers
+
+| Name | Version |
+|------|---------|
+| local | 2.1.0 |
+
+
+## Usage
+| User-defined service meta | Required | Description |
+|-------------------|----------|-------------|
+| test_key | false | Test metadata that is printed out per service |
+
+**User Config for Consul Terraform Sync**
+
+example.hcl
+```hcl
+task {
+  name = "example-task"
+  description = "Writes the service name, id, and IP address to a file"
+  source = "../../example-module"
+  providers = ["local"]
+  services = ["web", "api"]
+  variable_files = [/path/to/task-example.tfvars]
+}
+
+driver "terraform" {
+  required_providers {
+    local = {
+      source = "hashicorp/local"
+      version = "2.1.0"
+    }
+  }
+}
+
+terraform_provider "local" {
+}
+
+service {
+  name = "web"
+  cts_user_defined_meta = {
+    "test_key" = "test_value"
+  }
+}
+```
+
+**Variable file**
+
+Optional input variable file defined by a user for the task above.
+
+| Input Variables | Default Value | Description |
+|-------------------|----------|-------------|
+| filename | test.txt | Name of file that is created with the service information |
+
+```hcl
+# task-example.tfvars
+
+filename = "consul_services.txt"
+```
