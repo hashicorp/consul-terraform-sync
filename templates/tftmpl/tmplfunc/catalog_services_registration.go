@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
@@ -45,7 +46,7 @@ type catalogServicesRegistrationQuery struct {
 	dc       string
 	ns       string
 	nodeMeta map[string]string
-	opts     QueryOptions
+	opts     consulapi.QueryOptions
 }
 
 // newCatalogServicesRegistrationQuery processes options in the format of
@@ -105,15 +106,18 @@ func (d *catalogServicesRegistrationQuery) Fetch(clients dep.Clients) (interface
 	default:
 	}
 
-	opts := d.opts.Merge(&QueryOptions{
-		Datacenter: d.dc,
-		Namespace:  d.ns,
-	}).ToConsulOpts()
-	// node-meta is handled specifically for /v1/catalog/services endpoint since
-	// it does not support the preferred filter option.
-	opts.NodeMeta = d.nodeMeta
+	opts := d.opts
+	if d.dc != "" {
+		opts.Datacenter = d.dc
+	}
+	if d.ns != "" {
+		opts.Namespace = d.ns
+	}
+	if len(d.nodeMeta) != 0 {
+		opts.NodeMeta = d.nodeMeta
+	}
 
-	entries, qm, err := clients.Consul().Catalog().Services(opts)
+	entries, qm, err := clients.Consul().Catalog().Services(&opts)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
@@ -167,7 +171,7 @@ func (d *catalogServicesRegistrationQuery) Stop() {
 	close(d.stopCh)
 }
 
-func (d *catalogServicesRegistrationQuery) SetOptions(opts QueryOptions) {
+func (d *catalogServicesRegistrationQuery) SetOptions(opts consulapi.QueryOptions) {
 	d.opts = opts
 }
 
