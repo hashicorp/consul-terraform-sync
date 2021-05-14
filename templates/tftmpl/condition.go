@@ -41,7 +41,7 @@ type CatalogServicesCondition struct {
 func (c *CatalogServicesCondition) appendTemplate(w io.Writer) error {
 	q := c.hcatQuery()
 	if c.SourceIncludesVar {
-		_, err := fmt.Fprintf(w, catalogServicesConditionIncludesVarTmpl, q, c.Regexp)
+		_, err := fmt.Fprintf(w, catalogServicesConditionIncludesVarTmpl, q)
 		if err != nil {
 			log.Printf("[WARN] (templates.tftmpl) unable to write catalog-service" +
 				" template to include variable")
@@ -49,7 +49,7 @@ func (c *CatalogServicesCondition) appendTemplate(w io.Writer) error {
 		}
 		return nil
 	}
-	_, err := fmt.Fprintf(w, catalogServicesConditionTmpl, q, c.Regexp)
+	_, err := fmt.Fprintf(w, catalogServicesConditionTmpl, q)
 	if err != nil {
 		log.Printf("[WARN] (templates.tftmpl) unable to write catalog-service" +
 			" empty template")
@@ -60,6 +60,10 @@ func (c *CatalogServicesCondition) appendTemplate(w io.Writer) error {
 
 func (c *CatalogServicesCondition) hcatQuery() string {
 	var opts []string
+
+	if c.Regexp != "" {
+		opts = append(opts, fmt.Sprintf("regexp=%s", c.Regexp))
+	}
 
 	if c.Datacenter != "" {
 		opts = append(opts, fmt.Sprintf("dc=%s", c.Datacenter))
@@ -79,19 +83,18 @@ func (c *CatalogServicesCondition) hcatQuery() string {
 	return ""
 }
 
-const catalogServicesConditionTmpl = `{{- with $allCatalogServices := services %s}}
-  {{- range $cs := $allCatalogServices }}
-    {{- if regexMatch "%s" $cs.Name }}{{/* Empty template. Detects changes in catalog-services */}}
-{{- end}}{{- end}}{{- end}}
+const catalogServicesConditionTmpl = `{{- with $catalogServices := catalogServicesRegistration %s}}
+  {{- range $cs := $catalogServices }}
+    {{- /* Empty template. Detects changes in catalog-services */ -}}
+{{- end}}{{- end}}
 
 `
 
 const catalogServicesConditionIncludesVarTmpl = `catalog_services = {
-{{- with $allCatalogServices := services %s}}
-  {{- range $cs := $allCatalogServices }}
-    {{- if regexMatch "%s" $cs.Name }}
+{{- with $catalogServices := catalogServicesRegistration %s}}
+  {{- range $cs := $catalogServices }}
   "{{ $cs.Name }}" = {{ HCLServiceTags $cs.Tags }}
-{{- end}}{{- end}}{{- end}}
+{{- end}}{{- end}}
 }
 
 `

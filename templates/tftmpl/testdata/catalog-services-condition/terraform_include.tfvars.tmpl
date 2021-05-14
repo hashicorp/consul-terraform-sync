@@ -8,11 +8,10 @@
 # Description: user description for task named 'test'
 
 catalog_services = {
-{{- with $allCatalogServices := services }}
-  {{- range $cs := $allCatalogServices }}
-    {{- if regexMatch ".*" $cs.Name }}
+{{- with $catalogServices := catalogServicesRegistration "regexp=.*" }}
+  {{- range $cs := $catalogServices }}
   "{{ $cs.Name }}" = {{ HCLServiceTags $cs.Tags }}
-{{- end}}{{- end}}{{- end}}
+{{- end}}{{- end}}
 }
 
 services = {

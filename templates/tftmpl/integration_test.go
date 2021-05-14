@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/tmplfunc"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	goVersion "github.com/hashicorp/go-version"
@@ -255,7 +256,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			input := hcat.TemplateInput{
 				Contents:      string(contents),
 				ErrMissingKey: true,
-				FuncMapMerge:  HCLTmplFuncMap(nil),
+				FuncMapMerge:  tmplfunc.HCLMap(nil),
 			}
 			tmpl := hcat.NewTemplate(input)
 
