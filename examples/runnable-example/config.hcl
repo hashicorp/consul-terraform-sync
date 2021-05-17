@@ -1,5 +1,4 @@
 log_level = "INFO"
-port = 8502
 
 consul {
   address = "localhost:8500"

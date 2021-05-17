@@ -6,7 +6,7 @@
 #
 
 log_level = "info"
-port = 8502
+port = 8555
 
 consul {
   address = "consul.example.com"

@@ -1,7 +1,5 @@
 terraform
 vendor/
-.terraform*
-terraform.tfstate
 examples/runnable-example/sync-tasks
 
 # ignore builds

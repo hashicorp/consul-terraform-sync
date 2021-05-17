@@ -1,9 +1,0 @@
-{
-  "service": {
-    "name": "api",
-    "tags": [
-      "test"
-    ],
-    "port": 9000
-  }
-}

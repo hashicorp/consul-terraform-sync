@@ -4,7 +4,7 @@ This is an example of a module that is compatible with Consul Terraform Sync, wh
 
 ## Features
 
-This module writes to a file the name, id, and IP address for all the consul services. It also writes a metadata value if provided for the service.
+This module writes to a file the name, id, and IP address for all the Consul services. It also writes a metadata value if provided for the service.
 
 ## Requirements
 ### Terraform Providers

@@ -1,9 +1,0 @@
-{
-  "service": {
-    "name": "web",
-    "tags": [
-      "example"
-    ],
-    "port": 80
-  }
-}

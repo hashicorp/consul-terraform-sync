@@ -10,8 +10,8 @@ terraform {
 }
 
 resource "local_file" "consul_services" {
-  content = join("\n", [
+  content = "${join("\n", [
     for _, service in var.services : "${service.name} ${service.id} ${service.node_address} ${lookup(service.cts_user_defined_meta, "test_key", "")}"
-  ])
+  ])}\n"
   filename = var.filename
 }
