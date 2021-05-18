@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/notifier"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/tmplfunc"
 	"github.com/hashicorp/hcat"
 	"github.com/pkg/errors"
@@ -529,11 +530,17 @@ func (tf *Terraform) initTaskTemplate() error {
 		Perms: filePerms,
 	})
 
-	tf.template = hcat.NewTemplate(hcat.TemplateInput{
+	tmpl := hcat.NewTemplate(hcat.TemplateInput{
 		Contents:     string(content),
 		Renderer:     renderer,
 		FuncMapMerge: tmplfunc.HCLMap(tf.task.UserDefinedMeta),
 	})
+	switch tf.task.Condition.(type) {
+	case *config.CatalogServicesConditionConfig:
+		tf.template = &notifier.CatalogServicesRegistration{Template: tmpl}
+	default:
+		tf.template = tmpl
+	}
 
 	return nil
 }
