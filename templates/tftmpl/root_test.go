@@ -1,6 +1,9 @@
 package tftmpl
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -162,6 +165,125 @@ func TestAppendRootProviderBlocks(t *testing.T) {
 
 			backend := []hcltmpl.NamedBlock{hcltmpl.NewNamedBlock(tc.rawBackend)}
 			appendRootProviderBlocks(body, backend)
+
+			content := hclFile.Bytes()
+			content = hclwrite.Format(content)
+			assert.Equal(t, tc.expected, string(content))
+		})
+	}
+}
+
+func TestAppendRootModuleBlocks(t *testing.T) {
+	workingDir, err := os.Getwd()
+	assert.Nil(t, err, "Error determining current working directory")
+	wdParent := filepath.Dir(workingDir)
+
+	testCases := []struct {
+		name     string
+		task     Task
+		cond     Condition
+		varNames []string
+		expected string
+	}{
+		{
+			"module without conditions or variables",
+			Task{
+				Description: "user description for task named 'test'",
+				Name:        "test",
+				Source:      "namespace/example/test-module",
+				Version:     "1.0.0",
+			},
+			nil,
+			nil,
+			`# user description for task named 'test'
+module "test" {
+  source   = "namespace/example/test-module"
+  version  = "1.0.0"
+  services = var.services
+}
+`},
+		{
+			"module with catalog service conditions",
+			Task{
+				Description: "user description for task named 'test'",
+				Name:        "test",
+				Source:      "namespace/example/test-module",
+				Version:     "1.0.0",
+			},
+			&CatalogServicesCondition{
+				Regexp:            ".*",
+				SourceIncludesVar: true,
+			},
+			nil,
+			`# user description for task named 'test'
+module "test" {
+  source           = "namespace/example/test-module"
+  version          = "1.0.0"
+  services         = var.services
+  catalog_services = var.catalog_services
+}
+`},
+		{
+			"module with variables",
+			Task{
+				Description: "user description for task named 'test'",
+				Name:        "test",
+				Source:      "namespace/example/test-module",
+				Version:     "1.0.0",
+			},
+			nil,
+			[]string{"test1", "test2"},
+			`# user description for task named 'test'
+module "test" {
+  source   = "namespace/example/test-module"
+  version  = "1.0.0"
+  services = var.services
+
+  test1 = var.test1
+  test2 = var.test2
+}
+`},
+		{
+			"local module within current directory",
+			Task{
+				Description: "user description for task named 'test'",
+				Name:        "test",
+				Source:      "./local-test-module",
+				Version:     "1.0.0",
+			},
+			nil,
+			nil,
+			fmt.Sprintf(`# user description for task named 'test'
+module "test" {
+  source   = "%s/local-test-module"
+  version  = "1.0.0"
+  services = var.services
+}
+`, workingDir)},
+		{
+			"local module in parent directory",
+			Task{
+				Description: "user description for task named 'test'",
+				Name:        "test",
+				Source:      "../local-test-module",
+				Version:     "1.0.0",
+			},
+			nil,
+			nil,
+			fmt.Sprintf(`# user description for task named 'test'
+module "test" {
+  source   = "%s/local-test-module"
+  version  = "1.0.0"
+  services = var.services
+}
+`, wdParent)},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			hclFile := hclwrite.NewEmptyFile()
+			body := hclFile.Body()
+			appendRootModuleBlock(body, tc.task, tc.cond, tc.varNames)
 
 			content := hclFile.Bytes()
 			content = hclwrite.Format(content)

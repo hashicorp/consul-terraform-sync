@@ -334,7 +334,19 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task, cond Condition,
 
 	moduleBlock := body.AppendNewBlock("module", []string{task.Name})
 	moduleBody := moduleBlock.Body()
-	moduleBody.SetAttributeValue("source", cty.StringVal(task.Source))
+
+	moduleSource := task.Source
+	if strings.HasPrefix(moduleSource, "./") || strings.HasPrefix(moduleSource, "../") {
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Println("[ERR] (templates.tftmpl) unable to retrieve current " +
+				"working directory to determine path to local module")
+			log.Panic(err)
+		}
+		moduleSource = filepath.Join(wd, task.Source)
+	}
+	moduleBody.SetAttributeValue("source", cty.StringVal(moduleSource))
+
 	if len(task.Version) > 0 {
 		moduleBody.SetAttributeValue("version", cty.StringVal(task.Version))
 	}
