@@ -1,5 +1,6 @@
 terraform
 vendor/
+examples/runnable-example/sync-tasks
 
 # ignore builds
 /pkg

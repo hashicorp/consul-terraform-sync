@@ -6,7 +6,7 @@
 #
 
 log_level = "info"
-port = 8502
+port = 8555
 
 consul {
   address = "consul.example.com"
@@ -19,7 +19,7 @@ task {
   version = "1.0.0"
   providers = ["myprovider"]
   services = ["web", "api"]
-  variable_files = ["example.module.tfvars"]
+  variable_files = ["/path/to/example.module.tfvars"]
 }
 
 driver "terraform" {
