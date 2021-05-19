@@ -201,6 +201,16 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
+			Name:   "terraform.tfvars.tmpl (catalog-services condition - no services)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/catalog-services-condition/terraform_no_services.tfvars.tmpl",
+			Input: RootModuleInputData{
+				Condition: &CatalogServicesCondition{
+					Regexp: ".*",
+				},
+				Task: task,
+			},
+		}, {
 			Name:   "providers.tfvars",
 			Func:   newProvidersTFVars,
 			Golden: "testdata/providers.tfvars",

@@ -65,29 +65,24 @@ func newProvidersTFVars(w io.Writer, filename string, input *RootModuleInputData
 //   },
 // }
 func appendRawServiceTemplateValues(body *hclwrite.Body, services []Service) {
-	if len(services) == 0 {
-		return
-	}
-
 	tokens := make([]*hclwrite.Token, 0, len(services)+2)
 	tokens = append(tokens, &hclwrite.Token{
 		Type:  hclsyntax.TokenOBrace,
 		Bytes: []byte("{"),
 	})
-	lastIdx := len(services) - 1
-	for i, s := range services {
+
+	for _, s := range services {
 		rawService := fmt.Sprintf(serviceBaseTmpl, s.hcatQuery())
-
-		if i == lastIdx {
-			rawService += "\n}"
-		}
-
 		token := hclwrite.Token{
 			Type:  hclsyntax.TokenNil,
 			Bytes: []byte(rawService),
 		}
 		tokens = append(tokens, &token)
 	}
+
+	tokens = append(tokens, &hclwrite.Token{
+		Bytes: []byte("\n}"),
+	})
 	body.SetAttributeRaw("services", tokens)
 }
 
