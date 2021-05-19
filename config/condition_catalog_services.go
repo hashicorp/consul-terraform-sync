@@ -96,13 +96,15 @@ func (c *CatalogServicesConditionConfig) Merge(o ConditionConfig) ConditionConfi
 	return r2
 }
 
-// Finalize ensures there no nil pointers.
+// Finalize ensures there no nil pointers with the _exception_ of Regexp. There
+// is a need to distinguish betweeen nil regex (unconfigured regex) and empty
+// string regex ("" regex pattern) at Validate()
 func (c *CatalogServicesConditionConfig) Finalize(services []string) {
 	if c == nil { // config not required, return early
 		return
 	}
 
-	if c.Regexp == nil {
+	if c.Regexp == nil && len(services) > 0 {
 		// default behavior: exact match on any of the services configured for
 		// the task. cannot default to "" since it is possible regex config.
 		// ex: ["api", "web", "db"] => "^api$|^web$|^db$"
@@ -111,11 +113,6 @@ func (c *CatalogServicesConditionConfig) Finalize(services []string) {
 			regex[ix] = fmt.Sprintf("^%s$", s) // exact match on service's name
 		}
 		c.Regexp = String(strings.Join(regex, "|"))
-
-		if len(services) == 0 {
-			// for testing. can't occur when running cts due to config validation
-			c.Regexp = String("")
-		}
 	}
 
 	if c.SourceIncludesVar == nil {
@@ -137,9 +134,15 @@ func (c *CatalogServicesConditionConfig) Finalize(services []string) {
 
 // Validate validates the values and required options. This method is recommended
 // to run after Finalize() to ensure the configuration is safe to proceed.
+// Note, it handles the possibility of nil Regexp value even after Finalize().
 func (c *CatalogServicesConditionConfig) Validate() error {
 	if c == nil { // config not required, return early
 		return nil
+	}
+
+	if c.Regexp == nil {
+		return fmt.Errorf("task.services and catalog-services regexp cannot " +
+			"both be unset")
 	}
 
 	if _, err := regexp.Compile(StringVal(c.Regexp)); err != nil {

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTaskConfig_Copy(t *testing.T) {
@@ -360,6 +361,18 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
+			"valid (missing services with catalog-services condition regexp)",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Providers: []string{"providerA", "providerB"},
+				Condition: &CatalogServicesConditionConfig{
+					Regexp: String(".*"),
+				},
+			},
+			true,
+		},
+		{
 			"missing name",
 			&TaskConfig{Services: []string{"service"}, Source: String("source")},
 			false,
@@ -374,8 +387,35 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"missing service",
+			"no service with no condition",
 			&TaskConfig{Name: String("task"), Source: String("source")},
+			false,
+		},
+		{
+			"no service with services condition",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Condition: &ServicesConditionConfig{},
+			},
+			false,
+		},
+		{
+			"missing service with catalog-service condition and no regexp",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Condition: &CatalogServicesConditionConfig{},
+			},
+			false,
+		},
+		{
+			"invalid catalog-service condition (bad regexp)",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Condition: &CatalogServicesConditionConfig{Regexp: String("*")},
+			},
 			false,
 		},
 		{
@@ -503,6 +543,65 @@ func TestTasksConfig_Validate(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestTaskConfig_FinalizeValidate(t *testing.T) {
+	// Tests the full finalize then validate process, particularly how it handles the
+	// relationship between task.services and task.condition
+	//
+	// Relationships:
+	// - When catalog-service condition's regexp is nil or empty string, test
+	//    how regexp is handled by Finalize() which impacts Validate()
+
+	cases := []struct {
+		name   string
+		config *TaskConfig
+		valid  bool
+	}{
+		{
+			"invalid: no services with catalog-service condition missing regexp",
+			&TaskConfig{
+				Name:      String("task_a"),
+				Source:    String("source"),
+				Condition: &CatalogServicesConditionConfig{},
+			},
+			false,
+		},
+		{
+			"valid: services with catalog-service condition missing regexp",
+			&TaskConfig{
+				Name:      String("task_a"),
+				Source:    String("source"),
+				Services:  []string{"serviceA"},
+				Condition: &CatalogServicesConditionConfig{},
+			},
+			true,
+		},
+		{
+			"valid: no services with catalog-service condition's regexp is empty string",
+			&TaskConfig{
+				Name:      String("task_a"),
+				Source:    String("source"),
+				Services:  []string{"serviceA"},
+				Condition: &CatalogServicesConditionConfig{Regexp: String("")},
+			},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.config.Finalize()
+			err := tc.config.Validate()
+			if tc.valid {
+				assert.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "condition",
+					"error does not seem to be about condition configuration")
 			}
 		})
 	}
