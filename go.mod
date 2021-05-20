@@ -57,11 +57,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
-
-replace (
-	// pin this version to avoid later versions that depend on a v1alpha1 branch that's no longer available
-	// this is a transitive dependency through vault, which pins v0.18.2, we use the same version here
-	k8s.io/api => k8s.io/api v0.18.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.18.2
-	k8s.io/client-go => k8s.io/client-go v0.18.2
-)
