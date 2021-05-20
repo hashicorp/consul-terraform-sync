@@ -125,10 +125,10 @@ workflows:
   build-test:
     jobs:
       - unit_integration_tests
-      - vault_integration_tests
       - e2e_tests
   weekly-benchmarks:
     jobs:
+      - vault_integration_tests
       - benchmarks
     triggers:
       - schedule:
