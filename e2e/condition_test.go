@@ -85,7 +85,6 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	taskName := "catalog_task"
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
-	services = ["unrelated"]
 	source = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "api-"
@@ -186,7 +185,6 @@ func TestCondition_CatalogServices_NodeMeta(t *testing.T) {
 	taskName := "catalog_task"
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
-	services = ["unrelated"]
 	source = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "api"

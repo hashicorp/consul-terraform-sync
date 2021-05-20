@@ -231,7 +231,7 @@ func TestCatalogServicesConditionConfig_Finalize(t *testing.T) {
 			[]string{},
 			&CatalogServicesConditionConfig{},
 			&CatalogServicesConditionConfig{
-				Regexp:            String(""),
+				Regexp:            nil,
 				SourceIncludesVar: Bool(false),
 				Datacenter:        String(""),
 				Namespace:         String(""),
@@ -281,6 +281,11 @@ func TestCatalogServicesConditionConfig_Validate(t *testing.T) {
 					"key2": "value2",
 				},
 			},
+		},
+		{
+			"nil_regexp",
+			true,
+			&CatalogServicesConditionConfig{},
 		},
 		{
 			"invalid_regexp",

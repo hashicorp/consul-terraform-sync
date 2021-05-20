@@ -230,7 +230,21 @@ func (c *TaskConfig) Validate() error {
 	}
 
 	if len(c.Services) == 0 {
-		return fmt.Errorf("at least one service is required for the task")
+		if isConditionNil(c.Condition) {
+			return fmt.Errorf("at least one service or a condition must be " +
+				"configured")
+		}
+		switch cond := c.Condition.(type) {
+		case *ServicesConditionConfig:
+			return fmt.Errorf("services condition requires at least one " +
+				"service in task.services to be configured")
+		case *CatalogServicesConditionConfig:
+			if cond.Regexp == nil {
+				return fmt.Errorf("catalog-services condition requires either" +
+					"task.condition.regexp or at least one service in " +
+					"task.services to be configured")
+			}
+		}
 	}
 
 	if c.Source == nil || len(*c.Source) == 0 {
