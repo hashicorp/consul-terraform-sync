@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
-	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +31,7 @@ func TestE2E_MetaCOmmandErrors(t *testing.T) {
 	config := fakeHandlerConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSDevModeFlag)
+	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 	defer stop(t)
 	err := cts.WaitForAPI(5 * time.Second)
 	require.NoError(t, err)
@@ -94,7 +94,7 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 	config := disabledTaskConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSDevModeFlag)
+	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 	defer stop(t)
 	err := cts.WaitForAPI(5 * time.Second)
 	require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 		appendConsulBlock(srv).appendDBTask()
 	config.write(t, configPath)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSDevModeFlag)
+	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 	defer stop(t)
 	err := cts.WaitForAPI(10 * time.Second)
 	require.NoError(t, err)

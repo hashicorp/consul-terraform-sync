@@ -22,6 +22,34 @@ jobs:
           key: ct-modcache-v1-{{ checksum "go.mod" }}
           paths:
             - /go/pkg/mod
+
+  vault_integration_tests:
+    environment:
+      GO111MODULE: "on"
+      GO_VERSION: "1.16"
+      VAULT_VERSION: "1.7.1"
+    docker:
+      - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
+    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - ct-modcache-v1-{{ checksum "go.mod" }}
+      - run:
+          name: Install Vault
+          command: |
+            curl -sLo consul.zip https://releases.hashicorp.com/vault/${VAULT_VERSION}/consul_${VAULT_VERSION}_linux_amd64.zip
+            unzip vault.zip
+            sudo cp vault /usr/local/bin/
+            vault version
+      - run: |
+          go test -count=1 -timeout=80s -tags 'integration vault' ./... -run Vault
+      - save_cache:
+          key: ct-modcache-v1-{{ checksum "go.mod" }}
+          paths:
+            - /go/pkg/mod
+            
   e2e_tests:
     environment:
       GO111MODULE: "on"

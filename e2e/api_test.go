@@ -16,7 +16,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
-	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,11 +36,15 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	config.write(t, configPath)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 	cmd, err := runSyncDevMode(configPath)
 	require.NoError(t, err)
 =======
 	cts, stopCTS := ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSDevModeFlag)
 >>>>>>> 00b0f8a... Update e2e tests to poll API availability
+=======
+	cts, stopCTS := api.StartCTS(t, configPath, api.CTSDevModeFlag)
+>>>>>>> 10b3abe... Remove dep on vault internals
 
 	// wait to run once before registering another instance to collect another event
 	err := cts.WaitForAPI(15 * time.Second)
@@ -258,17 +261,10 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	config := disabledTaskConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-<<<<<<< HEAD
-	cmd, err := runSync(configPath)
-	defer stopCommand(cmd)
-	require.NoError(t, err)
-	time.Sleep(5 * time.Second)
-=======
-	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 	err := cts.WaitForAPI(15 * time.Second)
 	require.NoError(t, err)
->>>>>>> 00b0f8a... Update e2e tests to poll API availability
 
 	// Confirm that terraform files were not generated for a disabled task
 	fileInfos, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, "disabled_task"))

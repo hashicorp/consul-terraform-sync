@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -18,6 +19,19 @@ import (
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+// FreePort finds the next free port incrementing upwards. Use for testing.
+func FreePort() (int, error) {
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return 0, err
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err = listener.Close(); err != nil {
+		return 0, err
+	}
+	return port, nil
+}
 
 // MakeTempDir creates a directory in the current path for a test. Caller is
 // responsible for managing the uniqueness of the directory name. Returns a
