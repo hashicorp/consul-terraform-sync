@@ -9,13 +9,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/internal/hcl2shim"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/version"
 	goVersion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
-	"github.com/hashicorp/terraform/configs/hcl2shim"
 	"github.com/zclconf/go-cty/cty"
 )
 
