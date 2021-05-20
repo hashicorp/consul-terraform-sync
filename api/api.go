@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -130,19 +129,6 @@ func (api *API) Serve(ctx context.Context) error {
 	// wait for shutdown
 	wg.Wait()
 	return ctx.Err()
-}
-
-// FreePort finds the next free port incrementing upwards. Use for testing.
-func FreePort() (int, error) {
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return 0, err
-	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	if err = listener.Close(); err != nil {
-		return 0, err
-	}
-	return port, nil
 }
 
 // jsonResponse adds the return response for handlers. Returns if json encode

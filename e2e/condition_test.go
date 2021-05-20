@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
-	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,7 +47,7 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
 
-	ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSOnceModeFlag)
+	api.StartCTS(t, configPath, api.CTSOnceModeFlag)
 
 	// confirm that only two files were generated, one for db and one for web
 	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
@@ -98,7 +97,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 
 	err := cts.WaitForAPI(15 * time.Second)
@@ -201,7 +200,7 @@ func TestCondition_CatalogServices_NodeMeta(t *testing.T) {
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 
 	err = cts.WaitForAPI(15 * time.Second)

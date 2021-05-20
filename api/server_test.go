@@ -119,7 +119,7 @@ func TestStatus(t *testing.T) {
 	drivers.Add("task_c", createDriver("task_c", true))
 
 	// start up server
-	port, err := FreePort()
+	port, err := testutils.FreePort()
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -273,7 +273,7 @@ func Test_Task_Update(t *testing.T) {
 	t.Parallel()
 
 	// start up server
-	port, err := FreePort()
+	port, err := testutils.FreePort()
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -346,7 +346,7 @@ func TestWaitForAPI(t *testing.T) {
 
 	t.Run("available", func(t *testing.T) {
 		// start up server
-		port, err := FreePort()
+		port, err := testutils.FreePort()
 		require.NoError(t, err)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

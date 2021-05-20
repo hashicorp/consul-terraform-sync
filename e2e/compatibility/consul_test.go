@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
-	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	capi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/go-getter"
 	"github.com/stretchr/testify/assert"
@@ -70,7 +69,7 @@ func TestCompatibilty_Consul(t *testing.T) {
 		for _, tc := range cases {
 			name := fmt.Sprintf("Consul v%s %s", cv, tc.name)
 			t.Run(name, func(t *testing.T) {
-				port, err := api.FreePort()
+				port, err := testutils.FreePort()
 				require.NoError(t, err)
 
 				stop := runConsul(t, port)
@@ -102,7 +101,7 @@ func testConsulBackendCompatibility(t *testing.T, port int) {
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 	err := cts.WaitForAPI(15 * time.Second)
 	require.NoError(t, err)
@@ -128,7 +127,7 @@ func testServiceInstanceCompatibility(t *testing.T, port int) {
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 	err := cts.WaitForAPI(15 * time.Second)
 	require.NoError(t, err)
@@ -185,7 +184,7 @@ func testServiceValuesCompatibility(t *testing.T, port int) {
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 	err := cts.WaitForAPI(15 * time.Second)
 	require.NoError(t, err)
@@ -289,7 +288,7 @@ func testTagQueryCompatibility(t *testing.T, port int) {
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 	err := cts.WaitForAPI(15 * time.Second)
 	require.NoError(t, err)
@@ -331,7 +330,7 @@ func testNodeValuesCompatibility(t *testing.T, port int) {
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 	err := cts.WaitForAPI(15 * time.Second)
 	require.NoError(t, err)
