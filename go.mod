@@ -5,7 +5,6 @@ go 1.14
 require (
 	cloud.google.com/go v0.78.0 // indirect
 	cloud.google.com/go/storage v1.13.0 // indirect
-	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/agext/levenshtein v1.2.3 // indirect
@@ -18,11 +17,9 @@ require (
 	github.com/hashicorp/consul/sdk v0.7.0
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0
-	github.com/hashicorp/go-getter v1.5.3
 	github.com/hashicorp/go-hclog v0.15.0 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
 	github.com/hashicorp/go-syslog v1.0.0
-	github.com/hashicorp/go-tfe v0.12.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/hcat v0.0.0-20210414201846-1b51a2a2651f
@@ -45,10 +42,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/pretty v1.0.2 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
-	github.com/xdg/scram v1.0.3 // indirect
-	github.com/xdg/stringprep v1.0.3 // indirect
 	github.com/zclconf/go-cty v1.8.2
 	go.opencensus.io v0.22.6 // indirect
 	golang.org/x/oauth2 v0.0.0-20210220000619-9bb904979d93 // indirect

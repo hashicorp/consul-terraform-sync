@@ -1,4 +1,5 @@
-// +build integration vault
+// +build integration
+// +build vault
 
 package testutils
 

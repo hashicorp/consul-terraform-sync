@@ -39,7 +39,7 @@ jobs:
       - run:
           name: Install Vault
           command: |
-            curl -sLo consul.zip https://releases.hashicorp.com/vault/${VAULT_VERSION}/consul_${VAULT_VERSION}_linux_amd64.zip
+            curl -sLo vault.zip https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip
             unzip vault.zip
             sudo cp vault /usr/local/bin/
             vault version
@@ -78,4 +78,5 @@ workflows:
   build-test:
     jobs:
       - unit_integration_tests
+      - vault_integration_tests
       - e2e_tests
