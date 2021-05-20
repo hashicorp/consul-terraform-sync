@@ -175,7 +175,7 @@ func TestAppendRootProviderBlocks(t *testing.T) {
 
 func TestAppendRootModuleBlocks(t *testing.T) {
 	workingDir, err := os.Getwd()
-	assert.Nil(t, err, "Error determining current working directory")
+	require.Nil(t, err, "Error determining current working directory")
 	wdParent := filepath.Dir(workingDir)
 
 	testCases := []struct {
