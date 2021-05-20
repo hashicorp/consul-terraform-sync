@@ -1,4 +1,4 @@
-package ctsTestClient
+package api
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,7 +21,7 @@ const (
 // StartCTS starts the CTS from binary and returns a function to stop CTS. If
 // running once-mode, the function will block until complete so no need to use
 // stop function
-func StartCTS(t *testing.T, configPath string, opts ...string) (*api.Client, func(t *testing.T)) {
+func StartCTS(t *testing.T, configPath string, opts ...string) (*Client, func(t *testing.T)) {
 	opts = append(opts, fmt.Sprintf("--config-file=%s", configPath))
 	cmd := exec.Command("consul-terraform-sync", opts...)
 	// uncomment to see logs
@@ -37,7 +37,7 @@ func StartCTS(t *testing.T, configPath string, opts ...string) (*api.Client, fun
 	}
 
 	// Grab port for API when CTS is running as a daemon and append to config file
-	port, err := api.FreePort()
+	port, err := testutils.FreePort()
 	require.NoError(t, err)
 	f, err := os.OpenFile(configPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func StartCTS(t *testing.T, configPath string, opts ...string) (*api.Client, fun
 	err = cmd.Start()
 	require.NoError(t, err)
 
-	ctsClient := api.NewClient(&api.ClientConfig{Port: port}, nil)
+	ctsClient := NewClient(&ClientConfig{Port: port}, nil)
 
 	return ctsClient, func(t *testing.T) {
 		cmd.Process.Signal(os.Interrupt)

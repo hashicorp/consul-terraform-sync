@@ -14,7 +14,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
-	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,7 +38,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	config := fakeHandlerConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cts, stopCTS := ctsTestClient.StartCTS(t, configPath, ctsTestClient.CTSDevModeFlag)
+	cts, stopCTS := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 
 	// wait to run once before registering another instance to collect another event
 	err := cts.WaitForAPI(15 * time.Second)
@@ -258,7 +257,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	config := disabledTaskConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 	err := cts.WaitForAPI(15 * time.Second)
 	require.NoError(t, err)

@@ -8,15 +8,21 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/aws/aws-sdk-go v1.37.19 // indirect
 	github.com/fatih/color v1.10.0 // indirect
+	github.com/go-test/deep v1.0.7 // indirect
+	github.com/golang/snappy v0.0.2 // indirect
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/hashicorp/consul v1.9.3
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/consul/sdk v0.7.0
+	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0
 	github.com/hashicorp/go-getter v1.5.3
+	github.com/hashicorp/go-hclog v0.15.0 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
 	github.com/hashicorp/go-syslog v1.0.0
+	github.com/hashicorp/go-tfe v0.12.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/hcat v0.0.0-20210430144333-5970348d8f49
@@ -25,9 +31,10 @@ require (
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/terraform v0.14.7
 	github.com/hashicorp/terraform-exec v0.13.3
-	github.com/hashicorp/vault v1.4.2
 	github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457
+	github.com/hashicorp/vault/sdk v0.1.14-0.20210322210658-b52b8b8c1264 // indirect
 	github.com/klauspost/compress v1.11.7 // indirect
+	github.com/miekg/dns v1.1.40 // indirect
 	github.com/mitchellh/cli v1.1.2
 	github.com/mitchellh/copystructure v1.1.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
@@ -52,10 +59,7 @@ replace (
 	// Terraform imports a pre-go-mod version of Vault. These replace directives
 	// resolves the ambiguous import between the package `vault/api` and
 	// `vault/api` nested go module.
-	github.com/hashicorp/vault => github.com/hashicorp/vault v1.7.0
 	github.com/hashicorp/vault/api => github.com/hashicorp/vault/api v1.0.5-0.20200805123347-1ef507638af6
-	github.com/hashicorp/vault/http => github.com/hashicorp/vault/http v1.7.0
-	github.com/hashicorp/vault/vault => github.com/hashicorp/vault/vault v1.7.0
 
 	// pin this version to avoid later versions that depend on a v1alpha1 branch that's no longer available
 	// this is a transitive dependency through vault, which pins v0.18.2, we use the same version here

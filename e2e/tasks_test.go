@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/testutils"
-	ctsTestClient "github.com/hashicorp/consul-terraform-sync/testutils/cts"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,7 +44,7 @@ task {
 		appendDBTask().appendWebTask().appendString(apiTask)
 	config.write(t, configPath)
 
-	cts, stop := ctsTestClient.StartCTS(t, configPath)
+	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 
 	t.Run("once mode", func(t *testing.T) {
