@@ -78,5 +78,15 @@ workflows:
   build-test:
     jobs:
       - unit_integration_tests
-      - vault_integration_tests
       - e2e_tests
+  weekly-benchmarks:
+    jobs:
+      - vault_integration_tests
+    triggers:
+      - schedule:
+          # 02:10 UTC every Wednesday
+          cron: 10 2 * * 3
+          filters:
+            branches:
+              only:
+              - master
