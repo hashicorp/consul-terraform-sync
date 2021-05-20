@@ -1,6 +1,8 @@
 terraform
 vendor/
 examples/runnable-example/sync-tasks
+e2e/tmp_*
+e2e/benchmarks/sync-tasks
 
 # ignore builds
 /pkg

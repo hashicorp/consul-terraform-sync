@@ -104,7 +104,7 @@ func generateConf(bConf benchmarkConfig) *config.Config {
 	for i := 0; i < bConf.numTasks; i++ {
 		taskConfigs[i] = &config.TaskConfig{
 			Name:     config.String(fmt.Sprintf("task_%03d", i)),
-			Source:   config.String("../../../test_modules/local_file"),
+			Source:   config.String("../test_modules/local_file"),
 			Services: serviceNames,
 		}
 	}

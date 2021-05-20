@@ -72,7 +72,7 @@ task {
 	description = "basic read-write e2e task for api & db"
 	services = ["api", "db"]
 	providers = ["local"]
-	source = "../../test_modules/e2e_basic_task"
+	source = "./test_modules/e2e_basic_task"
 }
 `, dbTaskName))
 }
@@ -84,7 +84,7 @@ task {
 	description = "basic read-write e2e task api & web"
 	services = ["api", "web"]
 	providers = ["local"]
-	source = "../../test_modules/e2e_basic_task"
+	source = "./test_modules/e2e_basic_task"
 }
 `, webTaskName))
 }
@@ -133,7 +133,7 @@ task {
 	description = "basic e2e task with fake handler. expected to error"
 	services = ["api"]
 	providers = ["fake-sync.failure"]
-	source = "../../test_modules/e2e_basic_task"
+	source = "./test_modules/e2e_basic_task"
 }
 
 task {
@@ -141,7 +141,7 @@ task {
 	description = "basic e2e task with fake handler. expected to not error"
 	services = ["api"]
 	providers = ["fake-sync.success"]
-	source = "../../test_modules/e2e_basic_task"
+	source = "./test_modules/e2e_basic_task"
 }
 
 task {
@@ -150,7 +150,7 @@ task {
 	enabled = false
 	services = ["api"]
 	providers = ["fake-sync.success"]
-	source = "../../test_modules/e2e_basic_task"
+	source = "./test_modules/e2e_basic_task"
 }
 `, fakeFailureTaskName, fakeSuccessTaskName, disabledTaskName))
 }
@@ -164,7 +164,7 @@ task {
 	enabled = false
 	services = ["api"]
 	providers = ["local"]
-	source = "../../test_modules/e2e_basic_task"
+	source = "./test_modules/e2e_basic_task"
 }
 
 service {

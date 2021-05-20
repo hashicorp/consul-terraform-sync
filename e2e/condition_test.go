@@ -36,7 +36,7 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	conditionTask := `task {
 	name = "catalog_task"
 	services = ["api"]
-	source = "../../test_modules/local_tags_file"
+	source = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "db|web"
 		source_includes_var = true
@@ -86,7 +86,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
 	services = ["unrelated"]
-	source = "../../test_modules/local_tags_file"
+	source = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "api-"
 		source_includes_var = true
@@ -187,7 +187,7 @@ func TestCondition_CatalogServices_NodeMeta(t *testing.T) {
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
 	services = ["unrelated"]
-	source = "../../test_modules/local_tags_file"
+	source = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "api"
 		node_meta {
