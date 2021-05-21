@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/terraform-exec/tfexec"
@@ -80,19 +79,19 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	}
 
 	// Expand any relative paths for variable files to absolute paths
-	var varFiles []string
+	varFiles := make([]string, 0, len(config.VarFiles))
 	for _, vf := range config.VarFiles {
-		if !strings.HasPrefix(vf, "/") {
+		if !filepath.IsAbs(vf) {
 			wd, err := os.Getwd()
 			if err != nil {
 				log.Println("[ERR] (client.terraformcli) unable to retrieve current " +
 					"working directory to determine path to variable files")
-				log.Panic(err)
+				return nil, err
 			}
 			vfAbs := filepath.Join(wd, vf)
 			varFiles = append(varFiles, vfAbs)
 		} else {
-			varFiles = append(varFiles, vf)
+			varFiles = append(varFiles, filepath.Clean(vf))
 		}
 	}
 
