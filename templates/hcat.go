@@ -23,8 +23,9 @@ const DepSizeWarning = 128
 // which implements the interfaces Templater and Renderer
 // https://github.com/hashicorp/hcat
 type Template interface {
+	Notify(interface{}) bool
 	Render(content []byte) (hcat.RenderResult, error)
-	Execute(hcat.Watcherer) ([]byte, error)
+	Execute(hcat.Recaller) ([]byte, error)
 	ID() string
 }
 

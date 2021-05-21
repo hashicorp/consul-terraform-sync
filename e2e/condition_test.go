@@ -19,6 +19,239 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestCondition_CatalogServices_Registration runs the CTS binary. It is a basic
+// test for a task configured with a catalog service condition. This test
+// confirms that the first instance of a service registering and the last
+// instance of a service deregistering triggers this task. Note, this test also
+// also covers ensuring that daemon-mode can pass through once-mode with no
+// initial service registrations
+func TestCondition_CatalogServices_Registration(t *testing.T) {
+	t.Parallel()
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	taskName := "catalog_task"
+	conditionTask := fmt.Sprintf(`task {
+	name = "%s"
+	services = ["api"]
+	source = "./test_modules/local_tags_file"
+	condition "catalog-services" {
+		source_includes_var = true
+	}
+}
+`, taskName)
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_registration")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+
+	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+		appendString(conditionTask)
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
+
+	// Test that task is triggered on service registration and deregistration
+	// 0. Confirm baseline: nothing is registered so no resource created yet
+	// 1. Register 'api' service. Confirm resource created
+	// 2. Deregister 'api' service. Confirm resource destroyed
+
+	// 0. Confirm resource not created
+	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
+	testutils.CheckFile(t, false, resourcesPath, "api_tags.txt")
+
+	// 1. Register api, resource created
+	service := testutil.TestService{ID: "api-1", Name: "api"}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
+	time.Sleep(7 * time.Second)
+	testutils.CheckFile(t, true, resourcesPath, "api_tags.txt")
+
+	// 2. Deregister api, resource destroyed
+	testutils.DeregisterConsulService(t, srv, "api-1")
+	time.Sleep(7 * time.Second)
+	testutils.CheckFile(t, false, resourcesPath, "api_tags.txt")
+
+	cleanup()
+}
+
+// TestCondition_CatalogServices_NoServicesTrigger runs the CTS binary. It
+// specifically tests a task configured with a catalog service condition. This
+// test confirms that changes in service instances, which do not effect the
+// overall service [de]registration, do not trigger the task.
+func TestCondition_CatalogServices_NoServicesTrigger(t *testing.T) {
+	t.Parallel()
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	service := testutil.TestService{ID: "api-1", Name: "api"}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
+	time.Sleep(7 * time.Second)
+
+	taskName := "catalog_task"
+	conditionTask := fmt.Sprintf(`task {
+	name = "%s"
+	services = ["api", "db"]
+	source = "./test_modules/local_tags_file"
+	condition "catalog-services" {
+		source_includes_var = true
+	}
+}
+`, taskName)
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_no_services_trigger")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+
+	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+		appendString(conditionTask)
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
+
+	// Test that task is not triggered by service-instance specific changes and
+	// only by service registration changes.
+	// 0. Confirm baseline: check current number of events for initially
+	//    registered api service. check for instance data in tfvars
+	// 1. Register api-2 instance for existing api service. Confirm task was not
+	//    triggered (no new event) and therefore api-2 not in tfvars
+	// 2. Register new db service. Confirm task was triggered (new event) and
+	//    db and api-2 (now) rendered in tfvars
+
+	// 0. Confirm one event. Confirm initial api service registration data
+	evenCountBase := eventCount(t, taskName, cts.Port())
+	require.Equal(t, 1, evenCountBase)
+
+	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
+	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.Contains(t, content, "api-1")
+
+	// 1. Register second api service instance "api-2" (no trigger)
+	service = testutil.TestService{ID: "api-2", Name: "api"}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
+	time.Sleep(7 * time.Second)
+
+	eventCountNow := eventCount(t, taskName, cts.Port())
+	require.Equal(t, evenCountBase, eventCountNow,
+		"change in event count. task was unexpectedly triggered")
+
+	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.NotContains(t, content, "api-2")
+
+	// 2. Register db service (trigger + render template)
+	service = testutil.TestService{ID: "db-1", Name: "db"}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
+	time.Sleep(7 * time.Second)
+
+	eventCountNow = eventCount(t, taskName, cts.Port())
+	require.Equal(t, evenCountBase+1, eventCountNow,
+		"event count did not increment once. task was not triggered as expected")
+
+	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.Contains(t, content, "api-2")
+	assert.Contains(t, content, "db-1")
+
+	cleanup()
+}
+
+// TestCondition_CatalogServices_NoTagsTrigger runs the CTS binary. It
+// specifically tests a task configured with a catalog service condition. This
+// test confirms that changes in service tag data do not trigger the task.
+func TestCondition_CatalogServices_NoTagsTrigger(t *testing.T) {
+	t.Parallel()
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	service := testutil.TestService{ID: "api-1", Name: "api", Tags: []string{"tag_a"}}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
+	time.Sleep(7 * time.Second)
+
+	taskName := "catalog_task"
+	conditionTask := fmt.Sprintf(`task {
+	name = "%s"
+	services = ["api", "db"]
+	source = "./test_modules/local_tags_file"
+	condition "catalog-services" {
+		source_includes_var = true
+	}
+}
+`, taskName)
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_no_tags_trigger")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+
+	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+		appendString(conditionTask)
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+
+	err := cts.WaitForAPI(15 * time.Second)
+	require.NoError(t, err)
+
+	// Test that task is not triggered by service tag changes and only by
+	// service registration changes.
+	// 0. Confirm baseline: check current number of events for initially
+	//    registered api service. check for tag data in resource
+	// 1. Register api-2 service instance with different tags. Confirm task was
+	//    not triggered (no new event) and therefore api-2 data not in tfvars
+	// 2. Register db service. Confirm task was triggered (new event) and db
+	//    and api-2 data is in tfvars
+
+	// 0. Confirm one event. Confirm tag data in resource
+	evenCountBase := eventCount(t, taskName, cts.Port())
+	require.Equal(t, 1, evenCountBase)
+
+	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
+	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.Contains(t, content, "tag_a")
+
+	// 1. Register another api service instance with new tags (no trigger)
+	service = testutil.TestService{ID: "api-2", Name: "api", Tags: []string{"tag_b"}}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
+	time.Sleep(7 * time.Second)
+
+	eventCountNow := eventCount(t, taskName, cts.Port())
+	require.Equal(t, evenCountBase, eventCountNow,
+		"change in event count. task was unexpectedly triggered")
+
+	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.NotContains(t, content, "tag_b")
+
+	// 2. Register new db service (trigger + render template)
+	service = testutil.TestService{ID: "db-1", Name: "db", Tags: []string{"tag_c"}}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
+	time.Sleep(7 * time.Second)
+
+	eventCountNow = eventCount(t, taskName, cts.Port())
+	require.Equal(t, evenCountBase+1, eventCountNow,
+		"event count did not increment once. task was not triggered as expected")
+
+	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.Contains(t, content, "tag_b")
+	assert.Contains(t, content, "tag_c")
+
+	cleanup()
+}
+
 // TestCondition_CatalogServices_Include runs the CTS binary. It specifically
 // tests a task configured with a catalog service condition with the
 // source_includes_var = true. This test confirms that the catalog_service
