@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"testing"
 
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
@@ -77,6 +78,16 @@ func TestNewTerraformCLI(t *testing.T) {
 				Workspace:  "my-workspace",
 			},
 		},
+		{
+			"variable files",
+			false,
+			&TerraformCLIConfig{
+				ExecPath:   "path/to/tf",
+				WorkingDir: "./",
+				Workspace:  "my-workspace",
+				VarFiles:   []string{"variables.tf", "/path/to/variables.tf"},
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -90,6 +101,10 @@ func TestNewTerraformCLI(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.NotNil(t, actual)
+
+			for _, vf := range actual.varFiles {
+				assert.True(t, filepath.IsAbs(vf), "Expected absolute path for variable files")
+			}
 		})
 	}
 }

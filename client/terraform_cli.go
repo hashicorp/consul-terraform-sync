@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"path/filepath"
 	"regexp"
 
@@ -77,11 +78,28 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 		log.Printf("[INFO] (client.terraformcli) persiting Terraform logs on disk: %s", logPath)
 	}
 
+	// Expand any relative paths for variable files to absolute paths
+	varFiles := make([]string, 0, len(config.VarFiles))
+	for _, vf := range config.VarFiles {
+		if !filepath.IsAbs(vf) {
+			wd, err := os.Getwd()
+			if err != nil {
+				log.Println("[ERR] (client.terraformcli) unable to retrieve current " +
+					"working directory to determine path to variable files")
+				return nil, err
+			}
+			vfAbs := filepath.Join(wd, vf)
+			varFiles = append(varFiles, vfAbs)
+		} else {
+			varFiles = append(varFiles, filepath.Clean(vf))
+		}
+	}
+
 	client := &TerraformCLI{
 		tf:         tf,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
-		varFiles:   config.VarFiles,
+		varFiles:   varFiles,
 	}
 	log.Printf("[TRACE] (client.terraformcli) created Terraform CLI client %s", client.GoString())
 
