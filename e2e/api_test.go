@@ -349,7 +349,7 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 		require.NotNil(t, e.Config)
 		assert.Equal(t, []string{"fake-sync"}, e.Config.Providers)
 		assert.Equal(t, []string{"api"}, e.Config.Services)
-		assert.Equal(t, "./test_modules/e2e_basic_task", e.Config.Source)
+		assert.Equal(t, "./test_modules/local_instances_file", e.Config.Source)
 
 		if taskName == fakeSuccessTaskName {
 			assert.True(t, e.Success)
