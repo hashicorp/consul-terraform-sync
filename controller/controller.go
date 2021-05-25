@@ -111,7 +111,7 @@ func (ctrl *baseController) init(ctx context.Context) (*driver.Drivers, error) {
 			return nil, err
 		}
 
-		err = d.InitTask(true)
+		err = d.InitTask(ctx)
 		if err != nil {
 			log.Printf("[ERR] (ctrl) error initializing task %q: %s", taskName, err)
 			return nil, err

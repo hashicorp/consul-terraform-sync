@@ -585,7 +585,7 @@ func TestDisabledTask(t *testing.T) {
 
 		ctx := context.Background()
 
-		err := tf.InitTask(true)
+		err := tf.InitTask(ctx)
 		assert.NoError(t, err)
 
 		tf.SetBufferPeriod()

@@ -71,10 +71,13 @@ var (
 
 `
 
-	rootFileFuncs = map[string]func(io.Writer, string, *RootModuleInputData) error{
-		RootFilename:            newMainTF,
-		VarsFilename:            newVariablesTF,
-		ModuleVarsFilename:      newModuleVariablesTF,
+	rootFileFuncs = map[string]tfFileFunc{
+		RootFilename:       newMainTF,
+		VarsFilename:       newVariablesTF,
+		ModuleVarsFilename: newModuleVariablesTF,
+	}
+
+	tfvarsFileFuncs = map[string]tfFileFunc{
 		TFVarsTmplFilename:      newTFVarsTmpl,
 		ProvidersTFVarsFilename: newProvidersTFVars,
 	}
@@ -102,6 +105,8 @@ type Service struct {
 	// network infrastructure automation.
 	CTSUserDefinedMeta map[string]string
 }
+
+type tfFileFunc func(io.Writer, string, *RootModuleInputData) error
 
 // hcatQuery prepares formatted parameters that satisfies hcat
 // query syntax to make Consul requests to /v1/health/service/:service
@@ -138,13 +143,19 @@ type RootModuleInputData struct {
 	Variables        hcltmpl.Variables
 	Condition        Condition
 
+	Path      string
+	FilePerms os.FileMode
+
+	// used for testing purposes whether or not to override existing files
+	skipOverride bool
+
 	backend *hcltmpl.NamedBlock
 }
 
-// Init processes input data used to generate a Terraform root module. It
+// init processes input data used to generate a Terraform root module. It
 // converts the RootModuleInputData values into HCL objects compatible for
 // Terraform configuration syntax.
-func (d *RootModuleInputData) Init() {
+func (d *RootModuleInputData) init() {
 	if d.Backend != nil {
 		block := hcltmpl.NewNamedBlock(d.Backend)
 		d.backend = &block
@@ -162,52 +173,64 @@ func (d *RootModuleInputData) Init() {
 }
 
 // InitRootModule generates the root module and writes the following files to
-// disk: main.tf, variables.tf
-func InitRootModule(input *RootModuleInputData, modulePath string, filePerms os.FileMode, force bool) error {
-	for filename, newFileFunc := range rootFileFuncs {
+// disk.
+//   always: main.tf, variables.tf, terraform.tfvars.tmpl
+// conditionally: variables.module.tf, providers.tfvars
+func InitRootModule(input *RootModuleInputData) error {
+	input.init()
+
+	fileFuncs := make(map[string]tfFileFunc)
+	for k, v := range rootFileFuncs {
+		fileFuncs[k] = v
+	}
+	for k, v := range tfvarsFileFuncs {
+		fileFuncs[k] = v
+	}
+	return initModule(input, fileFuncs)
+}
+
+func initModule(input *RootModuleInputData, fileFuncs map[string]tfFileFunc) error {
+	for filename, newFileFunc := range fileFuncs {
 		if filename == ModuleVarsFilename && len(input.Variables) == 0 {
 			// Skip variables.module.tf if there are no user input variables
 			continue
 		}
 
-		filePath := filepath.Join(modulePath, filename)
-		exists := fileExists(filePath)
-		switch {
-		case exists && !force:
-			log.Printf("[DEBUG] (templates.tftmpl) %s in root module for task %q "+
-				"already exists, skipping file creation", filename, input.Task.Name)
-
-		case exists && force:
+		filePath := filepath.Join(input.Path, filename)
+		if fileExists(filePath) {
+			if input.skipOverride {
+				log.Printf("[DEBUG] (templates.tftmpl) %s in root module for task %q "+
+					"already exists, skipping file creation", filename, input.Task.Name)
+				continue
+			}
 			log.Printf("[INFO] (templates.tftmpl) overwriting %s in root module "+
 				"for task %q", filename, input.Task.Name)
-			fallthrough
-
-		default:
-			log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
-				"task %q: %s", filename, input.Task.Name, filePath)
-
-			f, err := os.Create(filePath)
-			if err != nil {
-				log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
-					"module for %q: %s", filename, input.Task.Name, err)
-				return err
-			}
-			defer f.Close()
-
-			if err := f.Chmod(filePerms); err != nil {
-				log.Printf("[ERR] (templates.tftmpl) unable to change permissions "+
-					"for %s in root module for %q: %s", filename, input.Task.Name, err)
-				return err
-			}
-
-			if err := newFileFunc(f, filename, input); err != nil {
-				log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
-					"root module for %q: %s", filename, input.Task.Name, err)
-				return err
-			}
-
-			f.Sync()
 		}
+
+		log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
+			"task %q: %s", filename, input.Task.Name, filePath)
+
+		f, err := os.Create(filePath)
+		if err != nil {
+			log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
+				"module for %q: %s", filename, input.Task.Name, err)
+			return err
+		}
+		defer f.Close()
+
+		if err := f.Chmod(input.FilePerms); err != nil {
+			log.Printf("[ERR] (templates.tftmpl) unable to change permissions "+
+				"for %s in root module for %q: %s", filename, input.Task.Name, err)
+			return err
+		}
+
+		if err := newFileFunc(f, filename, input); err != nil {
+			log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
+				"root module for %q: %s", filename, input.Task.Name, err)
+			return err
+		}
+
+		f.Sync()
 	}
 
 	return nil

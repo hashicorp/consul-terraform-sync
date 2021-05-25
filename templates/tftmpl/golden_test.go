@@ -262,7 +262,7 @@ func TestNewFiles(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			input := tc.Input
-			input.Init()
+			input.init()
 			b := new(bytes.Buffer)
 			err := tc.Func(b, tc.Name, &input)
 			require.NoError(t, err)
