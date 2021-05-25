@@ -119,7 +119,7 @@ func TestBaseControllerInit(t *testing.T) {
 			d.On("InitTask", mock.Anything, mock.Anything).Return(tc.initTaskErr).Once()
 
 			baseCtrl := baseController{
-				newDriver: func(*config.Config, driver.Task, templates.Watcher) (driver.Driver, error) {
+				newDriver: func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 					return d, nil
 				},
 				conf: tc.config,
@@ -144,16 +144,16 @@ func TestNewDriverTasks(t *testing.T) {
 	testCases := []struct {
 		name  string
 		conf  *config.Config
-		tasks []driver.Task
+		tasks []*driver.Task
 	}{
 		{
 			"no config",
 			nil,
-			[]driver.Task{},
+			[]*driver.Task{},
 		}, {
 			"no tasks",
 			&config.Config{Tasks: &config.TaskConfigs{}},
-			[]driver.Task{},
+			[]*driver.Task{},
 		}, {
 			// Fetches correct provider and required_providers blocks from config
 			"providers",
@@ -180,7 +180,7 @@ func TestNewDriverTasks(t *testing.T) {
 					}},
 				},
 			},
-			[]driver.Task{{
+			[]*driver.Task{newTestTask(t, driver.TaskConfig{
 				Name:    "name",
 				Enabled: true,
 				Env: map[string]string{
@@ -207,7 +207,7 @@ func TestNewDriverTasks(t *testing.T) {
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
 				},
-			}},
+			})},
 		}, {
 			// Fetches correct provider and required_providers blocks from config
 			// with context of alias
@@ -243,7 +243,7 @@ func TestNewDriverTasks(t *testing.T) {
 					}},
 				},
 			},
-			[]driver.Task{{
+			[]*driver.Task{newTestTask(t, driver.TaskConfig{
 				Name:    "name",
 				Enabled: true,
 				Env: map[string]string{
@@ -273,7 +273,7 @@ func TestNewDriverTasks(t *testing.T) {
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
 				},
-			}},
+			})},
 		}, {
 			// Task env is fetched from providers and Consul config when using
 			// default backend
@@ -298,7 +298,7 @@ func TestNewDriverTasks(t *testing.T) {
 					}},
 				},
 			},
-			[]driver.Task{{
+			[]*driver.Task{newTestTask(t, driver.TaskConfig{
 				Name:    "name",
 				Enabled: true,
 				Env: map[string]string{
@@ -324,7 +324,7 @@ func TestNewDriverTasks(t *testing.T) {
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
 				},
-			}},
+			})},
 		},
 	}
 
@@ -340,7 +340,8 @@ func TestNewDriverTasks(t *testing.T) {
 				}
 			}
 
-			tasks := newDriverTasks(tc.conf, providerConfigs)
+			tasks, err := newDriverTasks(tc.conf, providerConfigs)
+			assert.NoError(t, err)
 			assert.Equal(t, tc.tasks, tasks)
 		})
 	}
@@ -428,4 +429,10 @@ func TestGetTemplateBufferPeriods(t *testing.T) {
 		})
 	}
 
+}
+
+func newTestTask(tb testing.TB, conf driver.TaskConfig) *driver.Task {
+	task, err := driver.NewTask(conf)
+	require.NoError(tb, err)
+	return task
 }

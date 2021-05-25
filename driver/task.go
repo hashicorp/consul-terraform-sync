@@ -2,11 +2,14 @@ package driver
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 )
 
 const (
@@ -44,46 +47,287 @@ type BufferPeriod struct {
 
 // Task contains task configuration information
 type Task struct {
+	mu sync.RWMutex
+
+	description     string
+	name            string
+	enabled         bool
+	env             map[string]string
+	providers       TerraformProviderBlocks // task.providers config info
+	providerInfo    map[string]interface{}  // driver.required_provider config info
+	services        []Service
+	source          string
+	varFiles        []string
+	variables       hcltmpl.Variables // loaded variables from varFiles
+	version         string
+	userDefinedMeta map[string]map[string]string
+	bufferPeriod    *BufferPeriod // nil when disabled
+	condition       config.ConditionConfig
+}
+
+type TaskConfig struct {
 	Description     string
 	Name            string
 	Enabled         bool
 	Env             map[string]string
-	Providers       TerraformProviderBlocks // task.providers config info
-	ProviderInfo    map[string]interface{}  // driver.required_provider config info
+	Providers       TerraformProviderBlocks
+	ProviderInfo    map[string]interface{}
 	Services        []Service
 	Source          string
 	VarFiles        []string
 	Version         string
 	UserDefinedMeta map[string]map[string]string
-	BufferPeriod    *BufferPeriod // nil when disabled
+	BufferPeriod    *BufferPeriod
 	Condition       config.ConditionConfig
+}
+
+func NewTask(conf TaskConfig) (*Task, error) {
+	loadedVars := make(hcltmpl.Variables)
+	for _, vf := range conf.VarFiles {
+		tfvars, err := tftmpl.LoadModuleVariables(vf)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range tfvars {
+			loadedVars[k] = v
+		}
+	}
+	return &Task{
+		description:     conf.Description,
+		name:            conf.Name,
+		enabled:         conf.Enabled,
+		env:             conf.Env,
+		providers:       conf.Providers,
+		providerInfo:    conf.ProviderInfo,
+		services:        conf.Services,
+		source:          conf.Source,
+		varFiles:        conf.VarFiles,
+		variables:       loadedVars,
+		version:         conf.Version,
+		userDefinedMeta: conf.UserDefinedMeta,
+		bufferPeriod:    conf.BufferPeriod,
+		condition:       conf.Condition,
+	}, nil
+}
+
+// BufferPeriod returns a copy of the buffer period. If the buffer
+// period is not configured, the second parameter returns false.
+func (t *Task) BufferPeriod() (BufferPeriod, bool) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.bufferPeriod == nil {
+		return BufferPeriod{}, false
+	}
+	return *t.bufferPeriod, true
+}
+
+// ConditionType returns the type of condition for the task to run
+func (t *Task) Condition() config.ConditionConfig {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.condition
+}
+
+// Description returns the task description
+func (t *Task) Description() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.description
+}
+
+// Name returns the task name
+func (t *Task) Name() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.name
+}
+
+// IsEnabled returns whether the task is enabled or disabled
+func (t *Task) IsEnabled() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.enabled
+}
+
+// Enable sets the task as enabled
+func (t *Task) Enable() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.enabled = true
+}
+
+// Disable sets the task as disabled
+func (t *Task) Disable() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.enabled = false
+}
+
+// Env returns a copy of task environment variables
+func (t *Task) Env() map[string]string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	env := make(map[string]string)
+	for k, v := range t.env {
+		env[k] = v
+	}
+	return env
+}
+
+// ProviderNames returns the list of providers that the task has configured
+func (t *Task) Providers() TerraformProviderBlocks {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.providers
 }
 
 // ProviderNames returns the list of providers that the task has configured
 func (t *Task) ProviderNames() []string {
-	names := make([]string, len(t.Providers))
-	for ix, p := range t.Providers {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	names := make([]string, len(t.providers))
+	for ix, p := range t.providers {
 		names[ix] = p.Name()
 	}
 	return names
 }
 
+// Services returns a copy of the list of services that the task has configured
+func (t *Task) Services() []Service {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	services := make([]Service, len(t.services))
+	for i, s := range t.services {
+		services[i] = s
+	}
+	return services
+}
+
 // ServiceNames returns the list of services that the task has configured
 func (t *Task) ServiceNames() []string {
-	names := make([]string, len(t.Services))
-	for ix, s := range t.Services {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	names := make([]string, len(t.services))
+	for ix, s := range t.services {
 		names[ix] = s.Name
 	}
 	return names
 }
 
+// Source returns the module source for the task
+func (t *Task) Source() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.source
+}
+
+// UserDefinedMeta returns metadata grouped by service
+func (t *Task) UserDefinedMeta() map[string]map[string]string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.userDefinedMeta
+}
+
+// VariableFiles returns a copy of the list of configured variable files
+// for the task's module.
+func (t *Task) VariableFiles() []string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	varFiles := make([]string, len(t.varFiles))
+	for i, vf := range t.varFiles {
+		varFiles[i] = vf
+	}
+	return varFiles
+}
+
+// Variables returns a copy of the loaded input variables for a module
+// from configured variable files.
+func (t *Task) Variables() hcltmpl.Variables {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	vars := make(hcltmpl.Variables)
+	for k, v := range t.variables {
+		vars[k] = v
+	}
+	return vars
+}
+
+// Version returns the configured version for the module of the task
+func (t *Task) Version() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.version
+}
+
+// configureRootModuleInput sets task values for the module input.
+func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	input.Task = tftmpl.Task{
+		Description: t.description,
+		Name:        t.name,
+		Source:      t.source,
+		Version:     t.version,
+	}
+
+	input.Services = make([]tftmpl.Service, len(t.services))
+	for i, s := range t.services {
+		input.Services[i] = tftmpl.Service{
+			Datacenter:  s.Datacenter,
+			Description: s.Description,
+			Name:        s.Name,
+			Namespace:   s.Namespace,
+			Tag:         s.Tag,
+		}
+	}
+
+	var condition tftmpl.Condition
+	switch v := t.condition.(type) {
+	case *config.CatalogServicesConditionConfig:
+		condition = &tftmpl.CatalogServicesCondition{
+			Regexp:            *v.Regexp,
+			SourceIncludesVar: *v.SourceIncludesVar,
+			Datacenter:        *v.Datacenter,
+			Namespace:         *v.Namespace,
+			NodeMeta:          v.NodeMeta,
+		}
+	case *config.ServicesConditionConfig:
+		condition = &tftmpl.ServicesCondition{}
+	default:
+		// expected only for test scenarios
+		log.Printf("[WARN] (driver.terraform) task '%s' condition config unset."+
+			" defaulting to services condition", t.name)
+		condition = &tftmpl.ServicesCondition{}
+	}
+	input.Condition = condition
+
+	input.Providers = t.providers.ProviderBlocks()
+	input.ProviderInfo = make(map[string]interface{})
+	for k, v := range t.providerInfo {
+		input.ProviderInfo[k] = v
+	}
+
+	input.Variables = make(hcltmpl.Variables)
+	for k, v := range t.variables {
+		input.Variables[k] = v
+	}
+}
+
 // clientConfig configures a driver client for a task
 type clientConfig struct {
-	task       Task
 	clientType string
 	log        bool
+	name       string
 	persistLog bool
 	path       string
+	varFiles   []string
 	workingDir string
 }
 
@@ -91,7 +335,7 @@ type clientConfig struct {
 func newClient(conf *clientConfig) (client.Client, error) {
 	var err error
 	var c client.Client
-	taskName := conf.task.Name
+	taskName := conf.name
 
 	switch conf.clientType {
 	case developmentClient:
@@ -113,7 +357,7 @@ func newClient(conf *clientConfig) (client.Client, error) {
 			ExecPath:   conf.path,
 			WorkingDir: conf.workingDir,
 			Workspace:  taskName,
-			VarFiles:   conf.task.VarFiles,
+			VarFiles:   conf.varFiles,
 		})
 	}
 

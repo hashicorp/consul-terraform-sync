@@ -64,11 +64,14 @@ func TestServe(t *testing.T) {
 	port, err := testutils.FreePort()
 	require.NoError(t, err)
 
+	task, err := driver.NewTask(driver.TaskConfig{Enabled: true})
+	require.NoError(t, err)
+
 	drivers := driver.NewDrivers()
 	d := new(mocks.Driver)
 	d.On("UpdateTask", mock.Anything, mock.Anything).
 		Return(driver.InspectPlan{}, nil).Once()
-	d.On("Task").Return(driver.Task{Enabled: true})
+	d.On("Task").Return(task)
 	drivers.Add("task_b", d)
 
 	api := NewAPI(event.NewStore(), drivers, port)

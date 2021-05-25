@@ -54,12 +54,11 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	addEvents(store, eventsC)
 
 	drivers := driver.NewDrivers()
-	drivers.Add("task_a", createDriver("task_a", true))
-	drivers.Add("task_b", createDriver("task_b", true))
-	drivers.Add("task_c", createDriver("task_c", true))
+	drivers.Add("task_a", createDriver(t, "task_a", true))
+	drivers.Add("task_b", createDriver(t, "task_b", true))
+	drivers.Add("task_c", createDriver(t, "task_c", true))
 
-	disabledD := new(mocks.Driver)
-	disabledD.On("Task").Return(driver.Task{
+	disabledTask, err := driver.NewTask(driver.TaskConfig{
 		Name:    "task_d",
 		Enabled: false,
 		Providers: driver.NewTerraformProviderBlocks(
@@ -70,6 +69,9 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			driver.Service{Name: "web"},
 		},
 	})
+	require.NoError(t, err)
+	disabledD := new(mocks.Driver)
+	disabledD.On("Task").Return(disabledTask)
 	drivers.Add("task_d", disabledD)
 
 	handler := newTaskStatusHandler(store, drivers, "v1")
@@ -295,10 +297,16 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 }
 
 func TestTaskStatus_MakeStatus(t *testing.T) {
+	enabledTask, err := driver.NewTask(driver.TaskConfig{Name: "test_task", Enabled: true})
+	require.NoError(t, err)
+
+	disabledTask, err := driver.NewTask(driver.TaskConfig{Name: "test_task", Enabled: false})
+	require.NoError(t, err)
+
 	cases := []struct {
 		name     string
 		events   []event.Event
-		task     driver.Task
+		task     *driver.Task
 		expected TaskStatus
 	}{
 		{
@@ -325,7 +333,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 					},
 				},
 			},
-			driver.Task{Name: "test_task", Enabled: true},
+			enabledTask,
 			TaskStatus{
 				TaskName:  "test_task",
 				Enabled:   true,
@@ -338,7 +346,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 		{
 			"no events",
 			[]event.Event{},
-			driver.Task{Name: "test_task", Enabled: true},
+			enabledTask,
 			TaskStatus{
 				TaskName:  "test_task",
 				Enabled:   true,
@@ -360,7 +368,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 					Config:  nil,
 				},
 			},
-			driver.Task{Name: "test_task", Enabled: true},
+			enabledTask,
 			TaskStatus{
 				TaskName:  "test_task",
 				Enabled:   true,
@@ -381,7 +389,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 					},
 				},
 			},
-			driver.Task{Name: "test_task", Enabled: false},
+			disabledTask,
 			TaskStatus{
 				TaskName:  "test_task",
 				Enabled:   false,
@@ -650,12 +658,14 @@ func addEvents(store *event.Store, events []event.Event) {
 	}
 }
 
-func createDriver(taskName string, enabled bool) driver.Driver {
-	d := new(mocks.Driver)
-	d.On("UpdateTask", mock.Anything, mock.Anything).Return("", nil).Once()
-	d.On("Task").Return(driver.Task{
+func createDriver(tb testing.TB, taskName string, enabled bool) driver.Driver {
+	task, err := driver.NewTask(driver.TaskConfig{
 		Name:    taskName,
 		Enabled: enabled,
 	})
+	require.NoError(tb, err)
+	d := new(mocks.Driver)
+	d.On("UpdateTask", mock.Anything, mock.Anything).Return("", nil).Once()
+	d.On("Task").Return(task)
 	return d
 }

@@ -74,11 +74,11 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 
 	// set up driver
 	drivers := driver.NewDrivers()
-	drivers.Add("success_a", createDriver("success_a", true))
-	drivers.Add("success_b", createDriver("success_b", true))
-	drivers.Add("errored_c", createDriver("errored_c", true))
-	drivers.Add("critical_d", createDriver("critical_d", true))
-	drivers.Add("disabled_e", createDriver("disabled_e", false))
+	drivers.Add("success_a", createDriver(t, "success_a", true))
+	drivers.Add("success_b", createDriver(t, "success_b", true))
+	drivers.Add("errored_c", createDriver(t, "errored_c", true))
+	drivers.Add("critical_d", createDriver(t, "critical_d", true))
+	drivers.Add("disabled_e", createDriver(t, "disabled_e", false))
 
 	handler := newOverallStatusHandler(store, drivers, "v1")
 

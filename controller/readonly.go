@@ -87,10 +87,14 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 
 func (ctrl *ReadOnly) checkInspect(ctx context.Context, u unit) (bool, error) {
 	taskName := u.taskName
+	d := u.driver
+	if !d.Task().IsEnabled() {
+		log.Printf("[TRACE] (ctrl) skipping disabled task '%s'", taskName)
+		return true, nil
+	}
 
 	log.Printf("[TRACE] (ctrl) checking dependencies changes for task %s", taskName)
 
-	d := u.driver
 	rendered, err := d.RenderTemplate(ctx)
 	if err != nil {
 		return false, fmt.Errorf("error rendering template for task %s: %s",

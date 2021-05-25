@@ -42,7 +42,6 @@ func TestNewClient(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual, err := newClient(&clientConfig{
-				task:       Task{},
 				clientType: tc.clientType,
 			})
 			if tc.expectError {
@@ -71,7 +70,7 @@ func TestTask_ProviderNames(t *testing.T) {
 		{
 			"happy path",
 			Task{
-				Providers: NewTerraformProviderBlocks(
+				providers: NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"local": map[string]interface{}{
 							"configs": "stuff",
@@ -107,7 +106,7 @@ func TestTask_ServiceNames(t *testing.T) {
 		{
 			"happy path",
 			Task{
-				Services: []Service{
+				services: []Service{
 					Service{Name: "web"},
 					Service{Name: "api"},
 				},

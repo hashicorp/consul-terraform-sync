@@ -75,7 +75,7 @@ func TestRenderTemplate(t *testing.T) {
 
 			tf := &Terraform{
 				mu:       &sync.RWMutex{},
-				task:     Task{Name: "RenderTemplateTest", Enabled: true},
+				task:     &Task{name: "RenderTemplateTest", enabled: true},
 				resolver: r,
 				template: tmpl,
 				watcher:  new(mocksTmpl.Watcher),
@@ -163,7 +163,7 @@ func TestApplyTask(t *testing.T) {
 
 			tf := &Terraform{
 				mu:        &sync.RWMutex{},
-				task:      Task{Name: "ApplyTaskTest", Enabled: true},
+				task:      &Task{name: "ApplyTaskTest", enabled: true},
 				client:    c,
 				postApply: tc.postApply,
 				inited:    tc.inited,
@@ -282,7 +282,7 @@ func TestUpdateTask(t *testing.T) {
 			tf := &Terraform{
 				mu:         &sync.RWMutex{},
 				workingDir: tc.dirName,
-				task:       Task{Name: "test_task", Enabled: tc.orig.Enabled},
+				task:       &Task{name: "test_task", enabled: tc.orig.Enabled},
 				client:     c,
 				resolver:   r,
 				watcher:    w,
@@ -382,7 +382,7 @@ func TestUpdateTask(t *testing.T) {
 			tf := &Terraform{
 				mu:         &sync.RWMutex{},
 				workingDir: tc.dirName,
-				task:       Task{Name: "test_task", Enabled: false},
+				task:       &Task{name: "test_task", enabled: false},
 				client:     c,
 				resolver:   r,
 				watcher:    w,
@@ -403,15 +403,15 @@ func TestSetBufferPeriod(t *testing.T) {
 	cases := []struct {
 		name    string
 		setTmpl bool
-		task    Task
+		task    *Task
 	}{
 		{
 			"happy path",
 			true,
-			Task{
-				Enabled: true,
-				Name:    "happy_task",
-				BufferPeriod: &BufferPeriod{
+			&Task{
+				enabled: true,
+				name:    "happy_task",
+				bufferPeriod: &BufferPeriod{
 					Min: 2 * time.Second,
 					Max: 5 * time.Second,
 				},
@@ -420,25 +420,25 @@ func TestSetBufferPeriod(t *testing.T) {
 		{
 			"disabled task",
 			false,
-			Task{
-				Enabled: false,
-				Name:    "disabled_task",
+			&Task{
+				enabled: false,
+				name:    "disabled_task",
 			},
 		},
 		{
 			"no buffer period",
 			true,
-			Task{
-				Enabled: true,
-				Name:    "no_buf_period_task",
+			&Task{
+				enabled: true,
+				name:    "no_buf_period_task",
 			},
 		},
 		{
 			"no template",
 			false,
-			Task{
-				Enabled: true,
-				Name:    "task_a",
+			&Task{
+				enabled: true,
+				name:    "task_a",
 			},
 		},
 	}
@@ -456,7 +456,7 @@ func TestSetBufferPeriod(t *testing.T) {
 				tf.template = tmpl
 			}
 
-			if tc.task.BufferPeriod != nil {
+			if _, ok := tc.task.BufferPeriod(); ok {
 				w := new(mocksTmpl.Watcher)
 				w.On("SetBufferPeriod", mock.Anything, mock.Anything, mock.Anything)
 				tf.watcher = w
@@ -494,6 +494,7 @@ func TestInitTaskTemplates(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tf := &Terraform{
 				fileReader: tc.fileReader,
+				task:       &Task{name: "test", enabled: true},
 			}
 			err := tf.initTaskTemplate()
 			if tc.expectError {
@@ -510,56 +511,53 @@ func TestGetTerraformHandlers(t *testing.T) {
 		name        string
 		expectError bool
 		nilHandler  bool
-		task        Task
+		providers   TerraformProviderBlocks
 	}{
 		{
 			"no provider",
 			false,
 			true,
-			Task{},
+			TerraformProviderBlocks{},
 		},
 		{
 			"provider without handler (no error)",
 			true,
 			true,
-			Task{
-				Providers: NewTerraformProviderBlocks([]hcltmpl.NamedBlock{
-					hcltmpl.NewNamedBlock(map[string]interface{}{
-						handler.TerraformProviderFake: map[string]interface{}{
-							"required-config": "missing",
-						},
-					})}),
-			},
+			NewTerraformProviderBlocks([]hcltmpl.NamedBlock{
+				hcltmpl.NewNamedBlock(map[string]interface{}{
+					handler.TerraformProviderFake: map[string]interface{}{
+						"required-config": "missing",
+					},
+				})},
+			),
 		},
 		{
 			"provider without handler (no error)",
 			false,
 			true,
-			Task{
-				Providers: NewTerraformProviderBlocks([]hcltmpl.NamedBlock{
-					hcltmpl.NewNamedBlock(map[string]interface{}{
-						"provider-no-handler": map[string]interface{}{},
-					})}),
-			},
+			NewTerraformProviderBlocks([]hcltmpl.NamedBlock{
+				hcltmpl.NewNamedBlock(map[string]interface{}{
+					"provider-no-handler": map[string]interface{}{},
+				})},
+			),
 		},
 		{
 			"happy path - provider with handler",
 			false,
 			false,
-			Task{
-				Providers: NewTerraformProviderBlocks([]hcltmpl.NamedBlock{
-					hcltmpl.NewNamedBlock(map[string]interface{}{
-						handler.TerraformProviderFake: map[string]interface{}{
-							"name": "happy-path",
-						},
-					})}),
-			},
+			NewTerraformProviderBlocks([]hcltmpl.NamedBlock{
+				hcltmpl.NewNamedBlock(map[string]interface{}{
+					handler.TerraformProviderFake: map[string]interface{}{
+						"name": "happy-path",
+					},
+				})},
+			),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, err := getTerraformHandlers(tc.task)
+			h, err := getTerraformHandlers(tc.name, tc.providers)
 			if tc.expectError {
 				assert.Error(t, err)
 				return
@@ -581,7 +579,7 @@ func TestDisabledTask(t *testing.T) {
 
 		tf := &Terraform{
 			mu:      &sync.RWMutex{},
-			task:    Task{Name: "disabled_task", Enabled: false},
+			task:    &Task{name: "disabled_task", enabled: false},
 			watcher: new(mocksTmpl.Watcher),
 		}
 
