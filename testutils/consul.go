@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -8,7 +9,9 @@ import (
 	"net/http"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/testutils/sdk"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -56,6 +59,64 @@ func NewTestConsulServer(tb testing.TB, config TestConsulServerConfig) *testutil
 	require.NoError(tb, err, "unable to start Consul server")
 
 	return srv
+}
+
+// RegisterConsulService regsiters a service to the Consul Catalog. The Consul
+// sdk/testutil package currently does not support a method to register multiple
+// service instances, distinguished by their IDs.
+func RegisterConsulService(tb testing.TB, srv *testutil.TestServer,
+	s testutil.TestService, health string, wait time.Duration) {
+	registerConsulService(tb, srv, s, health)
+
+	if wait.Seconds() == 0 {
+		return
+	}
+
+	polling := make(chan struct{})
+	stopPolling := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-stopPolling:
+				return
+			default:
+				if ok := serviceRegistered(tb, srv, s.ID); ok {
+					polling <- struct{}{}
+					return
+				}
+			}
+		}
+	}()
+
+	select {
+	case <-polling:
+		return
+	case <-time.After(wait):
+		close(stopPolling)
+		tb.Fatalf("timed out after waiting for %v for service %q to register "+
+			"with Consul", wait, s.ID)
+	}
+}
+
+func registerConsulService(tb testing.TB, srv *testutil.TestServer,
+	s testutil.TestService, health string) {
+
+	var body bytes.Buffer
+	enc := json.NewEncoder(&body)
+	require.NoError(tb, enc.Encode(&s))
+
+	u := fmt.Sprintf("http://%s/v1/agent/service/register", srv.HTTPAddr)
+	resp := RequestHTTP(tb, http.MethodPut, u, body.String())
+	defer resp.Body.Close()
+
+	sdk.AddCheck(srv, tb, s.ID, s.ID, testutil.HealthPassing)
+}
+
+func serviceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string) bool {
+	u := fmt.Sprintf("http://%s/v1/agent/service/%s", srv.HTTPAddr, serviceID)
+	resp := RequestHTTP(tb, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
 }
 
 // Bulk add test data for seeding consul
