@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -24,7 +25,11 @@ const (
 func StartCTS(t *testing.T, configPath string, opts ...string) (*Client, func(t *testing.T)) {
 	opts = append(opts, fmt.Sprintf("--config-file=%s", configPath))
 	cmd := exec.Command("consul-terraform-sync", opts...)
-	// uncomment to see logs
+	// capture logging to output on error
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	// uncomment to see all logs
 	// cmd.Stdout = os.Stdout
 	// cmd.Stderr = os.Stderr
 
@@ -52,6 +57,20 @@ func StartCTS(t *testing.T, configPath string, opts ...string) (*Client, func(t 
 	ctsClient := NewClient(&ClientConfig{Port: port}, nil)
 
 	return ctsClient, func(t *testing.T) {
+		defer func() {
+			logLen := buf.Len()
+			// if the test has failed for any reason, print log snippet
+			if t.Failed() && logLen > 0 {
+				logStr := buf.String()
+				numChar := 3000
+				if logLen < 3000 {
+					numChar = logLen
+				}
+				t.Logf("\nFailed Test: %s\nCTS logs:\n\n...%s", t.Name(),
+					logStr[logLen-numChar:])
+			}
+		}()
+
 		cmd.Process.Signal(os.Interrupt)
 		sigintErr := errors.New("signal: interrupt")
 		if err := cmd.Wait(); err != nil {

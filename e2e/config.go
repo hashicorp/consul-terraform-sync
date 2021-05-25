@@ -90,7 +90,7 @@ task {
 }
 
 func baseConfig() hclConfig {
-	return `log_level = "INFO"
+	return `log_level = "DEBUG"
 
 service {
   name = "api"
