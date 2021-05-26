@@ -45,6 +45,17 @@ func NewTerraformProviderBlock(b hcltmpl.NamedBlock) TerraformProviderBlock {
 	}
 }
 
+func (p TerraformProviderBlock) Copy() TerraformProviderBlock {
+	env := make(map[string]string)
+	for k, v := range p.env {
+		env[k] = v
+	}
+	return TerraformProviderBlock{
+		block: p.block.Copy(),
+		env:   env,
+	}
+}
+
 // Name returns the name of the provider. This is the label of the HCL named
 // block.
 func (p TerraformProviderBlock) Name() string {
@@ -81,4 +92,12 @@ func (p TerraformProviderBlocks) Env() map[string]string {
 		}
 	}
 	return env
+}
+
+func (p TerraformProviderBlocks) Copy() TerraformProviderBlocks {
+	copy := make(TerraformProviderBlocks, len(p))
+	for k, v := range p {
+		copy[k] = v.Copy()
+	}
+	return copy
 }

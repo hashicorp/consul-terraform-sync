@@ -179,7 +179,7 @@ func (t *Task) Env() map[string]string {
 func (t *Task) Providers() TerraformProviderBlocks {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.providers
+	return t.providers.Copy()
 }
 
 // ProviderNames returns the list of providers that the task has configured
@@ -229,7 +229,15 @@ func (t *Task) Source() string {
 func (t *Task) UserDefinedMeta() map[string]map[string]string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.userDefinedMeta
+
+	meta := make(map[string]map[string]string)
+	for k, nestedMap := range t.userDefinedMeta {
+		meta[k] = make(map[string]string)
+		for nestedK, nestedV := range nestedMap {
+			meta[k][nestedK] = nestedV
+		}
+	}
+	return meta
 }
 
 // VariableFiles returns a copy of the list of configured variable files
