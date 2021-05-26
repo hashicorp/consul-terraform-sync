@@ -148,7 +148,7 @@ func (tf *Terraform) Task() *Task {
 
 // InitTask initializes the task by creating the Terraform root module and related
 // files to execute on.
-func (tf *Terraform) InitTask(force bool) error {
+func (tf *Terraform) InitTask(context.Context) error {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
@@ -158,7 +158,7 @@ func (tf *Terraform) InitTask(force bool) error {
 		return nil
 	}
 
-	return tf.initTask(force)
+	return tf.initTask()
 }
 
 // SetBufferPeriod sets the buffer period for the task. Do not set this when
@@ -280,7 +280,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 	}
 
 	if reinit {
-		if err := tf.initTask(true); err != nil {
+		if err := tf.initTask(); err != nil {
 			return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to init "+
 				"task: %s", taskName, err)
 		}
@@ -337,14 +337,15 @@ func (tf *Terraform) init(ctx context.Context) error {
 }
 
 // initTask initializes the task
-func (tf *Terraform) initTask(force bool) error {
+func (tf *Terraform) initTask() error {
 	input := tftmpl.RootModuleInputData{
 		TerraformVersion: TerraformVersion,
 		Backend:          tf.backend,
+		Path:             tf.workingDir,
+		FilePerms:        filePerms,
 	}
 	tf.task.configureRootModuleInput(&input)
-	input.Init()
-	if err := tftmpl.InitRootModule(&input, tf.workingDir, filePerms, force); err != nil {
+	if err := tftmpl.InitRootModule(&input); err != nil {
 		return err
 	}
 

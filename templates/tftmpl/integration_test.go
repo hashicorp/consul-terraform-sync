@@ -67,9 +67,11 @@ func TestInitRootModule(t *testing.T) {
 			"one":       cty.NumberIntVal(1),
 			"bool_true": cty.BoolVal(true),
 		},
+		Path:      dir,
+		FilePerms: expectedPerm,
+		skipOverride: true,
 	}
-	input.Init()
-	err = InitRootModule(&input, dir, expectedPerm, false)
+	err = InitRootModule(&input)
 	assert.NoError(t, err)
 
 	files := []struct {

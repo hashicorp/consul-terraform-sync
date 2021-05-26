@@ -10,7 +10,7 @@ import (
 // downstream to update network infrastructure.
 type Driver interface {
 	// InitTask initializes the task that the driver executes
-	InitTask(force bool) error
+	InitTask(ctx context.Context) error
 
 	// SetBufferPeriod sets the task's buffer period on the watcher
 	SetBufferPeriod()
