@@ -324,7 +324,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 type clientConfig struct {
 	clientType string
 	log        bool
-	name       string
+	taskName   string
 	persistLog bool
 	path       string
 	varFiles   []string
@@ -335,7 +335,7 @@ type clientConfig struct {
 func newClient(conf *clientConfig) (client.Client, error) {
 	var err error
 	var c client.Client
-	taskName := conf.name
+	taskName := conf.taskName
 
 	switch conf.clientType {
 	case developmentClient:

@@ -92,7 +92,7 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 	tfClient, err := newClient(&clientConfig{
 		clientType: config.ClientType,
 		log:        config.Log,
-		name:       taskName,
+		taskName:   taskName,
 		persistLog: config.PersistLog,
 		path:       config.Path,
 		workingDir: config.WorkingDir,
@@ -494,7 +494,7 @@ func (tf *Terraform) initTaskTemplate() error {
 //
 // Returned handler may be nil even if returned err is nil. This happens when
 // no providers have a handler.
-func getTerraformHandlers(name string, providers TerraformProviderBlocks) (handler.Handler, error) {
+func getTerraformHandlers(taskName string, providers TerraformProviderBlocks) (handler.Handler, error) {
 	counter := 0
 	var next handler.Handler
 	for _, p := range providers {
@@ -514,7 +514,7 @@ func getTerraformHandlers(name string, providers TerraformProviderBlocks) (handl
 		}
 	}
 	log.Printf("[INFO] (driver.terraform) retrieved %d Terraform handlers for task '%s'",
-		counter, name)
+		counter, taskName)
 	return next, nil
 }
 

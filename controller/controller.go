@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
@@ -110,12 +111,10 @@ func (ctrl *baseController) init(ctx context.Context) (*driver.Drivers, error) {
 			return nil, err
 		}
 
-		if task.IsEnabled() {
-			err = d.InitTask(true)
-			if err != nil {
-				log.Printf("[ERR] (ctrl) error initializing task %q: %s", taskName, err)
-				return nil, err
-			}
+		err = d.InitTask(true)
+		if err != nil {
+			log.Printf("[ERR] (ctrl) error initializing task %q: %s", taskName, err)
+			return nil, err
 		}
 
 		units = append(units, unit{
@@ -260,7 +259,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			Condition:       t.Condition,
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error initializing task %s: %s", *t.Name, err)
 		}
 		tasks[i] = task
 	}
