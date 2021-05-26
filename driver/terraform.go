@@ -482,7 +482,8 @@ func (tf *Terraform) initTaskTemplate() error {
 	})
 	switch tf.task.Condition().(type) {
 	case *config.CatalogServicesConditionConfig:
-		tf.template = &notifier.CatalogServicesRegistration{Template: tmpl}
+		tf.template = notifier.NewCatalogServicesRegistration(tmpl,
+			len(tf.task.Services()))
 	default:
 		tf.template = tmpl
 	}
