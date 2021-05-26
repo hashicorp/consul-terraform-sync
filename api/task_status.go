@@ -114,7 +114,7 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // makeTaskStatus takes event data for a task and returns a task status
-func makeTaskStatus(events []event.Event, task driver.Task,
+func makeTaskStatus(events []event.Event, task *driver.Task,
 	version string) TaskStatus {
 
 	successes := make([]bool, len(events))
@@ -134,23 +134,24 @@ func makeTaskStatus(events []event.Event, task driver.Task,
 		}
 	}
 
+	taskName := task.Name()
 	return TaskStatus{
-		TaskName:  task.Name,
+		TaskName:  taskName,
 		Status:    successToStatus(successes),
-		Enabled:   task.Enabled,
+		Enabled:   task.IsEnabled(),
 		Providers: mapKeyToArray(uniqProviders),
 		Services:  mapKeyToArray(uniqServices),
-		EventsURL: makeEventsURL(events, version, task.Name),
+		EventsURL: makeEventsURL(events, version, taskName),
 	}
 }
 
 // makeTaskStatusUnknown returns a task status for tasks that do not have events
 // but still exist within CTS. Example: a task that has been disabled from the start
-func makeTaskStatusUnknown(task driver.Task) TaskStatus {
+func makeTaskStatusUnknown(task *driver.Task) TaskStatus {
 	return TaskStatus{
-		TaskName:  task.Name,
+		TaskName:  task.Name(),
 		Status:    StatusUnknown,
-		Enabled:   task.Enabled,
+		Enabled:   task.IsEnabled(),
 		Providers: task.ProviderNames(),
 		Services:  task.ServiceNames(),
 		EventsURL: "",

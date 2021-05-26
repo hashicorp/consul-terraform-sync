@@ -30,7 +30,7 @@ type Driver interface {
 	UpdateTask(ctx context.Context, task PatchTask) (InspectPlan, error)
 
 	// Task returns the task information of the driver
-	Task() Task
+	Task() *Task
 
 	// Version returns the version of the driver.
 	Version() string

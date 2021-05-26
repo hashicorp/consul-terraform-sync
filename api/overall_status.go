@@ -80,7 +80,7 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 			taskSummary.Status.Unknown++
 		}
 
-		if d.Task().Enabled {
+		if d.Task().IsEnabled() {
 			taskSummary.Enabled.True++
 		} else {
 			taskSummary.Enabled.False++

@@ -165,7 +165,7 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, error) {
 	taskName := u.taskName
 	d := u.driver
-	if !d.Task().Enabled {
+	if !d.Task().IsEnabled() {
 		log.Printf("[TRACE] (ctrl) skipping disabled task '%s'", taskName)
 		return true, nil
 	}

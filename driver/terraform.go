@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/templates"
-	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/notifier"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/tmplfunc"
@@ -47,7 +46,7 @@ var (
 type Terraform struct {
 	mu *sync.RWMutex
 
-	task              Task
+	task              *Task
 	backend           map[string]interface{}
 	requiredProviders map[string]interface{}
 
@@ -66,7 +65,7 @@ type Terraform struct {
 
 // TerraformConfig configures the Terraform driver
 type TerraformConfig struct {
-	Task              Task
+	Task              *Task
 	Log               bool
 	PersistLog        bool
 	Path              string
@@ -88,20 +87,23 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		}
 	}
 
+	task := config.Task
+	taskName := task.Name()
 	tfClient, err := newClient(&clientConfig{
-		task:       config.Task,
 		clientType: config.ClientType,
 		log:        config.Log,
+		taskName:   taskName,
 		persistLog: config.PersistLog,
 		path:       config.Path,
 		workingDir: config.WorkingDir,
+		varFiles:   task.VariableFiles(),
 	})
 	if err != nil {
 		log.Printf("[ERR] (driver.terraform) init client type '%s' error: %s", config.ClientType, err)
 		return nil, err
 	}
 
-	if taskEnv := config.Task.Env; len(taskEnv) > 0 {
+	if taskEnv := task.Env(); len(taskEnv) > 0 {
 		// Terraform init requires discovering git in the PATH env.
 		//
 		// The terraform-exec package disables inheriting from the os environment
@@ -114,7 +116,7 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		tfClient.SetEnv(env)
 	}
 
-	handler, err := getTerraformHandlers(config.Task)
+	handler, err := getTerraformHandlers(taskName, task.Providers())
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +142,7 @@ func (tf *Terraform) Version() string {
 }
 
 // Task returns the task config info
-func (tf *Terraform) Task() Task {
+func (tf *Terraform) Task() *Task {
 	return tf.task
 }
 
@@ -150,9 +152,9 @@ func (tf *Terraform) InitTask(force bool) error {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
-	if !tf.task.Enabled {
+	if !tf.task.IsEnabled() {
 		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"initializing", tf.task.Name)
+			"initializing", tf.task.Name())
 		return nil
 	}
 
@@ -165,13 +167,12 @@ func (tf *Terraform) SetBufferPeriod() {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
-	if !tf.task.Enabled {
+	taskName := tf.task.Name()
+	if !tf.task.IsEnabled() {
 		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"setting buffer period", tf.task.Name)
+			"setting buffer period", taskName)
 		return
 	}
-
-	taskName := tf.task.Name
 
 	if tf.template == nil {
 		log.Printf("[WARN] (driver.terraform) attempted to set buffer for "+
@@ -179,8 +180,8 @@ func (tf *Terraform) SetBufferPeriod() {
 		return
 	}
 
-	bp := tf.task.BufferPeriod
-	if bp == nil {
+	bp, ok := tf.task.BufferPeriod()
+	if !ok {
 		log.Printf("[TRACE] (driver.terraform) no buffer period for '%s'", taskName)
 		return
 	}
@@ -198,9 +199,9 @@ func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
-	if !tf.task.Enabled {
+	if !tf.task.IsEnabled() {
 		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"rendering template", tf.task.Name)
+			"rendering template", tf.task.Name())
 		return true, nil
 	}
 
@@ -213,9 +214,9 @@ func (tf *Terraform) InspectTask(ctx context.Context) error {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
-	if !tf.task.Enabled {
+	if !tf.task.IsEnabled() {
 		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"inspecting", tf.task.Name)
+			"inspecting", tf.task.Name())
 		return nil
 	}
 
@@ -228,9 +229,9 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
-	if !tf.task.Enabled {
+	if !tf.task.IsEnabled() {
 		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"applying", tf.task.Name)
+			"applying", tf.task.Name())
 		return nil
 	}
 
@@ -247,6 +248,7 @@ type InspectPlan struct {
 // depending on the fields updated. If update task is requested with the inspect
 // run option, then returns the inspected plan
 func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPlan, error) {
+	taskName := tf.task.Name()
 	switch patch.RunOption {
 	case "", RunOptionInspect, RunOptionNow:
 		// valid options
@@ -260,10 +262,12 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 
 	reinit := false
 
-	if tf.task.Enabled != patch.Enabled {
-		tf.task.Enabled = patch.Enabled
-		if tf.task.Enabled {
+	if tf.task.IsEnabled() != patch.Enabled {
+		if patch.Enabled {
+			tf.task.Enable()
 			reinit = true
+		} else {
+			tf.task.Disable()
 		}
 	}
 
@@ -278,14 +282,14 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 	if reinit {
 		if err := tf.initTask(true); err != nil {
 			return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to init "+
-				"task: %s", tf.task.Name, err)
+				"task: %s", taskName, err)
 		}
 
 		for i := int64(0); ; i++ {
 			rendered, err := tf.renderTemplate(ctx)
 			if err != nil {
 				return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to "+
-					"render template for task: %s", tf.task.Name, err)
+					"render template for task: %s", taskName, err)
 			}
 			if rendered {
 				break
@@ -295,18 +299,18 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 
 	if patch.RunOption == RunOptionInspect {
 		log.Printf("[TRACE] (driver.terraform) update task '%s'. inspect run "+
-			"option", tf.task.Name)
+			"option", taskName)
 		plan, err := tf.inspectTask(ctx, true)
 		if err != nil {
 			return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to inspect "+
-				"task: %s", tf.task.Name, err)
+				"task: %s", taskName, err)
 		}
 		return plan, nil
 	}
 
 	if patch.RunOption == RunOptionNow {
 		log.Printf("[TRACE] (driver.terraform) update task '%s'. run now "+
-			"option", tf.task.Name)
+			"option", taskName)
 		return InspectPlan{}, tf.applyTask(ctx)
 	}
 
@@ -316,7 +320,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 
 // init initializes the Terraform workspace if needed
 func (tf *Terraform) init(ctx context.Context) error {
-	taskName := tf.task.Name
+	taskName := tf.task.Name()
 
 	if tf.inited {
 		log.Printf("[TRACE] (driver.terraform) workspace for task already "+
@@ -334,72 +338,12 @@ func (tf *Terraform) init(ctx context.Context) error {
 
 // initTask initializes the task
 func (tf *Terraform) initTask(force bool) error {
-	task := tf.task
-
-	services := make([]tftmpl.Service, len(task.Services))
-	for i, s := range task.Services {
-		services[i] = tftmpl.Service{
-			Datacenter:  s.Datacenter,
-			Description: s.Description,
-			Name:        s.Name,
-			Namespace:   s.Namespace,
-			Tag:         s.Tag,
-		}
-	}
-
-	var vars hcltmpl.Variables
-	for _, vf := range task.VarFiles {
-		tfvars, err := tftmpl.LoadModuleVariables(vf)
-		if err != nil {
-			return err
-		}
-
-		if len(vars) == 0 {
-			vars = tfvars
-			continue
-		}
-
-		for k, v := range tfvars {
-			vars[k] = v
-		}
-	}
-
-	var condition tftmpl.Condition
-	switch v := task.Condition.(type) {
-	case *config.CatalogServicesConditionConfig:
-		condition = &tftmpl.CatalogServicesCondition{
-			Regexp:            *v.Regexp,
-			SourceIncludesVar: *v.SourceIncludesVar,
-			Datacenter:        *v.Datacenter,
-			Namespace:         *v.Namespace,
-			NodeMeta:          v.NodeMeta,
-		}
-	case *config.ServicesConditionConfig:
-		condition = &tftmpl.ServicesCondition{}
-	default:
-		// expected only for test scenarios
-		log.Printf("[WARN] (driver.terraform) task '%s' condition config unset."+
-			" defaulting to services condition", task.Name)
-		condition = &tftmpl.ServicesCondition{}
-	}
-
 	input := tftmpl.RootModuleInputData{
 		TerraformVersion: TerraformVersion,
 		Backend:          tf.backend,
-		Providers:        task.Providers.ProviderBlocks(),
-		ProviderInfo:     task.ProviderInfo,
-		Services:         services,
-		Task: tftmpl.Task{
-			Description: task.Description,
-			Name:        task.Name,
-			Source:      task.Source,
-			Version:     task.Version,
-		},
-		Variables: vars,
-		Condition: condition,
 	}
+	tf.task.configureRootModuleInput(&input)
 	input.Init()
-
 	if err := tftmpl.InitRootModule(&input, tf.workingDir, filePerms, force); err != nil {
 		return err
 	}
@@ -418,7 +362,7 @@ func (tf *Terraform) initTask(force bool) error {
 
 // renderTemplate attempts to render the hashicat template
 func (tf *Terraform) renderTemplate(ctx context.Context) (bool, error) {
-	taskName := tf.task.Name
+	taskName := tf.task.Name()
 	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
 
 	var err error
@@ -428,7 +372,7 @@ func (tf *Terraform) renderTemplate(ctx context.Context) (bool, error) {
 			"for '%s': %s", taskName, err)
 
 		return false, fmt.Errorf("error fetching template dependencies for task %s: %s",
-			tf.task.Name, err)
+			taskName, err)
 	}
 
 	// result.Complete is only `true` if the template has new data that has been
@@ -453,7 +397,7 @@ func (tf *Terraform) renderTemplate(ctx context.Context) (bool, error) {
 // inspectTask inspects the task changes. Option to return inspection plan
 // details rather than logging out
 func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (InspectPlan, error) {
-	taskName := tf.task.Name
+	taskName := tf.task.Name()
 
 	if err := tf.init(ctx); err != nil {
 		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
@@ -489,7 +433,7 @@ func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (InspectP
 
 // applyTask applies the task changes.
 func (tf *Terraform) applyTask(ctx context.Context) error {
-	taskName := tf.task.Name
+	taskName := tf.task.Name()
 
 	if err := tf.init(ctx); err != nil {
 		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
@@ -521,7 +465,7 @@ func (tf *Terraform) initTaskTemplate() error {
 	content, err := tf.fileReader(tmplFullpath)
 	if err != nil {
 		log.Printf("[ERR] (driver.terraform) unable to read file for '%s': %s",
-			tf.task.Name, err)
+			tf.task.Name(), err)
 		return err
 	}
 
@@ -533,9 +477,9 @@ func (tf *Terraform) initTaskTemplate() error {
 	tmpl := hcat.NewTemplate(hcat.TemplateInput{
 		Contents:     string(content),
 		Renderer:     renderer,
-		FuncMapMerge: tmplfunc.HCLMap(tf.task.UserDefinedMeta),
+		FuncMapMerge: tmplfunc.HCLMap(tf.task.UserDefinedMeta()),
 	})
-	switch tf.task.Condition.(type) {
+	switch tf.task.Condition().(type) {
 	case *config.CatalogServicesConditionConfig:
 		tf.template = &notifier.CatalogServicesRegistration{Template: tmpl}
 	default:
@@ -550,10 +494,10 @@ func (tf *Terraform) initTaskTemplate() error {
 //
 // Returned handler may be nil even if returned err is nil. This happens when
 // no providers have a handler.
-func getTerraformHandlers(task Task) (handler.Handler, error) {
+func getTerraformHandlers(taskName string, providers TerraformProviderBlocks) (handler.Handler, error) {
 	counter := 0
 	var next handler.Handler
-	for _, p := range task.Providers {
+	for _, p := range providers {
 		h, err := handler.TerraformProviderHandler(p.Name(), p.ProviderBlock().RawConfig())
 		if err != nil {
 			log.Printf(
@@ -570,7 +514,7 @@ func getTerraformHandlers(task Task) (handler.Handler, error) {
 		}
 	}
 	log.Printf("[INFO] (driver.terraform) retrieved %d Terraform handlers for task '%s'",
-		counter, task.Name)
+		counter, taskName)
 	return next, nil
 }
 

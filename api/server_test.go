@@ -114,9 +114,9 @@ func TestStatus(t *testing.T) {
 
 	// setup drivers
 	drivers := driver.NewDrivers()
-	drivers.Add("task_a", createDriver("task_a", true))
-	drivers.Add("task_b", createDriver("task_b", true))
-	drivers.Add("task_c", createDriver("task_c", true))
+	drivers.Add("task_a", createDriver(t, "task_a", true))
+	drivers.Add("task_b", createDriver(t, "task_b", true))
+	drivers.Add("task_c", createDriver(t, "task_c", true))
 
 	// start up server
 	port, err := testutils.FreePort()
@@ -291,21 +291,24 @@ func Test_Task_Update(t *testing.T) {
 		delete := testutils.MakeTempDir(t, tempDir)
 		defer delete()
 
+		task, err := driver.NewTask(driver.TaskConfig{Enabled: true})
+		require.NoError(t, err)
+
 		// add a driver
 		d, err := driver.NewTerraform(&driver.TerraformConfig{
-			Task:       driver.Task{Enabled: true},
+			Task:       task,
 			WorkingDir: tempDir,
 			ClientType: "test",
 		})
 		require.NoError(t, err)
 		drivers.Add("task_a", d)
 
-		assert.True(t, d.Task().Enabled)
+		assert.True(t, d.Task().IsEnabled())
 		plan, err := c.Task().Update("task_a", UpdateTaskConfig{
 			Enabled: config.Bool(false),
 		}, nil)
 		require.NoError(t, err)
-		assert.False(t, d.Task().Enabled)
+		assert.False(t, d.Task().IsEnabled())
 		assert.Empty(t, plan)
 	})
 	t.Run("task-not-found-error", func(t *testing.T) {

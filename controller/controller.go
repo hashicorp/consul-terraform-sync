@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
@@ -47,7 +48,7 @@ type unit struct {
 
 type baseController struct {
 	conf      *config.Config
-	newDriver func(*config.Config, driver.Task, templates.Watcher) (driver.Driver, error)
+	newDriver func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error)
 	units     []unit
 	watcher   templates.Watcher
 	resolver  templates.Resolver
@@ -88,7 +89,10 @@ func (ctrl *baseController) init(ctx context.Context) (*driver.Drivers, error) {
 
 	// Future: improve by combining tasks into workflows.
 	log.Printf("[INFO] (ctrl) initializing all tasks")
-	tasks := newDriverTasks(ctrl.conf, providerConfigs)
+	tasks, err := newDriverTasks(ctrl.conf, providerConfigs)
+	if err != nil {
+		return nil, err
+	}
 	units := make([]unit, 0, len(tasks))
 	drivers := driver.NewDrivers()
 
@@ -100,7 +104,8 @@ func (ctrl *baseController) init(ctx context.Context) (*driver.Drivers, error) {
 		default:
 		}
 
-		log.Printf("[DEBUG] (ctrl) initializing task %q", task.Name)
+		taskName := task.Name()
+		log.Printf("[DEBUG] (ctrl) initializing task %q", taskName)
 		d, err := ctrl.newDriver(ctrl.conf, task, ctrl.watcher)
 		if err != nil {
 			return nil, err
@@ -108,19 +113,19 @@ func (ctrl *baseController) init(ctx context.Context) (*driver.Drivers, error) {
 
 		err = d.InitTask(true)
 		if err != nil {
-			log.Printf("[ERR] (ctrl) error initializing task %q: %s", task.Name, err)
+			log.Printf("[ERR] (ctrl) error initializing task %q: %s", taskName, err)
 			return nil, err
 		}
 
 		units = append(units, unit{
-			taskName:  task.Name,
+			taskName:  taskName,
 			driver:    d,
 			providers: task.ProviderNames(),
 			services:  task.ServiceNames(),
-			source:    task.Source,
+			source:    task.Source(),
 		})
 
-		drivers.Add(task.Name, d)
+		drivers.Add(taskName, d)
 	}
 	ctrl.units = units
 
@@ -184,7 +189,7 @@ func InstallDriver(ctx context.Context, conf *config.Config) error {
 
 // newDriverFunc is a constructor abstraction for all of supported drivers
 func newDriverFunc(conf *config.Config) (
-	func(conf *config.Config, task driver.Task, w templates.Watcher) (driver.Driver, error), error) {
+	func(conf *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error), error) {
 	if conf.Driver.Terraform != nil {
 		return newTerraformDriver, nil
 	}
@@ -193,7 +198,7 @@ func newDriverFunc(conf *config.Config) (
 
 // newTerraformDriver maps user configuration to initialize a Terraform driver
 // for a task
-func newTerraformDriver(conf *config.Config, task driver.Task, w templates.Watcher) (driver.Driver, error) {
+func newTerraformDriver(conf *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 	tfConf := *conf.Driver.Terraform
 	return driver.NewTerraform(&driver.TerraformConfig{
 		Task:              task,
@@ -201,7 +206,7 @@ func newTerraformDriver(conf *config.Config, task driver.Task, w templates.Watch
 		Log:               *tfConf.Log,
 		PersistLog:        *tfConf.PersistLog,
 		Path:              *tfConf.Path,
-		WorkingDir:        filepath.Join(*tfConf.WorkingDir, task.Name),
+		WorkingDir:        filepath.Join(*tfConf.WorkingDir, task.Name()),
 		Backend:           tfConf.Backend,
 		RequiredProviders: tfConf.RequiredProviders,
 		ClientType:        *conf.ClientType,
@@ -210,12 +215,12 @@ func newTerraformDriver(conf *config.Config, task driver.Task, w templates.Watch
 
 // newDriverTasks converts user-defined task configurations to the task object
 // used by drivers.
-func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProviderBlocks) []driver.Task {
+func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProviderBlocks) ([]*driver.Task, error) {
 	if conf == nil {
-		return []driver.Task{}
+		return []*driver.Task{}, nil
 	}
 
-	tasks := make([]driver.Task, len(*conf.Tasks))
+	tasks := make([]*driver.Task, len(*conf.Tasks))
 	for i, t := range *conf.Tasks {
 
 		services := make([]driver.Service, len(t.Services))
@@ -238,7 +243,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			}
 		}
 
-		tasks[i] = driver.Task{
+		task, err := driver.NewTask(driver.TaskConfig{
 			Description:     *t.Description,
 			Name:            *t.Name,
 			Enabled:         *t.Enabled,
@@ -252,10 +257,14 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			UserDefinedMeta: conf.Services.CTSUserDefinedMeta(t.Services),
 			BufferPeriod:    getTemplateBufferPeriod(conf, t),
 			Condition:       t.Condition,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error initializing task %s: %s", *t.Name, err)
 		}
+		tasks[i] = task
 	}
 
-	return tasks
+	return tasks, nil
 }
 
 // getService is a helper to find and convert a user-defined service
