@@ -36,11 +36,28 @@ func NewCatalogServicesRegistration(tmpl templates.Template, serviceCount int) *
 
 // Notify notifies when Catalog Services registration changes.
 //
-// Note: there is a race condition that can cause once-mode to hang. Once-mode
-// requires all dependencies to be retrieved before notifying to render the
-// complete template (and then executing task). During once-mode, if the last
-// dependency received is not a CatalogSnippet dependency with a registration
-// change, we still need to notify or else once-mode will hang
+// Notifications are sent when:
+// A. There is a change in the Catalog Service's dependency ([]*dep.CatalogSnippet)
+//    that is specifically a service _registration_ change.
+// B. All the dependencies have been received for the first time. This is
+//    regardless of the dependency type that "completes" having received all the
+//    dependencies. Note: this is a special notification sent to handle a race
+//    condition that causes hanging during once-mode (details below)
+//
+// Notification are suppressed when:
+//  - There is a change in the Catalog Service's dependency ([]*dep.CatalogSnippet)
+//    that is specifically a service _tag_ change.
+//  - Other types of dependencies that are not Catalog Service. For example,
+//    Services ([]*dep.HealthService).
+//
+// Race condition: Once-mode requires a notification when all dependencies are
+// received in order to trigger CTS. It will hang otherwise. This notifier only
+// notifies on Catalog Service registration changes. The dependencies are
+// received by the notifier in any order. Therefore sometimes the last
+// dependency to "complete all dependencies" is a Health Service change, which
+// can lead to no notification even though once-mode requires a notification
+// when all dependencies are received.
+// Resolved by sending a special notification for once-mode. Bullet B above.
 func (n *CatalogServicesRegistration) Notify(d interface{}) (notify bool) {
 	log.Printf("[DEBUG] (notifier.cs) received dependency change type %T", d)
 	notify = false
