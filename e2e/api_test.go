@@ -268,7 +268,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	require.Equal(t, len(files), 0)
 
 	// Confirm that resources were not created
-	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
+	resourcesPath := filepath.Join(tempDir, disabledTaskName, resourcesDir)
 	testutils.CheckDir(t, false, resourcesPath)
 
 	// Update Task API: enable task with inspect run option

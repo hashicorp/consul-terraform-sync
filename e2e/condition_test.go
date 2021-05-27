@@ -150,7 +150,7 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	api.StartCTS(t, configPath, api.CTSOnceModeFlag)
 
 	// confirm that only two files were generated, one for db and one for web
-	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
+	resourcesPath := filepath.Join(tempDir, "catalog_task", resourcesDir)
 	files := testutils.CheckDir(t, true, resourcesPath)
 	require.Equal(t, 2, len(files))
 
@@ -353,6 +353,107 @@ func TestCondition_CatalogServices_NodeMeta(t *testing.T) {
 	cleanup()
 }
 
+func TestCondition_CatalogServices_MultipleTasks(t *testing.T) {
+	t.Parallel()
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	apiTaskName := "api_task"
+	apiWebTaskName := "api_web_task"
+	allTaskName := "all_task"
+	tasks := fmt.Sprintf(`
+task {
+	name = "%s"
+	source = "./test_modules/local_tags_file"
+	condition "catalog-services" {
+		regexp = "api"
+		source_includes_var = true
+	}
+}
+task {
+	name = "%s"
+	source = "./test_modules/local_tags_file"
+	condition "catalog-services" {
+		regexp = "^api$|^web$"
+		source_includes_var = true
+	}
+}
+task {
+	name = "%s"
+	source = "./test_modules/local_tags_file"
+	condition "catalog-services" {
+		regexp = ".*"
+		source_includes_var = true
+	}
+}
+`, apiTaskName, apiWebTaskName, allTaskName)
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_multi")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+
+	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+		appendString(tasks)
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+
+	err := cts.WaitForAPI(defaultWaitForAPI)
+	require.NoError(t, err)
+
+	// Test that the appropriate task is triggered given a particular service
+	// registration
+	// 1. Register 'api' service. Confirm all tasks are triggered
+	// 2. Register 'web' service. Confirm that only api_web_task and all_task
+	// 3. Register 'db' service. Confirm only all_task is registered
+
+	apiResourcesPath := filepath.Join(tempDir, apiTaskName, resourcesDir)
+	apiWebResourcesPath := filepath.Join(tempDir, apiWebTaskName, resourcesDir)
+	allResourcesPath := filepath.Join(tempDir, allTaskName, resourcesDir)
+
+	// 1. Register api, all tasks create resource
+	service := testutil.TestService{ID: "api-1", Name: "api"}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	now := time.Now()
+	// wait longer than default since more tasks are being executed
+	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent*2)
+	api.WaitForEvent(t, cts, apiWebTaskName, now, defaultWaitForEvent*2)
+	api.WaitForEvent(t, cts, apiTaskName, now, defaultWaitForEvent*2)
+
+	testutils.CheckFile(t, true, allResourcesPath, "api_tags.txt")
+	testutils.CheckFile(t, true, apiWebResourcesPath, "api_tags.txt")
+	testutils.CheckFile(t, true, apiResourcesPath, "api_tags.txt")
+
+	// 2. Register web, only all_task and api_web_task create resource
+	service = testutil.TestService{ID: "web-1", Name: "web"}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	now = time.Now()
+	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent*2)
+	api.WaitForEvent(t, cts, apiWebTaskName, now, defaultWaitForEvent*2)
+
+	testutils.CheckFile(t, true, allResourcesPath, "web_tags.txt")
+	testutils.CheckFile(t, true, apiWebResourcesPath, "web_tags.txt")
+	testutils.CheckFile(t, false, apiResourcesPath, "web_tags.txt")
+
+	// 3. Register db, only all_task create resource
+	service = testutil.TestService{ID: "db-1", Name: "db"}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, allTaskName, time.Now(), defaultWaitForEvent)
+
+	testutils.CheckFile(t, true, allResourcesPath, "db_tags.txt")
+	testutils.CheckFile(t, false, apiWebResourcesPath, "db_tags.txt")
+	testutils.CheckFile(t, false, apiResourcesPath, "db_tags.txt")
+
+	cleanup()
+}
+
 func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirName, resource string) {
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
@@ -379,7 +480,7 @@ func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirNa
 	// 2. Deregister 'api' service. Confirm resource destroyed
 
 	// 0. Confirm resource not created
-	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
 	testutils.CheckFile(t, false, resourcesPath, resource)
 
 	// 1. Register api, resource created
