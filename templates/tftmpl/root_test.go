@@ -328,14 +328,22 @@ func TestService_hcatQuery(t *testing.T) {
 			},
 			`"app" "\"my-tag\" in Service.Tags"`,
 		}, {
+			"filter",
+			Service{
+				Name:   "filtered-app",
+				Filter: `"test" in Service.Tags or Service.Tags is empty`,
+			},
+			`"filtered-app" "\"test\" in Service.Tags or Service.Tags is empty"`,
+		}, {
 			"all",
 			Service{
 				Name:       "app",
 				Datacenter: "dc1",
 				Namespace:  "namespace",
 				Tag:        "my-tag",
+				Filter:     `Service.Meta["meta-key"] contains "test"`,
 			},
-			`"app" "dc=dc1" "ns=namespace" "\"my-tag\" in Service.Tags"`,
+			`"app" "dc=dc1" "ns=namespace" "\"my-tag\" in Service.Tags" "Service.Meta[\"meta-key\"] contains \"test\""`,
 		},
 	}
 	for _, tc := range testCases {

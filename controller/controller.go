@@ -280,6 +280,7 @@ func getService(services *config.ServiceConfigs, id string) driver.Service {
 				Name:        *s.Name,
 				Namespace:   *s.Namespace,
 				Tag:         *s.Tag,
+				Filter:      *s.Filter,
 			}
 		}
 	}

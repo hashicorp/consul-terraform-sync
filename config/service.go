@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -28,7 +29,11 @@ type ServiceConfig struct {
 	Namespace *string `mapstructure:"namespace"`
 
 	// Tag is used to filter nodes based on the tag for the service.
+	// Deprecated in favor of Filter.
 	Tag *string `mapstructure:"tag"`
+
+	// Filter is used to filter nodes based on a Consul compatible filter expression.
+	Filter *string `mapstructure:"filter"`
 
 	// CTSUserDefinedMeta is metadata added to a service automated by CTS for
 	// network infrastructure automation.
@@ -51,6 +56,7 @@ func (c *ServiceConfig) Copy() *ServiceConfig {
 	o.Name = StringCopy(c.Name)
 	o.Namespace = StringCopy(c.Namespace)
 	o.Tag = StringCopy(c.Tag)
+	o.Filter = StringCopy(c.Filter)
 
 	if c.CTSUserDefinedMeta != nil {
 		o.CTSUserDefinedMeta = make(map[string]string)
@@ -104,6 +110,10 @@ func (c *ServiceConfig) Merge(o *ServiceConfig) *ServiceConfig {
 		r.Tag = StringCopy(o.Tag)
 	}
 
+	if o.Filter != nil {
+		r.Filter = StringCopy(o.Filter)
+	}
+
 	if o.CTSUserDefinedMeta != nil {
 		if r.CTSUserDefinedMeta == nil {
 			r.CTSUserDefinedMeta = make(map[string]string)
@@ -144,6 +154,16 @@ func (c *ServiceConfig) Finalize() {
 
 	if c.Tag == nil {
 		c.Tag = String("")
+	} else {
+		log.Println("[WARN] (config) The 'tag' attribute was marked for " +
+			"deprecation in v0.2.0 and will be removed in a future version " +
+			"of Consul-Terraform-Sync. Please update your configuration to " +
+			"use 'filter' and provide a filter expression using the " +
+			"Service.Tags selector.")
+	}
+
+	if c.Filter == nil {
+		c.Filter = String("")
 	}
 
 	if c.CTSUserDefinedMeta == nil {
@@ -176,6 +196,7 @@ func (c *ServiceConfig) GoString() string {
 		"Namespace:%s, "+
 		"Datacenter:%s, "+
 		"Tag:%s, "+
+		"Filter:%s, "+
 		"Description:%s, "+
 		"CTSUserDefinedMeta:%s"+
 		"}",
@@ -183,6 +204,7 @@ func (c *ServiceConfig) GoString() string {
 		StringVal(c.Namespace),
 		StringVal(c.Datacenter),
 		StringVal(c.Tag),
+		StringVal(c.Filter),
 		StringVal(c.Description),
 		c.CTSUserDefinedMeta,
 	)
