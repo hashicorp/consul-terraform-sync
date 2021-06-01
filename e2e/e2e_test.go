@@ -16,17 +16,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// tempDirPrefix is the prefix for the directory for a given e2e test
-// where files generated from e2e are stored. This directory is
-// destroyed after e2e testing if no errors.
-const tempDirPrefix = "tmp_"
+const (
+	// tempDirPrefix is the prefix for the directory for a given e2e test
+	// where files generated from e2e are stored. This directory is
+	// destroyed after e2e testing if no errors.
+	tempDirPrefix = "tmp_"
 
-// resourcesDir is the sub-directory of tempDir where the
-// Terraform resources created from running consul-terraform-sync are stored
-const resourcesDir = "resources"
+	// resourcesDir is the sub-directory of tempDir where the
+	// Terraform resources created from running consul-terraform-sync are stored
+	resourcesDir = "resources"
 
-// configFile is the name of the sync config file
-const configFile = "config.hcl"
+	// configFile is the name of the sync config file
+	configFile = "config.hcl"
+
+	// liberal default times to wait
+	defaultWaitForRegistration = 8 * time.Second
+	defaultWaitForEvent        = 8 * time.Second
+
+	// liberal wait time to ensure event doesn't happen
+	defaultWaitForNoEvent = 6 * time.Second
+)
 
 func TestE2EBasic(t *testing.T) {
 	// Note: no t.Parallel() for this particular test. Choosing this test to run 'first'

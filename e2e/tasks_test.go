@@ -83,8 +83,6 @@ task {
 			Address: "5.6.7.8",
 			Port:    8080,
 		}
-		testutils.RegisterConsulService(t, srv, apiInstance, testutil.HealthPassing)
-		testutils.RegisterConsulService(t, srv, webInstance, testutil.HealthPassing)
 
 		now := time.Now()
 		testutils.RegisterConsulService(t, srv, apiInstance,
@@ -115,7 +113,11 @@ task {
 	t.Run("deregister service", func(t *testing.T) {
 		// Deregister service
 		testutils.DeregisterConsulService(t, srv, "api_new")
-		time.Sleep(15 * time.Second)
+		fullWait := defaultWaitForRegistration + defaultWaitForEvent
+		now := time.Now()
+		api.WaitForEvent(t, cts, apiTaskName, now, fullWait)
+		api.WaitForEvent(t, cts, dbTaskName, now, fullWait)
+		api.WaitForEvent(t, cts, webTaskName, now, fullWait)
 
 		// Verify updated Catalog information is reflected in terraform.tfvars
 		expectedTaskServices := map[string][]string{

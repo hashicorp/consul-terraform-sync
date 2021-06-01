@@ -309,8 +309,9 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 		Address: "5.6.7.8",
 		Port:    8080,
 	}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(3 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
 
 	// Confirm that resources are not recreated for disabled task
 	confirmDirNotFound(t, resourcesPath)
