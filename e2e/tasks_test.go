@@ -28,7 +28,6 @@ func TestTasksUpdate(t *testing.T) {
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "multiple_tasks")
 	delete := testutils.MakeTempDir(t, tempDir)
-	testutils.MakeTempDir(t, tempDir)
 
 	apiTaskName := "e2e_task_api"
 	apiTask := fmt.Sprintf(`
