@@ -32,6 +32,7 @@ const (
 	// liberal default times to wait
 	defaultWaitForRegistration = 8 * time.Second
 	defaultWaitForEvent        = 8 * time.Second
+	defaultWaitForAPI          = 20 * time.Second
 
 	// liberal wait time to ensure event doesn't happen
 	defaultWaitForNoEvent = 6 * time.Second
@@ -125,7 +126,7 @@ func TestE2ERestartConsul(t *testing.T) {
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 	// wait enough for cts to cycle through once-mode successfully
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// stop Consul

@@ -36,7 +36,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	cts, stopCTS := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 
 	// wait to run once before registering another instance to collect another event
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 	service := testutil.TestService{
 		ID:      "api-2",
@@ -252,7 +252,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Confirm that terraform files were not generated for a disabled task
