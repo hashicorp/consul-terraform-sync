@@ -213,7 +213,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 					Address: "5.6.7.8",
 					Port:    8080,
 				}
-				testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
+				testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing, 5*time.Second)
 			}
 
 			// Setup another server with an identical API service
