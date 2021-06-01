@@ -69,13 +69,16 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 
 	// 1. Register api, resource created
 	service := testutil.TestService{ID: "api-1", Name: "api"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(7 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
+
 	testutils.CheckFile(t, true, resourcesPath, "api_tags.txt")
 
 	// 2. Deregister api, resource destroyed
 	testutils.DeregisterConsulService(t, srv, "api-1")
-	time.Sleep(7 * time.Second)
+	api.WaitForEvent(t, cts, taskName, time.Now(),
+		defaultWaitForRegistration+defaultWaitForEvent)
 	testutils.CheckFile(t, false, resourcesPath, "api_tags.txt")
 
 	cleanup()
@@ -94,8 +97,8 @@ func TestCondition_CatalogServices_NoServicesTrigger(t *testing.T) {
 	defer srv.Stop()
 
 	service := testutil.TestService{ID: "api-1", Name: "api"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(7 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
 
 	taskName := "catalog_task"
 	conditionTask := fmt.Sprintf(`task {
@@ -141,8 +144,9 @@ func TestCondition_CatalogServices_NoServicesTrigger(t *testing.T) {
 
 	// 1. Register second api service instance "api-2" (no trigger)
 	service = testutil.TestService{ID: "api-2", Name: "api"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(7 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
 	require.Equal(t, evenCountBase, eventCountNow,
@@ -153,8 +157,9 @@ func TestCondition_CatalogServices_NoServicesTrigger(t *testing.T) {
 
 	// 2. Register db service (trigger + render template)
 	service = testutil.TestService{ID: "db-1", Name: "db"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(7 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
 	require.Equal(t, evenCountBase+1, eventCountNow,
@@ -179,8 +184,8 @@ func TestCondition_CatalogServices_NoTagsTrigger(t *testing.T) {
 	defer srv.Stop()
 
 	service := testutil.TestService{ID: "api-1", Name: "api", Tags: []string{"tag_a"}}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(7 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
 
 	taskName := "catalog_task"
 	conditionTask := fmt.Sprintf(`task {
@@ -226,8 +231,9 @@ func TestCondition_CatalogServices_NoTagsTrigger(t *testing.T) {
 
 	// 1. Register another api service instance with new tags (no trigger)
 	service = testutil.TestService{ID: "api-2", Name: "api", Tags: []string{"tag_b"}}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(7 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
 	require.Equal(t, evenCountBase, eventCountNow,
@@ -238,8 +244,9 @@ func TestCondition_CatalogServices_NoTagsTrigger(t *testing.T) {
 
 	// 2. Register new db service (trigger + render template)
 	service = testutil.TestService{ID: "db-1", Name: "db", Tags: []string{"tag_c"}}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(7 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
 	require.Equal(t, evenCountBase+1, eventCountNow,
@@ -355,8 +362,9 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 
 	// 1. Register a filtered out service "db"
 	service := testutil.TestService{ID: "db-1", Name: "db"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(7 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
 	require.Equal(t, evenCountBase, eventCountNow,
@@ -367,8 +375,9 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 
 	// 2. Register a matched service "api-web"
 	service = testutil.TestService{ID: "api-web-1", Name: "api-web"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(7 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
 	require.Equal(t, evenCountBase+1, eventCountNow,
@@ -460,7 +469,7 @@ func TestCondition_CatalogServices_NodeMeta(t *testing.T) {
 	// 1. Register a filtered out service with server 1 (no node-meta)
 	srv1.AddAddressableService(t, "api", testutil.HealthPassing, "1.2.3.4", 8080,
 		[]string{"tag_a"})
-	time.Sleep(7 * time.Second)
+	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
 	require.Equal(t, evenCountBase, eventCountNow,
@@ -472,7 +481,7 @@ func TestCondition_CatalogServices_NodeMeta(t *testing.T) {
 	// 2. Register a matched service with server 2 (with configured node-meta)
 	srv2.AddAddressableService(t, "api", testutil.HealthPassing, "1.2.3.4", 8080,
 		[]string{"tag_b"})
-	time.Sleep(7 * time.Second)
+	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
 	require.Equal(t, evenCountBase+1, eventCountNow,

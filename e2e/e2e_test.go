@@ -14,17 +14,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// tempDirPrefix is the prefix for the directory for a given e2e test
-// where files generated from e2e are stored. This directory is
-// destroyed after e2e testing if no errors.
-const tempDirPrefix = "tmp_"
+const (
+	// tempDirPrefix is the prefix for the directory for a given e2e test
+	// where files generated from e2e are stored. This directory is
+	// destroyed after e2e testing if no errors.
+	tempDirPrefix = "tmp_"
 
-// resourcesDir is the sub-directory of tempDir where the
-// Terraform resources created from running consul-terraform-sync are stored
-const resourcesDir = "resources"
+	// resourcesDir is the sub-directory of tempDir where the
+	// Terraform resources created from running consul-terraform-sync are stored
+	resourcesDir = "resources"
 
-// configFile is the name of the sync config file
-const configFile = "config.hcl"
+	// configFile is the name of the sync config file
+	configFile = "config.hcl"
+
+	// liberal default times to wait
+	defaultWaitForRegistration = 8 * time.Second
+	defaultWaitForEvent        = 8 * time.Second
+
+	// liberal wait time to ensure event doesn't happen
+	defaultWaitForNoEvent = 6 * time.Second
+)
 
 // TestE2EBasic runs the CTS binary in daemon mode with a configuration with 2
 // tasks and a test module that writes IP addresses to disk. This tests for CTS
@@ -135,8 +144,9 @@ func TestE2ERestartConsul(t *testing.T) {
 
 	// register a new service
 	apiInstance := testutil.TestService{ID: "api_new", Name: "api"}
-	testutils.RegisterConsulService(t, consul, apiInstance, testutil.HealthPassing)
-	time.Sleep(8 * time.Second)
+	testutils.RegisterConsulService(t, consul, apiInstance,
+		testutil.HealthPassing, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, dbTaskName, time.Now(), defaultWaitForEvent)
 
 	// confirm that CTS reconnected with Consul and created resource for latest service
 	testutils.CheckFile(t, true, fmt.Sprintf("%s/%s", tempDir, resourcesDir), "api_new.txt")
