@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
@@ -36,7 +35,7 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 
 	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 	defer stop(t)
-	err := cts.WaitForAPI(5 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -101,7 +100,7 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 
 	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 	defer stop(t)
-	err := cts.WaitForAPI(5 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -163,7 +162,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 
 	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 	defer stop(t)
-	err := cts.WaitForAPI(10 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	cases := []struct {

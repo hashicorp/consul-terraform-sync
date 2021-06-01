@@ -55,7 +55,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Test that task is triggered on service registration and deregistration
@@ -122,7 +122,7 @@ func TestCondition_CatalogServices_NoServicesTrigger(t *testing.T) {
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Test that task is not triggered by service-instance specific changes and
@@ -209,7 +209,7 @@ func TestCondition_CatalogServices_NoTagsTrigger(t *testing.T) {
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Test that task is not triggered by service tag changes and only by
@@ -340,7 +340,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Test that regex filter is filtering service registration information and
@@ -445,7 +445,7 @@ func TestCondition_CatalogServices_NodeMeta(t *testing.T) {
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 
-	err = cts.WaitForAPI(15 * time.Second)
+	err = cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Test that node-meta filter is filtering service registration information

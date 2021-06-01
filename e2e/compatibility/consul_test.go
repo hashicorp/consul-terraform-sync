@@ -103,7 +103,7 @@ func testConsulBackendCompatibility(t *testing.T, port int) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Test: ConsulKV backend
@@ -129,7 +129,7 @@ func testServiceInstanceCompatibility(t *testing.T, port int) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Test adding and removing service instances
@@ -186,7 +186,7 @@ func testServiceValuesCompatibility(t *testing.T, port int) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Test updating service-related values
@@ -290,7 +290,7 @@ func testTagQueryCompatibility(t *testing.T, port int) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Test that filtering by tags
@@ -332,7 +332,7 @@ func testNodeValuesCompatibility(t *testing.T, port int) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(15 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
 	// Test updating node-related values
