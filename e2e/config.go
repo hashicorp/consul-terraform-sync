@@ -92,6 +92,10 @@ task {
 func baseConfig() hclConfig {
 	return `log_level = "DEBUG"
 
+buffer_period {
+	enabled = false
+}
+
 service {
   name = "api"
   description = "backend"
