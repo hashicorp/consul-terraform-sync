@@ -226,7 +226,7 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 		c.PersistLog = Bool(false)
 	}
 
-	if c.Path == nil {
+	if c.Path == nil || *c.Path == "" {
 		c.Path = String(wd)
 	}
 
