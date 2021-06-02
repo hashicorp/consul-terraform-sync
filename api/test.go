@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/require"
@@ -76,5 +77,46 @@ func StartCTS(t *testing.T, configPath string, opts ...string) (*Client, func(t 
 		if err := cmd.Wait(); err != nil {
 			require.Equal(t, sigintErr, err)
 		}
+	}
+}
+
+func WaitForEvent(t *testing.T, client *Client, taskName string, start time.Time, timeout time.Duration) {
+	polling := make(chan struct{})
+	stopPolling := make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case <-stopPolling:
+				return
+			default:
+				q := &QueryParam{IncludeEvents: true}
+				results, err := client.Status().Task(taskName, q)
+				if err != nil {
+					continue
+				}
+				task, ok := results[taskName]
+				if !ok {
+					continue
+				}
+				if len(task.Events) == 0 {
+					continue
+				}
+				mostRecent := task.Events[0]
+				if mostRecent.EndTime.After(start) {
+					polling <- struct{}{}
+					return
+				}
+			}
+		}
+	}()
+
+	select {
+	case <-polling:
+		return
+	case <-time.After(timeout):
+		close(stopPolling)
+		t.Logf("\nError: timed out after waiting for %v for new event for task %q\n",
+			timeout, taskName)
 	}
 }

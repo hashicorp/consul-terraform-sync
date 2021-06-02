@@ -4,8 +4,6 @@
 package testutils
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -17,7 +15,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/hashicorp/consul-terraform-sync/testutils/sdk"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -88,23 +85,6 @@ func CheckFile(t testing.TB, exists bool, path, filename string) string {
 
 	require.NoError(t, err)
 	return string(content)
-}
-
-// RegisterConsulService regsiters a service to the Consul Catalog. The Consul
-// sdk/testutil package currently does not support a method to register multiple
-// service instances, distinguished by their IDs.
-func RegisterConsulService(tb testing.TB, srv *testutil.TestServer,
-	s testutil.TestService, health string) {
-
-	var body bytes.Buffer
-	enc := json.NewEncoder(&body)
-	require.NoError(tb, enc.Encode(&s))
-
-	u := fmt.Sprintf("http://%s/v1/agent/service/register", srv.HTTPAddr)
-	resp := RequestHTTP(tb, http.MethodPut, u, body.String())
-	defer resp.Body.Close()
-
-	sdk.AddCheck(srv, tb, s.ID, s.ID, testutil.HealthPassing)
 }
 
 func DeregisterConsulService(tb testing.TB, srv *testutil.TestServer, id string) {
