@@ -499,6 +499,26 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				RequiredProviders: map[string]interface{}{},
 			},
 		},
+		{
+			"terraform path empty string",
+			&TerraformConfig{
+				Version:    String(""),
+				Log:        Bool(false),
+				PersistLog: Bool(false),
+				Path:       String(""),
+				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+			},
+			nil,
+			&TerraformConfig{
+				Version:           String(""),
+				Log:               Bool(false),
+				PersistLog:        Bool(false),
+				Path:              String(wd),
+				WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
+				Backend:           map[string]interface{}{},
+				RequiredProviders: map[string]interface{}{},
+			},
+		},
 	}
 
 	for i, tc := range cases {
