@@ -64,6 +64,12 @@ func TestE2EBasic(t *testing.T) {
 	dbResourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
 	webResourcesPath := filepath.Join(tempDir, webTaskName, resourcesDir)
 
+	files := testutils.CheckDir(t, true, dbResourcesPath)
+	require.Equal(t, 2, len(files))
+
+	files = testutils.CheckDir(t, true, webResourcesPath)
+	require.Equal(t, 2, len(files))
+
 	contents := testutils.CheckFile(t, true, dbResourcesPath, "api.txt")
 	require.Equal(t, "1.2.3.4", string(contents))
 
