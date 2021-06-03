@@ -446,6 +446,7 @@ task {
 	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
 		defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, allTaskName, time.Now(), defaultWaitForEvent)
+	time.Sleep(defaultWaitForNoEvent) // ensure api_web_task & api_task don't trigger
 
 	testutils.CheckFile(t, true, allResourcesPath, "db_tags.txt")
 	testutils.CheckFile(t, false, apiWebResourcesPath, "db_tags.txt")
