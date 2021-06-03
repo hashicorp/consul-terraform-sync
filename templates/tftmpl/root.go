@@ -127,7 +127,9 @@ func (s Service) hcatQuery() string {
 	}
 
 	if s.Filter != "" {
-		opts = append(opts, fmt.Sprintf("%s", strings.ReplaceAll(s.Filter, `"`, `\"`)))
+		filter := strings.ReplaceAll(s.Filter, `"`, `\"`)
+		filter = strings.Trim(filter, "\n")
+		opts = append(opts, fmt.Sprintf("%s", filter))
 	}
 
 	query := fmt.Sprintf("%q", s.Name)
