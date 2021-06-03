@@ -213,8 +213,8 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	//    (one new event) and its data exists in catalog_service.
 
 	// 0. Confirm only one event. Confirm empty var catalog_services
-	evenCountBase := eventCount(t, taskName, cts.Port())
-	require.Equal(t, 1, evenCountBase)
+	eventCountBase := eventCount(t, taskName, cts.Port())
+	require.Equal(t, 1, eventCountBase)
 
 	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
 	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -227,7 +227,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
-	require.Equal(t, evenCountBase, eventCountNow,
+	require.Equal(t, eventCountBase, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -240,7 +240,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
-	require.Equal(t, evenCountBase+1, eventCountNow,
+	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -319,8 +319,8 @@ func TestCondition_CatalogServices_NodeMeta(t *testing.T) {
 	//    task was triggered (one new event) and its data exists in catalog_service.
 
 	// 0. Confirm only one event. Confirm empty var catalog_services
-	evenCountBase := eventCount(t, taskName, cts.Port())
-	require.Equal(t, 1, evenCountBase)
+	eventCountBase := eventCount(t, taskName, cts.Port())
+	require.Equal(t, 1, eventCountBase)
 
 	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
 	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -332,7 +332,7 @@ func TestCondition_CatalogServices_NodeMeta(t *testing.T) {
 	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
-	require.Equal(t, evenCountBase, eventCountNow,
+	require.Equal(t, eventCountBase, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -344,7 +344,7 @@ func TestCondition_CatalogServices_NodeMeta(t *testing.T) {
 	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
-	require.Equal(t, evenCountBase+1, eventCountNow,
+	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -534,10 +534,10 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	//    db and api-2 (now) rendered in tfvars
 
 	// 0. Confirm one event. Confirm initial api service registration data
-	evenCountBase := eventCount(t, taskName, cts.Port())
-	require.Equal(t, 1, evenCountBase)
+	eventCountBase := eventCount(t, taskName, cts.Port())
+	require.Equal(t, 1, eventCountBase)
 
-	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
+	workingDir := filepath.Join(tempDir, taskName)
 	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "api-1")
 
@@ -548,7 +548,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
-	require.Equal(t, evenCountBase, eventCountNow,
+	require.Equal(t, eventCountBase, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -561,7 +561,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
-	require.Equal(t, evenCountBase+1, eventCountNow,
+	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -605,10 +605,10 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	//    and api-2 data is in tfvars
 
 	// 0. Confirm one event. Confirm tag data in resource
-	evenCountBase := eventCount(t, taskName, cts.Port())
-	require.Equal(t, 1, evenCountBase)
+	eventCountBase := eventCount(t, taskName, cts.Port())
+	require.Equal(t, 1, eventCountBase)
 
-	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
+	workingDir := filepath.Join(tempDir, taskName)
 	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "tag_a")
 
@@ -619,7 +619,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
-	require.Equal(t, evenCountBase, eventCountNow,
+	require.Equal(t, eventCountBase, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -632,7 +632,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
-	require.Equal(t, evenCountBase+1, eventCountNow,
+	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
