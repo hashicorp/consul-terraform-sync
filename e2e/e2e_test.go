@@ -61,17 +61,25 @@ func TestE2EBasic(t *testing.T) {
 
 	runSyncStop(t, configPath, 20*time.Second)
 
-	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
-	files := testutils.CheckDir(t, true, resourcesPath)
-	require.Equal(t, 3, len(files))
+	dbResourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
+	webResourcesPath := filepath.Join(tempDir, webTaskName, resourcesDir)
 
-	contents := testutils.CheckFile(t, true, resourcesPath, "api.txt")
+	files := testutils.CheckDir(t, true, dbResourcesPath)
+	require.Equal(t, 2, len(files))
+
+	files = testutils.CheckDir(t, true, webResourcesPath)
+	require.Equal(t, 2, len(files))
+
+	contents := testutils.CheckFile(t, true, dbResourcesPath, "api.txt")
 	require.Equal(t, "1.2.3.4", string(contents))
 
-	contents = testutils.CheckFile(t, true, resourcesPath, "web.txt")
+	contents = testutils.CheckFile(t, true, webResourcesPath, "api.txt")
+	require.Equal(t, "1.2.3.4", string(contents))
+
+	contents = testutils.CheckFile(t, true, webResourcesPath, "web.txt")
 	require.Equal(t, "5.6.7.8", string(contents))
 
-	contents = testutils.CheckFile(t, true, resourcesPath, "db.txt")
+	contents = testutils.CheckFile(t, true, dbResourcesPath, "db.txt")
 	require.Equal(t, "10.10.10.10", string(contents))
 
 	// check statefiles exist
@@ -150,7 +158,8 @@ func TestE2ERestartConsul(t *testing.T) {
 	api.WaitForEvent(t, cts, dbTaskName, time.Now(), defaultWaitForEvent)
 
 	// confirm that CTS reconnected with Consul and created resource for latest service
-	testutils.CheckFile(t, true, fmt.Sprintf("%s/%s", tempDir, resourcesDir), "api_new.txt")
+	resourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
+	testutils.CheckFile(t, true, resourcesPath, "api_new.txt")
 
 	cleanup()
 }

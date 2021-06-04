@@ -72,7 +72,7 @@ task {
 	description = "basic read-write e2e task for api & db"
 	services = ["api", "db"]
 	providers = ["local"]
-	source = "./test_modules/e2e_basic_task"
+	source = "./test_modules/local_instances_file"
 }
 `, dbTaskName))
 }
@@ -84,13 +84,17 @@ task {
 	description = "basic read-write e2e task api & web"
 	services = ["api", "web"]
 	providers = ["local"]
-	source = "./test_modules/e2e_basic_task"
+	source = "./test_modules/local_instances_file"
 }
 `, webTaskName))
 }
 
 func baseConfig() hclConfig {
 	return `log_level = "DEBUG"
+
+buffer_period {
+	enabled = false
+}
 
 service {
   name = "api"
@@ -133,7 +137,7 @@ task {
 	description = "basic e2e task with fake handler. expected to error"
 	services = ["api"]
 	providers = ["fake-sync.failure"]
-	source = "./test_modules/e2e_basic_task"
+	source = "./test_modules/local_instances_file"
 }
 
 task {
@@ -141,7 +145,7 @@ task {
 	description = "basic e2e task with fake handler. expected to not error"
 	services = ["api"]
 	providers = ["fake-sync.success"]
-	source = "./test_modules/e2e_basic_task"
+	source = "./test_modules/local_instances_file"
 }
 
 task {
@@ -150,7 +154,7 @@ task {
 	enabled = false
 	services = ["api"]
 	providers = ["fake-sync.success"]
-	source = "./test_modules/e2e_basic_task"
+	source = "./test_modules/local_instances_file"
 }
 `, fakeFailureTaskName, fakeSuccessTaskName, disabledTaskName))
 }
@@ -164,7 +168,7 @@ task {
 	enabled = false
 	services = ["api"]
 	providers = ["local"]
-	source = "./test_modules/e2e_basic_task"
+	source = "./test_modules/local_instances_file"
 }
 
 service {

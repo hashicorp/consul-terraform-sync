@@ -172,7 +172,7 @@ func TestJsonResponse(t *testing.T) {
 							Config: &event.Config{
 								Providers: []string{"local", "null", "f5"},
 								Services:  []string{"api", "web", "db"},
-								Source:    "./test_modules/e2e_basic_task",
+								Source:    "./test_modules/local_instances_file",
 							},
 						},
 						event.Event{
@@ -187,7 +187,7 @@ func TestJsonResponse(t *testing.T) {
 							Config: &event.Config{
 								Providers: []string{"local", "null", "f5"},
 								Services:  []string{"api", "web", "db"},
-								Source:    "./test_modules/e2e_basic_task",
+								Source:    "./test_modules/local_instances_file",
 							},
 						},
 					},

@@ -268,7 +268,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	require.Equal(t, len(files), 0)
 
 	// Confirm that resources were not created
-	resourcesPath := fmt.Sprintf("%s/%s", tempDir, resourcesDir)
+	resourcesPath := filepath.Join(tempDir, disabledTaskName, resourcesDir)
 	testutils.CheckDir(t, false, resourcesPath)
 
 	// Update Task API: enable task with inspect run option
@@ -349,7 +349,7 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 		require.NotNil(t, e.Config)
 		assert.Equal(t, []string{"fake-sync"}, e.Config.Providers)
 		assert.Equal(t, []string{"api"}, e.Config.Services)
-		assert.Equal(t, "./test_modules/e2e_basic_task", e.Config.Source)
+		assert.Equal(t, "./test_modules/local_instances_file", e.Config.Source)
 
 		if taskName == fakeSuccessTaskName {
 			assert.True(t, e.Success)

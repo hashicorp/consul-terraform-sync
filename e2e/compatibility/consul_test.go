@@ -548,7 +548,7 @@ task {
 	description = "basic task"
 	services = ["%s", "%s"]
 	providers = ["local"]
-	source = "../test_modules/e2e_basic_task"
+	source = "../test_modules/local_instances_file"
 }
 `, taskName, service1, service2)
 }

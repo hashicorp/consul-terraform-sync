@@ -2,5 +2,5 @@
 resource "local_file" "tags" {
     for_each = var.catalog_services
     content = join(",", each.value)
-    filename = "../resources/${each.key}_tags.txt"
+    filename = "resources/${each.key}_tags.txt"
 }
