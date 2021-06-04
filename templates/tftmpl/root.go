@@ -99,6 +99,7 @@ type Service struct {
 	Name        string
 	Namespace   string
 	Tag         string
+	Filter      string
 
 	// CTSUserDefinedMeta is user defined metadata that is configured by
 	// operators for CTS to append to Consul service information to be used for
@@ -123,6 +124,12 @@ func (s Service) hcatQuery() string {
 
 	if s.Tag != "" {
 		opts = append(opts, fmt.Sprintf(`\"%s\" in Service.Tags`, s.Tag))
+	}
+
+	if s.Filter != "" {
+		filter := strings.ReplaceAll(s.Filter, `"`, `\"`)
+		filter = strings.Trim(filter, "\n")
+		opts = append(opts, fmt.Sprintf("%s", filter))
 	}
 
 	query := fmt.Sprintf("%q", s.Name)

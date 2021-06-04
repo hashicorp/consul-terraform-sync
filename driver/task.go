@@ -36,6 +36,7 @@ type Service struct {
 	Name        string
 	Namespace   string
 	Tag         string
+	Filter      string
 }
 
 // BufferPeriod contains the task's buffer period configuration information
@@ -293,6 +294,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			Name:        s.Name,
 			Namespace:   s.Namespace,
 			Tag:         s.Tag,
+			Filter:      s.Filter,
 		}
 	}
 
