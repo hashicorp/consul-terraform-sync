@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
-	"github.com/zclconf/go-cty/cty"
 )
 
 // hclServiceFunc is a wrapper of the template function to marshal Consul
@@ -43,7 +42,7 @@ type healthService struct {
 	Port      int               `hcl:"port"`
 	Meta      map[string]string `hcl:"meta"`
 	Tags      []string          `hcl:"tags"`
-	Namespace cty.Value         `hcl:"namespace"`
+	Namespace string            `hcl:"namespace"`
 	Status    string            `hcl:"status"`
 
 	// Consul node information for a service
@@ -63,14 +62,6 @@ func newHealthService(s *dep.HealthService, ctsUserDefinedMeta map[string]string
 		return healthService{}
 	}
 
-	// Namespace is null-able
-	var namespace cty.Value
-	if s.Namespace != "" {
-		namespace = cty.StringVal(s.Namespace)
-	} else {
-		namespace = cty.NullVal(cty.String)
-	}
-
 	// Default to empty list instead of null
 	tags := []string{}
 	if s.Tags != nil {
@@ -85,7 +76,7 @@ func newHealthService(s *dep.HealthService, ctsUserDefinedMeta map[string]string
 		Port:      s.Port,
 		Meta:      nonNullMap(s.ServiceMeta),
 		Tags:      tags,
-		Namespace: namespace,
+		Namespace: s.Namespace,
 		Status:    s.Status,
 
 		Node:                s.Node,
