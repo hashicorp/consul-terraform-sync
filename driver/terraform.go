@@ -475,15 +475,21 @@ func (tf *Terraform) initTaskTemplate() error {
 		Perms: filePerms,
 	})
 
+	metaMap := make(map[string]map[string]string)
+	services := tf.task.Services()
+	for _, s := range services {
+		metaMap[s.Name] = s.UserDefinedMeta
+	}
+
 	tmpl := hcat.NewTemplate(hcat.TemplateInput{
 		Contents:     string(content),
 		Renderer:     renderer,
-		FuncMapMerge: tmplfunc.HCLMap(tf.task.UserDefinedMeta()),
+		FuncMapMerge: tmplfunc.HCLMap(metaMap),
 	})
 	switch tf.task.Condition().(type) {
 	case *config.CatalogServicesConditionConfig:
 		tf.template = notifier.NewCatalogServicesRegistration(tmpl,
-			len(tf.task.Services()))
+			len(services))
 	default:
 		tf.template = tmpl
 	}
