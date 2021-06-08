@@ -386,11 +386,8 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task, cond Condition,
 		hcl.TraverseAttr{Name: "services"},
 	})
 
-	if v, ok := cond.(*CatalogServicesCondition); ok && v.SourceIncludesVar {
-		moduleBody.SetAttributeTraversal("catalog_services", hcl.Traversal{
-			hcl.TraverseRoot{Name: "var"},
-			hcl.TraverseAttr{Name: "catalog_services"},
-		})
+	if cond != nil && cond.sourceIncludesVariable() {
+		cond.appendModuleAttribute(moduleBody)
 	}
 
 	if len(varNames) != 0 {
