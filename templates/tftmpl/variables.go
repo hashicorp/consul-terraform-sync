@@ -19,8 +19,8 @@ var tfVersionSensitive = goVersion.Must(goVersion.NewSemver("0.14.0"))
 
 // VariableServices is versioned to track compatibility with the generated
 // root module with modules.
-var VariableServices = []byte(
-	`# Service definition protocol v0
+var VariableServices = []byte(`
+# Service definition protocol v0
 variable "services" {
   description = "Consul services monitored by Consul Terraform Sync"
   type = map(

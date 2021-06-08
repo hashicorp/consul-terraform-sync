@@ -68,7 +68,6 @@ var (
 	// beginning of generated module files.
 	TaskPreamble = `# Task: %s
 # Description: %s
-
 `
 
 	rootFileFuncs = map[string]tfFileFunc{
@@ -252,6 +251,7 @@ func newMainTF(w io.Writer, filename string, input *RootModuleInputData) error {
 
 	hclFile := hclwrite.NewEmptyFile()
 	rootBody := hclFile.Body()
+	rootBody.AppendNewline()
 	appendRootTerraformBlock(rootBody, input.backend, input.ProviderInfo)
 	rootBody.AppendNewline()
 	appendRootProviderBlocks(rootBody, input.Providers)

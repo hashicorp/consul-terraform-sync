@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"path/filepath"
 	"testing"
@@ -28,8 +27,6 @@ type TestConsulServerConfig struct {
 
 // NewTestConsulServer starts a test Consul server as configured
 func NewTestConsulServer(tb testing.TB, config TestConsulServerConfig) *testutil.TestServer {
-	log.SetOutput(ioutil.Discard)
-
 	var certFile string
 	var keyFile string
 	if config.HTTPSRelPath != "" {

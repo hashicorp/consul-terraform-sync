@@ -23,7 +23,7 @@ type Condition interface {
 type ServicesCondition struct{}
 
 func (c *ServicesCondition) appendTemplate(w io.Writer) error {
-	// no-op: services conditon currently requires no additional condition
+	// no-op: services condition currently requires no additional condition
 	// templating. it relies on the monitoring template as the run condition
 	return nil
 }
@@ -83,18 +83,20 @@ func (c *CatalogServicesCondition) hcatQuery() string {
 	return ""
 }
 
-const catalogServicesConditionTmpl = `{{- with $catalogServices := catalogServicesRegistration %s}}
+const catalogServicesConditionTmpl = `
+{{- with $catalogServices := catalogServicesRegistration %s}}
   {{- range $cs := $catalogServices }}
     {{- /* Empty template. Detects changes in catalog-services */ -}}
 {{- end}}{{- end}}
-
 `
 
-const catalogServicesConditionIncludesVarTmpl = `catalog_services = {
+var catalogServicesConditionIncludesVarTmpl = fmt.Sprintf(`
+catalog_services = {%s}
+`, catalogServicesBaseTmpl)
+
+const catalogServicesBaseTmpl = `
 {{- with $catalogServices := catalogServicesRegistration %s}}
   {{- range $cs := $catalogServices }}
   "{{ $cs.Name }}" = {{ HCLServiceTags $cs.Tags }}
 {{- end}}{{- end}}
-}
-
 `
