@@ -25,6 +25,9 @@ type Client interface {
 	// Plan makes a request to generate a plan of proposed changes
 	Plan(ctx context.Context) (bool, error)
 
+	// Validate verifies that the generated configurations are valid
+	Validate(ctx context.Context) error
+
 	// GoString defines the printable version of the client
 	GoString() string
 }

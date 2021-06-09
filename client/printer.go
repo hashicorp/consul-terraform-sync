@@ -77,6 +77,13 @@ func (p *Printer) Plan(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
+// Validate logs out 'validate'
+func (p *Printer) Validate(ctx context.Context) error {
+	p.logger.Printf("[INFO] (client.printer) validating workspace: '%s', workingdir: '%s'",
+		p.workspace, p.workingDir)
+	return nil
+}
+
 // GoString defines the printable version of this struct.
 func (p *Printer) GoString() string {
 	if p == nil {
