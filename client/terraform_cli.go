@@ -211,7 +211,7 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 		case `An argument named "catalog_services" is not expected here.`:
 			fmt.Fprintf(
 				&sb,
-				"%s is missing the \"catalog_service\" variable, add to module or set source_includes_var to false\n",
+				"%s is missing the \"catalog_services\" variable, add to module or set source_includes_var to false\n",
 				*d.Snippet.Context)
 		default:
 			fmt.Fprintf(&sb, "%s: %s\n", d.Severity, d.Summary)
