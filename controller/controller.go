@@ -117,6 +117,11 @@ func (ctrl *baseController) init(ctx context.Context) (*driver.Drivers, error) {
 			return nil, err
 		}
 
+		err = d.ValidateTask(ctx)
+		if err != nil {
+			return nil, err
+		}
+
 		units = append(units, unit{
 			taskName:  taskName,
 			driver:    d,

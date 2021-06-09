@@ -318,6 +318,19 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 	return InspectPlan{}, nil
 }
 
+// ValidateTask validates the generated configurations
+func (tf *Terraform) ValidateTask(ctx context.Context) error {
+	tf.mu.Lock()
+	defer tf.mu.Unlock()
+
+	if !tf.task.IsEnabled() {
+		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
+			"validating", tf.task.Name())
+		return nil
+	}
+	return tf.validateTask(ctx)
+}
+
 // init initializes the Terraform workspace if needed
 func (tf *Terraform) init(ctx context.Context) error {
 	taskName := tf.task.Name()
@@ -488,6 +501,14 @@ func (tf *Terraform) initTaskTemplate() error {
 		tf.template = tmpl
 	}
 
+	return nil
+}
+
+func (tf *Terraform) validateTask(ctx context.Context) error {
+	err := tf.client.Validate(ctx)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
