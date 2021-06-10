@@ -2,11 +2,13 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"testing"
 
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
+	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -261,6 +263,99 @@ func TestTerraformCLIPlan(t *testing.T) {
 				return
 			}
 
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestTerraformCLIValidate(t *testing.T) {
+	t.Parallel()
+
+	errJson := `{
+		"valid": false,
+		"diagnostics": [
+			{
+				"severity": "error",
+				"summary": "Unsupported argument",
+				"detail": "An argument named \"catalog_services\" is not expected here.",
+				"range": {
+					"filename": "main.tf",
+					"start": {
+						"line": 32
+					}
+				},
+				"snippet": {
+					"context": "module \"example-task\"",
+					"code": "  catalog_services = var.catalog_services",
+					"start_line": 32
+				}
+			}
+		]
+	}`
+	var errValidOut *tfjson.ValidateOutput
+	json.Unmarshal([]byte(errJson), &errValidOut)
+
+	warnJson := `{
+		"valid": true,
+		"diagnostics": [
+			{
+				"severity": "warning",
+				"summary": "Version constraints inside provider configuration blocks are deprecated",
+				"detail": "Terraform 0.13 and earlier allowed provider....",
+				"range": {
+					"filename": "main.tf",
+					"start": {
+						"line": 26
+					}
+				},
+				"snippet": {
+					"context": "provider \"local\"",
+					"code": "  version = \"2.1.0\"",
+					"start_line": 26
+				}
+			}
+		]
+	}`
+	var warnValidOut *tfjson.ValidateOutput
+	json.Unmarshal([]byte(warnJson), &warnValidOut)
+
+	cases := []struct {
+		name        string
+		validateOut *tfjson.ValidateOutput
+		expectError bool
+	}{
+		{
+			"happy path",
+			&tfjson.ValidateOutput{
+				Valid: true,
+			},
+			false,
+		},
+		{
+			"error",
+			errValidOut,
+			true,
+		},
+		{
+			"warning",
+			warnValidOut,
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := new(mocks.TerraformExec)
+			m.On("Validate", mock.Anything).Return(tc.validateOut, nil)
+			client := NewTestTerraformCLI(&TerraformCLIConfig{}, m)
+
+			ctx := context.Background()
+			err := client.Validate(ctx)
+
+			if tc.expectError {
+				assert.Error(t, err)
+				return
+			}
 			assert.NoError(t, err)
 		})
 	}

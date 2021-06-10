@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/terraform-exec/tfexec"
@@ -192,6 +193,45 @@ func (t *TerraformCLI) Plan(ctx context.Context) (bool, error) {
 	}
 
 	return t.tf.Plan(ctx, opts...)
+}
+
+// Validate verifies the generated configuration files
+func (t *TerraformCLI) Validate(ctx context.Context) error {
+	output, err := t.tf.Validate(ctx)
+	if err != nil {
+		return err
+	}
+
+	var sb strings.Builder
+	for _, d := range output.Diagnostics {
+		sb.WriteByte('\n')
+		switch d.Detail {
+		case `An argument named "services" is not expected here.`:
+			fmt.Fprintf(&sb, "%s is missing the \"services\" variable\n", *d.Snippet.Context)
+		case `An argument named "catalog_services" is not expected here.`:
+			fmt.Fprintf(
+				&sb,
+				"%s is missing the \"catalog_services\" variable, add to module or set source_includes_var to false\n",
+				*d.Snippet.Context)
+		default:
+			fmt.Fprintf(&sb, "%s: %s\n", d.Severity, d.Summary)
+			if d.Range != nil && d.Snippet != nil {
+				fmt.Fprintf(&sb, "\non %s line %d, in %s\n", d.Range.Filename, d.Range.Start.Line, *d.Snippet.Context)
+				fmt.Fprintf(&sb, "%d:%s\n\n", d.Snippet.StartLine, d.Snippet.Code)
+			}
+			fmt.Fprintf(&sb, "%s\n\n", d.Detail)
+		}
+	}
+
+	if !output.Valid {
+		return fmt.Errorf(sb.String())
+	}
+
+	if sb.Len() > 0 {
+		log.Printf("[WARN] (client.terraformcli) Terraform validate returned the following warnings: %s", sb.String())
+	}
+
+	return nil
 }
 
 // GoString defines the printable version of this struct.

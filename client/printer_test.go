@@ -135,6 +135,20 @@ func TestPrinterPlan(t *testing.T) {
 	assert.Contains(t, buf.String(), "plan")
 }
 
+func TestPrinterValidate(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	p, err := DefaultTestPrinter(&buf)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	p.Validate(ctx)
+	assert.NotEmpty(t, buf.String())
+	assert.Contains(t, buf.String(), "client.printer")
+	assert.Contains(t, buf.String(), "validating")
+}
+
 func TestPrinterGoString(t *testing.T) {
 	cases := []struct {
 		name    string

@@ -93,20 +93,30 @@ func TestBaseControllerInit(t *testing.T) {
 	conf := singleTaskConfig()
 
 	cases := []struct {
-		name        string
-		expectError bool
-		initTaskErr error
-		config      *config.Config
+		name            string
+		expectError     bool
+		initTaskErr     error
+		validateTaskErr error
+		config          *config.Config
 	}{
 		{
 			"error on driver.InitTask()",
 			true,
 			errors.New("error on driver.InitTask()"),
+			nil,
+			conf,
+		},
+		{
+			"error on driver.ValidateTask()",
+			true,
+			nil,
+			errors.New("error on driver.ValidateTask()"),
 			conf,
 		},
 		{
 			"happy path",
 			false,
+			nil,
 			nil,
 			conf,
 		},
@@ -117,6 +127,7 @@ func TestBaseControllerInit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			d := new(mocksD.Driver)
 			d.On("InitTask", mock.Anything).Return(tc.initTaskErr).Once()
+			d.On("ValidateTask", mock.Anything).Return(tc.validateTaskErr).Once()
 
 			baseCtrl := baseController{
 				newDriver: func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
