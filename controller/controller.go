@@ -271,7 +271,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 // configuration by ID to a driver service type. If a service is not
 // explicitly configured, it assumes the service is a logical service name
 // in the default namespace.
-func getService(services *config.ServiceConfigs, id string, meta map[string]map[string]string) driver.Service {
+func getService(services *config.ServiceConfigs, id string, meta config.ServicesMeta) driver.Service {
 	for _, s := range *services {
 		if *s.ID == id {
 			return driver.Service{

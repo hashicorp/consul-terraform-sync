@@ -43,6 +43,10 @@ type ServiceConfig struct {
 // ServiceConfigs is a collection of ServiceConfig
 type ServiceConfigs []*ServiceConfig
 
+// ServicesMeta is a useful type to abstract from the nested map of string which
+// represents the user defined meta for each service a task monitors
+type ServicesMeta map[string]map[string]string
+
 // Copy returns a deep copy of this configuration.
 func (c *ServiceConfig) Copy() *ServiceConfig {
 	if c == nil {
@@ -300,7 +304,7 @@ func (c *ServiceConfigs) Validate() error {
 
 // CTSUserDefinedMeta generates a map of service name to user defined metadata
 // from a list of service IDs or service names.
-func (c *ServiceConfigs) CTSUserDefinedMeta(serviceList []string) map[string]map[string]string {
+func (c *ServiceConfigs) CTSUserDefinedMeta(serviceList []string) ServicesMeta {
 	if c == nil {
 		return nil
 	}
@@ -310,7 +314,7 @@ func (c *ServiceConfigs) CTSUserDefinedMeta(serviceList []string) map[string]map
 		services[s] = true
 	}
 
-	m := make(map[string]map[string]string)
+	m := make(ServicesMeta)
 	for _, s := range *c {
 		if len(s.CTSUserDefinedMeta) == 0 {
 			continue

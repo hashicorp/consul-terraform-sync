@@ -11,9 +11,13 @@ import (
 	"github.com/hashicorp/hcat/tfunc"
 )
 
+// ServicesMeta is a useful type to abstract from the nested map of string which
+// represents the user defined meta for each service a task monitors
+type ServicesMeta map[string]map[string]string
+
 // HCLMap is the map of template functions for rendering HCL
 // to their respective implementations
-func HCLMap(meta map[string]map[string]string) template.FuncMap {
+func HCLMap(meta ServicesMeta) template.FuncMap {
 	tmplFuncs := hcat.FuncMapConsulV1()
 	tmplFuncs["catalogServicesRegistration"] = catalogServicesRegistrationFunc
 	tmplFuncs["indent"] = tfunc.Helpers()["indent"]

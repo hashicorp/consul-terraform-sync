@@ -119,7 +119,7 @@ cts_user_defined_meta = {}`,
 }
 
 func TestHCLServiceFunc_ctsUserDefinedMeta(t *testing.T) {
-	meta := map[string]map[string]string{
+	meta := ServicesMeta{
 		"api": {
 			"key":        "value",
 			"foo_bar":    "baz",

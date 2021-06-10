@@ -475,7 +475,7 @@ func (tf *Terraform) initTaskTemplate() error {
 		Perms: filePerms,
 	})
 
-	metaMap := make(map[string]map[string]string)
+	metaMap := make(tmplfunc.ServicesMeta)
 	services := tf.task.Services()
 	for _, s := range services {
 		metaMap[s.Name] = s.UserDefinedMeta
