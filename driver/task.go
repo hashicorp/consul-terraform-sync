@@ -31,12 +31,13 @@ type PatchTask struct {
 
 // Service contains service configuration information
 type Service struct {
-	Datacenter  string
-	Description string
-	Name        string
-	Namespace   string
-	Tag         string
-	Filter      string
+	Datacenter      string
+	Description     string
+	Name            string
+	Namespace       string
+	Tag             string
+	Filter          string
+	UserDefinedMeta map[string]string
 }
 
 // BufferPeriod contains the task's buffer period configuration information
@@ -50,36 +51,34 @@ type BufferPeriod struct {
 type Task struct {
 	mu sync.RWMutex
 
-	description     string
-	name            string
-	enabled         bool
-	env             map[string]string
-	providers       TerraformProviderBlocks // task.providers config info
-	providerInfo    map[string]interface{}  // driver.required_provider config info
-	services        []Service
-	source          string
-	varFiles        []string
-	variables       hcltmpl.Variables // loaded variables from varFiles
-	version         string
-	userDefinedMeta map[string]map[string]string
-	bufferPeriod    *BufferPeriod // nil when disabled
-	condition       config.ConditionConfig
+	description  string
+	name         string
+	enabled      bool
+	env          map[string]string
+	providers    TerraformProviderBlocks // task.providers config info
+	providerInfo map[string]interface{}  // driver.required_provider config info
+	services     []Service
+	source       string
+	varFiles     []string
+	variables    hcltmpl.Variables // loaded variables from varFiles
+	version      string
+	bufferPeriod *BufferPeriod // nil when disabled
+	condition    config.ConditionConfig
 }
 
 type TaskConfig struct {
-	Description     string
-	Name            string
-	Enabled         bool
-	Env             map[string]string
-	Providers       TerraformProviderBlocks
-	ProviderInfo    map[string]interface{}
-	Services        []Service
-	Source          string
-	VarFiles        []string
-	Version         string
-	UserDefinedMeta map[string]map[string]string
-	BufferPeriod    *BufferPeriod
-	Condition       config.ConditionConfig
+	Description  string
+	Name         string
+	Enabled      bool
+	Env          map[string]string
+	Providers    TerraformProviderBlocks
+	ProviderInfo map[string]interface{}
+	Services     []Service
+	Source       string
+	VarFiles     []string
+	Version      string
+	BufferPeriod *BufferPeriod
+	Condition    config.ConditionConfig
 }
 
 func NewTask(conf TaskConfig) (*Task, error) {
@@ -95,20 +94,19 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		}
 	}
 	return &Task{
-		description:     conf.Description,
-		name:            conf.Name,
-		enabled:         conf.Enabled,
-		env:             conf.Env,
-		providers:       conf.Providers,
-		providerInfo:    conf.ProviderInfo,
-		services:        conf.Services,
-		source:          conf.Source,
-		varFiles:        conf.VarFiles,
-		variables:       loadedVars,
-		version:         conf.Version,
-		userDefinedMeta: conf.UserDefinedMeta,
-		bufferPeriod:    conf.BufferPeriod,
-		condition:       conf.Condition,
+		description:  conf.Description,
+		name:         conf.Name,
+		enabled:      conf.Enabled,
+		env:          conf.Env,
+		providers:    conf.Providers,
+		providerInfo: conf.ProviderInfo,
+		services:     conf.Services,
+		source:       conf.Source,
+		varFiles:     conf.VarFiles,
+		variables:    loadedVars,
+		version:      conf.Version,
+		bufferPeriod: conf.BufferPeriod,
+		condition:    conf.Condition,
 	}, nil
 }
 
@@ -202,7 +200,7 @@ func (t *Task) Services() []Service {
 
 	services := make([]Service, len(t.services))
 	for i, s := range t.services {
-		services[i] = s
+		services[i] = s.Copy()
 	}
 	return services
 }
@@ -224,21 +222,6 @@ func (t *Task) Source() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.source
-}
-
-// UserDefinedMeta returns metadata grouped by service
-func (t *Task) UserDefinedMeta() map[string]map[string]string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	meta := make(map[string]map[string]string)
-	for k, nestedMap := range t.userDefinedMeta {
-		meta[k] = make(map[string]string)
-		for nestedK, nestedV := range nestedMap {
-			meta[k][nestedK] = nestedV
-		}
-	}
-	return meta
 }
 
 // VariableFiles returns a copy of the list of configured variable files
@@ -274,6 +257,18 @@ func (t *Task) Version() string {
 	return t.version
 }
 
+func (s Service) Copy() Service {
+	// All other Service attributes are simple types, this sets the meta to a new
+	// copy of the map
+	meta := make(map[string]string)
+	for k, v := range s.UserDefinedMeta {
+		meta[k] = v
+	}
+	copy := s
+	copy.UserDefinedMeta = meta
+	return copy
+}
+
 // configureRootModuleInput sets task values for the module input.
 func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	t.mu.RLock()
@@ -289,12 +284,13 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	input.Services = make([]tftmpl.Service, len(t.services))
 	for i, s := range t.services {
 		input.Services[i] = tftmpl.Service{
-			Datacenter:  s.Datacenter,
-			Description: s.Description,
-			Name:        s.Name,
-			Namespace:   s.Namespace,
-			Tag:         s.Tag,
-			Filter:      s.Filter,
+			Datacenter:         s.Datacenter,
+			Description:        s.Description,
+			Name:               s.Name,
+			Namespace:          s.Namespace,
+			Tag:                s.Tag,
+			Filter:             s.Filter,
+			CTSUserDefinedMeta: s.UserDefinedMeta,
 		}
 	}
 

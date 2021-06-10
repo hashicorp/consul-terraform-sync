@@ -223,9 +223,10 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 	tasks := make([]*driver.Task, len(*conf.Tasks))
 	for i, t := range *conf.Tasks {
 
+		meta := conf.Services.CTSUserDefinedMeta(t.Services)
 		services := make([]driver.Service, len(t.Services))
 		for si, service := range t.Services {
-			services[si] = getService(conf.Services, service)
+			services[si] = getService(conf.Services, service, meta)
 		}
 
 		providers := make(driver.TerraformProviderBlocks, len(t.Providers))
@@ -244,19 +245,18 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 		}
 
 		task, err := driver.NewTask(driver.TaskConfig{
-			Description:     *t.Description,
-			Name:            *t.Name,
-			Enabled:         *t.Enabled,
-			Env:             buildTaskEnv(conf, providers.Env()),
-			Providers:       providers,
-			ProviderInfo:    providerInfo,
-			Services:        services,
-			Source:          *t.Source,
-			VarFiles:        t.VarFiles,
-			Version:         *t.Version,
-			UserDefinedMeta: conf.Services.CTSUserDefinedMeta(t.Services),
-			BufferPeriod:    getTemplateBufferPeriod(conf, t),
-			Condition:       t.Condition,
+			Description:  *t.Description,
+			Name:         *t.Name,
+			Enabled:      *t.Enabled,
+			Env:          buildTaskEnv(conf, providers.Env()),
+			Providers:    providers,
+			ProviderInfo: providerInfo,
+			Services:     services,
+			Source:       *t.Source,
+			VarFiles:     t.VarFiles,
+			Version:      *t.Version,
+			BufferPeriod: getTemplateBufferPeriod(conf, t),
+			Condition:    t.Condition,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error initializing task %s: %s", *t.Name, err)
@@ -271,16 +271,17 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 // configuration by ID to a driver service type. If a service is not
 // explicitly configured, it assumes the service is a logical service name
 // in the default namespace.
-func getService(services *config.ServiceConfigs, id string) driver.Service {
+func getService(services *config.ServiceConfigs, id string, meta config.ServicesMeta) driver.Service {
 	for _, s := range *services {
 		if *s.ID == id {
 			return driver.Service{
-				Datacenter:  *s.Datacenter,
-				Description: *s.Description,
-				Name:        *s.Name,
-				Namespace:   *s.Namespace,
-				Tag:         *s.Tag,
-				Filter:      *s.Filter,
+				Datacenter:      *s.Datacenter,
+				Description:     *s.Description,
+				Name:            *s.Name,
+				Namespace:       *s.Namespace,
+				Tag:             *s.Tag,
+				Filter:          *s.Filter,
+				UserDefinedMeta: meta[*s.Name],
 			}
 		}
 	}

@@ -335,7 +335,7 @@ func TestServiceConfigs_CTSUserDefinedMeta(t *testing.T) {
 		name        string
 		conf        *ServiceConfigs
 		serviceList []string
-		expected    map[string]map[string]string
+		expected    ServicesMeta
 	}{
 		{
 			"nil",
@@ -346,7 +346,7 @@ func TestServiceConfigs_CTSUserDefinedMeta(t *testing.T) {
 			"empty",
 			&ServiceConfigs{},
 			[]string{"a"},
-			make(map[string]map[string]string),
+			make(ServicesMeta),
 		}, {
 			"meta",
 			&ServiceConfigs{{
@@ -356,7 +356,7 @@ func TestServiceConfigs_CTSUserDefinedMeta(t *testing.T) {
 				},
 			}},
 			[]string{"a"},
-			map[string]map[string]string{
+			ServicesMeta{
 				"a": {"key": "value"},
 			},
 		}, {
@@ -365,7 +365,7 @@ func TestServiceConfigs_CTSUserDefinedMeta(t *testing.T) {
 				Name: String("a"),
 			}},
 			[]string{"a"},
-			map[string]map[string]string{},
+			ServicesMeta{},
 		}, {
 			"meta by id",
 			&ServiceConfigs{{
@@ -376,7 +376,7 @@ func TestServiceConfigs_CTSUserDefinedMeta(t *testing.T) {
 				},
 			}},
 			[]string{"a-with-meta"},
-			map[string]map[string]string{
+			ServicesMeta{
 				"a": {"key": "value"},
 			},
 		}, {
@@ -394,7 +394,7 @@ func TestServiceConfigs_CTSUserDefinedMeta(t *testing.T) {
 				},
 			}},
 			[]string{"a-with-meta"},
-			map[string]map[string]string{
+			ServicesMeta{
 				"a": {"key": "value"},
 			},
 		}, {
@@ -412,7 +412,7 @@ func TestServiceConfigs_CTSUserDefinedMeta(t *testing.T) {
 				},
 			}},
 			[]string{"a"},
-			map[string]map[string]string{
+			ServicesMeta{
 				"a": {"a": "b"},
 			},
 		}, {
@@ -434,7 +434,7 @@ func TestServiceConfigs_CTSUserDefinedMeta(t *testing.T) {
 				},
 			}},
 			[]string{"a", "b"},
-			map[string]map[string]string{
+			ServicesMeta{
 				"a": {"key": "value a"},
 				"b": {"key": "value b"},
 			},
