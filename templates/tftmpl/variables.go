@@ -61,7 +61,7 @@ func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) er
 		return err
 	}
 
-	if input.Condition != nil && input.Condition.sourceIncludesVariable() {
+	if input.Condition != nil && input.Condition.SourceIncludesVariable() {
 		if err = input.Condition.appendVariable(w); err != nil {
 			return err
 		}

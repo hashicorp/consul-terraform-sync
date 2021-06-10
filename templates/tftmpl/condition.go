@@ -18,9 +18,9 @@ var (
 // Condition handles appending a run condition's relevant templating for Terraform
 // generated files
 type Condition interface {
-	// sourceIncludesVariable returns if the module source expects to
+	// SourceIncludesVariable returns if the module source expects to
 	// include the condition variable.
-	sourceIncludesVariable() bool
+	SourceIncludesVariable() bool
 
 	// appendModuleAttribute writes to an HCL module body the condition variable
 	// as a module argument in main.tf file.
@@ -42,7 +42,7 @@ type Condition interface {
 // This is the default run condition
 type ServicesCondition struct{}
 
-func (c ServicesCondition) sourceIncludesVariable() bool {
+func (c ServicesCondition) SourceIncludesVariable() bool {
 	return false
 }
 
@@ -68,7 +68,7 @@ type CatalogServicesCondition struct {
 	NodeMeta          map[string]string
 }
 
-func (c CatalogServicesCondition) sourceIncludesVariable() bool {
+func (c CatalogServicesCondition) SourceIncludesVariable() bool {
 	return c.SourceIncludesVar
 }
 

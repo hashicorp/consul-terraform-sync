@@ -386,7 +386,7 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task, cond Condition,
 		hcl.TraverseAttr{Name: "services"},
 	})
 
-	if cond != nil && cond.sourceIncludesVariable() {
+	if cond != nil && cond.SourceIncludesVariable() {
 		cond.appendModuleAttribute(moduleBody)
 	}
 
