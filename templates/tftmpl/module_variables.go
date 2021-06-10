@@ -68,6 +68,7 @@ func newModuleVariablesTF(w io.Writer, filename string, input *RootModuleInputDa
 
 	hclFile := hclwrite.NewEmptyFile()
 	rootBody := hclFile.Body()
+	rootBody.AppendNewline()
 
 	lastIdx := len(input.Variables) - 1
 	for i, name := range input.Variables.Keys() {

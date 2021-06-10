@@ -67,8 +67,8 @@ func TestInitRootModule(t *testing.T) {
 			"one":       cty.NumberIntVal(1),
 			"bool_true": cty.BoolVal(true),
 		},
-		Path:      dir,
-		FilePerms: expectedPerm,
+		Path:         dir,
+		FilePerms:    expectedPerm,
 		skipOverride: true,
 	}
 	err = InitRootModule(&input)

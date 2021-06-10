@@ -41,6 +41,7 @@ func newProvidersTFVars(w io.Writer, filename string, input *RootModuleInputData
 
 	hclFile := hclwrite.NewEmptyFile()
 	body := hclFile.Body()
+	body.AppendNewline()
 
 	lastIdx := len(input.Providers) - 1
 	for i, p := range input.Providers {
@@ -83,6 +84,7 @@ func appendRawServiceTemplateValues(body *hclwrite.Body, services []Service) {
 	tokens = append(tokens, &hclwrite.Token{
 		Bytes: []byte("\n}"),
 	})
+	body.AppendNewline()
 	body.SetAttributeRaw("services", tokens)
 }
 

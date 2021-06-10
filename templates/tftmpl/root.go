@@ -68,7 +68,6 @@ var (
 	// beginning of generated module files.
 	TaskPreamble = `# Task: %s
 # Description: %s
-
 `
 
 	rootFileFuncs = map[string]tfFileFunc{
@@ -252,6 +251,7 @@ func newMainTF(w io.Writer, filename string, input *RootModuleInputData) error {
 
 	hclFile := hclwrite.NewEmptyFile()
 	rootBody := hclFile.Body()
+	rootBody.AppendNewline()
 	appendRootTerraformBlock(rootBody, input.backend, input.ProviderInfo)
 	rootBody.AppendNewline()
 	appendRootProviderBlocks(rootBody, input.Providers)
@@ -386,11 +386,8 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task, cond Condition,
 		hcl.TraverseAttr{Name: "services"},
 	})
 
-	if v, ok := cond.(*CatalogServicesCondition); ok && v.SourceIncludesVar {
-		moduleBody.SetAttributeTraversal("catalog_services", hcl.Traversal{
-			hcl.TraverseRoot{Name: "var"},
-			hcl.TraverseAttr{Name: "catalog_services"},
-		})
+	if cond != nil && cond.SourceIncludesVariable() {
+		cond.appendModuleAttribute(moduleBody)
 	}
 
 	if len(varNames) != 0 {
