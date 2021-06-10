@@ -200,7 +200,7 @@ func (t *Task) Services() []Service {
 
 	services := make([]Service, len(t.services))
 	for i, s := range t.services {
-		services[i] = s
+		services[i] = s.Copy()
 	}
 	return services
 }
@@ -255,6 +255,18 @@ func (t *Task) Version() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.version
+}
+
+func (s Service) Copy() Service {
+	// All other Service attributes are simple types, this sets the meta to a new
+	// copy of the map
+	meta := make(map[string]string)
+	for k, v := range s.UserDefinedMeta {
+		meta[k] = v
+	}
+	copy := s
+	copy.UserDefinedMeta = meta
+	return copy
 }
 
 // configureRootModuleInput sets task values for the module input.
