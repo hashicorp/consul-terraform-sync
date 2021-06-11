@@ -124,7 +124,7 @@ func (d *catalogServicesRegistrationQuery) Fetch(clients dep.Clients) (interface
 
 	var catalogServices []*dep.CatalogSnippet
 	for name, tags := range entries {
-		if !d.regexp.MatchString(name) {
+		if d.regexp != nil && !d.regexp.MatchString(name) {
 			continue
 		}
 		catalogServices = append(catalogServices, &dep.CatalogSnippet{
