@@ -160,7 +160,7 @@ func (c *ServiceConfig) Finalize() {
 		c.Tag = String("")
 	} else {
 		log.Println("[WARN] (config) The 'tag' attribute was marked for " +
-			"deprecation in v0.2.0 and will be removed in a future version " +
+			"deprecation in v0.2.0 and will be removed in v0.4.0 " +
 			"of Consul-Terraform-Sync. Please update your configuration to " +
 			"use 'filter' and provide a filter expression using the " +
 			"Service.Tags selector.")
