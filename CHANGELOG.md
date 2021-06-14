@@ -6,7 +6,7 @@ BREAKING CHANGES:
 FEATURES:
 * Add support for Terraform v0.15 [[GH-277](https://github.com/hashicorp/consul-terraform-sync/pull/277)]
 * Add support to only trigger a task on service registration (on first instance of a service registering) or on service deregistration (on last instance of a service deregistering) [[GH-254](https://github.com/hashicorp/consul-terraform-sync/pull/254), [GH-265](https://github.com/hashicorp/consul-terraform-sync/pull/265), [GH-274](https://github.com/hashicorp/consul-terraform-sync/pull/274), [GH-275](https://github.com/hashicorp/consul-terraform-sync/pull/275), [GH-276](https://github.com/hashicorp/consul-terraform-sync/pull/276), [GH-278](https://github.com/hashicorp/consul-terraform-sync/pull/278), [GH-284](https://github.com/hashicorp/consul-terraform-sync/pull/284), [GH-287](https://github.com/hashicorp/consul-terraform-sync/pull/287), [GH-291](https://github.com/hashicorp/consul-terraform-sync/pull/291)]
-* Add support for filtering service nodes using a filter expression. Deprecate `tag` in favor of `filter`. [[GH-295](https://github.com/hashicorp/consul-terraform-sync/pull/295)]
+* Add support for filtering service nodes using a filter expression. Deprecate `tag` in favor of `filter`, where `tag` will be removed in CTS v0.4.0. [[GH-295](https://github.com/hashicorp/consul-terraform-sync/pull/295)]
 * Execute Terraform validate after tasks are initialized [[GH-306](https://github.com/hashicorp/consul-terraform-sync/pull/306)]
 
 BUG FIXES:
