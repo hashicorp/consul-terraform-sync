@@ -284,75 +284,40 @@ func TestE2ELocalBackend(t *testing.T) {
 func TestE2EValidateError(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		version string
-	}{
-		{
-			"",	// default/fallback version
-		},
-		{
-			"0.13.7",
-		},
-		{
-			"0.14.11",
-		},
-		{
-			"0.15.5",
-		},
-	}
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "validate_errors")
+	delete := testutils.MakeTempDir(t, tempDir)
+	// no defer to delete directory: only delete at end of test if no errors
 	
-	for _, tc := range cases {		
-		srv := newTestConsulServer(t)
-		defer srv.Stop()
-
-		tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "validate_errors")
-		delete := testutils.MakeTempDir(t, tempDir)
-		// no defer to delete directory: only delete at end of test if no errors
-
-		tfPath, err := filepath.Abs(tempDir)
-		require.NoError(t, err)
-		
-		var version string
-		if tc.version != "" {
-			version = fmt.Sprintf(`version = "%s"`, tc.version)
-		}
-		tfBlock := fmt.Sprintf(`
-		driver "terraform" {
-			log = true
-			path = "%s"
-			working_dir = "%s"
-			%s
-		}
-		`, tfPath, tempDir, version)
-
-		configPath := filepath.Join(tempDir, configFile)
-		taskName := "cts_error_task"
-		conditionTask := fmt.Sprintf(`task {
-		name = "%s"
-		source = "./test_modules/incompatible_w_cts"
-		services = ["api", "db"]
-		condition "catalog-services" {
-			source_includes_var = true
-		}
+	configPath := filepath.Join(tempDir, configFile)
+	taskName := "cts_error_task"
+	conditionTask := fmt.Sprintf(`task {
+	name = "%s"
+	source = "./test_modules/incompatible_w_cts"
+	services = ["api", "db"]
+	condition "catalog-services" {
+		source_includes_var = true
 	}
-	`, taskName)
+}
+`, taskName)
 
-		config := baseConfig().appendConsulBlock(srv).appendString(tfBlock).
-			appendString(conditionTask)
-		config.write(t, configPath)
-		cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
-		var buf bytes.Buffer
-		cmd.Stdout = &buf
-		cmd.Stderr = &buf
+	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+		appendString(conditionTask)
+	config.write(t, configPath)
+	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
 
-		cmd.Run()
-		assert.Contains(t, buf.String(), fmt.Sprintf(`module for task "%s" is missing the "services" variable`, taskName))
-		require.Contains(t,
-			buf.String(),
-			fmt.Sprintf(`module for task "%s" is missing the "catalog_services" variable, add to module or set "source_includes_var" to false`,
-				taskName))
-		delete()
-	}
+	cmd.Run()
+	assert.Contains(t, buf.String(), fmt.Sprintf(`module for task "%s" is missing the "services" variable`, taskName))
+	require.Contains(t,
+		buf.String(),
+		fmt.Sprintf(`module for task "%s" is missing the "catalog_services" variable, add to module or set "source_includes_var" to false`,
+			taskName))
+	delete()
 }
 
 func newTestConsulServer(t *testing.T) *testutil.TestServer {

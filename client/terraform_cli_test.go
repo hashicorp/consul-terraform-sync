@@ -287,7 +287,10 @@ func TestTerraformCLIValidate(t *testing.T) {
 module for task "test-workspace" is missing the "services" variable
 `,
 			`{
+	"format_version": "0.1",
 	"valid": false,
+	"error_count": 1,
+	"warning_count": 0,
 	"diagnostics": [
 		{
 			"severity": "error",
@@ -296,17 +299,27 @@ module for task "test-workspace" is missing the "services" variable
 			"range": {
 				"filename": "main.tf",
 				"start": {
-					"line": 32
+					"line": 31,
+					"column": 3,
+					"byte": 845
+				},
+				"end": {
+					"line": 31,
+					"column": 11,
+					"byte": 853
 				}
 			},
 			"snippet": {
-				"context": "module \"example-module\"",
-				"code": "  service = var.service",
-				"start_line": 32
+				"context": "module \"example-task\"",
+				"code": "  services = var.services",
+				"start_line": 31,
+				"highlight_start_offset": 2,
+				"highlight_end_offset": 10,
+				"values": []
 			}
 		}
 	]
-}`,
+}`, // Terraform v0.15 output
 		},
 		{
 			"missing catalog_services error",
@@ -315,6 +328,8 @@ module for task "test-workspace" is missing the "catalog_services" variable, add
 `,
 			`{
 	"valid": false,
+	"error_count": 1,
+	"warning_count": 0,
 	"diagnostics": [
 		{
 			"severity": "error",
@@ -323,12 +338,19 @@ module for task "test-workspace" is missing the "catalog_services" variable, add
 			"range": {
 				"filename": "main.tf",
 				"start": {
-					"line": 32
+					"line": 32,
+					"column": 3,
+					"byte": 887
+				},
+				"end": {
+					"line": 32,
+					"column": 19,
+					"byte": 903
 				}
 			}
 		}
 	]
-}`,
+}`,	// Terraform v0.13/v0.14 output
 		},
 		{
 			"warning",
