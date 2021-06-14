@@ -271,89 +271,128 @@ func TestTerraformCLIPlan(t *testing.T) {
 func TestTerraformCLIValidate(t *testing.T) {
 	t.Parallel()
 
-	errJson := `{
-		"valid": false,
-		"diagnostics": [
-			{
-				"severity": "error",
-				"summary": "Unsupported argument",
-				"detail": "An argument named \"catalog_services\" is not expected here.",
-				"range": {
-					"filename": "main.tf",
-					"start": {
-						"line": 32
-					}
-				},
-				"snippet": {
-					"context": "module \"example-task\"",
-					"code": "  catalog_services = var.catalog_services",
-					"start_line": 32
-				}
-			}
-		]
-	}`
-	var errValidOut *tfjson.ValidateOutput
-	json.Unmarshal([]byte(errJson), &errValidOut)
-
-	warnJson := `{
-		"valid": true,
-		"diagnostics": [
-			{
-				"severity": "warning",
-				"summary": "Version constraints inside provider configuration blocks are deprecated",
-				"detail": "Terraform 0.13 and earlier allowed provider....",
-				"range": {
-					"filename": "main.tf",
-					"start": {
-						"line": 26
-					}
-				},
-				"snippet": {
-					"context": "provider \"local\"",
-					"code": "  version = \"2.1.0\"",
-					"start_line": 26
-				}
-			}
-		]
-	}`
-	var warnValidOut *tfjson.ValidateOutput
-	json.Unmarshal([]byte(warnJson), &warnValidOut)
-
 	cases := []struct {
 		name        string
-		validateOut *tfjson.ValidateOutput
-		expectError bool
+		expectedErr string
+		jsonOut     string
 	}{
 		{
 			"happy path",
-			&tfjson.ValidateOutput{
-				Valid: true,
-			},
-			false,
+			"",
+			`{"valid": true}`,
 		},
 		{
-			"error",
-			errValidOut,
-			true,
+			"missing services error",
+			`
+module for task "test-workspace" is missing the "services" variable
+`,
+			`{
+	"format_version": "0.1",
+	"valid": false,
+	"error_count": 1,
+	"warning_count": 0,
+	"diagnostics": [
+		{
+			"severity": "error",
+			"summary": "Unsupported argument",
+			"detail": "An argument named \"services\" is not expected here.",
+			"range": {
+				"filename": "main.tf",
+				"start": {
+					"line": 31,
+					"column": 3,
+					"byte": 845
+				},
+				"end": {
+					"line": 31,
+					"column": 11,
+					"byte": 853
+				}
+			},
+			"snippet": {
+				"context": "module \"example-task\"",
+				"code": "  services = var.services",
+				"start_line": 31,
+				"highlight_start_offset": 2,
+				"highlight_end_offset": 10,
+				"values": []
+			}
+		}
+	]
+}`, // Terraform v0.15 output
+		},
+		{
+			"missing catalog_services error",
+			`
+module for task "test-workspace" is missing the "catalog_services" variable, add to module or set "source_includes_var" to false
+`,
+			`{
+	"valid": false,
+	"error_count": 1,
+	"warning_count": 0,
+	"diagnostics": [
+		{
+			"severity": "error",
+			"summary": "Unsupported argument",
+			"detail": "An argument named \"catalog_services\" is not expected here.",
+			"range": {
+				"filename": "main.tf",
+				"start": {
+					"line": 32,
+					"column": 3,
+					"byte": 887
+				},
+				"end": {
+					"line": 32,
+					"column": 19,
+					"byte": 903
+				}
+			}
+		}
+	]
+}`,	// Terraform v0.13/v0.14 output
 		},
 		{
 			"warning",
-			warnValidOut,
-			false,
+			"",
+			`{
+	"valid": true,
+	"diagnostics": [
+		{
+			"severity": "warning",
+			"summary": "Version constraints inside provider configuration blocks are deprecated",
+			"detail": "Terraform 0.13 and earlier allowed provider....",
+			"range": {
+				"filename": "main.tf",
+				"start": {
+					"line": 26
+				}
+			},
+			"snippet": {
+				"context": "provider \"local\"",
+				"code": "  version = \"2.1.0\"",
+				"start_line": 26
+			}
+		}
+	]
+}`,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			m := new(mocks.TerraformExec)
-			m.On("Validate", mock.Anything).Return(tc.validateOut, nil)
+			var validateOut *tfjson.ValidateOutput
+			json.Unmarshal([]byte(tc.jsonOut), &validateOut)
+			m.On("Validate", mock.Anything).Return(validateOut, nil)
 			client := NewTestTerraformCLI(&TerraformCLIConfig{}, m)
 
 			ctx := context.Background()
 			err := client.Validate(ctx)
 
-			if tc.expectError {
+			if tc.expectedErr != "" {
 				assert.Error(t, err)
+				assert.Equal(t, tc.expectedErr, err.Error())
 				return
 			}
 			assert.NoError(t, err)

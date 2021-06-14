@@ -207,20 +207,21 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 		sb.WriteByte('\n')
 		switch d.Detail {
 		case `An argument named "services" is not expected here.`:
-			fmt.Fprintf(&sb, "%s is missing the \"services\" variable\n", *d.Snippet.Context)
+			fmt.Fprintf(&sb, `module for task "%s" is missing the "services" variable`, t.workspace)
 		case `An argument named "catalog_services" is not expected here.`:
 			fmt.Fprintf(
 				&sb,
-				"%s is missing the \"catalog_services\" variable, add to module or set source_includes_var to false\n",
-				*d.Snippet.Context)
+				`module for task "%s" is missing the "catalog_services" variable, add to module or set "source_includes_var" to false`,
+				t.workspace)
 		default:
 			fmt.Fprintf(&sb, "%s: %s\n", d.Severity, d.Summary)
 			if d.Range != nil && d.Snippet != nil {
 				fmt.Fprintf(&sb, "\non %s line %d, in %s\n", d.Range.Filename, d.Range.Start.Line, *d.Snippet.Context)
 				fmt.Fprintf(&sb, "%d:%s\n\n", d.Snippet.StartLine, d.Snippet.Code)
 			}
-			fmt.Fprintf(&sb, "%s\n\n", d.Detail)
+			sb.WriteString(d.Detail)
 		}
+		sb.WriteByte('\n')
 	}
 
 	if !output.Valid {
