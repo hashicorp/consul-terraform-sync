@@ -73,7 +73,7 @@ func TestServicesRenderRace(t *testing.T) {
 	require.NoError(t, err)
 
 	// veryify results
-	tfvarsFile := filepath.Join(tempDir, "serv_rend_race_task", "terraform.tfvars")
+	tfvarsFile := filepath.Join(tempDir, "terraform.tfvars")
 	data, err := os.ReadFile(tfvarsFile)
 	require.NoError(t, err)
 	// 'svc_name_' is unique per service and much easier to count than
