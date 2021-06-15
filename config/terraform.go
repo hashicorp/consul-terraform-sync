@@ -11,15 +11,9 @@ import (
 	goVersion "github.com/hashicorp/go-version"
 )
 
-const (
-	// DefaultTFBackendKVPath is the default KV path used for configuring the
-	// default backend to use Consul KV.
-	DefaultTFBackendKVPath = "consul-terraform-sync/terraform"
-
-	// DefaultTFWorkingDir is the default location where Sync will use as the
-	// working directory to manage infrastructure.
-	DefaultTFWorkingDir = "sync-tasks"
-)
+// DefaultTFBackendKVPath is the default KV path used for configuring the
+// default backend to use Consul KV.
+const DefaultTFBackendKVPath = "consul-terraform-sync/terraform"
 
 // TerraformConfig is the configuration for the Terraform driver.
 type TerraformConfig struct {
@@ -45,7 +39,6 @@ func DefaultTerraformConfig() *TerraformConfig {
 		Log:               Bool(false),
 		PersistLog:        Bool(false),
 		Path:              String(wd),
-		WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
 		Backend:           make(map[string]interface{}),
 		RequiredProviders: make(map[string]interface{}),
 	}
@@ -230,8 +223,15 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 		c.Path = String(wd)
 	}
 
-	if c.WorkingDir == nil || *c.WorkingDir == "" {
-		c.WorkingDir = String(path.Join(wd, DefaultTFWorkingDir))
+	if c.WorkingDir != nil {
+		// intentionally left as nil for the top-level config to override
+		// log a warning message if the configuration is not configured to the
+		// default location.
+		log.Println("[WARN] (config) The 'driver.working_dir' configuration " +
+			"option was marked for deprecation in v0.3.0 and will be removed in " +
+			"v0.5.0 of Consul-Terraform-Sync. Please update your configuration " +
+			"to use 'working_dir' or configure the working directory individually " +
+			"for each task with the 'task.working_dir' option.")
 	}
 
 	if c.Backend == nil {

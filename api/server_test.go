@@ -291,13 +291,12 @@ func Test_Task_Update(t *testing.T) {
 		delete := testutils.MakeTempDir(t, tempDir)
 		defer delete()
 
-		task, err := driver.NewTask(driver.TaskConfig{Enabled: true})
+		task, err := driver.NewTask(driver.TaskConfig{Enabled: true, WorkingDir: tempDir})
 		require.NoError(t, err)
 
 		// add a driver
 		d, err := driver.NewTerraform(&driver.TerraformConfig{
 			Task:       task,
-			WorkingDir: tempDir,
 			ClientType: "test",
 		})
 		require.NoError(t, err)

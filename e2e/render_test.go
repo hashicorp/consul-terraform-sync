@@ -48,13 +48,13 @@ func TestServicesRenderRace(t *testing.T) {
 	}
 	conf.Tasks = &config.TaskConfigs{
 		&config.TaskConfig{
-			Name:     config.String("serv_rend_race_task"),
-			Source:   config.String("./test_modules/null_resource"),
-			Services: serviceNames,
+			Name:       config.String("serv_rend_race_task"),
+			Source:     config.String("./test_modules/null_resource"),
+			Services:   serviceNames,
+			WorkingDir: config.String(tempDir),
 		}}
 	conf.Consul.Address = config.String(srv.HTTPAddr)
 	conf.Finalize()
-	conf.Driver.Terraform.WorkingDir = config.String(tempDir)
 	path, err := filepath.Abs("./")
 	require.NoError(t, err)
 	conf.Driver.Terraform.Path = config.String(path)

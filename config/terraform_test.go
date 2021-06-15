@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -421,7 +420,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:               Bool(false),
 				PersistLog:        Bool(false),
 				Path:              String(wd),
-				WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
+				WorkingDir:        nil,
 				Backend:           map[string]interface{}{},
 				RequiredProviders: map[string]interface{}{},
 			},
@@ -435,7 +434,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
-				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+				WorkingDir: nil,
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"address": *consul.Address,
@@ -461,7 +460,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
-				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+				WorkingDir: nil,
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"address":   *consul.Address,
@@ -488,7 +487,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
-				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+				WorkingDir: nil,
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"address": "127.0.0.1:8080",
@@ -506,7 +505,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(""),
-				WorkingDir: String(path.Join(wd, DefaultTFWorkingDir)),
+				WorkingDir: nil,
 			},
 			nil,
 			&TerraformConfig{
@@ -514,7 +513,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:               Bool(false),
 				PersistLog:        Bool(false),
 				Path:              String(wd),
-				WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
+				WorkingDir:        nil,
 				Backend:           map[string]interface{}{},
 				RequiredProviders: map[string]interface{}{},
 			},
