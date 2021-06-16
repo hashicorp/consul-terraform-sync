@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -206,7 +205,6 @@ func newTerraformDriver(conf *config.Config, task *driver.Task, w templates.Watc
 		Log:               *tfConf.Log,
 		PersistLog:        *tfConf.PersistLog,
 		Path:              *tfConf.Path,
-		WorkingDir:        filepath.Join(*tfConf.WorkingDir, task.Name()),
 		Backend:           tfConf.Backend,
 		RequiredProviders: tfConf.RequiredProviders,
 		ClientType:        *conf.ClientType,
@@ -257,6 +255,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			Version:      *t.Version,
 			BufferPeriod: getTemplateBufferPeriod(conf, t),
 			Condition:    t.Condition,
+			WorkingDir:   *t.WorkingDir,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error initializing task %s: %s", *t.Name, err)

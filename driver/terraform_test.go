@@ -250,12 +250,11 @@ func TestUpdateTask(t *testing.T) {
 
 			w := new(mocksTmpl.Watcher)
 			tf := &Terraform{
-				mu:         &sync.RWMutex{},
-				workingDir: tc.dirName,
-				task:       &Task{name: "test_task", enabled: tc.orig.Enabled},
-				client:     c,
-				resolver:   r,
-				watcher:    w,
+				mu:       &sync.RWMutex{},
+				task:     &Task{name: "test_task", enabled: tc.orig.Enabled, workingDir: tc.dirName},
+				client:   c,
+				resolver: r,
+				watcher:  w,
 			}
 
 			if tc.callInit {
@@ -353,12 +352,11 @@ func TestUpdateTask(t *testing.T) {
 
 			w := new(mocksTmpl.Watcher)
 			tf := &Terraform{
-				mu:         &sync.RWMutex{},
-				workingDir: tc.dirName,
-				task:       &Task{name: "test_task", enabled: false},
-				client:     c,
-				resolver:   r,
-				watcher:    w,
+				mu:       &sync.RWMutex{},
+				task:     &Task{name: "test_task", enabled: false, workingDir: tc.dirName},
+				client:   c,
+				resolver: r,
+				watcher:  w,
 				fileReader: func(string) ([]byte, error) {
 					return []byte{}, tc.fileReaderErr
 				},

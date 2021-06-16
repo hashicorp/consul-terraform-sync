@@ -55,10 +55,9 @@ type Terraform struct {
 	watcher    templates.Watcher
 	fileReader func(string) ([]byte, error)
 
-	workingDir string
-	client     client.Client
-	logClient  bool
-	postApply  handler.Handler
+	client    client.Client
+	logClient bool
+	postApply handler.Handler
 
 	inited bool
 }
@@ -69,7 +68,6 @@ type TerraformConfig struct {
 	Log               bool
 	PersistLog        bool
 	Path              string
-	WorkingDir        string
 	Backend           map[string]interface{}
 	RequiredProviders map[string]interface{}
 	Watcher           templates.Watcher
@@ -80,22 +78,23 @@ type TerraformConfig struct {
 // NewTerraform configures and initializes a new Terraform driver for a task.
 // The underlying Terraform CLI client and out-of-band handlers are prepared.
 func NewTerraform(config *TerraformConfig) (*Terraform, error) {
-	if _, err := os.Stat(config.WorkingDir); os.IsNotExist(err) {
-		if err := os.Mkdir(config.WorkingDir, workingDirPerms); err != nil {
+	task := config.Task
+	taskName := task.Name()
+	wd := task.WorkingDir()
+	if _, err := os.Stat(wd); os.IsNotExist(err) {
+		if err := os.MkdirAll(wd, workingDirPerms); err != nil {
 			log.Printf("[ERR] (driver.terraform) error creating task work directory: %s", err)
 			return nil, err
 		}
 	}
 
-	task := config.Task
-	taskName := task.Name()
 	tfClient, err := newClient(&clientConfig{
 		clientType: config.ClientType,
 		log:        config.Log,
 		taskName:   taskName,
 		persistLog: config.PersistLog,
 		path:       config.Path,
-		workingDir: config.WorkingDir,
+		workingDir: wd,
 		varFiles:   task.VariableFiles(),
 	})
 	if err != nil {
@@ -126,7 +125,6 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		task:              config.Task,
 		backend:           config.Backend,
 		requiredProviders: config.RequiredProviders,
-		workingDir:        config.WorkingDir,
 		client:            tfClient,
 		logClient:         config.Log,
 		postApply:         handler,
@@ -341,7 +339,7 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 	input := tftmpl.RootModuleInputData{
 		TerraformVersion: TerraformVersion,
 		Backend:          tf.backend,
-		Path:             tf.workingDir,
+		Path:             tf.task.WorkingDir(),
 		FilePerms:        filePerms,
 	}
 	tf.task.configureRootModuleInput(&input)
@@ -461,8 +459,9 @@ func (tf *Terraform) applyTask(ctx context.Context) error {
 
 // initTaskTemplate creates templates to be monitored and rendered.
 func (tf *Terraform) initTaskTemplate() error {
-	tmplFullpath := filepath.Join(tf.workingDir, tftmpl.TFVarsTmplFilename)
-	tfvarsFilepath := filepath.Join(tf.workingDir, tftmpl.TFVarsFilename)
+	wd := tf.task.WorkingDir()
+	tmplFullpath := filepath.Join(wd, tftmpl.TFVarsTmplFilename)
+	tfvarsFilepath := filepath.Join(wd, tftmpl.TFVarsFilename)
 
 	content, err := tf.fileReader(tmplFullpath)
 	if err != nil {

@@ -48,13 +48,13 @@ func TestServicesRenderRace(t *testing.T) {
 	}
 	conf.Tasks = &config.TaskConfigs{
 		&config.TaskConfig{
-			Name:     config.String("serv_rend_race_task"),
-			Source:   config.String("./test_modules/null_resource"),
-			Services: serviceNames,
+			Name:       config.String("serv_rend_race_task"),
+			Source:     config.String("./test_modules/null_resource"),
+			Services:   serviceNames,
+			WorkingDir: config.String(tempDir),
 		}}
 	conf.Consul.Address = config.String(srv.HTTPAddr)
 	conf.Finalize()
-	conf.Driver.Terraform.WorkingDir = config.String(tempDir)
 	path, err := filepath.Abs("./")
 	require.NoError(t, err)
 	conf.Driver.Terraform.Path = config.String(path)
@@ -73,7 +73,7 @@ func TestServicesRenderRace(t *testing.T) {
 	require.NoError(t, err)
 
 	// veryify results
-	tfvarsFile := filepath.Join(tempDir, "serv_rend_race_task", "terraform.tfvars")
+	tfvarsFile := filepath.Join(tempDir, "terraform.tfvars")
 	data, err := os.ReadFile(tfvarsFile)
 	require.NoError(t, err)
 	// 'svc_name_' is unique per service and much easier to count than

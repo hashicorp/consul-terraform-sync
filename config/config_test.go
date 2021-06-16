@@ -281,6 +281,7 @@ func TestConfig_Finalize(t *testing.T) {
 	expected := longConfig.Copy()
 	expected.ClientType = String("")
 	expected.Port = Int(8502)
+	expected.WorkingDir = String("working")
 	expected.Syslog.Facility = String("LOCAL0")
 	expected.BufferPeriod.Enabled = Bool(true)
 	expected.Consul.KVNamespace = String("")
@@ -299,6 +300,7 @@ func TestConfig_Finalize(t *testing.T) {
 	(*expected.Tasks)[0].VarFiles = []string{}
 	(*expected.Tasks)[0].Version = String("")
 	(*expected.Tasks)[0].BufferPeriod = DefaultTaskBufferPeriodConfig()
+	(*expected.Tasks)[0].WorkingDir = String("working/task")
 	(*expected.Services)[0].ID = String("serviceA")
 	(*expected.Services)[0].Namespace = String("")
 	(*expected.Services)[0].Datacenter = String("")

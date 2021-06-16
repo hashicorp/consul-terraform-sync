@@ -40,6 +40,7 @@ func TestTaskConfig_Copy(t *testing.T) {
 						"key": "value",
 					},
 				},
+				WorkingDir: String("cts-dir"),
 			},
 		},
 	}
@@ -263,6 +264,30 @@ func TestTaskConfig_Merge(t *testing.T) {
 			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String(".*")}},
 			&TaskConfig{Condition: &CatalogServicesConditionConfig{Regexp: String(".*")}},
 		},
+		{
+			"working_dir_overrides",
+			&TaskConfig{WorkingDir: String("cts-dir")},
+			&TaskConfig{WorkingDir: String("cts-dir-override")},
+			&TaskConfig{WorkingDir: String("cts-dir-override")},
+		},
+		{
+			"working_dir_empty_one",
+			&TaskConfig{WorkingDir: String("cts-dir")},
+			&TaskConfig{},
+			&TaskConfig{WorkingDir: String("cts-dir")},
+		},
+		{
+			"working_dir_empty_two",
+			&TaskConfig{},
+			&TaskConfig{WorkingDir: String("cts-dir")},
+			&TaskConfig{WorkingDir: String("cts-dir")},
+		},
+		{
+			"working_dir_same",
+			&TaskConfig{WorkingDir: String("cts-dir")},
+			&TaskConfig{WorkingDir: String("cts-dir")},
+			&TaskConfig{WorkingDir: String("cts-dir")},
+		},
 	}
 
 	for i, tc := range cases {
@@ -293,6 +318,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				BufferPeriod: DefaultTaskBufferPeriodConfig(),
 				Enabled:      Bool(true),
 				Condition:    DefaultConditionConfig(),
+				WorkingDir:   String("sync-tasks"),
 			},
 		},
 		{
@@ -311,13 +337,14 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				BufferPeriod: DefaultTaskBufferPeriodConfig(),
 				Enabled:      Bool(true),
 				Condition:    DefaultConditionConfig(),
+				WorkingDir:   String("sync-tasks/task"),
 			},
 		},
 	}
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tc.i.Finalize()
+			tc.i.Finalize(DefaultWorkingDir)
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}
@@ -594,7 +621,7 @@ func TestTaskConfig_FinalizeValidate(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.config.Finalize()
+			tc.config.Finalize(DefaultWorkingDir)
 			err := tc.config.Validate()
 			if tc.valid {
 				assert.NoError(t, err)

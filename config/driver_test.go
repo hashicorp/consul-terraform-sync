@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -155,7 +154,7 @@ func TestDriverConfig_Finalize(t *testing.T) {
 					Log:               Bool(false),
 					PersistLog:        Bool(false),
 					Path:              String(wd),
-					WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
+					WorkingDir:        nil,
 					Backend:           map[string]interface{}{},
 					RequiredProviders: map[string]interface{}{},
 				},
@@ -174,7 +173,7 @@ func TestDriverConfig_Finalize(t *testing.T) {
 					Log:               Bool(true),
 					PersistLog:        Bool(false),
 					Path:              String(wd),
-					WorkingDir:        String(path.Join(wd, DefaultTFWorkingDir)),
+					WorkingDir:        nil,
 					Backend:           map[string]interface{}{},
 					RequiredProviders: map[string]interface{}{},
 				},

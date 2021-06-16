@@ -25,15 +25,7 @@ var TerraformVersion *goVersion.Version
 // InstallTerraform installs the Terraform binary to the configured path.
 // If an existing Terraform exists in the path, it is checked for compatibility.
 func InstallTerraform(ctx context.Context, conf *config.TerraformConfig) error {
-	workingDir := *conf.WorkingDir
 	path := *conf.Path
-
-	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(workingDir, workingDirPerms); err != nil {
-			log.Printf("[ERR] (driver.terraform) error creating base work directory: %s", err)
-			return err
-		}
-	}
 
 	if isTFInstalled(path) {
 		tfVersion, compatible, err := verifyInstalledTF(ctx, conf)
@@ -94,11 +86,17 @@ func isTFInstalled(tfPath string) bool {
 // verifyInstalledTF checks if the installed Terraform is compatible with the
 // current architecture and is valid within Sync version constraints.
 func verifyInstalledTF(ctx context.Context, conf *config.TerraformConfig) (*goVersion.Version, bool, error) {
-	workingDir := *conf.WorkingDir
 	tfPath := *conf.Path
 
+	// NewTerraform requires an existing directory. This tfexec client is only
+	// used for validation, so we don't need to use the actual working dir for the task
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, false, err
+	}
+
 	// Verify version for existing terraform
-	tf, err := tfexec.NewTerraform(workingDir, filepath.Join(tfPath, "terraform"))
+	tf, err := tfexec.NewTerraform(wd, filepath.Join(tfPath, "terraform"))
 	if err != nil {
 		log.Printf("[ERR] (driver.terraform) unable to setup Terraform client "+
 			"from path %s: %s", tfPath, err)

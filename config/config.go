@@ -23,6 +23,11 @@ const (
 
 	// DefaultPort is the default port to use for api server.
 	DefaultPort = 8558
+
+	// DefaultWorkingDir is the default location where CTS will manage
+	// artifacts generated for each task. By default, a child directory is
+	// created for each task with its task name.
+	DefaultWorkingDir = "sync-tasks"
 )
 
 // Config is used to configure Sync
@@ -30,6 +35,7 @@ type Config struct {
 	LogLevel   *string `mapstructure:"log_level"`
 	ClientType *string `mapstructure:"client_type"`
 	Port       *int    `mapstructure:"port"`
+	WorkingDir *string `mapstructure:"working_dir"`
 
 	Syslog             *SyslogConfig             `mapstructure:"syslog"`
 	Consul             *ConsulConfig             `mapstructure:"consul"`
@@ -92,6 +98,7 @@ func (c *Config) Copy() *Config {
 		LogLevel:           StringCopy(c.LogLevel),
 		Syslog:             c.Syslog.Copy(),
 		Port:               IntCopy(c.Port),
+		WorkingDir:         StringCopy(c.WorkingDir),
 		Consul:             c.Consul.Copy(),
 		Vault:              c.Vault.Copy(),
 		Driver:             c.Driver.Copy(),
@@ -126,6 +133,10 @@ func (c *Config) Merge(o *Config) *Config {
 
 	if o.Port != nil {
 		r.Port = IntCopy(o.Port)
+	}
+
+	if o.WorkingDir != nil {
+		r.WorkingDir = StringCopy(o.WorkingDir)
 	}
 
 	if o.Syslog != nil {
@@ -201,10 +212,20 @@ func (c *Config) Finalize() {
 	}
 	c.Driver.Finalize()
 
+	// Finalize working dir after driver until deprecated driver.working_dir
+	// is removed.
+	if c.WorkingDir == nil {
+		if c.Driver.Terraform != nil && c.Driver.Terraform.WorkingDir != nil {
+			c.WorkingDir = StringCopy(c.Driver.Terraform.WorkingDir)
+		} else {
+			c.WorkingDir = String(DefaultWorkingDir)
+		}
+	}
+
 	if c.Tasks == nil {
 		c.Tasks = DefaultTaskConfigs()
 	}
-	c.Tasks.Finalize()
+	c.Tasks.Finalize(*c.WorkingDir)
 
 	if c.Services == nil {
 		c.Services = DefaultServiceConfigs()
@@ -300,6 +321,7 @@ func (c *Config) GoString() string {
 	return fmt.Sprintf("&Config{"+
 		"LogLevel:%s, "+
 		"Port:%d, "+
+		"WorkingDir:%s, "+
 		"Syslog:%s, "+
 		"Consul:%s, "+
 		"Vault:%s, "+
@@ -311,6 +333,7 @@ func (c *Config) GoString() string {
 		"}",
 		StringVal(c.LogLevel),
 		IntVal(c.Port),
+		StringVal(c.WorkingDir),
 		c.Syslog.GoString(),
 		c.Consul.GoString(),
 		c.Vault.GoString(),

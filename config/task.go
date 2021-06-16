@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2/hclsyntax"
@@ -54,6 +55,12 @@ type TaskConfig struct {
 	// Condition optionally configures a single run condition under which the
 	// task will start executing
 	Condition ConditionConfig `mapstructure:"condition"`
+
+	// The local working directory for CTS to manage Terraform configuration
+	// files and artifacts that are generated for the task. The default option
+	// will create a child directory with the task name in the global working
+	// directory.
+	WorkingDir *string `mapstructure:"working_dir"`
 }
 
 // TaskConfigs is a collection of TaskConfig
@@ -91,6 +98,10 @@ func (c *TaskConfig) Copy() *TaskConfig {
 
 	if !isConditionNil(c.Condition) {
 		o.Condition = c.Condition.Copy()
+	}
+
+	if c.WorkingDir != nil {
+		o.WorkingDir = StringCopy(c.WorkingDir)
 	}
 
 	return &o
@@ -158,11 +169,15 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		}
 	}
 
+	if o.WorkingDir != nil {
+		r.WorkingDir = StringCopy(o.WorkingDir)
+	}
+
 	return r
 }
 
 // Finalize ensures there no nil pointers.
-func (c *TaskConfig) Finalize() {
+func (c *TaskConfig) Finalize(wd string) {
 	if c == nil {
 		return
 	}
@@ -208,6 +223,10 @@ func (c *TaskConfig) Finalize() {
 		c.Condition = DefaultConditionConfig()
 	}
 	c.Condition.Finalize(c.Services)
+
+	if c.WorkingDir == nil {
+		c.WorkingDir = String(filepath.Join(wd, *c.Name))
+	}
 }
 
 // Validate validates the values and required options. This method is recommended
@@ -359,13 +378,13 @@ func (c *TaskConfigs) Merge(o *TaskConfigs) *TaskConfigs {
 
 // Finalize ensures the configuration has no nil pointers and sets default
 // values.
-func (c *TaskConfigs) Finalize() {
+func (c *TaskConfigs) Finalize(wd string) {
 	if c == nil {
 		*c = *DefaultTaskConfigs()
 	}
 
 	for _, t := range *c {
-		t.Finalize()
+		t.Finalize(wd)
 	}
 }
 

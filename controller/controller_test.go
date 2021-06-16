@@ -206,6 +206,7 @@ func TestNewDriverTasks(t *testing.T) {
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
 				},
+				WorkingDir: "sync-tasks/name",
 			})},
 		}, {
 			// Fetches correct provider and required_providers blocks from config
@@ -271,6 +272,7 @@ func TestNewDriverTasks(t *testing.T) {
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
 				},
+				WorkingDir: "sync-tasks/name",
 			})},
 		}, {
 			// Task env is fetched from providers and Consul config when using
@@ -321,6 +323,7 @@ func TestNewDriverTasks(t *testing.T) {
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
 				},
+				WorkingDir: "sync-tasks/name",
 			})},
 		},
 	}

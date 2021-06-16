@@ -64,6 +64,7 @@ type Task struct {
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
 	condition    config.ConditionConfig
+	workingDir   string
 }
 
 type TaskConfig struct {
@@ -79,6 +80,7 @@ type TaskConfig struct {
 	Version      string
 	BufferPeriod *BufferPeriod
 	Condition    config.ConditionConfig
+	WorkingDir   string
 }
 
 func NewTask(conf TaskConfig) (*Task, error) {
@@ -107,6 +109,7 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
 		condition:    conf.Condition,
+		workingDir:   conf.WorkingDir,
 	}, nil
 }
 
@@ -255,6 +258,14 @@ func (t *Task) Version() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.version
+}
+
+// WorkingDir returns the working directory to manage generated artifacts for
+// the task.
+func (t *Task) WorkingDir() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.workingDir
 }
 
 func (s Service) Copy() Service {
