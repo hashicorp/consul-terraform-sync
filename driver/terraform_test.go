@@ -615,8 +615,7 @@ func TestInitTask(t *testing.T) {
 
 			tf := &Terraform{
 				mu:         &sync.RWMutex{},
-				task:       &Task{name: "InitTaskTest", enabled: true},
-				workingDir: dirName,
+				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName},
 				client:     c,
 				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
 			}
