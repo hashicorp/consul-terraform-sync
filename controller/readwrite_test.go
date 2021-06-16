@@ -182,7 +182,6 @@ func TestOnce(t *testing.T) {
 		d.On("RenderTemplate", mock.Anything).Return(false, nil).Once()
 		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
-		d.On("ValidateTask", mock.Anything).Return(nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
 
 		rw := &ReadWrite{

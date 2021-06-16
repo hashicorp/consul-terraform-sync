@@ -119,20 +119,6 @@ func (_m *Driver) UpdateTask(ctx context.Context, task driver.PatchTask) (driver
 	return r0, r1
 }
 
-// ValidateTask provides a mock function with given fields: ctx
-func (_m *Driver) ValidateTask(ctx context.Context) error {
-	ret := _m.Called(ctx)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // Version provides a mock function with given fields:
 func (_m *Driver) Version() string {
 	ret := _m.Called()

@@ -100,56 +100,30 @@ func TestApplyTask(t *testing.T) {
 	cases := []struct {
 		name        string
 		expectError bool
-		inited      bool
-		initReturn  error
 		applyReturn error
 		postApply   handler.Handler
 	}{
 		{
 			"happy path - no post-apply handler",
 			false,
-			false,
-			nil,
 			nil,
 			nil,
 		},
 		{
 			"happy path - post-apply handler",
 			false,
-			false,
-			nil,
 			nil,
 			testHandler(false),
 		},
 		{
-			"already inited",
-			false,
-			true,
-			nil,
-			nil,
-			nil,
-		},
-		{
-			"error on init",
-			true,
-			false,
-			errors.New("init error"),
-			nil,
-			nil,
-		},
-		{
 			"error on apply",
 			true,
-			false,
-			nil,
 			errors.New("apply error"),
 			nil,
 		},
 		{
 			"error on post-apply handler",
 			true,
-			false,
-			nil,
 			nil,
 			testHandler(true),
 		},
@@ -158,7 +132,6 @@ func TestApplyTask(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := new(mocks.Client)
-			c.On("Init", ctx).Return(tc.initReturn).Once()
 			c.On("Apply", ctx).Return(tc.applyReturn).Once()
 
 			tf := &Terraform{
@@ -166,7 +139,6 @@ func TestApplyTask(t *testing.T) {
 				task:      &Task{name: "ApplyTaskTest", enabled: true},
 				client:    c,
 				postApply: tc.postApply,
-				inited:    tc.inited,
 			}
 
 			err := tf.ApplyTask(ctx)
@@ -269,12 +241,10 @@ func TestUpdateTask(t *testing.T) {
 
 			c := new(mocks.Client)
 			if tc.callInspect {
-				c.On("Init", ctx).Return(nil).Once()
 				c.On("Plan", ctx).Return(true, nil).Once()
 				c.On("SetStdout", mock.Anything).Twice()
 			}
 			if tc.callApply {
-				c.On("Init", ctx).Return(nil).Once()
 				c.On("Apply", ctx).Return(nil).Once()
 			}
 
@@ -289,6 +259,8 @@ func TestUpdateTask(t *testing.T) {
 			}
 
 			if tc.callInit {
+				c.On("Init", ctx).Return(nil).Once()
+				c.On("Validate", ctx).Return(nil).Once()
 				tf.fileReader = func(string) ([]byte, error) { return []byte{}, nil }
 			}
 
@@ -374,6 +346,7 @@ func TestUpdateTask(t *testing.T) {
 
 			c := new(mocks.Client)
 			c.On("Init", ctx).Return(nil).Once()
+			c.On("Validate", ctx).Return(nil).Once()
 			c.On("Plan", ctx).Return(true, tc.planErr).Once()
 			c.On("SetStdout", mock.Anything).Twice()
 			c.On("Apply", ctx).Return(tc.applyErr).Once()
@@ -600,6 +573,64 @@ func TestDisabledTask(t *testing.T) {
 		err = tf.ApplyTask(ctx)
 		assert.NoError(t, err)
 	})
+}
+
+func TestInitTask(t *testing.T) {
+	t.Parallel()
+
+	mockCases := []struct {
+		name        string
+		expectError bool
+		initErr     error
+		validateErr error
+	}{
+		{
+			"happy path",
+			false,
+			nil,
+			nil,
+		},
+		{
+			"init workspace error",
+			true,
+			errors.New("error on init()"),
+			nil,
+		},
+		{
+			"validate error",
+			true,
+			nil,
+			errors.New("error on validate()"),
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range mockCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dirName := "init-task-test"
+			delete := testutils.MakeTempDir(t, dirName)
+			defer delete()
+
+			c := new(mocks.Client)
+			c.On("Init", ctx).Return(tc.initErr).Once()
+			c.On("Validate", ctx).Return(tc.validateErr)
+
+			tf := &Terraform{
+				mu:         &sync.RWMutex{},
+				task:       &Task{name: "InitTaskTest", enabled: true},
+				workingDir: dirName,
+				client:     c,
+				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
+			}
+
+			err := tf.initTask(ctx)
+			if !tc.expectError {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
 }
 
 // testHandler returns a fake handler that can return an error or not on Do()

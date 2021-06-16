@@ -148,7 +148,7 @@ func (tf *Terraform) Task() *Task {
 
 // InitTask initializes the task by creating the Terraform root module and related
 // files to execute on.
-func (tf *Terraform) InitTask(context.Context) error {
+func (tf *Terraform) InitTask(ctx context.Context) error {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
@@ -158,7 +158,7 @@ func (tf *Terraform) InitTask(context.Context) error {
 		return nil
 	}
 
-	return tf.initTask()
+	return tf.initTask(ctx)
 }
 
 // SetBufferPeriod sets the buffer period for the task. Do not set this when
@@ -280,7 +280,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 	}
 
 	if reinit {
-		if err := tf.initTask(); err != nil {
+		if err := tf.initTask(ctx); err != nil {
 			return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to init "+
 				"task: %s", taskName, err)
 		}
@@ -318,19 +318,6 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 	return InspectPlan{}, nil
 }
 
-// ValidateTask validates the generated configurations
-func (tf *Terraform) ValidateTask(ctx context.Context) error {
-	tf.mu.Lock()
-	defer tf.mu.Unlock()
-
-	if !tf.task.IsEnabled() {
-		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"validating", tf.task.Name())
-		return nil
-	}
-	return tf.validateTask(ctx)
-}
-
 // init initializes the Terraform workspace if needed
 func (tf *Terraform) init(ctx context.Context) error {
 	taskName := tf.task.Name()
@@ -350,7 +337,7 @@ func (tf *Terraform) init(ctx context.Context) error {
 }
 
 // initTask initializes the task
-func (tf *Terraform) initTask() error {
+func (tf *Terraform) initTask(ctx context.Context) error {
 	input := tftmpl.RootModuleInputData{
 		TerraformVersion: TerraformVersion,
 		Backend:          tf.backend,
@@ -370,6 +357,19 @@ func (tf *Terraform) initTask() error {
 	// task will require re-initializing terraform. Reset to false so terraform
 	// will reinit
 	tf.inited = false
+
+	// initialize workspace
+	taskName := tf.task.Name()
+	if err := tf.init(ctx); err != nil {
+		log.Printf("[ERR] (driver.terraform) error initializing workspace "+
+			"for task '%s'", taskName)
+		return err
+	}
+
+	// validate workspace
+	if err := tf.validateTask(ctx); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -413,12 +413,6 @@ func (tf *Terraform) renderTemplate(ctx context.Context) (bool, error) {
 func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (InspectPlan, error) {
 	taskName := tf.task.Name()
 
-	if err := tf.init(ctx); err != nil {
-		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
-			"skipping plan for '%s'", taskName)
-		return InspectPlan{}, err
-	}
-
 	var buf bytes.Buffer
 	if returnPlan {
 		tf.client.SetStdout(&buf)
@@ -448,12 +442,6 @@ func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (InspectP
 // applyTask applies the task changes.
 func (tf *Terraform) applyTask(ctx context.Context) error {
 	taskName := tf.task.Name()
-
-	if err := tf.init(ctx); err != nil {
-		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
-			"skipping apply for '%s'", taskName)
-		return err
-	}
 
 	log.Printf("[TRACE] (driver.terraform) apply '%s'", taskName)
 	if err := tf.client.Apply(ctx); err != nil {
@@ -511,14 +499,6 @@ func (tf *Terraform) initTaskTemplate() error {
 }
 
 func (tf *Terraform) validateTask(ctx context.Context) error {
-	taskName := tf.task.Name()
-
-	if err := tf.init(ctx); err != nil {
-		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
-			"skipping validate for '%s'", taskName)
-		return err
-	}
-
 	err := tf.client.Validate(ctx)
 	if err != nil {
 		return err
