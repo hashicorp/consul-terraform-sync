@@ -361,8 +361,8 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 	// initialize workspace
 	taskName := tf.task.Name()
 	if err := tf.init(ctx); err != nil {
-		log.Printf("[ERR] (driver.terraform) error initializing workspace, "+
-			"skipping validate for '%s'", taskName)
+		log.Printf("[ERR] (driver.terraform) error initializing workspace "+
+			"for task '%s'", taskName)
 		return err
 	}
 
