@@ -23,15 +23,14 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
 	github.com/hashicorp/go-syslog v1.0.0
-	github.com/hashicorp/go-tfe v0.12.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.3.0
-	github.com/hashicorp/hcat v0.0.0-20210519214441-ed61ff082586
+	github.com/hashicorp/hcat v0.0.0-20210621161842-de0babeb95b0
 	github.com/hashicorp/hcl v1.0.1-vault-2
 	github.com/hashicorp/hcl/v2 v2.8.2
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/terraform-exec v0.13.3
-	github.com/hashicorp/terraform-json v0.10.0 // indirect
+	github.com/hashicorp/terraform-json v0.10.0
 	github.com/hashicorp/vault/api v1.1.0
 	github.com/hashicorp/vault/sdk v0.2.0 // indirect
 	github.com/klauspost/compress v1.11.7 // indirect
