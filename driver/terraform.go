@@ -487,6 +487,15 @@ func (tf *Terraform) initTaskTemplate() error {
 		Renderer:     renderer,
 		FuncMapMerge: tmplfunc.HCLMap(metaMap),
 	})
+
+	if tf.template != nil && tf.template.ID() == tmpl.ID() {
+		// if the new template ID is the same as an existing one (e.g. during a
+		// task update), then the template content is the same. Template
+		// content must be unique.
+		// See: https://github.com/hashicorp/consul-terraform-sync/pull/167
+		return nil
+	}
+
 	switch tf.task.Condition().(type) {
 	case *config.CatalogServicesConditionConfig:
 		tf.template = notifier.NewCatalogServicesRegistration(tmpl,
