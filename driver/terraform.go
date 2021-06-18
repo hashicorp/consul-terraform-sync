@@ -408,6 +408,14 @@ func (tf *Terraform) renderTemplate(ctx context.Context) (bool, error) {
 			tf.task.Name, err)
 	}
 
+	// result.NoChange can occur when template rendering is forced even though
+	// there may be no dependency changes rather than naturally triggered
+	// e.g. when a task is re-enabled
+	if result.NoChange {
+		log.Printf("[DEBUG] (driver.terraform) no changes detected for task %s", taskName)
+		return true, nil
+	}
+
 	// result.Complete is only `true` if the template has new data that has been
 	// completely fetched.
 	if result.Complete {
