@@ -507,12 +507,21 @@ func (tf *Terraform) initTaskTemplate() error {
 		Perms: filePerms,
 	})
 
-	tf.template = hcat.NewTemplate(hcat.TemplateInput{
+	tmpl := hcat.NewTemplate(hcat.TemplateInput{
 		Contents:     string(content),
 		Renderer:     renderer,
 		FuncMapMerge: tftmpl.HCLTmplFuncMap(tf.task.UserDefinedMeta),
 	})
 
+	if tf.template != nil && tf.template.ID() == tmpl.ID() {
+		// if the new template ID is the same as an existing one (e.g. during a
+		// task update), then the template content is the same. Template
+		// content must be unique.
+		// See: https://github.com/hashicorp/consul-terraform-sync/pull/167
+		return nil
+	}
+
+	tf.template = tmpl
 	return nil
 }
 
