@@ -122,11 +122,33 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
-	plan, err := d.UpdateTask(ctx, patch)
-	if err != nil {
+	var storedErr error
+	if runOp == driver.RunOptionNow {
+		task := d.Task()
+		ev, err := event.NewEvent(taskName, &event.Config{
+			Providers: task.ProviderNames(),
+			Services:  task.ServiceNames(),
+			Source:    task.Source(),
+		})
+		if err != nil {
+			log.Printf("[ERROR] (api.task) error creating event for task %q: %s",
+				taskName, err)
+		}
+		defer func() {
+			ev.End(storedErr)
+			log.Printf("[TRACE] (api.task) adding event %s", ev.GoString())
+			if err := h.store.Add(*ev); err != nil {
+				log.Printf("[ERROR] (api.task) error storing event %s", ev.GoString())
+			}
+		}()
+		ev.Start()
+	}
+	var plan driver.InspectPlan
+	plan, storedErr = d.UpdateTask(ctx, patch)
+	if storedErr != nil {
 		log.Printf("[TRACE] (api.task) error while updating task '%s': %s",
-			taskName, err)
-		jsonErrorResponse(w, http.StatusInternalServerError, err)
+			taskName, storedErr)
+		jsonErrorResponse(w, http.StatusInternalServerError, storedErr)
 		return
 	}
 

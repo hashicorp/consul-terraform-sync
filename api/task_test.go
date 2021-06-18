@@ -161,6 +161,14 @@ func TestTask_updateTask(t *testing.T) {
 			errors.New("error updating task"),
 		},
 		{
+			"error when updating task with run-now",
+			"/v1/tasks/task_a?run=now",
+			`{"enabled": true}`,
+			http.StatusInternalServerError,
+			driver.InspectPlan{},
+			errors.New("error updating task"),
+		},
+		{
 			"invalid run option",
 			"/v1/tasks/task_a?run=bad-run-option",
 			`{"enabled": true}`,
@@ -176,9 +184,11 @@ func TestTask_updateTask(t *testing.T) {
 			d := new(mocks.Driver)
 			d.On("UpdateTask", mock.Anything, mock.Anything).
 				Return(tc.updateTaskRet, tc.updateTaskErr).Once()
+			d.On("Task").Return(&driver.Task{}).Once()
 			drivers.Add("task_a", d)
 
-			handler := newTaskHandler(event.NewStore(), drivers, "v1")
+			store := event.NewStore()
+			handler := newTaskHandler(store, drivers, "v1")
 
 			r := strings.NewReader(tc.body)
 			req, err := http.NewRequest(http.MethodPatch, tc.path, r)
@@ -198,6 +208,24 @@ func TestTask_updateTask(t *testing.T) {
 				assert.Nil(t, actual.Inspect)
 			} else {
 				assert.Equal(t, tc.updateTaskRet, *actual.Inspect)
+			}
+
+			eventStored := strings.Contains(tc.path, "run=now")
+			data := store.Read("task_a")
+			events, ok := data["task_a"]
+			if !eventStored {
+				assert.False(t, ok)
+				return
+			}
+			require.True(t, ok)
+			assert.Len(t, events, 1, "expected one event")
+			event := events[0]
+			if tc.updateTaskErr == nil {
+				assert.True(t, event.Success)
+				assert.Nil(t, event.EventError)
+			} else {
+				assert.False(t, event.Success)
+				assert.NotNil(t, event.EventError)
 			}
 		})
 	}
