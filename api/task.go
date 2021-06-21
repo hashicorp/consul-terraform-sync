@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 )
 
 const taskPath = "tasks"
@@ -131,14 +132,19 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 			Source:    task.Source(),
 		})
 		if err != nil {
-			log.Printf("[ERROR] (api.task) error creating event for task %q: %s",
-				taskName, err)
+			err = errors.Wrap(err, fmt.Sprintf("error creating task update"+
+				"event for %q", taskName))
+			log.Printf("[ERROR] (api.task) %s", err)
+			jsonErrorResponse(w, http.StatusInternalServerError, err)
+			return
 		}
 		defer func() {
 			ev.End(storedErr)
 			log.Printf("[TRACE] (api.task) adding event %s", ev.GoString())
 			if err := h.store.Add(*ev); err != nil {
-				log.Printf("[ERROR] (api.task) error storing event %s", ev.GoString())
+				// only log error since update task occurred successfully by now
+				log.Printf("[ERROR] (api.task) error storing event %s: %s",
+					ev.GoString(), err)
 			}
 		}()
 		ev.Start()
