@@ -129,7 +129,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		ev, err := event.NewEvent(taskName, &event.Config{
 			Providers: task.ProviderNames(),
 			Services:  task.ServiceNames(),
-			Source:    task.Source(),
+			Source:    task.Source,
 		})
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("error creating task update"+

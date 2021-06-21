@@ -184,7 +184,7 @@ func TestTask_updateTask(t *testing.T) {
 			d := new(mocks.Driver)
 			d.On("UpdateTask", mock.Anything, mock.Anything).
 				Return(tc.updateTaskRet, tc.updateTaskErr).Once()
-			d.On("Task").Return(&driver.Task{}).Once()
+			d.On("Task").Return(driver.Task{}).Once()
 			drivers.Add("task_a", d)
 
 			store := event.NewStore()
