@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 )
 
 const taskPath = "tasks"
@@ -122,11 +123,38 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
-	plan, err := d.UpdateTask(ctx, patch)
-	if err != nil {
+	var storedErr error
+	if runOp == driver.RunOptionNow {
+		task := d.Task()
+		ev, err := event.NewEvent(taskName, &event.Config{
+			Providers: task.ProviderNames(),
+			Services:  task.ServiceNames(),
+			Source:    task.Source(),
+		})
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("error creating task update"+
+				"event for %q", taskName))
+			log.Printf("[ERROR] (api.task) %s", err)
+			jsonErrorResponse(w, http.StatusInternalServerError, err)
+			return
+		}
+		defer func() {
+			ev.End(storedErr)
+			log.Printf("[TRACE] (api.task) adding event %s", ev.GoString())
+			if err := h.store.Add(*ev); err != nil {
+				// only log error since update task occurred successfully by now
+				log.Printf("[ERROR] (api.task) error storing event %s: %s",
+					ev.GoString(), err)
+			}
+		}()
+		ev.Start()
+	}
+	var plan driver.InspectPlan
+	plan, storedErr = d.UpdateTask(ctx, patch)
+	if storedErr != nil {
 		log.Printf("[TRACE] (api.task) error while updating task '%s': %s",
-			taskName, err)
-		jsonErrorResponse(w, http.StatusInternalServerError, err)
+			taskName, storedErr)
+		jsonErrorResponse(w, http.StatusInternalServerError, storedErr)
 		return
 	}
 
