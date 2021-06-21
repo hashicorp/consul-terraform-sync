@@ -44,6 +44,11 @@ func (_m *Watcher) Complete(_a0 hcat.Notifier) bool {
 	return r0
 }
 
+// Mark provides a mock function with given fields: notifier
+func (_m *Watcher) Mark(notifier hcat.IDer) {
+	_m.Called(notifier)
+}
+
 // Recaller provides a mock function with given fields: _a0
 func (_m *Watcher) Recaller(_a0 hcat.Notifier) hcat.Recaller {
 	ret := _m.Called(_a0)
@@ -89,6 +94,11 @@ func (_m *Watcher) Size() int {
 // Stop provides a mock function with given fields:
 func (_m *Watcher) Stop() {
 	_m.Called()
+}
+
+// Sweep provides a mock function with given fields: notifier
+func (_m *Watcher) Sweep(notifier hcat.IDer) {
+	_m.Called(notifier)
 }
 
 // WaitCh provides a mock function with given fields: _a0
