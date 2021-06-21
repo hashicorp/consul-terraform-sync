@@ -12,6 +12,7 @@ FEATURES:
 BUG FIXES:
 - Add support for relative paths for task variable files [[GH-279](https://github.com/hashicorp/consul-terraform-sync/issues/279), [GH-288](https://github.com/hashicorp/consul-terraform-sync/pull/288)]
 - Fix Terraform installation issue when path is set to an empty string [[GH-212](https://github.com/hashicorp/consul-terraform-sync/issues/212), [GH-297](https://github.com/hashicorp/consul-terraform-sync/pull/297)]
+- Fix missing event when task was enabled and executed using the CLI enable sub command [[GH-318](https://github.com/hashicorp/consul-terraform-sync/issues/318), [GH-319](https://github.com/hashicorp/consul-terraform-sync/issues/319)]
 
 ## 0.1.2 (April 28, 2021)
 
