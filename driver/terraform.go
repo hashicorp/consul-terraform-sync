@@ -521,12 +521,18 @@ func (tf *Terraform) initTaskTemplate() error {
 		FuncMapMerge: tftmpl.HCLTmplFuncMap(tf.task.UserDefinedMeta),
 	})
 
-	if tf.template != nil && tf.template.ID() == tmpl.ID() {
-		// if the new template ID is the same as an existing one (e.g. during a
-		// task update), then the template content is the same. Template
-		// content must be unique.
-		// See: https://github.com/hashicorp/consul-terraform-sync/pull/167
-		return nil
+	if tf.template != nil {
+		if tf.template.ID() == tmpl.ID() {
+			// if the new template ID is the same as an existing one (e.g.
+			// during a task update), then the template content is the same.
+			// Template content must be unique.
+			// See: https://github.com/hashicorp/consul-terraform-sync/pull/167
+			return nil
+		}
+
+		// cleanup old template from watcher
+		tf.watcher.Mark(tf.template)
+		tf.watcher.Sweep(tf.template)
 	}
 
 	tf.template = tmpl
