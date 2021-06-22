@@ -44,10 +44,11 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 		Address: "5.6.7.8",
 		Port:    8080,
 	}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-
-	// wait and then retrieve status
-	time.Sleep(7 * time.Second)
+	now := time.Now()
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, fakeFailureTaskName, now, defaultWaitForEvent)
+	api.WaitForEvent(t, cts, fakeSuccessTaskName, now, defaultWaitForEvent)
 
 	taskCases := []struct {
 		name       string

@@ -4,9 +4,6 @@ package e2e
 
 import (
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -135,9 +132,11 @@ func TestE2ERestartConsul(t *testing.T) {
 	time.Sleep(5 * time.Second)
 
 	// register a new service
+	now := time.Now()
 	apiInstance := testutil.TestService{ID: "api_new", Name: "api"}
-	testutils.RegisterConsulService(t, consul, apiInstance, testutil.HealthPassing)
-	time.Sleep(8 * time.Second)
+	testutils.RegisterConsulService(t, consul, apiInstance,
+		testutil.HealthPassing, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
 
 	// confirm that CTS reconnected with Consul and created resource for latest service
 	_, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_api_new.txt", tempDir, resourcesDir))

@@ -40,7 +40,7 @@ func TestRenderTemplate(t *testing.T) {
 		{
 			"happy path: no changes",
 			false,
-			true,
+			false,
 			nil,
 			nil,
 			hcat.ResolveEvent{NoChange: true},
@@ -59,7 +59,7 @@ func TestRenderTemplate(t *testing.T) {
 			false,
 			nil,
 			errors.New("error on resolver.Run()"),
-			hcat.ResolveEvent{Complete: true},
+			hcat.ResolveEvent{},
 		},
 		{
 			"error on template.Render()",

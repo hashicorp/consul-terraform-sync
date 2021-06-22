@@ -86,8 +86,16 @@ task {
 		testutils.RegisterConsulService(t, srv, apiInstance, testutil.HealthPassing)
 		testutils.RegisterConsulService(t, srv, webInstance, testutil.HealthPassing)
 
-		// Wait for CTS to detect changes and run tasks
-		time.Sleep(15 * time.Second)
+		now := time.Now()
+		testutils.RegisterConsulService(t, srv, apiInstance,
+			testutil.HealthPassing, defaultWaitForRegistration)
+		api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForEvent) // only check one task
+
+		now = time.Now()
+		testutils.RegisterConsulService(t, srv, webInstance,
+			testutil.HealthPassing, defaultWaitForRegistration)
+		// takes a little longer due to consecutive registrations
+		api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForEvent*2)
 
 		// Verify updated Catalog information is reflected in terraform.tfvars
 		expectedTaskServices := map[string][]string{
