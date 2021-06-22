@@ -49,9 +49,9 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 		Address: "5.6.7.8",
 		Port:    8080,
 	}
+	now := time.Now()
 	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
 		defaultWaitForRegistration)
-	now := time.Now()
 	api.WaitForEvent(t, cts, fakeFailureTaskName, now, defaultWaitForEvent)
 	api.WaitForEvent(t, cts, fakeSuccessTaskName, now, defaultWaitForEvent)
 

@@ -5,8 +5,8 @@ package e2e
 import (
 	"bytes"
 	"fmt"
-	"path/filepath"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -155,10 +155,11 @@ func TestE2ERestartConsul(t *testing.T) {
 	time.Sleep(5 * time.Second)
 
 	// register a new service
+	now := time.Now()
 	apiInstance := testutil.TestService{ID: "api_new", Name: "api"}
 	testutils.RegisterConsulService(t, consul, apiInstance,
 		testutil.HealthPassing, defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, dbTaskName, time.Now(), defaultWaitForEvent)
+	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
 
 	// confirm that CTS reconnected with Consul and created resource for latest service
 	resourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
@@ -290,7 +291,7 @@ func TestE2EValidateError(t *testing.T) {
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "validate_errors")
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
-	
+
 	configPath := filepath.Join(tempDir, configFile)
 	taskName := "cts_error_task"
 	conditionTask := fmt.Sprintf(`task {

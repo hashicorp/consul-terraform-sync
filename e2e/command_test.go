@@ -234,18 +234,21 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 	output, err := runSubcommand(t, "", subcmd...)
 	assert.NoError(t, err, output)
 
+	now := time.Now()
 	subcmd = []string{"task", "enable", fmt.Sprintf("-port=%d", cts.Port()), dbTaskName}
 	output, err = runSubcommand(t, "yes\n", subcmd...)
 	assert.NoError(t, err, output)
+	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
 
 	// 1. get current number of events
 	eventCountBase := eventCount(t, dbTaskName, cts.Port())
 
 	// 2. register api service. check triggers task
+	now = time.Now()
 	service := testutil.TestService{ID: "api-1", Name: "api"}
 	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
 		defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, dbTaskName, time.Now(), defaultWaitForEvent)
+	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
 
 	eventCountNow := eventCount(t, dbTaskName, cts.Port())
 	require.Equal(t, eventCountBase+1, eventCountNow,
