@@ -103,7 +103,9 @@ func WaitForEvent(t *testing.T, client *Client, taskName string, start time.Time
 					continue
 				}
 				mostRecent := task.Events[0]
-				if mostRecent.EndTime.After(start) {
+				if mostRecent.StartTime.After(start) && mostRecent.EndTime.After(start) {
+					// start is the time before a trigger occurs, so this checks if the
+					// most recent event started and completed after the trigger
 					polling <- struct{}{}
 					return
 				}

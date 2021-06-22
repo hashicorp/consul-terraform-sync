@@ -233,10 +233,11 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	assert.Contains(t, content, "catalog_services = {\n}")
 
 	// 2. Register a matched service "api-web"
+	now := time.Now()
 	service = testutil.TestService{ID: "api-web-1", Name: "api-web"}
 	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
 		defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
 	require.Equal(t, eventCountBase+1, eventCountNow,
@@ -311,10 +312,10 @@ task {
 	allResourcesPath := filepath.Join(tempDir, allTaskName, resourcesDir)
 
 	// 1. Register api, all tasks create resource
+	now := time.Now()
 	service := testutil.TestService{ID: "api-1", Name: "api"}
 	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
 		defaultWaitForRegistration)
-	now := time.Now()
 	// wait longer than default since more tasks are being executed
 	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent*2)
 	api.WaitForEvent(t, cts, apiWebTaskName, now, defaultWaitForEvent*2)
@@ -325,10 +326,10 @@ task {
 	testutils.CheckFile(t, true, apiResourcesPath, "api_tags.txt")
 
 	// 2. Register web, only all_task and api_web_task create resource
+	now = time.Now()
 	service = testutil.TestService{ID: "web-1", Name: "web"}
 	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
 		defaultWaitForRegistration)
-	now = time.Now()
 	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent*2)
 	api.WaitForEvent(t, cts, apiWebTaskName, now, defaultWaitForEvent*2)
 
@@ -337,10 +338,11 @@ task {
 	testutils.CheckFile(t, false, apiResourcesPath, "web_tags.txt")
 
 	// 3. Register db, only all_task create resource
+	now = time.Now()
 	service = testutil.TestService{ID: "db-1", Name: "db"}
 	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
 		defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, allTaskName, time.Now(), defaultWaitForEvent)
+	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent)
 	time.Sleep(defaultWaitForNoEvent) // ensure api_web_task & api_task don't trigger
 
 	testutils.CheckFile(t, true, allResourcesPath, "db_tags.txt")
@@ -380,16 +382,18 @@ func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirNa
 	testutils.CheckFile(t, false, resourcesPath, resource)
 
 	// 1. Register api, resource created
+	now := time.Now()
 	service := testutil.TestService{ID: "api-1", Name: "api"}
 	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
 		defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 
 	testutils.CheckFile(t, true, resourcesPath, resource)
 
 	// 2. Deregister api, resource destroyed
+	now = time.Now()
 	testutils.DeregisterConsulService(t, srv, "api-1")
-	api.WaitForEvent(t, cts, taskName, time.Now(),
+	api.WaitForEvent(t, cts, taskName, now,
 		defaultWaitForRegistration+defaultWaitForEvent)
 	testutils.CheckFile(t, false, resourcesPath, resource)
 
@@ -451,10 +455,11 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	assert.NotContains(t, content, "api-2")
 
 	// 2. Register db service (trigger + render template)
+	now := time.Now()
 	service = testutil.TestService{ID: "db-1", Name: "db"}
 	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
 		defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
 	require.Equal(t, eventCountBase+1, eventCountNow,
@@ -522,10 +527,11 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	assert.NotContains(t, content, "tag_b")
 
 	// 2. Register new db service (trigger + render template)
+	now := time.Now()
 	service = testutil.TestService{ID: "db-1", Name: "db", Tags: []string{"tag_c"}}
 	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
 		defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
 	require.Equal(t, eventCountBase+1, eventCountNow,
