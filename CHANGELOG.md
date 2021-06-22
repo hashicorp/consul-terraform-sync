@@ -1,4 +1,4 @@
-## UNRELEASED
+## 0.2.0 (June 22, 2021)
 BREAKING CHANGES:
 * Change task source for local modules to expect path based on directory where CTS is run instead of task directory. [[GH-264](https://github.com/hashicorp/consul-terraform-sync/issues/264),  [GH-283](https://github.com/hashicorp/consul-terraform-sync/pull/283)]
 * Change the empty `namespace` value for `var.services` from `null` to empty string `""`. This effects CTS when used with Consul OSS, and no changes when used with Consul Enterprise where the default namespace value is `"default"`. [[GH-303](https://github.com/hashicorp/consul-terraform-sync/pull/303)]
