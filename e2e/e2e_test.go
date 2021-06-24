@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
@@ -47,8 +48,7 @@ func TestE2EBasic(t *testing.T) {
 		appendDBTask().appendWebTask()
 	config.write(t, configPath)
 
-	err := runSyncStop(configPath, 20*time.Second)
-	require.NoError(t, err)
+	runSyncStop(t, configPath, 20*time.Second)
 
 	files, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, resourcesDir))
 	require.NoError(t, err)
@@ -90,12 +90,10 @@ func TestE2ERestartSync(t *testing.T) {
 	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).appendDBTask()
 	config.write(t, configPath)
 
-	err := runSyncStop(configPath, 8*time.Second)
-	require.NoError(t, err)
+	runSyncStop(t, configPath, 8*time.Second)
 
 	// rerun sync. confirm no errors e.g. recreating workspaces
-	err = runSyncStop(configPath, 8*time.Second)
-	require.NoError(t, err)
+	runSyncStop(t, configPath, 8*time.Second)
 
 	delete()
 }
