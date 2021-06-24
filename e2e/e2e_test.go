@@ -4,6 +4,9 @@ package e2e
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"

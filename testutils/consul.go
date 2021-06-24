@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"path/filepath"
 	"testing"
 	"time"
@@ -14,6 +15,10 @@ import (
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+// defaultTFBackendKVPath is the same as config package. Duplicating to avoid
+// import cycles
+const defaultTFBackendKVPath = "consul-terraform-sync/terraform"
 
 // TestConsulServerConfig configures a test Consul server
 type TestConsulServerConfig struct {

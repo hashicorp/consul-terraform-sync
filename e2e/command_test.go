@@ -4,10 +4,13 @@ package e2e
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
@@ -272,4 +275,21 @@ func runSubcommand(t *testing.T, input string, subcmd ...string) (string, error)
 
 	err = cmd.Wait()
 	return b.String(), err
+}
+
+// eventCount returns number of events that are stored for a given task by
+// querying the Task Status API. Note: events have a storage limit (currently 5)
+func eventCount(t *testing.T, taskName string, port int) int {
+	u := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s?include=events",
+		port, "v1", taskName)
+	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	var taskStatuses map[string]api.TaskStatus
+	decoder := json.NewDecoder(resp.Body)
+	err := decoder.Decode(&taskStatuses)
+	require.NoError(t, err)
+	taskStatus, ok := taskStatuses[taskName]
+	require.True(t, ok)
+	return len(taskStatus.Events)
 }
