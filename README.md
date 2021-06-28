@@ -1,8 +1,8 @@
 [![CircleCI](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/master.svg?style=svg&circle-token=a88491ffa8b02149fc483c29c6b8b91ed771f5a5)](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/master)
 
-# Consul Terraform Sync
+# Consul-Terraform-Sync
 
-Consul Terraform Sync (just Sync from here on) is a service-oriented tool for managing network infrastructure near real-time. Sync runs as a daemon and integrates the network topology maintained by your Consul cluster with your network infrastructure to dynamically secure and connect services.
+Consul-Terraform-Sync (just Sync from here on) is a service-oriented tool for managing network infrastructure near real-time. Sync runs as a daemon and integrates the network topology maintained by your Consul cluster with your network infrastructure to dynamically secure and connect services.
 
 * Website: [consul.io/docs/nia](https://www.consul.io/docs/nia)
 
@@ -14,6 +14,13 @@ Community portal: [discuss.hashicorp.com](https://discuss.hashicorp.com/tags/c/c
 Other resources: [consul.io/community](https://www.consul.io/community)
 
 Additionally, for issues and pull requests, we'll be using the 👍 reactions as a rough voting system to help gauge community priorities. So please add 👍 to any issue or pull request you'd like to see worked on. Thanks.
+
+## Consul-Terraform-Sync Roadmap
+
+Knowing about our upcoming features and priorities helps our users plan. This repository contains information about what we are working on and allows all our user to give direct feedback.
+
+
+[See the roadmap »](https://github.com/hashicorp/consul-terraform-sync/projects/1)
 
 ## Installation
 Sync is a daemon that runs alongside [Consul](https://github.com/hashicorp/consul), similar to other Consul ecosystem tools like [Consul Template](https://github.com/hashicorp/consul-template). Sync is not included with the Consul binary and will need to be installed separately.
@@ -74,3 +81,26 @@ Usage of consul-terraform-sync:
 ## Configuration
 
 [Documentation to configure Sync](https://consul.io/docs/nia/configuration)
+
+## Roadmap FAQs
+**Why did you build this public facing roadmap?**
+
+We know that our customers are making decisions and plans based on what we are developing, and we want to provide our customers the insights they need to plan.
+
+**Why does your roadmap not have specific dates?**
+
+Because the highest priority for us to put out a secure and operationally stable product, we can't provide specific target dates for features. The roadmap is subject to change at any time, and roadmap issues in this repository do not guarantee a feature will be launched as proposed.
+
+**What are the roadmap categories?**
+* *Recently Shipped* - These are the features, enhancements or bug fixes that we recently delivered.
+* *Up Next* - Features, enhancements or bug fixes coming in the next couple of months.
+* *Researching* - This might mean that we are still designing and thinking through how this feature or enhancement might work. We would love to hear from you on how you would like to see something implemented. Additionally, we would like to hear your usecase or design ideas here.
+
+
+**How can I request a feature be added to the roadmap?**
+
+Please open an issue!  Guidelines on how to contribute can be found [here](/CONTRIBUTING.md). Community submitted issues will be tagged "Enhancement" and will be reviewed by the team.
+
+**Will you accept a pull request?**
+
+We want to create a strong community around CTS. We will take all PRs very seriously and review for inclusion. Please read about [contributing](/CONTRIBUTING.md).
