@@ -82,14 +82,16 @@ task {
 			Port:    8080,
 		}
 
+		now := time.Now()
 		testutils.RegisterConsulService(t, srv, apiInstance,
 			testutil.HealthPassing, defaultWaitForRegistration)
-		api.WaitForEvent(t, cts, webTaskName, time.Now(), defaultWaitForEvent) // only check one task
+		api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForEvent) // only check one task
 
+		now = time.Now()
 		testutils.RegisterConsulService(t, srv, webInstance,
 			testutil.HealthPassing, defaultWaitForRegistration)
 		// takes a little longer due to consecutive registrations
-		api.WaitForEvent(t, cts, webTaskName, time.Now(), defaultWaitForEvent*2)
+		api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForEvent*2)
 
 		// Verify updated Catalog information is reflected in terraform.tfvars
 		expectedTaskServices := map[string][]string{
