@@ -17,10 +17,11 @@ Additionally, for issues and pull requests, we'll be using the 👍 reactions as
 
 ## Roadmap
 
-Knowing about our upcoming features and priorities helps our users plan. This repository contains information about what we are working on and allows all our user to give direct feedback.
-
+Knowing about our upcoming features and priorities helps our users plan. This repository contains information about what we are working on and allows all our user to give direct feedback. Please visit the [Roadmap FAQs](#roadmap-faqs) for more information on the categorization of the roadmap
 
 [See the roadmap »](https://github.com/hashicorp/consul-terraform-sync/projects/1)
+
+
 
 ## Installation
 Sync is a daemon that runs alongside [Consul](https://github.com/hashicorp/consul), similar to other Consul ecosystem tools like [Consul Template](https://github.com/hashicorp/consul-template). Sync is not included with the Consul binary and will need to be installed separately.
