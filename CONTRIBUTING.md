@@ -20,7 +20,7 @@ If you're reporting what you think is a bug (i.e., something isn't right with an
 * A reproducible test case or series of steps performed
 * The version of our code being used for our products(CTS version, Consul version, Terraform version, Terraform provider(s) version, etc.)
 * Any modifications you've made relevant to the bug
-* Anything unusual about your environment or deployment
+* Anything unique about your environment or deployment that may be useful to consider for debugging
 
 
 ## Licensing
