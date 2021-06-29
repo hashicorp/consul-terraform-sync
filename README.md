@@ -15,7 +15,7 @@ Other resources: [consul.io/community](https://www.consul.io/community)
 
 Additionally, for issues and pull requests, we'll be using the 👍 reactions as a rough voting system to help gauge community priorities. So please add 👍 to any issue or pull request you'd like to see worked on. Thanks.
 
-## Consul-Terraform-Sync Roadmap
+## Roadmap
 
 Knowing about our upcoming features and priorities helps our users plan. This repository contains information about what we are working on and allows all our user to give direct feedback.
 
