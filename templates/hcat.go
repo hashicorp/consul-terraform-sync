@@ -23,8 +23,9 @@ const DepSizeWarning = 128
 // which implements the interfaces Templater and Renderer
 // https://github.com/hashicorp/hcat
 type Template interface {
+	Notify(interface{}) bool
 	Render(content []byte) (hcat.RenderResult, error)
-	Execute(hcat.Watcherer) ([]byte, error)
+	Execute(hcat.Recaller) ([]byte, error)
 	ID() string
 }
 
@@ -41,9 +42,11 @@ type Resolver interface {
 type Watcher interface {
 	WaitCh(context.Context) <-chan error
 	Buffer(tmplID string) bool
+	Mark(notifier hcat.IDer)
 	SetBufferPeriod(min, max time.Duration, tmplIDs ...string)
 	Size() int
 	Stop()
+	Sweep(notifier hcat.IDer)
 	// not used but needed to meet the hcat.Watcherer interface
 	Complete(hcat.Notifier) bool
 	Recaller(hcat.Notifier) hcat.Recaller

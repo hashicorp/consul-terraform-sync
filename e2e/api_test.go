@@ -4,12 +4,10 @@ package e2e
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -31,29 +29,26 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	port, err := api.FreePort()
-	require.NoError(t, err)
-
 	configPath := filepath.Join(tempDir, configFile)
-	config := fakeHandlerConfig().appendPort(port).
-		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := fakeHandlerConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cmd, err := runSyncDevMode(configPath)
-	require.NoError(t, err)
+	cts, stopCTS := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 
 	// wait to run once before registering another instance to collect another event
-	time.Sleep(7 * time.Second)
+	err := cts.WaitForAPI(defaultWaitForAPI)
+	require.NoError(t, err)
 	service := testutil.TestService{
 		ID:      "api-2",
 		Name:    "api",
 		Address: "5.6.7.8",
 		Port:    8080,
 	}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-
-	// wait and then retrieve status
-	time.Sleep(7 * time.Second)
+	now := time.Now()
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, fakeFailureTaskName, now, defaultWaitForEvent)
+	api.WaitForEvent(t, cts, fakeSuccessTaskName, now, defaultWaitForEvent)
 
 	taskCases := []struct {
 		name       string
@@ -117,7 +112,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 	for _, tc := range taskCases {
 		t.Run(tc.name, func(t *testing.T) {
-			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
+			u := fmt.Sprintf("http://localhost:%d/%s/%s", cts.Port(), "v1", tc.path)
 			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
@@ -171,7 +166,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 	for _, tc := range eventCases {
 		t.Run(tc.name, func(t *testing.T) {
-			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
+			u := fmt.Sprintf("http://localhost:%d/%s/%s", cts.Port(), "v1", tc.path)
 			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
@@ -207,7 +202,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 	for _, tc := range overallCases {
 		t.Run(tc.name, func(t *testing.T) {
-			u := fmt.Sprintf("http://localhost:%d/%s/%s", port, "v1", tc.path)
+			u := fmt.Sprintf("http://localhost:%d/%s/%s", cts.Port(), "v1", tc.path)
 			resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
 			defer resp.Body.Close()
 
@@ -231,8 +226,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 		})
 	}
 
-	err = stopCommand(cmd)
-	require.NoError(t, err)
+	stopCTS(t)
 	delete()
 }
 
@@ -252,18 +246,14 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	port, err := api.FreePort()
-	require.NoError(t, err)
-
 	configPath := filepath.Join(tempDir, configFile)
-	config := disabledTaskConfig().appendPort(port).
-		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := disabledTaskConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cmd, err := runSync(configPath)
-	defer stopCommand(cmd)
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
-	time.Sleep(5 * time.Second)
 
 	// Confirm that terraform files were not generated for a disabled task
 	fileInfos, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, "disabled_task"))
@@ -276,7 +266,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	// Update Task API: enable task with inspect run option
 	baseUrl := fmt.Sprintf("http://localhost:%d/%s/tasks/%s",
-		port, "v1", disabledTaskName)
+		cts.Port(), "v1", disabledTaskName)
 	u := fmt.Sprintf("%s?run=inspect", baseUrl)
 	resp := testutils.RequestHTTP(t, http.MethodPatch, u, `{"enabled":true}`)
 	defer resp.Body.Close()
@@ -319,46 +309,14 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 		Address: "5.6.7.8",
 		Port:    8080,
 	}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing)
-	time.Sleep(3 * time.Second)
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
 
 	// Confirm that resources are not recreated for disabled task
 	confirmDirNotFound(t, resourcesPath)
 
 	delete()
-}
-
-// runSyncDevMode runs the daemon in development which does not run or download
-// Terraform.
-func runSyncDevMode(configPath string) (*exec.Cmd, error) {
-	cmd := exec.Command("consul-terraform-sync",
-		fmt.Sprintf("--config-file=%s", configPath), "--client-type=development")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return cmd, nil
-}
-
-func runSync(configPath string) (*exec.Cmd, error) {
-	cmd := exec.Command("consul-terraform-sync",
-		fmt.Sprintf("--config-file=%s", configPath))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return cmd, nil
-}
-
-func stopCommand(cmd *exec.Cmd) error {
-	cmd.Process.Signal(os.Interrupt)
-	sigintErr := errors.New("signal: interrupt")
-	if err := cmd.Wait(); err != nil && err != sigintErr {
-		return err
-	}
-	return nil
 }
 
 // checkEvents does some basic checks to loosely ensure returned events in

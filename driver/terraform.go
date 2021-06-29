@@ -58,7 +58,8 @@ type Terraform struct {
 	logClient  bool
 	postApply  handler.Handler
 
-	inited bool
+	inited       bool
+	renderedOnce bool
 }
 
 // TerraformConfig configures the Terraform driver
@@ -201,7 +202,8 @@ func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 
-	return tf.renderTemplate(ctx)
+	re, err := tf.renderTemplate(ctx)
+	return re.Complete, err
 }
 
 // InspectTask inspects for any differences pertaining to the task between
@@ -279,12 +281,14 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 		}
 
 		for i := int64(0); ; i++ {
-			rendered, err := tf.renderTemplate(ctx)
+			result, err := tf.renderTemplate(ctx)
 			if err != nil {
 				return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to "+
 					"render template for task: %s", tf.task.Name, err)
 			}
-			if rendered {
+			if result.Complete || (result.NoChange && tf.renderedOnce) {
+				// Continue if the template has completed or the template had already
+				// completed prior to enabling the task and there is no change.
 				break
 			}
 		}
@@ -394,18 +398,25 @@ func (tf *Terraform) initTask(force bool) error {
 }
 
 // renderTemplate attempts to render the hashicat template
-func (tf *Terraform) renderTemplate(ctx context.Context) (bool, error) {
+func (tf *Terraform) renderTemplate(ctx context.Context) (hcat.ResolveEvent, error) {
 	taskName := tf.task.Name
 	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
 
-	var err error
-	var result hcat.ResolveEvent
-	if result, err = tf.resolver.Run(tf.template, tf.watcher); err != nil {
+	result, err := tf.resolver.Run(tf.template, tf.watcher)
+	if err != nil {
 		log.Printf("[ERROR] (driver.terraform) checking dependency changes "+
 			"for '%s': %s", taskName, err)
 
-		return false, fmt.Errorf("error fetching template dependencies for task %s: %s",
-			tf.task.Name, err)
+		return hcat.ResolveEvent{}, fmt.Errorf("error fetching template dependencies for task %s: %s",
+			taskName, err)
+	}
+
+	// result.NoChange can occur when template rendering is forced even though
+	// there may be no dependency changes rather than naturally triggered
+	// e.g. when a task is re-enabled
+	if result.NoChange && tf.renderedOnce {
+		log.Printf("[TRACE] (driver.terraform) no changes detected for task %s", taskName)
+		return result, nil
 	}
 
 	// result.Complete is only `true` if the template has new data that has been
@@ -418,13 +429,14 @@ func (tf *Terraform) renderTemplate(ctx context.Context) (bool, error) {
 			log.Printf("[ERR] (driver.terraform) rendering template for '%s': %s",
 				taskName, err)
 
-			return false, err
+			return hcat.ResolveEvent{}, err
 		}
 		log.Printf("[TRACE] (driver.terraform) template for task %q rendered: %+v",
 			taskName, rendered)
+		tf.renderedOnce = true
 	}
 
-	return result.Complete, nil
+	return result, nil
 }
 
 // inspectTask inspects the task changes. Option to return inspection plan
@@ -507,12 +519,27 @@ func (tf *Terraform) initTaskTemplate() error {
 		Perms: filePerms,
 	})
 
-	tf.template = hcat.NewTemplate(hcat.TemplateInput{
+	tmpl := hcat.NewTemplate(hcat.TemplateInput{
 		Contents:     string(content),
 		Renderer:     renderer,
 		FuncMapMerge: tftmpl.HCLTmplFuncMap(tf.task.UserDefinedMeta),
 	})
 
+	if tf.template != nil {
+		if tf.template.ID() == tmpl.ID() {
+			// if the new template ID is the same as an existing one (e.g.
+			// during a task update), then the template content is the same.
+			// Template content must be unique.
+			// See: https://github.com/hashicorp/consul-terraform-sync/pull/167
+			return nil
+		}
+
+		// cleanup old template from watcher
+		tf.watcher.Mark(tf.template)
+		tf.watcher.Sweep(tf.template)
+	}
+
+	tf.template = tmpl
 	return nil
 }
 

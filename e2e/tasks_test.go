@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,6 @@ func TestTasksUpdate(t *testing.T) {
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "multiple_tasks")
 	delete := testutils.MakeTempDir(t, tempDir)
-	testutils.MakeTempDir(t, tempDir)
 
 	apiTaskName := "e2e_task_api"
 	apiTask := fmt.Sprintf(`
@@ -45,15 +45,13 @@ task {
 		appendDBTask().appendWebTask().appendString(apiTask)
 	config.write(t, configPath)
 
-	cmd, err := runSync(configPath)
-	require.NoError(t, err)
-
-	// Stop CTS then stop the Consul agent
-	defer stopCommand(cmd)
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
 
 	t.Run("once mode", func(t *testing.T) {
 		// Wait for tasks to execute once
-		time.Sleep(15 * time.Second)
+		err := cts.WaitForAPI(defaultWaitForAPI)
+		require.NoError(t, err)
 
 		// Verify Catalog information is reflected in terraform.tfvars
 		expectedTaskServices := map[string][]string{
@@ -84,11 +82,17 @@ task {
 			Address: "5.6.7.8",
 			Port:    8080,
 		}
-		testutils.RegisterConsulService(t, srv, apiInstance, testutil.HealthPassing)
-		testutils.RegisterConsulService(t, srv, webInstance, testutil.HealthPassing)
 
-		// Wait for CTS to detect changes and run tasks
-		time.Sleep(15 * time.Second)
+		now := time.Now()
+		testutils.RegisterConsulService(t, srv, apiInstance,
+			testutil.HealthPassing, defaultWaitForRegistration)
+		api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForEvent) // only check one task
+
+		now = time.Now()
+		testutils.RegisterConsulService(t, srv, webInstance,
+			testutil.HealthPassing, defaultWaitForRegistration)
+		// takes a little longer due to consecutive registrations
+		api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForEvent*2)
 
 		// Verify updated Catalog information is reflected in terraform.tfvars
 		expectedTaskServices := map[string][]string{
@@ -108,7 +112,11 @@ task {
 	t.Run("deregister service", func(t *testing.T) {
 		// Deregister service
 		testutils.DeregisterConsulService(t, srv, "api_new")
-		time.Sleep(15 * time.Second)
+		fullWait := defaultWaitForRegistration + defaultWaitForEvent
+		now := time.Now()
+		api.WaitForEvent(t, cts, apiTaskName, now, fullWait)
+		api.WaitForEvent(t, cts, dbTaskName, now, fullWait)
+		api.WaitForEvent(t, cts, webTaskName, now, fullWait)
 
 		// Verify updated Catalog information is reflected in terraform.tfvars
 		expectedTaskServices := map[string][]string{

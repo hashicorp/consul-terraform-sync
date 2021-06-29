@@ -61,7 +61,7 @@ func TestServe(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	port, err := FreePort()
+	port, err := testutils.FreePort()
 	require.NoError(t, err)
 
 	drivers := driver.NewDrivers()
@@ -104,7 +104,7 @@ func TestServe(t *testing.T) {
 func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
-	port, err := FreePort()
+	port, err := testutils.FreePort()
 	require.NoError(t, err)
 	api := NewAPI(event.NewStore(), driver.NewDrivers(), port)
 
@@ -126,31 +126,6 @@ func TestServe_context_cancel(t *testing.T) {
 	case <-time.After(time.Second * 5):
 		t.Fatal("Run did not exit properly from cancelling context")
 	}
-}
-
-func TestFreePort(t *testing.T) {
-	t.Run("ports_are_not_reused", func(t *testing.T) {
-		a, err := FreePort()
-		require.NoError(t, err)
-		b, err := FreePort()
-		require.NoError(t, err)
-
-		// wait to ensure listener has freed up port
-		time.Sleep(1 * time.Second)
-		c, err := FreePort()
-		require.NoError(t, err)
-
-		time.Sleep(2 * time.Second)
-		d, err := FreePort()
-		require.NoError(t, err)
-
-		assert.NotEqual(t, a, b)
-		assert.NotEqual(t, a, c)
-		assert.NotEqual(t, a, d)
-		assert.NotEqual(t, b, c)
-		assert.NotEqual(t, b, d)
-		assert.NotEqual(t, c, d)
-	})
 }
 
 func TestJsonResponse(t *testing.T) {

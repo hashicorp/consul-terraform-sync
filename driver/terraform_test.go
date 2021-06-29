@@ -30,12 +30,20 @@ func TestRenderTemplate(t *testing.T) {
 		runResult      hcat.ResolveEvent
 	}{
 		{
-			"happy path",
+			"happy path: changes",
 			false,
 			true,
 			nil,
 			nil,
 			hcat.ResolveEvent{Complete: true},
+		},
+		{
+			"happy path: no changes",
+			false,
+			false,
+			nil,
+			nil,
+			hcat.ResolveEvent{NoChange: true},
 		},
 		{
 			"data not completely fetched",
@@ -51,7 +59,7 @@ func TestRenderTemplate(t *testing.T) {
 			false,
 			nil,
 			errors.New("error on resolver.Run()"),
-			hcat.ResolveEvent{Complete: true},
+			hcat.ResolveEvent{},
 		},
 		{
 			"error on template.Render()",

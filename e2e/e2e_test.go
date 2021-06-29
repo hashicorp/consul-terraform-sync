@@ -12,23 +12,34 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-// tempDirPrefix is the prefix for the directory for a given e2e test
-// where files generated from e2e are stored. This directory is
-// destroyed after e2e testing if no errors.
-const tempDirPrefix = "tmp_"
+const (
+	// tempDirPrefix is the prefix for the directory for a given e2e test
+	// where files generated from e2e are stored. This directory is
+	// destroyed after e2e testing if no errors.
+	tempDirPrefix = "tmp_"
 
-// resourcesDir is the sub-directory of tempDir where the
-// Terraform resources created from running consul-terraform-sync are stored
-const resourcesDir = "resources"
+	// resourcesDir is the sub-directory of tempDir where the
+	// Terraform resources created from running consul-terraform-sync are stored
+	resourcesDir = "resources"
 
-// configFile is the name of the sync config file
-const configFile = "config.hcl"
+	// configFile is the name of the sync config file
+	configFile = "config.hcl"
+
+	// liberal default times to wait
+	defaultWaitForRegistration = 8 * time.Second
+	defaultWaitForEvent        = 8 * time.Second
+	defaultWaitForAPI          = 20 * time.Second
+
+	// liberal wait time to ensure event doesn't happen
+	defaultWaitForNoEvent = 6 * time.Second
+)
 
 func TestE2EBasic(t *testing.T) {
 	// Note: no t.Parallel() for this particular test. Choosing this test to run 'first'
@@ -47,8 +58,7 @@ func TestE2EBasic(t *testing.T) {
 		appendDBTask().appendWebTask()
 	config.write(t, configPath)
 
-	err := runSyncStop(configPath, 20*time.Second)
-	require.NoError(t, err)
+	runSyncStop(t, configPath, 20*time.Second)
 
 	files, err := ioutil.ReadDir(fmt.Sprintf("%s/%s", tempDir, resourcesDir))
 	require.NoError(t, err)
@@ -90,12 +100,10 @@ func TestE2ERestartSync(t *testing.T) {
 	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).appendDBTask()
 	config.write(t, configPath)
 
-	err := runSyncStop(configPath, 8*time.Second)
-	require.NoError(t, err)
+	runSyncStop(t, configPath, 8*time.Second)
 
 	// rerun sync. confirm no errors e.g. recreating workspaces
-	err = runSyncStop(configPath, 8*time.Second)
-	require.NoError(t, err)
+	runSyncStop(t, configPath, 8*time.Second)
 
 	delete()
 }
@@ -118,10 +126,11 @@ func TestE2ERestartConsul(t *testing.T) {
 	config.write(t, configPath)
 
 	// start CTS
-	cmd, err := runSync(configPath)
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+	// wait enough for cts to cycle through once-mode successfully
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
-	defer stopCommand(cmd)
-	time.Sleep(5 * time.Second)
 
 	// stop Consul
 	consul.Stop()
@@ -136,9 +145,11 @@ func TestE2ERestartConsul(t *testing.T) {
 	time.Sleep(5 * time.Second)
 
 	// register a new service
+	now := time.Now()
 	apiInstance := testutil.TestService{ID: "api_new", Name: "api"}
-	testutils.RegisterConsulService(t, consul, apiInstance, testutil.HealthPassing)
-	time.Sleep(8 * time.Second)
+	testutils.RegisterConsulService(t, consul, apiInstance,
+		testutil.HealthPassing, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
 
 	// confirm that CTS reconnected with Consul and created resource for latest service
 	_, err = ioutil.ReadFile(fmt.Sprintf("%s/%s/consul_service_api_new.txt", tempDir, resourcesDir))
@@ -168,8 +179,7 @@ func TestE2EPanosHandlerError(t *testing.T) {
 		appendTerraformBlock(tempDir, requiredProviders)
 	config.write(t, configPath)
 
-	err := runSyncOnce(configPath)
-	require.Error(t, err)
+	api.StartCTS(t, configPath, api.CTSOnceModeFlag)
 
 	delete()
 }
@@ -247,8 +257,7 @@ func TestE2ELocalBackend(t *testing.T) {
 			configPath := filepath.Join(tempDir, configFile)
 			config.write(t, configPath)
 
-			err := runSyncOnce(configPath)
-			require.NoError(t, err)
+			api.StartCTS(t, configPath, api.CTSOnceModeFlag)
 
 			// check that statefile was created locally
 			exists, err := checkStateFileLocally(tc.dbStateFilePath)
@@ -279,13 +288,10 @@ func newTestConsulServer(t *testing.T) *testutil.TestServer {
 	return srv
 }
 
-func runSyncStop(configPath string, dur time.Duration) error {
-	cmd, err := runSync(configPath)
-	if err != nil {
-		return err
-	}
-	time.Sleep(dur)
-	return stopCommand(cmd)
+func runSyncStop(t *testing.T, configPath string, dur time.Duration) {
+	cts, stop := api.StartCTS(t, configPath)
+	cts.WaitForAPI(dur)
+	stop(t)
 }
 
 func runSyncOnce(configPath string) error {

@@ -4,7 +4,9 @@ package e2e
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
+	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,18 +30,14 @@ func TestE2E_MetaCOmmandErrors(t *testing.T) {
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	port, err := api.FreePort()
-	require.NoError(t, err)
-
 	configPath := filepath.Join(tempDir, configFile)
-	config := fakeHandlerConfig().appendPort(port).
-		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := fakeHandlerConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cmd, err := runSyncDevMode(configPath)
-	defer stopCommand(cmd)
+	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
+	defer stop(t)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
-	time.Sleep(5 * time.Second)
 
 	cases := []struct {
 		name           string
@@ -57,12 +56,12 @@ func TestE2E_MetaCOmmandErrors(t *testing.T) {
 		},
 		{
 			"non-existing task",
-			[]string{fmt.Sprintf("-port=%d", port), "non-existent-task"},
+			[]string{fmt.Sprintf("-port=%d", cts.Port()), "non-existent-task"},
 			"does not exist or has not been initialized yet",
 		},
 		{
 			"out of order arguments",
-			[]string{fakeFailureTaskName, fmt.Sprintf("-port %d", port)},
+			[]string{fakeFailureTaskName, fmt.Sprintf("-port %d", cts.Port())},
 			"All flags are required to appear before positional arguments",
 		},
 	}
@@ -94,18 +93,14 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	port, err := api.FreePort()
-	require.NoError(t, err)
-
 	configPath := filepath.Join(tempDir, configFile)
-	config := disabledTaskConfig().appendPort(port).
-		appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := disabledTaskConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
 	config.write(t, configPath)
 
-	cmd, err := runSyncDevMode(configPath)
-	defer stopCommand(cmd)
+	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
+	defer stop(t)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
-	time.Sleep(5 * time.Second)
 
 	cases := []struct {
 		name           string
@@ -115,13 +110,13 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 	}{
 		{
 			"happy path",
-			[]string{fmt.Sprintf("-port=%d", port), disabledTaskName},
+			[]string{fmt.Sprintf("-port=%d", cts.Port()), disabledTaskName},
 			"yes\n",
 			"enable complete!",
 		},
 		{
 			"user does not approve plan",
-			[]string{fmt.Sprintf("-port=%d", port), disabledTaskName},
+			[]string{fmt.Sprintf("-port=%d", cts.Port()), disabledTaskName},
 			"no\n",
 			"Cancelled enabling task",
 		},
@@ -157,17 +152,15 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	delete := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
-	port, err := api.FreePort()
-	require.NoError(t, err)
-
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig().appendPort(port).appendConsulBlock(srv).appendDBTask()
+	config := baseConfig().appendTerraformBlock(tempDir).
+		appendConsulBlock(srv).appendDBTask()
 	config.write(t, configPath)
 
-	cmd, err := runSyncDevMode(configPath)
-	defer stopCommand(cmd)
+	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
+	defer stop(t)
+	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
-	time.Sleep(5 * time.Second)
 
 	cases := []struct {
 		name           string
@@ -176,7 +169,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	}{
 		{
 			"happy path",
-			[]string{fmt.Sprintf("-port=%d", port), dbTaskName},
+			[]string{fmt.Sprintf("-port=%d", cts.Port()), dbTaskName},
 			"disable complete!",
 		},
 		{
@@ -198,6 +191,65 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	}
 
 	delete()
+}
+
+// TestE2E_ReenableTaskTriggers specifically tests the case were an enabled task
+// is disabled and then re-enabled. It confirms that the task triggered as
+// expected once re-enabled.
+// See https://github.com/hashicorp/consul-terraform-sync/issues/320
+func TestE2E_ReenableTaskTriggers(t *testing.T) {
+	t.Parallel()
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "reenable_trigger")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+
+	configPath := filepath.Join(tempDir, configFile)
+	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).appendDBTask()
+	config.write(t, configPath)
+
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+	err := cts.WaitForAPI(defaultWaitForAPI)
+	require.NoError(t, err)
+
+	// Test that regex filter is filtering service registration information and
+	// task triggers
+	// 0. Setup: disable task, re-enable it
+	// 1. Confirm baseline: check current number of events
+	// 2. Register api service instance. Confirm that the task was triggered
+	//    (one new event)
+
+	// 0. disable then re-enable the task
+	subcmd := []string{"task", "disable", fmt.Sprintf("-port=%d", cts.Port()), dbTaskName}
+	output, err := runSubcommand(t, "", subcmd...)
+	assert.NoError(t, err, output)
+
+	now := time.Now()
+	subcmd = []string{"task", "enable", fmt.Sprintf("-port=%d", cts.Port()), dbTaskName}
+	output, err = runSubcommand(t, "yes\n", subcmd...)
+	assert.NoError(t, err, output)
+	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
+
+	// 1. get current number of events
+	eventCountBase := eventCount(t, dbTaskName, cts.Port())
+
+	// 2. register api service. check triggers task
+	now = time.Now()
+	service := testutil.TestService{ID: "api-1", Name: "api"}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
+
+	eventCountNow := eventCount(t, dbTaskName, cts.Port())
+	require.Equal(t, eventCountBase+1, eventCountNow,
+		"event count did not increment once. task was not triggered as expected")
+
+	cleanup()
 }
 
 // runSubcommand runs a CTS subcommand and its arguments. If user input is
@@ -223,4 +275,21 @@ func runSubcommand(t *testing.T, input string, subcmd ...string) (string, error)
 
 	err = cmd.Wait()
 	return b.String(), err
+}
+
+// eventCount returns number of events that are stored for a given task by
+// querying the Task Status API. Note: events have a storage limit (currently 5)
+func eventCount(t *testing.T, taskName string, port int) int {
+	u := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s?include=events",
+		port, "v1", taskName)
+	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	var taskStatuses map[string]api.TaskStatus
+	decoder := json.NewDecoder(resp.Body)
+	err := decoder.Decode(&taskStatuses)
+	require.NoError(t, err)
+	taskStatus, ok := taskStatuses[taskName]
+	require.True(t, ok)
+	return len(taskStatus.Events)
 }

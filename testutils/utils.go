@@ -4,20 +4,31 @@
 package testutils
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 
-	"github.com/hashicorp/consul-terraform-sync/testutils/sdk"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+// FreePort finds the next free port incrementing upwards. Use for testing.
+func FreePort() (int, error) {
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return 0, err
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err = listener.Close(); err != nil {
+		return 0, err
+	}
+	return port, nil
+}
 
 // MakeTempDir creates a directory in the current path for a test. Caller is
 // responsible for managing the uniqueness of the directory name. Returns a
@@ -36,23 +47,6 @@ func MakeTempDir(t testing.TB, tempDir string) func() error {
 		return os.RemoveAll(tempDir)
 
 	}
-}
-
-// RegisterConsulService regsiters a service to the Consul Catalog. The Consul
-// sdk/testutil package currently does not support a method to register multiple
-// service instances, distinguished by their IDs.
-func RegisterConsulService(tb testing.TB, srv *testutil.TestServer,
-	s testutil.TestService, health string) {
-
-	var body bytes.Buffer
-	enc := json.NewEncoder(&body)
-	require.NoError(tb, enc.Encode(&s))
-
-	u := fmt.Sprintf("http://%s/v1/agent/service/register", srv.HTTPAddr)
-	resp := RequestHTTP(tb, http.MethodPut, u, body.String())
-	defer resp.Body.Close()
-
-	sdk.AddCheck(srv, tb, s.ID, s.ID, testutil.HealthPassing)
 }
 
 func DeregisterConsulService(tb testing.TB, srv *testutil.TestServer, id string) {

@@ -3,7 +3,7 @@ package hcltmpl
 import (
 	"sort"
 
-	"github.com/hashicorp/terraform/configs/hcl2shim"
+	"github.com/hashicorp/consul-terraform-sync/internal/hcl2shim"
 	"github.com/zclconf/go-cty/cty"
 )
 
