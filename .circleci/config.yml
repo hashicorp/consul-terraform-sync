@@ -129,7 +129,7 @@ workflows:
   weekly-benchmarks:
     jobs:
       - vault_integration_tests
-      - benchmarks
+      # - benchmarks (disabling temporarily)
     triggers:
       - schedule:
           # 02:10 UTC every Wednesday
