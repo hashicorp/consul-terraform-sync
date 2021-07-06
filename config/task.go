@@ -45,6 +45,11 @@ type TaskConfig struct {
 	// the default if omitted.
 	Version *string `mapstructure:"version"`
 
+	// The Terraform client version to use for the task when configured with CTS
+	// enterprise and the Terraform Cloud driver. This option is not supported
+	// when using CTS OSS or the Terraform driver.
+	TFVersion *string `mapstructure:"terraform_version"`
+
 	// BufferPeriod configures per-task buffer timers.
 	BufferPeriod *BufferPeriodConfig `mapstructure:"buffer_period"`
 
@@ -91,6 +96,8 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	}
 
 	o.Version = StringCopy(c.Version)
+
+	o.TFVersion = StringCopy(c.TFVersion)
 
 	o.BufferPeriod = c.BufferPeriod.Copy()
 
@@ -153,6 +160,10 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Version = StringCopy(o.Version)
 	}
 
+	if o.TFVersion != nil {
+		r.TFVersion = StringCopy(o.TFVersion)
+	}
+
 	if o.BufferPeriod != nil {
 		r.BufferPeriod = r.BufferPeriod.Merge(o.BufferPeriod)
 	}
@@ -208,6 +219,10 @@ func (c *TaskConfig) Finalize(wd string) {
 
 	if c.Version == nil {
 		c.Version = String("")
+	}
+
+	if c.TFVersion == nil {
+		c.TFVersion = String("")
 	}
 
 	if c.BufferPeriod == nil {
@@ -270,6 +285,13 @@ func (c *TaskConfig) Validate() error {
 		return fmt.Errorf("source for the task is required")
 	}
 
+	if c.TFVersion != nil && *c.TFVersion != "" {
+		return fmt.Errorf("unsupported configuration 'terraform_version' for "+
+			"task %q. This option is available for Consul-Terraform-Sync enterprise "+
+			"when using the Terraform Cloud driver, or configure the Terraform client "+
+			"version within the Terraform driver block", *c.Name)
+	}
+
 	// Restrict only one provider instance per task
 	pNames := make(map[string]bool)
 	for _, p := range c.Providers {
@@ -308,6 +330,7 @@ func (c *TaskConfig) GoString() string {
 		"Source:%s, "+
 		"VarFiles:%s, "+
 		"Version:%s, "+
+		"TFVersion: %s, "+
 		"BufferPeriod:%s, "+
 		"Enabled:%t, "+
 		"Condition:%v"+
@@ -319,6 +342,7 @@ func (c *TaskConfig) GoString() string {
 		StringVal(c.Source),
 		c.VarFiles,
 		StringVal(c.Version),
+		StringVal(c.TFVersion),
 		c.BufferPeriod.GoString(),
 		BoolVal(c.Enabled),
 		c.Condition.GoString(),
