@@ -217,6 +217,30 @@ func TestTaskConfig_Merge(t *testing.T) {
 			&TaskConfig{Version: String("0.0.0")},
 		},
 		{
+			"tf_version_merges",
+			&TaskConfig{TFVersion: String("0.14.0")},
+			&TaskConfig{TFVersion: String("0.15.5")},
+			&TaskConfig{TFVersion: String("0.15.5")},
+		},
+		{
+			"tf_version_empty_one",
+			&TaskConfig{TFVersion: String("0.15.0")},
+			&TaskConfig{},
+			&TaskConfig{TFVersion: String("0.15.0")},
+		},
+		{
+			"tf_version_empty_two",
+			&TaskConfig{},
+			&TaskConfig{TFVersion: String("0.15.0")},
+			&TaskConfig{TFVersion: String("0.15.0")},
+		},
+		{
+			"tf_version_same",
+			&TaskConfig{TFVersion: String("0.15.0")},
+			&TaskConfig{TFVersion: String("0.15.0")},
+			&TaskConfig{TFVersion: String("0.15.0")},
+		},
+		{
 			"enabled_overrides",
 			&TaskConfig{Enabled: Bool(false)},
 			&TaskConfig{Enabled: Bool(true)},
@@ -315,6 +339,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Source:       String(""),
 				VarFiles:     []string{},
 				Version:      String(""),
+				TFVersion:    String(""),
 				BufferPeriod: DefaultTaskBufferPeriodConfig(),
 				Enabled:      Bool(true),
 				Condition:    DefaultConditionConfig(),
@@ -334,6 +359,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Source:       String(""),
 				VarFiles:     []string{},
 				Version:      String(""),
+				TFVersion:    String(""),
 				BufferPeriod: DefaultTaskBufferPeriodConfig(),
 				Enabled:      Bool(true),
 				Condition:    DefaultConditionConfig(),
@@ -451,6 +477,16 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
+			"unsupported TF version per task",
+			&TaskConfig{
+				Name:      String("task"),
+				Services:  []string{"service"},
+				Source:    String("source"),
+				TFVersion: String("0.15.0"),
+			},
+			false,
+		},
+		{
 			"duplicate provider",
 			&TaskConfig{
 				Name:      String("task"),
@@ -491,12 +527,12 @@ func TestTasksConfig_Validate(t *testing.T) {
 		isValid bool
 	}{
 		{
-			"nil",
-			nil,
-			false,
+			name:    "nil",
+			i:       nil,
+			isValid: false,
 		}, {
-			"one task",
-			[]*TaskConfig{
+			name: "one task",
+			i: []*TaskConfig{
 				{
 					Name:      String("task"),
 					Services:  []string{"serviceA", "serviceB"},
@@ -504,10 +540,10 @@ func TestTasksConfig_Validate(t *testing.T) {
 					Providers: []string{"providerA", "providerB"},
 				},
 			},
-			true,
+			isValid: true,
 		}, {
-			"two tasks",
-			[]*TaskConfig{
+			name: "two tasks",
+			i: []*TaskConfig{
 				{
 					Name:      String("task"),
 					Services:  []string{"serviceA", "serviceB"},
@@ -521,10 +557,10 @@ func TestTasksConfig_Validate(t *testing.T) {
 					Providers: []string{"providerC"},
 				},
 			},
-			true,
+			isValid: true,
 		}, {
-			"duplicate task names",
-			[]*TaskConfig{
+			name: "duplicate task names",
+			i: []*TaskConfig{
 				{
 					Name:      String("task"),
 					Services:  []string{"serviceA", "serviceB"},
@@ -537,10 +573,10 @@ func TestTasksConfig_Validate(t *testing.T) {
 					Providers: []string{"providerA"},
 				},
 			},
-			false,
+			isValid: false,
 		}, {
-			"one invalid",
-			[]*TaskConfig{
+			name: "one invalid",
+			i: []*TaskConfig{
 				{
 					Name:      String("task"),
 					Services:  []string{"serviceA", "serviceB"},
@@ -550,16 +586,27 @@ func TestTasksConfig_Validate(t *testing.T) {
 					Name: String("invalid"),
 				},
 			},
-			false,
+			isValid: false,
 		}, {
-			"duplicate provider instances",
-			[]*TaskConfig{
+			name: "duplicate provider instances",
+			i: []*TaskConfig{
 				{
 					Name:      String("task"),
 					Providers: []string{"provider.A", "provider.B"},
 				},
 			},
-			false,
+			isValid: false,
+		}, {
+			name: "unsupported TF version per task",
+			i: []*TaskConfig{
+				{
+					Name:      String("task"),
+					Services:  []string{"serviceA", "serviceB"},
+					Source:    String("source"),
+					TFVersion: String("0.15.0"),
+				},
+			},
+			isValid: false,
 		},
 	}
 
