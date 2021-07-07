@@ -166,7 +166,7 @@ task {
 	name = "%s"
 	description = "task is configured as disabled"
 	enabled = false
-	services = ["api"]
+	services = ["api", "web"]
 	providers = ["local"]
 	source = "./test_modules/local_instances_file"
 }
