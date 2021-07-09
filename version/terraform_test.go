@@ -26,12 +26,16 @@ func TestTerraformConstraint(t *testing.T) {
 			"0.15.0",
 			true,
 		}, {
+			"valid 1.0",
+			"1.0.0",
+			true,
+		}, {
 			"invalid lower bound",
 			"0.12.12",
 			false,
 		}, {
 			"invalid upper bound",
-			"0.16.2",
+			"1.1.0",
 			false,
 		}, {
 			"unsupported beta release",
