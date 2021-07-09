@@ -285,13 +285,13 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 				"task: %s", taskName, err)
 		}
 
-		for i := int64(0); ; i++ {
-			result, err := tf.renderTemplate(ctx)
+		for {
+			rendered, err := tf.renderTemplate(ctx)
 			if err != nil {
 				return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to "+
 					"render template for task: %s", taskName, err)
 			}
-			if result.Complete || (result.NoChange && tf.renderedOnce) {
+			if rendered.Complete || (rendered.NoChange && tf.renderedOnce) {
 				// Continue if the template has completed or the template had already
 				// completed prior to enabling the task and there is no change.
 				break
@@ -417,11 +417,10 @@ func (tf *Terraform) renderTemplate(ctx context.Context) (hcat.ResolveEvent, err
 	if result.Complete {
 		log.Printf("[DEBUG] (driver.terraform) change detected for task %s", taskName)
 
-		var rendered hcat.RenderResult
-		if rendered, err = tf.template.Render(result.Contents); err != nil {
+		rendered, err := tf.template.Render(result.Contents)
+		if err != nil {
 			log.Printf("[ERR] (driver.terraform) rendering template for '%s': %s",
 				taskName, err)
-
 			return hcat.ResolveEvent{}, err
 		}
 		log.Printf("[TRACE] (driver.terraform) template for task %q rendered: %+v",

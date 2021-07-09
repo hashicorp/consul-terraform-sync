@@ -21,10 +21,12 @@ import (
 type Controller interface {
 	// Init initializes elements needed by controller. Returns a map of
 	// taskname to driver
-	Init(ctx context.Context) (*driver.Drivers, error)
+	Init(context.Context) error
 
 	// Run runs the controller by monitoring Consul and triggering the driver as needed
-	Run(ctx context.Context) error
+	Run(context.Context) error
+
+	ServeAPI(context.Context) error
 
 	// Stop stops underlying clients and connections
 	Stop()
@@ -35,20 +37,10 @@ type Oncer interface {
 	Once(ctx context.Context) error
 }
 
-// unit of work per template/task
-type unit struct {
-	taskName string
-	driver   driver.Driver
-
-	providers []string
-	services  []string
-	source    string
-}
-
 type baseController struct {
 	conf      *config.Config
 	newDriver func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error)
-	units     []unit
+	drivers   *driver.Drivers
 	watcher   templates.Watcher
 	resolver  templates.Resolver
 }
@@ -68,6 +60,7 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 	return &baseController{
 		conf:      conf,
 		newDriver: nd,
+		drivers:   driver.NewDrivers(),
 		watcher:   watcher,
 		resolver:  hcat.NewResolver(),
 	}, nil
@@ -77,29 +70,29 @@ func (ctrl *baseController) Stop() {
 	ctrl.watcher.Stop()
 }
 
-func (ctrl *baseController) init(ctx context.Context) (*driver.Drivers, error) {
+func (ctrl *baseController) init(ctx context.Context) error {
 	log.Printf("[INFO] (ctrl) initializing driver")
 
 	// Load provider configuration and evaluate dynamic values
 	providerConfigs, err := ctrl.loadProviderConfigs(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Future: improve by combining tasks into workflows.
 	log.Printf("[INFO] (ctrl) initializing all tasks")
 	tasks, err := newDriverTasks(ctrl.conf, providerConfigs)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	units := make([]unit, 0, len(tasks))
-	drivers := driver.NewDrivers()
+
+	ctrl.drivers.Reset()
 
 	for _, task := range tasks {
 		select {
 		case <-ctx.Done():
 			// Stop initializing remaining tasks if context has stopped.
-			return nil, ctx.Err()
+			return ctx.Err()
 		default:
 		}
 
@@ -107,29 +100,20 @@ func (ctrl *baseController) init(ctx context.Context) (*driver.Drivers, error) {
 		log.Printf("[DEBUG] (ctrl) initializing task %q", taskName)
 		d, err := ctrl.newDriver(ctrl.conf, task, ctrl.watcher)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		err = d.InitTask(ctx)
 		if err != nil {
 			log.Printf("[ERR] (ctrl) error initializing task %q", taskName)
-			return nil, err
+			return err
 		}
 
-		units = append(units, unit{
-			taskName:  taskName,
-			driver:    d,
-			providers: task.ProviderNames(),
-			services:  task.ServiceNames(),
-			source:    task.Source(),
-		})
-
-		drivers.Add(taskName, d)
+		ctrl.drivers.Add(taskName, d)
 	}
-	ctrl.units = units
 
 	log.Printf("[INFO] (ctrl) driver initialized")
-	return drivers, nil
+	return nil
 }
 
 // loadProviderConfigs loads provider configs and evaluates provider blocks

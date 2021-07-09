@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -31,7 +32,7 @@ type ReadWrite struct {
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
-func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
+func NewReadWrite(conf *config.Config) (Controller, error) {
 	baseCtrl, err := newBaseController(conf)
 	if err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
 
 	return &ReadWrite{
 		baseController: baseCtrl,
-		store:          store,
+		store:          event.NewStore(),
 		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		taskNotify:     make(chan string, len(*conf.Tasks)),
 	}, nil
@@ -47,7 +48,7 @@ func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
 
 // Init initializes the controller before it can be run. Ensures that
 // driver is initializes, works are created for each task.
-func (rw *ReadWrite) Init(ctx context.Context) (*driver.Drivers, error) {
+func (rw *ReadWrite) Init(ctx context.Context) error {
 	return rw.init(ctx)
 }
 
@@ -58,9 +59,7 @@ func (rw *ReadWrite) Init(ctx context.Context) (*driver.Drivers, error) {
 func (rw *ReadWrite) Run(ctx context.Context) error {
 	// Only initialize buffer periods for running the full loop and not for Once
 	// mode so it can immediately render the first time.
-	for _, u := range rw.units {
-		u.driver.SetBufferPeriod()
-	}
+	rw.drivers.SetBufferPeriod()
 
 	for i := int64(1); ; i++ {
 		// Blocking on Wait is first as we just ran in Once mode so we want
@@ -79,8 +78,8 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 			return ctx.Err()
 		}
 
-		for err := range rw.runUnits(ctx) {
-			// aggregate error collector for runUnits, just logs everything for now
+		for err := range rw.runTasks(ctx) {
+			// aggregate error collector for runTasks, just logs everything for now
 			log.Printf("[ERR] (ctrl) %s", err)
 		}
 
@@ -90,23 +89,29 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 // A single run through of all the units/tasks/templates
 // Returned error channel closes when done with all units
-func (rw *ReadWrite) runUnits(ctx context.Context) chan error {
+func (rw *ReadWrite) runTasks(ctx context.Context) chan error {
 	// keep error chan and waitgroup here to keep runTask simple (on task)
 	errCh := make(chan error, 1)
 	wg := sync.WaitGroup{}
-	for _, u := range rw.units {
+	for taskName, d := range rw.drivers.Map() {
+		if rw.drivers.IsActive(taskName) {
+			// The driver is currently active with the task, initiated by an ad-hoc run.
+			// There may be updates for other tasks, so we'll continue checking
+			log.Printf("[TRACE] (ctrl) task %q is active", taskName)
+			continue
+		}
 		wg.Add(1)
-		go func(u unit) {
-			complete, err := rw.checkApply(ctx, u, true)
+		go func(taskName string, d driver.Driver) {
+			complete, err := rw.checkApply(ctx, d, true)
 			if err != nil {
 				errCh <- err
 			}
 
 			if rw.testMode && complete {
-				rw.taskNotify <- u.taskName
+				rw.taskNotify <- taskName
 			}
 			wg.Done()
-		}(u)
+		}(taskName, d)
 	}
 
 	go func() {
@@ -122,16 +127,17 @@ func (rw *ReadWrite) runUnits(ctx context.Context) chan error {
 func (rw *ReadWrite) Once(ctx context.Context) error {
 	log.Println("[INFO] (ctrl) executing all tasks once through")
 
-	completed := make(map[string]bool, len(rw.units))
+	driversCopy := rw.drivers.Map()
+	completed := make(map[string]bool, len(driversCopy))
 	for i := int64(0); ; i++ {
 		done := true
-		for _, u := range rw.units {
-			if !completed[u.taskName] {
-				complete, err := rw.checkApply(ctx, u, false)
+		for taskName, d := range driversCopy {
+			if !completed[taskName] {
+				complete, err := rw.checkApply(ctx, d, false)
 				if err != nil {
 					return err
 				}
-				completed[u.taskName] = complete
+				completed[taskName] = complete
 				if !complete && done {
 					done = false
 				}
@@ -155,6 +161,10 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 	}
 }
 
+func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
+	return api.NewAPI(rw.store, rw.drivers, config.IntVal(rw.conf.Port)).Serve(ctx)
+}
+
 // Single run, render, apply of a unit (task).
 //
 // Stores event data on error or on successful _full_ execution of task.
@@ -162,19 +172,19 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 // driver.RenderTemplate() may be called many times per full task execution
 // since there could be many per full task execution i.e. when driver.RenderTemplate()
 // returns false, no event is stored.
-func (rw *ReadWrite) checkApply(ctx context.Context, u unit, retry bool) (bool, error) {
-	taskName := u.taskName
-	d := u.driver
-	if !d.Task().IsEnabled() {
+func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry bool) (bool, error) {
+	task := d.Task()
+	taskName := task.Name()
+	if !task.IsEnabled() {
 		log.Printf("[TRACE] (ctrl) skipping disabled task '%s'", taskName)
 		return true, nil
 	}
 
 	// setup to store event information
 	ev, err := event.NewEvent(taskName, &event.Config{
-		Providers: u.providers,
-		Services:  u.services,
-		Source:    u.source,
+		Providers: task.ProviderNames(),
+		Services:  task.ServiceNames(),
+		Source:    task.Source(),
 	})
 	if err != nil {
 		return false, fmt.Errorf("error creating event for task %s: %s",

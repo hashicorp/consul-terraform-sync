@@ -12,7 +12,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
@@ -66,7 +65,7 @@ func TestNewControllers(t *testing.T) {
 			}
 
 			t.Run("readwrite", func(t *testing.T) {
-				controller, err := NewReadWrite(tc.conf, event.NewStore())
+				controller, err := NewReadWrite(tc.conf)
 				if tc.expectError {
 					assert.Error(t, err)
 					return
@@ -93,10 +92,10 @@ func TestBaseControllerInit(t *testing.T) {
 	conf := singleTaskConfig()
 
 	cases := []struct {
-		name            string
-		expectError     bool
-		initTaskErr     error
-		config          *config.Config
+		name        string
+		expectError bool
+		initTaskErr error
+		config      *config.Config
 	}{
 		{
 			"error on driver.InitTask()",
@@ -122,10 +121,12 @@ func TestBaseControllerInit(t *testing.T) {
 				newDriver: func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 					return d, nil
 				},
-				conf: tc.config,
+				drivers: driver.NewDrivers(),
+				conf:    tc.config,
 			}
+			baseCtrl.drivers.Add("foo", d)
 
-			_, err := baseCtrl.init(ctx)
+			err := baseCtrl.init(ctx)
 
 			if tc.expectError {
 				assert.Error(t, err)

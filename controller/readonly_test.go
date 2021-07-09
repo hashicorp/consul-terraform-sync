@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/hcat"
@@ -52,19 +53,19 @@ func TestReadOnlyRun(t *testing.T) {
 			w := new(mocks.Watcher)
 			w.On("Size").Return(5)
 
+			ctrl := ReadOnly{baseController: &baseController{
+				watcher: w,
+				drivers: driver.NewDrivers(),
+			}}
+
 			d := new(mocksD.Driver)
-			d.On("Task").Return(enabledTestTask(t))
+			d.On("Task").Return(enabledTestTask(t, "foo"))
 			d.On("RenderTemplate", mock.Anything).
 				Return(true, tc.renderTmplErr)
 			d.On("InspectTask", mock.Anything).Return(tc.inspectTaskErr)
+			ctrl.drivers.Add("foo", d)
 
-			ctrl := ReadOnly{baseController: &baseController{
-				watcher: w,
-				units:   []unit{{driver: d}},
-			}}
-			ctx := context.Background()
-
-			err := ctrl.Run(ctx)
+			err := ctrl.Run(context.Background())
 			if tc.expectError {
 				if assert.Error(t, err) {
 					assert.Contains(t, err.Error(), tc.name)
@@ -87,12 +88,15 @@ func TestReadOnlyRun_context_cancel(t *testing.T) {
 		On("Stop").Return()
 
 	d := new(mocksD.Driver)
-	d.On("Task").Return(enabledTestTask(t))
+	d.On("Task").Return(enabledTestTask(t, "foo"))
 	d.On("RenderTemplate", mock.Anything).Return(false, nil)
+	drivers := driver.NewDrivers()
+	drivers.Add("foo", d)
+
 	ctrl := ReadOnly{baseController: &baseController{
 		watcher:  w,
 		resolver: r,
-		units:    []unit{{driver: d}},
+		drivers:  drivers,
 	}}
 
 	ctx, cancel := context.WithCancel(context.Background())

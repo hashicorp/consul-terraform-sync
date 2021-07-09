@@ -2,9 +2,9 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"sort"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
@@ -33,18 +33,8 @@ func NewReadOnly(conf *config.Config) (Controller, error) {
 }
 
 // Init initializes the controller before it can be run
-func (ctrl *ReadOnly) Init(ctx context.Context) (*driver.Drivers, error) {
-	drivers, err := ctrl.init(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Sort units for consistent ordering when inspecting tasks
-	sort.Slice(ctrl.units, func(i, j int) bool {
-		return ctrl.units[i].taskName < ctrl.units[j].taskName
-	})
-
-	return drivers, nil
+func (ctrl *ReadOnly) Init(ctx context.Context) error {
+	return ctrl.init(ctx)
 }
 
 // Run runs the controller in read-only mode by checking Consul catalog once for
@@ -52,16 +42,17 @@ func (ctrl *ReadOnly) Init(ctx context.Context) (*driver.Drivers, error) {
 func (ctrl *ReadOnly) Run(ctx context.Context) error {
 	log.Println("[INFO] (ctrl) inspecting all tasks")
 
-	completed := make(map[string]bool, len(ctrl.units))
+	driversCopy := ctrl.drivers.Map()
+	completed := make(map[string]bool, len(driversCopy))
 	for i := int64(0); ; i++ {
 		done := true
-		for _, u := range ctrl.units {
-			if !completed[u.taskName] {
-				complete, err := ctrl.checkInspect(ctx, u)
+		for taskName, d := range driversCopy {
+			if !completed[taskName] {
+				complete, err := ctrl.checkInspect(ctx, d)
 				if err != nil {
 					return err
 				}
-				completed[u.taskName] = complete
+				completed[taskName] = complete
 				if !complete && done {
 					done = false
 				}
@@ -85,12 +76,16 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 	}
 }
 
-func (ctrl *ReadOnly) checkInspect(ctx context.Context, u unit) (bool, error) {
-	taskName := u.taskName
+func (ctrl *ReadOnly) ServeAPI(ctx context.Context) error {
+	return errors.New("server API is not supported for ReadOnly controller")
+}
+
+func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, error) {
+	task := d.Task()
+	taskName := task.Name()
 
 	log.Printf("[TRACE] (ctrl) checking dependencies changes for task %s", taskName)
 
-	d := u.driver
 	rendered, err := d.RenderTemplate(ctx)
 	if err != nil {
 		return false, fmt.Errorf("error rendering template for task %s: %s",
