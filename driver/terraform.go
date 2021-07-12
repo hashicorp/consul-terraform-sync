@@ -198,12 +198,14 @@ func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
+	taskName := tf.task.Name()
 	if !tf.task.IsEnabled() {
 		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"rendering template", tf.task.Name())
+			"rendering template", taskName)
 		return true, nil
 	}
 
+	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
 	re, err := tf.renderTemplate(ctx)
 	return re.Complete, err
 }
@@ -393,8 +395,6 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 // renderTemplate attempts to render the hashicat template
 func (tf *Terraform) renderTemplate(ctx context.Context) (hcat.ResolveEvent, error) {
 	taskName := tf.task.Name()
-	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
-
 	result, err := tf.resolver.Run(tf.template, tf.watcher)
 	if err != nil {
 		log.Printf("[ERROR] (driver.terraform) checking dependency changes "+
