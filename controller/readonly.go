@@ -76,6 +76,7 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 	}
 }
 
+// ServeAPI runs the API server for the controller
 func (ctrl *ReadOnly) ServeAPI(ctx context.Context) error {
 	return errors.New("server API is not supported for ReadOnly controller")
 }

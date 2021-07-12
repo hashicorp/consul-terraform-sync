@@ -161,6 +161,7 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 	}
 }
 
+// ServeAPI runs the API server for the controller
 func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
 	return api.NewAPI(rw.store, rw.drivers, config.IntVal(rw.conf.Port)).Serve(ctx)
 }
