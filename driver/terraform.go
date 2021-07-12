@@ -346,6 +346,20 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 		Path:             tf.task.WorkingDir(),
 		FilePerms:        filePerms,
 	}
+
+	// convert relative paths to absolute paths for local module sources
+	moduleSource := tf.task.source
+	if strings.HasPrefix(moduleSource, "./") || strings.HasPrefix(moduleSource, "../") {
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Println("[ERR] (driver.terraform) unable to retrieve current " +
+				"working directory to determine path to local module")
+			return err
+		}
+		moduleSource = filepath.Join(wd, tf.task.source)
+		tf.task.source = moduleSource
+	}
+
 	tf.task.configureRootModuleInput(&input)
 	if err := tftmpl.InitRootModule(&input); err != nil {
 		return err

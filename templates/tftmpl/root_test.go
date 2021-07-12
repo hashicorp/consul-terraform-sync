@@ -1,9 +1,6 @@
 package tftmpl
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -174,10 +171,6 @@ func TestAppendRootProviderBlocks(t *testing.T) {
 }
 
 func TestAppendRootModuleBlocks(t *testing.T) {
-	workingDir, err := os.Getwd()
-	require.Nil(t, err, "Error determining current working directory")
-	wdParent := filepath.Dir(workingDir)
-
 	testCases := []struct {
 		name     string
 		task     Task
@@ -243,40 +236,6 @@ module "test" {
   test2 = var.test2
 }
 `},
-		{
-			"local module within current directory",
-			Task{
-				Description: "user description for task named 'test'",
-				Name:        "test",
-				Source:      "./local-test-module",
-				Version:     "1.0.0",
-			},
-			nil,
-			nil,
-			fmt.Sprintf(`# user description for task named 'test'
-module "test" {
-  source   = "%s/local-test-module"
-  version  = "1.0.0"
-  services = var.services
-}
-`, workingDir)},
-		{
-			"local module in parent directory",
-			Task{
-				Description: "user description for task named 'test'",
-				Name:        "test",
-				Source:      "../local-test-module",
-				Version:     "1.0.0",
-			},
-			nil,
-			nil,
-			fmt.Sprintf(`# user description for task named 'test'
-module "test" {
-  source   = "%s/local-test-module"
-  version  = "1.0.0"
-  services = var.services
-}
-`, wdParent)},
 	}
 
 	for _, tc := range testCases {
