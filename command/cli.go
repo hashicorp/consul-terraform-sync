@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -230,7 +229,7 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 
 	go func() {
 		log.Printf("[INFO] (cli) initializing controller")
-		drivers, err := ctrl.Init(ctx)
+		_, err := ctrl.Init(ctx)
 		if err != nil {
 			if err == context.Canceled {
 				exitCh <- struct{}{}
@@ -263,8 +262,7 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 			if isInspect {
 				return
 			}
-			api := api.NewAPI(store, drivers, config.IntVal(conf.Port))
-			if err = api.Serve(ctx); err != nil {
+			if err = ctrl.ServeAPI(ctx); err != nil {
 				if err == context.Canceled {
 					exitCh <- struct{}{}
 					return

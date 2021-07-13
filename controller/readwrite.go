@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -153,6 +154,11 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
+}
+
+// ServeAPI runs the API server for the controller
+func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
+	return api.NewAPI(rw.store, rw.drivers, config.IntVal(rw.conf.Port)).Serve(ctx)
 }
 
 // Single run, render, apply of a unit (task).

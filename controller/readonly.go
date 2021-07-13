@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -83,6 +84,11 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
+}
+
+// ServeAPI runs the API server for the controller
+func (ctrl *ReadOnly) ServeAPI(ctx context.Context) error {
+	return errors.New("server API is not supported for ReadOnly controller")
 }
 
 func (ctrl *ReadOnly) checkInspect(ctx context.Context, u unit) (bool, error) {
