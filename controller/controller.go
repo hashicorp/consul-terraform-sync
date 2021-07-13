@@ -26,6 +26,9 @@ type Controller interface {
 	// Run runs the controller by monitoring Consul and triggering the driver as needed
 	Run(ctx context.Context) error
 
+	// ServeAPI runs the API server for the controller
+	ServeAPI(context.Context) error
+
 	// Stop stops underlying clients and connections
 	Stop()
 }
@@ -48,6 +51,7 @@ type unit struct {
 type baseController struct {
 	conf      *config.Config
 	newDriver func(*config.Config, driver.Task, templates.Watcher) (driver.Driver, error)
+	drivers   *driver.Drivers
 	units     []unit
 	watcher   templates.Watcher
 	resolver  templates.Resolver
@@ -122,6 +126,7 @@ func (ctrl *baseController) init(ctx context.Context) (*driver.Drivers, error) {
 
 		drivers.Add(task.Name, d)
 	}
+	ctrl.drivers = drivers
 	ctrl.units = units
 
 	log.Printf("[INFO] (ctrl) driver initialized")
