@@ -229,7 +229,7 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 
 	go func() {
 		log.Printf("[INFO] (cli) initializing controller")
-		_, err := ctrl.Init(ctx)
+		err := ctrl.Init(ctx)
 		if err != nil {
 			if err == context.Canceled {
 				exitCh <- struct{}{}
