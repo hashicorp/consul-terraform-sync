@@ -38,21 +38,10 @@ type Oncer interface {
 	Once(ctx context.Context) error
 }
 
-// unit of work per template/task
-type unit struct {
-	taskName string
-	driver   driver.Driver
-
-	providers []string
-	services  []string
-	source    string
-}
-
 type baseController struct {
 	conf      *config.Config
 	newDriver func(*config.Config, driver.Task, templates.Watcher) (driver.Driver, error)
 	drivers   *driver.Drivers
-	units     []unit
 	watcher   templates.Watcher
 	resolver  templates.Resolver
 }
@@ -93,7 +82,6 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	// Future: improve by combining tasks into workflows.
 	log.Printf("[INFO] (ctrl) initializing all tasks")
 	tasks := newDriverTasks(ctrl.conf, providerConfigs)
-	units := make([]unit, 0, len(tasks))
 	drivers := driver.NewDrivers()
 
 	for _, task := range tasks {
@@ -115,19 +103,9 @@ func (ctrl *baseController) init(ctx context.Context) error {
 			log.Printf("[ERR] (ctrl) error initializing task %q: %s", task.Name, err)
 			return err
 		}
-
-		units = append(units, unit{
-			taskName:  task.Name,
-			driver:    d,
-			providers: task.ProviderNames(),
-			services:  task.ServiceNames(),
-			source:    task.Source,
-		})
-
 		drivers.Add(task.Name, d)
 	}
 	ctrl.drivers = drivers
-	ctrl.units = units
 
 	log.Printf("[INFO] (ctrl) driver initialized")
 	return nil
