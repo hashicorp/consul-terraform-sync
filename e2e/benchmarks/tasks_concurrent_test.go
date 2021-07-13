@@ -61,7 +61,7 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 
 	b.Run("task setup", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			_, err = rwCtrl.Init(ctx)
+			err = rwCtrl.Init(ctx)
 			require.NoError(b, err)
 		}
 	})

@@ -125,7 +125,7 @@ func TestBaseControllerInit(t *testing.T) {
 				conf: tc.config,
 			}
 
-			_, err := baseCtrl.init(ctx)
+			err := baseCtrl.init(ctx)
 
 			if tc.expectError {
 				assert.Error(t, err)

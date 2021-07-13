@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/retry"
 )
@@ -48,7 +47,7 @@ func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
 
 // Init initializes the controller before it can be run. Ensures that
 // driver is initializes, works are created for each task.
-func (rw *ReadWrite) Init(ctx context.Context) (*driver.Drivers, error) {
+func (rw *ReadWrite) Init(ctx context.Context) error {
 	return rw.init(ctx)
 }
 
