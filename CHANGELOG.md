@@ -1,3 +1,8 @@
+## UNRELEASED
+FEATURES:
+* Add support for Terraform v1.0 [[GH-333](https://github.com/hashicorp/consul-terraform-sync/pull/333)]
+
+
 ## 0.2.0 (June 22, 2021)
 BREAKING CHANGES:
 * Change task source for local modules to expect path based on directory where CTS is run instead of task directory. [[GH-264](https://github.com/hashicorp/consul-terraform-sync/issues/264),  [GH-283](https://github.com/hashicorp/consul-terraform-sync/pull/283)]
