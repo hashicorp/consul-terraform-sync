@@ -62,6 +62,7 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 	return &baseController{
 		conf:      conf,
 		newDriver: nd,
+		drivers:   driver.NewDrivers(),
 		watcher:   watcher,
 		resolver:  hcat.NewResolver(),
 	}, nil
@@ -86,7 +87,7 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	drivers := driver.NewDrivers()
+	ctrl.drivers.Reset()
 
 	for _, task := range tasks {
 		select {
@@ -108,9 +109,8 @@ func (ctrl *baseController) init(ctx context.Context) error {
 			log.Printf("[ERR] (ctrl) error initializing task %q", taskName)
 			return err
 		}
-		drivers.Add(taskName, d)
+		ctrl.drivers.Add(taskName, d)
 	}
-	ctrl.drivers = drivers
 
 	log.Printf("[INFO] (ctrl) driver initialized")
 	return nil
