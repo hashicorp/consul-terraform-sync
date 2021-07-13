@@ -32,9 +32,7 @@ type ClientConfig struct {
 // NewClient returns a client to make api requests
 func NewClient(c *ClientConfig, httpClient httpClient) *Client {
 	if httpClient == nil {
-		httpClient = &http.Client{
-			Timeout: time.Second * 5,
-		}
+		httpClient = &http.Client{}
 	}
 	return &Client{
 		port:    c.Port,

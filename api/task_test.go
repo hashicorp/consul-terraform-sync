@@ -1,12 +1,14 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
@@ -229,6 +231,38 @@ func TestTask_updateTask(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("cancel", func(t *testing.T) {
+		// have the server delay on response, and the client cancel to ensure
+		// the handler exits immediately
+		handler := newTaskHandler(event.NewStore(), driver.NewDrivers(), "v1")
+
+		ctx, cancel := context.WithCancel(context.Background())
+		req, err := http.NewRequestWithContext(ctx,
+			http.MethodPatch,
+			"/v1/tasks/task_a",
+			strings.NewReader(`{"enabled": true}`),
+		)
+		require.NoError(t, err)
+
+		d := new(mocks.Driver)
+		d.On("UpdateTask", mock.Anything, driver.PatchTask{Enabled: true}).
+			Run(func(mock.Arguments) {
+				<-req.Context().Done()
+				assert.Equal(t, req.Context().Err(), context.Canceled)
+			}).
+			Return(driver.InspectPlan{}, context.Canceled).Once()
+		d.On("Task").Return(&driver.Task{}).Once()
+		handler.drivers.Add("task_a", d)
+
+		resp := httptest.NewRecorder()
+		go func() {
+			time.Sleep(time.Second)
+			cancel()
+		}()
+		handler.updateTask(resp, req)
+		assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	})
 }
 
 func TestTask_decodeJSON(t *testing.T) {
