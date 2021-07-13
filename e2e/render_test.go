@@ -11,7 +11,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -64,7 +63,7 @@ func TestServicesRenderRace(t *testing.T) {
 	require.NoError(t, err)
 
 	// run controller
-	ctrl, err := controller.NewReadWrite(conf, event.NewStore())
+	ctrl, err := controller.NewReadWrite(conf)
 	rwCtrl := ctrl.(*controller.ReadWrite)
 	require.NoError(t, err)
 	err = rwCtrl.Init(ctx)
