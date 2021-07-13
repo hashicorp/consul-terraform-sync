@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -121,8 +120,6 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		patch.Enabled = config.BoolVal(conf.Enabled)
 	}
 
-	ctx := context.Background()
-
 	var storedErr error
 	if runOp == driver.RunOptionNow {
 		task := d.Task()
@@ -150,7 +147,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		ev.Start()
 	}
 	var plan driver.InspectPlan
-	plan, storedErr = d.UpdateTask(ctx, patch)
+	plan, storedErr = d.UpdateTask(r.Context(), patch)
 	if storedErr != nil {
 		log.Printf("[TRACE] (api.task) error while updating task '%s': %s",
 			taskName, storedErr)
