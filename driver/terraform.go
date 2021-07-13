@@ -195,13 +195,15 @@ func (tf *Terraform) SetBufferPeriod() {
 func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
+	taskName := tf.task.Name
 
 	if !tf.task.Enabled {
 		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"rendering template", tf.task.Name)
+			"rendering template", taskName)
 		return true, nil
 	}
 
+	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
 	re, err := tf.renderTemplate(ctx)
 	return re.Complete, err
 }
@@ -280,7 +282,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 				"task: %s", tf.task.Name, err)
 		}
 
-		for i := int64(0); ; i++ {
+		for {
 			result, err := tf.renderTemplate(ctx)
 			if err != nil {
 				return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to "+
@@ -400,7 +402,6 @@ func (tf *Terraform) initTask(force bool) error {
 // renderTemplate attempts to render the hashicat template
 func (tf *Terraform) renderTemplate(ctx context.Context) (hcat.ResolveEvent, error) {
 	taskName := tf.task.Name
-	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
 
 	result, err := tf.resolver.Run(tf.template, tf.watcher)
 	if err != nil {
@@ -424,8 +425,8 @@ func (tf *Terraform) renderTemplate(ctx context.Context) (hcat.ResolveEvent, err
 	if result.Complete {
 		log.Printf("[DEBUG] (driver.terraform) change detected for task %s", taskName)
 
-		var rendered hcat.RenderResult
-		if rendered, err = tf.template.Render(result.Contents); err != nil {
+		rendered, err := tf.template.Render(result.Contents)
+		if err != nil {
 			log.Printf("[ERR] (driver.terraform) rendering template for '%s': %s",
 				taskName, err)
 
