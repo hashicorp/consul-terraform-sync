@@ -12,6 +12,7 @@ type Drivers struct {
 	mu *sync.RWMutex
 
 	drivers map[string]Driver
+	active  sync.Map
 }
 
 // NewDrivers returns a new drivers object
@@ -56,6 +57,16 @@ func (d *Drivers) Get(taskName string) (Driver, bool) {
 	return driver, true
 }
 
+func (d *Drivers) Reset() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	for k := range d.drivers {
+		delete(d.drivers, k)
+		d.active.Delete(k)
+	}
+}
+
 // Map returns a copy of the map containing the drivers
 func (d *Drivers) Map() map[string]Driver {
 	d.mu.RLock()
@@ -74,4 +85,22 @@ func (d *Drivers) SetBufferPeriod() {
 	for _, driver := range d.drivers {
 		driver.SetBufferPeriod()
 	}
+}
+
+func (d *Drivers) SetActive(name string) bool {
+	d.active.Store(name, struct{}{})
+	return true
+}
+
+func (d *Drivers) SetInactive(name string) bool {
+	_, ok := d.active.Load(name)
+	if ok {
+		d.active.Delete(name)
+	}
+	return ok
+}
+
+func (d *Drivers) IsActive(name string) bool {
+	_, ok := d.active.Load(name)
+	return ok
 }
