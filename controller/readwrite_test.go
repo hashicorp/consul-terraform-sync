@@ -82,7 +82,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			d := new(mocksD.Driver)
 			drivers := driver.NewDrivers()
-			var task *driver.Task
+			var task driver.Task
 			if tc.enabledTask {
 				task = enabledTestTask(t, tc.taskName)
 				d.On("RenderTemplate", mock.Anything).
@@ -359,20 +359,16 @@ func singleTaskConfig() *config.Config {
 	return c
 }
 
-func enabledTestTask(tb testing.TB, name string) *driver.Task {
-	task, err := driver.NewTask(driver.TaskConfig{
+func enabledTestTask(tb testing.TB, name string) driver.Task {
+	return driver.Task{
 		Name:    name,
 		Enabled: true,
-	})
-	require.NoError(tb, err)
-	return task
+	}
 }
 
-func disabledTestTask(tb testing.TB, name string) *driver.Task {
-	task, err := driver.NewTask(driver.TaskConfig{
+func disabledTestTask(tb testing.TB, name string) driver.Task {
+	return driver.Task{
 		Name:    name,
 		Enabled: false,
-	})
-	require.NoError(tb, err)
-	return task
+	}
 }
