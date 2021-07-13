@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/controller"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
@@ -57,7 +56,7 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 		numServices: numServices,
 	})
 
-	ctrl, err := controller.NewReadWrite(conf, event.NewStore())
+	ctrl, err := controller.NewReadWrite(conf)
 	require.NoError(b, err)
 	rwCtrl := ctrl.(*controller.ReadWrite)
 

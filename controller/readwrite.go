@@ -31,7 +31,7 @@ type ReadWrite struct {
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
-func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
+func NewReadWrite(conf *config.Config) (Controller, error) {
 	baseCtrl, err := newBaseController(conf)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
 
 	return &ReadWrite{
 		baseController: baseCtrl,
-		store:          store,
+		store:          event.NewStore(),
 		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		taskNotify:     make(chan string, len(*conf.Tasks)),
 	}, nil
