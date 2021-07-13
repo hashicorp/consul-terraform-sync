@@ -61,6 +61,7 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 	return &baseController{
 		conf:      conf,
 		newDriver: nd,
+		drivers:   driver.NewDrivers(),
 		watcher:   watcher,
 		resolver:  hcat.NewResolver(),
 	}, nil
@@ -82,7 +83,7 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	// Future: improve by combining tasks into workflows.
 	log.Printf("[INFO] (ctrl) initializing all tasks")
 	tasks := newDriverTasks(ctrl.conf, providerConfigs)
-	drivers := driver.NewDrivers()
+	ctrl.drivers.Reset()
 
 	for _, task := range tasks {
 		select {
@@ -103,9 +104,8 @@ func (ctrl *baseController) init(ctx context.Context) error {
 			log.Printf("[ERR] (ctrl) error initializing task %q: %s", task.Name, err)
 			return err
 		}
-		drivers.Add(task.Name, d)
+		ctrl.drivers.Add(task.Name, d)
 	}
-	ctrl.drivers = drivers
 
 	log.Printf("[INFO] (ctrl) driver initialized")
 	return nil

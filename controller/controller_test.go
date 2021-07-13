@@ -121,8 +121,10 @@ func TestBaseControllerInit(t *testing.T) {
 				newDriver: func(*config.Config, driver.Task, templates.Watcher) (driver.Driver, error) {
 					return d, nil
 				},
-				conf: tc.config,
+				drivers: driver.NewDrivers(),
+				conf:    tc.config,
 			}
+			baseCtrl.drivers.Add("task", d)
 
 			err := baseCtrl.init(ctx)
 
