@@ -67,3 +67,11 @@ func (d *Drivers) Map() map[string]Driver {
 	}
 	return copy
 }
+
+func (d *Drivers) SetBufferPeriod() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	for _, driver := range d.drivers {
+		driver.SetBufferPeriod()
+	}
+}
