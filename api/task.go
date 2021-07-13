@@ -87,6 +87,8 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		jsonErrorResponse(w, http.StatusNotFound, err)
 		return
 	}
+	h.drivers.SetActive(taskName)
+	defer h.drivers.SetInactive(taskName)
 
 	runOp, err := runOption(r)
 	if err != nil {

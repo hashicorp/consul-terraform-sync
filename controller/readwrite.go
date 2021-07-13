@@ -87,13 +87,19 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	}
 }
 
-// A single run through of all the units/tasks/templates
+// A single run through of all the drivers/tasks/templates
 // Returned error channel closes when done with all units
 func (rw *ReadWrite) runTasks(ctx context.Context) chan error {
 	// keep error chan and waitgroup here to keep runTask simple (on task)
 	errCh := make(chan error, 1)
 	wg := sync.WaitGroup{}
 	for taskName, d := range rw.drivers.Map() {
+		if rw.drivers.IsActive(taskName) {
+			// The driver is currently active with the task, initiated by an ad-hoc run.
+			// There may be updates for other tasks, so we'll continue checking
+			log.Printf("[TRACE] (ctrl) task %q is active", taskName)
+			continue
+		}
 		wg.Add(1)
 		go func(taskName string, d driver.Driver) {
 			complete, err := rw.checkApply(ctx, d, true)
