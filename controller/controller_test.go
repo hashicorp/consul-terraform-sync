@@ -12,7 +12,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
@@ -66,7 +65,7 @@ func TestNewControllers(t *testing.T) {
 			}
 
 			t.Run("readwrite", func(t *testing.T) {
-				controller, err := NewReadWrite(tc.conf, event.NewStore())
+				controller, err := NewReadWrite(tc.conf)
 				if tc.expectError {
 					assert.Error(t, err)
 					return
@@ -125,7 +124,7 @@ func TestBaseControllerInit(t *testing.T) {
 				conf: tc.config,
 			}
 
-			_, err := baseCtrl.init(ctx)
+			err := baseCtrl.init(ctx)
 
 			if tc.expectError {
 				assert.Error(t, err)
