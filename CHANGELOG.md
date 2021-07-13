@@ -2,6 +2,9 @@
 FEATURES:
 * Add support for Terraform v1.0 [[GH-333](https://github.com/hashicorp/consul-terraform-sync/pull/333)]
 
+BUG FIXES:
+- Fix missing event when task was enabled and executed using the CLI enable sub command [[GH-318](https://github.com/hashicorp/consul-terraform-sync/issues/318), [GH-319](https://github.com/hashicorp/consul-terraform-sync/issues/319)]
+- Fix disabled tasks to trigger after re-enabling [[GH-320](https://github.com/hashicorp/consul-terraform-sync/issues/320)]
 
 ## 0.2.0 (June 22, 2021)
 BREAKING CHANGES:
