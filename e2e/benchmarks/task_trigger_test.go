@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/controller"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
@@ -40,10 +39,10 @@ func BenchmarkTaskTrigger(b *testing.B) {
 		numServices: 25,
 	})
 
-	ctrl, err := controller.NewReadWrite(conf, event.NewStore())
+	ctrl, err := controller.NewReadWrite(conf)
 	rwCtrl := ctrl.(*controller.ReadWrite)
 	require.NoError(b, err)
-	_, err = rwCtrl.Init(ctx)
+	err = rwCtrl.Init(ctx)
 	require.NoError(b, err)
 	err = rwCtrl.Once(ctx)
 	require.NoError(b, err)

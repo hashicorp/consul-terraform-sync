@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/retry"
 )
@@ -31,7 +31,7 @@ type ReadWrite struct {
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
-func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
+func NewReadWrite(conf *config.Config) (Controller, error) {
 	baseCtrl, err := newBaseController(conf)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
 
 	return &ReadWrite{
 		baseController: baseCtrl,
-		store:          store,
+		store:          event.NewStore(),
 		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		taskNotify:     make(chan string, len(*conf.Tasks)),
 	}, nil
@@ -47,7 +47,7 @@ func NewReadWrite(conf *config.Config, store *event.Store) (Controller, error) {
 
 // Init initializes the controller before it can be run. Ensures that
 // driver is initializes, works are created for each task.
-func (rw *ReadWrite) Init(ctx context.Context) (*driver.Drivers, error) {
+func (rw *ReadWrite) Init(ctx context.Context) error {
 	return rw.init(ctx)
 }
 
@@ -153,6 +153,11 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
+}
+
+// ServeAPI runs the API server for the controller
+func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
+	return api.NewAPI(rw.store, rw.drivers, config.IntVal(rw.conf.Port)).Serve(ctx)
 }
 
 // Single run, render, apply of a unit (task).

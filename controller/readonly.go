@@ -2,12 +2,11 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"sort"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
 )
 
 var _ Controller = (*ReadOnly)(nil)
@@ -33,18 +32,8 @@ func NewReadOnly(conf *config.Config) (Controller, error) {
 }
 
 // Init initializes the controller before it can be run
-func (ctrl *ReadOnly) Init(ctx context.Context) (*driver.Drivers, error) {
-	drivers, err := ctrl.init(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Sort units for consistent ordering when inspecting tasks
-	sort.Slice(ctrl.units, func(i, j int) bool {
-		return ctrl.units[i].taskName < ctrl.units[j].taskName
-	})
-
-	return drivers, nil
+func (ctrl *ReadOnly) Init(ctx context.Context) error {
+	return ctrl.init(ctx)
 }
 
 // Run runs the controller in read-only mode by checking Consul catalog once for
@@ -83,6 +72,11 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
+}
+
+// ServeAPI runs the API server for the controller
+func (ctrl *ReadOnly) ServeAPI(ctx context.Context) error {
+	return errors.New("server API is not supported for ReadOnly controller")
 }
 
 func (ctrl *ReadOnly) checkInspect(ctx context.Context, u unit) (bool, error) {
