@@ -43,7 +43,7 @@ func BenchmarkTaskTrigger(b *testing.B) {
 	ctrl, err := controller.NewReadWrite(conf, event.NewStore())
 	rwCtrl := ctrl.(*controller.ReadWrite)
 	require.NoError(b, err)
-	_, err = rwCtrl.Init(ctx)
+	err = rwCtrl.Init(ctx)
 	require.NoError(b, err)
 	err = rwCtrl.Once(ctx)
 	require.NoError(b, err)

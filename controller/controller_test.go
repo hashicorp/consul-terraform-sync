@@ -93,10 +93,10 @@ func TestBaseControllerInit(t *testing.T) {
 	conf := singleTaskConfig()
 
 	cases := []struct {
-		name            string
-		expectError     bool
-		initTaskErr     error
-		config          *config.Config
+		name        string
+		expectError bool
+		initTaskErr error
+		config      *config.Config
 	}{
 		{
 			"error on driver.InitTask()",
@@ -125,7 +125,7 @@ func TestBaseControllerInit(t *testing.T) {
 				conf: tc.config,
 			}
 
-			_, err := baseCtrl.init(ctx)
+			err := baseCtrl.init(ctx)
 
 			if tc.expectError {
 				assert.Error(t, err)

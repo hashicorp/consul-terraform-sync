@@ -67,7 +67,7 @@ func TestServicesRenderRace(t *testing.T) {
 	ctrl, err := controller.NewReadWrite(conf, event.NewStore())
 	rwCtrl := ctrl.(*controller.ReadWrite)
 	require.NoError(t, err)
-	_, err = rwCtrl.Init(ctx)
+	err = rwCtrl.Init(ctx)
 	require.NoError(t, err)
 	err = rwCtrl.Once(ctx)
 	require.NoError(t, err)
