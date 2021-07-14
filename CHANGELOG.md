@@ -1,4 +1,4 @@
-## UNRELEASED
+## 0.1.3 (July 14, 2021)
 BUG FIXES:
 - Fix missing event when task was enabled and executed using the CLI enable sub command [[GH-318](https://github.com/hashicorp/consul-terraform-sync/issues/318), [GH-319](https://github.com/hashicorp/consul-terraform-sync/issues/319)]
 - Fix disabled tasks to trigger after re-enabling [[GH-320](https://github.com/hashicorp/consul-terraform-sync/issues/320)]
