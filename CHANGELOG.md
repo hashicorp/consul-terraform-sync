@@ -19,6 +19,11 @@ BUG FIXES:
 - Fix Terraform installation issue when path is set to an empty string [[GH-212](https://github.com/hashicorp/consul-terraform-sync/issues/212), [GH-297](https://github.com/hashicorp/consul-terraform-sync/pull/297)]
 - Fix missing event when task was enabled and executed using the CLI enable sub command [[GH-318](https://github.com/hashicorp/consul-terraform-sync/issues/318), [GH-319](https://github.com/hashicorp/consul-terraform-sync/issues/319)]
 
+## 0.1.3 (July 14, 2021)
+BUG FIXES:
+- Fix missing event when task was enabled and executed using the CLI enable sub command [[GH-318](https://github.com/hashicorp/consul-terraform-sync/issues/318), [GH-319](https://github.com/hashicorp/consul-terraform-sync/issues/319)]
+- Fix disabled tasks to trigger after re-enabling [[GH-320](https://github.com/hashicorp/consul-terraform-sync/issues/320)]
+
 ## 0.1.2 (April 28, 2021)
 
 SECURITY:
