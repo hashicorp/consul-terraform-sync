@@ -1,4 +1,4 @@
-## UNRELEASED
+## 0.2.1 (July 14, 2021)
 FEATURES:
 * Add support for Terraform v1.0 [[GH-333](https://github.com/hashicorp/consul-terraform-sync/pull/333)]
 
