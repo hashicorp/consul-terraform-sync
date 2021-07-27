@@ -16,7 +16,9 @@ package benchmarks
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
@@ -80,6 +82,18 @@ func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 
 		b.Run("task execution", func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
+				// Make an initial dependency change as setup, reset timer
+				random := rand.New(rand.NewSource(time.Now().UnixNano()))
+				service := testutil.TestService{
+					ID:      fmt.Sprintf("service-000-%d", random.Intn(99999)),
+					Name:    "service-000",
+					Address: "5.6.7.8",
+					Port:    8080,
+				}
+				testutils.RegisterConsulService(b, srv, service, testutil.HealthPassing, 0)
+				b.ResetTimer()
+
+				// Run task execution
 				err = ctrl.Run(ctx)
 				require.NoError(b, err)
 			}
