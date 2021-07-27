@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -414,7 +413,7 @@ func decodeConfig(content []byte, file string) (*Config, error) {
 
 	if err := decoder.Decode(raw); err != nil {
 		log.Println("[DEBUG] (config) mapstructure decode failed")
-		return nil, err
+		return nil, decodeError(err)
 	}
 
 	if err := processUnusedConfigKeys(md, file); err != nil {
@@ -520,26 +519,6 @@ func supportedFormat(format string) bool {
 	}
 
 	return false
-}
-
-func processUnusedConfigKeys(md mapstructure.Metadata, file string) error {
-	if len(md.Unused) == 0 {
-		return nil
-	}
-
-	sort.Strings(md.Unused)
-	err := fmt.Errorf("'%s' has invalid keys: %s", file, strings.Join(md.Unused, ", "))
-
-	for _, key := range md.Unused {
-		if key == "provider" {
-			err = fmt.Errorf(`%s
-	'provider' is an invalid key for Consul Terraform Sync configuration, try 'terraform_provider'.
-	terraform_provider configuration blocks are similar to provider blocks in Terraform but have additional features supported only by Consul Terraform Sync.
-
-`, err)
-		}
-	}
-	return err
 }
 
 func stringFromEnv(list []string, def string) *string {

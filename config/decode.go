@@ -1,0 +1,46 @@
+package config
+
+import (
+	"fmt"
+	"regexp"
+	"sort"
+	"strings"
+
+	"github.com/mitchellh/mapstructure"
+)
+
+var reRepeatedBlock = regexp.MustCompile(`'([^\']+)' expected a map, got 'slice'`)
+
+func processUnusedConfigKeys(md mapstructure.Metadata, file string) error {
+	if len(md.Unused) == 0 {
+		return nil
+	}
+
+	sort.Strings(md.Unused)
+	err := fmt.Errorf("'%s' has invalid keys: %s", file, strings.Join(md.Unused, ", "))
+
+	for _, key := range md.Unused {
+		if key == "provider" {
+			err = fmt.Errorf(`%s
+	'provider' is an invalid key for Consul Terraform Sync configuration, try 'terraform_provider'.
+	terraform_provider configuration blocks are similar to provider blocks in Terraform but have additional features supported only by Consul Terraform Sync.
+
+`, err)
+		}
+	}
+	return err
+}
+
+// decodeError is a middleware for mapstructure.Decoder.Decode() errors
+// with decode hooks specifically for CTS.
+func decodeError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	match := reRepeatedBlock.FindStringSubmatch(err.Error())
+	if len(match) >= 2 {
+		return fmt.Errorf("only one '%s' block can be configured", match[1])
+	}
+	return err
+}
