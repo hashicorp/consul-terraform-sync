@@ -73,7 +73,7 @@ func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 
 		b.Run("task setup", func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
-				_, err = ctrl.Init(ctx)
+				err = ctrl.Init(ctx)
 				require.NoError(b, err)
 			}
 		})
@@ -110,6 +110,7 @@ func generateConf(bConf benchmarkConfig) *config.Config {
 	}
 
 	conf := config.DefaultConfig()
+	conf.WorkingDir = &bConf.tempDir
 	conf.BufferPeriod.Enabled = config.Bool(false)
 	conf.Tasks = &taskConfigs
 	conf.Consul.Address = config.String(bConf.consul.HTTPSAddr)
