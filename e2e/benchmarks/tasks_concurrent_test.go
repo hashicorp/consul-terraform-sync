@@ -67,14 +67,8 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 		}
 	})
 
-	b.Run("once mode", func(b *testing.B) {
-		// Run through once to initialize Terraform workspaces to isolate the
-		// concurrent execution to only Terraform applies.
-		for n := 0; n < b.N; n++ {
-			err = rwCtrl.Once(ctx)
-			require.NoError(b, err)
-		}
-	})
+	err = rwCtrl.Once(ctx)
+	require.NoError(b, err)
 
 	b.Run("task concurrent execution", func(b *testing.B) {
 		// This is the crux of the benchmark which evaluates the performance of
