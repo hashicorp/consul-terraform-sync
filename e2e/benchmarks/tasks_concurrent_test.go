@@ -94,10 +94,10 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 			b.ResetTimer()
 
 			// Register service instance to Consul catalog. This triggers task execution
-			// for all tasks watching service_000
+			// for all tasks watching service-000
 			service := testutil.TestService{
-				ID:      fmt.Sprintf("service_000_%s_%d", b.Name(), n),
-				Name:    "service_000",
+				ID:      fmt.Sprintf("service-000-%s-%d", b.Name(), n),
+				Name:    "service-000",
 				Address: "5.6.7.8",
 				Port:    8080,
 			}

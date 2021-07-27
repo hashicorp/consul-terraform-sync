@@ -97,7 +97,7 @@ type benchmarkConfig struct {
 func generateConf(bConf benchmarkConfig) *config.Config {
 	serviceNames := make([]string, bConf.numServices)
 	for i := 0; i < bConf.numServices; i++ {
-		serviceNames[i] = fmt.Sprintf("service_%03d", i)
+		serviceNames[i] = fmt.Sprintf("service-%03d", i)
 	}
 
 	taskConfigs := make(config.TaskConfigs, bConf.numTasks)

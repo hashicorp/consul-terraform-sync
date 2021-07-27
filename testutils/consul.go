@@ -128,10 +128,10 @@ func AddServices(t testing.TB, srv *testutil.TestServer, svcs []testutil.TestSer
 func TestServices(n int) []testutil.TestService {
 	return generateServices(n,
 		func(i int) string {
-			return fmt.Sprintf("svc_name_%d", i)
+			return fmt.Sprintf("svc-name-%d", i)
 		},
 		func(i int) string {
-			return fmt.Sprintf("svc_id_%d", i)
+			return fmt.Sprintf("svc-id-%d", i)
 		})
 }
 
@@ -140,10 +140,10 @@ func TestServices(n int) []testutil.TestService {
 func TestInstances(n int) []testutil.TestService {
 	return generateServices(n,
 		func(i int) string {
-			return fmt.Sprintf("svc_name_common")
+			return fmt.Sprintf("svc-name-common")
 		},
 		func(i int) string {
-			return fmt.Sprintf("svc_id_%d", i)
+			return fmt.Sprintf("svc-id-%d", i)
 		})
 }
 
