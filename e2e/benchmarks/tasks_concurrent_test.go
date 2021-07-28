@@ -8,6 +8,7 @@ package benchmarks
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -48,7 +49,6 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 	cleanup := testutils.MakeTempDir(b, tempDir)
 	defer cleanup()
 
-	ctx, ctxCancel := context.WithCancel(context.Background())
 	conf := generateConf(benchmarkConfig{
 		consul:      srv,
 		tempDir:     tempDir,
@@ -62,24 +62,20 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 
 	b.Run("task setup", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			err = rwCtrl.Init(ctx)
+			err = rwCtrl.Init(context.Background())
 			require.NoError(b, err)
 		}
 	})
 
-	b.Run("once mode", func(b *testing.B) {
-		// Run through once to initialize Terraform workspaces to isolate the
-		// concurrent execution to only Terraform applies.
-		for n := 0; n < b.N; n++ {
-			err = rwCtrl.Once(ctx)
-			require.NoError(b, err)
-		}
-	})
+	err = rwCtrl.Once(context.Background())
+	require.NoError(b, err)
 
 	b.Run("task concurrent execution", func(b *testing.B) {
 		// This is the crux of the benchmark which evaluates the performance of
 		// tasks triggered and executing concurrently.
 		for n := 0; n < b.N; n++ {
+			ctx, ctxCancel := context.WithCancel(context.Background())
+			defer ctxCancel()
 			ctrlStopped := make(chan error)
 			rwCtrl.EnableTestMode()
 			completedTasksCh, err := rwCtrl.TaskNotifyChannel()
@@ -94,10 +90,11 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 			b.ResetTimer()
 
 			// Register service instance to Consul catalog. This triggers task execution
-			// for all tasks watching service_000
+			// for all tasks watching service-000
+			random := rand.New(rand.NewSource(time.Now().UnixNano()))
 			service := testutil.TestService{
-				ID:      fmt.Sprintf("service_000_%s_%d", b.Name(), n),
-				Name:    "service_000",
+				ID:      fmt.Sprintf("service-000-%s-%d-%d", b.Name(), n, random.Intn(99999)),
+				Name:    "service-000",
 				Address: "5.6.7.8",
 				Port:    8080,
 			}
@@ -105,6 +102,7 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 
 			ctxTimeout, _ := context.WithTimeout(context.Background(), 30*time.Second)
 			completedTasks := make(map[string]bool, len(*conf.Tasks))
+		RunLoop:
 			for {
 				select {
 				case taskName := <-completedTasksCh:
@@ -120,7 +118,7 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 				case err := <-ctrlStopped:
 					assert.Equal(b, err, context.Canceled)
 					assert.Len(b, completedTasks, numTasks, "%s timed out before tasks were triggered and had executed", b.Name())
-					return
+					break RunLoop
 				}
 			}
 		}

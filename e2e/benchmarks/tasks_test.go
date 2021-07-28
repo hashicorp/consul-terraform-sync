@@ -16,7 +16,9 @@ package benchmarks
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
@@ -73,13 +75,25 @@ func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 
 		b.Run("task setup", func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
-				_, err = ctrl.Init(ctx)
+				err = ctrl.Init(ctx)
 				require.NoError(b, err)
 			}
 		})
 
 		b.Run("task execution", func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
+				// Make an initial dependency change as setup, reset timer
+				random := rand.New(rand.NewSource(time.Now().UnixNano()))
+				service := testutil.TestService{
+					ID:      fmt.Sprintf("service-000-%d", random.Intn(99999)),
+					Name:    "service-000",
+					Address: "5.6.7.8",
+					Port:    8080,
+				}
+				testutils.RegisterConsulService(b, srv, service, testutil.HealthPassing, 0)
+				b.ResetTimer()
+
+				// Run task execution
 				err = ctrl.Run(ctx)
 				require.NoError(b, err)
 			}
@@ -97,7 +111,7 @@ type benchmarkConfig struct {
 func generateConf(bConf benchmarkConfig) *config.Config {
 	serviceNames := make([]string, bConf.numServices)
 	for i := 0; i < bConf.numServices; i++ {
-		serviceNames[i] = fmt.Sprintf("service_%03d", i)
+		serviceNames[i] = fmt.Sprintf("service-%03d", i)
 	}
 
 	taskConfigs := make(config.TaskConfigs, bConf.numTasks)
@@ -110,6 +124,7 @@ func generateConf(bConf benchmarkConfig) *config.Config {
 	}
 
 	conf := config.DefaultConfig()
+	conf.WorkingDir = &bConf.tempDir
 	conf.BufferPeriod.Enabled = config.Bool(false)
 	conf.Tasks = &taskConfigs
 	conf.Consul.Address = config.String(bConf.consul.HTTPSAddr)

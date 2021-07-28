@@ -75,7 +75,7 @@ func TestServicesRenderRace(t *testing.T) {
 	tfvarsFile := filepath.Join(tempDir, "terraform.tfvars")
 	data, err := os.ReadFile(tfvarsFile)
 	require.NoError(t, err)
-	// 'svc_name_' is unique per service and much easier to count than
+	// 'svc-name-' is unique per service and much easier to count than
 	// parsing the file and counting the real entries
-	require.Equal(t, NumberOfServices, bytes.Count(data, []byte("svc_name_")))
+	require.Equal(t, NumberOfServices, bytes.Count(data, []byte("svc-name-")))
 }

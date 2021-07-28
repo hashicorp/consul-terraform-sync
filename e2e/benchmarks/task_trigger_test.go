@@ -76,8 +76,8 @@ func BenchmarkTaskTrigger(b *testing.B) {
 		// Make a Consul catalog change for a monitored service
 		go func() {
 			service := testutil.TestService{
-				ID:      fmt.Sprintf("service_000_%s_%d", b.Name(), n),
-				Name:    "service_000",
+				ID:      fmt.Sprintf("service-000-%s%d", b.Name(), n),
+				Name:    "service-000",
 				Address: "5.6.7.8",
 				Port:    8080,
 			}

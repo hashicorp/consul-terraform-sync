@@ -125,13 +125,13 @@ func makeConfig(t testing.TB, services []string, addr string, tls bool,
 	cleanup := testutils.MakeTempDir(t, tmpDir)
 
 	configPath := filepath.Join(tmpDir, configFile)
-	testutils.WriteFile(t, configPath, configContents(addr, tls, services))
+	testutils.WriteFile(t, configPath, configContents(addr, tls, services, tmpDir))
 
 	return configPath, cleanup
 }
 
 // returns templated contents of config file
-func configContents(address string, tls bool, services []string) string {
+func configContents(address string, tls bool, services []string, workingDir string) string {
 	sservices := `["` + strings.Join(services, `","`) + `"]`
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -139,7 +139,7 @@ func configContents(address string, tls bool, services []string) string {
 	}
 	return fmt.Sprintf(`
 log_level = "WARN"
-
+working_dir = "%s/sync-tasks"
 consul {
   address = "%s"
   tls {
@@ -162,5 +162,5 @@ task {
   services = %s
 }
 
-`, address, tls, pwd, sservices)
+`, workingDir, address, tls, pwd, sservices)
 }
