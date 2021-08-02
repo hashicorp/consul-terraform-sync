@@ -69,7 +69,9 @@ task {
 		{
 			"no condition: defaults to services condition",
 			false,
-			&ServicesConditionConfig{},
+			&ServicesConditionConfig{
+				Regexp: String(""),
+			},
 			"config.hcl",
 			`
 task {
@@ -81,7 +83,25 @@ task {
 		{
 			"services: happy path",
 			false,
-			&ServicesConditionConfig{},
+			&ServicesConditionConfig{
+				Regexp: String(".*"),
+			},
+			"config.hcl",
+			`
+task {
+	name = "services_condition_task"
+	source = "..."
+	condition "services" {
+		regexp = ".*"
+	}
+}`,
+		},
+		{
+			"services: unconfigured",
+			false,
+			&ServicesConditionConfig{
+				Regexp: String(""),
+			},
 			"config.hcl",
 			`
 task {
