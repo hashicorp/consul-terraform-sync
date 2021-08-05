@@ -41,7 +41,6 @@ type ConsulConfig struct {
 // DefaultConsulConfig returns the default configuration struct
 func DefaultConsulConfig() *ConsulConfig {
 	return &ConsulConfig{
-		Address:   String(DefaultConsulAddress),
 		Auth:      DefaultAuthConfig(),
 		KVPath:    String(DefaultConsulKVPath),
 		TLS:       DefaultTLSConfig(),
