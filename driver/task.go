@@ -341,6 +341,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 type clientConfig struct {
 	clientType string
 	log        bool
+	logLevel   string
 	taskName   string
 	persistLog bool
 	path       string
@@ -358,7 +359,7 @@ func newClient(conf *clientConfig) (client.Client, error) {
 	case developmentClient:
 		log.Printf("[TRACE] (driver) creating development client for task '%s'", taskName)
 		c, err = client.NewPrinter(&client.PrinterConfig{
-			LogLevel:   "debug",
+			LogLevel:   conf.logLevel,
 			ExecPath:   conf.path,
 			WorkingDir: conf.workingDir,
 			Workspace:  taskName,

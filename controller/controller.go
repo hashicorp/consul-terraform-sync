@@ -186,6 +186,7 @@ func newTerraformDriver(conf *config.Config, task *driver.Task, w templates.Watc
 		Task:              task,
 		Watcher:           w,
 		Log:               *tfConf.Log,
+		LogLevel:          config.StringVal(conf.LogLevel),
 		PersistLog:        *tfConf.PersistLog,
 		Path:              *tfConf.Path,
 		Backend:           tfConf.Backend,
