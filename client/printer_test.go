@@ -4,14 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/hashicorp/consul-terraform-sync/logging"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-)
+	"github.com/hashicorp/consul-terraform-sync/logging"
 
-const (
-	testDefaultLogLevel = "INFO"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewPrinter(t *testing.T) {
@@ -56,7 +53,6 @@ func TestNewPrinter(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.NotNil(t, actual)
-			assert.Equal(t, testDefaultLogLevel, actual.logLevel)
 			assert.Equal(t, tc.config.WorkingDir, actual.workingDir)
 			assert.Equal(t, tc.config.Workspace, actual.workspace)
 		})
