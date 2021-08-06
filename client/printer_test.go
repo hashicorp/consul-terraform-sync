@@ -15,18 +15,21 @@ func TestNewPrinter(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name        string
-		expectError bool
-		config      *PrinterConfig
+		name             string
+		expectError      bool
+		expectedLogLevel string
+		config           *PrinterConfig
 	}{
 		{
 			"error nil config",
 			true,
+			"",
 			nil,
 		},
 		{
 			"happy path debug log level",
 			false,
+			"DEBUG",
 			&PrinterConfig{
 				WorkingDir: "path/to/wd",
 				Workspace:  "ws",
@@ -35,6 +38,7 @@ func TestNewPrinter(t *testing.T) {
 		{
 			"happy path",
 			false,
+			"INFO",
 			&PrinterConfig{
 				WorkingDir: "path/to/wd",
 				Workspace:  "ws",
@@ -44,6 +48,7 @@ func TestNewPrinter(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			logging.LogLevel = tc.expectedLogLevel
 			actual, err := NewPrinter(tc.config)
 
 			if tc.expectError {
@@ -53,6 +58,7 @@ func TestNewPrinter(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.NotNil(t, actual)
+			assert.Equal(t, tc.expectedLogLevel, actual.logLevel)
 			assert.Equal(t, tc.config.WorkingDir, actual.workingDir)
 			assert.Equal(t, tc.config.Workspace, actual.workspace)
 		})
@@ -125,6 +131,8 @@ func TestPrinterInit(t *testing.T) {
 }
 
 func TestPrinterLogLevel(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name        string
 		expectWrite bool

@@ -40,12 +40,6 @@ type Config struct {
 	Writer io.Writer
 }
 
-type LocalConfig struct {
-	// Writer is the output where logs should go. If syslog is enabled, data will
-	// be written to writer in addition to syslog.
-	Writer io.Writer
-}
-
 func Setup(config *Config) error {
 	// Set the global log level, this will be used by all loggers
 	LogLevel = config.Level
@@ -77,7 +71,7 @@ func Setup(config *Config) error {
 	return nil
 }
 
-// SetupLocal returns a new log.Logger which logs to os.Stdout
+// SetupLocal returns a new log.Logger which logs to a provided io.Writer
 // The logger will filter logs based on the global log level
 func SetupLocal(writer io.Writer) (*log.Logger, error) {
 	// Create default logger
