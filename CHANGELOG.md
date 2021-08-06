@@ -3,6 +3,9 @@ FEATURES:
 * Deprecate `driver.working_dir` configuration option to be removed in v0.5.0. Add new options to configure working directory for managing CTS generated artifacts. Top-level `working_dir` to configure parent directory for all tasks or `task.working_dir` to configure per task. [[GH-314](https://github.com/hashicorp/consul-terraform-sync/issues/314)]
 * **(Enterprise Only)** Add `task.terraform_version` configuration option to set the Terraform version used for the task's workspace on Terraform Enterprise.
 
+BUG FIXES:
+- Fix loading the `CONSUL_HTTP_ADDR` environment variable. [[GH-351](https://github.com/hashicorp/consul-terraform-sync/pull/351)]
+
 ## 0.2.1 (July 14, 2021)
 FEATURES:
 * Add support for Terraform v1.0 [[GH-333](https://github.com/hashicorp/consul-terraform-sync/pull/333)]
