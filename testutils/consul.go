@@ -106,7 +106,9 @@ func registerConsulService(tb testing.TB, srv *testutil.TestServer,
 	resp := RequestHTTP(tb, http.MethodPut, u, body.String())
 	defer resp.Body.Close()
 
-	sdk.AddCheck(srv, tb, s.ID, s.ID, testutil.HealthPassing)
+	if health != "" {
+		sdk.AddCheck(srv, tb, s.ID, s.ID, health)
+	}
 }
 
 func serviceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string) bool {

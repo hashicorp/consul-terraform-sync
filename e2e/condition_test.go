@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
+	"github.com/hashicorp/consul-terraform-sync/testutils/sdk"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -561,4 +562,114 @@ func eventCount(t *testing.T, taskName string, port int) int {
 	taskStatus, ok := taskStatuses[taskName]
 	require.True(t, ok)
 	return len(taskStatus.Events)
+}
+
+// TestCondition_Services_Regexp runs the CTS binary to test
+// a task configured with a regexp in the service condition.
+// This test confirms that when a service is registered that
+// doesn't match the task condition's regexp config, no task
+// is triggered.
+func TestCondition_Services_Regexp(t *testing.T) {
+	t.Parallel()
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "services_condition_regexp")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+
+	taskName := "services_condition_task"
+	conditionTask := fmt.Sprintf(`task {
+	name = "%s"
+	source = "./test_modules/local_instances_file"
+	condition "services" {
+		regexp = "api-"
+	}
+}
+`, taskName)
+
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
+		appendString(conditionTask)
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+
+	err := cts.WaitForAPI(defaultWaitForAPI)
+	require.NoError(t, err)
+
+	// Test that regex filter is filtering service registration information and
+	// task triggers
+	// 0. Confirm baseline: check current number of events and that that the
+	//    services variable contains no service information
+	// 1. Register db service instance. Confirm that the task was not triggered
+	//    (no new event) and its data is filtered out of services variable.
+	// 2. Register api-web service instance. Confirm that task was triggered
+	//    (one new event) and its data exists in the services variable.
+	// 3. Add a check to the api-web service instance. Confirm that task was triggered
+	//    (one new event) and its data exists in the services variable.
+	// 4.Add a check to the api-web service instance. Confirm that task was triggered
+	//    (one new event) and its the check status is updated in the services variable.
+
+	// 0. Confirm only one event. Confirm empty var catalog_services
+	eventCountBase := eventCount(t, taskName, cts.Port())
+	require.Equal(t, 1, eventCountBase)
+
+	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
+	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.Contains(t, content, "services = {\n}")
+
+	// 1. Register a filtered out service "db"
+	service := testutil.TestService{ID: "db-1", Name: "db"}
+	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
+		defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
+
+	eventCountNow := eventCount(t, taskName, cts.Port())
+	require.Equal(t, eventCountBase, eventCountNow,
+		"change in event count. task was unexpectedly triggered")
+
+	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.Contains(t, content, "services = {\n}")
+
+	// 2. Register a matched service "api-web"
+	now := time.Now()
+	service = testutil.TestService{ID: "api-web-1", Name: "api-web"}
+	testutils.RegisterConsulService(t, srv, service, "", defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+
+	eventCountNow = eventCount(t, taskName, cts.Port())
+	require.Equal(t, eventCountBase+1, eventCountNow,
+		"event count did not increment once. task was not triggered as expected")
+
+	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.Contains(t, content, `"api-web"`)
+	assert.Contains(t, content, `"api-web-1"`)
+
+	// 3. Add a check to the service "api-web"
+	now = time.Now()
+	sdk.AddCheck(srv, t, service.ID, service.ID, testutil.HealthPassing)
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+	eventCountNow = eventCount(t, taskName, cts.Port())
+	require.Equal(t, eventCountBase+2, eventCountNow,
+		"event count did not increment once. task was not triggered as expected")
+	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.Contains(t, content, testutil.HealthPassing)
+
+	// 4. Update check status to critical for service "api-web"
+	now = time.Now()
+	sdk.UpdateCheck(srv, t, service.ID, service.ID, testutil.HealthCritical)
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+	eventCountNow = eventCount(t, taskName, cts.Port())
+	require.Equal(t, eventCountBase+3, eventCountNow,
+		"event count did not increment once. task was not triggered as expected")
+	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+	assert.Contains(t, content, `"api-web"`)
+	assert.Contains(t, content, `"api-web-1"`)
+	assert.Contains(t, content, testutil.HealthCritical)
+
+	cleanup()
 }
