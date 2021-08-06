@@ -67,7 +67,6 @@ type Terraform struct {
 type TerraformConfig struct {
 	Task              *Task
 	Log               bool
-	LogLevel          string
 	PersistLog        bool
 	Path              string
 	Backend           map[string]interface{}
@@ -93,7 +92,6 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 	tfClient, err := newClient(&clientConfig{
 		clientType: config.ClientType,
 		log:        config.Log,
-		logLevel:   config.LogLevel,
 		taskName:   taskName,
 		persistLog: config.PersistLog,
 		path:       config.Path,

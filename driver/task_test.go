@@ -10,6 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testLogLevelInfo = "INFO"
+)
+
 func TestNewClient(t *testing.T) {
 	t.Parallel()
 
