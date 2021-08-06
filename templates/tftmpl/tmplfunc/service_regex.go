@@ -1,0 +1,258 @@
+package tmplfunc
+
+import (
+	"fmt"
+	"regexp"
+	"sort"
+	"strings"
+
+	consulapi "github.com/hashicorp/consul/api"
+	"github.com/hashicorp/go-bexpr"
+	"github.com/hashicorp/hcat"
+	"github.com/hashicorp/hcat/dep"
+	"github.com/pkg/errors"
+)
+
+var (
+	// queryParamOptRe is the regular expression to distinguish between query
+	// params and filters, excluding the regex parameter. Non-regex query parameters
+	// only have one "=" where as filters can have "==" or "!=" operators.
+	queryParamOptRe = regexp.MustCompile(`[\w\d\s]=[\w\d\s]`)
+)
+
+// serviceRegexFunc returns information on registered Consul
+// services that have a name that match a given regex. It queries
+// the Catalog List Services API initially to get all the services
+// and then queries the Health API for each matching service.
+// It supports parameters filter, dc, ns, and node-meta on the
+// Health API query only.
+//
+// Endpoints:
+//   /v1/catalog/services
+//   /v1/health/service/:service
+// Template: {{ serviceRegex regexp=<regex> <options> ... }}
+func serviceRegexFunc(recall hcat.Recaller) interface{} {
+	return func(opts ...string) ([]*dep.HealthService, error) {
+		result := []*dep.HealthService{}
+
+		d, err := newServiceRegexQuery(opts)
+		if err != nil {
+			return nil, err
+		}
+
+		if value, ok := recall(d); ok {
+			return value.([]*dep.HealthService), nil
+		}
+
+		return result, nil
+	}
+}
+
+// serviceRegexQuery is the representation of the regex service
+// query from inside a template.
+type serviceRegexQuery struct {
+	stopCh chan struct{}
+
+	regexp *regexp.Regexp
+
+	filter   string
+	dc       string
+	ns       string
+	nodeMeta map[string]string
+	opts     consulapi.QueryOptions
+}
+
+// newServiceRegexQuery processes options in the format of
+// "key=value" (e.g. "regexp=^web.*") with the exception of filters.
+// Any option that is not a key/value pair is assumed to be a filter.
+func newServiceRegexQuery(opts []string) (*serviceRegexQuery, error) {
+	serviceRegexQuery := serviceRegexQuery{
+		stopCh: make(chan struct{}, 1),
+	}
+	var filters []string
+	for _, opt := range opts {
+		if strings.TrimSpace(opt) == "" {
+			continue
+		}
+
+		// Parse query paramters, excluding the filter which is not set as a parameter
+		if queryParamOptRe.MatchString(opt) || strings.Contains(opt, "regexp=") {
+			queryParam := strings.SplitN(opt, "=", 2)
+			query := strings.TrimSpace(queryParam[0])
+			value := strings.TrimSpace(queryParam[1])
+			switch query {
+			case "regexp":
+				r, err := regexp.Compile(value)
+				if err != nil {
+					return nil, fmt.Errorf("service.regex: invalid regexp")
+				}
+				serviceRegexQuery.regexp = r
+				continue
+			case "dc", "datacenter":
+				serviceRegexQuery.dc = value
+				continue
+			case "ns", "namespace":
+				serviceRegexQuery.ns = value
+				continue
+			case "node-meta":
+				if serviceRegexQuery.nodeMeta == nil {
+					serviceRegexQuery.nodeMeta = make(map[string]string)
+				}
+				k, v, err := stringsSplit2(value, ":")
+				if err != nil {
+					return nil, fmt.Errorf(
+						"service.regex: invalid format for query "+
+							"parameter %q: %s", query, value)
+				}
+				serviceRegexQuery.nodeMeta[k] = v
+				continue
+			}
+		}
+
+		// Any option that was not already parsed is assumed to be a filter.
+		// Evaluate the grammer of the filter before attempting to query Consul.
+		// Defer to the Consul API to evaluate the kind and type of filter selectors.
+		_, err := bexpr.CreateFilter(opt)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"health.service: invalid filter: %q: %s", opt, err)
+		}
+		filters = append(filters, opt)
+	}
+
+	if len(filters) > 0 {
+		serviceRegexQuery.filter = strings.Join(filters, " and ")
+	}
+
+	if serviceRegexQuery.regexp == nil {
+		return nil, fmt.Errorf("service.regex: regexp option required")
+	}
+
+	return &serviceRegexQuery, nil
+}
+
+// Fetch queries the Consul API defined by the given client and returns a slice
+// of HealthService objects for services that match the set regex.
+func (d *serviceRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
+	select {
+	case <-d.stopCh:
+		return nil, nil, dep.ErrStopped
+	default:
+	}
+
+	// Fetch all services via catalog services
+	opts := d.opts
+	if d.dc != "" {
+		opts.Datacenter = d.dc
+	}
+	if d.ns != "" {
+		opts.Namespace = d.ns
+	}
+	if len(d.nodeMeta) != 0 {
+		opts.NodeMeta = d.nodeMeta
+	}
+	catalog, qm, err := clients.Consul().Catalog().Services(&opts)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, d.String())
+	}
+
+	// Filter out only the services that match the regex
+	var matchServices []string
+	for name := range catalog {
+		if d.regexp != nil && !d.regexp.MatchString(name) {
+			continue
+		}
+		matchServices = append(matchServices, name)
+	}
+
+	// Fetch the health of each matching service
+	if d.filter != "" {
+		opts.Filter = d.filter
+	}
+	var services []*dep.HealthService
+	for _, s := range matchServices {
+		var entries []*consulapi.ServiceEntry
+		entries, qm, err = clients.Consul().Health().Service(s, "", false, &opts)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, d.String())
+		}
+		for _, entry := range entries {
+			address := entry.Service.Address
+			if address == "" {
+				address = entry.Node.Address
+			}
+			services = append(services, &dep.HealthService{
+				Node:                entry.Node.Node,
+				NodeID:              entry.Node.ID,
+				Kind:                string(entry.Service.Kind),
+				NodeAddress:         entry.Node.Address,
+				NodeDatacenter:      entry.Node.Datacenter,
+				NodeTaggedAddresses: entry.Node.TaggedAddresses,
+				NodeMeta:            entry.Node.Meta,
+				ServiceMeta:         entry.Service.Meta,
+				Address:             address,
+				ID:                  entry.Service.ID,
+				Name:                entry.Service.Service,
+				Tags: dep.ServiceTags(
+					deepCopyAndSortTags(entry.Service.Tags)),
+				Status:    entry.Checks.AggregatedStatus(),
+				Checks:    entry.Checks,
+				Port:      entry.Service.Port,
+				Weights:   entry.Service.Weights,
+				Namespace: entry.Service.Namespace,
+			})
+		}
+	}
+
+	sort.Stable(ByNodeThenID(services))
+
+	rm := &dep.ResponseMetadata{
+		LastIndex:   qm.LastIndex,
+		LastContact: qm.LastContact,
+	}
+
+	return services, rm, nil
+}
+
+// String returns the human-friendly version of this query.
+func (d *serviceRegexQuery) String() string {
+	var opts []string
+	opts = append(opts, fmt.Sprintf("regexp=%s", d.regexp.String()))
+
+	if d.dc != "" {
+		opts = append(opts, fmt.Sprintf("dc=%s", d.dc))
+	}
+	if d.ns != "" {
+		opts = append(opts, fmt.Sprintf("ns=%s", d.ns))
+	}
+	for k, v := range d.nodeMeta {
+		opts = append(opts, fmt.Sprintf("node-meta=%s:%s", k, v))
+	}
+	if d.filter != "" {
+		opts = append(opts, fmt.Sprintf("filter=%s", d.filter))
+	}
+
+	sort.Strings(opts)
+	return fmt.Sprintf("service.regex(%s)",
+		strings.Join(opts, "&"))
+}
+
+// Stop halts the query's fetch function.
+func (d *serviceRegexQuery) Stop() {
+	close(d.stopCh)
+}
+
+// ByNodeThenID is a sortable slice of Service
+type ByNodeThenID []*dep.HealthService
+
+// Len, Swap, and Less are used to implement the sort.Sort interface.
+func (s ByNodeThenID) Len() int      { return len(s) }
+func (s ByNodeThenID) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s ByNodeThenID) Less(i, j int) bool {
+	if s[i].Node < s[j].Node {
+		return true
+	} else if s[i].Node == s[j].Node {
+		return s[i].ID <= s[j].ID
+	}
+	return false
+}
