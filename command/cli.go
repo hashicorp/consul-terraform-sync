@@ -181,11 +181,6 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := controller.InstallDriver(ctx, conf); err != nil {
-		log.Printf("[ERR] (cli) error installing driver: %s", err)
-		return ExitCodeDriverError
-	}
-
 	if len(inspectTasks) != 0 {
 		isInspect = true
 		conf.Tasks, err = config.FilterTasks(conf.Tasks, inspectTasks)
@@ -220,6 +215,12 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 		return ExitCodeConfigError
 	}
 	defer ctrl.Stop()
+
+	// Install the driver after controller has tested Consul connection
+	if err := controller.InstallDriver(ctx, conf); err != nil {
+		log.Printf("[ERR] (cli) error installing driver: %s", err)
+		return ExitCodeDriverError
+	}
 
 	errCh := make(chan error, 1)
 	exitBufLen := 2 // exit api & controller
