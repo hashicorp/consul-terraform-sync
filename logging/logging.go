@@ -91,7 +91,7 @@ func SetupLocal(writer io.Writer) (*log.Logger, error) {
 func NewLogFilter() *logutils.LevelFilter {
 	return &logutils.LevelFilter{
 		Levels:   Levels,
-		MinLevel: "WARN",
+		MinLevel: logutils.LogLevel(defaultLogLevel),
 		Writer:   ioutil.Discard,
 	}
 }

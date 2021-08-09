@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -99,7 +98,6 @@ func TestPrinterSetEnv(t *testing.T) {
 	assert.Contains(t, buf.String(), "client.printer")
 	assert.Contains(t, buf.String(), "set")
 	assert.Contains(t, buf.String(), "env")
-	fmt.Println(buf.String())
 }
 
 func TestPrinterSetStdout(t *testing.T) {
