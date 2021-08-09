@@ -398,6 +398,7 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 	require.NoError(t, err)
 
 	consul := DefaultConsulConfig()
+	consul.Finalize()
 
 	cases := []struct {
 		name   string

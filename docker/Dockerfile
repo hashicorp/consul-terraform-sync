@@ -9,7 +9,7 @@ FROM alpine:3.13
 
 # NAME and VERSION are the name of the software in releases.hashicorp.com
 # and the version to download. Example: NAME=consul VERSION=1.2.3.
-ARG NAME
+ARG NAME=consul-terraform-sync
 ARG VERSION
 
 LABEL maintainer="Consul Team <consul@hashicorp.com>"
