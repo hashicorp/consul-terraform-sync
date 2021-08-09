@@ -2,6 +2,7 @@
 FEATURES:
 * Deprecate `driver.working_dir` configuration option to be removed in v0.5.0. Add new options to configure working directory for managing CTS generated artifacts. Top-level `working_dir` to configure parent directory for all tasks or `task.working_dir` to configure per task. [[GH-314](https://github.com/hashicorp/consul-terraform-sync/issues/314)]
 * **(Enterprise Only)** Add `task.terraform_version` configuration option to set the Terraform version used for the task's workspace on Terraform Enterprise.
+* **(Enterprise Only)** Add `license_path` configuration option and `CONSUL_LICENSE` and `CONSUL_LICENSE_PATH` environment variables to check for valid, unexpired Consul license on start up and provide logging notification for expiration and termination events.
 
 BUG FIXES:
 - Fix loading the `CONSUL_HTTP_ADDR` environment variable. [[GH-351](https://github.com/hashicorp/consul-terraform-sync/pull/351)]
