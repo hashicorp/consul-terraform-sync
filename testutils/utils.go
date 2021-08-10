@@ -20,16 +20,15 @@ import (
 )
 
 // FreePort finds the next free port incrementing upwards. Use for testing.
-func FreePort() (int, error) {
+func FreePort(t testing.TB) int {
 	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return 0, err
-	}
+	require.NoError(t, err)
+
 	port := listener.Addr().(*net.TCPAddr).Port
-	if err = listener.Close(); err != nil {
-		return 0, err
-	}
-	return port, nil
+	err = listener.Close()
+	require.NoError(t, err)
+
+	return port
 }
 
 // MakeTempDir creates a directory in the current path for a test. Caller is
@@ -103,6 +102,21 @@ func RequestHTTP(t testing.TB, method, url, body string) *http.Response {
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	return resp
+}
+
+// Setenv sets an environment variable to a value. Returns a reset function to
+// reset the environment variable back to the original state.
+func Setenv(envvar, value string) func() {
+	original, ok := os.LookupEnv(envvar)
+	os.Setenv(envvar, value)
+
+	return func() {
+		if ok {
+			os.Setenv(envvar, original)
+		} else {
+			os.Unsetenv(envvar)
+		}
+	}
 }
 
 // Meets consul/sdk/testutil/TestingTB interface

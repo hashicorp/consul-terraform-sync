@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -11,19 +12,15 @@ import (
 
 func TestFreePort(t *testing.T) {
 	t.Run("ports_are_not_reused", func(t *testing.T) {
-		a, err := FreePort()
-		require.NoError(t, err)
-		b, err := FreePort()
-		require.NoError(t, err)
+		a := FreePort(t)
+		b := FreePort(t)
 
 		// wait to ensure listener has freed up port
 		time.Sleep(1 * time.Second)
-		c, err := FreePort()
-		require.NoError(t, err)
+		c := FreePort(t)
 
 		time.Sleep(2 * time.Second)
-		d, err := FreePort()
-		require.NoError(t, err)
+		d := FreePort(t)
 
 		assert.NotEqual(t, a, b)
 		assert.NotEqual(t, a, c)
@@ -45,5 +42,39 @@ func TestMakeTempDir(t *testing.T) {
 		delete()
 		_, err = ioutil.ReadDir(tempDir)
 		require.Error(t, err)
+	})
+}
+
+func TestSetEnvVar(t *testing.T) {
+	envvar := "CTS_TEST_ENV_VAR"
+	t.Run("env var with existing value", func(t *testing.T) {
+		// set up environment variable with a value
+		os.Setenv(envvar, "old-value")
+		defer os.Unsetenv(envvar)
+
+		// check that setting worked
+		reset := Setenv(envvar, "new-value")
+		actual, ok := os.LookupEnv(envvar)
+		require.True(t, ok)
+		assert.Equal(t, "new-value", actual)
+
+		// check resetting back to original value
+		reset()
+		actual, ok = os.LookupEnv(envvar)
+		require.True(t, ok)
+		assert.Equal(t, "old-value", actual)
+	})
+	t.Run("env var with no value", func(t *testing.T) {
+		// check that setting worked
+		reset := Setenv(envvar, "value")
+		actual, ok := os.LookupEnv(envvar)
+		assert.True(t, ok)
+		assert.Equal(t, "value", actual)
+
+		// check resetting back to no value
+		reset()
+		actual, ok = os.LookupEnv(envvar)
+		assert.False(t, ok)
+		assert.Empty(t, actual)
 	})
 }

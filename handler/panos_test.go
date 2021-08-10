@@ -3,12 +3,12 @@ package handler
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/PaloAltoNetworks/pango"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/handler"
 	"github.com/hashicorp/consul-terraform-sync/retry"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -77,13 +77,8 @@ func TestNewPanos(t *testing.T) {
 
 	t.Run("username from env", func(t *testing.T) {
 		adminUser := "admin"
-		cachedUser, ok := os.LookupEnv("PANOS_USERNAME")
-		if ok {
-			defer os.Setenv("PANOS_USERNAME", cachedUser)
-		} else {
-			defer os.Unsetenv("PANOS_USERNAME")
-		}
-		os.Setenv("PANOS_USERNAME", adminUser)
+		reset := testutils.Setenv("PANOS_USERNAME", adminUser)
+		defer reset()
 
 		config := map[string]interface{}{
 			"hostname": "10.10.10.10",
