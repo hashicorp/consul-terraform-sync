@@ -105,6 +105,21 @@ func RequestHTTP(t testing.TB, method, url, body string) *http.Response {
 	return resp
 }
 
+// Setenv sets an environment variable to a value. Returns a reset function to
+// reset the environment variable back to the original state.
+func Setenv(envvar, value string) func() {
+	original, ok := os.LookupEnv(envvar)
+	os.Setenv(envvar, value)
+
+	return func() {
+		if ok {
+			os.Setenv(envvar, original)
+		} else {
+			os.Unsetenv(envvar)
+		}
+	}
+}
+
 // Meets consul/sdk/testutil/TestingTB interface
 // Required for any initialization of the test consul server as it requires
 // one of these as an argument.

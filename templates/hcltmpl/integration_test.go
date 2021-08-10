@@ -5,7 +5,6 @@ package hcltmpl
 import (
 	"context"
 	"io/ioutil"
-	"os"
 	"testing"
 	"time"
 
@@ -18,20 +17,8 @@ import (
 
 func TestLoadDynamicConfig_Env(t *testing.T) {
 	// Environment cleanup after testing
-	cachedTestEnv, ok := os.LookupEnv("CTS_TEST_ENV")
-	if ok {
-		defer os.Setenv("CTS_TEST_ENV", cachedTestEnv)
-	} else {
-		defer os.Unsetenv("CTS_TEST_ENV")
-	}
-	os.Setenv("CTS_TEST_ENV", "foobar")
-
-	cachedTestDNEEnv, ok := os.LookupEnv("CTS_TEST_DNE")
-	if ok {
-		defer os.Setenv("CTS_TEST_DNE", cachedTestDNEEnv)
-	} else {
-		defer os.Unsetenv("CTS_TEST_DNE")
-	}
+	reset := testutils.Setenv("CTS_TEST_ENV", "foobar")
+	defer reset()
 
 	w := hcat.NewWatcher(hcat.WatcherInput{})
 	r := hcat.NewResolver()
