@@ -59,14 +59,14 @@ func (c ServicesCondition) ServicesAppended() bool {
 func (c ServicesCondition) appendModuleAttribute(body *hclwrite.Body) {}
 
 func (c ServicesCondition) appendTemplate(w io.Writer) error {
-	q := c.hcatQuery()
-	if c.Regexp != "" {
-		_, err := fmt.Fprintf(w, serviceRegexTmpl, q)
-		if err != nil {
-			log.Printf("[WARN] (templates.tftmpl) unable to write service condition template")
-			return err
-		}
+	if c.Regexp == "" {
 		return nil
+	}
+	q := c.hcatQuery()
+	_, err := fmt.Fprintf(w, serviceRegexTmpl, q)
+	if err != nil {
+		log.Printf("[ERR] (templates.tftmpl) unable to write service condition template")
+		return err
 	}
 	return nil
 }
@@ -129,7 +129,7 @@ func (c CatalogServicesCondition) appendTemplate(w io.Writer) error {
 	if c.SourceIncludesVar {
 		_, err := fmt.Fprintf(w, catalogServicesConditionIncludesVarTmpl, q)
 		if err != nil {
-			log.Printf("[WARN] (templates.tftmpl) unable to write catalog-service" +
+			log.Printf("[ERR] (templates.tftmpl) unable to write catalog-service" +
 				" template to include variable")
 			return err
 		}
@@ -137,7 +137,7 @@ func (c CatalogServicesCondition) appendTemplate(w io.Writer) error {
 	}
 	_, err := fmt.Fprintf(w, catalogServicesConditionTmpl, q)
 	if err != nil {
-		log.Printf("[WARN] (templates.tftmpl) unable to write catalog-service" +
+		log.Printf("[ERR] (templates.tftmpl) unable to write catalog-service" +
 			" empty template")
 		return err
 	}

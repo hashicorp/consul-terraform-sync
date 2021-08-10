@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 
@@ -270,7 +271,7 @@ func (c *TaskConfig) Validate() error {
 		}
 		switch cond := c.Condition.(type) {
 		case *ServicesConditionConfig:
-			if cond.Regexp == nil ||  *cond.Regexp == ""  {
+			if cond.Regexp == nil || *cond.Regexp == "" {
 				return fmt.Errorf("at least one service is required in task.services " +
 					"or task.condition.regexp must be configured")
 			}
@@ -285,7 +286,11 @@ func (c *TaskConfig) Validate() error {
 		switch cond := c.Condition.(type) {
 		case *ServicesConditionConfig:
 			if cond.Regexp != nil && *cond.Regexp != "" {
-				return fmt.Errorf("task.services is not allowed if task.condition.regexp is configured")
+				log.Printf("[ERR] (config.task) list of services and service condition regex " +
+					"both provided. If both are needed, consider including the list in the regex " +
+					"or creating separate tasks.")
+				return fmt.Errorf("task.services is not allowed if task.condition.regexp " +
+					"is configured for a services condition")
 			}
 		}
 	}

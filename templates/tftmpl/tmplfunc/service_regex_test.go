@@ -276,9 +276,9 @@ func TestServiceRegexQuery_Fetch(t *testing.T) {
 				assert.Equal(t, tc.expected[i].Name, actualNode.Name)
 				assert.Equal(t, tc.expected[i].ID, actualNode.ID)
 				assert.Equal(t, tc.expected[i].Node, actualNode.Node,
-					fmt.Sprintf("unexpected node name for service %s", actualNode.ID))
+					fmt.Sprintf("unexpected node name for service %s", actualNode.Node))
 				assert.Equal(t, tc.expected[i].NodeID, actualNode.NodeID,
-					fmt.Sprintf("unexpected node name for service %s", actualNode.ID))
+					fmt.Sprintf("unexpected node id for service %s", actualNode.ID))
 			}
 		})
 	}
