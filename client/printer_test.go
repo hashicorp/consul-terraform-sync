@@ -5,6 +5,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,20 +14,31 @@ func TestNewPrinter(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name        string
-		expectError bool
-		config      *PrinterConfig
+		name             string
+		expectError      bool
+		expectedLogLevel string
+		config           *PrinterConfig
 	}{
 		{
 			"error nil config",
 			true,
+			"",
 			nil,
+		},
+		{
+			"happy path debug log level",
+			false,
+			"DEBUG",
+			&PrinterConfig{
+				WorkingDir: "path/to/wd",
+				Workspace:  "ws",
+			},
 		},
 		{
 			"happy path",
 			false,
+			"INFO",
 			&PrinterConfig{
-				LogLevel:   "INFO",
 				WorkingDir: "path/to/wd",
 				Workspace:  "ws",
 			},
@@ -34,6 +47,7 @@ func TestNewPrinter(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			logging.LogLevel = tc.expectedLogLevel
 			actual, err := NewPrinter(tc.config)
 
 			if tc.expectError {
@@ -43,7 +57,7 @@ func TestNewPrinter(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.NotNil(t, actual)
-			assert.Equal(t, tc.config.LogLevel, actual.logLevel)
+			assert.Equal(t, tc.expectedLogLevel, actual.logLevel)
 			assert.Equal(t, tc.config.WorkingDir, actual.workingDir)
 			assert.Equal(t, tc.config.Workspace, actual.workspace)
 		})
@@ -51,17 +65,24 @@ func TestNewPrinter(t *testing.T) {
 }
 
 func DefaultTestPrinter(buf *bytes.Buffer) (*Printer, error) {
-	printer, err := NewPrinter(&PrinterConfig{
-		LogLevel:   "INFO",
+	printer, err := NewTestPrinter(&PrinterConfig{
 		WorkingDir: "path/to/wd",
 		Workspace:  "ws",
+		Writer:     buf,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Overwrite the printer's logger so that we can look at contents
-	printer.logger.SetOutput(buf)
+	return printer, nil
+}
+
+func NewTestPrinter(config *PrinterConfig) (*Printer, error) {
+	printer, err := NewPrinter(config)
+	if err != nil {
+		return nil, err
+	}
+
 	return printer, nil
 }
 
@@ -105,6 +126,53 @@ func TestPrinterInit(t *testing.T) {
 	assert.NotEmpty(t, buf.String())
 	assert.Contains(t, buf.String(), "client.printer")
 	assert.Contains(t, buf.String(), "init")
+}
+
+func TestPrinterLogLevel(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		expectWrite bool
+		logLevel    string
+		config      *PrinterConfig
+	}{
+		{
+			"no write info log level",
+			false,
+			"INFO",
+			&PrinterConfig{
+				WorkingDir: "path/to/wd",
+				Workspace:  "ws",
+			},
+		},
+		{
+			"write trace log level",
+			true,
+			"TRACE",
+			&PrinterConfig{
+				WorkingDir: "path/to/wd",
+				Workspace:  "ws",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			logging.LogLevel = tc.logLevel
+			var buf bytes.Buffer
+			tc.config.Writer = &buf
+			p, err := NewTestPrinter(tc.config)
+			assert.NoError(t, err)
+
+			p.logger.Printf("[TRACE] Test Message")
+			if tc.expectWrite {
+				assert.NotEmpty(t, buf.String())
+			} else {
+				assert.Empty(t, buf.String())
+			}
+		})
+	}
 }
 
 func TestPrinterApply(t *testing.T) {
@@ -161,7 +229,6 @@ func TestPrinterGoString(t *testing.T) {
 		{
 			"happy path",
 			&Printer{
-				logLevel:   "INFO",
 				workingDir: "path/to/wd",
 				workspace:  "ws",
 			},
@@ -176,7 +243,6 @@ func TestPrinterGoString(t *testing.T) {
 			}
 
 			assert.Contains(t, tc.printer.GoString(), "&Printer")
-			assert.Contains(t, tc.printer.GoString(), tc.printer.logLevel)
 			assert.Contains(t, tc.printer.GoString(), tc.printer.workingDir)
 			assert.Contains(t, tc.printer.GoString(), tc.printer.workspace)
 		})

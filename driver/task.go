@@ -2,6 +2,7 @@ package driver
 
 import (
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -358,10 +359,10 @@ func newClient(conf *clientConfig) (client.Client, error) {
 	case developmentClient:
 		log.Printf("[TRACE] (driver) creating development client for task '%s'", taskName)
 		c, err = client.NewPrinter(&client.PrinterConfig{
-			LogLevel:   "debug",
 			ExecPath:   conf.path,
 			WorkingDir: conf.workingDir,
 			Workspace:  taskName,
+			Writer:     os.Stdout,
 		})
 	case testClient:
 		log.Printf("[TRACE] (driver) creating mock client for task '%s'", taskName)

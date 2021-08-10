@@ -5,14 +5,23 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
-	"github.com/hashicorp/go-syslog"
+	gsyslog "github.com/hashicorp/go-syslog"
 	"github.com/hashicorp/logutils"
 )
 
 // Levels are the log levels we respond too.
 var Levels = []logutils.LogLevel{"TRACE", "DEBUG", "INFO", "WARN", "ERR"}
+
+// LogLevel is the log level of all logs in this package
+// it is set by the Setup() function and is shared with all other setup variations (i.e. SetupLocal())
+var LogLevel = ""
+
+const (
+	defaultLogLevel = "INFO"
+)
 
 // Config is the configuration for this log setup.
 type Config struct {
@@ -32,20 +41,15 @@ type Config struct {
 }
 
 func Setup(config *Config) error {
-	var logOutput io.Writer
+	// Set the global log level, this will be used by all loggers
+	LogLevel = config.Level
 
-	// Setup the default logging
-	logFilter := NewLogFilter()
-	logFilter.MinLevel = logutils.LogLevel(strings.ToUpper(config.Level))
-	logFilter.Writer = config.Writer
-	if !ValidateLevelFilter(logFilter.MinLevel, logFilter) {
-		levels := make([]string, 0, len(logFilter.Levels))
-		for _, level := range logFilter.Levels {
-			levels = append(levels, string(level))
-		}
-		return fmt.Errorf("invalid log level %q, valid log levels are %s",
-			config.Level, strings.Join(levels, ", "))
+	logFilter, err := setupFilter(config.Writer)
+	if err != nil {
+		return fmt.Errorf("error setting up log filter: %s", err)
 	}
+
+	var logOutput io.Writer
 
 	// Check if syslog is enabled
 	if config.Syslog {
@@ -67,12 +71,27 @@ func Setup(config *Config) error {
 	return nil
 }
 
+// SetupLocal returns a new log.Logger which logs to a provided io.Writer
+// The logger will filter logs based on the global log level
+func SetupLocal(writer io.Writer) (*log.Logger, error) {
+	// Create default logger
+	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.LUTC)
+	logFilter, err := setupFilter(writer)
+	if err != nil {
+		return &log.Logger{}, fmt.Errorf("error setting up log filter: %s", err)
+	}
+
+	logOutput := io.Writer(logFilter)
+	logger.SetOutput(logOutput)
+	return logger, nil
+}
+
 // NewLogFilter returns a LevelFilter that is configured with the log levels that
 // we use.
 func NewLogFilter() *logutils.LevelFilter {
 	return &logutils.LevelFilter{
 		Levels:   Levels,
-		MinLevel: "WARN",
+		MinLevel: logutils.LogLevel(defaultLogLevel),
 		Writer:   ioutil.Discard,
 	}
 }
@@ -85,4 +104,25 @@ func ValidateLevelFilter(min logutils.LogLevel, filter *logutils.LevelFilter) bo
 		}
 	}
 	return false
+}
+
+func setupFilter(writer io.Writer) (*logutils.LevelFilter, error) {
+	// Setup the default logging if nothing has been set
+	if len(LogLevel) == 0 {
+		LogLevel = defaultLogLevel
+	}
+
+	logFilter := NewLogFilter()
+	logFilter.MinLevel = logutils.LogLevel(strings.ToUpper(LogLevel))
+	logFilter.Writer = writer
+	if !ValidateLevelFilter(logFilter.MinLevel, logFilter) {
+		levels := make([]string, 0, len(logFilter.Levels))
+		for _, level := range logFilter.Levels {
+			levels = append(levels, string(level))
+		}
+		return &logutils.LevelFilter{}, fmt.Errorf("invalid log level %q, valid log levels are %s",
+			LogLevel, strings.Join(levels, ", "))
+	}
+
+	return logFilter, nil
 }

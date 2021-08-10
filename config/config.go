@@ -18,7 +18,7 @@ import (
 
 const (
 	// DefaultLogLevel is the default logging level.
-	DefaultLogLevel = "WARN"
+	DefaultLogLevel = "INFO"
 
 	// DefaultPort is the default port to use for api server.
 	DefaultPort = 8558

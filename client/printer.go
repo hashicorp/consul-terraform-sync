@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 var _ Client = (*Printer)(nil)
@@ -22,10 +23,10 @@ type Printer struct {
 
 // PrinterConfig configures the log client
 type PrinterConfig struct {
-	LogLevel   string
 	ExecPath   string
 	WorkingDir string
 	Workspace  string
+	Writer     io.Writer
 }
 
 // NewPrinter creates a new client
@@ -33,13 +34,17 @@ func NewPrinter(config *PrinterConfig) (*Printer, error) {
 	if config == nil {
 		return nil, errors.New("PrinterConfig cannot be nil - mirror Terraform CLI error")
 	}
+
+	logger, err := logging.SetupLocal(config.Writer)
+	if err != nil {
+		return &Printer{}, fmt.Errorf("error creating new logger: %s", err)
+	}
+
 	return &Printer{
-		logLevel:   config.LogLevel,
+		logLevel:   logging.LogLevel,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
-		// TODO: revisit to improve for long-term using a setup like
-		// https://github.com/hashicorp/consul-terraform-sync/blob/master/logging/logging.go#L34
-		logger: log.New(os.Stdout, "", log.Ldate|log.Lmicroseconds),
+		logger:     logger,
 	}, nil
 }
 
