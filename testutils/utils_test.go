@@ -12,19 +12,15 @@ import (
 
 func TestFreePort(t *testing.T) {
 	t.Run("ports_are_not_reused", func(t *testing.T) {
-		a, err := FreePort()
-		require.NoError(t, err)
-		b, err := FreePort()
-		require.NoError(t, err)
+		a := FreePort(t)
+		b := FreePort(t)
 
 		// wait to ensure listener has freed up port
 		time.Sleep(1 * time.Second)
-		c, err := FreePort()
-		require.NoError(t, err)
+		c := FreePort(t)
 
 		time.Sleep(2 * time.Second)
-		d, err := FreePort()
-		require.NoError(t, err)
+		d := FreePort(t)
 
 		assert.NotEqual(t, a, b)
 		assert.NotEqual(t, a, c)

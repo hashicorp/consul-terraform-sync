@@ -43,8 +43,7 @@ func StartCTS(t *testing.T, configPath string, opts ...string) (*Client, func(t 
 	}
 
 	// Grab port for API when CTS is running as a daemon and append to config file
-	port, err := testutils.FreePort()
-	require.NoError(t, err)
+	port := testutils.FreePort(t)
 	f, err := os.OpenFile(configPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	require.NoError(t, err)
 	_, err = f.WriteString(fmt.Sprintf("port = %d\n", port))

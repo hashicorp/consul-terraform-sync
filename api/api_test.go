@@ -61,8 +61,7 @@ func TestServe(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	port, err := testutils.FreePort()
-	require.NoError(t, err)
+	port := testutils.FreePort(t)
 
 	task, err := driver.NewTask(driver.TaskConfig{Enabled: true})
 	require.NoError(t, err)
@@ -93,8 +92,7 @@ func TestServe(t *testing.T) {
 func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
-	port, err := testutils.FreePort()
-	require.NoError(t, err)
+	port := testutils.FreePort(t)
 	api := NewAPI(event.NewStore(), driver.NewDrivers(), port)
 
 	ctx, cancel := context.WithCancel(context.Background())

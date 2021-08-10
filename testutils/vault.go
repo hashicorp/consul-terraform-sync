@@ -31,8 +31,7 @@ func NewTestVaultServer(tb testing.TB, config TestVaultServerConfig) (*vaultAPI.
 	var err error
 	port := config.Port
 	if port == 0 {
-		port, err = FreePort()
-		require.NoError(tb, err)
+		port = FreePort(tb)
 	}
 	addr := fmt.Sprintf("http://127.0.0.1:%d", port)
 

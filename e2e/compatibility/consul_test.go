@@ -69,8 +69,7 @@ func TestCompatibilty_Consul(t *testing.T) {
 		for _, tc := range cases {
 			name := fmt.Sprintf("Consul v%s %s", cv, tc.name)
 			t.Run(name, func(t *testing.T) {
-				port, err := testutils.FreePort()
-				require.NoError(t, err)
+				port := testutils.FreePort(t)
 
 				stop := runConsul(t, port)
 				defer stop()

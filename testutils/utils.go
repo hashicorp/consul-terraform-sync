@@ -20,16 +20,15 @@ import (
 )
 
 // FreePort finds the next free port incrementing upwards. Use for testing.
-func FreePort() (int, error) {
+func FreePort(t testing.TB) int {
 	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return 0, err
-	}
+	require.NoError(t, err)
+
 	port := listener.Addr().(*net.TCPAddr).Port
-	if err = listener.Close(); err != nil {
-		return 0, err
-	}
-	return port, nil
+	err = listener.Close()
+	require.NoError(t, err)
+
+	return port
 }
 
 // MakeTempDir creates a directory in the current path for a test. Caller is
