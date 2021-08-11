@@ -35,7 +35,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := fakeHandlerConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := fakeHandlerConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock()
 	config.write(t, configPath)
 
 	cts, stopCTS := api.StartCTS(t, configPath, api.CTSDevModeFlag)
@@ -255,7 +255,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := disabledTaskConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := disabledTaskConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock()
 	config.write(t, configPath)
 
 	cts, stop := api.StartCTS(t, configPath)

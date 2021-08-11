@@ -58,7 +58,7 @@ func TestE2EBasic(t *testing.T) {
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
 		appendDBTask().appendWebTask()
 	config.write(t, configPath)
 
@@ -106,7 +106,7 @@ func TestE2ERestartSync(t *testing.T) {
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).appendDBTask()
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().appendDBTask()
 	config.write(t, configPath)
 
 	runSyncStop(t, configPath, 8*time.Second)
@@ -131,8 +131,8 @@ func TestE2ERestartConsul(t *testing.T) {
 	cleanup := testutils.MakeTempDir(t, tempDir) // cleanup at end if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig().appendConsulBlock(consul).
-		appendTerraformBlock(tempDir).appendDBTask()
+	config := baseConfig(tempDir).appendConsulBlock(consul).
+		appendTerraformBlock().appendDBTask()
 	config.write(t, configPath)
 
 	// start CTS
@@ -264,8 +264,8 @@ func TestE2ELocalBackend(t *testing.T) {
 			delete := testutils.MakeTempDir(t, tempDir)
 			// no defer to delete directory: only delete at end of test if no errors
 
-			config := baseConfig().appendConsulBlock(srv).
-				appendTerraformBlock(tempDir, tc.backendConfig).
+			config := baseConfig(tempDir).appendConsulBlock(srv).
+				appendTerraformBlock(tc.backendConfig).
 				appendDBTask().appendWebTask()
 
 			configPath := filepath.Join(tempDir, configFile)
@@ -304,7 +304,7 @@ func TestE2EValidateError(t *testing.T) {
 }
 `, taskName)
 
-	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
 		appendString(conditionTask)
 	config.write(t, configPath)
 	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))

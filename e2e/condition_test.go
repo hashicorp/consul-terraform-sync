@@ -141,7 +141,7 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	}
 }
 `
-	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
 		appendString(conditionTask)
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
@@ -191,7 +191,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 }
 `, taskName)
 
-	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
 		appendString(conditionTask)
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
@@ -290,7 +290,7 @@ task {
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_multi")
 	cleanup := testutils.MakeTempDir(t, tempDir)
 
-	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
 		appendString(tasks)
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
@@ -361,7 +361,7 @@ func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirNa
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
 	cleanup := testutils.MakeTempDir(t, tempDir)
 
-	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
 		appendString(taskConf)
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
@@ -413,7 +413,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
 	cleanup := testutils.MakeTempDir(t, tempDir)
 
-	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
 		appendString(taskConf)
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
@@ -485,7 +485,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
 	cleanup := testutils.MakeTempDir(t, tempDir)
 
-	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
 		appendString(taskConf)
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
