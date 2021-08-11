@@ -16,25 +16,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewServiceRegexQuery(t *testing.T) {
+func TestNewServicesRegexQuery(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name string
 		opts []string
-		exp  *serviceRegexQuery
+		exp  *servicesRegexQuery
 		err  bool
 	}{
 		{
 			"no opts",
 			[]string{},
-			&serviceRegexQuery{},
+			&servicesRegexQuery{},
 			true,
 		},
 		{
 			"regexp",
 			[]string{"regexp=.*"},
-			&serviceRegexQuery{
+			&servicesRegexQuery{
 				regexp: regexp.MustCompile(".*"),
 			},
 			false,
@@ -42,7 +42,7 @@ func TestNewServiceRegexQuery(t *testing.T) {
 		{
 			"multiple",
 			[]string{"regexp=.*", "\"my-tag\" in Service.Tags", "node-meta=k:v", "ns=namespace", "dc=dc1"},
-			&serviceRegexQuery{
+			&servicesRegexQuery{
 				regexp:   regexp.MustCompile(".*"),
 				dc:       "dc1",
 				ns:       "namespace",
@@ -67,7 +67,7 @@ func TestNewServiceRegexQuery(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			act, err := newServiceRegexQuery(tc.opts)
+			act, err := newServicesRegexQuery(tc.opts)
 			if tc.err {
 				assert.Error(t, err)
 				return
@@ -83,7 +83,7 @@ func TestNewServiceRegexQuery(t *testing.T) {
 	}
 }
 
-func TestServiceRegexQuery_String(t *testing.T) {
+func TestServicesRegexQuery_String(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -105,7 +105,7 @@ func TestServiceRegexQuery_String(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			d, err := newServiceRegexQuery(tc.i)
+			d, err := newServicesRegexQuery(tc.i)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -114,7 +114,7 @@ func TestServiceRegexQuery_String(t *testing.T) {
 	}
 }
 
-func TestServiceRegexQuery_Fetch(t *testing.T) {
+func TestServicesRegexQuery_Fetch(t *testing.T) {
 	t.Parallel()
 
 	// Test is fetching services from a Consul cluster set-up as:
@@ -261,7 +261,7 @@ func TestServiceRegexQuery_Fetch(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			d, err := newServiceRegexQuery(tc.i)
+			d, err := newServicesRegexQuery(tc.i)
 			require.NoError(t, err)
 
 			a, _, err := d.Fetch(&testClient{consul: client})

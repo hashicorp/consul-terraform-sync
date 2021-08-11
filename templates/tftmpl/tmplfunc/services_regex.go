@@ -20,7 +20,7 @@ var (
 	queryParamOptRe = regexp.MustCompile(`[\w\d\s]=[\w\d\s]`)
 )
 
-// serviceRegexFunc returns information on registered Consul
+// servicesRegexFunc returns information on registered Consul
 // services that have a name that match a given regex. It queries
 // the Catalog List Services API initially to get all the services
 // and then queries the Health API for each matching service.
@@ -30,12 +30,12 @@ var (
 // Endpoints:
 //   /v1/catalog/services
 //   /v1/health/service/:service
-// Template: {{ serviceRegex regexp=<regex> <options> ... }}
-func serviceRegexFunc(recall hcat.Recaller) interface{} {
+// Template: {{ servicesRegex regexp=<regex> <options> ... }}
+func servicesRegexFunc(recall hcat.Recaller) interface{} {
 	return func(opts ...string) ([]*dep.HealthService, error) {
 		result := []*dep.HealthService{}
 
-		d, err := newServiceRegexQuery(opts)
+		d, err := newServicesRegexQuery(opts)
 		if err != nil {
 			return nil, err
 		}
@@ -48,9 +48,9 @@ func serviceRegexFunc(recall hcat.Recaller) interface{} {
 	}
 }
 
-// serviceRegexQuery is the representation of the regex service
+// servicesRegexQuery is the representation of the regex service
 // query from inside a template.
-type serviceRegexQuery struct {
+type servicesRegexQuery struct {
 	stopCh chan struct{}
 
 	regexp *regexp.Regexp
@@ -62,11 +62,11 @@ type serviceRegexQuery struct {
 	opts     consulapi.QueryOptions
 }
 
-// newServiceRegexQuery processes options in the format of
+// newServicesRegexQuery processes options in the format of
 // "key=value" (e.g. "regexp=^web.*") with the exception of filters.
 // Any option that is not a key/value pair is assumed to be a filter.
-func newServiceRegexQuery(opts []string) (*serviceRegexQuery, error) {
-	serviceRegexQuery := serviceRegexQuery{
+func newServicesRegexQuery(opts []string) (*servicesRegexQuery, error) {
+	servicesRegexQuery := servicesRegexQuery{
 		stopCh: make(chan struct{}, 1),
 	}
 	var filters []string
@@ -86,17 +86,17 @@ func newServiceRegexQuery(opts []string) (*serviceRegexQuery, error) {
 				if err != nil {
 					return nil, fmt.Errorf("service.regex: invalid regexp")
 				}
-				serviceRegexQuery.regexp = r
+				servicesRegexQuery.regexp = r
 				continue
 			case "dc", "datacenter":
-				serviceRegexQuery.dc = value
+				servicesRegexQuery.dc = value
 				continue
 			case "ns", "namespace":
-				serviceRegexQuery.ns = value
+				servicesRegexQuery.ns = value
 				continue
 			case "node-meta":
-				if serviceRegexQuery.nodeMeta == nil {
-					serviceRegexQuery.nodeMeta = make(map[string]string)
+				if servicesRegexQuery.nodeMeta == nil {
+					servicesRegexQuery.nodeMeta = make(map[string]string)
 				}
 				k, v, err := stringsSplit2(value, ":")
 				if err != nil {
@@ -104,7 +104,7 @@ func newServiceRegexQuery(opts []string) (*serviceRegexQuery, error) {
 						"service.regex: invalid format for query "+
 							"parameter %q: %s", query, value)
 				}
-				serviceRegexQuery.nodeMeta[k] = v
+				servicesRegexQuery.nodeMeta[k] = v
 				continue
 			}
 		}
@@ -121,19 +121,19 @@ func newServiceRegexQuery(opts []string) (*serviceRegexQuery, error) {
 	}
 
 	if len(filters) > 0 {
-		serviceRegexQuery.filter = strings.Join(filters, " and ")
+		servicesRegexQuery.filter = strings.Join(filters, " and ")
 	}
 
-	if serviceRegexQuery.regexp == nil {
+	if servicesRegexQuery.regexp == nil {
 		return nil, fmt.Errorf("service.regex: regexp option required")
 	}
 
-	return &serviceRegexQuery, nil
+	return &servicesRegexQuery, nil
 }
 
 // Fetch queries the Consul API defined by the given client and returns a slice
 // of HealthService objects for services that match the set regex.
-func (d *serviceRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
+func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, dep.ErrStopped
@@ -215,7 +215,7 @@ func (d *serviceRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respon
 }
 
 // String returns the human-friendly version of this query.
-func (d *serviceRegexQuery) String() string {
+func (d *servicesRegexQuery) String() string {
 	var opts []string
 	opts = append(opts, fmt.Sprintf("regexp=%s", d.regexp.String()))
 
@@ -238,7 +238,7 @@ func (d *serviceRegexQuery) String() string {
 }
 
 // Stop halts the query's fetch function.
-func (d *serviceRegexQuery) Stop() {
+func (d *servicesRegexQuery) Stop() {
 	close(d.stopCh)
 }
 

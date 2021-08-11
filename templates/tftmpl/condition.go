@@ -63,7 +63,7 @@ func (c ServicesCondition) appendTemplate(w io.Writer) error {
 		return nil
 	}
 	q := c.hcatQuery()
-	_, err := fmt.Fprintf(w, serviceRegexTmpl, q)
+	_, err := fmt.Fprintf(w, servicesRegexTmpl, q)
 	if err != nil {
 		log.Printf("[ERR] (templates.tftmpl) unable to write service condition template")
 		return err
@@ -88,9 +88,9 @@ func (c ServicesCondition) hcatQuery() string {
 	return ""
 }
 
-const serviceRegexTmpl = `
+const servicesRegexTmpl = `
 services = {
-{{- with $srv := serviceRegex %s }}
+{{- with $srv := servicesRegex %s }}
   {{- range $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
 {{ HCLService $s | indent 4 }}

@@ -20,7 +20,7 @@ type ServicesMeta map[string]map[string]string
 func HCLMap(meta ServicesMeta) template.FuncMap {
 	tmplFuncs := hcat.FuncMapConsulV1()
 	tmplFuncs["catalogServicesRegistration"] = catalogServicesRegistrationFunc
-	tmplFuncs["serviceRegex"] = serviceRegexFunc
+	tmplFuncs["servicesRegex"] = servicesRegexFunc
 	tmplFuncs["indent"] = tfunc.Helpers()["indent"]
 	tmplFuncs["subtract"] = tfunc.Math()["subtract"]
 	tmplFuncs["joinStrings"] = joinStringsFunc
