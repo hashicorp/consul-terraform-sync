@@ -23,8 +23,9 @@ var (
 	}
 
 	longConfig = Config{
-		LogLevel: String("ERR"),
-		Port:     Int(8502),
+		LogLevel:   String("ERR"),
+		Port:       Int(8502),
+		WorkingDir: String("working"),
 		Syslog: &SyslogConfig{
 			Enabled: Bool(true),
 			Name:    String("syslog"),
@@ -57,9 +58,8 @@ var (
 		},
 		Driver: &DriverConfig{
 			Terraform: &TerraformConfig{
-				Log:        Bool(true),
-				Path:       String("path"),
-				WorkingDir: String("working"),
+				Log:  Bool(true),
+				Path: String("path"),
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"address": "consul-example.com",

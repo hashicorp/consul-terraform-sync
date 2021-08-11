@@ -30,6 +30,8 @@ func TestTasksUpdate(t *testing.T) {
 
 	apiTaskName := "e2e_task_api"
 	apiTask := fmt.Sprintf(`
+working_dir = "%s"
+
 task {
 	name = "%s"
 	description = "basic read-write e2e task api only"
@@ -37,10 +39,10 @@ task {
 	providers = ["local"]
 	source = "./test_modules/local_instances_file"
 }
-`, apiTaskName)
+`, tempDir, apiTaskName)
 	configPath := filepath.Join(tempDir, configFile)
 	var config hclConfig
-	config = config.appendConsulBlock(srv).appendTerraformBlock(tempDir).
+	config = config.appendConsulBlock(srv).appendTerraformBlock().
 		appendDBTask().appendWebTask().appendString(apiTask)
 	config.write(t, configPath)
 

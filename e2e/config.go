@@ -45,7 +45,7 @@ consul {
 `, consul.HTTPSAddr, consul.Config.CertFile))
 }
 
-func (c hclConfig) appendTerraformBlock(dir string, opts ...string) hclConfig {
+func (c hclConfig) appendTerraformBlock(opts ...string) hclConfig {
 	cwd, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -59,10 +59,9 @@ func (c hclConfig) appendTerraformBlock(dir string, opts ...string) hclConfig {
 	return c.appendString(fmt.Sprintf(`
 driver "terraform" {
 	log = true
-	path = "%s"
-	working_dir = "%s"%s
+	path = "%s"%s
 }
-`, cwd, dir, optsConfig))
+`, cwd, optsConfig))
 }
 
 func (c hclConfig) appendDBTask() hclConfig {
@@ -89,8 +88,9 @@ task {
 `, webTaskName))
 }
 
-func baseConfig() hclConfig {
-	return `log_level = "DEBUG"
+func baseConfig(wd string) hclConfig {
+	return hclConfig(fmt.Sprintf(`log_level = "DEBUG"
+working_dir = "%s"
 
 buffer_period {
 	enabled = false
@@ -112,13 +112,15 @@ service {
 }
 
 terraform_provider "local" {}
-`
+`, wd))
 }
 
 // fakeHandlerConfig returns a config file with fake provider that has a handler
 // Use for running in development to test cases success/failed events
-func fakeHandlerConfig() hclConfig {
+func fakeHandlerConfig(dir string) hclConfig {
 	return hclConfig(fmt.Sprintf(`
+working_dir = "%s"
+
 terraform_provider "fake-sync" {
 	alias = "failure"
 	name = "failure"
@@ -156,12 +158,14 @@ task {
 	providers = ["fake-sync.success"]
 	source = "./test_modules/local_instances_file"
 }
-`, fakeFailureTaskName, fakeSuccessTaskName, disabledTaskName))
+`, dir, fakeFailureTaskName, fakeSuccessTaskName, disabledTaskName))
 }
 
 // disabledTaskConfig returns a config file with a task that is disabled
-func disabledTaskConfig() hclConfig {
+func disabledTaskConfig(dir string) hclConfig {
 	return hclConfig(fmt.Sprintf(`
+working_dir = "%s"
+
 task {
 	name = "%s"
 	description = "task is configured as disabled"
@@ -175,7 +179,7 @@ service {
 	name = "api"
 	description = "backend"
 }
-`, disabledTaskName))
+`, dir, disabledTaskName))
 }
 
 func panosBadCredConfig() hclConfig {

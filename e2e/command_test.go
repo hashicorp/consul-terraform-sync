@@ -32,7 +32,7 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := fakeHandlerConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := fakeHandlerConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock()
 	config.write(t, configPath)
 
 	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
@@ -97,7 +97,7 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := disabledTaskConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir)
+	config := disabledTaskConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock()
 	config.write(t, configPath)
 
 	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
@@ -158,7 +158,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig().appendTerraformBlock(tempDir).
+	config := baseConfig(tempDir).appendTerraformBlock().
 		appendConsulBlock(srv).appendDBTask()
 	config.write(t, configPath)
 
@@ -214,7 +214,7 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 	cleanup := testutils.MakeTempDir(t, tempDir)
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig().appendConsulBlock(srv).appendTerraformBlock(tempDir).appendDBTask()
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().appendDBTask()
 	config.write(t, configPath)
 
 	cts, stop := api.StartCTS(t, configPath)

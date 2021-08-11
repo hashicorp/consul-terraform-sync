@@ -1,5 +1,6 @@
 log_level = "ERR"
 port = 8502
+working_dir = "working"
 
 syslog {
   enabled = true
@@ -41,7 +42,6 @@ consul {
 driver "terraform" {
   log = true
   path = "path"
-  working_dir = "working"
   backend "consul" {
     address = "consul-example.com"
     path = "kv-path/terraform"

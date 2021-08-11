@@ -513,17 +513,17 @@ func baseConfig(dir string, port int) string {
 
 # port 0 will automatically select next free port
 port = 0
+working_dir = "%s"
 
 driver "terraform" {
 	log = true
 	path = "%s"
-	working_dir = "%s"
 }
 
 consul {
 	address = "localhost:%d"
 }
-`, cwd, dir, port)
+`, dir, cwd, port)
 }
 
 // nullTask returns config for a task with null resource module
