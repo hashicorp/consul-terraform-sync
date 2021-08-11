@@ -98,6 +98,7 @@ func TestLoadDynamicConfig(t *testing.T) {
 
 	w := new(mocks.Watcher)
 	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil)
+	w.On("Register", mock.Anything).Return(nil)
 
 	testCases := []struct {
 		name   string

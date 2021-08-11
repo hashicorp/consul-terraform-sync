@@ -16,13 +16,13 @@ type Watcher struct {
 	mock.Mock
 }
 
-// Buffer provides a mock function with given fields: tmplID
-func (_m *Watcher) Buffer(tmplID string) bool {
-	ret := _m.Called(tmplID)
+// Buffer provides a mock function with given fields: _a0
+func (_m *Watcher) Buffer(_a0 hcat.Notifier) bool {
+	ret := _m.Called(_a0)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(string) bool); ok {
-		r0 = rf(tmplID)
+	if rf, ok := ret.Get(0).(func(hcat.Notifier) bool); ok {
+		r0 = rf(_a0)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
@@ -60,6 +60,26 @@ func (_m *Watcher) Recaller(_a0 hcat.Notifier) hcat.Recaller {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(hcat.Recaller)
 		}
+	}
+
+	return r0
+}
+
+// Register provides a mock function with given fields: ns
+func (_m *Watcher) Register(ns ...hcat.Notifier) error {
+	_va := make([]interface{}, len(ns))
+	for _i := range ns {
+		_va[_i] = ns[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(...hcat.Notifier) error); ok {
+		r0 = rf(ns...)
+	} else {
+		r0 = ret.Error(0)
 	}
 
 	return r0

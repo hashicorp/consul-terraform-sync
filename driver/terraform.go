@@ -207,7 +207,7 @@ func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
 
 	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
 	re, err := tf.renderTemplate(ctx)
-	return re.Complete, err
+	return (re.Complete && !re.NoChange), err
 }
 
 // InspectTask inspects for any differences pertaining to the task between
@@ -293,7 +293,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 				return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to "+
 					"render template for task: %s", taskName, err)
 			}
-			if result.Complete || (result.NoChange && tf.renderedOnce) {
+			if (result.Complete && !result.NoChange) || (result.Complete && result.NoChange && tf.renderedOnce) {
 				// Continue if the template has completed or the template had already
 				// completed prior to enabling the task and there is no change.
 				break
@@ -408,14 +408,12 @@ func (tf *Terraform) renderTemplate(ctx context.Context) (hcat.ResolveEvent, err
 	// result.NoChange can occur when template rendering is forced even though
 	// there may be no dependency changes rather than naturally triggered
 	// e.g. when a task is re-enabled
-	if result.NoChange && tf.renderedOnce {
+	if result.Complete && result.NoChange && tf.renderedOnce {
 		log.Printf("[TRACE] (driver.terraform) no changes detected for task %s", taskName)
 		return result, nil
 	}
 
-	// result.Complete is only `true` if the template has new data that has been
-	// completely fetched.
-	if result.Complete {
+	if result.Complete && !result.NoChange {
 		log.Printf("[DEBUG] (driver.terraform) change detected for task %s", taskName)
 
 		rendered, err := tf.template.Render(result.Contents)
@@ -534,6 +532,11 @@ func (tf *Terraform) initTaskTemplate() error {
 			len(services))
 	default:
 		tf.template = tmpl
+	}
+
+	err = tf.watcher.Register(tf.template)
+	if err != nil {
+		return err
 	}
 
 	return nil

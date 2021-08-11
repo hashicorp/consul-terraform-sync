@@ -261,6 +261,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 				FuncMapMerge:  tmplfunc.HCLMap(nil),
 			}
 			tmpl := hcat.NewTemplate(input)
+			w.Register(tmpl)
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
 			defer cancel()
