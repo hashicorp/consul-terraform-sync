@@ -45,11 +45,12 @@ type Condition interface {
 // ServicesCondition handles appending templating for the services run condition
 // This is the default run condition
 type ServicesCondition struct {
-	Regexp string
+	Regexp            string
+	SourceIncludesVar bool
 }
 
 func (c ServicesCondition) SourceIncludesVariable() bool {
-	return false
+	return c.SourceIncludesVar
 }
 
 func (c ServicesCondition) ServicesAppended() bool {
@@ -63,7 +64,13 @@ func (c ServicesCondition) appendTemplate(w io.Writer) error {
 		return nil
 	}
 	q := c.hcatQuery()
-	_, err := fmt.Fprintf(w, servicesRegexTmpl, q)
+	var err error
+	if c.SourceIncludesVariable() {
+		_, err = fmt.Fprintf(w, servicesRegexIncludesVarTmpl, q)
+	} else {
+		_, err = fmt.Fprintf(w, servicesRegexTmpl, q)
+	}
+
 	if err != nil {
 		log.Printf("[ERR] (templates.tftmpl) unable to write service condition template")
 		return err
@@ -88,8 +95,11 @@ func (c ServicesCondition) hcatQuery() string {
 	return ""
 }
 
+var servicesRegexIncludesVarTmpl = fmt.Sprintf(`
+services = {%s}
+`, servicesRegexTmpl)
+
 const servicesRegexTmpl = `
-services = {
 {{- with $srv := servicesRegex %s }}
   {{- range $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
@@ -97,7 +107,7 @@ services = {
   },
   {{- end}}
 {{- end}}
-}`
+`
 
 // CatalogServicesCondition handles appending templating for the catalog-service
 // run condition
