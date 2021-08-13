@@ -1,5 +1,10 @@
 package config
 
+import (
+	"fmt"
+	"regexp"
+)
+
 const servicesConditionType = "services"
 
 var _ ConditionConfig = (*ServicesConditionConfig)(nil)
@@ -7,7 +12,9 @@ var _ ConditionConfig = (*ServicesConditionConfig)(nil)
 // ServicesConditionConfig configures a condition configuration block of type
 // 'services'. This is the default type of condition. A services condition is
 // triggered when changes occur to the the task's services.
-type ServicesConditionConfig struct{}
+type ServicesConditionConfig struct {
+	Regexp *string `mapstructure:"regexp"`
+}
 
 // Copy returns a deep copy of this configuration.
 func (c *ServicesConditionConfig) Copy() ConditionConfig {
@@ -16,6 +23,8 @@ func (c *ServicesConditionConfig) Copy() ConditionConfig {
 	}
 
 	var o ServicesConditionConfig
+	o.Regexp = StringCopy(c.Regexp)
+
 	return &o
 }
 
@@ -35,18 +44,45 @@ func (c *ServicesConditionConfig) Merge(o ConditionConfig) ConditionConfig {
 		return c.Copy()
 	}
 
-	return c.Copy()
+	r := c.Copy()
+	o2, ok := o.(*ServicesConditionConfig)
+	if !ok {
+		return r
+	}
+
+	r2 := r.(*ServicesConditionConfig)
+
+	if o2.Regexp != nil {
+		r2.Regexp = StringCopy(o2.Regexp)
+	}
+
+	return r2
 }
 
 // Finalize ensures there no nil pointers.
 func (c *ServicesConditionConfig) Finalize(services []string) {
-	// no-op: no fields to finalize yet
+	if c == nil { // config not required, return early
+		return
+	}
+
+	if c.Regexp == nil {
+		c.Regexp = String("")
+	}
 }
 
 // Validate validates the values and required options. This method is recommended
 // to run after Finalize() to ensure the configuration is safe to proceed.
 func (c *ServicesConditionConfig) Validate() error {
-	// no-op: no fields to validate yet
+	if c == nil { // config not required, return early
+		return nil
+	}
+
+	if c.Regexp != nil && *c.Regexp != "" {
+		if _, err := regexp.Compile(StringVal(c.Regexp)); err != nil {
+			return fmt.Errorf("unable to compile services regexp: %s", err)
+		}
+	}
+
 	return nil
 }
 
@@ -56,5 +92,9 @@ func (c *ServicesConditionConfig) GoString() string {
 		return "(*ServicesConditionConfig)(nil)"
 	}
 
-	return "&ServicesConditionConfig{}"
+	return fmt.Sprintf("&ServicesConditionConfig{"+
+		"Regexp:%s, "+
+		"}",
+		StringVal(c.Regexp),
+	)
 }

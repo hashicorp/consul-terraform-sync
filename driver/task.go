@@ -317,7 +317,9 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			NodeMeta:          v.NodeMeta,
 		}
 	case *config.ServicesConditionConfig:
-		condition = &tftmpl.ServicesCondition{}
+		condition = &tftmpl.ServicesCondition{
+			Regexp: *v.Regexp,
+		}
 	default:
 		// expected only for test scenarios
 		log.Printf("[WARN] (driver.terraform) task '%s' condition config unset."+

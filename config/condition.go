@@ -24,7 +24,9 @@ type ConditionConfig interface {
 // DefaultConditionConfig returns the default conditions which is an unconfigured
 // 'services' type condition.
 func DefaultConditionConfig() ConditionConfig {
-	return &ServicesConditionConfig{}
+	return &ServicesConditionConfig{
+		Regexp: String(""),
+	}
 }
 
 // isConditionNil can be used to check if a ConditionConfig interface is nil by

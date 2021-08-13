@@ -36,6 +36,10 @@ func AddCheck(s *testutil.TestServer, t testing.TB, name, serviceID, status stri
 	}
 	put(s, t, "/v1/agent/check/register", payload)
 
+	UpdateCheck(s, t, name, serviceID, status)
+}
+
+func UpdateCheck(s *testutil.TestServer, t testing.TB, name, serviceID, status string) {
 	switch status {
 	case testutil.HealthPassing:
 		put(s, t, "/v1/agent/check/pass/"+name, nil)

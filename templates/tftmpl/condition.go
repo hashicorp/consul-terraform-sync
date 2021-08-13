@@ -22,6 +22,10 @@ type Condition interface {
 	// include the condition variable.
 	SourceIncludesVariable() bool
 
+	// ServicesAppended returns if the services variable has been appended
+	// to the template content.
+	ServicesAppended() bool
+
 	// appendModuleAttribute writes to an HCL module body the condition variable
 	// as a module argument in main.tf file.
 	// module "name" {
@@ -40,23 +44,60 @@ type Condition interface {
 
 // ServicesCondition handles appending templating for the services run condition
 // This is the default run condition
-type ServicesCondition struct{}
+type ServicesCondition struct {
+	Regexp string
+}
 
 func (c ServicesCondition) SourceIncludesVariable() bool {
 	return false
 }
 
+func (c ServicesCondition) ServicesAppended() bool {
+	return c.Regexp != ""
+}
+
 func (c ServicesCondition) appendModuleAttribute(body *hclwrite.Body) {}
 
-func (c ServicesCondition) appendTemplate(io.Writer) error {
-	// no-op: services condition currently requires no additional condition
-	// templating. it relies on the monitoring template as the run condition
+func (c ServicesCondition) appendTemplate(w io.Writer) error {
+	if c.Regexp == "" {
+		return nil
+	}
+	q := c.hcatQuery()
+	_, err := fmt.Fprintf(w, servicesRegexTmpl, q)
+	if err != nil {
+		log.Printf("[ERR] (templates.tftmpl) unable to write service condition template")
+		return err
+	}
 	return nil
 }
 
 func (c ServicesCondition) appendVariable(io.Writer) error {
 	return nil
 }
+
+func (c ServicesCondition) hcatQuery() string {
+	var opts []string
+
+	if c.Regexp != "" {
+		opts = append(opts, fmt.Sprintf("regexp=%s", c.Regexp))
+	}
+
+	if len(opts) > 0 {
+		return `"` + strings.Join(opts, `" "`) + `" ` // deliberate space at end
+	}
+	return ""
+}
+
+const servicesRegexTmpl = `
+services = {
+{{- with $srv := servicesRegex %s }}
+  {{- range $s := $srv}}
+  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
+{{ HCLService $s | indent 4 }}
+  },
+  {{- end}}
+{{- end}}
+}`
 
 // CatalogServicesCondition handles appending templating for the catalog-service
 // run condition
@@ -72,6 +113,10 @@ func (c CatalogServicesCondition) SourceIncludesVariable() bool {
 	return c.SourceIncludesVar
 }
 
+func (c CatalogServicesCondition) ServicesAppended() bool {
+	return false
+}
+
 func (c CatalogServicesCondition) appendModuleAttribute(body *hclwrite.Body) {
 	body.SetAttributeTraversal("catalog_services", hcl.Traversal{
 		hcl.TraverseRoot{Name: "var"},
@@ -84,7 +129,7 @@ func (c CatalogServicesCondition) appendTemplate(w io.Writer) error {
 	if c.SourceIncludesVar {
 		_, err := fmt.Fprintf(w, catalogServicesConditionIncludesVarTmpl, q)
 		if err != nil {
-			log.Printf("[WARN] (templates.tftmpl) unable to write catalog-service" +
+			log.Printf("[ERR] (templates.tftmpl) unable to write catalog-service" +
 				" template to include variable")
 			return err
 		}
@@ -92,7 +137,7 @@ func (c CatalogServicesCondition) appendTemplate(w io.Writer) error {
 	}
 	_, err := fmt.Fprintf(w, catalogServicesConditionTmpl, q)
 	if err != nil {
-		log.Printf("[WARN] (templates.tftmpl) unable to write catalog-service" +
+		log.Printf("[ERR] (templates.tftmpl) unable to write catalog-service" +
 			" empty template")
 		return err
 	}

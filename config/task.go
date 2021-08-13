@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 
@@ -259,7 +260,7 @@ func (c *TaskConfig) Validate() error {
 	// We'll validate early resembling Terraform restrictions to surface any errors
 	// before a task is ran.
 	if !hclsyntax.ValidIdentifier(*c.Name) {
-		return fmt.Errorf("A task name must start with a letter or underscore and "+
+		return fmt.Errorf("a task name must start with a letter or underscore and "+
 			"may contain only letters, digits, underscores, and dashes: %q", *c.Name)
 	}
 
@@ -270,13 +271,26 @@ func (c *TaskConfig) Validate() error {
 		}
 		switch cond := c.Condition.(type) {
 		case *ServicesConditionConfig:
-			return fmt.Errorf("services condition requires at least one " +
-				"service in task.services to be configured")
+			if cond.Regexp == nil || *cond.Regexp == "" {
+				return fmt.Errorf("at least one service is required in task.services " +
+					"or task.condition.regexp must be configured")
+			}
 		case *CatalogServicesConditionConfig:
 			if cond.Regexp == nil {
 				return fmt.Errorf("catalog-services condition requires either" +
 					"task.condition.regexp or at least one service in " +
 					"task.services to be configured")
+			}
+		}
+	} else {
+		switch cond := c.Condition.(type) {
+		case *ServicesConditionConfig:
+			if cond.Regexp != nil && *cond.Regexp != "" {
+				log.Printf("[ERR] (config.task) list of services and service condition regex " +
+					"both provided. If both are needed, consider including the list in the regex " +
+					"or creating separate tasks.")
+				return fmt.Errorf("task.services is not allowed if task.condition.regexp " +
+					"is configured for a services condition")
 			}
 		}
 	}
