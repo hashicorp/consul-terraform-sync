@@ -222,8 +222,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 
 	// 1. Register a filtered out service "db"
 	service := testutil.TestService{ID: "db-1", Name: "db"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
@@ -236,8 +235,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	// 2. Register a matched service "api-web"
 	now := time.Now()
 	service = testutil.TestService{ID: "api-web-1", Name: "api-web"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
@@ -315,8 +313,7 @@ task {
 	// 1. Register api, all tasks create resource
 	now := time.Now()
 	service := testutil.TestService{ID: "api-1", Name: "api"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	// wait longer than default since more tasks are being executed
 	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent*2)
 	api.WaitForEvent(t, cts, apiWebTaskName, now, defaultWaitForEvent*2)
@@ -329,8 +326,7 @@ task {
 	// 2. Register web, only all_task and api_web_task create resource
 	now = time.Now()
 	service = testutil.TestService{ID: "web-1", Name: "web"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent*2)
 	api.WaitForEvent(t, cts, apiWebTaskName, now, defaultWaitForEvent*2)
 
@@ -341,8 +337,7 @@ task {
 	// 3. Register db, only all_task create resource
 	now = time.Now()
 	service = testutil.TestService{ID: "db-1", Name: "db"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent)
 	time.Sleep(defaultWaitForNoEvent) // ensure api_web_task & api_task don't trigger
 
@@ -385,8 +380,7 @@ func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirNa
 	// 1. Register api, resource created
 	now := time.Now()
 	service := testutil.TestService{ID: "api-1", Name: "api"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 
 	testutils.CheckFile(t, true, resourcesPath, resource)
@@ -408,8 +402,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	defer srv.Stop()
 
 	service := testutil.TestService{ID: "api-1", Name: "api"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
 	cleanup := testutils.MakeTempDir(t, tempDir)
@@ -444,8 +437,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 
 	// 1. Register second api service instance "api-2" (no trigger)
 	service = testutil.TestService{ID: "api-2", Name: "api"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
@@ -458,8 +450,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	// 2. Register db service (trigger + render template)
 	now := time.Now()
 	service = testutil.TestService{ID: "db-1", Name: "db"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
@@ -480,8 +471,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	defer srv.Stop()
 
 	service := testutil.TestService{ID: "api-1", Name: "api", Tags: []string{"tag_a"}}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
 	cleanup := testutils.MakeTempDir(t, tempDir)
@@ -516,8 +506,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 
 	// 1. Register another api service instance with new tags (no trigger)
 	service = testutil.TestService{ID: "api-2", Name: "api", Tags: []string{"tag_b"}}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
@@ -530,8 +519,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	// 2. Register new db service (trigger + render template)
 	now := time.Now()
 	service = testutil.TestService{ID: "db-1", Name: "db", Tags: []string{"tag_c"}}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())
@@ -625,8 +613,7 @@ func TestCondition_Services_Regexp(t *testing.T) {
 
 	// 1. Register a filtered out service "db"
 	service := testutil.TestService{ID: "db-1", Name: "db"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
@@ -639,7 +626,7 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	// 2. Register a matched service "api-web"
 	now := time.Now()
 	service = testutil.TestService{ID: "api-web-1", Name: "api-web"}
-	testutils.RegisterConsulService(t, srv, service, "", defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 
 	eventCountNow = eventCount(t, taskName, cts.Port())

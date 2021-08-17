@@ -246,8 +246,7 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 	// 2. register api service. check triggers task
 	now = time.Now()
 	service := testutil.TestService{ID: "api-1", Name: "api"}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
 
 	eventCountNow := eventCount(t, dbTaskName, cts.Port())

@@ -50,8 +50,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 		Port:    8080,
 	}
 	now := time.Now()
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, fakeFailureTaskName, now, defaultWaitForEvent)
 	api.WaitForEvent(t, cts, fakeSuccessTaskName, now, defaultWaitForEvent)
 
@@ -315,8 +314,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 		Address: "5.6.7.8",
 		Port:    8080,
 	}
-	testutils.RegisterConsulService(t, srv, service, testutil.HealthPassing,
-		defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	time.Sleep(defaultWaitForNoEvent)
 
 	// Confirm that resources are not recreated for disabled task

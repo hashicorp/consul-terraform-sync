@@ -62,8 +62,31 @@ func NewTestConsulServer(tb testing.TB, config TestConsulServerConfig) *testutil
 // sdk/testutil package currently does not support a method to register multiple
 // service instances, distinguished by their IDs.
 func RegisterConsulService(tb testing.TB, srv *testutil.TestServer,
-	s testutil.TestService, health string, wait time.Duration) {
-	registerConsulService(tb, srv, s, health)
+	s testutil.TestService, wait time.Duration) {
+	registerConsulService(tb, srv, s, wait, nil)
+}
+
+// RegisterConsulServiceHealth is similar to RegisterConsulService and also
+// sets the health status of the service.
+func RegisterConsulServiceHealth(tb testing.TB, srv *testutil.TestServer,
+	s testutil.TestService, wait time.Duration, health string) {
+	registerConsulService(tb, srv, s, wait, &health)
+}
+
+func registerConsulService(tb testing.TB, srv *testutil.TestServer,
+	s testutil.TestService, wait time.Duration, health *string) {
+
+	var body bytes.Buffer
+	enc := json.NewEncoder(&body)
+	require.NoError(tb, enc.Encode(&s))
+
+	u := fmt.Sprintf("http://%s/v1/agent/service/register", srv.HTTPAddr)
+	resp := RequestHTTP(tb, http.MethodPut, u, body.String())
+	defer resp.Body.Close()
+
+	if health != nil {
+		sdk.AddCheck(srv, tb, s.ID, s.ID, *health)
+	}
 
 	if wait.Seconds() == 0 {
 		return
@@ -95,22 +118,6 @@ func RegisterConsulService(tb testing.TB, srv *testutil.TestServer,
 	}
 }
 
-func registerConsulService(tb testing.TB, srv *testutil.TestServer,
-	s testutil.TestService, health string) {
-
-	var body bytes.Buffer
-	enc := json.NewEncoder(&body)
-	require.NoError(tb, enc.Encode(&s))
-
-	u := fmt.Sprintf("http://%s/v1/agent/service/register", srv.HTTPAddr)
-	resp := RequestHTTP(tb, http.MethodPut, u, body.String())
-	defer resp.Body.Close()
-
-	if health != "" {
-		sdk.AddCheck(srv, tb, s.ID, s.ID, health)
-	}
-}
-
 func serviceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string) bool {
 	u := fmt.Sprintf("http://%s/v1/agent/service/%s", srv.HTTPAddr, serviceID)
 	resp := RequestHTTP(tb, http.MethodGet, u, "")
@@ -121,7 +128,7 @@ func serviceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string
 // Bulk add test data for seeding consul
 func AddServices(t testing.TB, srv *testutil.TestServer, svcs []testutil.TestService) {
 	for _, s := range svcs {
-		RegisterConsulService(t, srv, s, testutil.HealthPassing, 0)
+		RegisterConsulServiceHealth(t, srv, s, 0, testutil.HealthPassing)
 	}
 }
 

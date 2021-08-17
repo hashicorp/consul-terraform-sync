@@ -85,13 +85,11 @@ task {
 		}
 
 		now := time.Now()
-		testutils.RegisterConsulService(t, srv, apiInstance,
-			testutil.HealthPassing, defaultWaitForRegistration)
+		testutils.RegisterConsulService(t, srv, apiInstance, defaultWaitForRegistration)
 		api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForEvent) // only check one task
 
 		now = time.Now()
-		testutils.RegisterConsulService(t, srv, webInstance,
-			testutil.HealthPassing, defaultWaitForRegistration)
+		testutils.RegisterConsulService(t, srv, webInstance, defaultWaitForRegistration)
 		// takes a little longer due to consecutive registrations
 		api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForEvent*2)
 

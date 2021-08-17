@@ -40,11 +40,12 @@ const (
 )
 
 // TestE2EBasic runs the CTS binary in daemon mode with a configuration with 2
-// tasks and a test module that writes IP addresses to disk. This tests for CTS
-// executing the 2 tasks upon startup and verifies the correct module resources
-// for each task were created for services ("api", "web", "db"). It verifies
-// the Terraform statefiles are written to Consul KV, the default Terraform
-// backend for CTS.
+// tasks and a test module that writes IP addresses to disk. Tests that CTS:
+// 1. executes the 2 tasks upon startup
+// 2. correct module resources are created for services ("api", "web", "db")
+// 3. verifies Terraform statefiles are written to Consul KV, the default
+//    Terraformfor backend for CTS for each task.
+// 4. Consul catalog changes trigger correct tasks
 func TestE2EBasic(t *testing.T) {
 	// Note: no t.Parallel() for this particular test. Choosing this test to run 'first'
 	// since e2e test running simultaneously will download Terraform into shared
@@ -157,8 +158,7 @@ func TestE2ERestartConsul(t *testing.T) {
 	// register a new service
 	now := time.Now()
 	apiInstance := testutil.TestService{ID: "api_new", Name: "api"}
-	testutils.RegisterConsulService(t, consul, apiInstance,
-		testutil.HealthPassing, defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, consul, apiInstance, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
 
 	// confirm that CTS reconnected with Consul and created resource for latest service

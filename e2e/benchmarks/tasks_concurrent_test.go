@@ -98,7 +98,7 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 				Address: "5.6.7.8",
 				Port:    8080,
 			}
-			testutils.RegisterConsulService(b, srv, service, testutil.HealthPassing, 0)
+			testutils.RegisterConsulServiceHealth(b, srv, service, 0, testutil.HealthPassing)
 
 			ctxTimeout, _ := context.WithTimeout(context.Background(), 30*time.Second)
 			completedTasks := make(map[string]bool, len(*conf.Tasks))

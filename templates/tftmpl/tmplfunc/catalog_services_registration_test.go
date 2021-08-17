@@ -204,16 +204,16 @@ func TestCatalogServicesRegistrationQuery_Fetch(t *testing.T) {
 
 	// register services
 	service := testutil.TestService{ID: "api-1", Name: "api", Tags: []string{"tag1"}}
-	testutils.RegisterConsulService(t, srv1, service, testutil.HealthPassing, 8*time.Second)
+	testutils.RegisterConsulService(t, srv1, service, 8*time.Second)
 
 	service = testutil.TestService{ID: "api-web-1", Name: "api-web"}
-	testutils.RegisterConsulService(t, srv2, service, testutil.HealthPassing, 8*time.Second)
+	testutils.RegisterConsulService(t, srv2, service, 8*time.Second)
 
 	service = testutil.TestService{ID: "web-1", Name: "web"}
-	testutils.RegisterConsulService(t, srv2, service, testutil.HealthPassing, 8*time.Second)
+	testutils.RegisterConsulService(t, srv2, service, 8*time.Second)
 
 	service = testutil.TestService{ID: "db-1", Name: "db"}
-	testutils.RegisterConsulService(t, srv3, service, testutil.HealthPassing, 8*time.Second)
+	testutils.RegisterConsulService(t, srv3, service, 8*time.Second)
 
 	// set up consul client for srv1
 	consulConfig := consulapi.DefaultConfig()
