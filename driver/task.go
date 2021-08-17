@@ -319,6 +319,8 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	case *config.ServicesConditionConfig:
 		condition = &tftmpl.ServicesCondition{
 			Regexp: *v.Regexp,
+			// always set services variable
+			SourceIncludesVar: true,
 		}
 	default:
 		// expected only for test scenarios

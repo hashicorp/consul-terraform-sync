@@ -611,8 +611,9 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	//    (one new event) and its data exists in the services variable.
 	// 3. Add a check to the api-web service instance. Confirm that task was triggered
 	//    (one new event) and its data exists in the services variable.
-	// 4.Add a check to the api-web service instance. Confirm that task was triggered
-	//    (one new event) and its the check status is updated in the services variable.
+	// 4. Set the check of the api-web service instance to Critical. Confirm that
+	//    task was triggered (one new event) and the status is updated in the
+	//    services variable.
 
 	// 0. Confirm only one event. Confirm empty var catalog_services
 	eventCountBase := eventCount(t, taskName, cts.Port())
