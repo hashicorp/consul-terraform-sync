@@ -31,15 +31,6 @@ func DefaultBufferPeriodConfig() *BufferPeriodConfig {
 	}
 }
 
-// DefaultTaskBufferPeriodConfig is the default configuration for a task.
-func DefaultTaskBufferPeriodConfig() *BufferPeriodConfig {
-	return &BufferPeriodConfig{
-		Enabled: Bool(false),
-		Min:     &DefaultBufferPeriodMin,
-		Max:     &DefaultBufferPeriodMax,
-	}
-}
-
 // Copy returns a deep copy of this configuration.
 func (c *BufferPeriodConfig) Copy() *BufferPeriodConfig {
 	if c == nil {
