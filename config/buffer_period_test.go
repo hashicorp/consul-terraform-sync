@@ -156,33 +156,115 @@ func TestBufferPeriodConfig_Finalize(t *testing.T) {
 	cases := []struct {
 		name string
 		i    *BufferPeriodConfig
+		p    *BufferPeriodConfig
 		r    *BufferPeriodConfig
 	}{
 		{
-			"empty",
+			"empty input, parent enabled",
 			&BufferPeriodConfig{},
+			DefaultBufferPeriodConfig(),
 			&BufferPeriodConfig{
-				Enabled: Bool(false),
+				Enabled: Bool(true),
 				Min:     TimeDuration(5 * time.Second),
 				Max:     TimeDuration(20 * time.Second),
 			},
 		},
 		{
-			"with_min",
+			"empty input, parent disabled",
+			&BufferPeriodConfig{},
+			&BufferPeriodConfig{
+				Enabled: Bool(false),
+				Min:     TimeDuration(0 * time.Second),
+				Max:     TimeDuration(0 * time.Second),
+			},
+			&BufferPeriodConfig{
+				Enabled: Bool(false),
+				Min:     TimeDuration(0 * time.Second),
+				Max:     TimeDuration(0 * time.Second),
+			},
+		},
+		{
+			"disabled input",
+			&BufferPeriodConfig{
+				Enabled: Bool(false),
+			},
+			DefaultBufferPeriodConfig(),
+			&BufferPeriodConfig{
+				Enabled: Bool(false),
+				Min:     TimeDuration(0 * time.Second),
+				Max:     TimeDuration(0 * time.Second),
+			},
+		},
+		{
+			"enabled input, enabled parent",
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+			},
+			DefaultBufferPeriodConfig(),
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(5 * time.Second),
+				Max:     TimeDuration(20 * time.Second)},
+		},
+		{
+			"enabled input, disabled parent",
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+			},
+			&BufferPeriodConfig{
+				Enabled: Bool(false),
+				Min:     TimeDuration(0 * time.Second),
+				Max:     TimeDuration(0 * time.Second),
+			},
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(5 * time.Second),
+				Max:     TimeDuration(20 * time.Second),
+			},
+		},
+		{
+			"only min input",
 			&BufferPeriodConfig{
 				Min: TimeDuration(10 * time.Second),
 			},
+			DefaultBufferPeriodConfig(),
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(10 * time.Second),
 				Max:     TimeDuration(40 * time.Second),
 			},
 		},
+		{
+			"only max input",
+			&BufferPeriodConfig{
+				Max: TimeDuration(50 * time.Second),
+			},
+			DefaultBufferPeriodConfig(),
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(5 * time.Second),
+				Max:     TimeDuration(50 * time.Second),
+			},
+		},
+		{
+			"input and parent configured",
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(20 * time.Second),
+				Max:     TimeDuration(50 * time.Second),
+			},
+			DefaultBufferPeriodConfig(),
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(20 * time.Second),
+				Max:     TimeDuration(50 * time.Second),
+			},
+		},
 	}
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tc.i.Finalize()
+			tc.i.Finalize(tc.p)
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}
