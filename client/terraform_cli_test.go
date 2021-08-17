@@ -350,7 +350,7 @@ module for task "test-workspace" is missing the "catalog_services" variable, add
 			}
 		}
 	]
-}`,	// Terraform v0.13/v0.14 output
+}`, // Terraform v0.13/v0.14 output
 		},
 		{
 			"warning",
