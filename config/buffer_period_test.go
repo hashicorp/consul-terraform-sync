@@ -247,13 +247,31 @@ func TestBufferPeriodConfig_Finalize(t *testing.T) {
 			},
 		},
 		{
-			"input and parent configured",
+			"input enabled and parent enabled fully configured",
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(20 * time.Second),
 				Max:     TimeDuration(50 * time.Second),
 			},
 			DefaultBufferPeriodConfig(),
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(20 * time.Second),
+				Max:     TimeDuration(50 * time.Second),
+			},
+		},
+		{
+			"input enabled and parent disabled fully configured",
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(20 * time.Second),
+				Max:     TimeDuration(50 * time.Second),
+			},
+			&BufferPeriodConfig{
+				Enabled: Bool(false),
+				Min:     TimeDuration(1 * time.Second),
+				Max:     TimeDuration(5 * time.Second),
+			},
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(20 * time.Second),
