@@ -1,7 +1,7 @@
 ## UNRELEASED
 BREAKING CHANGES:
 * `INFO` log level is now the default, changed from `WARN`. [[GH-23](https://github.com/hashicorp/consul-terraform-sync/issues/23)]
-  
+
 FEATURES:
 * Deprecate `driver.working_dir` configuration option to be removed in v0.5.0. Add new options to configure working directory for managing CTS generated artifacts. Top-level `working_dir` to configure parent directory for all tasks or `task.working_dir` to configure per task. [[GH-314](https://github.com/hashicorp/consul-terraform-sync/issues/314)]
 * (**Beta Feature**) Add regex support for service triggers. This feature currently does not support any query parameters [[GH-357](https://github.com/hashicorp/consul-terraform-sync/issues/357)], which includes any query parameters set in a service block. [[GH-299](https://github.com/hashicorp/consul-terraform-sync/issues/299), [GH-357](https://github.com/hashicorp/consul-terraform-sync/pull/353)]
@@ -10,6 +10,7 @@ FEATURES:
 
 BUG FIXES:
 - Fix loading the `CONSUL_HTTP_ADDR` environment variable. [[GH-351](https://github.com/hashicorp/consul-terraform-sync/pull/351)]
+- Fix issue where the task-level `buffer_period` configuration did not override the global-level `buffer_period` configuration when the task-level `buffer_period` was disabled. [[GH-359](https://github.com/hashicorp/consul-terraform-sync/pull/359)]
 
 ## 0.2.1 (July 14, 2021)
 FEATURES:
