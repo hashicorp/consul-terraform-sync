@@ -189,7 +189,7 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *TaskConfig) Finalize(wd string) {
+func (c *TaskConfig) Finalize(bp *BufferPeriodConfig, wd string) {
 	if c == nil {
 		return
 	}
@@ -227,9 +227,9 @@ func (c *TaskConfig) Finalize(wd string) {
 	}
 
 	if c.BufferPeriod == nil {
-		c.BufferPeriod = DefaultTaskBufferPeriodConfig()
+		c.BufferPeriod = bp
 	}
-	c.BufferPeriod.Finalize()
+	c.BufferPeriod.Finalize(bp)
 
 	if c.Enabled == nil {
 		c.Enabled = Bool(true)
@@ -416,13 +416,13 @@ func (c *TaskConfigs) Merge(o *TaskConfigs) *TaskConfigs {
 
 // Finalize ensures the configuration has no nil pointers and sets default
 // values.
-func (c *TaskConfigs) Finalize(wd string) {
+func (c *TaskConfigs) Finalize(bp *BufferPeriodConfig, wd string) {
 	if c == nil {
 		*c = *DefaultTaskConfigs()
 	}
 
 	for _, t := range *c {
-		t.Finalize(wd)
+		t.Finalize(bp, wd)
 	}
 }
 

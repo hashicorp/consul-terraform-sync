@@ -221,10 +221,17 @@ func (c *Config) Finalize() {
 		}
 	}
 
+	// global buffer period must be finalized before finalizing task in order
+	// to resolve task's buffer period
+	if c.BufferPeriod == nil {
+		c.BufferPeriod = DefaultBufferPeriodConfig()
+	}
+	c.BufferPeriod.Finalize(DefaultBufferPeriodConfig())
+
 	if c.Tasks == nil {
 		c.Tasks = DefaultTaskConfigs()
 	}
-	c.Tasks.Finalize(*c.WorkingDir)
+	c.Tasks.Finalize(c.BufferPeriod, *c.WorkingDir)
 
 	if c.Services == nil {
 		c.Services = DefaultServiceConfigs()
@@ -235,11 +242,6 @@ func (c *Config) Finalize() {
 		c.TerraformProviders = DefaultTerraformProviderConfigs()
 	}
 	c.TerraformProviders.Finalize()
-
-	if c.BufferPeriod == nil {
-		c.BufferPeriod = DefaultBufferPeriodConfig()
-	}
-	c.BufferPeriod.Finalize()
 }
 
 // Validate validates the values and nested values of the configuration struct

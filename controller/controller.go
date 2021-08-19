@@ -225,6 +225,14 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			}
 		}
 
+		var bp *driver.BufferPeriod // nil if disabled
+		if *t.BufferPeriod.Enabled {
+			bp = &driver.BufferPeriod{
+				Min: *t.BufferPeriod.Min,
+				Max: *t.BufferPeriod.Max,
+			}
+		}
+
 		task, err := driver.NewTask(driver.TaskConfig{
 			Description:  *t.Description,
 			Name:         *t.Name,
@@ -236,7 +244,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			Source:       *t.Source,
 			VarFiles:     t.VarFiles,
 			Version:      *t.Version,
-			BufferPeriod: getTemplateBufferPeriod(conf, t),
+			BufferPeriod: bp,
 			Condition:    t.Condition,
 			WorkingDir:   *t.WorkingDir,
 		})
@@ -312,32 +320,6 @@ func getProvider(providers driver.TerraformProviderBlocks, id string) driver.Ter
 		Name:      name,
 		Variables: make(hcltmpl.Variables),
 	})
-}
-
-// getTemplateBufferPeriod applies the task buffer period config to its template
-func getTemplateBufferPeriod(conf *config.Config,
-	taskConfig *config.TaskConfig) *driver.BufferPeriod {
-
-	if buffPeriod := taskConfig.BufferPeriod; *buffPeriod.Enabled {
-		return &driver.BufferPeriod{
-			Min: *buffPeriod.Min,
-			Max: *buffPeriod.Max,
-		}
-	}
-
-	if conf == nil {
-		return nil
-	}
-
-	// Set default buffer period
-	if buffPeriod := conf.BufferPeriod; *buffPeriod.Enabled {
-		return &driver.BufferPeriod{
-			Min: *buffPeriod.Min,
-			Max: *buffPeriod.Max,
-		}
-	}
-
-	return nil
 }
 
 func buildTaskEnv(conf *config.Config, customEnv map[string]string) map[string]string {

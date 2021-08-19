@@ -300,7 +300,10 @@ func TestConfig_Finalize(t *testing.T) {
 	(*expected.Tasks)[0].TFVersion = String("")
 	(*expected.Tasks)[0].VarFiles = []string{}
 	(*expected.Tasks)[0].Version = String("")
-	(*expected.Tasks)[0].BufferPeriod = DefaultTaskBufferPeriodConfig()
+	(*expected.Tasks)[0].BufferPeriod = &BufferPeriodConfig{}
+	(*expected.Tasks)[0].BufferPeriod.Enabled = Bool(true)
+	(*expected.Tasks)[0].BufferPeriod.Min = TimeDuration(20 * time.Second)
+	(*expected.Tasks)[0].BufferPeriod.Max = TimeDuration(60 * time.Second)
 	(*expected.Tasks)[0].WorkingDir = String("working/task")
 	(*expected.Services)[0].ID = String("serviceA")
 	(*expected.Services)[0].Namespace = String("")
@@ -477,6 +480,97 @@ func TestConfig_validateDynamicConfig(t *testing.T) {
 			} else {
 				assert.Error(t, err)
 			}
+		})
+	}
+}
+
+func TestConfig_BufferPeriod(t *testing.T) {
+	// Tests that global-level and task-level buffer period config are
+	// resolved as expected
+
+	cases := []struct {
+		name     string
+		confBp   *BufferPeriodConfig
+		taskBp   *BufferPeriodConfig
+		expected *BufferPeriodConfig
+	}{
+		{
+			"only global-level configured",
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(1 * time.Second),
+				Max:     TimeDuration(3 * time.Second),
+			},
+			nil,
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(1 * time.Second),
+				Max:     TimeDuration(3 * time.Second),
+			},
+		},
+		{
+			"only task-level configured",
+			nil,
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(1 * time.Second),
+				Max:     TimeDuration(3 * time.Second),
+			},
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(1 * time.Second),
+				Max:     TimeDuration(3 * time.Second),
+			},
+		},
+		{
+			"both configured",
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(1 * time.Second),
+				Max:     TimeDuration(3 * time.Second),
+			},
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(5 * time.Second),
+				Max:     TimeDuration(7 * time.Second),
+			},
+			&BufferPeriodConfig{
+				Enabled: Bool(true),
+				Min:     TimeDuration(5 * time.Second),
+				Max:     TimeDuration(7 * time.Second),
+			},
+		},
+		{
+			"neither configured",
+			nil,
+			nil,
+			DefaultBufferPeriodConfig(),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// set-up config with global-level and task-level buf period
+			config := &Config{
+				BufferPeriod: tc.confBp,
+				Tasks: &TaskConfigs{
+					{
+						Name:         String("test_task"),
+						Services:     []string{"api"},
+						Source:       String("/source"),
+						BufferPeriod: tc.taskBp,
+					},
+				},
+			}
+
+			// replicate config processing in cts cli
+			config.Finalize()
+			err := config.Validate()
+			require.NoError(t, err)
+
+			// confirm task-level buf period as expected
+			task := (*config.Tasks)[0]
+			assert.Equal(t, tc.expected, task.BufferPeriod)
 		})
 	}
 }

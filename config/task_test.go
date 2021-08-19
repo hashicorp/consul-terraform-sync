@@ -340,7 +340,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				VarFiles:     []string{},
 				Version:      String(""),
 				TFVersion:    String(""),
-				BufferPeriod: DefaultTaskBufferPeriodConfig(),
+				BufferPeriod: DefaultBufferPeriodConfig(),
 				Enabled:      Bool(true),
 				Condition:    DefaultConditionConfig(),
 				WorkingDir:   String("sync-tasks"),
@@ -360,7 +360,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				VarFiles:     []string{},
 				Version:      String(""),
 				TFVersion:    String(""),
-				BufferPeriod: DefaultTaskBufferPeriodConfig(),
+				BufferPeriod: DefaultBufferPeriodConfig(),
 				Enabled:      Bool(true),
 				Condition:    DefaultConditionConfig(),
 				WorkingDir:   String("sync-tasks/task"),
@@ -370,7 +370,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tc.i.Finalize(DefaultWorkingDir)
+			tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}
@@ -701,7 +701,7 @@ func TestTaskConfig_FinalizeValidate(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.config.Finalize(DefaultWorkingDir)
+			tc.config.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
 			err := tc.config.Validate()
 			if tc.valid {
 				assert.NoError(t, err)

@@ -31,15 +31,6 @@ func DefaultBufferPeriodConfig() *BufferPeriodConfig {
 	}
 }
 
-// DefaultTaskBufferPeriodConfig is the default configuration for a task.
-func DefaultTaskBufferPeriodConfig() *BufferPeriodConfig {
-	return &BufferPeriodConfig{
-		Enabled: Bool(false),
-		Min:     &DefaultBufferPeriodMin,
-		Max:     &DefaultBufferPeriodMax,
-	}
-}
-
 // Copy returns a deep copy of this configuration.
 func (c *BufferPeriodConfig) Copy() *BufferPeriodConfig {
 	if c == nil {
@@ -86,14 +77,39 @@ func (c *BufferPeriodConfig) Merge(o *BufferPeriodConfig) *BufferPeriodConfig {
 	return r
 }
 
-// Finalize ensures there no nil pointers.
-func (c *BufferPeriodConfig) Finalize() {
-	if c.Enabled == nil {
-		c.Enabled = Bool(TimeDurationPresent(c.Min))
+// Finalize ensures that the receiver contains no nil pointers. For nil pointers,
+// Finalize sets these values using the passed in "parent" BufferPeriodConfig
+// along with using other defaults where necessary.
+//
+// Example parent param: global-level buffer period uses default values,
+// task-level buffer period uses the global-level buffer period
+func (c *BufferPeriodConfig) Finalize(parent *BufferPeriodConfig) {
+	// if disabled, fill in zero values
+	if c.Enabled != nil && !*c.Enabled {
+		c.Min = TimeDuration(0 * time.Second)
+		c.Max = TimeDuration(0 * time.Second)
+		return
 	}
 
+	// if nothing configured, default to parent
+	if c.Enabled == nil && c.Min == nil && c.Max == nil {
+		c.Min = parent.Min
+		c.Max = parent.Max
+		c.Enabled = parent.Enabled
+		return
+	}
+
+	// some Min/Max info configured, assume user intention is enabled
+	c.Enabled = Bool(true)
+
 	if c.Min == nil {
-		c.Min = TimeDuration(DefaultBufferPeriodMin)
+		if parent.Enabled != nil && *parent.Enabled {
+			// parent is enabled: use parent Min
+			c.Min = parent.Min
+		} else {
+			// parent is disabled: use default Min
+			c.Min = TimeDuration(DefaultBufferPeriodMin)
+		}
 	}
 
 	if c.Max == nil {
