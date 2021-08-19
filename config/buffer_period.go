@@ -77,12 +77,12 @@ func (c *BufferPeriodConfig) Merge(o *BufferPeriodConfig) *BufferPeriodConfig {
 	return r
 }
 
-// Finalize ensures there no nil pointers. For nil pointers, use 'parent'
-// BufferPeriodConfig and other default values as necessary.
+// Finalize ensures that the receiver contains no nil pointers. For nil pointers,
+// Finalize sets these values using the passed in "parent" BufferPeriodConfig
+// along with using other defaults where necessary.
 //
-// Finalizing global-level buffer period, use DefaultBufferPeriodConfig() as
-// parent. Finalizing task-level buffer period, use global-level buffer period
-// as parent.
+// Example parent param: global-level buffer period uses default values,
+// task-level buffer period uses the global-level buffer period
 func (c *BufferPeriodConfig) Finalize(parent *BufferPeriodConfig) {
 	// if disabled, fill in zero values
 	if c.Enabled != nil && !*c.Enabled {
