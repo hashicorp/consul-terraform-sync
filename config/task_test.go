@@ -539,6 +539,17 @@ func TestTaskConfig_Validate(t *testing.T) {
 			},
 			false,
 		},
+		{
+			"missing services with consul-kv condition",
+			&TaskConfig{
+				Name:   String("task"),
+				Source: String("source"),
+				Condition: &ConsulKVConditionConfig{
+					Path: String("path"),
+				},
+			},
+			false,
+		},
 	}
 
 	for i, tc := range cases {
