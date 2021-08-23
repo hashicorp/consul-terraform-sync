@@ -66,7 +66,7 @@ jobs:
         - uses: actions/upload-artifact@v2
           if: ${{ matrix.goos == 'linux' }}
           with:
-            name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
+            name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}docker_linux_${{ matrix.goarch }}.tar
             path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}docker_linux_${{ matrix.goarch }}.tar
 
   generate_metadata:
