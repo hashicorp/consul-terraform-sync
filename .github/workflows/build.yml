@@ -62,7 +62,8 @@ jobs:
             ls -lah
             cp ../../dist/${{ github.event.repository.name }} ./
             make docker ARCH=${{ matrix.goarch }}
-        
+            ls -lah
+            
         - uses: actions/upload-artifact@v2
           if: ${{ matrix.goos == 'linux' }}
           with:
