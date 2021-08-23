@@ -7,5 +7,5 @@ prerelease=$(awk '$1 == "VersionPrerelease" && $2 == "=" { gsub(/"/, "", $3); pr
 if [ -n "$prerelease" ]; then
     echo "${version}-${prerelease}"
 else
-    echo "${versi
+    echo "${version}"
 fi
