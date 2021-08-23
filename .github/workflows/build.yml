@@ -63,12 +63,12 @@ jobs:
             cp ../../dist/${{ github.event.repository.name }} ./
             make docker ARCH=${{ matrix.goarch }}
             ls -lah
-            
+
         - uses: actions/upload-artifact@v2
           if: ${{ matrix.goos == 'linux' }}
           with:
-            name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}docker_linux_${{ matrix.goarch }}.tar
-            path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}docker_linux_${{ matrix.goarch }}.tar
+            name: consul-terraform-sync_v0.2.1_docker_linux_386.tar
+            path: packaging/docker/consul-terraform-sync_v0.2.1_docker_linux_386.tar
 
   generate_metadata:
     needs: get-product-version
