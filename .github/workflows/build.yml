@@ -13,6 +13,6 @@ jobs:
       - name: get product version
         id: get-product-version
         run: |
-          MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
+          #MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
           CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
           VERSION := v0.2.1
