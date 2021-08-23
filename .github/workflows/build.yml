@@ -42,5 +42,5 @@ jobs:
           run: |
             mkdir dist out
             go build -o dist/ .
-            curl -o dist/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt
-            zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+            ls -lah
+            zip -r -j out/${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
