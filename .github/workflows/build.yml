@@ -13,5 +13,9 @@ jobs:
       - name: get product version
         id: get-product-version
         run: |
-          make version
-          echo "::set-output name=product-version::$(make version)"
+#          make version
+          MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
+          CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
+          VERSION := $(shell awk -F\" '/Version/ { print $$2; exit }' "${CURRENT_DIR}/version/version.go")
+          make dev
+#          echo "::set-output name=product-version::$(make version)"
