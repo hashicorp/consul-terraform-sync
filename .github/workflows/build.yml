@@ -58,6 +58,8 @@ jobs:
           if: ${{ matrix.goos == 'linux' }}
           working-directory: ./packaging/docker
           run: |
+            pwd
+            ls -lah
             cp ../../dist/${{ github.event.repository.name }} ./
             make docker ARCH=${{ matrix.goarch }}
         
