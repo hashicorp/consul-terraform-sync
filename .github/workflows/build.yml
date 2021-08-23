@@ -15,5 +15,4 @@ jobs:
         run: |
           MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
           CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
-          VERSION := $(shell awk -F\" '/Version/ { print $$2; exit }' "${CURRENT_DIR}/version/version.go")
-          make dev
+          VERSION := v0.2.1
