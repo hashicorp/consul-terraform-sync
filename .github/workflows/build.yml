@@ -1,12 +1,13 @@
 name: build
 
-#temp on push to test all the changes
-on: push
+on:
+  workflow_run:
+    workflows: ["Release tag"]
+    types:
+      - completed
 
 jobs:
   get-product-version:
-    env:
-      VERSION: v0.2.1
     runs-on: ubuntu-latest
     outputs:
       product-version: ${{ steps.get-product-version.outputs.product-version }}
@@ -15,7 +16,8 @@ jobs:
       - name: get product version
         id: get-product-version
         run: |
-          echo ${{env.VERSION}}
+          make version
+          echo "::set-output name=product-version::$(make version)"
 
   build-386:
     needs: get-product-version
