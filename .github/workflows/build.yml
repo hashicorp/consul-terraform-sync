@@ -45,4 +45,7 @@ jobs:
             cd dist && pwd && ls -lah
             cd ..
             cd out && pwd && ls -lah
+            cd ..
+
             zip -r -j out/${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+            cd out && ls -lah
