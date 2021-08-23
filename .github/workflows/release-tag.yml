@@ -1,0 +1,23 @@
+name: Release tag
+on:
+  push:
+    branches:
+      #- master
+    - releng-879/build.yml
+    paths:
+      - version/current.txt
+
+jobs:
+  tag_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: Find current version
+        run: |
+          echo "VERSION=$(cat version/current.txt)" >> $GITHUB_ENV
+      - name: Create tag
+        run: |
+          git tag v$VERSION
+          git push --tags
