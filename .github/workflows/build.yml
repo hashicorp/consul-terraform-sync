@@ -41,13 +41,7 @@ jobs:
           run: |
             mkdir dist out
             go build -o dist/ .
-            cd dist && pwd && ls -lah
-            cd ..
-            cd out && pwd && ls -lah
-            cd ..
-
             zip -r -j out/${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
-            cd out && ls -lah
         - uses: actions/upload-artifact@v2
           with:
             name: ${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
@@ -57,17 +51,48 @@ jobs:
           if: ${{ matrix.goos == 'linux' }}
           working-directory: ./packaging/docker
           run: |
-            pwd
-            ls -lah
             cp ../../dist/${{ github.event.repository.name }} ./
             make docker ARCH=${{ matrix.goarch }}
-            ls -lah
 
         - uses: actions/upload-artifact@v2
           if: ${{ matrix.goos == 'linux' }}
           with:
-            name: consul-terraform-sync_v0.2.1_docker_linux_386.tar
-            path: packaging/docker/consul-terraform-sync_v0.2.1_docker_linux_386.tar
+            name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
+            path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
+
+  build-amd64:
+    needs: get-product-version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, freebsd, solaris, windows]
+        goarch: ["amd64"]
+        go: ["1.16"]
+      fail-fast: true
+
+    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+
+    env:
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Build
+        run: |
+          mkdir dist out
+          go build -o dist/
+          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
   generate_metadata:
     needs: get-product-version
