@@ -100,6 +100,18 @@ jobs:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
+      - name: Docker build
+        if: ${{ matrix.goos == 'linux' }}
+        working-directory: ./packaging/docker
+        run: |
+          cp ../../dist/${{ github.event.repository.name }} ./
+          make docker ARCH=${{ matrix.goarch }}
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goos == 'linux' }}
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
+          path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
+
   build-arm:
     needs: get-product-version
     runs-on: ubuntu-latest
@@ -133,6 +145,18 @@ jobs:
         with:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+      
+      - name: Docker build
+        if: ${{ matrix.goos == 'linux' }}
+        working-directory: ./packaging/docker
+        run: |
+          cp ../../dist/${{ github.event.repository.name }} ./
+          make docker ARCH=${{ matrix.goarch }}
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goos == 'linux' }}
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
+          path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
 
   build-darwin:
     needs: get-product-version
