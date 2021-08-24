@@ -100,6 +100,78 @@ jobs:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
+  build-amd64:
+    needs: get-product-version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [ linux, freebsd, solaris, windows ]
+        goarch: [ "amd64" ]
+        go: [ "1.16" ]
+      fail-fast: true
+
+    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+
+    env:
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Build
+        run: |
+          mkdir dist out
+          go build -o dist/
+          curl -o dist/EULA.txt https://eula.hashicorp.com/EULA.txt
+          curl -o dist/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt
+          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+
+  build-arm:
+    needs: get-product-version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux]
+        goarch: [arm, arm64]
+        go: ["1.16"]
+      fail-fast: true
+
+    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+
+    env:
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Build
+        run: |
+          mkdir dist out
+          go build -o dist/
+          curl -o dist/EULA.txt https://eula.hashicorp.com/EULA.txt
+          curl -o dist/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt
+          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+
   generate_metadata:
     needs: get-product-version
     runs-on: ubuntu-latest
