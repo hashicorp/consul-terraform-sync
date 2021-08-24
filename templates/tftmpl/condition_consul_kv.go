@@ -39,6 +39,12 @@ func (c ConsulKVCondition) appendModuleAttribute(body *hclwrite.Body) {
 	})
 }
 
+// appendTemplate writes the template needed for the Consul KV condition.
+// It determines which template to use based on the values of the
+// source_includes_var and recurse options. If source_includes_var is set
+// to true, include the template as part of the variable consul_kv.
+// If recurse is set to true, then use the 'keys' template, otherwise
+// use the 'keyExists'/'key' template.
 func (c ConsulKVCondition) appendTemplate(w io.Writer) error {
 	q := c.hcatQuery()
 
@@ -47,7 +53,7 @@ func (c ConsulKVCondition) appendTemplate(w io.Writer) error {
 		if c.Recurse {
 			baseTmpl = fmt.Sprintf(consulKVRecurseBaseTmpl, q)
 		} else {
-			baseTmpl = fmt.Sprintf(consulKVBaseTmpl, q, c.Path)
+			baseTmpl = fmt.Sprintf(consulKVBaseTmpl, q, q, c.Path)
 		}
 		_, err := fmt.Fprintf(w, consulKVConditionIncludesVarTmpl, baseTmpl)
 		if err != nil {
@@ -60,11 +66,11 @@ func (c ConsulKVCondition) appendTemplate(w io.Writer) error {
 
 	var conditionTmpl string
 	if c.Recurse {
-		conditionTmpl = consulKVRecurseConditionTmpl
+		conditionTmpl = fmt.Sprintf(consulKVRecurseConditionTmpl, q)
 	} else {
-		conditionTmpl = consulKVConditionTmpl
+		conditionTmpl = fmt.Sprintf(consulKVConditionTmpl, q, q)
 	}
-	_, err := fmt.Fprintf(w, conditionTmpl, q)
+	_, err := w.Write([]byte(conditionTmpl))
 	if err != nil {
 		log.Printf("[ERR] (templates.tftmpl) unable to write consul-kv" +
 			" empty template")
@@ -98,8 +104,10 @@ func (c ConsulKVCondition) hcatQuery() string {
 }
 
 const consulKVConditionTmpl = `
-{{- with $kv := key %s }}
-	{{- /* Empty template. Detects changes in Consul KV */ -}}
+{{- if keyExists %s }}
+	{{- with $kv := key %s }}
+		{{- /* Empty template. Detects changes in Consul KV */ -}}
+	{{- end}}
 {{- end}}
 `
 const consulKVRecurseConditionTmpl = `
@@ -115,8 +123,10 @@ consul_kv = {%s}
 `
 
 const consulKVBaseTmpl = `
-{{- with $kv := key %s }}
-	"%s" = "{{ $kv }}"
+{{- if keyExists %s }}
+	{{- with $kv := key %s }}
+		"%s" = "{{ $kv }}"
+	{{- end}}
 {{- end}}
 `
 

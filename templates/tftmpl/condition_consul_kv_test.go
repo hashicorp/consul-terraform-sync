@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConsulKVCondition_hcatQuery(t *testing.T) {
@@ -55,8 +56,10 @@ func TestConsulKVCondition_appendTemplate(t *testing.T) {
 				Namespace:         "test-ns",
 			},
 			`
-{{- with $kv := key "path" "dc=dc1" "ns=test-ns"  }}
-	{{- /* Empty template. Detects changes in Consul KV */ -}}
+{{- if keyExists "path" "dc=dc1" "ns=test-ns"  }}
+	{{- with $kv := key "path" "dc=dc1" "ns=test-ns"  }}
+		{{- /* Empty template. Detects changes in Consul KV */ -}}
+	{{- end}}
 {{- end}}
 `,
 		},
@@ -71,8 +74,10 @@ func TestConsulKVCondition_appendTemplate(t *testing.T) {
 			},
 			`
 consul_kv = {
-{{- with $kv := key "path" "dc=dc1" "ns=test-ns"  }}
-	"path" = "{{ $kv }}"
+{{- if keyExists "path" "dc=dc1" "ns=test-ns"  }}
+	{{- with $kv := key "path" "dc=dc1" "ns=test-ns"  }}
+		"path" = "{{ $kv }}"
+	{{- end}}
 {{- end}}
 }
 `,
@@ -118,7 +123,8 @@ consul_kv = {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := new(strings.Builder)
-			tc.c.appendTemplate(w)
+			err := tc.c.appendTemplate(w)
+			require.NoError(t, err)
 			assert.Equal(t, tc.exp, w.String())
 		})
 	}
