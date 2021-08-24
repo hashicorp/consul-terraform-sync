@@ -47,10 +47,10 @@ jobs:
           run: |
             mkdir dist out
             go build -o dist/ .
-            zip -r -j out/${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }} dist/
+            zip -r -j out/${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
         - uses: actions/upload-artifact@v2
           with:
-            name: ${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+            name: ${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}
             path: out/${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
       
         - name: Docker build
@@ -94,7 +94,7 @@ jobs:
         run: |
           mkdir dist out
           go build -o dist/
-          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }} dist/
+          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
@@ -107,7 +107,7 @@ jobs:
           cp ../../dist/${{ github.event.repository.name }} ./
           make docker ARCH=${{ matrix.goarch }}
       - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }
+        if: ${{ matrix.goos == 'linux' }}
         with:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
           path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
