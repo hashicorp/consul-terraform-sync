@@ -1,5 +1,22 @@
-FROM alpine:3.13.5
+FROM alpine:3.13
 
-COPY consul-terraform-sync /usr/local/bin/consul-terraform-sync
+# NAME and VERSION are the name of the software in releases.hashicorp.com
+# and the version to download. Example: NAME=consul VERSION=1.2.3.
+ARG NAME=consul-terraform-sync-test
+ARG VERSION
 
-ENTRYPOINT [ "/usr/local/bin/consul-terraform-sync" ]
+LABEL maintainer="Consul Team <consul@hashicorp.com>"
+LABEL version=$VERSION
+
+### Added for CTS
+RUN mkdir -p /consul-terraform-sync/config \
+        && chown -R ${NAME}:${NAME} /consul-terraform-sync
+VOLUME /consul-terraform-sync/config
+COPY docker-entrypoint.sh /bin/docker-entrypoint.sh
+WORKDIR /consul-terraform-sync
+ENTRYPOINT ["/bin/docker-entrypoint.sh"]
+###
+
+USER ${NAME}
+CMD /bin/${NAME}
+
