@@ -2,7 +2,7 @@ name: build
 
 on:
   push
-#placeholder
+#placeholder to replicate current release trigger (with version/current.txt and .github/workflows/release-tag.yml files) need to ask Sarah to confirm
 #on:
 #  workflow_run:
 #    workflows: ["Release tag"]
