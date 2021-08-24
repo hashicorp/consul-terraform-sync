@@ -1,11 +1,11 @@
 name: Release tag
-on:
-  push:
-    branches:
-      #- master
-    - releng-879/build.yml
-    paths:
-      - version/current.txt
+#on:
+#  push:
+#    branches:
+#      - master
+#    #- releng-879/build.yml
+#    paths:
+#      - version/current.txt
 
 jobs:
   tag_release:
