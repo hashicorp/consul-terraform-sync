@@ -2,11 +2,15 @@ FROM alpine:3.13
 
 # NAME and VERSION are the name of the software in releases.hashicorp.com
 # and the version to download. Example: NAME=consul VERSION=1.2.3.
-ARG NAME=consul-terraform-sync-test
+ARG NAME=consul-terraform-sync
 ARG VERSION
 
 LABEL maintainer="Consul Team <consul@hashicorp.com>"
 LABEL version=$VERSION
+
+# Create a non-root user to run the software.
+RUN addgroup ${NAME} && \
+    adduser -S -G ${NAME} ${NAME}
 
 ### Added for CTS
 RUN mkdir -p /consul-terraform-sync/config \
