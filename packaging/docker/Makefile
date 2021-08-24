@@ -6,13 +6,13 @@ export PROJECT_NAME=consul-terraform-sync
 build: download docker
 
 download: export RELEASE_DIST=https://releases.hashicorp.com
-download: export VERSION=v0.2.1
+download: export VERSION=$$(./../../build-scripts/version.sh ../../version/version.go)
 download: 
 	curl -o $(PROJECT_NAME).zip $(RELEASE_DIST)/$(PROJECT_NAME)/$(VERSION)/$(PROJECT_NAME)_$(VERSION)_linux_$(ARCH).zip
 	unzip $(PROJECT_NAME).zip
 	rm $(PROJECT_NAME).zip
 
-docker: export VERSION=v0.2.1
+docker: export VERSION=$$(./../../build-scripts/version.sh ../../version/version.go)
 docker:
 	echo $(VERSION)
 	docker build --label version=$(VERSION) --no-cache -t $(PROJECT_NAME):$(VERSION) .
