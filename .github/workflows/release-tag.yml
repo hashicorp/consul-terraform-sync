@@ -1,6 +1,6 @@
 name: Release tag
-#on:
-#  push:
+on:
+  push:
 #    branches:
 #      - master
 #    #- releng-879/build.yml
