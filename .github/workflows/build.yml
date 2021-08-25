@@ -52,6 +52,25 @@ jobs:
           with:
             name: ${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}
             path: out/${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+
+      - name: Package
+        if: ${{ matrix.goos == 'linux' }}
+        uses: ./.github/actions/package
+        with:
+          name: ${{ github.event.repository.name }}
+          arch: ${{ matrix.goarch }}
+          version: ${{ needs.get-product-version.outputs.product-version }}
+          maintainer: "HashiCorp"
+          homepage: "https://www.hashicorp.com"
+          license: "MIT"
+          binary: "dist/${{ github.event.repository.name }}"
+          deb_depends: "openssl"
+          rpm_depends: "openssl"
+          config_dir: "packaging/linux"
+          preinstall: "packaging/preinstall"
+          postinstall: "packaging/postinstall"
+          preremove: "packaging/preremove"
+          postremove: "packaging/postremove"
       
         - name: Docker build
           if: ${{ matrix.goos == 'linux' }}
@@ -100,6 +119,25 @@ jobs:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
+      - name: Package
+        if: ${{ matrix.goos == 'linux' }}
+        uses: ./.github/actions/package
+        with:
+          name: ${{ github.event.repository.name }}
+          arch: ${{ matrix.goarch }}
+          version: ${{ needs.get-product-version.outputs.product-version }}
+          maintainer: "HashiCorp"
+          homepage: "https://www.hashicorp.com"
+          license: "MIT"
+          binary: "dist/${{ github.event.repository.name }}"
+          deb_depends: "openssl"
+          rpm_depends: "openssl"
+          config_dir: "packaging/linux"
+          preinstall: "packaging/preinstall"
+          postinstall: "packaging/postinstall"
+          preremove: "packaging/preremove"
+          postremove: "packaging/postremove"
+
       - name: Docker build
         if: ${{ matrix.goos == 'linux' }}
         working-directory: ./packaging/docker
@@ -145,6 +183,25 @@ jobs:
         with:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+
+      - name: Package
+        if: ${{ matrix.goos == 'linux' }}
+        uses: ./.github/actions/package
+        with:
+          name: ${{ github.event.repository.name }}
+          arch: ${{ matrix.goarch }}
+          version: ${{ needs.get-product-version.outputs.product-version }}
+          maintainer: "HashiCorp"
+          homepage: "https://www.hashicorp.com"
+          license: "MIT"
+          binary: "dist/${{ github.event.repository.name }}"
+          deb_depends: "openssl"
+          rpm_depends: "openssl"
+          config_dir: "packaging/linux"
+          preinstall: "packaging/preinstall"
+          postinstall: "packaging/postinstall"
+          preremove: "packaging/preremove"
+          postremove: "packaging/postremove"
       
       - name: Docker build
         if: ${{ matrix.goos == 'linux' }}
