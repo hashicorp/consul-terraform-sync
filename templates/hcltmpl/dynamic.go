@@ -83,6 +83,7 @@ func dynamicValue(ctx context.Context, w tmpls.Watcher, r tmpls.Resolver, v cty.
 			Contents:     v.AsString(),
 			FuncMapMerge: tfunc.Env(),
 		})
+		w.Register(tmpl)
 		rendered, err := renderDynamicValue(ctx, w, r, tmpl)
 		if err != nil {
 			return cty.Value{}, err

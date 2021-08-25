@@ -244,7 +244,7 @@ func TestUpdateTask(t *testing.T) {
 			r := new(mocksTmpl.Resolver)
 			if tc.callRender {
 				r.On("Run", mock.Anything, mock.Anything).
-					Return(hcat.ResolveEvent{Complete: true}, nil).Once()
+					Return(hcat.ResolveEvent{Complete: true, NoChange: false}, nil).Once()
 			}
 
 			c := new(mocks.Client)
@@ -257,6 +257,7 @@ func TestUpdateTask(t *testing.T) {
 			}
 
 			w := new(mocksTmpl.Watcher)
+			w.On("Register", mock.Anything).Return(nil).Once()
 			tf := &Terraform{
 				mu:       &sync.RWMutex{},
 				task:     &Task{name: "test_task", enabled: tc.orig.Enabled, workingDir: tc.dirName},
@@ -359,6 +360,8 @@ func TestUpdateTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyErr).Once()
 
 			w := new(mocksTmpl.Watcher)
+			w.On("Register", mock.Anything).Return(nil).Once()
+
 			tf := &Terraform{
 				mu:       &sync.RWMutex{},
 				task:     &Task{name: "test_task", enabled: false, workingDir: tc.dirName},
@@ -471,9 +474,12 @@ func TestInitTaskTemplates(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			w := new(mocksTmpl.Watcher)
+			w.On("Register", mock.Anything).Return(nil).Once()
 			tf := &Terraform{
 				fileReader: tc.fileReader,
 				task:       &Task{name: "test", enabled: true},
+				watcher:    w,
 			}
 			err := tf.initTaskTemplate()
 			if tc.expectError {
@@ -621,11 +627,15 @@ func TestInitTask(t *testing.T) {
 			c.On("Init", ctx).Return(tc.initErr).Once()
 			c.On("Validate", ctx).Return(tc.validateErr)
 
+			w := new(mocksTmpl.Watcher)
+			w.On("Register", mock.Anything).Return(nil).Once()
+
 			tf := &Terraform{
 				mu:         &sync.RWMutex{},
 				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName},
 				client:     c,
 				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
+				watcher:    w,
 			}
 
 			err := tf.initTask(ctx)
