@@ -23,8 +23,7 @@ ENV VERSION=$VERSION
 ENV HASHICORP_RELEASES=https://releases.hashicorp.com
 
 # Create a non-root user to run the software.
-RUN addgroup ${NAME} && \
-    adduser -S -G ${NAME} ${NAME}
+RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
 # Set up certificates, base tools, and software.
 RUN set -eux && \

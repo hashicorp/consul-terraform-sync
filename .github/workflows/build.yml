@@ -30,6 +30,7 @@ jobs:
     env:
       GOOS: ${{ matrix.goos }}
       GOARCH: ${{ matrix.goarch }}
+      DOCKER_CLI_EXPERIMENTAL: enabled
 
     steps:
         - uses: actions/checkout@v2
@@ -44,7 +45,7 @@ jobs:
             zip -r -j out/${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
         - uses: actions/upload-artifact@v2
           with:
-            name: ${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}
+            name: ${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
             path: out/${{ github.event.repository.name }}${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
         - name: Package
@@ -70,6 +71,9 @@ jobs:
           if: ${{ matrix.goos == 'linux' }}
           working-directory: ./packaging/docker
           run: |
+            sudo apt-get update
+            sudo apt-get install -y qemu-user-static
+            docker buildx create --use
             cp ../../dist/${{ github.event.repository.name }} ./
             make docker ARCH=${{ matrix.goarch }}
 
@@ -94,6 +98,7 @@ jobs:
     env:
       GOOS: ${{ matrix.goos }}
       GOARCH: ${{ matrix.goarch }}
+      DOCKER_CLI_EXPERIMENTAL: enabled
 
     steps:
       - uses: actions/checkout@v2
@@ -132,10 +137,25 @@ jobs:
           preremove: "packaging/preremove"
           postremove: "packaging/postremove"
 
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goos == 'linux' }}
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goos == 'linux' }}
+        with:
+          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
+          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
+
       - name: Docker build
         if: ${{ matrix.goos == 'linux' }}
         working-directory: ./packaging/docker
         run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static
+          docker buildx create --use
           cp ../../dist/${{ github.event.repository.name }} ./
           make docker ARCH=${{ matrix.goarch }}
       - uses: actions/upload-artifact@v2
@@ -150,7 +170,106 @@ jobs:
     strategy:
       matrix:
         goos: [linux]
-        goarch: [arm, arm64]
+        goarch: [arm]
+        go: ["1.16"]
+        goarm: [5, 6]
+      fail-fast: true
+
+    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} ${{ matrix.goarm }} build
+
+    env:
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+      DOCKER_CLI_EXPERIMENTAL: enabled
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Build
+        if: ${{ matrix.goarm == 6 }}
+        run: |
+          mkdir dist out
+          go build -o dist/
+          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}hfv6.zip dist/
+
+      - name: Build
+        if: ${{ matrix.goarm == 5 }}
+        run: |
+          mkdir dist out
+          go build -o dist/
+          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}elv5.zip dist/
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goarm == 5 }}
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}elv5.zip
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}elv5.zip
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goarm == 6 }}
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}hfv6.zip
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}hfv6.zip
+
+      - name: Package
+        if: ${{ matrix.goos == 'linux' }}
+        uses: ./.github/actions/package
+        with:
+          name: ${{ github.event.repository.name }}
+          arch: ${{ matrix.goarch }}
+          version: ${{ needs.get-product-version.outputs.product-version }}
+          maintainer: "HashiCorp"
+          homepage: "https://www.hashicorp.com"
+          license: "MIT"
+          binary: "dist/${{ github.event.repository.name }}"
+          deb_depends: "openssl"
+          rpm_depends: "openssl"
+          config_dir: "packaging/linux"
+          preinstall: "packaging/preinstall"
+          postinstall: "packaging/postinstall"
+          preremove: "packaging/preremove"
+          postremove: "packaging/postremove"
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goarm == 6 }}
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_arm*.deb
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goarm == 6 }}
+        with:
+          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
+          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm
+      
+      - name: Docker build
+        if: ${{ matrix.goarm == 6 }}
+        working-directory: ./packaging/docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static
+          docker buildx create --use
+          cp ../../dist/${{ github.event.repository.name }} ./
+          make docker ARCH=${{ matrix.goarch }}
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goarm == 6 }}
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
+          path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
+  
+  build-arm-64:
+    needs: get-product-version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux]
+        goarch: [arm64]
         go: ["1.16"]
       fail-fast: true
 
@@ -159,6 +278,7 @@ jobs:
     env:
       GOOS: ${{ matrix.goos }}
       GOARCH: ${{ matrix.goarch }}
+      DOCKER_CLI_EXPERIMENTAL: enabled
 
     steps:
       - uses: actions/checkout@v2
@@ -196,19 +316,36 @@ jobs:
           postinstall: "packaging/postinstall"
           preremove: "packaging/preremove"
           postremove: "packaging/postremove"
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goos == 'linux' }}
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_arm*.deb
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goos == 'linux' }}
+        with:
+          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
+          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm
       
       - name: Docker build
         if: ${{ matrix.goos == 'linux' }}
         working-directory: ./packaging/docker
         run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static
+          docker buildx create --use
           cp ../../dist/${{ github.event.repository.name }} ./
           make docker ARCH=${{ matrix.goarch }}
+
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
         with:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
           path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
 
+  
   build-darwin:
     needs: get-product-version
     runs-on: macos-latest
