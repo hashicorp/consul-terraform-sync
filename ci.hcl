@@ -95,3 +95,17 @@ event "sign" {
     message_template = "{{stage_name}} {{version}} failed with {{stage_output}}"
   }
 }
+
+event "verify" {
+  depends = ["sign"]
+  action "verify" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "verify"
+  }
+
+  notification {
+    on = "fail"
+    message_template = "{{stage_name}} {{version}} failed with {{stage_output}}"
+  }
+}
