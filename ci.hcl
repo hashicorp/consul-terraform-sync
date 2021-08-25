@@ -38,23 +38,7 @@ event "upload-dev" {
   }
 }
 
-event "security-scan" {
-  depends = ["quality-tests"]
-  action "security-scan" {
-    organization = "hashicorp"
-    repository = "consul-terraform-sync"
-    workflow = "security-scan"
-
-  }
-
-  notification {
-    on = "fail"
-    message_template = "{{stage_name}} {{version}} failed with {{stage_output}}"
-  }
-}
-
 event "notarize-darwin-amd64" {
-  depends = ["security-scan"]
   action "notarize-darwin-amd64" {
     organization = "hashicorp"
     repository = "consul-terraform-sync"
@@ -104,10 +88,6 @@ event "sign" {
     repository = "crt-workflows-common"
     workflow = "sign"
 
-    parameter {
-      key = "SOME_KEY"
-      value = "SOME_VALUE"
-    }
   }
 
   notification {
