@@ -249,7 +249,7 @@ jobs:
           sudo apt-get install -y qemu-user-static
           docker buildx create --use
           cp ../../dist/${{ github.event.repository.name }} ./
-          make docker ARCH=${{ matrix.goarch }}
+          make docker ARCH=${{ matrix.goarch }}/v6
 
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goarm == 6 }}
