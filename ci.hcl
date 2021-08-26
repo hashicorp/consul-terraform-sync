@@ -12,8 +12,6 @@ project "consul-terraform-sync" {
   }
 }
 
-event "merge" {}
-
 event "build" {
   depends = ["merge"]
   action "build" {
@@ -39,6 +37,7 @@ event "upload-dev" {
 }
 
 event "notarize-darwin-amd64" {
+  depends = ["upload-dev"]
   action "notarize-darwin-amd64" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
