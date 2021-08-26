@@ -84,3 +84,11 @@ dev-tree:
 	@true
 .PHONY: dev-tree
 
+version:
+ifneq (,$(wildcard version/version_ent.go))
+	@$(CURDIR)/build-scripts/version.sh version/version_ent.go
+else
+	@$(CURDIR)/build-scripts/version.sh version/version.go
+endif
+
+.PHONY: version
