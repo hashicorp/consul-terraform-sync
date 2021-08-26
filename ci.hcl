@@ -1,9 +1,9 @@
 schema = "1"
 
 project "consul-terraform-sync" {
-  team = "consul team" #TODO update team name
+  team = "consul api tooling"
   slack {
-    notification_channel = "#consul channel" #TODO update slack channel
+    notification_channel = "#feed-releng" #TODO update slack channel
   }
   github {
     organization = "hashicorp"
