@@ -243,13 +243,15 @@ jobs:
       
       - name: Docker build
         if: ${{ matrix.goarm == 6 }}
+        env:
+         GOARM_DOCKER: /v6
         working-directory: ./packaging/docker
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user-static
           docker buildx create --use
           cp ../../dist/${{ github.event.repository.name }} ./
-          make docker ARCH=${{ matrix.goarch }}/v6
+          make docker ARCH=${{ matrix.goarch }} GOARM_DOCKER=${{ env.GOARM_DOCKER }}
 
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goarm == 6 }}

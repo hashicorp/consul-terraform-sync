@@ -15,5 +15,5 @@ download:
 docker: export VERSION=$$(./../../build-scripts/version.sh ../../version/version.go)
 docker:
 	echo $(VERSION)
-	docker buildx build --load --build-arg VERSION=$(VERSION) --build-arg ARCH=$(ARCH) --platform=linux/$(ARCH) --no-cache -t $(PROJECT_NAME):$(VERSION) .
+	docker buildx build --load --build-arg VERSION=$(VERSION) --build-arg ARCH=$(ARCH) --platform=linux/$(ARCH)$(GOARM_DOCKER) --no-cache -t $(PROJECT_NAME):$(VERSION) .
 	docker save --output $(PROJECT_NAME)_$(VERSION)_docker_linux_$(ARCH).tar $(PROJECT_NAME):$(VERSION)
