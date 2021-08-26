@@ -233,12 +233,12 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ env.FILE_SUFFIX }}.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_arm*.deb
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ env.FILE_SUFFIX }}.deb
 
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ env.FILE_SUFFIX }}.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm
+          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ env.FILE_SUFFIX }}.rpm
 
       
       - name: Docker build
