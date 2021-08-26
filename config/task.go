@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
@@ -193,7 +194,7 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *TaskConfig) Finalize(bp *BufferPeriodConfig, wd string) {
+func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if c == nil {
 		return
 	}
@@ -230,6 +231,20 @@ func (c *TaskConfig) Finalize(bp *BufferPeriodConfig, wd string) {
 		c.TFVersion = String("")
 	}
 
+	bp := globalBp
+	if _, ok := c.Condition.(*ScheduleConditionConfig); ok {
+		// disable buffer_period for schedule condition
+		if c.BufferPeriod != nil {
+			log.Printf("[WARN] (config.task) disabling buffer_period for "+
+				"schedule condition. overriding buffer_period configured for "+
+				"this task: %s", c.BufferPeriod.GoString())
+		}
+		bp = &BufferPeriodConfig{
+			Enabled: Bool(false),
+			Min:     TimeDuration(0 * time.Second),
+			Max:     TimeDuration(0 * time.Second),
+		}
+	}
 	if c.BufferPeriod == nil {
 		c.BufferPeriod = bp
 	}
@@ -287,6 +302,9 @@ func (c *TaskConfig) Validate() error {
 			}
 		case *ConsulKVConditionConfig:
 			return fmt.Errorf("consul-kv condition requires at least one service to " +
+				"be configured in task.services")
+		case *ScheduleConditionConfig:
+			return fmt.Errorf("schedule condition requires at least one service to " +
 				"be configured in task.services")
 		}
 	} else {

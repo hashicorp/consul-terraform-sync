@@ -16,6 +16,7 @@ require (
 	github.com/hashicorp/consul v1.9.3
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/consul/sdk v0.7.0
+	github.com/hashicorp/cronexpr v1.1.1
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.4
 	github.com/hashicorp/go-checkpoint v0.5.0

@@ -43,6 +43,8 @@ func isConditionNil(c ConditionConfig) bool {
 		result = v == nil
 	case *ConsulKVConditionConfig:
 		result = v == nil
+	case *ScheduleConditionConfig:
+		result = v == nil
 	default:
 		return c == nil || reflect.ValueOf(c).IsNil()
 	}
@@ -88,6 +90,10 @@ func conditionToTypeFunc() mapstructure.DecodeHookFunc {
 		}
 		if c, ok := conditions[consulKVConditionType]; ok {
 			var config ConsulKVConditionConfig
+			return decodeConditionToType(c, &config)
+		}
+		if c, ok := conditions[scheduleConditionType]; ok {
+			var config ScheduleConditionConfig
 			return decodeConditionToType(c, &config)
 		}
 

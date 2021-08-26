@@ -128,6 +128,23 @@ task {
 }`,
 		},
 		{
+			"schedule: happy path",
+			false,
+			&ScheduleConditionConfig{
+				Cron: String("* * * * * * *"),
+			},
+			"config.hcl",
+			`
+task {
+	name = "schedule_condition_task"
+	source = "..."
+	services = ["api"]
+	condition "schedule" {
+		cron = "* * * * * * *"
+	}
+}`,
+		},
+		{
 			"catalog-services: unsupported field",
 			true,
 			nil,
