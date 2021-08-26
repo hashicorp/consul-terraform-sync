@@ -190,31 +190,26 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
 
+      - name: Set env NEED
+        run: |
+          if [[ ${{ matrix.goarm }} == '5' ]]; then
+              echo "FILE_SUFFIX=armelv5" >> "$GITHUB_ENV"
+          else
+              echo "FILE_SUFFIX=armhfv6" >> "$GITHUB_ENV"
+          fi
+
       - name: Build
-        if: ${{ matrix.goarm == 6 }}
         run: |
           mkdir dist out
           go build -o dist/
-          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}hfv6.zip dist/
+          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ env.FILE_SUFFIX }}.zip dist/
 
-      - name: Build
-        if: ${{ matrix.goarm == 5 }}
-        run: |
-          mkdir dist out
-          go build -o dist/
-          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}elv5.zip dist/
 
       - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goarm == 5 }}
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}elv5.zip
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}elv5.zip
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ env.FILE_SUFFIX }}.zip
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ env.FILE_SUFFIX }}.zip
 
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goarm == 6 }}
-        with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}hfv6.zip
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}hfv6.zip
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
@@ -236,16 +231,15 @@ jobs:
           postremove: "packaging/postremove"
 
       - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goarm == 6 }}
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ env.FILE_SUFFIX }}.deb
           path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_arm*.deb
 
       - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goarm == 6 }}
         with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
+          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ env.FILE_SUFFIX }}.rpm
           path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm
+
       
       - name: Docker build
         if: ${{ matrix.goarm == 6 }}
