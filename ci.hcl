@@ -8,7 +8,7 @@ project "consul-terraform-sync" {
   github {
     organization = "hashicorp"
     repository = "consul-terraform-sync"
-    release_branches = ["master"]
+    release_branches = ["crt-cts-migration"]
   }
 }
 
