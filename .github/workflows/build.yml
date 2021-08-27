@@ -62,11 +62,6 @@ jobs:
           binary: "dist/${{ github.event.repository.name }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
-          config_dir: "packaging/linux"
-          preinstall: "packaging/preinstall"
-          postinstall: "packaging/postinstall"
-          preremove: "packaging/preremove"
-          postremove: "packaging/postremove"
       
       - name: Docker build
         if: ${{ matrix.goos == 'linux' }}
@@ -133,11 +128,6 @@ jobs:
           binary: "dist/${{ github.event.repository.name }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
-          config_dir: "packaging/linux"
-          preinstall: "packaging/preinstall"
-          postinstall: "packaging/postinstall"
-          preremove: "packaging/preremove"
-          postremove: "packaging/postremove"
 
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
@@ -227,11 +217,6 @@ jobs:
           binary: "dist/${{ github.event.repository.name }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
-          config_dir: "packaging/linux"
-          preinstall: "packaging/preinstall"
-          postinstall: "packaging/postinstall"
-          preremove: "packaging/preremove"
-          postremove: "packaging/postremove"
 
       - uses: actions/upload-artifact@v2
         with:
@@ -311,11 +296,6 @@ jobs:
           binary: "dist/${{ github.event.repository.name }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
-          config_dir: "packaging/linux"
-          preinstall: "packaging/preinstall"
-          postinstall: "packaging/postinstall"
-          preremove: "packaging/preremove"
-          postremove: "packaging/postremove"
 
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
