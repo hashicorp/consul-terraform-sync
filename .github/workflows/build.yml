@@ -50,7 +50,7 @@ jobs:
 
         - name: Package
           if: ${{ matrix.goos == 'linux' }}
-          uses: ./.github/actions/package
+          uses: hashicorp/package@v1
           with:
             name: ${{ github.event.repository.name }}
             arch: ${{ matrix.goarch }}
@@ -120,7 +120,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: ./.github/actions/package
+        uses: hashicorp/package@v1
         with:
           name: ${{ github.event.repository.name }}
           arch: ${{ matrix.goarch }}
@@ -213,7 +213,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: ./.github/actions/package
+        uses: hashicorp/package@v1
         with:
           name: ${{ github.event.repository.name }}
           arch: ${{ env.FILE_SUFFIX }}
@@ -296,7 +296,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: ./.github/actions/package
+        uses: hashicorp/package@v1
         with:
           name: ${{ github.event.repository.name }}
           arch: ${{ matrix.goarch }}
