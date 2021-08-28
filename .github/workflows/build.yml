@@ -68,10 +68,10 @@ jobs:
             postremove: "packaging/postremove"
 
         - uses: actions/upload-artifact@v2
-            if: ${{ matrix.goos == 'linux' }}
-            with:
-              name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-              path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+          if: ${{ matrix.goos == 'linux' }}
+          with:
+            name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+            path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
 
         - uses: actions/upload-artifact@v2
           if: ${{ matrix.goos == 'linux' }}
