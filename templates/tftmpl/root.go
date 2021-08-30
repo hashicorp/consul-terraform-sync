@@ -3,13 +3,13 @@ package tftmpl
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/internal/hcl2shim"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/version"
 	goVersion "github.com/hashicorp/go-version"
@@ -202,37 +202,33 @@ func initModule(input *RootModuleInputData, fileFuncs map[string]tfFileFunc) err
 			continue
 		}
 
+		logger := logging.Global().Named(logSystemName).Named(tftmplSubsystemName).With(
+			"file_name", filename, "task_name", input.Task.Name)
 		filePath := filepath.Join(input.Path, filename)
 		if fileExists(filePath) {
 			if input.skipOverride {
-				log.Printf("[DEBUG] (templates.tftmpl) %s in root module for task %q "+
-					"already exists, skipping file creation", filename, input.Task.Name)
+				logger.Debug("filename in root module for task already exists, skipping file creation")
 				continue
 			}
-			log.Printf("[INFO] (templates.tftmpl) overwriting %s in root module "+
-				"for task %q", filename, input.Task.Name)
+			logger.Info("overwriting file in root module for task")
 		}
 
-		log.Printf("[DEBUG] (templates.tftmpl) creating %s in root module for "+
-			"task %q: %s", filename, input.Task.Name, filePath)
+		logger.Debug("creating file in root module for task", "file_path", filePath)
 
 		f, err := os.Create(filePath)
 		if err != nil {
-			log.Printf("[ERR] (templates.tftmpl) unable to create %s in root "+
-				"module for %q: %s", filename, input.Task.Name, err)
+			logger.Error("error, unable to create file in root module", "error", err)
 			return err
 		}
 		defer f.Close()
 
 		if err := f.Chmod(input.FilePerms); err != nil {
-			log.Printf("[ERR] (templates.tftmpl) unable to change permissions "+
-				"for %s in root module for %q: %s", filename, input.Task.Name, err)
+			logger.Error("error, unable to change permissions for file in root module", "error", err)
 			return err
 		}
 
 		if err := newFileFunc(f, filename, input); err != nil {
-			log.Printf("[ERR] (templates.tftmpl) error writing content for %s in "+
-				"root module for %q: %s", filename, input.Task.Name, err)
+			logger.Error("error writing content for file in root module", "error", err)
 			return err
 		}
 
@@ -422,11 +418,12 @@ func sortedKeys(m map[string]interface{}) []string {
 // files. Each preamble includes task information.
 func writePreamble(w io.Writer, task Task, filename string) error {
 	_, err := w.Write(RootPreamble)
+	logger := logging.Global().Named(logSystemName).Named(tftmplSubsystemName).With(
+		"file_name", filename)
 	if err != nil {
 		// The preamble is not required for TF config files to be usable. So any
 		// errors here we'll just log and continue.
-		log.Printf("[WARN] (templates.tftmpl) unable to write preamble warning to %q",
-			filename)
+		logger.Warn("unable to write preamble warning to file")
 	}
 
 	// Adding the task name to generated files guarantees the file content is
@@ -438,8 +435,7 @@ func writePreamble(w io.Writer, task Task, filename string) error {
 	// template files will render by hcat causing CTS to indefinitely wait.
 	_, err = fmt.Fprintf(w, TaskPreamble, task.Name, task.Description)
 	if err != nil {
-		log.Printf("[WARN] (templates.tftmpl) unable to write task preamble warning to %q",
-			filename)
+		logger.Warn("unable to write task preamble warning to file")
 	}
 	return err
 }

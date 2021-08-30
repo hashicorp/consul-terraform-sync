@@ -2,18 +2,21 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	ctsVersion "github.com/hashicorp/consul-terraform-sync/version"
 	goVersion "github.com/hashicorp/go-version"
 )
 
 // DefaultTFBackendKVPath is the default KV path used for configuring the
 // default backend to use Consul KV.
-const DefaultTFBackendKVPath = "consul-terraform-sync/terraform"
+const (
+	DefaultTFBackendKVPath = "consul-terraform-sync/terraform"
+	logSystemName          = "config"
+)
 
 // TerraformConfig is the configuration for the Terraform driver.
 type TerraformConfig struct {
@@ -30,9 +33,9 @@ type TerraformConfig struct {
 func DefaultTerraformConfig() *TerraformConfig {
 	wd, err := os.Getwd()
 	if err != nil {
-		log.Println("[ERR] (config) unable to retrieve current working directory " +
-			"to setup default configuration for the Terraform driver")
-		log.Panic(err)
+		logging.Global().Named(logSystemName).Error("unable to retrieve current working directory "+
+			"to setup default configuration for the Terraform driver", "error", err)
+		panic(err)
 	}
 
 	return &TerraformConfig{
@@ -201,10 +204,11 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 	}
 
 	wd, err := os.Getwd()
+	logger := logging.Global().Named(logSystemName)
 	if err != nil {
-		log.Println("[ERR] (config) unable to retrieve current working directory " +
-			"to setup default configuration for the Terraform driver")
-		log.Panic(err)
+		logger.Error("unable to retrieve current working directory "+
+			"to setup default configuration for the Terraform driver", "error", err)
+		panic(err)
 	}
 
 	if c.Version == nil {
@@ -227,7 +231,7 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 		// intentionally left as nil for the top-level config to override
 		// log a warning message if the configuration is not configured to the
 		// default location.
-		log.Println("[WARN] (config) The 'driver.working_dir' configuration " +
+		logger.Warn("The 'driver.working_dir' configuration " +
 			"option was marked for deprecation in v0.3.0 and will be removed in " +
 			"v0.5.0 of Consul-Terraform-Sync. Please update your configuration " +
 			"to use 'working_dir' or configure the working directory individually " +

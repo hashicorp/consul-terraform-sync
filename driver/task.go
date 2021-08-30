@@ -1,13 +1,13 @@
 package driver
 
 import (
-	"log"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
@@ -66,6 +66,7 @@ type Task struct {
 	bufferPeriod *BufferPeriod // nil when disabled
 	condition    config.ConditionConfig
 	workingDir   string
+	logger       logging.Logger
 }
 
 type TaskConfig struct {
@@ -111,6 +112,7 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		bufferPeriod: conf.BufferPeriod,
 		condition:    conf.Condition,
 		workingDir:   conf.WorkingDir,
+		logger:       logging.Global().Named(logSystemName),
 	}, nil
 }
 
@@ -331,8 +333,8 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 		}
 	default:
 		// expected only for test scenarios
-		log.Printf("[WARN] (driver.terraform) task '%s' condition config unset."+
-			" defaulting to services condition", t.name)
+		t.logger.Warn("task condition config unset. defaulting to services condition",
+			"task_name", t.name)
 		condition = &tftmpl.ServicesCondition{}
 	}
 	input.Condition = condition
@@ -366,9 +368,10 @@ func newClient(conf *clientConfig) (client.Client, error) {
 	var c client.Client
 	taskName := conf.taskName
 
+	tnlog := logging.Global().Named(logSystemName).With(taskNameLogKey, taskName)
 	switch conf.clientType {
 	case developmentClient:
-		log.Printf("[TRACE] (driver) creating development client for task '%s'", taskName)
+		tnlog.Trace("creating development client for task")
 		c, err = client.NewPrinter(&client.PrinterConfig{
 			ExecPath:   conf.path,
 			WorkingDir: conf.workingDir,
@@ -376,10 +379,10 @@ func newClient(conf *clientConfig) (client.Client, error) {
 			Writer:     os.Stdout,
 		})
 	case testClient:
-		log.Printf("[TRACE] (driver) creating mock client for task '%s'", taskName)
+		tnlog.Trace("creating mock client for task")
 		c = new(mocks.Client)
 	default:
-		log.Printf("[TRACE] (driver) creating terraform cli client for task '%s'", taskName)
+		tnlog.Trace("creating terraform cli client for task")
 		c, err = client.NewTerraformCLI(&client.TerraformCLIConfig{
 			Log:        conf.log,
 			PersistLog: conf.persistLog,

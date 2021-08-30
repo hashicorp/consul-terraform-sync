@@ -2,11 +2,15 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+)
+
+const (
+	taskSubsystemName = "task"
 )
 
 // TaskConfig is the configuration for a Sync task. This block may be
@@ -289,11 +293,12 @@ func (c *TaskConfig) Validate() error {
 		switch cond := c.Condition.(type) {
 		case *ServicesConditionConfig:
 			if cond.Regexp != nil && *cond.Regexp != "" {
-				log.Printf("[ERR] (config.task) list of services and service condition regex " +
-					"both provided. If both are needed, consider including the list in the regex " +
-					"or creating separate tasks.")
-				return fmt.Errorf("task.services is not allowed if task.condition.regexp " +
+				err := fmt.Errorf("task.services is not allowed if task.condition.regexp " +
 					"is configured for a services condition")
+				logging.Global().Named(logSystemName+taskSubsystemName).Error("[ERR] (config.task) list of "+
+					"services and service condition regex both provided. If both are needed, consider "+
+					"including the list in the regex or creating separate tasks.", "error", err)
+				return err
 			}
 		}
 	}

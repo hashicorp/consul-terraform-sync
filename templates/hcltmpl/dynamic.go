@@ -3,9 +3,9 @@ package hcltmpl
 import (
 	"context"
 	"fmt"
-	"log"
 	"regexp"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	tmpls "github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/tfunc"
@@ -15,6 +15,11 @@ import (
 var (
 	dynamicTmplRegexp = regexp.MustCompile(`\{\{\s*(env|key|with secret)\s+\\?\".+\\?\"\s*\}\}`)
 	vaultTmplRegexp   = regexp.MustCompile(`\{\{\s*with secret\s+\\?\".+\\?\"\s*\}\}`)
+)
+
+const (
+	logSystemName        = "template"
+	hcltmplSubsystemName = "hcltmpl"
 )
 
 // ContainsDynamicTemplate reports whether the template syntax supported by CTS
@@ -42,7 +47,8 @@ func LoadDynamicConfig(ctx context.Context, w tmpls.Watcher, r tmpls.Resolver,
 		return block, nil
 	}
 
-	log.Printf("[INFO] (templates.hcltmpl) evaluating dynamic configuration for %q", block.Name)
+	logging.Global().Named(logSystemName).Named(hcltmplSubsystemName).Info(
+		"evaluating dynamic configuration for block", "block_name", block.Name)
 
 	// Traverse all variables and nested variables to evaluate any dynamic values
 	for attrName, v := range block.Variables {

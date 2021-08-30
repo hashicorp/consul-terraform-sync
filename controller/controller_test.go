@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
@@ -123,10 +124,12 @@ func TestBaseControllerInit(t *testing.T) {
 				},
 				drivers: driver.NewDrivers(),
 				conf:    tc.config,
+				logger:  logging.NewNullLogger(),
 			}
-			baseCtrl.drivers.Add("task", d)
+			err := baseCtrl.drivers.Add("task", d)
+			require.NoError(t, err)
 
-			err := baseCtrl.init(ctx)
+			err = baseCtrl.init(ctx)
 
 			if tc.expectError {
 				assert.Error(t, err)

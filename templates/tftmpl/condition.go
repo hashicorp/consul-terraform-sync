@@ -3,9 +3,9 @@ package tftmpl
 import (
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
@@ -13,6 +13,11 @@ import (
 var (
 	_ Condition = (*ServicesCondition)(nil)
 	_ Condition = (*CatalogServicesCondition)(nil)
+)
+
+const (
+	logSystemName       = "templates"
+	tftmplSubsystemName = "tftmpl"
 )
 
 // Condition handles appending a run condition's relevant templating for Terraform
@@ -72,7 +77,8 @@ func (c ServicesCondition) appendTemplate(w io.Writer) error {
 	}
 
 	if err != nil {
-		log.Printf("[ERR] (templates.tftmpl) unable to write service condition template")
+		logging.Global().Named(logSystemName).Named(tftmplSubsystemName).Error(
+			"unable to write service condition template", "error", err)
 		return err
 	}
 	return nil
@@ -136,19 +142,18 @@ func (c CatalogServicesCondition) appendModuleAttribute(body *hclwrite.Body) {
 
 func (c CatalogServicesCondition) appendTemplate(w io.Writer) error {
 	q := c.hcatQuery()
+	logger := logging.Global().Named(logSystemName).Named(tftmplSubsystemName)
 	if c.SourceIncludesVar {
 		_, err := fmt.Fprintf(w, catalogServicesConditionIncludesVarTmpl, q)
 		if err != nil {
-			log.Printf("[ERR] (templates.tftmpl) unable to write catalog-service" +
-				" template to include variable")
+			logger.Error("unable to write catalog-service template to include variable", "error", err)
 			return err
 		}
 		return nil
 	}
 	_, err := fmt.Fprintf(w, catalogServicesConditionTmpl, q)
 	if err != nil {
-		log.Printf("[ERR] (templates.tftmpl) unable to write catalog-service" +
-			" empty template")
+		logger.Error("unable to write catalog-service empty template", "error", err)
 		return err
 	}
 	return nil

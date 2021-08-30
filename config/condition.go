@@ -2,11 +2,11 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul/lib/decode"
 	"github.com/mitchellh/mapstructure"
 )
@@ -100,6 +100,7 @@ func conditionToTypeFunc() mapstructure.DecodeHookFunc {
 // of an interface into an implementation
 func decodeConditionToType(data interface{}, condition ConditionConfig) (ConditionConfig, error) {
 	var md mapstructure.Metadata
+	logger := logging.Global().Named(logSystemName)
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			decode.HookWeakDecodeFromSlice,
@@ -110,21 +111,19 @@ func decodeConditionToType(data interface{}, condition ConditionConfig) (Conditi
 		Result:           &condition,
 	})
 	if err != nil {
-		log.Printf("[ERR] (config) condition mapstructure decoder creation"+
-			"failed: %s", err)
+		logger.Error("condition mapstructure decoder create failed", "error", err)
 		return nil, err
 	}
 
 	if err := decoder.Decode(data); err != nil {
-		log.Printf("[ERR] (config) condition mapstructure decode failed: %s",
-			err)
+		logger.Error("condition mapstructure decode failed", "error", err)
 		return nil, err
 	}
 
 	if len(md.Unused) > 0 {
 		sort.Strings(md.Unused)
 		err := fmt.Errorf("invalid keys: %s", strings.Join(md.Unused, ", "))
-		log.Printf("[ERR] (config) condition %s", err.Error())
+		logger.Error("condition invalid keys", "error", err)
 		return nil, err
 	}
 

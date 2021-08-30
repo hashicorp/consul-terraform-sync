@@ -1,13 +1,17 @@
 package controller
 
 import (
-	"log"
 	"math/rand"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/hashicorp/hcat"
+)
+
+const (
+	hcatLogSystemName = "hcat"
 )
 
 // newWatcher initializes a new hcat Watcher with a Consul client and optional
@@ -65,16 +69,17 @@ func newWatcher(conf *config.Config) (*hcat.Watcher, error) {
 // zero retries).
 func retryConsul(retryCount int) (bool, time.Duration) {
 	max := 8 // 8+1 retries. total wait of 8.5-12.8 min
+	logger := logging.Global().Named(hcatLogSystemName)
 	if retryCount > max {
-		log.Printf("[ERR] (hcat) error connecting with Consul even after retries")
+		logger.Error("error connecting with Consul even after retries", "retries", retryCount)
 		return false, 0 * time.Second
 	}
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	wait := retry.WaitTime(uint(retryCount), random)
 	dur := time.Duration(wait)
-	log.Printf("[DEBUG] (hcat) error connecting with Consul. Waiting %v to retry"+
-		" attempt #%d", dur, retryCount+1)
+	logger.Debug("couldn't connect with Consul. Waiting to retry",
+		"wait_duration", dur, "attempt_number", retryCount+1)
 	return true, dur
 }
 

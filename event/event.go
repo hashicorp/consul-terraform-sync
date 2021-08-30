@@ -3,10 +3,14 @@ package event
 import (
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/go-uuid"
+)
+
+const (
+	logSystemName = "event"
 )
 
 // Event captures the series of actions that needs to happen to update network
@@ -56,7 +60,7 @@ func NewEvent(taskName string, config *Config) (*Event, error) {
 // Start sets the start time on an event. Can only be called once.
 func (e *Event) Start() {
 	if !e.StartTime.IsZero() {
-		log.Printf("[WARN] (event) event already started. unable to restart")
+		logging.Global().Named(logSystemName).Warn("event already started. unable to restart")
 		return
 	}
 	e.StartTime = time.Now()
@@ -66,7 +70,7 @@ func (e *Event) Start() {
 // Can only be called once
 func (e *Event) End(err error) {
 	if !e.EndTime.IsZero() {
-		log.Printf("[WARN] (event) event already ended. unable to re-end")
+		logging.Global().Named(logSystemName).Warn("event already ended. unable to re-end")
 		return
 	}
 

@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -34,6 +33,8 @@ const (
 	ExitCodeParseFlagsError
 	ExitCodeConfigError
 	ExitCodeDriverError
+
+	logSystemName = "cli"
 )
 
 // CLI is the main entry point.
@@ -152,14 +153,15 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 
 	// Build the config.
 	conf, err := config.BuildConfig([]string(configFiles))
+	logger := logging.Global().Named(logSystemName)
 	if err != nil {
-		log.Printf("[ERR] (cli) error building configuration: %s", err)
+		logger.Error("error building configuration", "error", err)
 		os.Exit(ExitCodeConfigError)
 	}
 	conf.Finalize()
 
 	if err := conf.Validate(); err != nil {
-		log.Printf("[ERR] (cli) error validating configuration: %s", err)
+		logger.Error("error validating configuration", "error", err)
 		os.Exit(ExitCodeConfigError)
 	}
 
@@ -170,13 +172,13 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 		SyslogName:     config.StringVal(conf.Syslog.Name),
 		Writer:         cli.errStream,
 	}); err != nil {
-		log.Printf("[ERR] (cli) error setting up logging: %s", err)
+		logger.Error("error setting up logging", "error", err)
 		return ExitCodeConfigError
 	}
 
 	// Print information on startup for debugging
-	log.Printf("[INFO] %s", version.GetHumanVersion())
-	log.Printf("[DEBUG] %s", conf.GoString())
+	logger.Info(version.GetHumanVersion())
+	logger.Debug("configuration", "config", conf.GoString())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -185,40 +187,40 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 		isInspect = true
 		conf.Tasks, err = config.FilterTasks(conf.Tasks, inspectTasks)
 		if err != nil {
-			log.Printf("[ERR] (cli) error inspecting tasks: %s", err)
+			logger.Error("error inspecting tasks", "error", err)
 			return ExitCodeConfigError
 		}
 	}
 
 	switch {
 	case isInspect:
-		log.Printf("[INFO] (cli) running controller in inspect mode")
+		logger.Info("running controller in inspect mode")
 	case isOnce:
-		log.Printf("[INFO] (cli) running controller in once mode")
+		logger.Info("running controller in once mode")
 	default:
-		log.Printf("[INFO] (cli) running controller in daemon mode")
+		logger.Info("running controller in daemon mode")
 	}
 
 	// Set up controller
 	conf.ClientType = config.String(clientType)
 	var ctrl controller.Controller
 	if isInspect {
-		log.Printf("[DEBUG] (cli) inspect mode enabled, processing then exiting")
-		log.Printf("[INFO] (cli) setting up controller: readonly")
+		logger.Debug("inspect mode enabled, processing then exiting")
+		logger.Info("setting up controller", "type", "readonly")
 		ctrl, err = controller.NewReadOnly(conf)
 	} else {
-		log.Printf("[INFO] (cli) setting up controller: readwrite")
+		logger.Info("setting up controller", "type", "readwrite")
 		ctrl, err = controller.NewReadWrite(conf)
 	}
 	if err != nil {
-		log.Printf("[ERR] (cli) error setting up controller: %s", err)
+		logger.Error("error setting up controller", "error", err)
 		return ExitCodeConfigError
 	}
 	defer ctrl.Stop()
 
 	// Install the driver after controller has tested Consul connection
 	if err := controller.InstallDriver(ctx, conf); err != nil {
-		log.Printf("[ERR] (cli) error installing driver: %s", err)
+		logger.Error("error installing driver", "error", err)
 		return ExitCodeDriverError
 	}
 
@@ -227,14 +229,14 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 	exitCh := make(chan struct{}, exitBufLen)
 
 	go func() {
-		log.Printf("[INFO] (cli) initializing controller")
+		logger.Info("initializing controller")
 		err := ctrl.Init(ctx)
 		if err != nil {
 			if err == context.Canceled {
 				exitCh <- struct{}{}
 				return
 			}
-			log.Printf("[ERR] (cli) error initializing controller: %s", err)
+			logger.Error("error initializing controller", "error", err)
 			errCh <- err
 			return
 		}
@@ -245,13 +247,13 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 				if err == context.Canceled {
 					exitCh <- struct{}{}
 				} else {
-					log.Printf("[ERR] (cli) error running controller in Once mode: %s", err)
+					logger.Error("error running controller in Once mode", "error", err)
 					errCh <- err
 				}
 				return
 			}
 			if isOnce {
-				log.Printf("[INFO] (cli) controller in Once mode has completed")
+				logger.Info("controller in Once mode has completed")
 				exitCh <- struct{}{}
 				return
 			}
@@ -275,7 +277,7 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 			if err == context.Canceled {
 				exitCh <- struct{}{}
 			} else {
-				log.Printf("[ERR] (cli) error running controller: %s", err)
+				logger.Error("error running controller", "error", err)
 				errCh <- err
 			}
 			return
@@ -291,7 +293,7 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 		case sig := <-interruptCh:
 			// Cancel the context and wait for controller go routine to gracefully
 			// shutdown
-			log.Printf("[INFO] (cli) signal received to initiate graceful shutdown: %v", sig)
+			logger.Info("signal received to initiate graceful shutdown", "signal", sig)
 			cancel()
 			counter := 0
 			start := time.Now()
@@ -301,21 +303,21 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 				case <-exitCh:
 					counter++
 					if counter >= exitBufLen {
-						log.Printf("[INFO] (cli) graceful shutdown")
+						logger.Info("graceful shutdown")
 						return ExitCodeOK
 					}
 				case <-time.After(10*time.Second - since):
-					log.Printf("[INFO] (cli) graceful shutdown timed out, exiting")
+					logger.Info("graceful shutdown timed out, exiting")
 					return ExitCodeInterrupt
 				}
 			}
 
 		case <-exitCh:
 			if isOnce || isInspect {
-				log.Printf("[INFO] (cli) graceful shutdown")
+				logger.Info("graceful shutdown")
 				return ExitCodeOK
 			}
-			log.Printf("[WARN] (cli) unexpected shutdown")
+			logger.Warn("unexpected shutdown")
 			return ExitCodeError
 
 		case <-errCh:

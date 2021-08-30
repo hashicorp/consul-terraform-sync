@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"strings"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 // ServiceConfig defines the explicit configuration for Sync to monitor
@@ -159,7 +160,7 @@ func (c *ServiceConfig) Finalize() {
 	if c.Tag == nil {
 		c.Tag = String("")
 	} else {
-		log.Println("[WARN] (config) The 'tag' attribute was marked for " +
+		logging.Global().Named(logSystemName).Warn("The 'tag' attribute was marked for " +
 			"deprecation in v0.2.0 and will be removed in v0.4.0 " +
 			"of Consul-Terraform-Sync. Please update your configuration to " +
 			"use 'filter' and provide a filter expression using the " +

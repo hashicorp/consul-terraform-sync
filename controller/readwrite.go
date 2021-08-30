@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -69,18 +68,18 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		select {
 		case err := <-rw.watcher.WaitCh(ctx):
 			if err != nil {
-				log.Printf("[ERR] (ctrl) error watching template dependencies: %s", err)
+				rw.logger.Error("error watching template dependencies", "error", err)
 				return err
 			}
 
 		case <-ctx.Done():
-			log.Printf("[INFO] (ctrl) stopping controller")
+			rw.logger.Info("stopping controller")
 			return ctx.Err()
 		}
 
 		for err := range rw.runTasks(ctx) {
 			// aggregate error collector for runTasks, just logs everything for now
-			log.Printf("[ERR] (ctrl) %s", err)
+			rw.logger.Error("error running tasks", "error", err)
 		}
 
 		rw.logDepSize(50, i)
@@ -97,7 +96,7 @@ func (rw *ReadWrite) runTasks(ctx context.Context) chan error {
 		if rw.drivers.IsActive(taskName) {
 			// The driver is currently active with the task, initiated by an ad-hoc run.
 			// There may be updates for other tasks, so we'll continue checking
-			log.Printf("[TRACE] (ctrl) task %q is active", taskName)
+			rw.logger.Trace("task is active", taskNameLogKey, taskName)
 			continue
 		}
 		wg.Add(1)
@@ -125,7 +124,7 @@ func (rw *ReadWrite) runTasks(ctx context.Context) chan error {
 // Once runs the controller in read-write mode making sure each template has
 // been fully rendered and the task run, then it returns.
 func (rw *ReadWrite) Once(ctx context.Context) error {
-	log.Println("[INFO] (ctrl) executing all tasks once through")
+	rw.logger.Info("executing all tasks once through")
 
 	driversCopy := rw.drivers.Map()
 	completed := make(map[string]bool, len(driversCopy))
@@ -145,14 +144,14 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 		}
 		rw.logDepSize(50, i)
 		if done {
-			log.Println("[INFO] (ctrl) all tasks completed once")
+			rw.logger.Info("all tasks completed once")
 			return nil
 		}
 
 		select {
 		case err := <-rw.watcher.WaitCh(ctx):
 			if err != nil {
-				log.Printf("[ERR] (ctrl) error watching template dependencies: %s", err)
+				rw.logger.Error("error watching template dependencies", "error", err)
 				return err
 			}
 		case <-ctx.Done():
@@ -177,7 +176,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry bool
 	task := d.Task()
 	taskName := task.Name()
 	if !task.IsEnabled() {
-		log.Printf("[TRACE] (ctrl) skipping disabled task '%s'", taskName)
+		rw.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
 		return true, nil
 	}
 
@@ -194,9 +193,9 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry bool
 	var storedErr error
 	storeEvent := func() {
 		ev.End(storedErr)
-		log.Printf("[TRACE] (ctrl) adding event %s", ev.GoString())
+		rw.logger.Trace("adding event", "event", ev.GoString())
 		if err := rw.store.Add(*ev); err != nil {
-			log.Printf("[ERROR] (ctrl) error storing event %s", ev.GoString())
+			rw.logger.Error("error storing event", "event", ev.GoString())
 		}
 	}
 	ev.Start()
@@ -212,7 +211,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry bool
 	// rendering a template may take several cycles in order to completely fetch
 	// new data
 	if rendered {
-		log.Printf("[INFO] (ctrl) executing task %s", taskName)
+		rw.logger.Info("executing task", taskNameLogKey, taskName)
 		defer storeEvent()
 
 		if retry {
@@ -226,7 +225,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry bool
 				taskName, storedErr)
 		}
 
-		log.Printf("[INFO] (ctrl) task completed %s", taskName)
+		rw.logger.Info("task completed", taskNameLogKey, taskName)
 	}
 
 	return rendered, nil

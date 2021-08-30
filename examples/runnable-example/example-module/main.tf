@@ -3,7 +3,7 @@ terraform {
     # Provider source is used for Terraform discovery and installation of
     # providers. Declare source for all providers required by the module.
     local = {
-      source = "hashicorp/local"
+      source  = "hashicorp/local"
       version = ">= 2.1.0"
     }
   }

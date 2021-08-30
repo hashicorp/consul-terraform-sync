@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 // TerraformProviderFake is the name of a fake Terraform provider
-const TerraformProviderFake = "fake-sync"
+const (
+	TerraformProviderFake = "fake-sync"
+	fakeSubsystemName     = "fake"
+)
 
 var _ Handler = (*Fake)(nil)
 
@@ -53,7 +57,9 @@ func NewFake(config map[string]interface{}) (*Fake, error) {
 		return nil, errors.New("FakeHandler: missing 'name' configuration")
 	}
 
-	log.Printf("[INFO] (handler.fake) creating handler with name: %s", h.name)
+	logging.Global().Named(logSystemName).Named(fakeSubsystemName).Info("creating handler",
+		"handler_name", h.name)
+
 	return h, nil
 }
 
@@ -68,7 +74,7 @@ func (h *Fake) Do(ctx context.Context, prevErr error) error {
 		err = fmt.Errorf("error %s", h.name)
 	}
 
-	if h.first == true {
+	if h.first {
 		h.first = false
 		if h.successFirst {
 			err = nil

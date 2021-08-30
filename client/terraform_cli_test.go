@@ -7,12 +7,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
+	"github.com/hashicorp/terraform-exec/tfexec"
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
-	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/stretchr/testify/require"
 )
 
 func NewTestTerraformCLI(config *TerraformCLIConfig, tfMock *mocks.TerraformExec) *TerraformCLI {
@@ -33,6 +34,7 @@ func NewTestTerraformCLI(config *TerraformCLIConfig, tfMock *mocks.TerraformExec
 		tf:         tfMock,
 		workingDir: "test/working/dir",
 		workspace:  "test-workspace",
+		logger:     logging.NewNullLogger(),
 	}
 
 	if config == nil {
@@ -350,7 +352,7 @@ module for task "test-workspace" is missing the "catalog_services" variable, add
 			}
 		}
 	]
-}`,	// Terraform v0.13/v0.14 output
+}`, // Terraform v0.13/v0.14 output
 		},
 		{
 			"warning",
@@ -383,12 +385,13 @@ module for task "test-workspace" is missing the "catalog_services" variable, add
 		t.Run(tc.name, func(t *testing.T) {
 			m := new(mocks.TerraformExec)
 			var validateOut *tfjson.ValidateOutput
-			json.Unmarshal([]byte(tc.jsonOut), &validateOut)
+			err := json.Unmarshal([]byte(tc.jsonOut), &validateOut)
+			require.NoError(t, err)
 			m.On("Validate", mock.Anything).Return(validateOut, nil)
 			client := NewTestTerraformCLI(&TerraformCLIConfig{}, m)
 
 			ctx := context.Background()
-			err := client.Validate(ctx)
+			err = client.Validate(ctx)
 
 			if tc.expectedErr != "" {
 				assert.Error(t, err)

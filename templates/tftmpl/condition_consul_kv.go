@@ -3,8 +3,9 @@ package tftmpl
 import (
 	"fmt"
 	"io"
-	"log"
 	"strings"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -48,6 +49,7 @@ func (c ConsulKVCondition) appendModuleAttribute(body *hclwrite.Body) {
 func (c ConsulKVCondition) appendTemplate(w io.Writer) error {
 	q := c.hcatQuery()
 
+	logger := logging.Global().Named(logSystemName).Named(tftmplSubsystemName)
 	if c.SourceIncludesVar {
 		var baseTmpl string
 		if c.Recurse {
@@ -57,8 +59,7 @@ func (c ConsulKVCondition) appendTemplate(w io.Writer) error {
 		}
 		_, err := fmt.Fprintf(w, consulKVConditionIncludesVarTmpl, baseTmpl)
 		if err != nil {
-			log.Printf("[ERR] (templates.tftmpl) unable to write consul-kv" +
-				" template to include variable")
+			logger.Error("unable to write consul-kv template to include variable", "error", err)
 			return err
 		}
 		return nil
@@ -72,8 +73,7 @@ func (c ConsulKVCondition) appendTemplate(w io.Writer) error {
 	}
 	_, err := w.Write([]byte(conditionTmpl))
 	if err != nil {
-		log.Printf("[ERR] (templates.tftmpl) unable to write consul-kv" +
-			" empty template")
+		logger.Error("unable to write consul-kv empty template", "error", err)
 		return err
 	}
 	return nil

@@ -3,19 +3,22 @@ package retry
 import (
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/pkg/errors"
 )
+
+const taskSystemName = "task"
 
 // Retry handles executing and retrying a function
 type Retry struct {
 	maxRetry uint // doesn't count initial try
 	random   *rand.Rand
 	testMode bool
+	logger   logging.Logger
 }
 
 // NewRetry initializes a retry handler
@@ -24,6 +27,7 @@ func NewRetry(maxRetry uint, seed int64) Retry {
 	return Retry{
 		maxRetry: maxRetry,
 		random:   rand.New(rand.NewSource(seed)),
+		logger:   logging.Global().Named(taskSystemName),
 	}
 }
 
@@ -44,12 +48,12 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("[INFO] (task) stopping retry of '%s'", desc)
+			r.logger.Info("stopping retry", "description", desc)
 			return ctx.Err()
 		case <-interval.C:
 			attempt++
 			if attempt > 1 {
-				log.Printf("[WARN]: (task) retrying '%s'. attempt #%d", desc, attempt)
+				r.logger.Warn("retrying", "attempt_number", attempt, "description", desc)
 			}
 			err := f(ctx)
 			if err == nil {

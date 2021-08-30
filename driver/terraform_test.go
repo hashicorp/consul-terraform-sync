@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/handler"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
@@ -83,10 +84,11 @@ func TestRenderTemplate(t *testing.T) {
 
 			tf := &Terraform{
 				mu:       &sync.RWMutex{},
-				task:     &Task{name: "RenderTemplateTest", enabled: true},
+				task:     &Task{name: "RenderTemplateTest", enabled: true, logger: logging.NewNullLogger()},
 				resolver: r,
 				template: tmpl,
 				watcher:  new(mocksTmpl.Watcher),
+				logger:   logging.NewNullLogger(),
 			}
 
 			actual, err := tf.RenderTemplate(ctx)
@@ -144,9 +146,10 @@ func TestApplyTask(t *testing.T) {
 
 			tf := &Terraform{
 				mu:        &sync.RWMutex{},
-				task:      &Task{name: "ApplyTaskTest", enabled: true},
+				task:      &Task{name: "ApplyTaskTest", enabled: true, logger: logging.NewNullLogger()},
 				client:    c,
 				postApply: tc.postApply,
+				logger:    logging.NewNullLogger(),
 			}
 
 			err := tf.ApplyTask(ctx)
@@ -238,8 +241,8 @@ func TestUpdateTask(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range mockCases {
 		t.Run(tc.name, func(t *testing.T) {
-			delete := testutils.MakeTempDir(t, tc.dirName)
-			defer delete()
+			deleteTemp := testutils.MakeTempDir(t, tc.dirName)
+			defer deleteTemp()
 
 			r := new(mocksTmpl.Resolver)
 			if tc.callRender {
@@ -259,11 +262,13 @@ func TestUpdateTask(t *testing.T) {
 			w := new(mocksTmpl.Watcher)
 			w.On("Register", mock.Anything).Return(nil).Once()
 			tf := &Terraform{
-				mu:       &sync.RWMutex{},
-				task:     &Task{name: "test_task", enabled: tc.orig.Enabled, workingDir: tc.dirName},
+				mu: &sync.RWMutex{},
+				task: &Task{name: "test_task", enabled: tc.orig.Enabled, workingDir: tc.dirName,
+					logger: logging.NewNullLogger()},
 				client:   c,
 				resolver: r,
 				watcher:  w,
+				logger:   logging.NewNullLogger(),
 			}
 
 			if tc.callInit {
@@ -345,8 +350,8 @@ func TestUpdateTask(t *testing.T) {
 	}
 	for _, tc := range errorCases {
 		t.Run(tc.name, func(t *testing.T) {
-			delete := testutils.MakeTempDir(t, tc.dirName)
-			defer delete()
+			deleteTemp := testutils.MakeTempDir(t, tc.dirName)
+			defer deleteTemp()
 
 			r := new(mocksTmpl.Resolver)
 			r.On("Run", mock.Anything, mock.Anything).
@@ -363,14 +368,16 @@ func TestUpdateTask(t *testing.T) {
 			w.On("Register", mock.Anything).Return(nil).Once()
 
 			tf := &Terraform{
-				mu:       &sync.RWMutex{},
-				task:     &Task{name: "test_task", enabled: false, workingDir: tc.dirName},
+				mu: &sync.RWMutex{},
+				task: &Task{name: "test_task", enabled: false, workingDir: tc.dirName,
+					logger: logging.NewNullLogger()},
 				client:   c,
 				resolver: r,
 				watcher:  w,
 				fileReader: func(string) ([]byte, error) {
 					return []byte{}, tc.fileReaderErr
 				},
+				logger: logging.NewNullLogger(),
 			}
 
 			_, err := tf.UpdateTask(ctx, tc.patch)
@@ -397,6 +404,7 @@ func TestSetBufferPeriod(t *testing.T) {
 					Min: 2 * time.Second,
 					Max: 5 * time.Second,
 				},
+				logger: logging.NewNullLogger(),
 			},
 		},
 		{
@@ -405,6 +413,7 @@ func TestSetBufferPeriod(t *testing.T) {
 			&Task{
 				enabled: false,
 				name:    "disabled_task",
+				logger:  logging.NewNullLogger(),
 			},
 		},
 		{
@@ -413,6 +422,7 @@ func TestSetBufferPeriod(t *testing.T) {
 			&Task{
 				enabled: true,
 				name:    "no_buf_period_task",
+				logger:  logging.NewNullLogger(),
 			},
 		},
 		{
@@ -421,6 +431,7 @@ func TestSetBufferPeriod(t *testing.T) {
 			&Task{
 				enabled: true,
 				name:    "task_a",
+				logger:  logging.NewNullLogger(),
 			},
 		},
 	}
@@ -428,8 +439,9 @@ func TestSetBufferPeriod(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			tf := &Terraform{
-				mu:   &sync.RWMutex{},
-				task: tc.task,
+				mu:     &sync.RWMutex{},
+				task:   tc.task,
+				logger: logging.NewNullLogger(),
 			}
 
 			if tc.setTmpl {
@@ -480,6 +492,7 @@ func TestInitTaskTemplates(t *testing.T) {
 				fileReader: tc.fileReader,
 				task:       &Task{name: "test", enabled: true},
 				watcher:    w,
+				logger:     logging.NewNullLogger(),
 			}
 			err := tf.initTaskTemplate()
 			if tc.expectError {
@@ -566,6 +579,7 @@ func TestDisabledTask(t *testing.T) {
 			mu:      &sync.RWMutex{},
 			task:    &Task{name: "disabled_task", enabled: false},
 			watcher: new(mocksTmpl.Watcher),
+			logger:  logging.NewNullLogger(),
 		}
 
 		ctx := context.Background()
@@ -620,8 +634,8 @@ func TestInitTask(t *testing.T) {
 	for _, tc := range mockCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dirName := "init-task-test"
-			delete := testutils.MakeTempDir(t, dirName)
-			defer delete()
+			deleteTemp := testutils.MakeTempDir(t, dirName)
+			defer deleteTemp()
 
 			c := new(mocks.Client)
 			c.On("Init", ctx).Return(tc.initErr).Once()
@@ -632,10 +646,11 @@ func TestInitTask(t *testing.T) {
 
 			tf := &Terraform{
 				mu:         &sync.RWMutex{},
-				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName},
+				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName, logger: logging.NewNullLogger()},
 				client:     c,
 				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
 				watcher:    w,
+				logger:     logging.NewNullLogger(),
 			}
 
 			err := tf.initTask(ctx)
