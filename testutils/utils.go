@@ -92,6 +92,12 @@ func DeregisterConsulService(tb testing.TB, srv *testutil.TestServer, id string)
 	defer resp.Body.Close()
 }
 
+func DeleteKV(tb testing.TB, srv *testutil.TestServer, key string) {
+	u := fmt.Sprintf("http://%s/v1/kv/%s", srv.HTTPAddr, key)
+	resp := RequestHTTP(tb, http.MethodDelete, u, "")
+	defer resp.Body.Close()
+}
+
 // RequestHTTP makes an http request. The caller is responsible for closing
 // the response.
 func RequestHTTP(t testing.TB, method, url, body string) *http.Response {
