@@ -70,14 +70,14 @@ jobs:
         - uses: actions/upload-artifact@v2
           if: ${{ matrix.goos == 'linux' }}
           with:
-            name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-            path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+            name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
+            path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
 
         - uses: actions/upload-artifact@v2
           if: ${{ matrix.goos == 'linux' }}
           with:
-            name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
-            path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
+            name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
+            path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
 
         - name: Docker build
           if: ${{ matrix.goos == 'linux' }}
