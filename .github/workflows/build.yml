@@ -48,6 +48,37 @@ jobs:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
+        - name: Package
+          if: ${{ matrix.goos == 'linux' }}
+          uses: ./.github/actions/package
+          with:
+            name: ${{ github.event.repository.name }}
+            arch: ${{ matrix.goarch }}
+            version: ${{ needs.get-product-version.outputs.product-version }}
+            maintainer: "HashiCorp"
+            homepage: "https://github.com/hashicorp/consul-terraform-sync"
+            license: "MPL-2.0"
+            binary: "dist/${{ github.event.repository.name }}"
+            deb_depends: "openssl"
+            rpm_depends: "openssl"
+            config_dir: "packaging/linux"
+            preinstall: "packaging/preinstall"
+            postinstall: "packaging/postinstall"
+            preremove: "packaging/preremove"
+            postremove: "packaging/postremove"
+
+        - uses: actions/upload-artifact@v2
+          if: ${{ matrix.goos == 'linux' }}
+          with:
+            name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+            path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+
+        - uses: actions/upload-artifact@v2
+          if: ${{ matrix.goos == 'linux' }}
+          with:
+            name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
+            path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
+
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
         uses: hashicorp/package@v1
@@ -109,6 +140,7 @@ jobs:
           mkdir dist out
           go build -o dist/
           zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
@@ -228,7 +260,7 @@ jobs:
           name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ env.FILE_SUFFIX }}.rpm
           path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ env.FILE_SUFFIX }}.rpm
 
-      
+
       - name: Docker build
         if: ${{ matrix.goarm == 6 }}
         env:
@@ -246,7 +278,7 @@ jobs:
         with:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
           path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
-  
+
   build-arm-64:
     needs: get-product-version
     runs-on: ubuntu-latest
@@ -308,7 +340,7 @@ jobs:
         with:
           name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
           path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm
-      
+
       - name: Docker build
         if: ${{ matrix.goos == 'linux' }}
         working-directory: ./packaging/docker
@@ -325,7 +357,7 @@ jobs:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
           path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
 
-  
+
   build-darwin:
     needs: get-product-version
     runs-on: macos-latest
