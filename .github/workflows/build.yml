@@ -50,9 +50,10 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: ./.github/actions/package
+        uses: hashicorp/package@v1
         with:
           name: ${{ github.event.repository.name }}
+          description: "Consul Terraform Sync is a service-oriented tool for managing network infrastructure near real-time."
           arch: ${{ matrix.goarch }}
           version: ${{ needs.get-product-version.outputs.product-version }}
           maintainer: "HashiCorp"
@@ -61,11 +62,6 @@ jobs:
           binary: "dist/${{ github.event.repository.name }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
-          config_dir: "packaging/linux"
-          preinstall: "packaging/preinstall"
-          postinstall: "packaging/postinstall"
-          preremove: "packaging/preremove"
-          postremove: "packaging/postremove"
 
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
@@ -79,20 +75,6 @@ jobs:
           name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
           path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
 
-      - name: Package
-        if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
-        with:
-          name: ${{ github.event.repository.name }}
-          description: "Consul Terraform Sync is a service-oriented tool for managing network infrastructure near real-time."
-          arch: ${{ matrix.goarch }}
-          version: ${{ needs.get-product-version.outputs.product-version }}
-          maintainer: "HashiCorp"
-          homepage: "https://github.com/hashicorp/consul-terraform-sync"
-          license: "MPL-2.0"
-          binary: "dist/${{ github.event.repository.name }}"
-          deb_depends: "openssl"
-          rpm_depends: "openssl"
   build-amd64:
     needs: get-product-version
     runs-on: ubuntu-latest
