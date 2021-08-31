@@ -337,7 +337,7 @@ jobs:
 
       # build docker image
       - name: Docker build
-        working-directory: ./packaging/docker
+        working-directory: ./.release/docker
         run: |
           docker version
           unzip -j ${GITHUB_WORKSPACE}/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ env.FILE_SUFFIX }}.zip
@@ -351,7 +351,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
-          path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
+          path: .release/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
   
   
   generate_metadata:
