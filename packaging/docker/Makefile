@@ -12,8 +12,12 @@ download:
 	unzip $(PROJECT_NAME).zip
 	rm $(PROJECT_NAME).zip
 
+# GITHUB_SHA is an environment variable from GitHub Actions
+# save images tagged as $GITHUB_SHA-$VERSION-$ARCH since we will need to combine distinct tags
+# together with docker manifest
 docker: export VERSION=$$(./../../build-scripts/version.sh ../../version/version.go)
 docker:
-	echo $(VERSION)
-	docker buildx build --load --build-arg VERSION=$(VERSION) --build-arg ARCH=$(ARCH) --platform=linux/$(ARCH)$(GOARM_DOCKER) --no-cache -t $(PROJECT_NAME):$(VERSION) .
-	docker save --output $(PROJECT_NAME)_$(VERSION)_docker_linux_$(ARCH).tar $(PROJECT_NAME):$(VERSION)
+	echo "Building image for $(PROJECT_NAME):$(GITHUB_SHA)-$(VERSION)-$(ARCH)"
+	docker buildx create --use
+	docker buildx build --load --build-arg VERSION=$(VERSION) --build-arg NAME=$(PROJECT_NAME) --platform=linux/$(ARCH)$(GOARM_DOCKER) -t $(PROJECT_NAME):$(GITHUB_SHA)-$(VERSION)-$(ARCH) .
+	docker save --output $(PROJECT_NAME)_$(VERSION)_docker_linux_$(ARCH).tar $(PROJECT_NAME):$(GITHUB_SHA)-$(VERSION)-$(ARCH)

@@ -48,37 +48,6 @@ jobs:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
-        - name: Package
-          if: ${{ matrix.goos == 'linux' }}
-          uses: ./.github/actions/package
-          with:
-            name: ${{ github.event.repository.name }}
-            arch: ${{ matrix.goarch }}
-            version: ${{ needs.get-product-version.outputs.product-version }}
-            maintainer: "HashiCorp"
-            homepage: "https://github.com/hashicorp/consul-terraform-sync"
-            license: "MPL-2.0"
-            binary: "dist/${{ github.event.repository.name }}"
-            deb_depends: "openssl"
-            rpm_depends: "openssl"
-            config_dir: "packaging/linux"
-            preinstall: "packaging/preinstall"
-            postinstall: "packaging/postinstall"
-            preremove: "packaging/preremove"
-            postremove: "packaging/postremove"
-
-        - uses: actions/upload-artifact@v2
-          if: ${{ matrix.goos == 'linux' }}
-          with:
-            name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
-            path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
-
-        - uses: actions/upload-artifact@v2
-          if: ${{ matrix.goos == 'linux' }}
-          with:
-            name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
-            path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
-
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
         uses: hashicorp/package@v1
@@ -93,22 +62,18 @@ jobs:
           binary: "dist/${{ github.event.repository.name }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
-      
-      - name: Docker build
-        if: ${{ matrix.goos == 'linux' }}
-        working-directory: ./packaging/docker
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static
-          docker buildx create --use
-          cp ../../dist/${{ github.event.repository.name }} ./
-          make docker ARCH=${{ matrix.goarch }}
 
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
-          path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.goos == 'linux' }}
+        with:
+          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
+          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
 
   build-amd64:
     needs: get-product-version
@@ -172,21 +137,6 @@ jobs:
         with:
           name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
           path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
-
-      - name: Docker build
-        if: ${{ matrix.goos == 'linux' }}
-        working-directory: ./packaging/docker
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static
-          docker buildx create --use
-          cp ../../dist/${{ github.event.repository.name }} ./
-          make docker ARCH=${{ matrix.goarch }}
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
-        with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
-          path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
 
   build-arm:
     needs: get-product-version
@@ -260,26 +210,7 @@ jobs:
           name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ env.FILE_SUFFIX }}.rpm
           path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ env.FILE_SUFFIX }}.rpm
 
-
-      - name: Docker build
-        if: ${{ matrix.goarm == 6 }}
-        env:
-         GOARM_DOCKER: /v6
-        working-directory: ./packaging/docker
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static
-          docker buildx create --use
-          cp ../../dist/${{ github.event.repository.name }} ./
-          make docker ARCH=${{ matrix.goarch }} GOARM_DOCKER=${{ env.GOARM_DOCKER }}
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goarm == 6 }}
-        with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
-          path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
-
-  build-arm-64:
+  build-arm64:
     needs: get-product-version
     runs-on: ubuntu-latest
     strategy:
@@ -341,22 +272,6 @@ jobs:
           name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
           path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm
 
-      - name: Docker build
-        if: ${{ matrix.goos == 'linux' }}
-        working-directory: ./packaging/docker
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static
-          docker buildx create --use
-          cp ../../dist/${{ github.event.repository.name }} ./
-          make docker ARCH=${{ matrix.goarch }}
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
-        with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
-          path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.goarch }}.tar
-
 
   build-darwin:
     needs: get-product-version
@@ -392,6 +307,53 @@ jobs:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
+  build-docker:
+    needs:
+      - get-product-version
+      - build-arm64
+      - build-386
+      - build-amd64
+      - build-arm
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: ["arm", "arm64", "386", "amd64"]
+    name: Docker ${{ matrix.arch }} build
+
+    steps:
+      - name: Set env NEED
+        run: |
+          if [[ ${{ matrix.arch }} == 'arm' ]]; then
+              echo "FILE_SUFFIX=armhfv6" >> "$GITHUB_ENV"
+          else
+              echo "FILE_SUFFIX=${{ matrix.arch }}" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@v2
+
+      # download arm/arm64/386/amd64 binaries from build jobs
+      - uses: actions/download-artifact@v2
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ env.FILE_SUFFIX }}.zip
+
+      # build docker image
+      - name: Docker build
+        working-directory: ./packaging/docker
+        run: |
+          docker version
+          unzip -j ${GITHUB_WORKSPACE}/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ env.FILE_SUFFIX }}.zip
+          # arm32 bit docker images are set with --platform=linux/arm/v6
+          if [ "${{ matrix.arch }}" = "arm" ]; then
+            make docker ARCH=${{ matrix.arch }} GOARM_DOCKER="/v6"
+          else
+            make docker ARCH=${{ matrix.arch }}
+          fi
+      # upload image tarball
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
+          path: packaging/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
+  
+  
   generate_metadata:
     needs: get-product-version
     runs-on: ubuntu-latest
