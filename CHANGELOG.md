@@ -1,4 +1,4 @@
-## UNRELEASED
+## 0.3.0 (September 01, 2021)
 BREAKING CHANGES:
 * `INFO` log level is now the default, changed from `WARN`. [[GH-23](https://github.com/hashicorp/consul-terraform-sync/issues/23)]
 
