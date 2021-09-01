@@ -45,7 +45,7 @@ test:
 test-integration:
 	@echo "==> Testing ${NAME} (test suite & integration)"
 	@go test -count=1 -timeout=80s -tags=integration -cover ./... ${TESTARGS}
-.PHONY: test-all
+.PHONY: test-integration
 
 # test-e2e runs e2e tests
 test-e2e: dev

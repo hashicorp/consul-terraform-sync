@@ -212,3 +212,83 @@ variable "catalog_services" {
   type = map(list(string))
 }
 `)
+
+type NodesCondition struct {
+	Datacenter string
+	Filter     string
+}
+
+func (n NodesCondition) SourceIncludesVariable() bool {
+	return true
+}
+
+func (n NodesCondition) ServicesAppended() bool {
+	return false
+}
+
+func (n NodesCondition) appendModuleAttribute(body *hclwrite.Body) {
+	body.SetAttributeTraversal("nodes", hcl.Traversal{
+		hcl.TraverseRoot{Name: "var"},
+		hcl.TraverseAttr{Name: "nodes"},
+	})
+}
+
+func (n NodesCondition) appendTemplate(w io.Writer) error {
+	q := n.hcatQuery()
+	_, err := fmt.Fprintf(w, nodesRegexTmpl, q)
+	if err != nil {
+		log.Printf("[ERR] (templates.tftmpl) unable to write nodes condition template")
+		return err
+	}
+
+	return nil
+}
+
+func (n NodesCondition) appendVariable(w io.Writer) error {
+	_, err := w.Write(variableNodes)
+	return err
+}
+
+func (n NodesCondition) hcatQuery() string {
+	var opts []string
+
+	if n.Datacenter != "" {
+		opts = append(opts, fmt.Sprintf("datacenter=%s", n.Datacenter))
+	}
+
+	if n.Filter != "" {
+		opts = append(opts, fmt.Sprintf("filter=%s", n.Filter))
+	}
+
+	if len(opts) > 0 {
+		return `"` + strings.Join(opts, `" "`) + `" ` // deliberate space at end
+	}
+	return ""
+}
+
+const nodesRegexTmpl = `
+nodes = [
+{{- with $nodes := nodes %s }}
+	{{- range $node := $nodes}}
+	{
+{{ HCLNode $node | indent 4 }}
+	},
+	{{- end}}
+{{- end}}
+]
+`
+
+var variableNodes = []byte(`
+# Nodes definition protocol v0
+variable "nodes" {
+  description = "Consul nodes"
+  type = list(object({
+	  id               = string
+	  node             = string
+	  address          = string
+	  datacenter       = string
+	  tagged_addresses = map(string)
+	  meta             = map(string)
+  }))
+}
+`)

@@ -97,3 +97,31 @@ func nonNullMap(m map[string]string) map[string]string {
 
 	return m
 }
+
+func hclNodeFunc(nDep *dep.Node) string {
+	if nDep == nil {
+		return ""
+	}
+
+	n := node{
+		ID:              nDep.ID,
+		Node:            nDep.Node,
+		Address:         nDep.Address,
+		Datacenter:      nDep.Datacenter,
+		TaggedAddresses: nDep.TaggedAddresses,
+		Meta:            nDep.Meta,
+	}
+
+	f := hclwrite.NewEmptyFile()
+	gohcl.EncodeIntoBody(n, f.Body())
+	return strings.TrimSpace(string(f.Bytes()))
+}
+
+type node struct {
+	ID              string            `hcl:"id"`
+	Node            string            `hcl:"node"`
+	Address         string            `hcl:"address"`
+	Datacenter      string            `hcl:"datacenter"`
+	TaggedAddresses map[string]string `hcl:"tagged_addresses"`
+	Meta            map[string]string `hcl:"meta"`
+}

@@ -143,6 +143,58 @@ task {
 }`,
 		},
 		{
+			"nodes: empty",
+			false,
+			&NodesConditionConfig{
+				Datacenter: String(""),
+				services:   []string{},
+			},
+			"config.hcl",
+			`
+task {
+	name = "condition_task"
+	source = "..."
+	services = []
+	condition "nodes" {}
+}
+`,
+		},
+		{
+			"nodes: happy path",
+			false,
+			&NodesConditionConfig{
+				Datacenter: String("dc2"),
+				services:   []string{},
+			},
+			"config.hcl",
+			`
+task {
+	name = "condition_task"
+	source = "..."
+	services = []
+	condition "nodes" {
+		datacenter = "dc2"
+	}
+}
+`,
+		},
+		{
+			"nodes: unsupported field",
+			true,
+			nil,
+			"config.hcl",
+			`
+task {
+	name = "condition_task"
+	source = "..."
+	services = []
+	condition "nodes" {
+		nonexistent_field = true
+	}
+}
+`,
+		},
+		{
 			"error: two conditions",
 			true,
 			nil,
