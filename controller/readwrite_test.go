@@ -215,7 +215,8 @@ func TestOnce(t *testing.T) {
 					d.On("ApplyTask", mock.Anything).Return(nil).Once()
 					return d, nil
 				},
-				conf: multipleTaskConfig(tc.numTasks),
+				conf:   multipleTaskConfig(tc.numTasks),
+				logger: logging.NewNullLogger(),
 			}
 
 			ctx := context.Background()
@@ -270,7 +271,8 @@ func TestReadWrite_Once_error(t *testing.T) {
 			}
 			return d, nil
 		},
-		conf: multipleTaskConfig(numTasks),
+		conf:   multipleTaskConfig(numTasks),
+		logger: logging.NewNullLogger(),
 	}
 
 	ctx := context.Background()
@@ -391,6 +393,7 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 	ctrl := ReadWrite{
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
+			logger:  logging.NewNullLogger(),
 		},
 		store: event.NewStore(),
 	}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -12,11 +11,15 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 )
 
-const taskPath = "tasks"
+const (
+	updateTaskSubsystemName = "updatetask"
+	taskPath                = "tasks"
+)
 
 // taskHandler handles the tasks endpoint
 type taskHandler struct {
@@ -38,7 +41,8 @@ func newTaskHandler(store *event.Store, drivers *driver.Drivers,
 
 // ServeHTTP serves the tasks endpoint
 func (h *taskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[TRACE] (api.task) requesting tasks '%s'", r.URL.Path)
+	logger := logging.FromContext(r.Context())
+	logger.Trace("requesting tasks", "url_path", r.URL.Path)
 
 	switch r.Method {
 	case http.MethodPatch:
@@ -46,8 +50,8 @@ func (h *taskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		err := fmt.Errorf("'%s' in an unsupported method. The task API "+
 			"currently supports the method(s): '%s'", r.Method, http.MethodPatch)
-		log.Printf("[TRACE] (api.task) unsupported method: %s", err)
-		jsonErrorResponse(w, http.StatusMethodNotAllowed, err)
+		logger.Trace("unsupported method", "error", err)
+		jsonErrorResponse(r.Context(), w, http.StatusMethodNotAllowed, err)
 	}
 }
 
@@ -64,27 +68,28 @@ type UpdateTaskResponse struct {
 // updateTask does a patch update to an existing task
 func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	taskName, err := getTaskName(r.URL.Path, taskPath, h.version)
+	logger := logging.FromContext(r.Context()).Named(updateTaskSubsystemName)
 	if err != nil {
-		log.Printf("[TRACE] (api.task) bad request: %s", err)
-		jsonErrorResponse(w, http.StatusBadRequest, err)
+		logger.Trace("bad request", "error", err)
 
+		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
 
 	if taskName == "" {
-		err := fmt.Errorf("No task name was included in the api request. " +
+		err := fmt.Errorf("no task name was included in the api request. " +
 			"Updating a task requires the task name: '/v1/tasks/:task_name'")
-		log.Printf("[TRACE] (api.task) bad request: %s", err)
-		jsonErrorResponse(w, http.StatusBadRequest, err)
+		logger.Trace("bad request", "error", err)
+		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
 
 	d, ok := h.drivers.Get(taskName)
 	if !ok {
-		err := fmt.Errorf("A task with the name '%s' does not exist or has not "+
+		err := fmt.Errorf("a task with the name '%s' does not exist or has not "+
 			"been initialized yet", taskName)
-		log.Printf("[TRACE] (api.task) task not found: %s", err)
-		jsonErrorResponse(w, http.StatusNotFound, err)
+		logger.Trace("task not found", "error", err)
+		jsonErrorResponse(r.Context(), w, http.StatusNotFound, err)
 		return
 	}
 	h.drivers.SetActive(taskName)
@@ -92,24 +97,23 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 
 	runOp, err := runOption(r)
 	if err != nil {
-		log.Printf("[TRACE] (api.task) unsupported run option: %s", err)
-		jsonErrorResponse(w, http.StatusBadRequest, err)
+		logger.Trace("unsupported run option", "error", err)
+		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("[TRACE] (api.task) unable to read request body from update "+
-			"request for task '%s': %s", taskName, err)
-		jsonErrorResponse(w, http.StatusInternalServerError, err)
+		logger.Trace("unable to read request body from update", "task_name", taskName, "error", err)
+		jsonErrorResponse(r.Context(), w, http.StatusInternalServerError, err)
 		return
 	}
 
 	conf, err := decodeBody(body)
 	if err != nil {
-		log.Printf("[TRACE] (api.task) problem decoding body from update request "+
-			"for task '%s': %s", taskName, err)
-		jsonErrorResponse(w, http.StatusBadRequest, err)
+		logger.Trace("problem decoding body from update request "+
+			"for task", "task_name", taskName, "error", err)
+		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -117,8 +121,8 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		RunOption: runOp,
 	}
 	if conf.Enabled != nil {
-		log.Printf("[INFO] (api.task) Updating task '%s' to be enabled=%t",
-			taskName, config.BoolVal(conf.Enabled))
+		logger.Info("update task enabled status",
+			"task_name", taskName, fmt.Sprintf("%t", config.BoolVal(conf.Enabled)))
 		patch.Enabled = config.BoolVal(conf.Enabled)
 	}
 
@@ -133,17 +137,16 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("error creating task update"+
 				"event for %q", taskName))
-			log.Printf("[ERROR] (api.task) %s", err)
-			jsonErrorResponse(w, http.StatusInternalServerError, err)
+			logger.Error("error creating new event", "error", err)
+			jsonErrorResponse(r.Context(), w, http.StatusInternalServerError, err)
 			return
 		}
 		defer func() {
 			ev.End(storedErr)
-			log.Printf("[TRACE] (api.task) adding event %s", ev.GoString())
+			logger.Trace("adding event", "event", ev.GoString())
 			if err := h.store.Add(*ev); err != nil {
 				// only log error since update task occurred successfully by now
-				log.Printf("[ERROR] (api.task) error storing event %s: %s",
-					ev.GoString(), err)
+				logger.Error("error storing event", "event", ev.GoString(), "error", err)
 			}
 		}()
 		ev.Start()
@@ -151,18 +154,21 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	var plan driver.InspectPlan
 	plan, storedErr = d.UpdateTask(r.Context(), patch)
 	if storedErr != nil {
-		log.Printf("[TRACE] (api.task) error while updating task '%s': %s",
-			taskName, storedErr)
-		jsonErrorResponse(w, http.StatusInternalServerError, storedErr)
+		logger.Trace("error while updating task", "task_name", taskName, "error", err)
+		jsonErrorResponse(r.Context(), w, http.StatusInternalServerError, storedErr)
 		return
 	}
 
 	if runOp != driver.RunOptionInspect {
-		jsonResponse(w, http.StatusOK, UpdateTaskResponse{})
+		if err = jsonResponse(w, http.StatusOK, UpdateTaskResponse{}); err != nil {
+			logger.Error("error, could not generate json error response", "error", err)
+		}
 		return
 	}
 
-	jsonResponse(w, http.StatusOK, UpdateTaskResponse{&plan})
+	if err = jsonResponse(w, http.StatusOK, UpdateTaskResponse{&plan}); err != nil {
+		logger.Error("error, could not generate json response", "error", err)
+	}
 }
 
 func decodeBody(body []byte) (UpdateTaskConfig, error) {

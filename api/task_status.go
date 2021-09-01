@@ -2,15 +2,18 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
-const taskStatusPath = "status/tasks"
+const (
+	taskStatusPath          = "status/tasks"
+	taskStatusSubsystemName = "taskstatus"
+)
 
 // TaskStatus is the status for a single task
 type TaskStatus struct {
@@ -42,26 +45,27 @@ func newTaskStatusHandler(store *event.Store, drivers *driver.Drivers, version s
 // ServeHTTP serves the task status endpoint which returns a map of taskname to
 // task status
 func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[TRACE] (api.taskstatus) requesting task status '%s'", r.URL.Path)
+	logger := logging.FromContext(r.Context()).Named(taskStatusSubsystemName)
+	logger.Trace("request task status", "url_path", r.URL.Path)
 
 	taskName, err := getTaskName(r.URL.Path, taskStatusPath, h.version)
 	if err != nil {
-		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
-		jsonErrorResponse(w, http.StatusBadRequest, err)
+		logger.Trace("bad request", "error", err)
+		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
 
 	filter, err := statusFilter(r)
 	if err != nil {
-		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
-		jsonErrorResponse(w, http.StatusBadRequest, err)
+		logger.Trace("bad request", "error", err)
+		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
 
 	include, err := include(r)
 	if err != nil {
-		log.Printf("[TRACE] (api.taskstatus) bad request: %s", err)
-		jsonErrorResponse(w, http.StatusBadRequest, err)
+		logger.Trace("bad request", "error", err)
+		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -71,8 +75,8 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		d, ok := h.drivers.Get(taskName)
 		if !ok {
 			err := fmt.Errorf("task '%s' does not have a driver", taskName)
-			log.Printf("[TRACE] (api.updatetask) %s", err)
-			jsonErrorResponse(w, http.StatusNotFound, err)
+			logger.Trace("error getting driver", "error", err)
+			jsonErrorResponse(r.Context(), w, http.StatusNotFound, err)
 			return
 		}
 		status := makeTaskStatus(events, d.Task(), h.version)
@@ -94,8 +98,8 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				statuses[taskName] = makeTaskStatusUnknown(d.Task())
 			} else {
 				err := fmt.Errorf("task '%s' does not exist", taskName)
-				log.Printf("[TRACE] (api.updatetask) %s", err)
-				jsonErrorResponse(w, http.StatusNotFound, err)
+				logger.Trace("error getting task", "error", err)
+				jsonErrorResponse(r.Context(), w, http.StatusNotFound, err)
 			}
 		}
 	}
@@ -110,7 +114,9 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	jsonResponse(w, http.StatusOK, statuses)
+	if err = jsonResponse(w, http.StatusOK, statuses); err != nil {
+		logger.Error("error, could not generate json response", "error", err)
+	}
 }
 
 // makeTaskStatus takes event data for a task and returns a task status

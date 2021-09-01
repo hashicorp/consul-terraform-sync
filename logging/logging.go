@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -20,6 +21,9 @@ const (
 	defaultLogLevel = "INFO"
 )
 
+// Logger is a type alias for hclog.Logger
+type Logger hclog.Logger
+
 // Config is the configuration for this log setup.
 type Config struct {
 	// Level is the log level to use.
@@ -36,9 +40,6 @@ type Config struct {
 	// be written to writer in addition to syslog.
 	Writer io.Writer
 }
-
-// Logger is a type alias for hclog.Logger
-type Logger hclog.Logger
 
 // Setup takes as an arugment a configuration and then uses it to configure the global
 // logger. After setup logging.Global() can be used to access the global logger
@@ -84,6 +85,18 @@ func Global() Logger {
 // NewNullLogger returns the hclog.NewNullLogger() null logger as type Logger
 func NewNullLogger() Logger {
 	return hclog.NewNullLogger()
+}
+
+// WithContext stores a Logger and any provided arguments into the provided context
+// to access this logger, use the FromContext function
+func WithContext(ctx context.Context, logger Logger, args ...interface{}) context.Context {
+	return hclog.WithContext(ctx, logger, args...)
+}
+
+// FromContext returns the Logger contained with the context. If no Logger is found in the context,
+// this function returns the Global Logger
+func FromContext(ctx context.Context) Logger {
+	return hclog.FromContext(ctx)
 }
 
 // SetupLocal returns a new log.Logger which logs to a provided io.Writer

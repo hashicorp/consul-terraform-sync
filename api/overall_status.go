@@ -1,14 +1,17 @@
 package api
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
-const overallStatusPath = "status"
+const (
+	overallStatusPath          = "status"
+	overallStatusSubsystemName = "overallstatus"
+)
 
 // OverallStatus is the overall status information for cts and across all the tasks
 type OverallStatus struct {
@@ -54,7 +57,8 @@ func newOverallStatusHandler(store *event.Store, drivers *driver.Drivers, versio
 // ServeHTTP serves the overall status endpoint which returns a struct
 // containing overall information across all tasks
 func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[TRACE] (api.overallstatus) requesting task status '%s'", r.URL.Path)
+	logger := logging.FromContext(r.Context()).Named(overallStatusSubsystemName)
+	logger.Trace("requesting task status", "url_path", r.URL.Path)
 
 	data := h.store.Read("")
 	taskSummary := TaskSummary{}
@@ -87,7 +91,10 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	jsonResponse(w, http.StatusOK, OverallStatus{
+	err := jsonResponse(w, http.StatusOK, OverallStatus{
 		TaskSummary: taskSummary,
 	})
+	if err != nil {
+		logger.Error("error, could not generate json error response", "error", err)
+	}
 }
