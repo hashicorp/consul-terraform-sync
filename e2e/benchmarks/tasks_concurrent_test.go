@@ -77,13 +77,10 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 			ctx, ctxCancel := context.WithCancel(context.Background())
 			defer ctxCancel()
 			ctrlStopped := make(chan error)
-			rwCtrl.EnableTestMode()
-			completedTasksCh, err := rwCtrl.TaskNotifyChannel()
-			require.NoError(b, err)
+			completedTasksCh := rwCtrl.EnableTestMode()
 
 			go func() {
-				err = rwCtrl.Run(ctx)
-				ctrlStopped <- err
+				ctrlStopped <- rwCtrl.Run(ctx)
 			}()
 
 			// Benchmark setup is done, reset the timer

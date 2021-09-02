@@ -67,6 +67,12 @@ func (d *Drivers) Reset() {
 	}
 }
 
+func (d *Drivers) Len() int {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return len(d.drivers)
+}
+
 // Map returns a copy of the map containing the drivers
 func (d *Drivers) Map() map[string]Driver {
 	d.mu.RLock()
