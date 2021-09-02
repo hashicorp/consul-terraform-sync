@@ -63,7 +63,11 @@ func TestE2EBasic(t *testing.T) {
 		appendDBTask().appendWebTask()
 	config.write(t, configPath)
 
-	runSyncStop(t, configPath, 20*time.Second)
+	// Start CTS and wait for once mode to complete before verifying
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+	err := cts.WaitForAPI(defaultWaitForAPI)
+	require.NoError(t, err)
 
 	dbResourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
 	webResourcesPath := filepath.Join(tempDir, webTaskName, resourcesDir)
@@ -90,13 +94,29 @@ func TestE2EBasic(t *testing.T) {
 	testutils.CheckStateFile(t, srv.HTTPAddr, dbTaskName)
 	testutils.CheckStateFile(t, srv.HTTPAddr, webTaskName)
 
+	// Make Consul catalog changes to trigger CTS tasks then verify
+	now := time.Now()
+	service := testutil.TestService{ID: "web-1", Name: "web", Address: "5.5.5.5"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForAPI)
+
+	contents = testutils.CheckFile(t, true, webResourcesPath, "web-1.txt")
+	assert.Equal(t, service.Address, string(contents), "web-1 should be created after registering")
+
+	now = time.Now()
+	testutils.DeregisterConsulService(t, srv, service.ID)
+	api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForAPI)
+
+	// web-1 should be removed after deregistering
+	testutils.CheckFile(t, false, webResourcesPath, "web-1.txt")
+
 	delete()
 }
 
-// TestE2ERestartSync runs the CTS binary in daemon mode and tests restarting
+// TestE2ERestart runs the CTS binary in daemon mode and tests restarting
 // CTS results in no errors and can continue running based on the same config
 // and Consul storing state.
-func TestE2ERestartSync(t *testing.T) {
+func TestE2ERestart(t *testing.T) {
 	t.Parallel()
 
 	srv := newTestConsulServer(t)
