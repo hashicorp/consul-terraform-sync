@@ -90,7 +90,7 @@ func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 					Address: "5.6.7.8",
 					Port:    8080,
 				}
-				testutils.RegisterConsulService(b, srv, service, testutil.HealthPassing, 0)
+				testutils.RegisterConsulServiceHealth(b, srv, service, 0, testutil.HealthPassing)
 				b.ResetTimer()
 
 				// Run task execution

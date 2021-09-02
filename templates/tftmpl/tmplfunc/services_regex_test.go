@@ -184,19 +184,19 @@ func TestServicesRegexQuery_Fetch(t *testing.T) {
 	// register services
 	apiSrv := &dep.HealthService{ID: "api-1", Name: "api", Tags: []string{"tag1"}, Node: consulSrv1.Node, NodeID: consulSrv1.NodeID}
 	service := testutil.TestService{ID: apiSrv.ID, Name: apiSrv.Name, Tags: apiSrv.Tags}
-	testutils.RegisterConsulService(t, srv1, service, testutil.HealthPassing, 8*time.Second)
+	testutils.RegisterConsulServiceHealth(t, srv1, service, 8*time.Second, testutil.HealthPassing)
 
 	apiWebSrv := &dep.HealthService{ID: "api-web-1", Name: "api-web", Node: consulSrv2.Node, NodeID: consulSrv2.NodeID}
 	service = testutil.TestService{ID: apiWebSrv.ID, Name: apiWebSrv.Name}
-	testutils.RegisterConsulService(t, srv2, service, testutil.HealthPassing, 8*time.Second)
+	testutils.RegisterConsulServiceHealth(t, srv2, service, 8*time.Second, testutil.HealthPassing)
 
 	webSrv := &dep.HealthService{ID: "web-1", Name: "web", Node: consulSrv2.Node, NodeID: consulSrv2.NodeID}
 	service = testutil.TestService{ID: webSrv.ID, Name: webSrv.Name}
-	testutils.RegisterConsulService(t, srv2, service, testutil.HealthPassing, 8*time.Second)
+	testutils.RegisterConsulServiceHealth(t, srv2, service, 8*time.Second, testutil.HealthPassing)
 
 	dbSrv := &dep.HealthService{ID: "db-1", Name: "db", Node: consulSrv3.Node, NodeID: consulSrv3.NodeID}
 	service = testutil.TestService{ID: dbSrv.ID, Name: dbSrv.Name}
-	testutils.RegisterConsulService(t, srv3, service, testutil.HealthPassing, 8*time.Second)
+	testutils.RegisterConsulServiceHealth(t, srv3, service, 8*time.Second, testutil.HealthPassing)
 
 	// set up consul client for srv1
 	consulConfig := consulapi.DefaultConfig()

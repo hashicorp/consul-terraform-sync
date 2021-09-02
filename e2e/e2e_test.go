@@ -40,11 +40,12 @@ const (
 )
 
 // TestE2EBasic runs the CTS binary in daemon mode with a configuration with 2
-// tasks and a test module that writes IP addresses to disk. This tests for CTS
-// executing the 2 tasks upon startup and verifies the correct module resources
-// for each task were created for services ("api", "web", "db"). It verifies
-// the Terraform statefiles are written to Consul KV, the default Terraform
-// backend for CTS.
+// tasks and a test module that writes IP addresses to disk. Tests that CTS:
+// 1. executes the 2 tasks upon startup
+// 2. correct module resources are created for services ("api", "web", "db")
+// 3. verifies Terraform statefiles are written to Consul KV, the default
+//    Terraformfor backend for CTS for each task.
+// 4. Consul catalog changes trigger correct tasks
 func TestE2EBasic(t *testing.T) {
 	// Note: no t.Parallel() for this particular test. Choosing this test to run 'first'
 	// since e2e test running simultaneously will download Terraform into shared
@@ -62,7 +63,11 @@ func TestE2EBasic(t *testing.T) {
 		appendDBTask().appendWebTask()
 	config.write(t, configPath)
 
-	runSyncStop(t, configPath, 20*time.Second)
+	// Start CTS and wait for once mode to complete before verifying
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+	err := cts.WaitForAPI(defaultWaitForAPI)
+	require.NoError(t, err)
 
 	dbResourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
 	webResourcesPath := filepath.Join(tempDir, webTaskName, resourcesDir)
@@ -89,13 +94,29 @@ func TestE2EBasic(t *testing.T) {
 	testutils.CheckStateFile(t, srv.HTTPAddr, dbTaskName)
 	testutils.CheckStateFile(t, srv.HTTPAddr, webTaskName)
 
+	// Make Consul catalog changes to trigger CTS tasks then verify
+	now := time.Now()
+	service := testutil.TestService{ID: "web-1", Name: "web", Address: "5.5.5.5"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForAPI)
+
+	contents = testutils.CheckFile(t, true, webResourcesPath, "web-1.txt")
+	assert.Equal(t, service.Address, string(contents), "web-1 should be created after registering")
+
+	now = time.Now()
+	testutils.DeregisterConsulService(t, srv, service.ID)
+	api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForAPI)
+
+	// web-1 should be removed after deregistering
+	testutils.CheckFile(t, false, webResourcesPath, "web-1.txt")
+
 	delete()
 }
 
-// TestE2ERestartSync runs the CTS binary in daemon mode and tests restarting
+// TestE2ERestart runs the CTS binary in daemon mode and tests restarting
 // CTS results in no errors and can continue running based on the same config
 // and Consul storing state.
-func TestE2ERestartSync(t *testing.T) {
+func TestE2ERestart(t *testing.T) {
 	t.Parallel()
 
 	srv := newTestConsulServer(t)
@@ -157,8 +178,7 @@ func TestE2ERestartConsul(t *testing.T) {
 	// register a new service
 	now := time.Now()
 	apiInstance := testutil.TestService{ID: "api_new", Name: "api"}
-	testutils.RegisterConsulService(t, consul, apiInstance,
-		testutil.HealthPassing, defaultWaitForRegistration)
+	testutils.RegisterConsulService(t, consul, apiInstance, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
 
 	// confirm that CTS reconnected with Consul and created resource for latest service

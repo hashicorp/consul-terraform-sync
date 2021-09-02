@@ -81,7 +81,7 @@ func BenchmarkTaskTrigger(b *testing.B) {
 				Address: "5.6.7.8",
 				Port:    8080,
 			}
-			testutils.RegisterConsulService(b, srv, service, testutil.HealthPassing, 0)
+			testutils.RegisterConsulServiceHealth(b, srv, service, 0, testutil.HealthPassing)
 			// b.Logf("service instance registered: %s", service.ID)
 		}()
 
