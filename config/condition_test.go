@@ -161,6 +161,31 @@ task {
 }`,
 		},
 		{
+			"consul-kv: happy path",
+			false,
+			&ConsulKVConditionConfig{
+				Path:              String("key-path"),
+				SourceIncludesVar: Bool(true),
+				Datacenter:        String("dc2"),
+				Namespace:         String("ns2"),
+				Recurse:           Bool(true),
+			},
+			"config.hcl",
+			`
+task {
+	name = "condition_task"
+	source = "..."
+	services = ["api"]
+	condition "consul-kv" {
+		path = "key-path"
+		source_includes_var = true
+		namespace = "ns2"
+		datacenter = "dc2"
+		recurse = true
+	}
+}`,
+		},
+		{
 			"error: nonexistent condition type",
 			true,
 			nil,
