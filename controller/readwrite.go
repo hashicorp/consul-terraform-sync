@@ -27,7 +27,8 @@ type ReadWrite struct {
 	store *event.Store
 	retry retry.Retry
 
-	testMode   bool
+	// taskNotify is only initialized if EnableTestMode() is used. It provides
+	// tests insight into which tasks were triggered and had completed
 	taskNotify chan string
 }
 
@@ -42,7 +43,6 @@ func NewReadWrite(conf *config.Config) (Controller, error) {
 		baseController: baseCtrl,
 		store:          event.NewStore(),
 		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
-		taskNotify:     make(chan string, len(*conf.Tasks)),
 	}, nil
 }
 
@@ -107,7 +107,7 @@ func (rw *ReadWrite) runTasks(ctx context.Context) chan error {
 				errCh <- err
 			}
 
-			if rw.testMode && complete {
+			if rw.taskNotify != nil && complete {
 				rw.taskNotify <- taskName
 			}
 			wg.Done()
@@ -233,18 +233,9 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry bool
 }
 
 // EnableTestMode is a helper for testing which tasks were triggered and
-// executed. Callers of this method must consume from TaskNotifyChannel to
+// executed. Callers of this method must consume from TaskNotify channel to
 // prevent the buffered channel from filling and causing a dead lock.
-func (rw *ReadWrite) EnableTestMode() {
-	rw.testMode = true
-}
-
-// TaskNotifyChannel returns a read only channel. The channel should only be
-// consumed by one reader.
-func (rw *ReadWrite) TaskNotifyChannel() (<-chan string, error) {
-	if !rw.testMode {
-		// This may change in the future, but for it errors
-		return nil, fmt.Errorf("TaskNotifyChannel is only for testing purposes")
-	}
-	return rw.taskNotify, nil
+func (rw *ReadWrite) EnableTestMode() <-chan string {
+	rw.taskNotify = make(chan string, rw.drivers.Len())
+	return rw.taskNotify
 }

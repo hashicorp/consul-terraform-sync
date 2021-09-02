@@ -171,60 +171,122 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 }
 
 func TestOnce(t *testing.T) {
-	t.Run("init-wraps-units", func(t *testing.T) {
-		conf := singleTaskConfig()
-		w := new(mocks.Watcher)
-		errCh := make(chan error)
-		var errChRc <-chan error = errCh
-		go func() { errCh <- nil }()
-		w.On("WaitCh", mock.Anything).Return(errChRc).Once()
-		w.On("Size").Return(5)
+	rw := &ReadWrite{
+		store: event.NewStore(),
+	}
 
-		d := new(mocksD.Driver)
-		d.On("Task").Return(enabledTestTask(t, "task")).Twice()
-		d.On("RenderTemplate", mock.Anything).Return(false, nil).Once()
-		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
-		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
-		d.On("ApplyTask", mock.Anything).Return(nil).Once()
-		drivers := driver.NewDrivers()
-		drivers.Add("task", d)
+	testCases := []struct {
+		name     string
+		once     func(context.Context) error
+		numTasks int
+	}{
+		{
+			"consecutive one task",
+			rw.Once,
+			1,
+		}, {
+			"consecutive multiple tasks",
+			rw.Once,
+			10,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			errCh := make(chan error)
+			var errChRc <-chan error = errCh
+			go func() { errCh <- nil }()
+			w := new(mocks.Watcher)
+			w.On("WaitCh", mock.Anything).Return(errChRc)
+			w.On("Size").Return(tc.numTasks)
 
-		rw := &ReadWrite{
-			baseController: &baseController{
+			rw.baseController = &baseController{
 				watcher: w,
-				newDriver: func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+				drivers: driver.NewDrivers(),
+				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+					taskName := task.Name()
+					d := new(mocksD.Driver)
+					d.On("Task").Return(enabledTestTask(t, taskName)).Twice()
+					d.On("RenderTemplate", mock.Anything).Return(false, nil).Once()
+					d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
+					d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
+					d.On("ApplyTask", mock.Anything).Return(nil).Once()
 					return d, nil
 				},
-				drivers: drivers,
-				conf:    conf,
-			},
-			store: event.NewStore(),
-		}
-
-		ctx := context.Background()
-		err := rw.Init(ctx)
-		assert.NoError(t, err)
-
-		// testing really starts here...
-		once := Oncer(rw)
-		done := make(chan error)
-		// running in goroutine so I can timeout
-		go func() {
-			done <- once.Once(ctx)
-		}()
-		select {
-		case err := <-done:
-			if err != nil {
-				t.Fatal("Unexpected error in Once():", err)
+				conf: multipleTaskConfig(tc.numTasks),
 			}
-		case <-time.After(time.Second):
-			t.Fatal("Once didn't return in expected time")
-		}
 
-		// Not sure about these... to far into the "test implementation" zone?
-		w.AssertExpectations(t)
-		d.AssertExpectations(t)
-	})
+			ctx := context.Background()
+			err := rw.Init(ctx)
+			assert.NoError(t, err)
+
+			// testing really starts here...
+			done := make(chan error)
+			// running in goroutine so I can timeout
+			go func() {
+				done <- tc.once(ctx)
+			}()
+			select {
+			case err := <-done:
+				assert.NoError(t, err, "unexpected error in Once()")
+			case <-time.After(time.Second):
+				t.Fatal("Once didn't return in expected time")
+			}
+
+			for _, d := range rw.drivers.Map() {
+				d.(*mocksD.Driver).AssertExpectations(t)
+			}
+		})
+	}
+}
+
+func TestReadWrite_Once_error(t *testing.T) {
+	// Test once mode error handling when a driver returns an error
+	rw := &ReadWrite{
+		store: event.NewStore(),
+	}
+	numTasks := 5
+	w := new(mocks.Watcher)
+	w.On("WaitCh", mock.Anything).Return(nil)
+	w.On("Size").Return(numTasks)
+
+	expectedErr := fmt.Errorf("test error")
+	rw.baseController = &baseController{
+		watcher: w,
+		drivers: driver.NewDrivers(),
+		newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+			taskName := task.Name()
+			d := new(mocksD.Driver)
+			d.On("Task").Return(enabledTestTask(t, taskName))
+			d.On("RenderTemplate", mock.Anything).Return(true, nil)
+			d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
+			if taskName == "task_03" {
+				// Mock an error during apply for a task
+				d.On("ApplyTask", mock.Anything).Return(expectedErr)
+			} else {
+				d.On("ApplyTask", mock.Anything).Return(nil)
+			}
+			return d, nil
+		},
+		conf: multipleTaskConfig(numTasks),
+	}
+
+	ctx := context.Background()
+	err := rw.Init(ctx)
+	assert.NoError(t, err)
+
+	// testing really starts here...
+	done := make(chan error)
+	// running in goroutine so I can timeout
+	go func() {
+		done <- rw.Once(ctx)
+	}()
+	select {
+	case err := <-done:
+		assert.Error(t, err, "task_03 driver error should bubble up")
+		assert.Contains(t, err.Error(), expectedErr.Error(), "unexpected error in Once")
+	case <-time.After(time.Second):
+		t.Fatal("Once didn't return in expected time")
+	}
 }
 
 func TestReadWriteUnits(t *testing.T) {
@@ -312,6 +374,65 @@ func TestReadWriteRun_context_cancel(t *testing.T) {
 	}
 }
 
+func TestReadWrite_OnceAndRun(t *testing.T) {
+	// Tests Run behaviors as expected with triggers after Once completes
+	d := new(mocksD.Driver)
+	d.On("Task").Return(enabledTestTask(t, "task_a")).
+		On("RenderTemplate", mock.Anything).Return(true, nil).
+		On("ApplyTask", mock.Anything).Return(nil).
+		On("SetBufferPeriod")
+
+	ctrl := ReadWrite{
+		baseController: &baseController{
+			drivers: driver.NewDrivers(),
+		},
+		store: event.NewStore(),
+	}
+	ctrl.drivers.Add("task_a", d)
+
+	watcherCh := make(chan error, 5)
+	var watcherChRc <-chan error = watcherCh
+	w := new(mocks.Watcher)
+	w.On("Size").Return(5)
+	ctrl.watcher = w
+
+	completedTasksCh := ctrl.EnableTestMode()
+	errCh := make(chan error)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	go func() {
+		err := ctrl.Once(ctx)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		// Once is expected to complete during first iteration with the
+		// mocked values, so we don't initialize Wait until after. Otherwise,
+		// the test would panic on missing mock method.
+		w.On("WaitCh", mock.Anything, mock.Anything).Return(watcherChRc)
+
+		err = ctrl.Run(ctx)
+		if err != nil {
+			errCh <- err
+		}
+	}()
+
+	// Emulate triggers to evaluate task completion
+	for i := 0; i < 5; i++ {
+		watcherCh <- nil
+		select {
+		case taskName := <-completedTasksCh:
+			assert.Equal(t, "task_a", taskName)
+		case err := <-errCh:
+			require.NoError(t, err)
+		case <-ctx.Done():
+			assert.NoError(t, ctx.Err(), "Context should not timeout. Once and Run usage of Watcher does not match the expected triggers.")
+		}
+	}
+}
+
 // singleTaskConfig returns a happy path config that has a single task
 func singleTaskConfig() *config.Config {
 	c := &config.Config{
@@ -355,6 +476,20 @@ func singleTaskConfig() *config.Config {
 		}},
 	}
 
+	c.Finalize()
+	return c
+}
+
+func multipleTaskConfig(numTasks int) *config.Config {
+	tasks := make(config.TaskConfigs, numTasks)
+	for i := 0; i < numTasks; i++ {
+		tasks[i] = &config.TaskConfig{
+			Name:     config.String(fmt.Sprintf("task_%02d", i)),
+			Services: []string{fmt.Sprintf("service_%02d", i)},
+			Source:   config.String("Y"),
+		}
+	}
+	c := &config.Config{Tasks: &tasks}
 	c.Finalize()
 	return c
 }
