@@ -322,6 +322,13 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			// always set services variable
 			SourceIncludesVar: true,
 		}
+	case *config.ConsulKVConditionConfig:
+		condition = &tftmpl.ConsulKVCondition{
+			Path:              *v.Path,
+			SourceIncludesVar: *v.SourceIncludesVar,
+			Datacenter:        *v.Datacenter,
+			Recurse:           *v.Recurse,
+		}
 	default:
 		// expected only for test scenarios
 		log.Printf("[WARN] (driver.terraform) task '%s' condition config unset."+
