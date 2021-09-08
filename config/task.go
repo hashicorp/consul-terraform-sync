@@ -235,9 +235,10 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if _, ok := c.Condition.(*ScheduleConditionConfig); ok {
 		// disable buffer_period for schedule condition
 		if c.BufferPeriod != nil {
-			log.Printf("[WARN] (config.task) disabling buffer_period for "+
-				"schedule condition. overriding buffer_period configured for "+
-				"this task: %s", c.BufferPeriod.GoString())
+			logging.Global().Named(logSystemName).Named(taskSubsystemName).Warn(
+				"disabling buffer_period for schedule condition. overriding "+
+					"buffer_period configured for this task",
+				"task_name", StringVal(c.Name), "buffer_period", c.BufferPeriod.GoString())
 		}
 		bp = &BufferPeriodConfig{
 			Enabled: Bool(false),
@@ -313,9 +314,11 @@ func (c *TaskConfig) Validate() error {
 			if cond.Regexp != nil && *cond.Regexp != "" {
 				err := fmt.Errorf("task.services is not allowed if task.condition.regexp " +
 					"is configured for a services condition")
-				logging.Global().Named(logSystemName+taskSubsystemName).Error("[ERR] (config.task) list of "+
-					"services and service condition regex both provided. If both are needed, consider "+
-					"including the list in the regex or creating separate tasks.", "error", err)
+				logging.Global().Named(logSystemName).Named(taskSubsystemName).
+					Error("list of services and service condition regex both "+
+						"provided. If both are needed, consider including the "+
+						"list in the regex or creating separate tasks",
+						"task_name", StringVal(c.Name), "error", err)
 				return err
 			}
 		}
