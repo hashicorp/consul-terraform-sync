@@ -193,7 +193,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_amd64.deb
+          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_armhf.deb
           path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_amd64.deb
 
       - uses: actions/upload-artifact@v2
