@@ -104,7 +104,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			}
 			ctx := context.Background()
 
-			_, err := controller.checkApply(ctx, d, false)
+			_, err := controller.checkApply(ctx, d, false, false)
 			data := controller.store.Read(tc.taskName)
 			events := data[tc.taskName]
 
@@ -135,6 +135,40 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("unrendered-scheduled-tasks", func(t *testing.T) {
+		// Test the behavior for once-mode and daemon-mode for the situation
+		// where a scheduled task's template did not render
+
+		controller := ReadWrite{
+			baseController: &baseController{
+				drivers: driver.NewDrivers(),
+				logger:  logging.NewNullLogger(),
+			},
+			store: event.NewStore(),
+		}
+
+		d := new(mocksD.Driver)
+		taskName := "scheduled_task"
+		d.On("Task").Return(scheduledTestTask(t, taskName))
+		d.On("RenderTemplate", mock.Anything).Return(false, nil)
+		controller.drivers.Add(taskName, d)
+
+		// Once-mode - confirm no events are stored
+		ctx := context.Background()
+		_, err := controller.checkApply(ctx, d, false, true)
+		assert.NoError(t, err)
+		data := controller.store.Read(taskName)
+		events := data[taskName]
+		assert.Equal(t, 0, len(events))
+
+		// Daemon-mode - confirm an event is stored
+		_, err = controller.checkApply(ctx, d, false, false)
+		assert.NoError(t, err)
+		data = controller.store.Read(taskName)
+		events = data[taskName]
+		assert.Equal(t, 1, len(events))
+	})
 }
 
 func TestReadWrite_CheckApply_Store(t *testing.T) {
@@ -159,12 +193,12 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 		controller.drivers.Add("task_b", disabledD)
 		ctx := context.Background()
 
-		controller.checkApply(ctx, d, false)
-		controller.checkApply(ctx, disabledD, false)
-		controller.checkApply(ctx, d, false)
-		controller.checkApply(ctx, d, false)
-		controller.checkApply(ctx, d, false)
-		controller.checkApply(ctx, disabledD, false)
+		controller.checkApply(ctx, d, false, false)
+		controller.checkApply(ctx, disabledD, false, false)
+		controller.checkApply(ctx, d, false, false)
+		controller.checkApply(ctx, d, false, false)
+		controller.checkApply(ctx, d, false, false)
+		controller.checkApply(ctx, disabledD, false, false)
 
 		taskStatuses := controller.store.Read("")
 
@@ -294,7 +328,7 @@ func TestReadWrite_Once_error(t *testing.T) {
 	}
 }
 
-func TestReadWriteUnits(t *testing.T) {
+func TestReadWrite_runDynamicTasks(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
 		controller := ReadWrite{
 			baseController: &baseController{
@@ -313,7 +347,7 @@ func TestReadWriteUnits(t *testing.T) {
 		controller.drivers.Add("task", d)
 
 		ctx := context.Background()
-		errCh := controller.runTasks(ctx)
+		errCh := controller.runDynamicTasks(ctx)
 		err := <-errCh
 		if err != nil {
 			t.Error(err)
@@ -337,13 +371,107 @@ func TestReadWriteUnits(t *testing.T) {
 		controller.drivers.Add("task", d)
 
 		ctx := context.Background()
-		errCh := controller.runTasks(ctx)
+		errCh := controller.runDynamicTasks(ctx)
 		err := <-errCh
 		testErr := fmt.Errorf("could not apply: %s", "test")
 		if errors.Is(err, testErr) {
 			t.Error(
 				fmt.Sprintf("bad error, expected '%v', got '%v'", testErr, err))
 		}
+	})
+
+	t.Run("skip-scheduled-tasks", func(t *testing.T) {
+		controller := ReadWrite{
+			baseController: &baseController{
+				drivers: driver.NewDrivers(),
+			},
+			store: event.NewStore(),
+		}
+
+		taskName := "scheduled_task"
+		d := new(mocksD.Driver)
+		d.On("Task").Return(scheduledTestTask(t, taskName))
+		// no other methods should be called (or mocked)
+		controller.drivers.Add(taskName, d)
+
+		ctx := context.Background()
+		errCh := controller.runDynamicTasks(ctx)
+		err := <-errCh
+		if err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestReadWrite_runScheduledTask(t *testing.T) {
+	t.Run("happy-path", func(t *testing.T) {
+		ctrl := ReadWrite{
+			baseController: &baseController{
+				drivers: driver.NewDrivers(),
+				logger:  logging.NewNullLogger(),
+			},
+			store: event.NewStore(),
+		}
+
+		taskName := "scheduled_task"
+		d := new(mocksD.Driver)
+		d.On("Task").Return(scheduledTestTask(t, taskName)).Twice()
+		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
+		d.On("ApplyTask", mock.Anything).Return(nil).Once()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		errCh := make(chan error)
+		go func() {
+			err := ctrl.runScheduledTask(ctx, d)
+			if err != nil {
+				errCh <- err
+			}
+		}()
+		time.Sleep(3 * time.Second)
+		cancel()
+
+		select {
+		case err := <-errCh:
+			assert.Equal(t, context.Canceled, err)
+		case <-time.After(time.Second * 5):
+			t.Fatal("runScheduledTask did not exit properly from cancelling context")
+		}
+
+		d.AssertExpectations(t)
+	})
+
+	t.Run("dynamic-task-errors", func(t *testing.T) {
+		ctrl := ReadWrite{
+			baseController: &baseController{
+				drivers: driver.NewDrivers(),
+				logger:  logging.NewNullLogger(),
+			},
+			store: event.NewStore(),
+		}
+
+		taskName := "dynamic_task"
+		d := new(mocksD.Driver)
+		d.On("Task").Return(enabledTestTask(t, taskName)).Once()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		errCh := make(chan error)
+		go func() {
+			err := ctrl.runScheduledTask(ctx, d)
+			if err != nil {
+				errCh <- err
+			}
+		}()
+		time.Sleep(1 * time.Second)
+		cancel()
+
+		select {
+		case err := <-errCh:
+			assert.Contains(t, err.Error(), "expected a schedule condition")
+		case <-time.After(time.Second * 5):
+			t.Fatal("runScheduledTask did not exit properly from cancelling context")
+		}
+
+		d.AssertExpectations(t)
 	})
 }
 
@@ -516,6 +644,19 @@ func disabledTestTask(tb testing.TB, name string) *driver.Task {
 	task, err := driver.NewTask(driver.TaskConfig{
 		Name:    name,
 		Enabled: false,
+	})
+	require.NoError(tb, err)
+	return task
+}
+
+func scheduledTestTask(tb testing.TB, name string) *driver.Task {
+	task, err := driver.NewTask(driver.TaskConfig{
+		Name:        name,
+		Description: "runs every 3 seconds",
+		Enabled:     true,
+		Condition: &config.ScheduleConditionConfig{
+			Cron: config.String("*/3 * * * * * *"),
+		},
 	})
 	require.NoError(tb, err)
 	return task

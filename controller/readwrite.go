@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/retry"
+	"github.com/hashicorp/cronexpr"
 )
 
 var (
@@ -54,11 +55,20 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 // Run runs the controller in read-write mode by continuously monitoring Consul
 // catalog and using the driver to apply network infrastructure changes for
 // any work that have been updated.
-// Blocking call that runs main consul monitoring loop
+//
+// Blocking call runs the main consul monitoring loop, which identifies triggers
+// for dynamic tasks. Scheduled tasks use their own go routine to trigger on
+// schedule.
 func (rw *ReadWrite) Run(ctx context.Context) error {
 	// Only initialize buffer periods for running the full loop and not for Once
 	// mode so it can immediately render the first time.
 	rw.drivers.SetBufferPeriod()
+
+	for _, d := range rw.drivers.Map() {
+		if _, ok := d.Task().Condition().(*config.ScheduleConditionConfig); ok {
+			go rw.runScheduledTask(ctx, d)
+		}
+	}
 
 	for i := int64(1); ; i++ {
 		// Blocking on Wait is first as we just ran in Once mode so we want
@@ -77,8 +87,8 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 			return ctx.Err()
 		}
 
-		for err := range rw.runTasks(ctx) {
-			// aggregate error collector for runTasks, just logs everything for now
+		for err := range rw.runDynamicTasks(ctx) {
+			// aggregate collected errors and just log everything for now
 			rw.logger.Error("error running tasks", "error", err)
 		}
 
@@ -86,13 +96,20 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	}
 }
 
-// A single run through of all the drivers/tasks/templates
-// Returned error channel closes when done with all units
-func (rw *ReadWrite) runTasks(ctx context.Context) chan error {
-	// keep error chan and waitgroup here to keep runTask simple (on task)
+// runDynamicTasks runs through all the dynamic tasks/drivers. For each dynamic
+// task, it will try to render the template and apply the task if necessary.
+//
+// Returned error channel closes when done with all tasks
+func (rw *ReadWrite) runDynamicTasks(ctx context.Context) chan error {
+	// keep error chan and waitgroup here to keep runDynamicTask simple (on task)
 	errCh := make(chan error, 1)
 	wg := sync.WaitGroup{}
 	for taskName, d := range rw.drivers.Map() {
+		if _, ok := d.Task().Condition().(*config.ScheduleConditionConfig); ok {
+			// Schedule tasks are not dynamic and run in a different process
+			continue
+		}
+
 		if rw.drivers.IsActive(taskName) {
 			// The driver is currently active with the task, initiated by an ad-hoc run.
 			// There may be updates for other tasks, so we'll continue checking
@@ -101,7 +118,7 @@ func (rw *ReadWrite) runTasks(ctx context.Context) chan error {
 		}
 		wg.Add(1)
 		go func(taskName string, d driver.Driver) {
-			complete, err := rw.checkApply(ctx, d, true)
+			complete, err := rw.checkApply(ctx, d, true, false)
 			if err != nil {
 				errCh <- err
 			}
@@ -121,6 +138,67 @@ func (rw *ReadWrite) runTasks(ctx context.Context) chan error {
 	return errCh
 }
 
+// runScheduledTask starts up a go-routine for a given scheduled task/driver.
+// The go-routine will manage the task's schedule and trigger the task on time.
+// If there are dependency changes since the task's last run time, then the task
+// will also apply.
+func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver) error {
+	task := d.Task()
+	taskName := task.Name()
+
+	cond, ok := task.Condition().(*config.ScheduleConditionConfig)
+	if !ok {
+		rw.logger.Error("unexpected condition while running a scheduled "+
+			"condition", taskNameLogKey, taskName, "condition_type",
+			fmt.Sprintf("%T", task.Condition()))
+		return fmt.Errorf("error: expected a schedule condition but got "+
+			"condition type %T", task.Condition())
+	}
+
+	expr, err := cronexpr.Parse(*cond.Cron)
+	if err != nil {
+		rw.logger.Error("error parsing task cron", taskNameLogKey, taskName,
+			"cron", *cond.Cron, "error", err)
+		return err
+	}
+
+	nextTime := expr.Next(time.Now())
+	waitTime := time.Until(nextTime)
+	rw.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
+		"wait_time", waitTime, "next_runtime", nextTime)
+
+	for i := int64(1); ; i++ {
+		select {
+		case <-time.After(waitTime):
+			rw.logger.Info("time for scheduled task", taskNameLogKey, taskName)
+			if rw.drivers.IsActive(taskName) {
+				// The driver is currently active with the task, initiated by an ad-hoc run.
+				rw.logger.Trace("task is active", taskNameLogKey, taskName)
+				continue
+			}
+
+			complete, err := rw.checkApply(ctx, d, true, false)
+			if err != nil {
+				// print error but continue
+				rw.logger.Error("error applying task %q: %s",
+					taskNameLogKey, taskName, "error", err)
+			}
+
+			if rw.taskNotify != nil && complete {
+				rw.taskNotify <- taskName
+			}
+
+			nextTime := expr.Next(time.Now())
+			waitTime = time.Until(nextTime)
+			rw.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
+				"wait_time", waitTime, "next_runtime", nextTime)
+		case <-ctx.Done():
+			rw.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
+			return ctx.Err()
+		}
+	}
+}
+
 // Once runs the controller in read-write mode making sure each template has
 // been fully rendered and the task run, then it returns.
 func (rw *ReadWrite) Once(ctx context.Context) error {
@@ -132,7 +210,7 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 		done := true
 		for taskName, d := range driversCopy {
 			if !completed[taskName] {
-				complete, err := rw.checkApply(ctx, d, false)
+				complete, err := rw.checkApply(ctx, d, false, true)
 				if err != nil {
 					return err
 				}
@@ -165,18 +243,31 @@ func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
 	return api.NewAPI(rw.store, rw.drivers, config.IntVal(rw.conf.Port)).Serve(ctx)
 }
 
-// Single run, render, apply of a unit (task).
+// checkApply runs a task by attempting to render the template and applying the
+// task as necessary.
 //
-// Stores event data on error or on successful _full_ execution of task.
-// Note: We do not store event when a template has not completely rendered since
-// driver.RenderTemplate() may be called many times per full task execution
-// since there could be many per full task execution i.e. when driver.RenderTemplate()
-// returns false, no event is stored.
-func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry bool) (bool, error) {
+// An event is stored:
+//  1. whenever a task errors while executing
+//  2. when a dynamic task successfully executes
+//  3. when a scheduled task successfully executes (regardless of if there
+//     were dependency changes)
+//
+// Note on #2: no event is stored when a dynamic task renders but does not apply.
+// This can occur becauser driver.RenderTemplate() may need to be called multiple
+// times before a template is ready to be applied.
+func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, once bool) (bool, error) {
 	task := d.Task()
 	taskName := task.Name()
 	if !task.IsEnabled() {
-		rw.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
+		if _, ok := task.Condition().(*config.ScheduleConditionConfig); ok {
+			// Schedule tasks are specifically triggered and logged at INFO.
+			// Accompanying disabled log should be at same level
+			rw.logger.Info("skipping disabled scheduled task", taskNameLogKey, taskName)
+		} else {
+			// Dynamic tasks are all triggered together on any dependency
+			// change so logs can be noisy
+			rw.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
+		}
 		return true, nil
 	}
 
@@ -206,6 +297,22 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry bool
 		defer storeEvent()
 		return false, fmt.Errorf("error rendering template for task %s: %s",
 			taskName, storedErr)
+	}
+
+	if !rendered && !once {
+		if _, ok := task.Condition().(*config.ScheduleConditionConfig); ok {
+			// We sometimes want to store an event when a scheduled task did not
+			// rendered i.e. the task ran on schedule but there were no
+			// dependency changes so the template did not re-render
+			//
+			// During once-mode though, a task may not have rendered because it
+			// may take multiple calls to fully render. check for once-mode to
+			// avoid extra logs/events while the template is finishing rendering.
+			rw.logger.Info("scheduled task triggered but had no changes",
+				taskNameLogKey, taskName)
+			defer storeEvent()
+		}
+		return rendered, nil
 	}
 
 	// rendering a template may take several cycles in order to completely fetch

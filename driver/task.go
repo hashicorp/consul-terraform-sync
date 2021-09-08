@@ -331,6 +331,10 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			Datacenter:        *v.Datacenter,
 			Recurse:           *v.Recurse,
 		}
+	case *config.ScheduleConditionConfig:
+		condition = &tftmpl.ServicesCondition{
+			SourceIncludesVar: true,
+		}
 	default:
 		// expected only for test scenarios
 		t.logger.Warn("task condition config unset. defaulting to services condition",
