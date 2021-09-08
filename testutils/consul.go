@@ -132,6 +132,18 @@ func AddServices(t testing.TB, srv *testutil.TestServer, svcs []testutil.TestSer
 	}
 }
 
+func DeregisterConsulService(tb testing.TB, srv *testutil.TestServer, id string) {
+	u := fmt.Sprintf("http://%s/v1/agent/service/deregister/%s", srv.HTTPAddr, id)
+	resp := RequestHTTP(tb, http.MethodPut, u, "")
+	defer resp.Body.Close()
+}
+
+func DeleteKV(tb testing.TB, srv *testutil.TestServer, key string) {
+	u := fmt.Sprintf("http://%s/v1/kv/%s", srv.HTTPAddr, key)
+	resp := RequestHTTP(tb, http.MethodDelete, u, "")
+	defer resp.Body.Close()
+}
+
 // Generate service TestService entries.
 // Services with different IDs and Names.
 func TestServices(n int) []testutil.TestService {

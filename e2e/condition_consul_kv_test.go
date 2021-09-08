@@ -199,6 +199,10 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 			value := "test-value"
 			srv.SetKVString(t, path, value)
 
+			childPath := path + "/test"
+			childValue := "child value"
+			srv.SetKVString(t, childPath, childValue)
+
 			// Configure and start CTS
 			taskName := "consul_kv_condition_existing"
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, taskName)
@@ -217,6 +221,14 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 			content := testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", path))
 			assert.Equal(t, value, content)
 
+			// Confirm existence of child key depending on if recurse is true or not
+			if tc.recurse {
+				content := testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", childPath))
+				assert.Equal(t, childValue, content)
+			} else {
+				testutils.CheckFile(t, false, resourcesPath, fmt.Sprintf("%s.txt", childPath))
+			}
+
 			// Update key with new value, check for event
 			now := time.Now()
 			value = "new-test-value"
@@ -228,6 +240,26 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 				"event count did not increment once. task was not triggered as expected")
 			content = testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", path))
 			assert.Equal(t, value, content)
+
+			// Update child key with new value, check for event only if recurse
+			now = time.Now()
+			childValue = "new-child-value"
+			srv.SetKVString(t, childPath, childValue)
+			if tc.recurse {
+				api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+				eventCountNow := eventCount(t, taskName, cts.Port())
+				eventCountBase++
+				require.Equal(t, eventCountBase, eventCountNow,
+					"event count did not increment once. task was not triggered as expected")
+				content := testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", childPath))
+				assert.Equal(t, childValue, content)
+			} else {
+				time.Sleep(defaultWaitForNoEvent)
+				eventCountNow = eventCount(t, taskName, cts.Port())
+				require.Equal(t, eventCountBase, eventCountNow,
+					"change in event count. task was unexpectedly triggered")
+				testutils.CheckFile(t, false, resourcesPath, fmt.Sprintf("%s.txt", childPath))
+			}
 
 			// Delete key, check for event
 			now = time.Now()

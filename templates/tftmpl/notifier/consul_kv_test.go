@@ -192,7 +192,7 @@ func Test_ConsulKV_Notify_Once_Mode_Single_Key(t *testing.T) {
 		notify = n.Notify([]*dep.HealthService{})
 		assert.True(t, notify, "second services dep should have notified")
 		assert.True(t, n.once, "got 3/3 deps. once-mode should be completed")
-		assert.Equal(t, 3, n.counter, "second services should be 4th dep")
+		assert.Equal(t, 3, n.counter, "second services should be 3rd dep")
 
 		// check mock template was called twice
 		tmpl.AssertExpectations(t)

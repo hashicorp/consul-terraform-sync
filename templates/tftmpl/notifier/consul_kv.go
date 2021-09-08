@@ -26,19 +26,21 @@ type ConsulKV struct {
 func NewConsulKV(tmpl templates.Template, serviceCount int) *ConsulKV {
 	return &ConsulKV{
 		Template: tmpl,
-		depTotal: serviceCount + 1, // for additional Consul KV dependency
+		// there will be at minimum either []*dep.KeyPair or dep.KVExists
+		depTotal: serviceCount + 1,
 	}
 }
 
 // Notify notifies when a Consul KV pair or set of pairs changes.
 //
 // Notifications are sent when:
-// A. There is a change in the Consul KV dependency for whether a single key pair
-//    exists or no longer exists (dep.KVExists)
-// B. There is a change in the Consul KV dependency for a single key pair where
-//    only the value of the key pair is returned (dep.KvValue)
-// C. There is a change in the Consul KV dependency for a set of key pairs where
-//    a list of key pairs is returned ([]*dep.KeyPair)
+// A. There is a change in the Consul KV dependency for whether a single key
+//    pair (recurse=false) exists or no longer exists (dep.KVExists)
+// B. There is a change in the Consul KV dependency for a single key pair (recurse=false)
+//    where  only the value of the key pair is returned (dep.KvValue), which only occurs
+//    if the key exists
+// C. There is a change in the Consul KV dependency for a set of key pairs (recurse=true)
+//    where a list of key pairs is returned ([]*dep.KeyPair)
 // D. All the dependencies have been received for the first time. This is
 //    regardless of the dependency type that "completes" having received all the
 //    dependencies.
@@ -55,7 +57,7 @@ func (n *ConsulKV) Notify(d interface{}) (notify bool) {
 		notify = true
 
 		if !n.once && bool(exists) {
-			// expect a KvValue dependency if the key exists
+			// only if the key exists, then expect an additional KvValue dependency
 			n.depTotal++
 		}
 	}

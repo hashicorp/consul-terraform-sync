@@ -4,7 +4,6 @@
 package testutils
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -84,18 +83,6 @@ func CheckFile(t testing.TB, exists bool, path, filename string) string {
 
 	require.NoError(t, err)
 	return string(content)
-}
-
-func DeregisterConsulService(tb testing.TB, srv *testutil.TestServer, id string) {
-	u := fmt.Sprintf("http://%s/v1/agent/service/deregister/%s", srv.HTTPAddr, id)
-	resp := RequestHTTP(tb, http.MethodPut, u, "")
-	defer resp.Body.Close()
-}
-
-func DeleteKV(tb testing.TB, srv *testutil.TestServer, key string) {
-	u := fmt.Sprintf("http://%s/v1/kv/%s", srv.HTTPAddr, key)
-	resp := RequestHTTP(tb, http.MethodDelete, u, "")
-	defer resp.Body.Close()
 }
 
 // RequestHTTP makes an http request. The caller is responsible for closing
