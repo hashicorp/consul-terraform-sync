@@ -11,6 +11,7 @@ import (
 const (
 	logSystemName   = "notifier"
 	csSubsystemName = "cs"
+	kvSubsystemName = "kv"
 )
 
 // CatalogServicesRegistration is a custom notifier expected to be used

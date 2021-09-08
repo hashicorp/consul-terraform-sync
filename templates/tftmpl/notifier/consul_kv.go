@@ -1,8 +1,9 @@
 package notifier
 
 import (
-	"log"
+	"fmt"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat/dep"
 )
@@ -19,6 +20,7 @@ type ConsulKV struct {
 	once     bool
 	depTotal int
 	counter  int
+	logger   logging.Logger
 }
 
 // NewConsulKV creates a new ConsulKVNotifier.
@@ -28,6 +30,7 @@ func NewConsulKV(tmpl templates.Template, serviceCount int) *ConsulKV {
 		Template: tmpl,
 		// there will be at minimum either []*dep.KeyPair or dep.KVExists
 		depTotal: serviceCount + 1,
+		logger:   logging.Global().Named(logSystemName).Named(kvSubsystemName),
 	}
 }
 
@@ -49,11 +52,11 @@ func NewConsulKV(tmpl templates.Template, serviceCount int) *ConsulKV {
 //  - Other types of dependencies that are not Consul KV. For example,
 //    Services ([]*dep.HealthService).
 func (n *ConsulKV) Notify(d interface{}) (notify bool) {
-	log.Printf("[DEBUG] (notifier.kv) received dependency change type %T", d)
+	n.logger.Debug("received dependency change", "dependency_type", fmt.Sprintf("%T", d))
 	notify = false
 
 	if exists, ok := d.(dep.KVExists); ok {
-		log.Printf("[DEBUG] (notifier.kv) notify Consul KV pair exists change")
+		n.logger.Debug("notify Consul KV pair exists change")
 		notify = true
 
 		if !n.once && bool(exists) {
@@ -66,19 +69,19 @@ func (n *ConsulKV) Notify(d interface{}) (notify bool) {
 		n.counter++
 		// after all dependencies are received, notify so once-mode can complete
 		if n.counter >= n.depTotal {
-			log.Printf("[DEBUG] (notifier.kv) notify once-mode complete")
+			n.logger.Debug("notify once-mode complete")
 			n.once = true
 			notify = true
 		}
 	}
 
 	if _, ok := d.(dep.KvValue); ok {
-		log.Printf("[DEBUG] (notifier.kv) notify Consul KV pair value change")
+		n.logger.Debug("notify Consul KV pair value change")
 		notify = true
 	}
 
 	if _, ok := d.([]*dep.KeyPair); ok {
-		log.Printf("[DEBUG] (notifier.kv) notify Consul KV pair list change")
+		n.logger.Debug("notify Consul KV pair list change")
 		notify = true
 	}
 

@@ -3,6 +3,7 @@ package notifier
 import (
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/hcat/dep"
 	"github.com/stretchr/testify/assert"
@@ -44,7 +45,7 @@ func Test_ConsulKV_Notify(t *testing.T) {
 			tmpl := new(mocks.Template)
 			tmpl.On("Notify", mock.Anything).Return(true)
 
-			n := ConsulKV{Template: tmpl, once: true}
+			n := ConsulKV{Template: tmpl, once: true, logger: logging.NewNullLogger()}
 			actual := n.Notify(tc.dep)
 			assert.Equal(t, tc.expected, actual)
 		})
