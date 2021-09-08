@@ -7,6 +7,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	logSystemName = "handler"
+)
+
 // Handler handles additional actions that need to be executed. These can
 // be at any level. Handlers can be chained such that they execute and continue
 // to the next handler. A chain of handlers will return an aggregate of any

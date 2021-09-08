@@ -3,13 +3,13 @@ package handler
 import (
 	"context"
 	"errors"
-	"log"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/PaloAltoNetworks/pango"
 	"github.com/PaloAltoNetworks/pango/commit"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/mitchellh/mapstructure"
 )
@@ -24,6 +24,8 @@ const (
 
 	// max number of retries
 	maxRetries = 4
+
+	panosSubsystemName = "panos"
 )
 
 //go:generate mockery --name=panosClient  --structname=PanosClient --output=../mocks/handler
@@ -53,12 +55,13 @@ type Panos struct {
 	configPath   string
 	autoCommit   bool
 	retry        retry.Retry
+	logger       logging.Logger
 }
 
 // NewPanos configures and returns a new panos handler
 func NewPanos(c map[string]interface{}) (*Panos, error) {
-	log.Printf("[INFO] (handler.panos) creating handler")
-
+	logger := logging.Global().Named(logSystemName).Named(panosSubsystemName)
+	logger.Info("creating handler")
 	var conf pango.Client
 	decoderConf := &mapstructure.DecoderConfig{TagName: "json", Result: &conf}
 	decoder, err := mapstructure.NewDecoder(decoderConf)
@@ -114,6 +117,7 @@ func NewPanos(c map[string]interface{}) (*Panos, error) {
 		configPath:   configPath,
 		autoCommit:   autoCommit,
 		retry:        retry.NewRetry(maxRetries, time.Now().UnixNano()),
+		logger:       logger,
 	}, nil
 }
 
@@ -124,8 +128,8 @@ func (h *Panos) Do(ctx context.Context, prevErr error) error {
 	if h.autoCommit {
 		committing = "enabled"
 	}
-	log.Printf("[TRACE] (handler.panos) commit %s. host '%s'",
-		committing, h.providerConf.Hostname)
+	h.logger.Trace(
+		"commit", "commit", committing, "host", h.providerConf.Hostname)
 	var err error
 	if h.autoCommit {
 		err = h.commit(ctx)
@@ -137,10 +141,10 @@ func (h *Panos) Do(ctx context.Context, prevErr error) error {
 func (h *Panos) commit(ctx context.Context) error {
 	if err := h.client.InitializeUsing(h.configPath, true); err != nil {
 		// potential optimizations to call Initialize() once / less frequently
-		log.Printf("[ERR] (handler.panos) error initializing panos client: %s", err)
+		h.logger.Error("error initializing panos client", "error", err)
 		return err
 	}
-	log.Printf("[TRACE] (handler.panos) client config after init: %s", h.client.String())
+	h.logger.Trace("client config after init", "client", h.client.String())
 
 	c := commit.FirewallCommit{
 		Admins:      []string{h.adminUser},
@@ -152,7 +156,7 @@ func (h *Panos) commit(ctx context.Context) error {
 			return nil
 		}
 		if err != nil {
-			log.Printf("[ERR] (handler.panos) error committing: %s. Server response: '%s'", err, resp)
+			h.logger.Error("error committing", "response", resp, "error", err)
 			return err
 		}
 
@@ -163,7 +167,7 @@ func (h *Panos) commit(ctx context.Context) error {
 		}
 
 		if err := h.client.WaitForJob(job, time.Millisecond, nil); err != nil {
-			log.Printf("[ERR] (handler.panos) error waiting for panos commit to finish: %s", err)
+			h.logger.Error("error waiting for panos commit to finish", "error", err)
 			return err
 		}
 		return nil
@@ -173,7 +177,7 @@ func (h *Panos) commit(ctx context.Context) error {
 		return err
 	}
 
-	log.Printf("[DEBUG] (handler.panos) commit successful")
+	h.logger.Info("commit successful")
 	return nil
 }
 
@@ -185,15 +189,15 @@ func (h *Panos) SetNext(next Handler) {
 // emptyCommit consumes the commit API return data to determine if commit was
 // empty i.e. there were no resource to commit
 func emptyCommit(job uint, resp []byte, err error) bool {
+	logger := logging.Global().Named(logSystemName).Named(panosSubsystemName)
 	if err == nil && job == 0 {
-		log.Printf("[DEBUG] (handler.panos) superadmin commit not needed")
+		logger.Debug("superadmin commit not needed")
 		return true
 	}
 
 	if err != nil && strings.HasPrefix(string(resp), emptyCommitServerRespPrefix) {
-		log.Printf("[DEBUG] (handler.panos) custom-role commit not needed")
-		log.Printf("[TRACE] (handler.panos) custom-role empty commit err: '%s'."+
-			" server response: '%s'", err, resp)
+		logger.Debug("custom-role commit not needed")
+		logger.Trace("custom-role empty commit", "response", resp, "error", err)
 		return true
 	}
 

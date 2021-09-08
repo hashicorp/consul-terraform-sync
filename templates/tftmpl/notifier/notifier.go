@@ -1,10 +1,16 @@
 package notifier
 
 import (
-	"log"
+	"fmt"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat/dep"
+)
+
+const (
+	logSystemName   = "notifier"
+	csSubsystemName = "cs"
 )
 
 // CatalogServicesRegistration is a custom notifier expected to be used
@@ -22,6 +28,7 @@ type CatalogServicesRegistration struct {
 	once     bool
 	depTotal int
 	counter  int
+	logger   logging.Logger
 }
 
 // NewCatalogServicesRegistration creates a new CatalogServicesRegistration
@@ -31,6 +38,7 @@ func NewCatalogServicesRegistration(tmpl templates.Template, serviceCount int) *
 	return &CatalogServicesRegistration{
 		Template: tmpl,
 		depTotal: serviceCount + 1, // for additional catalog-services dep
+		logger:   logging.Global().Named(logSystemName).Named(csSubsystemName),
 	}
 }
 
@@ -59,14 +67,14 @@ func NewCatalogServicesRegistration(tmpl templates.Template, serviceCount int) *
 // when all dependencies are received.
 // Resolved by sending a special notification for once-mode. Bullet B above.
 func (n *CatalogServicesRegistration) Notify(d interface{}) (notify bool) {
-	log.Printf("[DEBUG] (notifier.cs) received dependency change type %T", d)
+	n.logger.Debug("received dependency change", "dependency_type", fmt.Sprintf("%T", d))
 	notify = false
 
 	if !n.once {
 		n.counter++
 		// after all dependencies are received, notify so once-mode can complete
 		if n.counter >= n.depTotal {
-			log.Printf("[DEBUG] (notifier.cs) notify once-mode complete")
+			n.logger.Debug("notify once-mode complete")
 			n.once = true
 			notify = true
 		}
@@ -74,7 +82,7 @@ func (n *CatalogServicesRegistration) Notify(d interface{}) (notify bool) {
 
 	if v, ok := d.([]*dep.CatalogSnippet); ok {
 		if n.registrationChange(v) {
-			log.Printf("[DEBUG] (notifier.cs) notify registration change")
+			n.logger.Debug("notify registration change")
 			notify = true
 		}
 	}

@@ -6,7 +6,6 @@ package testutils
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -37,8 +37,8 @@ func FreePort(t testing.TB) int {
 func MakeTempDir(t testing.TB, tempDir string) func() error {
 	_, err := os.Stat(tempDir)
 	if !os.IsNotExist(err) {
-		log.Printf("[WARN] temp dir %s was not cleared out after last test. "+
-			"Deleting.", tempDir)
+		logging.Global().Warn("temp dir was not cleared out after last test. "+
+			"Deleting.", "temp_dir", tempDir)
 		err = os.RemoveAll(tempDir)
 		require.NoError(t, err)
 	}

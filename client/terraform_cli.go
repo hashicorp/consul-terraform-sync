@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
@@ -21,6 +22,10 @@ var (
 	wsFailedToSelectRegexp = regexp.MustCompile(`Failed to select workspace`)
 )
 
+const (
+	tcliSubsystemName = "terraformcli"
+)
+
 // TerraformCLI is the client that wraps around terraform-exec
 // to execute Terraform cli commands
 type TerraformCLI struct {
@@ -28,6 +33,7 @@ type TerraformCLI struct {
 	workingDir string
 	workspace  string
 	varFiles   []string
+	logger     logging.Logger
 }
 
 // TerraformCLIConfig configures the Terraform client
@@ -57,15 +63,15 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	// log within Sync logs. This is useful for debugging and development
 	// purposes. It may be difficult to work with log aggregators that expect
 	// uniform log format.
+	logger := logging.Global().Named(loggingSystemName).Named(tcliSubsystemName)
 	if config.Log {
-		log.Printf("[INFO] (client.terraformcli) Terraform logging is set, " +
-			"Terraform logs will output with Sync logs")
-		logger := log.New(log.Writer(), "", log.Flags())
-		tf.SetLogger(logger)
+		logger.Info("Terraform logging is set, Terraform logs will output with Sync logs")
+		lg := log.New(log.Writer(), "", log.Flags())
+		tf.SetLogger(lg)
 		tf.SetStdout(log.Writer())
 		tf.SetStderr(log.Writer())
 	} else {
-		log.Printf("[INFO] (client.terraformcli) Terraform output is muted")
+		logger.Info("Terraform output is muted")
 	}
 
 	// This is equivalent to setting TF_LOG_PATH=$WORKDIR/terraform.log.
@@ -76,7 +82,7 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	if config.PersistLog {
 		logPath := filepath.Join(config.WorkingDir, "terraform.log")
 		tf.SetLogPath(logPath)
-		log.Printf("[INFO] (client.terraformcli) persiting Terraform logs on disk: %s", logPath)
+		logger.Info("persisting Terraform logs on disk", "logPath", logPath)
 	}
 
 	// Expand any relative paths for variable files to absolute paths
@@ -85,7 +91,7 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 		if !filepath.IsAbs(vf) {
 			wd, err := os.Getwd()
 			if err != nil {
-				log.Println("[ERR] (client.terraformcli) unable to retrieve current " +
+				logger.Error("unable to retrieve current " + "" +
 					"working directory to determine path to variable files")
 				return nil, err
 			}
@@ -101,8 +107,9 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
 		varFiles:   varFiles,
+		logger:     logger,
 	}
-	log.Printf("[TRACE] (client.terraformcli) created Terraform CLI client %s", client.GoString())
+	logger.Trace("created Terraform CLI client", "client", client.GoString())
 
 	return client, nil
 }
@@ -131,7 +138,7 @@ TF_INIT_AGAIN:
 		var wsErr *tfexec.ErrNoWorkspace
 		matched := wsFailedToSelectRegexp.MatchString(err.Error())
 		if matched || errors.As(err, &wsErr) {
-			log.Printf("[INFO] (client.terraformcli) workspace was detected without state, " +
+			t.logger.Info("workspace was detected without state, " +
 				"creating new workspace and attempting Terraform init again")
 			if err := t.tf.WorkspaceNew(ctx, t.workspace); err != nil {
 				return err
@@ -145,22 +152,23 @@ TF_INIT_AGAIN:
 		return err
 	}
 
+	logws := t.logger.With("workspace", t.workspace)
 	if !wsCreated {
 		err := t.tf.WorkspaceNew(ctx, t.workspace)
 		if err != nil {
 			var wsErr *tfexec.ErrWorkspaceExists
 			if !errors.As(err, &wsErr) {
-				log.Printf("[ERR] (client.terraformcli) unable to create workspace: %q", t.workspace)
+				logws.Error("unable to create workspace", "error", err)
 				return err
 			}
-			log.Printf("[DEBUG] (client.terraformcli) workspace already exists: '%s'", t.workspace)
+			logws.Debug("workspace already exists", "error", err)
 		} else {
-			log.Printf("[TRACE] (client.terraformcli) workspace created: %q", t.workspace)
+			logws.Trace("workspace created")
 		}
 	}
 
 	if err := t.tf.WorkspaceSelect(ctx, t.workspace); err != nil {
-		log.Printf("[ERR] (client.terraformcli) unable to change workspace: %q", t.workspace)
+		logws.Error("unable to change workspace", "error", err)
 		return err
 	}
 
@@ -229,7 +237,7 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 	}
 
 	if sb.Len() > 0 {
-		log.Printf("[WARN] (client.terraformcli) Terraform validate returned the following warnings: %s", sb.String())
+		t.logger.Warn("Terraform validate returned warnings", "warnings", sb.String())
 	}
 
 	return nil

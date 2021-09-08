@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
@@ -40,7 +39,7 @@ func (ctrl *ReadOnly) Init(ctx context.Context) error {
 // Run runs the controller in read-only mode by checking Consul catalog once for
 // latest and using the driver to plan network infrastructure changes
 func (ctrl *ReadOnly) Run(ctx context.Context) error {
-	log.Println("[INFO] (ctrl) inspecting all tasks")
+	ctrl.logger.Info("inspecting all tasks")
 
 	driversCopy := ctrl.drivers.Map()
 	completed := make(map[string]bool, len(driversCopy))
@@ -60,14 +59,14 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 		}
 		ctrl.logDepSize(50, i)
 		if done {
-			log.Println("[INFO] (ctrl) completed task inspections")
+			ctrl.logger.Info("completed task inspections")
 			return nil
 		}
 
 		select {
 		case err := <-ctrl.watcher.WaitCh(ctx):
 			if err != nil {
-				log.Printf("[ERR] (ctrl) error watching template dependencies: %s", err)
+				ctrl.logger.Error("error watching template dependencies", "error", err)
 				return err
 			}
 		case <-ctx.Done():
@@ -85,7 +84,7 @@ func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, 
 	task := d.Task()
 	taskName := task.Name()
 
-	log.Printf("[TRACE] (ctrl) checking dependencies changes for task %s", taskName)
+	ctrl.logger.Trace("checking dependencies changes for task", taskNameLogKey, taskName)
 
 	rendered, err := d.RenderTemplate(ctx)
 	if err != nil {
@@ -96,14 +95,14 @@ func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, 
 	// rendering a template may take several cycles in order to completely fetch
 	// new data
 	if rendered {
-		log.Printf("[TRACE] (ctrl) template for task %q rendered: %+v", taskName, rendered)
+		ctrl.logger.Trace("template for task rendered", taskNameLogKey, taskName)
 
-		log.Printf("[INFO] (ctrl) inspecting task %s", taskName)
+		ctrl.logger.Info("inspecting task", taskNameLogKey, taskName)
 		if err := d.InspectTask(ctx); err != nil {
 			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
 		}
 
-		log.Printf("[INFO] (ctrl) inspected task %s", taskName)
+		ctrl.logger.Info("inspected task", taskNameLogKey, taskName)
 	}
 
 	return rendered, nil

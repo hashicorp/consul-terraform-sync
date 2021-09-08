@@ -1,19 +1,17 @@
 package logging
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
-	"os"
 	"strings"
 
+	"github.com/hashicorp/go-hclog"
 	gsyslog "github.com/hashicorp/go-syslog"
-	"github.com/hashicorp/logutils"
 )
 
 // Levels are the log levels we respond too.
-var Levels = []logutils.LogLevel{"TRACE", "DEBUG", "INFO", "WARN", "ERR"}
+var Levels = []string{"TRACE", "DEBUG", "INFO", "WARN", "ERR"}
 
 // LogLevel is the log level of all logs in this package
 // it is set by the Setup() function and is shared with all other setup variations (i.e. SetupLocal())
@@ -22,6 +20,9 @@ var LogLevel = ""
 const (
 	defaultLogLevel = "INFO"
 )
+
+// Logger is a type alias for hclog.Logger
+type Logger hclog.Logger
 
 // Config is the configuration for this log setup.
 type Config struct {
@@ -40,89 +41,97 @@ type Config struct {
 	Writer io.Writer
 }
 
+// Setup takes as an arugment a configuration and then uses it to configure the global
+// logger. After setup logging.Global() can be used to access the global logger
 func Setup(config *Config) error {
-	// Set the global log level, this will be used by all loggers
-	LogLevel = config.Level
 
-	logFilter, err := setupFilter(config.Writer)
-	if err != nil {
-		return fmt.Errorf("error setting up log filter: %s", err)
+	// Validate the log level
+	if !validateLogLevel(config.Level) {
+		return fmt.Errorf("Invalid log level: %s. Valid log levels are: %v",
+			config.Level,
+			Levels)
 	}
 
-	var logOutput io.Writer
+	// Set the global log level, this will be used by all loggers
+	setLogLevel(config.Level)
 
+	var logOutput io.Writer
 	// Check if syslog is enabled
 	if config.Syslog {
-		log.Printf("[INFO] (logging) enabling syslog on %s", config.SyslogFacility)
-
-		l, err := gsyslog.NewLogger(gsyslog.LOG_NOTICE, config.SyslogFacility, config.SyslogName)
+		syslog, err := gsyslog.NewLogger(gsyslog.LOG_NOTICE, config.SyslogFacility, config.SyslogName)
 		if err != nil {
 			return fmt.Errorf("error setting up syslog logger: %s", err)
 		}
-		syslog := &SyslogWrapper{l, logFilter}
-		logOutput = io.MultiWriter(logFilter, syslog)
+		logOutput = io.MultiWriter(config.Writer, syslog)
 	} else {
-		logOutput = io.MultiWriter(logFilter)
+		logOutput = config.Writer
 	}
 
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.LUTC)
-	log.SetOutput(logOutput)
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level:      hclog.LevelFromString(LogLevel),
+		Output:     logOutput,
+		TimeFormat: hclog.TimeFormat,
+	})
 
+	hclog.SetDefault(logger)
 	return nil
+}
+
+// Global returns the hclog.Default() global logger as type Logger
+func Global() Logger {
+	return hclog.Default()
+}
+
+// NewNullLogger returns the hclog.NewNullLogger() null logger as type Logger
+func NewNullLogger() Logger {
+	return hclog.NewNullLogger()
+}
+
+// WithContext stores a Logger and any provided arguments into the provided context
+// to access this logger, use the FromContext function
+func WithContext(ctx context.Context, logger Logger, args ...interface{}) context.Context {
+	return hclog.WithContext(ctx, logger, args...)
+}
+
+// FromContext returns the Logger contained with the context. If no Logger is found in the context,
+// this function returns the Global Logger
+func FromContext(ctx context.Context) Logger {
+	return hclog.FromContext(ctx)
 }
 
 // SetupLocal returns a new log.Logger which logs to a provided io.Writer
 // The logger will filter logs based on the global log level
-func SetupLocal(writer io.Writer) (*log.Logger, error) {
-	// Create default logger
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.LUTC)
-	logFilter, err := setupFilter(writer)
-	if err != nil {
-		return &log.Logger{}, fmt.Errorf("error setting up log filter: %s", err)
-	}
+func SetupLocal(writer io.Writer, systemName string, subsystemName string, values ...interface{}) (Logger, error) {
+	setLogLevel(LogLevel)
 
-	logOutput := io.Writer(logFilter)
-	logger.SetOutput(logOutput)
+	// Create default logger
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:       systemName,
+		Level:      hclog.LevelFromString(LogLevel),
+		Output:     writer,
+		TimeFormat: hclog.TimeFormat,
+	})
+
+	// Set the subsystem name
+	logger = logger.Named(subsystemName).With(values...)
 	return logger, nil
 }
 
-// NewLogFilter returns a LevelFilter that is configured with the log levels that
-// we use.
-func NewLogFilter() *logutils.LevelFilter {
-	return &logutils.LevelFilter{
-		Levels:   Levels,
-		MinLevel: logutils.LogLevel(defaultLogLevel),
-		Writer:   ioutil.Discard,
+func setLogLevel(logLevel string) {
+	if len(logLevel) == 0 {
+		LogLevel = defaultLogLevel
+	} else {
+		LogLevel = logLevel
 	}
 }
 
-// ValidateLevelFilter verifies that the log levels within the filter are valid.
-func ValidateLevelFilter(min logutils.LogLevel, filter *logutils.LevelFilter) bool {
-	for _, level := range filter.Levels {
-		if level == min {
+// validateLogLevel verifies that a new log level is valid
+func validateLogLevel(minLevel string) bool {
+	newLevel := strings.ToUpper(minLevel)
+	for _, level := range Levels {
+		if level == newLevel {
 			return true
 		}
 	}
 	return false
-}
-
-func setupFilter(writer io.Writer) (*logutils.LevelFilter, error) {
-	// Setup the default logging if nothing has been set
-	if len(LogLevel) == 0 {
-		LogLevel = defaultLogLevel
-	}
-
-	logFilter := NewLogFilter()
-	logFilter.MinLevel = logutils.LogLevel(strings.ToUpper(LogLevel))
-	logFilter.Writer = writer
-	if !ValidateLevelFilter(logFilter.MinLevel, logFilter) {
-		levels := make([]string, 0, len(logFilter.Levels))
-		for _, level := range logFilter.Levels {
-			levels = append(levels, string(level))
-		}
-		return &logutils.LevelFilter{}, fmt.Errorf("invalid log level %q, valid log levels are %s",
-			LogLevel, strings.Join(levels, ", "))
-	}
-
-	return logFilter, nil
 }

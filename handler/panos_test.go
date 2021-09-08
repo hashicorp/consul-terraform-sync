@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/PaloAltoNetworks/pango"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/handler"
 	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
@@ -116,9 +117,9 @@ func TestPanosDo(t *testing.T) {
 				Return(nil)
 			m.On("String").Return("client string")
 
-			h := &Panos{client: m}
+			h := &Panos{client: m, logger: logging.NewNullLogger()}
 			if tc.next {
-				next := &Panos{client: m}
+				next := &Panos{client: m, logger: logging.NewNullLogger()}
 				h.SetNext(next)
 			}
 
@@ -136,7 +137,7 @@ func TestPanosDo(t *testing.T) {
 			Return(nil).Once()
 		m.On("String").Return("client string").Once()
 
-		h := &Panos{client: m, autoCommit: true, retry: retry.NewTestRetry(1)}
+		h := &Panos{client: m, autoCommit: true, retry: retry.NewTestRetry(1), logger: logging.NewNullLogger()}
 		assert.NoError(t, h.Do(context.Background(), nil))
 		h.autoCommit = false
 		assert.NoError(t, h.Do(context.Background(), nil))
@@ -211,7 +212,7 @@ func TestPanosCommit(t *testing.T) {
 				Return(tc.waitReturn)
 			m.On("String").Return("client string").Once()
 
-			h := &Panos{client: m, retry: retry.NewTestRetry(1)}
+			h := &Panos{client: m, retry: retry.NewTestRetry(1), logger: logging.NewNullLogger()}
 			err := h.commit(context.Background())
 			if tc.expectErr {
 				assert.Error(t, err)
@@ -254,8 +255,8 @@ func TestPanosSetNext(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := &Panos{}
-			h.SetNext(&Panos{})
+			h := &Panos{logger: logging.NewNullLogger()}
+			h.SetNext(&Panos{logger: logging.NewNullLogger()})
 			assert.NotNil(t, h.next)
 		})
 	}

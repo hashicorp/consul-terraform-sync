@@ -20,7 +20,7 @@ require (
 	github.com/hashicorp/go-bexpr v0.1.4
 	github.com/hashicorp/go-checkpoint v0.5.0
 	github.com/hashicorp/go-getter v1.5.3
-	github.com/hashicorp/go-hclog v0.15.0 // indirect
+	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
 	github.com/hashicorp/go-syslog v1.0.0

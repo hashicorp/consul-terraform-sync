@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 const (
@@ -50,6 +50,8 @@ const (
 	// recent task updates are stored as an ‘event’ in CTS. A task is
 	// unknown when no event data has been collected yet.
 	StatusUnknown = "unknown"
+
+	logSystemName = "api"
 )
 
 // API supports api requests to the cts binary
@@ -67,17 +69,17 @@ func NewAPI(store *event.Store, drivers *driver.Drivers, port int) *API {
 
 	// retrieve overall status
 	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, overallStatusPath),
-		newOverallStatusHandler(store, drivers, defaultAPIVersion))
+		withLogging(newOverallStatusHandler(store, drivers, defaultAPIVersion)))
 	// retrieve task status for a task-name
 	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskStatusPath),
-		newTaskStatusHandler(store, drivers, defaultAPIVersion))
+		withLogging(newTaskStatusHandler(store, drivers, defaultAPIVersion)))
 	// retrieve all task statuses
 	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, taskStatusPath),
-		newTaskStatusHandler(store, drivers, defaultAPIVersion))
+		withLogging(newTaskStatusHandler(store, drivers, defaultAPIVersion)))
 
 	// crud task
 	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskPath),
-		newTaskHandler(store, drivers, defaultAPIVersion))
+		withLogging(newTaskHandler(store, drivers, defaultAPIVersion)))
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
@@ -102,6 +104,7 @@ func (api *API) Serve(ctx context.Context) error {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	logger := logging.Global().Named(logSystemName)
 	go func() {
 		defer wg.Done()
 		for {
@@ -111,18 +114,18 @@ func (api *API) Serve(ctx context.Context) error {
 				defer cancel()
 
 				if err := api.srv.Shutdown(ctxShutDown); err != nil {
-					log.Printf("[ERROR] (api) error stopping api server: '%s'", err)
+					logger.Error("error stopping api server", "error", err)
 				} else {
-					log.Printf("[INFO] (api) shutdown api server")
+					logger.Info("shutdown api server")
 				}
 				return
 			}
 		}
 	}()
 
-	log.Printf("[INFO] (api) starting server at '%d'", api.port)
+	logger.Info("starting server", "port", api.port)
 	if err := api.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Printf("[ERROR] (api) serving api at '%d': %s", api.port, err)
+		logger.Error("error serving api", "port", api.port, "error", err)
 		return err
 	}
 
@@ -140,8 +143,12 @@ func jsonResponse(w http.ResponseWriter, code int, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
 
-func jsonErrorResponse(w http.ResponseWriter, code int, err error) error {
-	return jsonResponse(w, code, NewErrorResponse(err))
+func jsonErrorResponse(ctx context.Context, w http.ResponseWriter, code int, err error) {
+	err = jsonResponse(w, code, NewErrorResponse(err))
+	if err != nil {
+		logging.FromContext(ctx).Named(logSystemName).Error("error, could not generate json error response",
+			"error", err)
+	}
 }
 
 // getTaskName retrieves the taskname from the url. Returns empty string if no

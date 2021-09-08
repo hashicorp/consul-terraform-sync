@@ -4,16 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcat"
+)
+
+const (
+	ctrlSystemName = "ctrl"
+	taskNameLogKey = "task_name"
 )
 
 // Controller describes the interface for monitoring Consul for relevant changes
@@ -44,6 +49,7 @@ type baseController struct {
 	drivers   *driver.Drivers
 	watcher   templates.Watcher
 	resolver  templates.Resolver
+	logger    logging.Logger
 }
 
 func newBaseController(conf *config.Config) (*baseController, error) {
@@ -52,7 +58,8 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 		return nil, err
 	}
 
-	log.Printf("[INFO] (ctrl) initializing Consul client and testing connection")
+	logger := logging.Global().Named(ctrlSystemName)
+	logger.Info("initializing Consul client and testing connection")
 	watcher, err := newWatcher(conf)
 	if err != nil {
 		return nil, err
@@ -64,6 +71,7 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 		drivers:   driver.NewDrivers(),
 		watcher:   watcher,
 		resolver:  hcat.NewResolver(),
+		logger:    logger,
 	}, nil
 }
 
@@ -72,7 +80,7 @@ func (ctrl *baseController) Stop() {
 }
 
 func (ctrl *baseController) init(ctx context.Context) error {
-	log.Printf("[INFO] (ctrl) initializing driver")
+	ctrl.logger.Info("initializing driver")
 
 	// Load provider configuration and evaluate dynamic values
 	providerConfigs, err := ctrl.loadProviderConfigs(ctx)
@@ -81,7 +89,7 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	}
 
 	// Future: improve by combining tasks into workflows.
-	log.Printf("[INFO] (ctrl) initializing all tasks")
+	ctrl.logger.Info("initializing all tasks")
 	tasks, err := newDriverTasks(ctrl.conf, providerConfigs)
 	if err != nil {
 		return err
@@ -97,7 +105,7 @@ func (ctrl *baseController) init(ctx context.Context) error {
 		}
 
 		taskName := task.Name()
-		log.Printf("[DEBUG] (ctrl) initializing task %q", taskName)
+		ctrl.logger.Info("initializing task", "task", taskName)
 		d, err := ctrl.newDriver(ctrl.conf, task, ctrl.watcher)
 		if err != nil {
 			return err
@@ -105,13 +113,17 @@ func (ctrl *baseController) init(ctx context.Context) error {
 
 		err = d.InitTask(ctx)
 		if err != nil {
-			log.Printf("[ERR] (ctrl) error initializing task %q", taskName)
+			ctrl.logger.Error("error initializing task", taskNameLogKey, taskName)
 			return err
 		}
-		ctrl.drivers.Add(taskName, d)
+		err = ctrl.drivers.Add(taskName, d)
+		if err != nil {
+			ctrl.logger.Error("error adding task to driver", taskNameLogKey, taskName)
+			return err
+		}
 	}
 
-	log.Printf("[INFO] (ctrl) driver initialized")
+	ctrl.logger.Info("driver initialized")
 	return nil
 }
 
@@ -132,8 +144,8 @@ func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]driver.T
 
 			block, err := hcltmpl.LoadDynamicConfig(ctxTimeout, ctrl.watcher, ctrl.resolver, conf)
 			if err != nil {
-				log.Printf("[ERR] (ctrl) error loading dynamic configuration for provider %q: %s",
-					block.Name, err)
+				ctrl.logger.Error("error loading dynamic configuration for provider",
+					"provider", block.Name, "error", err)
 				lastErr = err
 				return
 			}
@@ -153,10 +165,10 @@ func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]driver.T
 func (ctrl *baseController) logDepSize(n uint, i int64) {
 	depSize := ctrl.watcher.Size()
 	if i%int64(n) == 0 || i < 0 {
-		log.Printf("[DEBUG] (ctrl) watching %d dependencies", depSize)
+		ctrl.logger.Debug("watching dependencies", "dependency_size", depSize)
 		if depSize > templates.DepSizeWarning {
-			log.Printf("[WARN] (ctrl) watching more than %d dependencies could "+
-				"DDoS your Consul cluster: %d", templates.DepSizeWarning, depSize)
+			ctrl.logger.Warn(fmt.Sprintf(" watching more than %d dependencies could "+
+				"DDoS your Consul cluster: %d", templates.DepSizeWarning, depSize))
 		}
 	}
 }

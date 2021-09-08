@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -165,7 +164,7 @@ func TestPrinterLogLevel(t *testing.T) {
 			p, err := NewTestPrinter(tc.config)
 			assert.NoError(t, err)
 
-			p.logger.Printf("[TRACE] Test Message")
+			p.logger.Trace("Test Message")
 			if tc.expectWrite {
 				assert.NotEmpty(t, buf.String())
 			} else {

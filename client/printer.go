@@ -5,12 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 var _ Client = (*Printer)(nil)
+
+const (
+	printerSubsystemName = "printer"
+	loggingSystemName    = "client"
+)
 
 // Printer is a fake client that only logs out actions. Intended to mirror
 // TerraformCLI client and to be used for development only
@@ -18,7 +22,7 @@ type Printer struct {
 	logLevel   string
 	workingDir string
 	workspace  string
-	logger     *log.Logger
+	logger     logging.Logger
 }
 
 // PrinterConfig configures the log client
@@ -35,7 +39,8 @@ func NewPrinter(config *PrinterConfig) (*Printer, error) {
 		return nil, errors.New("PrinterConfig cannot be nil - mirror Terraform CLI error")
 	}
 
-	logger, err := logging.SetupLocal(config.Writer)
+	logger, err := logging.SetupLocal(config.Writer, loggingSystemName, printerSubsystemName,
+		"workspace", config.Workspace, "working_dir", config.WorkingDir)
 	if err != nil {
 		return &Printer{}, fmt.Errorf("error creating new logger: %s", err)
 	}
@@ -50,42 +55,36 @@ func NewPrinter(config *PrinterConfig) (*Printer, error) {
 
 // SetEnv logs out 'setenv'
 func (p *Printer) SetEnv(map[string]string) error {
-	p.logger.Printf("[INFO] (client.printer) setting workspace environment: "+
-		"'%s', workingdir: '%s'", p.workspace, p.workingDir)
+	p.logger.Info("setting environment for workspace")
 	return nil
 }
 
 // SetStdout logs out 'set standard out'
-func (p *Printer) SetStdout(w io.Writer) {
-	p.logger.Printf("[INFO] (client.printer) setting standard out for workspace: "+
-		"'%s', workingdir: '%s'", p.workspace, p.workingDir)
+func (p *Printer) SetStdout(io.Writer) {
+	p.logger.Info("setting standard out for workspace")
 }
 
 // Init logs out 'init'
-func (p *Printer) Init(ctx context.Context) error {
-	p.logger.Printf("[INFO] (client.printer) initing workspace: '%s', workingdir: '%s'",
-		p.workspace, p.workingDir)
+func (p *Printer) Init(context.Context) error {
+	p.logger.Info("initing workspace")
 	return nil
 }
 
 // Apply logs out 'apply'
-func (p *Printer) Apply(ctx context.Context) error {
-	p.logger.Printf("[INFO] (client.printer) applying workspace: '%s', workingdir: '%s'",
-		p.workspace, p.workingDir)
+func (p *Printer) Apply(context.Context) error {
+	p.logger.Info("applying workspace")
 	return nil
 }
 
 // Plan logs out 'plan'
-func (p *Printer) Plan(ctx context.Context) (bool, error) {
-	p.logger.Printf("[INFO] (client.printer) planning workspace: '%s', workingdir: '%s'",
-		p.workspace, p.workingDir)
+func (p *Printer) Plan(context.Context) (bool, error) {
+	p.logger.Info("planning workspace")
 	return true, nil
 }
 
 // Validate logs out 'validate'
-func (p *Printer) Validate(ctx context.Context) error {
-	p.logger.Printf("[INFO] (client.printer) validating workspace: '%s', workingdir: '%s'",
-		p.workspace, p.workingDir)
+func (p *Printer) Validate(context.Context) error {
+	p.logger.Info("validating workspace")
 	return nil
 }
 

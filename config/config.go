@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul/lib/decode"
 	"github.com/hashicorp/hcl"
@@ -27,6 +27,8 @@ const (
 	// artifacts generated for each task. By default, a child directory is
 	// created for each task with its task name.
 	DefaultWorkingDir = "sync-tasks"
+
+	filePathLogKey = "file_path"
 )
 
 // Config is used to configure Sync
@@ -376,6 +378,7 @@ func decodeConfig(content []byte, file string) (*Config, error) {
 	var err error
 
 	format := fileFormat(file)
+	logger := logging.Global().Named(logSystemName)
 	switch format {
 	case "json":
 		err = json.Unmarshal(content, &raw)
@@ -395,7 +398,7 @@ func decodeConfig(content []byte, file string) (*Config, error) {
 		return nil, fmt.Errorf("invalid format: %s", format)
 	}
 	if err != nil {
-		log.Printf("[ERR] (config) failed to decode %s", format)
+		logger.Error("failed to decode config", "file_format", format, "error", err)
 		return nil, err
 	}
 
@@ -409,12 +412,12 @@ func decodeConfig(content []byte, file string) (*Config, error) {
 		Result:           &config,
 	})
 	if err != nil {
-		log.Println("[DEBUG] (config) mapstructure decoder creation failed")
+		logger.Debug("mapstructure decoder create failed")
 		return nil, err
 	}
 
 	if err := decoder.Decode(raw); err != nil {
-		log.Println("[DEBUG] (config) mapstructure decode failed")
+		logger.Debug("mapstructure decode failed")
 		return nil, decodeError(err)
 	}
 
@@ -433,15 +436,16 @@ func fromFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("invalid file format: %s", format)
 	}
 
+	logger := logging.Global().Named(logSystemName)
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Printf("[ERR] (config) failed reading config file from disk: %s\n", path)
+		logger.Error("failed reading config file from disk", filePathLogKey, path)
 		return nil, err
 	}
 
 	config, err := decodeConfig(content, filepath.Base(path))
 	if err != nil {
-		log.Printf("[ERR] (config) failed decoding content from file: %s\n", path)
+		logger.Error("failed decoding content from file", filePathLogKey, path)
 		return nil, err
 	}
 
@@ -452,8 +456,9 @@ func fromFile(path string) (*Config, error) {
 // returning the resulting config.
 func fromPath(path string) (*Config, error) {
 	// Ensure the given filepath exists
+	logger := logging.Global().Named(logSystemName)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		log.Printf("[ERR] (config) missing file/folder: %s\n", path)
+		logger.Error("missing file/folder", filePathLogKey, path)
 		return nil, err
 	}
 
@@ -478,7 +483,7 @@ func fromPath(path string) (*Config, error) {
 	// Ensure the given filepath has at least one config file
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
-		log.Printf("[ERR] (config) failed listing directory: %s\n", path)
+		logger.Error("failed listing directory", filePathLogKey, path)
 		return nil, err
 	}
 

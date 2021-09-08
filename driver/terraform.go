@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/handler"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/notifier"
@@ -32,6 +33,8 @@ const (
 	filePerms       = os.FileMode(0640) // -rw-r-----
 
 	errSuggestion = "remove Terraform from the configured path or specify a new path to safely install a compatible version."
+
+	taskNameLogKey = "task_name"
 )
 
 var (
@@ -41,7 +44,7 @@ var (
 	errIncompatibleTerraformBinary = fmt.Errorf("incompatible Terraform binary: %s", errSuggestion)
 )
 
-// Terraform is an Sync driver that uses the Terraform CLI to interface with
+// Terraform is a Sync driver that uses the Terraform CLI to interface with
 // low-level network infrastructure.
 type Terraform struct {
 	mu *sync.RWMutex
@@ -61,6 +64,8 @@ type Terraform struct {
 
 	inited       bool
 	renderedOnce bool
+
+	logger logging.Logger
 }
 
 // TerraformConfig configures the Terraform driver
@@ -82,9 +87,10 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 	task := config.Task
 	taskName := task.Name()
 	wd := task.WorkingDir()
+	logger := logging.Global().Named(logSystemName).Named(terraformSubsystemName)
 	if _, err := os.Stat(wd); os.IsNotExist(err) {
 		if err := os.MkdirAll(wd, workingDirPerms); err != nil {
-			log.Printf("[ERR] (driver.terraform) error creating task work directory: %s", err)
+			logger.Error("error creating task work directory", "error", err)
 			return nil, err
 		}
 	}
@@ -99,7 +105,7 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		varFiles:   task.VariableFiles(),
 	})
 	if err != nil {
-		log.Printf("[ERR] (driver.terraform) init client type '%s' error: %s", config.ClientType, err)
+		logger.Error("init client type error", "client_type", config.ClientType, "error", err)
 		return nil, err
 	}
 
@@ -116,7 +122,7 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		tfClient.SetEnv(env)
 	}
 
-	handler, err := getTerraformHandlers(taskName, task.Providers())
+	h, err := getTerraformHandlers(taskName, task.Providers())
 	if err != nil {
 		return nil, err
 	}
@@ -128,10 +134,11 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		requiredProviders: config.RequiredProviders,
 		client:            tfClient,
 		logClient:         config.Log,
-		postApply:         handler,
+		postApply:         h,
 		resolver:          hcat.NewResolver(),
 		watcher:           config.Watcher,
 		fileReader:        ioutil.ReadFile,
+		logger:            logger,
 	}, nil
 }
 
@@ -152,8 +159,8 @@ func (tf *Terraform) InitTask(ctx context.Context) error {
 	defer tf.mu.Unlock()
 
 	if !tf.task.IsEnabled() {
-		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"initializing", tf.task.Name())
+		tf.logger.Trace(
+			"task disabled. skip initializing", taskNameLogKey, tf.task.Name())
 		return nil
 	}
 
@@ -168,25 +175,22 @@ func (tf *Terraform) SetBufferPeriod() {
 
 	taskName := tf.task.Name()
 	if !tf.task.IsEnabled() {
-		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"setting buffer period", taskName)
+		tf.logger.Trace("task disabled. skip setting buffer period", taskNameLogKey, taskName)
 		return
 	}
 
 	if tf.template == nil {
-		log.Printf("[WARN] (driver.terraform) attempted to set buffer for "+
-			"'%s' which does not have a template", taskName)
+		tf.logger.Warn("attempted to set buffer for task which does not have a template", taskNameLogKey, taskName)
 		return
 	}
 
 	bp, ok := tf.task.BufferPeriod()
 	if !ok {
-		log.Printf("[TRACE] (driver.terraform) no buffer period for '%s'", taskName)
+		tf.logger.Trace("no buffer period for task", taskNameLogKey, taskName)
 		return
 	}
 
-	log.Printf("[TRACE] (driver.terraform) set buffer period for '%s': %+v",
-		taskName, bp)
+	tf.logger.Trace("set buffer period for task", taskNameLogKey, taskName, "buffer_period", bp)
 	tf.watcher.SetBufferPeriod(bp.Min, bp.Max, tf.template.ID())
 }
 
@@ -200,12 +204,11 @@ func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
 	taskName := tf.task.Name()
 
 	if !tf.task.IsEnabled() {
-		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"rendering template", taskName)
+		tf.logger.Trace("task disabled. skip rendering template", taskNameLogKey, taskName)
 		return true, nil
 	}
 
-	log.Printf("[TRACE] (driver.terraform) checking dependency changes for task %s", taskName)
+	tf.logger.Trace("checking dependency changes for task", taskNameLogKey, taskName)
 	re, err := tf.renderTemplate(ctx)
 	return (re.Complete && !re.NoChange), err
 }
@@ -217,8 +220,8 @@ func (tf *Terraform) InspectTask(ctx context.Context) error {
 	defer tf.mu.Unlock()
 
 	if !tf.task.IsEnabled() {
-		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"inspecting", tf.task.Name())
+		tf.logger.Trace(
+			"task disabled. skip inspecting", taskNameLogKey, tf.task.Name())
 		return nil
 	}
 
@@ -232,8 +235,8 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 	defer tf.mu.Unlock()
 
 	if !tf.task.IsEnabled() {
-		log.Printf("[TRACE] (driver.terraform) task '%s' disabled. skip"+
-			"applying", tf.task.Name())
+		tf.logger.Trace(
+			"task disabled. skip applying", taskNameLogKey, tf.task.Name())
 		return nil
 	}
 
@@ -302,8 +305,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 	}
 
 	if patch.RunOption == RunOptionInspect {
-		log.Printf("[TRACE] (driver.terraform) update task '%s'. inspect run "+
-			"option", taskName)
+		tf.logger.Trace("update task. inspect run option", taskNameLogKey, taskName)
 		plan, err := tf.inspectTask(ctx, true)
 		if err != nil {
 			return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to inspect "+
@@ -313,8 +315,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 	}
 
 	if patch.RunOption == RunOptionNow {
-		log.Printf("[TRACE] (driver.terraform) update task '%s'. run now "+
-			"option", taskName)
+		tf.logger.Trace("update task. run now option", taskNameLogKey, taskName)
 		return InspectPlan{}, tf.applyTask(ctx)
 	}
 
@@ -327,12 +328,11 @@ func (tf *Terraform) init(ctx context.Context) error {
 	taskName := tf.task.Name()
 
 	if tf.inited {
-		log.Printf("[TRACE] (driver.terraform) workspace for task already "+
-			"initialized, skipping for '%s'", taskName)
+		tf.logger.Trace("workspace for task already initialized, skipping for task", taskNameLogKey, taskName)
 		return nil
 	}
 
-	log.Printf("[TRACE] (driver.terraform) initializing workspace '%s'", taskName)
+	tf.logger.Trace("initializing workspace", taskNameLogKey, taskName)
 	if err := tf.client.Init(ctx); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error tf-init for '%s'", taskName))
 	}
@@ -354,8 +354,8 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 	if strings.HasPrefix(moduleSource, "./") || strings.HasPrefix(moduleSource, "../") {
 		wd, err := os.Getwd()
 		if err != nil {
-			log.Println("[ERR] (driver.terraform) unable to retrieve current " +
-				"working directory to determine path to local module")
+			tf.logger.Error("unable to retrieve current working directory to determine path to local module",
+				"error", err)
 			return err
 		}
 		moduleSource = filepath.Join(wd, tf.task.source)
@@ -379,8 +379,7 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 	// initialize workspace
 	taskName := tf.task.Name()
 	if err := tf.init(ctx); err != nil {
-		log.Printf("[ERR] (driver.terraform) error initializing workspace "+
-			"for task '%s'", taskName)
+		tf.logger.Error("error initializing worksapce for task", taskNameLogKey, taskName)
 		return err
 	}
 
@@ -396,10 +395,11 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 func (tf *Terraform) renderTemplate(ctx context.Context) (hcat.ResolveEvent, error) {
 	taskName := tf.task.Name()
 
+	// log the task name with each log
+	tnlog := tf.logger.With(taskNameLogKey, taskName)
 	result, err := tf.resolver.Run(tf.template, tf.watcher)
 	if err != nil {
-		log.Printf("[ERROR] (driver.terraform) checking dependency changes "+
-			"for '%s': %s", taskName, err)
+		tnlog.Error("error checking dependency changes for task", "error", err)
 
 		return hcat.ResolveEvent{}, fmt.Errorf("error fetching template dependencies for task %s: %s",
 			taskName, err)
@@ -409,22 +409,20 @@ func (tf *Terraform) renderTemplate(ctx context.Context) (hcat.ResolveEvent, err
 	// there may be no dependency changes rather than naturally triggered
 	// e.g. when a task is re-enabled
 	if result.Complete && result.NoChange && tf.renderedOnce {
-		log.Printf("[TRACE] (driver.terraform) no changes detected for task %s", taskName)
+		tnlog.Trace("no changes detected for task")
 		return result, nil
 	}
 
 	if result.Complete && !result.NoChange {
-		log.Printf("[DEBUG] (driver.terraform) change detected for task %s", taskName)
+		tnlog.Debug("change detected for task")
 
 		rendered, err := tf.template.Render(result.Contents)
 		if err != nil {
-			log.Printf("[ERR] (driver.terraform) rendering template for '%s': %s",
-				taskName, err)
+			tnlog.Error("rendering template for task", "error", err)
 
 			return hcat.ResolveEvent{}, err
 		}
-		log.Printf("[TRACE] (driver.terraform) template for task %q rendered: %+v",
-			taskName, rendered)
+		tnlog.Trace("template for task rendered", "rendered_template", rendered)
 		tf.renderedOnce = true
 	}
 
@@ -440,16 +438,16 @@ func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (InspectP
 	if returnPlan {
 		tf.client.SetStdout(&buf)
 
-		var logger *log.Logger
+		var tfLogger *log.Logger
 		if tf.logClient {
-			logger = log.New(log.Writer(), "", log.Flags())
+			tfLogger = log.New(log.Writer(), "", log.Flags())
 		} else {
-			logger = log.New(ioutil.Discard, "", 0)
+			tfLogger = log.New(ioutil.Discard, "", 0)
 		}
-		defer tf.client.SetStdout(logger.Writer())
+		defer tf.client.SetStdout(tfLogger.Writer())
 	}
 
-	log.Printf("[TRACE] (driver.terraform) plan '%s'", taskName)
+	tf.logger.Trace("plan", taskNameLogKey, taskName)
 	c, err := tf.client.Plan(ctx)
 	if err != nil {
 		return InspectPlan{}, errors.Wrap(err,
@@ -466,14 +464,13 @@ func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (InspectP
 func (tf *Terraform) applyTask(ctx context.Context) error {
 	taskName := tf.task.Name()
 
-	log.Printf("[TRACE] (driver.terraform) apply '%s'", taskName)
+	tf.logger.Trace("apply", taskNameLogKey, taskName)
 	if err := tf.client.Apply(ctx); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error tf-apply for '%s'", taskName))
 	}
 
 	if tf.postApply != nil {
-		log.Printf("[TRACE] (driver.terraform) post-apply out-of-band actions "+
-			"for '%s'", taskName)
+		tf.logger.Trace("post-apply out-of-band actions for task", taskNameLogKey, taskName)
 		if err := tf.postApply.Do(ctx, nil); err != nil {
 			return err
 		}
@@ -490,8 +487,8 @@ func (tf *Terraform) initTaskTemplate() error {
 
 	content, err := tf.fileReader(tmplFullpath)
 	if err != nil {
-		log.Printf("[ERR] (driver.terraform) unable to read file for '%s': %s",
-			tf.task.Name(), err)
+		tf.logger.Error(
+			"unable to read for task", taskNameLogKey, tf.task.Name(), "error", err)
 		return err
 	}
 
@@ -558,24 +555,22 @@ func (tf *Terraform) validateTask(ctx context.Context) error {
 func getTerraformHandlers(taskName string, providers TerraformProviderBlocks) (handler.Handler, error) {
 	counter := 0
 	var next handler.Handler
+	logger := logging.Global().Named(logSystemName).Named(terraformSubsystemName)
 	for _, p := range providers {
 		h, err := handler.TerraformProviderHandler(p.Name(), p.ProviderBlock().RawConfig())
 		if err != nil {
-			log.Printf(
-				"[ERR] (driver.terraform) could not initialize handler for "+
-					"provider '%s': %s", p.Name(), err)
+			logger.Error("error, could not initialize handler for provider",
+				"provider", p.Name, "error", err)
 			return nil, err
 		}
 		if h != nil {
 			counter++
-			log.Printf(
-				"[INFO] (driver.terraform) retrieved handler for provider '%s'", p.Name())
+			logger.Info("retrieved handler for provider", "provider", p.Name())
 			h.SetNext(next)
 			next = h
 		}
 	}
-	log.Printf("[INFO] (driver.terraform) retrieved %d Terraform handlers for task '%s'",
-		counter, taskName)
+	logger.Info(fmt.Sprintf("retrieved %d Terraform handlers for task", counter), taskNameLogKey, taskName)
 	return next, nil
 }
 

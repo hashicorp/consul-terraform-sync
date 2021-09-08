@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/handler"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates"
@@ -97,6 +98,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			controller := ReadWrite{
 				baseController: &baseController{
 					drivers: drivers,
+					logger:  logging.NewNullLogger(),
 				},
 				store: event.NewStore(),
 			}
@@ -148,6 +150,7 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 		controller := ReadWrite{
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
+				logger:  logging.NewNullLogger(),
 			},
 			store: event.NewStore(),
 		}
@@ -212,7 +215,8 @@ func TestOnce(t *testing.T) {
 					d.On("ApplyTask", mock.Anything).Return(nil).Once()
 					return d, nil
 				},
-				conf: multipleTaskConfig(tc.numTasks),
+				conf:   multipleTaskConfig(tc.numTasks),
+				logger: logging.NewNullLogger(),
 			}
 
 			ctx := context.Background()
@@ -267,7 +271,8 @@ func TestReadWrite_Once_error(t *testing.T) {
 			}
 			return d, nil
 		},
-		conf: multipleTaskConfig(numTasks),
+		conf:   multipleTaskConfig(numTasks),
+		logger: logging.NewNullLogger(),
 	}
 
 	ctx := context.Background()
@@ -294,6 +299,7 @@ func TestReadWriteUnits(t *testing.T) {
 		controller := ReadWrite{
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
+				logger:  logging.NewNullLogger(),
 			},
 			store: event.NewStore(),
 		}
@@ -318,6 +324,7 @@ func TestReadWriteUnits(t *testing.T) {
 		controller := ReadWrite{
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
+				logger:  logging.NewNullLogger(),
 			},
 			store: event.NewStore(),
 		}
@@ -350,6 +357,7 @@ func TestReadWriteRun_context_cancel(t *testing.T) {
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			watcher: w,
+			logger:  logging.NewNullLogger(),
 		},
 		store: event.NewStore(),
 	}
@@ -385,6 +393,7 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 	ctrl := ReadWrite{
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
+			logger:  logging.NewNullLogger(),
 		},
 		store: event.NewStore(),
 	}

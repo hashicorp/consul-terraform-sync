@@ -253,7 +253,8 @@ func TestTask_updateTask(t *testing.T) {
 			}).
 			Return(driver.InspectPlan{}, context.Canceled).Once()
 		d.On("Task").Return(&driver.Task{}).Once()
-		handler.drivers.Add("task_a", d)
+		err = handler.drivers.Add("task_a", d)
+		require.NoError(t, err)
 
 		resp := httptest.NewRecorder()
 		go func() {
