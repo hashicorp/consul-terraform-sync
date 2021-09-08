@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
@@ -193,7 +194,7 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *TaskConfig) Finalize(bp *BufferPeriodConfig, wd string) {
+func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if c == nil {
 		return
 	}
@@ -230,6 +231,21 @@ func (c *TaskConfig) Finalize(bp *BufferPeriodConfig, wd string) {
 		c.TFVersion = String("")
 	}
 
+	bp := globalBp
+	if _, ok := c.Condition.(*ScheduleConditionConfig); ok {
+		// disable buffer_period for schedule condition
+		if c.BufferPeriod != nil {
+			logging.Global().Named(logSystemName).Named(taskSubsystemName).Warn(
+				"disabling buffer_period for schedule condition. overriding "+
+					"buffer_period configured for this task",
+				"task_name", StringVal(c.Name), "buffer_period", c.BufferPeriod.GoString())
+		}
+		bp = &BufferPeriodConfig{
+			Enabled: Bool(false),
+			Min:     TimeDuration(0 * time.Second),
+			Max:     TimeDuration(0 * time.Second),
+		}
+	}
 	if c.BufferPeriod == nil {
 		c.BufferPeriod = bp
 	}
@@ -288,6 +304,9 @@ func (c *TaskConfig) Validate() error {
 		case *ConsulKVConditionConfig:
 			return fmt.Errorf("consul-kv condition requires at least one service to " +
 				"be configured in task.services")
+		case *ScheduleConditionConfig:
+			return fmt.Errorf("schedule condition requires at least one service to " +
+				"be configured in task.services")
 		}
 	} else {
 		switch cond := c.Condition.(type) {
@@ -295,9 +314,11 @@ func (c *TaskConfig) Validate() error {
 			if cond.Regexp != nil && *cond.Regexp != "" {
 				err := fmt.Errorf("task.services is not allowed if task.condition.regexp " +
 					"is configured for a services condition")
-				logging.Global().Named(logSystemName+taskSubsystemName).Error("[ERR] (config.task) list of "+
-					"services and service condition regex both provided. If both are needed, consider "+
-					"including the list in the regex or creating separate tasks.", "error", err)
+				logging.Global().Named(logSystemName).Named(taskSubsystemName).
+					Error("list of services and service condition regex both "+
+						"provided. If both are needed, consider including the "+
+						"list in the regex or creating separate tasks",
+						"task_name", StringVal(c.Name), "error", err)
 				return err
 			}
 		}

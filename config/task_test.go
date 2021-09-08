@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -366,6 +367,31 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				WorkingDir:   String("sync-tasks/task"),
 			},
 		},
+		{
+			"with_schedule_condition",
+			&TaskConfig{
+				Name:      String("task"),
+				Condition: &ScheduleConditionConfig{},
+			},
+			&TaskConfig{
+				Description: String(""),
+				Name:        String("task"),
+				Providers:   []string{},
+				Services:    []string{},
+				Source:      String(""),
+				VarFiles:    []string{},
+				Version:     String(""),
+				TFVersion:   String(""),
+				BufferPeriod: &BufferPeriodConfig{
+					Enabled: Bool(false),
+					Min:     TimeDuration(0 * time.Second),
+					Max:     TimeDuration(0 * time.Second),
+				},
+				Enabled:    Bool(true),
+				Condition:  &ScheduleConditionConfig{String("")},
+				WorkingDir: String("sync-tasks/task"),
+			},
+		},
 	}
 
 	for i, tc := range cases {
@@ -438,6 +464,16 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
+			"valid (service with schedule condition)",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Services:  []string{"serviceA", "serviceB"},
+				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
+			},
+			true,
+		},
+		{
 			"missing name",
 			&TaskConfig{Services: []string{"service"}, Source: String("source")},
 			false,
@@ -473,6 +509,15 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Name:      String("task"),
 				Source:    String("source"),
 				Condition: &CatalogServicesConditionConfig{},
+			},
+			false,
+		},
+		{
+			"missing service with schedule condition",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 			},
 			false,
 		},
