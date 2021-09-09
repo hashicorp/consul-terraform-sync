@@ -84,7 +84,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	assert.Equal(t, 0, latestStartTime.Second()%10, fmt.Sprintf("expected "+
 		"start time to be at the 10s mark but was at %s", latestStartTime))
 
-	// 2. Register a new service. Confirm task only triggered on schedule
+	// 2. Register two new services. Confirm task only triggered on schedule
 
 	// wait for scheduled task to have just ran. then register consul services
 	api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
@@ -229,7 +229,9 @@ func checkScheduledRun(t *testing.T, taskName string, depChangeTime time.Time,
 	taskSchedule time.Duration, port int) {
 
 	e := events(t, taskName, port)
-	require.GreaterOrEqual(t, len(e), 2)
+	require.GreaterOrEqual(t, len(e), 2, "expect at least two events. cannot "+
+		"use this check for first event. first event is from once-mode which "+
+		"calls task on demand, not on schedule")
 
 	// confirm that latest event is caused by latest dependency change
 	latestEventStartTime := e[0].StartTime
@@ -239,7 +241,7 @@ func checkScheduledRun(t *testing.T, taskName string, depChangeTime time.Time,
 
 	// confirm that prior event happened before latest dependency change
 	priorEventStartTime := e[1].StartTime
-	assert.True(t, depChangeTime.After(priorEventStartTime), fmt.Sprintf(
+	assert.True(t, priorEventStartTime.Before(depChangeTime), fmt.Sprintf(
 		"expected prior event time %s to be before dep change time %s",
 		priorEventStartTime, depChangeTime))
 

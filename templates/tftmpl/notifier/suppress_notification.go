@@ -62,8 +62,8 @@ func (n *SuppressNotification) Notify(d interface{}) (notify bool) {
 		}
 	}
 
-	// keep the template up-to-date with latest dependency information even
-	// if we do not notify watcher.
+	// still let the template know that its dependencies have been updated so
+	// that it will re-render when triggered, even if we do not notify watcher.
 	n.Template.Notify(d)
 
 	return notify

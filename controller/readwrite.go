@@ -167,7 +167,7 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver) erro
 	rw.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
 		"wait_time", waitTime, "next_runtime", nextTime)
 
-	for i := int64(1); ; i++ {
+	for {
 		select {
 		case <-time.After(waitTime):
 			rw.logger.Info("time for scheduled task", taskNameLogKey, taskName)
@@ -302,7 +302,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	if !rendered && !once {
 		if _, ok := task.Condition().(*config.ScheduleConditionConfig); ok {
 			// We sometimes want to store an event when a scheduled task did not
-			// rendered i.e. the task ran on schedule but there were no
+			// render i.e. the task ran on schedule but there were no
 			// dependency changes so the template did not re-render
 			//
 			// During once-mode though, a task may not have rendered because it

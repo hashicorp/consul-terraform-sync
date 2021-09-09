@@ -61,8 +61,11 @@ func Test_SuppressNotification_Notify(t *testing.T) {
 		// 3. subsequent services dependency do not notify
 		notify = n.Notify([]*dep.HealthService{})
 		assert.False(t, notify, "third services dep should not have notified")
+		notify = n.Notify([]*dep.HealthService{})
 		assert.False(t, notify, "fourth services dep should not have notified")
+		notify = n.Notify([]*dep.HealthService{})
 		assert.False(t, notify, "fifth services dep should not have notified")
+		notify = n.Notify([]*dep.HealthService{})
 		assert.False(t, notify, "sixth services dep should not have notified")
 	})
 }
