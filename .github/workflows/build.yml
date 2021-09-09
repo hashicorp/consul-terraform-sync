@@ -3,6 +3,9 @@ name: build
 on:
   push
 
+env:
+  PKG_NAME: "consul-terraform-sync"
+
 jobs:
   get-product-version:
     runs-on: ubuntu-latest
@@ -59,7 +62,7 @@ jobs:
           maintainer: "HashiCorp"
           homepage: "https://github.com/hashicorp/consul-terraform-sync"
           license: "MPL-2.0"
-          binary: "dist/${{ github.event.repository.name }}"
+          binary: "dist/${{ env.PKG_NAME }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
 
@@ -122,7 +125,7 @@ jobs:
           maintainer: "HashiCorp"
           homepage: "https://github.com/hashicorp/consul-terraform-sync"
           license: "MPL-2.0"
-          binary: "dist/${{ github.event.repository.name }}"
+          binary: "dist/${{ env.PKG_NAME }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
 
@@ -196,7 +199,7 @@ jobs:
           maintainer: "HashiCorp"
           homepage: "https://github.com/hashicorp/consul-terraform-sync"
           license: "MPL-2.0"
-          binary: "dist/${{ github.event.repository.name }}"
+          binary: "dist/${{ env.PKG_NAME }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
 
@@ -256,7 +259,7 @@ jobs:
           maintainer: "HashiCorp"
           homepage: "https://github.com/hashicorp/consul-terraform-sync"
           license: "MPL-2.0"
-          binary: "dist/${{ github.event.repository.name }}"
+          binary: "dist/${{ env.PKG_NAME }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
 
