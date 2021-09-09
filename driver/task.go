@@ -127,11 +127,19 @@ func (t *Task) BufferPeriod() (BufferPeriod, bool) {
 	return *t.bufferPeriod, true
 }
 
-// ConditionType returns the type of condition for the task to run
+// Condition returns the type of condition for the task to run
 func (t *Task) Condition() config.ConditionConfig {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.condition
+}
+
+// IsScheduled returns if the task is a scheduled task or not (a dynamic task)
+func (t *Task) IsScheduled() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	_, ok := t.condition.(*config.ScheduleConditionConfig)
+	return ok
 }
 
 // Description returns the task description

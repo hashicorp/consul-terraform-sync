@@ -65,7 +65,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	rw.drivers.SetBufferPeriod()
 
 	for _, d := range rw.drivers.Map() {
-		if _, ok := d.Task().Condition().(*config.ScheduleConditionConfig); ok {
+		if d.Task().IsScheduled() {
 			go rw.runScheduledTask(ctx, d)
 		}
 	}
@@ -105,7 +105,7 @@ func (rw *ReadWrite) runDynamicTasks(ctx context.Context) chan error {
 	errCh := make(chan error, 1)
 	wg := sync.WaitGroup{}
 	for taskName, d := range rw.drivers.Map() {
-		if _, ok := d.Task().Condition().(*config.ScheduleConditionConfig); ok {
+		if d.Task().IsScheduled() {
 			// Schedule tasks are not dynamic and run in a different process
 			continue
 		}
@@ -259,7 +259,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	task := d.Task()
 	taskName := task.Name()
 	if !task.IsEnabled() {
-		if _, ok := task.Condition().(*config.ScheduleConditionConfig); ok {
+		if task.IsScheduled() {
 			// Schedule tasks are specifically triggered and logged at INFO.
 			// Accompanying disabled log should be at same level
 			rw.logger.Info("skipping disabled scheduled task", taskNameLogKey, taskName)
@@ -300,7 +300,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	}
 
 	if !rendered && !once {
-		if _, ok := task.Condition().(*config.ScheduleConditionConfig); ok {
+		if task.IsScheduled() {
 			// We sometimes want to store an event when a scheduled task did not
 			// render i.e. the task ran on schedule but there were no
 			// dependency changes so the template did not re-render
