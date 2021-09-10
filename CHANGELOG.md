@@ -1,6 +1,7 @@
 ## UNRELEASED
 FEATURES:
 * Add support for Consul KV triggers. [[GH-150](https://github.com/hashicorp/consul-terraform-sync/issues/150)]
+* Add support for triggering a task on schedule for a task module requiring only services input. Supports a new schedule condition that is configured in conjunction with `task.services`. [[GH-308](https://github.com/hashicorp/consul-terraform-sync/issues/308)]
 
 ## 0.3.0 (September 01, 2021)
 BREAKING CHANGES:
