@@ -530,6 +530,8 @@ func (tf *Terraform) initTaskTemplate() error {
 	case *config.ConsulKVConditionConfig:
 		tf.template = notifier.NewConsulKV(tmpl,
 			len(services))
+	case *config.ScheduleConditionConfig:
+		tf.template = notifier.NewSuppressNotification(tmpl, len(services))
 	default:
 		tf.template = tmpl
 	}
