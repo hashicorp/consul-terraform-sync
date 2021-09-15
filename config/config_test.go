@@ -94,15 +94,18 @@ var (
 				Providers:   []string{"X"},
 				Source:      String("Y"),
 				Condition: &CatalogServicesConditionConfig{
-					Regexp:            String(".*"),
-					SourceIncludesVar: Bool(true),
-					Datacenter:        String("dc2"),
-					Namespace:         String("ns2"),
-					NodeMeta: map[string]string{
-						"key1": "value1",
-						"key2": "value2",
+					CatalogServicesMonitorConfig{
+						Regexp:            String(".*"),
+						SourceIncludesVar: Bool(true),
+						Datacenter:        String("dc2"),
+						Namespace:         String("ns2"),
+						NodeMeta: map[string]string{
+							"key1": "value1",
+							"key2": "value2",
+						},
 					},
 				},
+				SourceInput: DefaultSourceInputConfig(),
 			},
 		},
 		TerraformProviders: &TerraformProviderConfigs{{
@@ -348,6 +351,7 @@ func TestConfig_Validate(t *testing.T) {
 		Providers:   []string{"Y"},
 		Source:      String("Z"),
 		Condition:   &ServicesConditionConfig{},
+		SourceInput: DefaultSourceInputConfig(),
 	})
 	*validMultiTask.TerraformProviders = append(*validMultiTask.TerraformProviders,
 		&TerraformProviderConfig{"Y": map[string]interface{}{}})

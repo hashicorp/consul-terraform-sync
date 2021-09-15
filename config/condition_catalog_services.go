@@ -2,53 +2,37 @@ package config
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 )
-
-const catalogServicesConditionType = "catalog-services"
 
 var _ ConditionConfig = (*CatalogServicesConditionConfig)(nil)
 
 // CatalogServicesConditionConfig configures a condition configuration block
-// of type 'catalog-services'. A catalog-services condition is triggered by
+// of type 'catalog-services'. A catalog-services condition is triggered by changes
 // that occur to services in the catalog-services api.
 type CatalogServicesConditionConfig struct {
-	Regexp            *string           `mapstructure:"regexp"`
-	SourceIncludesVar *bool             `mapstructure:"source_includes_var"`
-	Datacenter        *string           `mapstructure:"datacenter"`
-	Namespace         *string           `mapstructure:"namespace"`
-	NodeMeta          map[string]string `mapstructure:"node_meta"`
+	CatalogServicesMonitorConfig `mapstructure:",squash"`
 }
 
 // Copy returns a deep copy of this configuration.
-func (c *CatalogServicesConditionConfig) Copy() ConditionConfig {
+func (c *CatalogServicesConditionConfig) Copy() MonitorConfig {
 	if c == nil {
 		return nil
 	}
 
-	var o CatalogServicesConditionConfig
-
-	o.Regexp = StringCopy(c.Regexp)
-	o.SourceIncludesVar = BoolCopy(c.SourceIncludesVar)
-	o.Datacenter = StringCopy(c.Datacenter)
-	o.Namespace = StringCopy(c.Namespace)
-
-	if c.NodeMeta != nil {
-		o.NodeMeta = make(map[string]string)
-		for k, v := range c.NodeMeta {
-			o.NodeMeta[k] = v
-		}
+	m, ok := c.CatalogServicesMonitorConfig.Copy().(*CatalogServicesMonitorConfig)
+	if !ok {
+		return nil
 	}
-
-	return &o
+	return &CatalogServicesConditionConfig{
+		CatalogServicesMonitorConfig: *m,
+	}
 }
 
 // Merge combines all values in this configuration with the values in the other
 // configuration, with values in the other configuration taking precedence.
 // Maps and slices are merged, most other values are overwritten. Complex
 // structs define their own merge functionality.
-func (c *CatalogServicesConditionConfig) Merge(o ConditionConfig) ConditionConfig {
+func (c *CatalogServicesConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 	if c == nil {
 		if isConditionNil(o) { // o is interface, use isConditionNil()
 			return nil
@@ -60,40 +44,19 @@ func (c *CatalogServicesConditionConfig) Merge(o ConditionConfig) ConditionConfi
 		return c.Copy()
 	}
 
-	r := c.Copy()
-	o2, ok := o.(*CatalogServicesConditionConfig)
+	cscc, ok := o.(*CatalogServicesConditionConfig)
 	if !ok {
-		return r
+		return nil
 	}
 
-	r2 := r.(*CatalogServicesConditionConfig)
-
-	if o2.Regexp != nil {
-		r2.Regexp = StringCopy(o2.Regexp)
+	merged, ok := c.CatalogServicesMonitorConfig.Merge(&cscc.CatalogServicesMonitorConfig).(*CatalogServicesMonitorConfig)
+	if !ok {
+		return nil
 	}
 
-	if o2.SourceIncludesVar != nil {
-		r2.SourceIncludesVar = BoolCopy(o2.SourceIncludesVar)
+	return &CatalogServicesConditionConfig{
+		CatalogServicesMonitorConfig: *merged,
 	}
-
-	if o2.Datacenter != nil {
-		r2.Datacenter = StringCopy(o2.Datacenter)
-	}
-
-	if o2.Namespace != nil {
-		r2.Namespace = StringCopy(o2.Namespace)
-	}
-
-	if o2.NodeMeta != nil {
-		if r2.NodeMeta == nil {
-			r2.NodeMeta = make(map[string]string)
-		}
-		for k, v := range o2.NodeMeta {
-			r2.NodeMeta[k] = v
-		}
-	}
-
-	return r2
 }
 
 // Finalize ensures there no nil pointers with the _exception_ of Regexp. There
@@ -103,33 +66,7 @@ func (c *CatalogServicesConditionConfig) Finalize(services []string) {
 	if c == nil { // config not required, return early
 		return
 	}
-
-	if c.Regexp == nil && len(services) > 0 {
-		// default behavior: exact match on any of the services configured for
-		// the task. cannot default to "" since it is possible regex config.
-		// ex: ["api", "web", "db"] => "^api$|^web$|^db$"
-		regex := make([]string, len(services))
-		for ix, s := range services {
-			regex[ix] = fmt.Sprintf("^%s$", s) // exact match on service's name
-		}
-		c.Regexp = String(strings.Join(regex, "|"))
-	}
-
-	if c.SourceIncludesVar == nil {
-		c.SourceIncludesVar = Bool(false)
-	}
-
-	if c.Datacenter == nil {
-		c.Datacenter = String("")
-	}
-
-	if c.Namespace == nil {
-		c.Namespace = String("")
-	}
-
-	if c.NodeMeta == nil {
-		c.NodeMeta = make(map[string]string)
-	}
+	c.CatalogServicesMonitorConfig.Finalize(services)
 }
 
 // Validate validates the values and required options. This method is recommended
@@ -139,16 +76,7 @@ func (c *CatalogServicesConditionConfig) Validate() error {
 	if c == nil { // config not required, return early
 		return nil
 	}
-
-	if c.Regexp == nil {
-		return fmt.Errorf("task.services and catalog-services regexp cannot " +
-			"both be unset")
-	}
-
-	if _, err := regexp.Compile(StringVal(c.Regexp)); err != nil {
-		return fmt.Errorf("unable to compile catalog-services regexp: %s", err)
-	}
-	return nil
+	return c.CatalogServicesMonitorConfig.Validate()
 }
 
 // GoString defines the printable version of this struct.
@@ -158,16 +86,8 @@ func (c *CatalogServicesConditionConfig) GoString() string {
 	}
 
 	return fmt.Sprintf("&CatalogServicesConditionConfig{"+
-		"Regexp:%s, "+
-		"SourceIncludesVar:%v, "+
-		"Datacenter:%v, "+
-		"Namespace:%v, "+
-		"NodeMeta:%s"+
+		"%s"+
 		"}",
-		StringVal(c.Regexp),
-		BoolVal(c.SourceIncludesVar),
-		StringVal(c.Datacenter),
-		StringVal(c.Namespace),
-		c.NodeMeta,
+		c.CatalogServicesMonitorConfig.GoString(),
 	)
 }

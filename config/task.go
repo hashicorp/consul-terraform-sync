@@ -39,6 +39,10 @@ type TaskConfig struct {
 	// is the module path (local or remote).
 	Source *string `mapstructure:"source"`
 
+	// SourceInput defines the Consul objects (e.g. services, kv) whose values are
+	// provided as the task source’s input variables
+	SourceInput SourceInputConfig `mapstructure:"source_input"`
+
 	// VarFiles is a list of paths to files containing variables for the
 	// task. For the Terraform driver, these are files ending in `.tfvars` and
 	// are used as Terraform input variables passed as arguments to the Terraform
@@ -87,19 +91,17 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.Description = StringCopy(c.Description)
 	o.Name = StringCopy(c.Name)
 
-	for _, p := range c.Providers {
-		o.Providers = append(o.Providers, p)
-	}
+	o.Providers = append(o.Providers, c.Providers...)
 
-	for _, s := range c.Services {
-		o.Services = append(o.Services, s)
-	}
+	o.Services = append(o.Services, c.Services...)
 
 	o.Source = StringCopy(c.Source)
 
-	for _, vf := range c.VarFiles {
-		o.VarFiles = append(o.VarFiles, vf)
+	if !isSourceInputNil(c.SourceInput) {
+		o.SourceInput = c.SourceInput.Copy()
 	}
+
+	o.VarFiles = append(o.VarFiles, c.VarFiles...)
 
 	o.Version = StringCopy(c.Version)
 
@@ -146,21 +148,23 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Name = StringCopy(o.Name)
 	}
 
-	for _, p := range o.Providers {
-		r.Providers = append(r.Providers, p)
-	}
+	r.Providers = append(r.Providers, o.Providers...)
 
-	for _, s := range o.Services {
-		r.Services = append(r.Services, s)
-	}
+	r.Services = append(r.Services, o.Services...)
 
 	if o.Source != nil {
 		r.Source = StringCopy(o.Source)
 	}
 
-	for _, vf := range o.VarFiles {
-		r.VarFiles = append(r.VarFiles, vf)
+	if !isSourceInputNil(o.SourceInput) {
+		if isSourceInputNil(r.SourceInput) {
+			r.SourceInput = o.SourceInput.Copy()
+		} else {
+			r.SourceInput = r.SourceInput.Merge(o.SourceInput)
+		}
 	}
+
+	r.VarFiles = append(r.VarFiles, o.VarFiles...)
 
 	if o.Version != nil {
 		r.Version = StringCopy(o.Version)
@@ -260,6 +264,11 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	}
 	c.Condition.Finalize(c.Services)
 
+	if isConditionNil(c.SourceInput) {
+		c.SourceInput = DefaultSourceInputConfig()
+	}
+	c.SourceInput.Finalize(c.Services)
+
 	if c.WorkingDir == nil {
 		c.WorkingDir = String(filepath.Join(wd, *c.Name))
 	}
@@ -284,48 +293,18 @@ func (c *TaskConfig) Validate() error {
 			"may contain only letters, digits, underscores, and dashes: %q", *c.Name)
 	}
 
-	if len(c.Services) == 0 {
-		if isConditionNil(c.Condition) {
-			return fmt.Errorf("at least one service or a condition must be " +
-				"configured")
-		}
-		switch cond := c.Condition.(type) {
-		case *ServicesConditionConfig:
-			if cond.Regexp == nil || *cond.Regexp == "" {
-				return fmt.Errorf("at least one service is required in task.services " +
-					"or task.condition.regexp must be configured")
-			}
-		case *CatalogServicesConditionConfig:
-			if cond.Regexp == nil {
-				return fmt.Errorf("catalog-services condition requires either" +
-					"task.condition.regexp or at least one service in " +
-					"task.services to be configured")
-			}
-		case *ConsulKVConditionConfig:
-			return fmt.Errorf("consul-kv condition requires at least one service to " +
-				"be configured in task.services")
-		case *ScheduleConditionConfig:
-			return fmt.Errorf("schedule condition requires at least one service to " +
-				"be configured in task.services")
-		}
-	} else {
-		switch cond := c.Condition.(type) {
-		case *ServicesConditionConfig:
-			if cond.Regexp != nil && *cond.Regexp != "" {
-				err := fmt.Errorf("task.services is not allowed if task.condition.regexp " +
-					"is configured for a services condition")
-				logging.Global().Named(logSystemName).Named(taskSubsystemName).
-					Error("list of services and service condition regex both "+
-						"provided. If both are needed, consider including the "+
-						"list in the regex or creating separate tasks",
-						"task_name", StringVal(c.Name), "error", err)
-				return err
-			}
-		}
+	err := c.validateCondition()
+	if err != nil {
+		return err
 	}
 
 	if c.Source == nil || len(*c.Source) == 0 {
 		return fmt.Errorf("source for the task is required")
+	}
+
+	err = c.validateSourceInput()
+	if err != nil {
+		return err
 	}
 
 	if c.TFVersion != nil && *c.TFVersion != "" {
@@ -355,6 +334,12 @@ func (c *TaskConfig) Validate() error {
 		}
 	}
 
+	if !isSourceInputNil(c.SourceInput) {
+		if err := c.SourceInput.Validate(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -377,6 +362,7 @@ func (c *TaskConfig) GoString() string {
 		"BufferPeriod:%s, "+
 		"Enabled:%t, "+
 		"Condition:%v"+
+		"SourceInput:%v"+
 		"}",
 		StringVal(c.Name),
 		StringVal(c.Description),
@@ -389,6 +375,7 @@ func (c *TaskConfig) GoString() string {
 		c.BufferPeriod.GoString(),
 		BoolVal(c.Enabled),
 		c.Condition.GoString(),
+		c.SourceInput.GoString(),
 	)
 }
 
@@ -507,4 +494,88 @@ func FilterTasks(tasks *TaskConfigs, names []string) (*TaskConfigs, error) {
 		filtered = append(filtered, tconf)
 	}
 	return &filtered, nil
+}
+
+func (c *TaskConfig) validateCondition() error {
+	if len(c.Services) == 0 {
+		if isConditionNil(c.Condition) {
+			return fmt.Errorf("at least one service or a condition must be " +
+				"configured")
+		}
+		switch cond := c.Condition.(type) {
+		case *ServicesConditionConfig:
+			if cond.Regexp == nil || *cond.Regexp == "" {
+				return fmt.Errorf("at least one service is required in task.services " +
+					"or task.condition.regexp must be configured")
+			}
+		case *CatalogServicesConditionConfig:
+			if cond.Regexp == nil {
+				return fmt.Errorf("catalog-services condition requires either" +
+					"task.condition.regexp or at least one service in " +
+					"task.services to be configured")
+			}
+		case *ConsulKVConditionConfig:
+			return fmt.Errorf("consul-kv condition requires at least one service to " +
+				"be configured in task.services")
+		case *ScheduleConditionConfig:
+			if isSourceInputEmpty(c.SourceInput) || isSourceInputNil(c.SourceInput) {
+				return fmt.Errorf("schedule condition requires at least one service to " +
+					"be configured in task.services")
+			}
+		}
+	} else {
+		switch cond := c.Condition.(type) {
+		case *ServicesConditionConfig:
+			if cond.Regexp != nil && *cond.Regexp != "" {
+				err := fmt.Errorf("task.services is not allowed if task.condition.regexp " +
+					"is configured for a services condition")
+				logging.Global().Named(logSystemName).Named(taskSubsystemName).
+					Error("list of services and service condition regex both "+
+						"provided. If both are needed, consider including the "+
+						"list in the regex or creating separate tasks",
+						"task_name", StringVal(c.Name), "error", err)
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *TaskConfig) validateSourceInput() error {
+	// For now only schedule condition allows for source_input, so a condition of type ScheduleConditionConfig
+	// is the only supported type
+	switch c.Condition.(type) {
+	case *ScheduleConditionConfig:
+		if len(c.Services) == 0 {
+			switch si := c.SourceInput.(type) {
+			case *ServicesSourceInputConfig:
+				// source_input "services" follows the same rules as condition "services"
+				if si.Regexp == nil || *si.Regexp == "" {
+					return fmt.Errorf("at least one service is required in task.services " +
+						"or task.source_input.regexp must be configured")
+				}
+			}
+		} else {
+			switch si := c.SourceInput.(type) {
+			case *ServicesSourceInputConfig:
+				if si.Regexp != nil && *si.Regexp != "" {
+					err := fmt.Errorf("task.services is not allowed if task.source_input.regexp " +
+						"is configured for a services condition")
+					logging.Global().Named(logSystemName).Named(taskSubsystemName).
+						Error("list of services and service condition regex both "+
+							"provided. If both are needed, consider including the "+
+							"list in the regex or creating separate tasks",
+							"task_name", StringVal(c.Name), "error", err)
+					return err
+				}
+			}
+		}
+	default:
+		if !isSourceInputNil(c.SourceInput) && !isSourceInputEmpty(c.SourceInput) {
+			return fmt.Errorf("source_input is only supported when a schedule condition is configured")
+		}
+	}
+
+	return nil
 }
