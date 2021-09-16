@@ -536,9 +536,12 @@ func (tf *Terraform) initTaskTemplate() error {
 		tf.template = tmpl
 	}
 
-	err = tf.watcher.Register(tf.template)
-	if err != nil {
-		return err
+	if !tf.watcher.Watching(tf.template.ID()) {
+		err = tf.watcher.Register(tf.template)
+		if err != nil && err != hcat.RegistryErr {
+			tf.logger.Error("unable to register template", taskNameLogKey, tf.task.Name(), "error", err)
+			return err
+		}
 	}
 
 	return nil

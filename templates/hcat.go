@@ -41,6 +41,7 @@ type Resolver interface {
 // https://github.com/hashicorp/hcat
 type Watcher interface {
 	WaitCh(context.Context) <-chan error
+	Watching(string) bool
 	Buffer(hcat.Notifier) bool
 	Mark(notifier hcat.IDer)
 	SetBufferPeriod(min, max time.Duration, tmplIDs ...string)
