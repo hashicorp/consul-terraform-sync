@@ -1,4 +1,8 @@
 version: 2.1
+
+orbs:
+  slack: circleci/slack@4.4
+
 jobs:
   unit_integration_tests:
     environment:
@@ -116,6 +120,9 @@ jobs:
           no_output_timeout: << parameters.no_output_timeout >>
           command:
             make test-benchmarks | /usr/bin/tee /tmp/benchmarks.json
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
       - run:
           name: Output benchmark results
           command: |
