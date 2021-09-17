@@ -260,6 +260,7 @@ func TestUpdateTask(t *testing.T) {
 			}
 
 			w := new(mocksTmpl.Watcher)
+			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 			tf := &Terraform{
 				mu: &sync.RWMutex{},
@@ -365,6 +366,7 @@ func TestUpdateTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyErr).Once()
 
 			w := new(mocksTmpl.Watcher)
+			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 
 			tf := &Terraform{
@@ -487,6 +489,7 @@ func TestInitTaskTemplates(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := new(mocksTmpl.Watcher)
+			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 			tf := &Terraform{
 				fileReader: tc.fileReader,
@@ -642,6 +645,7 @@ func TestInitTask(t *testing.T) {
 			c.On("Validate", ctx).Return(tc.validateErr)
 
 			w := new(mocksTmpl.Watcher)
+			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 
 			tf := &Terraform{
