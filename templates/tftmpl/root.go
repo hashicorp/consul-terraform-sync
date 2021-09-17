@@ -128,7 +128,7 @@ func (s Service) hcatQuery() string {
 	if s.Filter != "" {
 		filter := strings.ReplaceAll(s.Filter, `"`, `\"`)
 		filter = strings.Trim(filter, "\n")
-		opts = append(opts, fmt.Sprintf("%s", filter))
+		opts = append(opts, filter)
 	}
 
 	query := fmt.Sprintf("%q", s.Name)
@@ -148,6 +148,7 @@ type RootModuleInputData struct {
 	Task             Task
 	Variables        hcltmpl.Variables
 	Condition        Condition
+	SourceInput      SourceInput
 
 	Path      string
 	FilePerms os.FileMode

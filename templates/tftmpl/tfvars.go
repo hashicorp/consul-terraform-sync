@@ -16,16 +16,37 @@ func newTFVarsTmpl(w io.Writer, filename string, input *RootModuleInputData) err
 		return err
 	}
 
-	// run condition templating
-	if input.Condition != nil {
-		if err := input.Condition.appendTemplate(w); err != nil {
+	// First append the SourceInput templating
+	areServicesAppended := false
+	if input.SourceInput != nil {
+		if err := input.SourceInput.appendTemplate(w); err != nil {
 			return err
+		}
+		areServicesAppended = input.SourceInput.ServicesAppended()
+	}
+
+	// Next append the condition templating
+	// SourceInput services take precedence over Condition services, so only append Condition services if services
+	// weren't appended by SourceInput
+	if input.Condition != nil {
+		if input.Condition.ServicesAppended() {
+			if !areServicesAppended {
+				if err := input.Condition.appendTemplate(w); err != nil {
+					return err
+				}
+				areServicesAppended = input.Condition.ServicesAppended()
+			}
+			// Else do nothing if services are already appended
+		} else {
+			if err := input.Condition.appendTemplate(w); err != nil {
+				return err
+			}
 		}
 	}
 
-	// monitoring services template
+	// Finally, append raw services if no services have been added yet
 	hclFile := hclwrite.NewEmptyFile()
-	if input.Condition == nil || !input.Condition.ServicesAppended() {
+	if !areServicesAppended {
 		body := hclFile.Body()
 		appendRawServiceTemplateValues(body, input.Services)
 	}

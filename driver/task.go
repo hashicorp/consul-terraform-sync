@@ -65,6 +65,7 @@ type Task struct {
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
 	condition    config.ConditionConfig
+	sourceInput  config.SourceInputConfig
 	workingDir   string
 	logger       logging.Logger
 }
@@ -82,6 +83,7 @@ type TaskConfig struct {
 	Version      string
 	BufferPeriod *BufferPeriod
 	Condition    config.ConditionConfig
+	SourceInput  config.SourceInputConfig
 	WorkingDir   string
 }
 
@@ -111,6 +113,7 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
 		condition:    conf.Condition,
+		sourceInput:  conf.SourceInput,
 		workingDir:   conf.WorkingDir,
 		logger:       logging.Global().Named(logSystemName),
 	}, nil
@@ -286,9 +289,9 @@ func (s Service) Copy() Service {
 	for k, v := range s.UserDefinedMeta {
 		meta[k] = v
 	}
-	copy := s
-	copy.UserDefinedMeta = meta
-	return copy
+	cp := s
+	cp.UserDefinedMeta = meta
+	return cp
 }
 
 // configureRootModuleInput sets task values for the module input.
@@ -320,24 +323,30 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	switch v := t.condition.(type) {
 	case *config.CatalogServicesConditionConfig:
 		condition = &tftmpl.CatalogServicesCondition{
-			Regexp:            *v.Regexp,
+			CatalogServicesMonitor: tftmpl.CatalogServicesMonitor{
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				NodeMeta:   v.NodeMeta,
+			},
 			SourceIncludesVar: *v.SourceIncludesVar,
-			Datacenter:        *v.Datacenter,
-			Namespace:         *v.Namespace,
-			NodeMeta:          v.NodeMeta,
 		}
 	case *config.ServicesConditionConfig:
 		condition = &tftmpl.ServicesCondition{
-			Regexp: *v.Regexp,
+			ServicesMonitor: tftmpl.ServicesMonitor{
+				Regexp: *v.Regexp,
+			},
 			// always set services variable
 			SourceIncludesVar: true,
 		}
 	case *config.ConsulKVConditionConfig:
 		condition = &tftmpl.ConsulKVCondition{
-			Path:              *v.Path,
+			ConsulKVMonitor: tftmpl.ConsulKVMonitor{
+				Path:       *v.Path,
+				Datacenter: *v.Datacenter,
+				Recurse:    *v.Recurse,
+			},
 			SourceIncludesVar: *v.SourceIncludesVar,
-			Datacenter:        *v.Datacenter,
-			Recurse:           *v.Recurse,
 		}
 	case *config.ScheduleConditionConfig:
 		condition = &tftmpl.ServicesCondition{
@@ -350,6 +359,22 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 		condition = &tftmpl.ServicesCondition{}
 	}
 	input.Condition = condition
+
+	var sourceInput tftmpl.SourceInput
+	switch v := t.sourceInput.(type) {
+	case *config.ServicesSourceInputConfig:
+		sourceInput = &tftmpl.ServicesSourceInput{
+			ServicesMonitor: tftmpl.ServicesMonitor{
+				Regexp: *v.Regexp,
+			},
+		}
+	default:
+		// expected only for test scenarios
+		t.logger.Warn("task source_input config unset. defaulting to services source_input",
+			"task_name", t.name)
+		sourceInput = &tftmpl.ServicesSourceInput{}
+	}
+	input.SourceInput = sourceInput
 
 	input.Providers = t.providers.ProviderBlocks()
 	input.ProviderInfo = make(map[string]interface{})

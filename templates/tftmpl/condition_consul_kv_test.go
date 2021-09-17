@@ -17,16 +17,22 @@ func TestConsulKVCondition_hcatQuery(t *testing.T) {
 		{
 			"path only",
 			&ConsulKVCondition{
-				Path: "key-path",
+				ConsulKVMonitor{
+					Path: "key-path",
+				},
+				false,
 			},
 			"\"key-path\" ",
 		},
 		{
 			"all_parameters",
 			&ConsulKVCondition{
-				Path:       "key-path",
-				Datacenter: "dc2",
-				Namespace:  "test-ns",
+				ConsulKVMonitor{
+					Path:       "key-path",
+					Datacenter: "dc2",
+					Namespace:  "test-ns",
+				},
+				false,
 			},
 			"\"key-path\" \"dc=dc2\" \"ns=test-ns\" ",
 		},
@@ -49,11 +55,13 @@ func TestConsulKVCondition_appendTemplate(t *testing.T) {
 		{
 			"recurse false includes var false",
 			&ConsulKVCondition{
-				Path:              "path",
-				Recurse:           false,
+				ConsulKVMonitor: ConsulKVMonitor{
+					Path:       "path",
+					Recurse:    false,
+					Datacenter: "dc1",
+					Namespace:  "test-ns",
+				},
 				SourceIncludesVar: false,
-				Datacenter:        "dc1",
-				Namespace:         "test-ns",
 			},
 			`
 {{- if keyExists "path" "dc=dc1" "ns=test-ns"  }}
@@ -66,11 +74,13 @@ func TestConsulKVCondition_appendTemplate(t *testing.T) {
 		{
 			"recurse false includes var true",
 			&ConsulKVCondition{
-				Path:              "path",
-				Recurse:           false,
+				ConsulKVMonitor: ConsulKVMonitor{
+					Path:       "path",
+					Recurse:    false,
+					Datacenter: "dc1",
+					Namespace:  "test-ns",
+				},
 				SourceIncludesVar: true,
-				Datacenter:        "dc1",
-				Namespace:         "test-ns",
 			},
 			`
 consul_kv = {
@@ -85,11 +95,13 @@ consul_kv = {
 		{
 			"recurse true includes var false",
 			&ConsulKVCondition{
-				Path:              "path",
-				Recurse:           true,
+				ConsulKVMonitor: ConsulKVMonitor{
+					Path:       "path",
+					Recurse:    true,
+					Datacenter: "dc1",
+					Namespace:  "test-ns",
+				},
 				SourceIncludesVar: false,
-				Datacenter:        "dc1",
-				Namespace:         "test-ns",
 			},
 			`
 {{- with $kv := keys "path" "dc=dc1" "ns=test-ns"  }}
@@ -102,11 +114,13 @@ consul_kv = {
 		{
 			"recurse true includes var true",
 			&ConsulKVCondition{
-				Path:              "path",
-				Recurse:           true,
+				ConsulKVMonitor: ConsulKVMonitor{
+					Path:       "path",
+					Recurse:    true,
+					Datacenter: "dc1",
+					Namespace:  "test-ns",
+				},
 				SourceIncludesVar: true,
-				Datacenter:        "dc1",
-				Namespace:         "test-ns",
 			},
 			`
 consul_kv = {

@@ -204,7 +204,9 @@ module "test" {
 				Version:     "1.0.0",
 			},
 			&CatalogServicesCondition{
-				Regexp:            ".*",
+				CatalogServicesMonitor: CatalogServicesMonitor{
+					Regexp: ".*",
+				},
 				SourceIncludesVar: true,
 			},
 			nil,
