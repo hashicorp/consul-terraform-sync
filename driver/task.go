@@ -36,7 +36,6 @@ type Service struct {
 	Description     string
 	Name            string
 	Namespace       string
-	Tag             string
 	Filter          string
 	UserDefinedMeta map[string]string
 }
@@ -310,7 +309,6 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			Description:        s.Description,
 			Name:               s.Name,
 			Namespace:          s.Namespace,
-			Tag:                s.Tag,
 			Filter:             s.Filter,
 			CTSUserDefinedMeta: s.UserDefinedMeta,
 		}

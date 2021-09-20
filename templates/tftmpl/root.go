@@ -97,7 +97,6 @@ type Service struct {
 	Description string
 	Name        string
 	Namespace   string
-	Tag         string
 	Filter      string
 
 	// CTSUserDefinedMeta is user defined metadata that is configured by
@@ -119,10 +118,6 @@ func (s Service) hcatQuery() string {
 
 	if s.Namespace != "" {
 		opts = append(opts, fmt.Sprintf("ns=%s", s.Namespace))
-	}
-
-	if s.Tag != "" {
-		opts = append(opts, fmt.Sprintf(`\"%s\" in Service.Tags`, s.Tag))
 	}
 
 	if s.Filter != "" {

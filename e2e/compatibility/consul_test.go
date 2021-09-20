@@ -28,6 +28,8 @@ const (
 	configFile    = "config.hcl"
 
 	nullTaskName = "null_task"
+
+	defaultWaitForAPI = 30 * time.Second
 )
 
 func TestCompatibilty_Consul(t *testing.T) {
@@ -279,7 +281,7 @@ func testTagQueryCompatibility(t *testing.T, port int) {
   name = "redis"
   description = "custom redis service config"
   datacenter = "dc1"
-  tag = "v1"
+  filter = "\"v1\" in Service.Tags"
 }
 `
 	config := baseConfig(tempDir, port) + redisService +
