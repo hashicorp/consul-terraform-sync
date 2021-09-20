@@ -33,7 +33,7 @@ const (
 	// liberal default times to wait
 	defaultWaitForRegistration = 8 * time.Second
 	defaultWaitForEvent        = 8 * time.Second
-	defaultWaitForAPI          = 20 * time.Second
+	defaultWaitForAPI          = 30 * time.Second
 
 	// liberal wait time to ensure event doesn't happen
 	defaultWaitForNoEvent = 6 * time.Second
@@ -130,10 +130,10 @@ func TestE2ERestart(t *testing.T) {
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().appendDBTask()
 	config.write(t, configPath)
 
-	runSyncStop(t, configPath, 8*time.Second)
+	runSyncStop(t, configPath, defaultWaitForAPI)
 
 	// rerun sync. confirm no errors e.g. recreating workspaces
-	runSyncStop(t, configPath, 8*time.Second)
+	runSyncStop(t, configPath, defaultWaitForAPI)
 
 	delete()
 }
