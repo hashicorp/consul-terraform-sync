@@ -281,7 +281,6 @@ func getService(services *config.ServiceConfigs, id string, meta config.Services
 				Description:     *s.Description,
 				Name:            *s.Name,
 				Namespace:       *s.Namespace,
-				Tag:             *s.Tag,
 				Filter:          *s.Filter,
 				UserDefinedMeta: meta[*s.Name],
 			}

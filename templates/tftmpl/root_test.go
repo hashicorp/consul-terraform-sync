@@ -280,13 +280,6 @@ func TestService_hcatQuery(t *testing.T) {
 			},
 			`"app" "ns=namespace"`,
 		}, {
-			"tag",
-			Service{
-				Name: "app",
-				Tag:  "my-tag",
-			},
-			`"app" "\"my-tag\" in Service.Tags"`,
-		}, {
 			"filter",
 			Service{
 				Name:   "filtered-app",
@@ -299,10 +292,9 @@ func TestService_hcatQuery(t *testing.T) {
 				Name:       "app",
 				Datacenter: "dc1",
 				Namespace:  "namespace",
-				Tag:        "my-tag",
 				Filter:     `Service.Meta["meta-key"] contains "test"`,
 			},
-			`"app" "dc=dc1" "ns=namespace" "\"my-tag\" in Service.Tags" "Service.Meta[\"meta-key\"] contains \"test\""`,
+			`"app" "dc=dc1" "ns=namespace" "Service.Meta[\"meta-key\"] contains \"test\""`,
 		},
 	}
 	for _, tc := range testCases {

@@ -3,8 +3,6 @@ package config
 import (
 	"fmt"
 	"strings"
-
-	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 // ServiceConfig defines the explicit configuration for Sync to monitor
@@ -28,10 +26,6 @@ type ServiceConfig struct {
 	// provided, the namespace will be inferred from the Sync ACL token, or
 	// default to the `default` namespace.
 	Namespace *string `mapstructure:"namespace"`
-
-	// Tag is used to filter nodes based on the tag for the service.
-	// Deprecated in favor of Filter.
-	Tag *string `mapstructure:"tag"`
 
 	// Filter is used to filter nodes based on a Consul compatible filter expression.
 	Filter *string `mapstructure:"filter"`
@@ -60,7 +54,6 @@ func (c *ServiceConfig) Copy() *ServiceConfig {
 	o.ID = StringCopy(c.ID)
 	o.Name = StringCopy(c.Name)
 	o.Namespace = StringCopy(c.Namespace)
-	o.Tag = StringCopy(c.Tag)
 	o.Filter = StringCopy(c.Filter)
 
 	if c.CTSUserDefinedMeta != nil {
@@ -111,10 +104,6 @@ func (c *ServiceConfig) Merge(o *ServiceConfig) *ServiceConfig {
 		r.Namespace = StringCopy(o.Namespace)
 	}
 
-	if o.Tag != nil {
-		r.Tag = StringCopy(o.Tag)
-	}
-
 	if o.Filter != nil {
 		r.Filter = StringCopy(o.Filter)
 	}
@@ -157,16 +146,6 @@ func (c *ServiceConfig) Finalize() {
 		c.Namespace = String("")
 	}
 
-	if c.Tag == nil {
-		c.Tag = String("")
-	} else {
-		logging.Global().Named(logSystemName).Warn("The 'tag' attribute was marked for " +
-			"deprecation in v0.2.0 and will be removed in v0.4.0 " +
-			"of Consul-Terraform-Sync. Please update your configuration to " +
-			"use 'filter' and provide a filter expression using the " +
-			"Service.Tags selector.")
-	}
-
 	if c.Filter == nil {
 		c.Filter = String("")
 	}
@@ -200,7 +179,6 @@ func (c *ServiceConfig) GoString() string {
 		"Name:%s, "+
 		"Namespace:%s, "+
 		"Datacenter:%s, "+
-		"Tag:%s, "+
 		"Filter:%s, "+
 		"Description:%s, "+
 		"CTSUserDefinedMeta:%s"+
@@ -208,7 +186,6 @@ func (c *ServiceConfig) GoString() string {
 		StringVal(c.Name),
 		StringVal(c.Namespace),
 		StringVal(c.Datacenter),
-		StringVal(c.Tag),
 		StringVal(c.Filter),
 		StringVal(c.Description),
 		c.CTSUserDefinedMeta,
