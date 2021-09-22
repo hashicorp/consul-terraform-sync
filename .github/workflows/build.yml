@@ -7,7 +7,7 @@ on:
       # Push events on master branch
       - master
       # Push events to branches matching refs/heads/release/**
-      - 'crt**'
+      - 'release/**'
 
 env:
   PKG_NAME: "consul-terraform-sync"
