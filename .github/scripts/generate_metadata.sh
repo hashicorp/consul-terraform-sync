@@ -23,6 +23,7 @@ cat <<-EOM
   "sha": "${git_sha}",
   "version": "${product_version}",
   "buildworkflowid" : "${GITHUB_RUN_ID}",
-  "branch": "${GITHUB_REF#refs/heads/}"
+  "branch": "${GITHUB_REF#refs/heads/}",
+  "repo": "${GITHUB_REPOSITORY#*/}"
 }
 EOM

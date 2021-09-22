@@ -51,11 +51,11 @@ jobs:
         run: |
           mkdir dist out
           go build -o dist/ .
-          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
@@ -75,14 +75,14 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
 
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
         with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
+          name: ${{ env.PKG_NAME }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
+          path: out/${{ env.PKG_NAME }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
 
   build-amd64:
     needs: get-product-version
@@ -113,12 +113,12 @@ jobs:
         run: |
           mkdir dist out
           go build -o dist/
-          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
 
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
@@ -138,14 +138,14 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
 
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
         with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
+          name: ${{ env.PKG_NAME }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
+          path: out/${{ env.PKG_NAME }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
 
   build-arm:
     needs: get-product-version
@@ -177,12 +177,12 @@ jobs:
           mkdir dist out
           go build -o dist/
 
-          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
 
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
@@ -201,13 +201,13 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_armhf.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_armhf.deb
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_armhf.deb
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_armhf.deb
 
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
+          name: ${{ env.PKG_NAME }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
+          path: out/${{ env.PKG_NAME }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
 
   build-arm64:
     needs: get-product-version
@@ -238,11 +238,11 @@ jobs:
         run: |
           mkdir dist out
           go build -o dist/
-          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
@@ -262,14 +262,14 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_arm*.deb
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_arm*.deb
 
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
         with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm
+          name: ${{ env.PKG_NAME }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
+          path: out/${{ env.PKG_NAME }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm
 
   build-darwin:
     needs: get-product-version
@@ -299,11 +299,11 @@ jobs:
         run: |
           mkdir dist out
           go build -o dist/
-          zip -r -j out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
   build-docker:
     needs:
@@ -324,14 +324,14 @@ jobs:
       # download arm/arm64/386/amd64 binaries from build jobs
       - uses: actions/download-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
 
       # build docker image
       - name: Docker build
         working-directory: ./.release/docker
         run: |
           docker version
-          unzip -j ${GITHUB_WORKSPACE}/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
+          unzip -j ${GITHUB_WORKSPACE}/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
           # arm32 bit docker images are set with --platform=linux/arm/v6
           if [ "${{ matrix.arch }}" = "arm" ]; then
             make docker ARCH=${{ matrix.arch }} GOARM_DOCKER="/v6"
@@ -341,8 +341,8 @@ jobs:
       # upload image tarball
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
-          path: .release/docker/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
+          path: .release/docker/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
 
   generate_metadata:
     needs: get-product-version
