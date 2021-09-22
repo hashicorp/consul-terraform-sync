@@ -198,7 +198,6 @@ func TestNewFiles(t *testing.T) {
 						Namespace:   "",
 						Datacenter:  "dc1",
 						Description: "api service for web",
-						Tag:         "tag",
 					},
 				},
 				Task: task,
