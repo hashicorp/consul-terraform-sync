@@ -191,13 +191,13 @@ task {
 			"consul-kv: happy path",
 			false,
 			&ConsulKVConditionConfig{
-				ConsulKVMonitorConfig{
-					Path:              String("key-path"),
-					SourceIncludesVar: Bool(true),
-					Datacenter:        String("dc2"),
-					Namespace:         String("ns2"),
-					Recurse:           Bool(true),
+				ConsulKVMonitorConfig: ConsulKVMonitorConfig{
+					Path:       String("key-path"),
+					Datacenter: String("dc2"),
+					Namespace:  String("ns2"),
+					Recurse:    Bool(true),
 				},
+				SourceIncludesVar: Bool(true),
 			},
 			"config.hcl",
 			`

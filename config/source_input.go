@@ -11,8 +11,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// SourceInputConfig configures a source_input on a task to define the Consul objects (e.g. services, kv) whose values are
-// provided as the task source’s input variables
+// SourceInputConfig configures a source_input on a task. This Source Input defines which Consul objects to monitor
+// (e.g. services, kv) whose values are then provided as the task source’s input variables
 type SourceInputConfig interface {
 	MonitorConfig
 }
@@ -81,8 +81,13 @@ func sourceInputToTypeFunc() mapstructure.DecodeHookFunc {
 			sourceInputs = json
 		}
 
-		if c, ok := sourceInputs[serviceSourceInputType]; ok {
+		if c, ok := sourceInputs[servicesType]; ok {
 			var config ServicesSourceInputConfig
+			return decodeSourceInputToType(c, &config)
+		}
+
+		if c, ok := sourceInputs[consulKVType]; ok {
+			var config ConsulKVSourceInputConfig
 			return decodeSourceInputToType(c, &config)
 		}
 

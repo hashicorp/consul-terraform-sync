@@ -11,8 +11,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// ConditionConfig configures a condition on a task to define the condition on
-// which to execute a task.
+// ConditionConfig configures a condition on a task. This Condition defines what to monitor for in order to
+// trigger the execution of a task
 type ConditionConfig interface {
 	MonitorConfig
 }
@@ -56,19 +56,19 @@ func conditionToTypeFunc() mapstructure.DecodeHookFunc {
 			conditions = json
 		}
 
-		if c, ok := conditions[catalogServicesMonitorType]; ok {
+		if c, ok := conditions[catalogServicesType]; ok {
 			var config CatalogServicesConditionConfig
 			return decodeConditionToType(c, &config)
 		}
-		if c, ok := conditions[servicesMonitorType]; ok {
+		if c, ok := conditions[servicesType]; ok {
 			var config ServicesConditionConfig
 			return decodeConditionToType(c, &config)
 		}
-		if c, ok := conditions[consulKVMonitorType]; ok {
+		if c, ok := conditions[consulKVType]; ok {
 			var config ConsulKVConditionConfig
 			return decodeConditionToType(c, &config)
 		}
-		if c, ok := conditions[scheduleConditionType]; ok {
+		if c, ok := conditions[scheduleType]; ok {
 			var config ScheduleConditionConfig
 			return decodeConditionToType(c, &config)
 		}
