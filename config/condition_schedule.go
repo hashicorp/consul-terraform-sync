@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/cronexpr"
 )
 
-const scheduleConditionType = "schedule"
+const scheduleType = "schedule"
 
 var _ ConditionConfig = (*ScheduleConditionConfig)(nil)
 

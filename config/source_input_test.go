@@ -31,6 +31,21 @@ task {
 		cron = "* * * * * * *"
 	}
 }`
+	testSourceInputConsulKVSuccess = `
+task {
+	name = "condition_task"
+	source = "..."
+	services = ["api"]
+	condition "schedule" {
+		cron = "* * * * * * *"
+	}
+	source_input "consul-kv" {
+		path = "key-path"
+		namespace = "ns2"
+		datacenter = "dc2"
+		recurse = true
+	}
+}`
 
 	// Errors
 	testSourceInputServicesUnsupportedFieldError = `
@@ -43,6 +58,22 @@ task {
 	}
 	condition "schedule" {
 		cron = "* * * * * * *"
+	}
+}`
+	testSourceInputConsulKVUnsupportedFieldError = `
+task {
+	name = "condition_task"
+	source = "..."
+	services = ["api"]
+	condition "schedule" {
+		cron = "* * * * * * *"
+	}
+	source_input "consul-kv" {
+		path = "key-path"
+        source_includes_var = true
+		namespace = "ns2"
+		datacenter = "dc2"
+		recurse = true
 	}
 }`
 
@@ -68,7 +99,7 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 		config   string
 	}{
 		{
-			name: "happy path",
+			name: "services happy path",
 			expected: &ServicesSourceInputConfig{
 				ServicesMonitorConfig{
 					Regexp: String(".*"),
@@ -77,13 +108,25 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 			config: testSourceInputServicesSuccess,
 		},
 		{
-			name: "un-configured",
+			name: "services un-configured",
 			expected: &ServicesSourceInputConfig{
 				ServicesMonitorConfig{
 					Regexp: String(""),
 				},
 			},
 			config: testSourceInputServicesUnconfiguredSuccess,
+		},
+		{
+			name: "consul-kv: happy path",
+			expected: &ConsulKVSourceInputConfig{
+				ConsulKVMonitorConfig{
+					Path:       String("key-path"),
+					Datacenter: String("dc2"),
+					Namespace:  String("ns2"),
+					Recurse:    Bool(true),
+				},
+			},
+			config: testSourceInputConsulKVSuccess,
 		},
 	}
 
@@ -112,9 +155,14 @@ func TestSourceInput_DecodeConfig_Error(t *testing.T) {
 		config   string
 	}{
 		{
-			name:     "unsupported field",
+			name:     "services unsupported field",
 			expected: nil,
 			config:   testSourceInputServicesUnsupportedFieldError,
+		},
+		{
+			name:     "consul kv unsupported field",
+			expected: nil,
+			config:   testSourceInputConsulKVUnsupportedFieldError,
 		},
 	}
 

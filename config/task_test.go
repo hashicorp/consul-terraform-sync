@@ -675,7 +675,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Name:   String("task"),
 				Source: String("source"),
 				Condition: &ConsulKVConditionConfig{
-					ConsulKVMonitorConfig{
+					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
 						Path: String("path"),
 					},
 				},
@@ -735,6 +735,20 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Source:      String("source"),
 				Condition:   &ServicesConditionConfig{ServicesMonitorConfig{Regexp: String(".*")}},
 				SourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("*")}},
+			},
+			false,
+		},
+		{
+			"invalid: missing services with consul-kv source input",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
+				SourceInput: &ConsulKVSourceInputConfig{
+					ConsulKVMonitorConfig{
+						Path: String("path"),
+					},
+				},
 			},
 			false,
 		},

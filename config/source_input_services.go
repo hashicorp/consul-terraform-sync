@@ -4,13 +4,10 @@ import (
 	"fmt"
 )
 
-const serviceSourceInputType = "services"
-
 var _ SourceInputConfig = (*ServicesSourceInputConfig)(nil)
 
 // ServicesSourceInputConfig configures a source_input configuration block of type
-// 'services'. This is the default type of source_input. A source_input defines the Consul objects, in this case "Services"
-// whose values are provided as the task source’s input variables
+// 'services'. Data about the services monitored will be used as input for the source variables.
 type ServicesSourceInputConfig struct {
 	ServicesMonitorConfig `mapstructure:",squash"`
 }
