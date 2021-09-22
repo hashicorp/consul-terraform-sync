@@ -17,7 +17,7 @@ type ScheduleConditionConfig struct {
 }
 
 // Copy returns a deep copy of this configuration.
-func (c *ScheduleConditionConfig) Copy() ConditionConfig {
+func (c *ScheduleConditionConfig) Copy() MonitorConfig {
 	if c == nil {
 		return nil
 	}
@@ -30,7 +30,7 @@ func (c *ScheduleConditionConfig) Copy() ConditionConfig {
 
 // Merge combines all values in this configuration with the values in the other
 // configuration, with values in the other configuration taking precedence.
-func (c *ScheduleConditionConfig) Merge(o ConditionConfig) ConditionConfig {
+func (c *ScheduleConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 	if c == nil {
 		if isConditionNil(o) { // o is interface, use isConditionNil()
 			return nil

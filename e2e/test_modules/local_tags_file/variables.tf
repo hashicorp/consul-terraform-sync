@@ -23,5 +23,5 @@ variable "services" {
 
 variable "catalog_services" {
   description = "Consul catalog service names and tags monitored by Consul Terraform Sync"
-  type = map(list(string))
+  type        = map(list(string))
 }

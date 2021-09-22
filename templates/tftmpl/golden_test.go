@@ -73,8 +73,10 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Backend: map[string]interface{}{},
 				Condition: &CatalogServicesCondition{
-					Regexp:            ".*",
-					SourceIncludesVar: true,
+					CatalogServicesMonitor{
+						Regexp: ".*",
+					},
+					true,
 				},
 				Task: task,
 			},
@@ -105,8 +107,10 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
 				Condition: &CatalogServicesCondition{
-					Regexp:            ".*",
-					SourceIncludesVar: true,
+					CatalogServicesMonitor{
+						Regexp: ".*",
+					},
+					true,
 				},
 				Task: task,
 			},
@@ -130,13 +134,91 @@ func TestNewFiles(t *testing.T) {
 				},
 				Task: task,
 			},
-		}, {
+		},
+		{
+			Name:   "terraform.tfvars.tmpl (services condition SourceIncludesVar true, empty SourceInput)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/terraform_services_source_input.tmpl",
+			Input: RootModuleInputData{
+				Condition: &ServicesCondition{
+					ServicesMonitor{
+						Regexp: ".*",
+					},
+					true,
+				},
+				Task:        task,
+				SourceInput: &ServicesSourceInput{},
+			},
+		},
+		{
+			Name:   "terraform.tfvars.tmpl (services source_input with empty services condition)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/terraform_services_source_input.tmpl",
+			Input: RootModuleInputData{
+				Condition: &ServicesCondition{},
+				Task:      task,
+				SourceInput: &ServicesSourceInput{
+					ServicesMonitor{
+						Regexp: ".*",
+					},
+				},
+			},
+		},
+		{
+			Name:   "terraform.tfvars.tmpl (services source_input with services condition SourceIncludesVar true)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/terraform_services_source_input.tmpl",
+			Input: RootModuleInputData{
+				Condition: &ServicesCondition{
+					ServicesMonitor{
+						Regexp: "^api.*",
+					},
+					true,
+				},
+				Task: task,
+				SourceInput: &ServicesSourceInput{
+					ServicesMonitor{
+						Regexp: ".*",
+					},
+				},
+			},
+		},
+		{
+			Name:   "terraform.tfvars.tmpl (services source_input with services list)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/terraform_services_source_input.tmpl",
+			Input: RootModuleInputData{
+				Condition: &ServicesCondition{},
+				Services: []Service{
+					{
+						Name:        "web",
+						Description: "web service",
+					}, {
+						Name:        "api",
+						Namespace:   "",
+						Datacenter:  "dc1",
+						Description: "api service for web",
+						Tag:         "tag",
+					},
+				},
+				Task: task,
+				SourceInput: &ServicesSourceInput{
+					ServicesMonitor{
+						Regexp: ".*",
+					},
+				},
+			},
+		},
+		{
 			Name:   "terraform.tfvars.tmpl (catalog-services condition)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/catalog-services-condition/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
-					Regexp: ".*",
+					CatalogServicesMonitor{
+						Regexp: ".*",
+					},
+					false,
 				},
 				Services: []Service{
 					{
@@ -158,8 +240,10 @@ func TestNewFiles(t *testing.T) {
 			Golden: "testdata/catalog-services-condition/terraform_include.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
-					Regexp:            ".*",
-					SourceIncludesVar: true,
+					CatalogServicesMonitor{
+						Regexp: ".*",
+					},
+					true,
 				},
 				Services: []Service{
 					{
@@ -181,10 +265,12 @@ func TestNewFiles(t *testing.T) {
 			Golden: "testdata/catalog-services-condition/terraform_filter.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
-					Regexp:            ".*",
-					SourceIncludesVar: true,
-					Datacenter:        "dc1",
-					NodeMeta:          map[string]string{"k": "v"},
+					CatalogServicesMonitor{
+						Regexp:     ".*",
+						Datacenter: "dc1",
+						NodeMeta:   map[string]string{"k": "v"},
+					},
+					true,
 				},
 				Services: []Service{
 					{
@@ -206,7 +292,10 @@ func TestNewFiles(t *testing.T) {
 			Golden: "testdata/catalog-services-condition/terraform_no_services.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
-					Regexp: ".*",
+					CatalogServicesMonitor{
+						Regexp: ".*",
+					},
+					false,
 				},
 				Task: task,
 			},

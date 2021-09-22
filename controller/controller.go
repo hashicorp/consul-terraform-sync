@@ -258,6 +258,7 @@ func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProvide
 			Version:      *t.Version,
 			BufferPeriod: bp,
 			Condition:    t.Condition,
+			SourceInput:  t.SourceInput,
 			WorkingDir:   *t.WorkingDir,
 		})
 		if err != nil {

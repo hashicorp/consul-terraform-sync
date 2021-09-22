@@ -19,13 +19,15 @@ func TestCondition_DecodeConfig(t *testing.T) {
 			"catalog-services: happy path",
 			false,
 			&CatalogServicesConditionConfig{
-				Regexp:            String(".*"),
-				SourceIncludesVar: Bool(true),
-				Datacenter:        String("dc2"),
-				Namespace:         String("ns2"),
-				NodeMeta: map[string]string{
-					"key1": "value1",
-					"key2": "value2",
+				CatalogServicesMonitorConfig{
+					Regexp:            String(".*"),
+					SourceIncludesVar: Bool(true),
+					Datacenter:        String("dc2"),
+					Namespace:         String("ns2"),
+					NodeMeta: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
 				},
 			},
 			"config.hcl",
@@ -50,11 +52,13 @@ task {
 			"catalog-services: unconfigured",
 			false,
 			&CatalogServicesConditionConfig{
-				Regexp:            String("^api$"),
-				SourceIncludesVar: Bool(false),
-				Datacenter:        String(""),
-				Namespace:         String(""),
-				NodeMeta:          map[string]string{},
+				CatalogServicesMonitorConfig{
+					Regexp:            String("^api$"),
+					SourceIncludesVar: Bool(false),
+					Datacenter:        String(""),
+					Namespace:         String(""),
+					NodeMeta:          map[string]string{},
+				},
 			},
 			"config.hcl",
 			`
@@ -70,7 +74,9 @@ task {
 			"no condition: defaults to services condition",
 			false,
 			&ServicesConditionConfig{
-				Regexp: String(""),
+				ServicesMonitorConfig{
+					Regexp: String(""),
+				},
 			},
 			"config.hcl",
 			`
@@ -84,7 +90,9 @@ task {
 			"services: happy path",
 			false,
 			&ServicesConditionConfig{
-				Regexp: String(".*"),
+				ServicesMonitorConfig{
+					Regexp: String(".*"),
+				},
 			},
 			"config.hcl",
 			`
@@ -100,7 +108,9 @@ task {
 			"services: unconfigured",
 			false,
 			&ServicesConditionConfig{
-				Regexp: String(""),
+				ServicesMonitorConfig{
+					Regexp: String(""),
+				},
 			},
 			"config.hcl",
 			`
@@ -181,11 +191,13 @@ task {
 			"consul-kv: happy path",
 			false,
 			&ConsulKVConditionConfig{
-				Path:              String("key-path"),
-				SourceIncludesVar: Bool(true),
-				Datacenter:        String("dc2"),
-				Namespace:         String("ns2"),
-				Recurse:           Bool(true),
+				ConsulKVMonitorConfig{
+					Path:              String("key-path"),
+					SourceIncludesVar: Bool(true),
+					Datacenter:        String("dc2"),
+					Namespace:         String("ns2"),
+					Recurse:           Bool(true),
+				},
 			},
 			"config.hcl",
 			`
@@ -220,13 +232,15 @@ task {
 			"json happy path",
 			false,
 			&CatalogServicesConditionConfig{
-				Regexp:            String(".*"),
-				SourceIncludesVar: Bool(true),
-				Datacenter:        String("dc2"),
-				Namespace:         String("ns2"),
-				NodeMeta: map[string]string{
-					"key1": "value1",
-					"key2": "value2",
+				CatalogServicesMonitorConfig{
+					Regexp:            String(".*"),
+					SourceIncludesVar: Bool(true),
+					Datacenter:        String("dc2"),
+					Namespace:         String("ns2"),
+					NodeMeta: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
 				},
 			},
 			"config.json",

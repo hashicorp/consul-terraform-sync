@@ -206,7 +206,14 @@ func TestNewDriverTasks(t *testing.T) {
 				Source:   "source",
 				VarFiles: []string{},
 				Condition: &config.ServicesConditionConfig{
-					Regexp: config.String(""),
+					config.ServicesMonitorConfig{
+						Regexp: config.String(""),
+					},
+				},
+				SourceInput: &config.ServicesSourceInputConfig{
+					config.ServicesMonitorConfig{
+						Regexp: config.String(""),
+					},
 				},
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
@@ -274,7 +281,14 @@ func TestNewDriverTasks(t *testing.T) {
 				Source:   "source",
 				VarFiles: []string{},
 				Condition: &config.ServicesConditionConfig{
-					Regexp: config.String(""),
+					config.ServicesMonitorConfig{
+						Regexp: config.String(""),
+					},
+				},
+				SourceInput: &config.ServicesSourceInputConfig{
+					config.ServicesMonitorConfig{
+						Regexp: config.String(""),
+					},
 				},
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
@@ -327,7 +341,14 @@ func TestNewDriverTasks(t *testing.T) {
 				Source:       "source",
 				VarFiles:     []string{},
 				Condition: &config.ServicesConditionConfig{
-					Regexp: config.String(""),
+					config.ServicesMonitorConfig{
+						Regexp: config.String(""),
+					},
+				},
+				SourceInput: &config.ServicesSourceInputConfig{
+					config.ServicesMonitorConfig{
+						Regexp: config.String(""),
+					},
 				},
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,

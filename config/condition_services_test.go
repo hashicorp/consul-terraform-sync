@@ -24,7 +24,9 @@ func TestServicesConditionConfig_Copy(t *testing.T) {
 		{
 			"fully_configured",
 			&ServicesConditionConfig{
-				Regexp: String("^web.*"),
+				ServicesMonitorConfig{
+					Regexp: String("^web.*"),
+				},
 			},
 		},
 	}
@@ -77,27 +79,27 @@ func TestServicesConditionConfig_Merge(t *testing.T) {
 		},
 		{
 			"regexp_overrides",
-			&ServicesConditionConfig{Regexp: String("same")},
-			&ServicesConditionConfig{Regexp: String("different")},
-			&ServicesConditionConfig{Regexp: String("different")},
+			&ServicesConditionConfig{ServicesMonitorConfig{Regexp: String("same")}},
+			&ServicesConditionConfig{ServicesMonitorConfig{Regexp: String("different")}},
+			&ServicesConditionConfig{ServicesMonitorConfig{Regexp: String("different")}},
 		},
 		{
 			"regexp_empty_one",
-			&ServicesConditionConfig{Regexp: String("same")},
+			&ServicesConditionConfig{ServicesMonitorConfig{Regexp: String("same")}},
 			&ServicesConditionConfig{},
-			&ServicesConditionConfig{Regexp: String("same")},
+			&ServicesConditionConfig{ServicesMonitorConfig{Regexp: String("same")}},
 		},
 		{
 			"regexp_empty_two",
 			&ServicesConditionConfig{},
-			&ServicesConditionConfig{Regexp: String("same")},
-			&ServicesConditionConfig{Regexp: String("same")},
+			&ServicesConditionConfig{ServicesMonitorConfig{Regexp: String("same")}},
+			&ServicesConditionConfig{ServicesMonitorConfig{Regexp: String("same")}},
 		},
 		{
 			"regexp_empty_same",
-			&ServicesConditionConfig{Regexp: String("same")},
-			&ServicesConditionConfig{Regexp: String("same")},
-			&ServicesConditionConfig{Regexp: String("same")},
+			&ServicesConditionConfig{ServicesMonitorConfig{Regexp: String("same")}},
+			&ServicesConditionConfig{ServicesMonitorConfig{Regexp: String("same")}},
+			&ServicesConditionConfig{ServicesMonitorConfig{Regexp: String("same")}},
 		},
 	}
 
@@ -128,7 +130,9 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 			[]string{},
 			&ServicesConditionConfig{},
 			&ServicesConditionConfig{
-				Regexp: String(""),
+				ServicesMonitorConfig{
+					Regexp: String(""),
+				},
 			},
 		},
 		{
@@ -136,7 +140,9 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 			[]string{"api"},
 			&ServicesConditionConfig{},
 			&ServicesConditionConfig{
-				Regexp: String(""),
+				ServicesMonitorConfig{
+					Regexp: String(""),
+				},
 			},
 		},
 	}
@@ -161,14 +167,18 @@ func TestServicesConditionConfig_Validate(t *testing.T) {
 			"happy_path",
 			false,
 			&ServicesConditionConfig{
-				Regexp: String(".*"),
+				ServicesMonitorConfig{
+					Regexp: String(".*"),
+				},
 			},
 		},
 		{
 			"invalid_regexp",
 			true,
 			&ServicesConditionConfig{
-				Regexp: String("*"),
+				ServicesMonitorConfig{
+					Regexp: String("*"),
+				},
 			},
 		},
 	}

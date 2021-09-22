@@ -4,37 +4,30 @@ import (
 	"fmt"
 )
 
-const consulKVConditionType = "consul-kv"
-
 var _ ConditionConfig = (*ConsulKVConditionConfig)(nil)
 
 type ConsulKVConditionConfig struct {
-	Path              *string `mapstructure:"path"`
-	SourceIncludesVar *bool   `mapstructure:"source_includes_var"`
-	Recurse           *bool   `mapstructure:"recurse"`
-	Datacenter        *string `mapstructure:"datacenter"`
-	Namespace         *string `mapstructure:"namespace"`
+	ConsulKVMonitorConfig `mapstructure:",squash"`
 }
 
 // Copy returns a deep copy of this configuration.
-func (c *ConsulKVConditionConfig) Copy() ConditionConfig {
+func (c *ConsulKVConditionConfig) Copy() MonitorConfig {
 	if c == nil {
 		return nil
 	}
 
-	var o ConsulKVConditionConfig
-	o.Path = StringCopy(c.Path)
-	o.Recurse = BoolCopy(c.Recurse)
-	o.SourceIncludesVar = BoolCopy(c.SourceIncludesVar)
-	o.Datacenter = StringCopy(c.Datacenter)
-	o.Namespace = StringCopy(c.Namespace)
-
-	return &o
+	m, ok := c.ConsulKVMonitorConfig.Copy().(*ConsulKVMonitorConfig)
+	if !ok {
+		return nil
+	}
+	return &ConsulKVConditionConfig{
+		ConsulKVMonitorConfig: *m,
+	}
 }
 
 // Merge combines all values in this configuration with the values in the other
 // configuration, with values in the other configuration taking precedence.
-func (c *ConsulKVConditionConfig) Merge(o ConditionConfig) ConditionConfig {
+func (c *ConsulKVConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 	if c == nil {
 		if isConditionNil(o) { // o is interface, use isConditionNil()
 			return nil
@@ -46,35 +39,19 @@ func (c *ConsulKVConditionConfig) Merge(o ConditionConfig) ConditionConfig {
 		return c.Copy()
 	}
 
-	r := c.Copy()
-	o2, ok := o.(*ConsulKVConditionConfig)
+	ckvc, ok := o.(*ConsulKVConditionConfig)
 	if !ok {
-		return r
+		return nil
 	}
 
-	r2 := r.(*ConsulKVConditionConfig)
-
-	if o2.Path != nil {
-		r2.Path = StringCopy(o2.Path)
+	merged, ok := c.ConsulKVMonitorConfig.Merge(&ckvc.ConsulKVMonitorConfig).(*ConsulKVMonitorConfig)
+	if !ok {
+		return nil
 	}
 
-	if o2.SourceIncludesVar != nil {
-		r2.SourceIncludesVar = BoolCopy(o2.SourceIncludesVar)
+	return &ConsulKVConditionConfig{
+		ConsulKVMonitorConfig: *merged,
 	}
-
-	if o2.Recurse != nil {
-		r2.Recurse = BoolCopy(o2.Recurse)
-	}
-
-	if o2.Datacenter != nil {
-		r2.Datacenter = StringCopy(o2.Datacenter)
-	}
-
-	if o2.Namespace != nil {
-		r2.Namespace = StringCopy(o2.Namespace)
-	}
-
-	return r2
 }
 
 // Finalize ensures there no nil pointers.
@@ -83,26 +60,7 @@ func (c *ConsulKVConditionConfig) Finalize(consulkv []string) {
 		return
 	}
 
-	if c.Path == nil {
-		c.Path = String("")
-	}
-
-	if c.SourceIncludesVar == nil {
-		c.SourceIncludesVar = Bool(false)
-	}
-
-	if c.Recurse == nil {
-		c.Recurse = Bool(false)
-	}
-
-	if c.Datacenter == nil {
-		c.Datacenter = String("")
-	}
-
-	if c.Namespace == nil {
-		c.Namespace = String("")
-	}
-
+	c.ConsulKVMonitorConfig.Finalize(consulkv)
 }
 
 // Validate validates the values and required options. This method is recommended
@@ -112,11 +70,7 @@ func (c *ConsulKVConditionConfig) Validate() error {
 		return nil
 	}
 
-	if c.Path == nil || *c.Path == "" {
-		return fmt.Errorf("path is required for consul-kv condition")
-	}
-
-	return nil
+	return c.ConsulKVMonitorConfig.Validate()
 }
 
 // GoString defines the printable version of this struct.
@@ -126,16 +80,8 @@ func (c *ConsulKVConditionConfig) GoString() string {
 	}
 
 	return fmt.Sprintf("&ConsulKVConditionConfig{"+
-		"Path:%s, "+
-		"SourceIncludesVar:%v, "+
-		"Recurse:%v, "+
-		"Datacenter:%v, "+
-		"Namespace:%v, "+
+		"%s"+
 		"}",
-		StringVal(c.Path),
-		BoolVal(c.SourceIncludesVar),
-		BoolVal(c.Recurse),
-		StringVal(c.Datacenter),
-		StringVal(c.Namespace),
+		c.ConsulKVMonitorConfig.GoString(),
 	)
 }

@@ -14,41 +14,17 @@ import (
 // ConditionConfig configures a condition on a task to define the condition on
 // which to execute a task.
 type ConditionConfig interface {
-	Copy() ConditionConfig
-	Merge(ConditionConfig) ConditionConfig
-	Finalize([]string)
-	Validate() error
-	GoString() string
+	MonitorConfig
 }
 
 // DefaultConditionConfig returns the default conditions which is an unconfigured
 // 'services' type condition.
 func DefaultConditionConfig() ConditionConfig {
 	return &ServicesConditionConfig{
-		Regexp: String(""),
+		ServicesMonitorConfig{
+			Regexp: String(""),
+		},
 	}
-}
-
-// isConditionNil can be used to check if a ConditionConfig interface is nil by
-// checking both the type and value. Not needed for checking a ConditionConfig
-// implementation i.e. isConditionNil(ConditionConfig),
-// servicesConditionConfig == nil
-func isConditionNil(c ConditionConfig) bool {
-	var result bool
-	// switching on type is a performance enhancement
-	switch v := c.(type) {
-	case *ServicesConditionConfig:
-		result = v == nil
-	case *CatalogServicesConditionConfig:
-		result = v == nil
-	case *ConsulKVConditionConfig:
-		result = v == nil
-	case *ScheduleConditionConfig:
-		result = v == nil
-	default:
-		return c == nil || reflect.ValueOf(c).IsNil()
-	}
-	return c == nil || result
 }
 
 // conditionToTypeFunc is a decode hook function to decode a ConditionConfig
@@ -80,15 +56,15 @@ func conditionToTypeFunc() mapstructure.DecodeHookFunc {
 			conditions = json
 		}
 
-		if c, ok := conditions[catalogServicesConditionType]; ok {
+		if c, ok := conditions[catalogServicesMonitorType]; ok {
 			var config CatalogServicesConditionConfig
 			return decodeConditionToType(c, &config)
 		}
-		if c, ok := conditions[servicesConditionType]; ok {
+		if c, ok := conditions[servicesMonitorType]; ok {
 			var config ServicesConditionConfig
 			return decodeConditionToType(c, &config)
 		}
-		if c, ok := conditions[consulKVConditionType]; ok {
+		if c, ok := conditions[consulKVMonitorType]; ok {
 			var config ConsulKVConditionConfig
 			return decodeConditionToType(c, &config)
 		}
@@ -102,9 +78,9 @@ func conditionToTypeFunc() mapstructure.DecodeHookFunc {
 }
 
 // decodeConditionToType is used by the overall config mapstructure decode hook
-// conditionToTypeFunc in order to convert ConditionConfig in the form
+// ToTypeFunc in order to convert MonitorConfig in the form
 // of an interface into an implementation
-func decodeConditionToType(data interface{}, condition ConditionConfig) (ConditionConfig, error) {
+func decodeConditionToType(data interface{}, monitor MonitorConfig) (MonitorConfig, error) {
 	var md mapstructure.Metadata
 	logger := logging.Global().Named(logSystemName)
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
@@ -114,24 +90,29 @@ func decodeConditionToType(data interface{}, condition ConditionConfig) (Conditi
 		WeaklyTypedInput: true,
 		ErrorUnused:      false,
 		Metadata:         &md,
-		Result:           &condition,
+		Result:           &monitor,
 	})
 	if err != nil {
-		logger.Error("condition mapstructure decoder create failed", "error", err)
+		logger.Error("monitor mapstructure decoder create failed", "error", err)
 		return nil, err
 	}
 
 	if err := decoder.Decode(data); err != nil {
-		logger.Error("condition mapstructure decode failed", "error", err)
+		logger.Error("monitor mapstructure decode failed", "error", err)
 		return nil, err
 	}
 
 	if len(md.Unused) > 0 {
 		sort.Strings(md.Unused)
 		err := fmt.Errorf("invalid keys: %s", strings.Join(md.Unused, ", "))
-		logger.Error("condition invalid keys", "error", err)
+		logger.Error("monitor invalid keys", "error", err)
 		return nil, err
 	}
 
-	return condition, nil
+	return monitor, nil
+}
+
+// isConditionNil returns true if the condition is Nil and false otherwise
+func isConditionNil(c ConditionConfig) bool {
+	return isMonitorNil(c)
 }

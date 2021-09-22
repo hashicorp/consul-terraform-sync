@@ -16,7 +16,7 @@ import (
 )
 
 // TestCondition_Schedule_Basic runs CTS in daemon-mode to test a task
-// configured with a schedule condition and monitoring task.services. This test
+// configured with a schedule condition and monitoring either task.services or task.source_input. This test
 // confirms some basic schedule condition behavior:
 // 1. Task successfully passes through once-mode and does not hang
 // 2. Task runs at the scheduled interval even when no dependency changes
@@ -25,17 +25,8 @@ import (
 func TestCondition_Schedule_Basic(t *testing.T) {
 	t.Parallel()
 
-	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
-		HTTPSRelPath: "../testutils",
-	})
-	defer srv.Stop()
-
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "schedule_basic")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
 	taskName := "scheduled_task"
-	taskSchedule := 10 * time.Second
-	conditionTask := fmt.Sprintf(`task {
+	conditionWithServices := fmt.Sprintf(`task {
 	name = "%s"
 	services = ["api", "web"]
 	source = "./test_modules/local_instances_file"
@@ -44,65 +35,107 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	}
 }
 `, taskName)
+	conditionWithSourceInput := fmt.Sprintf(`task {
+	name = "%s"
+	source = "./test_modules/local_instances_file"
+	condition "schedule" {
+		cron = "*/10 * * * * * *"
+	}
+    source_input "services"{
+	    regexp = "^web.*|^api.*"
+    }
+}
+`, taskName)
 
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(conditionTask)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
+	testcases := []struct {
+		name          string
+		conditionTask string
+		tempDir       string
+	}{
+		{
+			"with services",
+			conditionWithServices,
+			"schedule_basic_services",
+		},
+		{
+			"with source_input",
+			conditionWithSourceInput,
+			"schedule_basic_source_input",
+		},
+	}
 
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+				HTTPSRelPath: "../testutils",
+			})
+			defer srv.Stop()
 
-	// Test schedule condition overall behavior:
-	// 0. Confirm baseline: check current number of events for each task.
-	// 1. Make no dependency changes but confirm that task is still triggered at
-	//    scheduled time.
-	// 2. Register multiple services and confirm that task is only triggered at
-	//    scheduled time. Check resources are created.
+			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.tempDir)
+			cleanup := testutils.MakeTempDir(t, tempDir)
 
-	port := cts.Port()
-	scheduledWait := taskSchedule + 5*time.Second // buffer for task to execute
+			taskSchedule := 10 * time.Second
 
-	// 0. Confirm one event for once-mode
-	eventCountBase := eventCount(t, taskName, port)
-	assert.Equal(t, 1, eventCountBase)
+			config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
+				appendString(tc.conditionTask)
+			configPath := filepath.Join(tempDir, configFile)
+			config.write(t, configPath)
 
-	// 1. Wait and confirm that the task was triggered at the scheduled time
-	// Special confirmation case: when task is run in once-mode, it runs on
-	// demand vs. on schedule. Then the first run in daemon-mode starts on the
-	// 10s mark. Therefore these two runs are not necessarily 10s apart.
-	beforeEvent := time.Now()
-	api.WaitForEvent(t, cts, taskName, beforeEvent, scheduledWait)
+			cts, stop := api.StartCTS(t, configPath)
+			defer stop(t)
+			err := cts.WaitForAPI(defaultWaitForAPI)
+			require.NoError(t, err)
 
-	eventCountNow := eventCount(t, taskName, port)
-	assert.Equal(t, eventCountNow, eventCountBase+1)
+			// Test schedule condition overall behavior:
+			// 0. Confirm baseline: check current number of events for each task.
+			// 1. Make no dependency changes but confirm that task is still triggered at
+			//    scheduled time.
+			// 2. Register multiple services and confirm that task is only triggered at
+			//    scheduled time. Check resources are created.
 
-	e := events(t, taskName, port)
-	latestStartTime := e[0].StartTime.Round(time.Second)
-	assert.Equal(t, 0, latestStartTime.Second()%10, fmt.Sprintf("expected "+
-		"start time to be at the 10s mark but was at %s", latestStartTime))
+			port := cts.Port()
+			scheduledWait := taskSchedule + 5*time.Second // buffer for task to execute
 
-	// 2. Register two new services. Confirm task only triggered on schedule
+			// 0. Confirm one event for once-mode
+			eventCountBase := eventCount(t, taskName, port)
+			assert.Equal(t, 1, eventCountBase)
 
-	// wait for scheduled task to have just ran. then register consul services
-	api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
-	registerTime := time.Now()
-	services := []testutil.TestService{{ID: "api-1", Name: "api"},
-		{ID: "web-1", Name: "web"}}
-	testutils.AddServices(t, srv, services)
+			// 1. Wait and confirm that the task was triggered at the scheduled time
+			// Special confirmation case: when task is run in once-mode, it runs on
+			// demand vs. on schedule. Then the first run in daemon-mode starts on the
+			// 10s mark. Therefore these two runs are not necessarily 10s apart.
+			beforeEvent := time.Now()
+			api.WaitForEvent(t, cts, taskName, beforeEvent, scheduledWait)
 
-	// check scheduled task did not trigger immediately and ran only on schedule
-	api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
-	checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
+			eventCountNow := eventCount(t, taskName, port)
+			assert.Equal(t, eventCountNow, eventCountBase+1)
 
-	// confirm resources created
-	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
-	testutils.CheckFile(t, true, resourcesPath, "api-1.txt")
-	testutils.CheckFile(t, true, resourcesPath, "web-1.txt")
+			e := events(t, taskName, port)
+			latestStartTime := e[0].StartTime.Round(time.Second)
+			assert.Equal(t, 0, latestStartTime.Second()%10, fmt.Sprintf("expected "+
+				"start time to be at the 10s mark but was at %s", latestStartTime))
 
-	cleanup()
+			// 2. Register two new services. Confirm task only triggered on schedule
+
+			// wait for scheduled task to have just ran. then register consul services
+			api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
+			registerTime := time.Now()
+			services := []testutil.TestService{{ID: "api-1", Name: "api"},
+				{ID: "web-1", Name: "web"}}
+			testutils.AddServices(t, srv, services)
+
+			// check scheduled task did not trigger immediately and ran only on schedule
+			api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
+			checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
+
+			// confirm resources created
+			resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+			testutils.CheckFile(t, true, resourcesPath, "api-1.txt")
+			testutils.CheckFile(t, true, resourcesPath, "web-1.txt")
+
+			cleanup()
+		})
+	}
 }
 
 // TestCondition_Schedule_Dynamic runs CTS in daemon-mode to test running a
