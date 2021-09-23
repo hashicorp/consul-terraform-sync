@@ -18,7 +18,7 @@ Artifacts can be promoted to `staging` and then on to `production` when it's tim
 
 Promotion approvals are gaited by GitHub environments. These environments should have been [set up](https://docs.google.com/document/d/14v-KQKhwSsfduJQPaD13GZtHwxIUx0nRDFspKtZAslQ/edit#bookmark=id.ow4jgmydlwsa) when the repo was being onboarded to CRT and will contain a small subset of approvers per product.
 
-For this repo the environment is - `cts-ent`.
+For this repo the environment is - `cts-oss`.
 
 ### When you are ready to promote artifacts to staging:
 
