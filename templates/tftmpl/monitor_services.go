@@ -24,6 +24,10 @@ type Monitor interface {
 	// to the template content.
 	ServicesAppended() bool
 
+	// SourceIncludesVariable returns if the module source expects to
+	// include the monitor variable.
+	SourceIncludesVariable() bool
+
 	// appendModuleAttribute writes to an HCL module body the monitor variable
 	// as a module argument in main.tf file.
 	// module "name" {
@@ -69,6 +73,13 @@ func (m ServicesMonitor) appendTemplate(w io.Writer) error {
 
 func (m ServicesMonitor) appendVariable(io.Writer) error {
 	return nil
+}
+
+// SourceIncludesVariable returns true if the source variables are to be included in the template.
+// For the case of a service monitor, this always returns true and must be overridden to
+// return based on other conditions.
+func (m ServicesMonitor) SourceIncludesVariable() bool {
+	return true
 }
 
 func (m ServicesMonitor) hcatQuery() string {

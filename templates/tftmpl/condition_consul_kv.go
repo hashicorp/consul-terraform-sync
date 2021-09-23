@@ -62,8 +62,8 @@ const consulKVConditionTmpl = `
 `
 const consulKVRecurseConditionTmpl = `
 {{- with $kv := keys %s }}
-	{{- range $k, $v := $kv }}
-		{{- /* Empty template. Detects changes in Consul KV */ -}}
-	{{- end}}
+  {{- range $k, $v := $kv }}
+  {{- /* Empty template. Detects changes in Consul KV */ -}}
+  {{- end}}
 {{- end}}
 `

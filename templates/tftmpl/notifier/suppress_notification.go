@@ -33,10 +33,10 @@ type SuppressNotification struct {
 
 // NewSuppressNotification creates a new SuppressNotification notifier.
 // serviceCount parameter: the number of services the task is configured with
-func NewSuppressNotification(tmpl templates.Template, serviceCount int) *SuppressNotification {
+func NewSuppressNotification(tmpl templates.Template, dependencyCount int) *SuppressNotification {
 	return &SuppressNotification{
 		Template: tmpl,
-		depTotal: serviceCount,
+		depTotal: dependencyCount,
 		logger:   logging.Global().Named(logSystemName).Named(supSubsystemName),
 	}
 }
