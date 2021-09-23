@@ -115,6 +115,35 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
+			Name:   "variables.tf (condition consul-kv)",
+			Func:   newVariablesTF,
+			Golden: "testdata/consul-kv/variables.tf",
+			Input: RootModuleInputData{
+				Condition: &ConsulKVCondition{
+					ConsulKVMonitor{
+						Path:       "key-path",
+						Datacenter: "dc1",
+					},
+					true,
+				},
+				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
+				Task:             task,
+			},
+		}, {
+			Name:   "variables.tf (source_input consul-kv)",
+			Func:   newVariablesTF,
+			Golden: "testdata/consul-kv/variables.tf",
+			Input: RootModuleInputData{
+				SourceInput: &ConsulKVSourceInput{
+					ConsulKVMonitor{
+						Path:       "key-path",
+						Datacenter: "dc1",
+					},
+				},
+				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
+				Task:             task,
+			},
+		}, {
 			Name:   "terraform.tfvars.tmpl (services condition)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/terraform.tfvars.tmpl",
@@ -207,8 +236,7 @@ func TestNewFiles(t *testing.T) {
 					},
 				},
 			},
-		},
-		{
+		}, {
 			Name:   "terraform.tfvars.tmpl (catalog-services condition)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/catalog-services-condition/terraform.tfvars.tmpl",
@@ -295,6 +323,190 @@ func TestNewFiles(t *testing.T) {
 						Regexp: ".*",
 					},
 					false,
+				},
+				Task: task,
+			},
+		}, {
+			Name:   "terraform.tfvars.tmpl (consul-kv condition no namespace)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/consul-kv/terraform.tfvars.tmpl",
+			Input: RootModuleInputData{
+				Condition: &ConsulKVCondition{
+					ConsulKVMonitor{
+						Path:       "key-path",
+						Datacenter: "dc1",
+					},
+					false,
+				},
+				Services: []Service{
+					{
+						Name:        "web",
+						Description: "web service",
+					}, {
+						Name:        "api",
+						Namespace:   "",
+						Datacenter:  "dc1",
+						Description: "api service for web",
+						Filter:      "\"tag\" in Service.Tags",
+					},
+				},
+				Task: task,
+			},
+		}, {
+			Name:   "terraform.tfvars.tmpl (consul-kv condition)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/consul-kv/terraform_namespace.tfvars.tmpl",
+			Input: RootModuleInputData{
+				Condition: &ConsulKVCondition{
+					ConsulKVMonitor{
+						Path:       "key-path",
+						Datacenter: "dc1",
+						Namespace:  "test-ns",
+					},
+					false,
+				},
+				Services: []Service{
+					{
+						Name:        "web",
+						Description: "web service",
+					}, {
+						Name:        "api",
+						Namespace:   "",
+						Datacenter:  "dc1",
+						Description: "api service for web",
+						Filter:      "\"tag\" in Service.Tags",
+					},
+				},
+				Task: task,
+			},
+		}, {
+			Name:   "terraform.tfvars.tmpl (consul-kv condition includes vars)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/consul-kv/terraform_includes_vars.tfvars.tmpl",
+			Input: RootModuleInputData{
+				Condition: &ConsulKVCondition{
+					ConsulKVMonitor{
+						Path:       "key-path",
+						Datacenter: "dc1",
+					},
+					true,
+				},
+				Services: []Service{
+					{
+						Name:        "web",
+						Description: "web service",
+					}, {
+						Name:        "api",
+						Namespace:   "",
+						Datacenter:  "dc1",
+						Description: "api service for web",
+						Filter:      "\"tag\" in Service.Tags",
+					},
+				},
+				Task: task,
+			},
+		}, {
+			Name:   "terraform.tfvars.tmpl (consul-kv condition includes vars recurse true)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/consul-kv/terraform_recurse_true.tfvars.tmpl",
+			Input: RootModuleInputData{
+				Condition: &ConsulKVCondition{
+					ConsulKVMonitor{
+						Path:       "key-path",
+						Datacenter: "dc1",
+						Recurse:    true,
+					},
+					true,
+				},
+				Services: []Service{
+					{
+						Name:        "web",
+						Description: "web service",
+					}, {
+						Name:        "api",
+						Namespace:   "",
+						Datacenter:  "dc1",
+						Description: "api service for web",
+						Filter:      "\"tag\" in Service.Tags",
+					},
+				},
+				Task: task,
+			},
+		}, {
+			Name:   "terraform.tfvars.tmpl (consul-kv condition includes vars false recurse true)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/consul-kv/terraform_recurse_true_include_false.tfvars.tmpl",
+			Input: RootModuleInputData{
+				Condition: &ConsulKVCondition{
+					ConsulKVMonitor{
+						Path:       "key-path",
+						Datacenter: "dc1",
+						Recurse:    true,
+					},
+					false,
+				},
+				Services: []Service{
+					{
+						Name:        "web",
+						Description: "web service",
+					}, {
+						Name:        "api",
+						Namespace:   "",
+						Datacenter:  "dc1",
+						Description: "api service for web",
+						Filter:      "\"tag\" in Service.Tags",
+					},
+				},
+				Task: task,
+			},
+		}, {
+			Name:   "terraform.tfvars.tmpl (consul-kv source_input)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/consul-kv/terraform_includes_vars.tfvars.tmpl",
+			Input: RootModuleInputData{
+				SourceInput: &ConsulKVSourceInput{
+					ConsulKVMonitor{
+						Path:       "key-path",
+						Datacenter: "dc1",
+					},
+				},
+				Services: []Service{
+					{
+						Name:        "web",
+						Description: "web service",
+					}, {
+						Name:        "api",
+						Namespace:   "",
+						Datacenter:  "dc1",
+						Description: "api service for web",
+						Filter:      "\"tag\" in Service.Tags",
+					},
+				},
+				Task: task,
+			},
+		}, {
+			Name:   "terraform.tfvars.tmpl (consul-kv source_input recurse true)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/consul-kv/terraform_recurse_true.tfvars.tmpl",
+			Input: RootModuleInputData{
+				SourceInput: &ConsulKVSourceInput{
+					ConsulKVMonitor{
+						Path:       "key-path",
+						Datacenter: "dc1",
+						Recurse:    true,
+					},
+				},
+				Services: []Service{
+					{
+						Name:        "web",
+						Description: "web service",
+					}, {
+						Name:        "api",
+						Namespace:   "",
+						Datacenter:  "dc1",
+						Description: "api service for web",
+						Filter:      "\"tag\" in Service.Tags",
+					},
 				},
 				Task: task,
 			},

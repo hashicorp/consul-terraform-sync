@@ -67,6 +67,19 @@ func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) er
 		}
 	}
 
+	if input.SourceInput != nil {
+		if input.SourceInput.SourceIncludesVariable() {
+			if err = input.SourceInput.appendVariable(w); err != nil {
+				return err
+			}
+		} else {
+			// SourceIncludesVariable should always be true for a non-nil source input
+			// if we got here, it means that a source_input's SourceIncludesVariable() function
+			// was not setup correctly
+			panic("SourceIncludesVariable is false for a non-nil source input")
+		}
+	}
+
 	hclFile := hclwrite.NewEmptyFile()
 	rootBody := hclFile.Body()
 	for _, p := range input.Providers {

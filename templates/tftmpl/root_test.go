@@ -175,20 +175,21 @@ func TestAppendRootModuleBlocks(t *testing.T) {
 		name     string
 		task     Task
 		cond     Condition
+		si       SourceInput
 		varNames []string
 		expected string
 	}{
 		{
-			"module without conditions or variables",
-			Task{
+			name: "module without conditions or variables",
+			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			nil,
-			nil,
-			`# user description for task named 'test'
+			cond:     nil,
+			varNames: nil,
+			expected: `# user description for task named 'test'
 module "test" {
   source   = "namespace/example/test-module"
   version  = "1.0.0"
@@ -196,21 +197,21 @@ module "test" {
 }
 `},
 		{
-			"module with catalog service conditions",
-			Task{
+			name: "module with catalog service conditions",
+			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			&CatalogServicesCondition{
+			cond: &CatalogServicesCondition{
 				CatalogServicesMonitor: CatalogServicesMonitor{
 					Regexp: ".*",
 				},
 				SourceIncludesVar: true,
 			},
-			nil,
-			`# user description for task named 'test'
+			varNames: nil,
+			expected: `# user description for task named 'test'
 module "test" {
   source           = "namespace/example/test-module"
   version          = "1.0.0"
@@ -219,16 +220,16 @@ module "test" {
 }
 `},
 		{
-			"module with variables",
-			Task{
+			name: "module with variables",
+			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			nil,
-			[]string{"test1", "test2"},
-			`# user description for task named 'test'
+			cond:     nil,
+			varNames: []string{"test1", "test2"},
+			expected: `# user description for task named 'test'
 module "test" {
   source   = "namespace/example/test-module"
   version  = "1.0.0"
@@ -238,13 +239,36 @@ module "test" {
   test2 = var.test2
 }
 `},
+		{
+			name: "module with catalog service conditions",
+			task: Task{
+				Description: "user description for task named 'test'",
+				Name:        "test",
+				Source:      "namespace/example/test-module",
+				Version:     "1.0.0",
+			},
+			cond: &CatalogServicesCondition{
+				CatalogServicesMonitor: CatalogServicesMonitor{
+					Regexp: ".*",
+				},
+				SourceIncludesVar: true,
+			},
+			varNames: nil,
+			expected: `# user description for task named 'test'
+module "test" {
+  source           = "namespace/example/test-module"
+  version          = "1.0.0"
+  services         = var.services
+  catalog_services = var.catalog_services
+}
+`},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			hclFile := hclwrite.NewEmptyFile()
 			body := hclFile.Body()
-			appendRootModuleBlock(body, tc.task, tc.cond, tc.varNames)
+			appendRootModuleBlock(body, tc.task, tc.varNames, tc.cond, tc.si)
 
 			content := hclFile.Bytes()
 			content = hclwrite.Format(content)
