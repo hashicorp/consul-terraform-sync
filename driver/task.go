@@ -343,6 +343,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 				Path:       *v.Path,
 				Datacenter: *v.Datacenter,
 				Recurse:    *v.Recurse,
+				Namespace:  *v.Namespace,
 			},
 			SourceIncludesVar: *v.SourceIncludesVar,
 		}
