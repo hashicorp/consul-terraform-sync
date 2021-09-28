@@ -1,9 +1,11 @@
 ## UNRELEASED
 BREAKING CHANGES:
 * Remove deprecated `tag` filtering option from `service` configuration, which has been replaced by the more general `filter` option. [[GH-312](https://github.com/hashicorp/consul-terraform-sync/issues/312)]
+* The logging timestamps are now reported using the timezone of the system CTS is running on, instead of defaulting to UTC time. [[GH-332](https://github.com/hashicorp/consul-terraform-sync/issues/332)]
 
 FEATURES:
 * Add support for Consul KV triggers. [[GH-150](https://github.com/hashicorp/consul-terraform-sync/issues/150)]
+* Enhanced http and structured logging. [[GH-332](https://github.com/hashicorp/consul-terraform-sync/issues/332)]
 
 ## 0.3.0 (September 01, 2021)
 BREAKING CHANGES:
