@@ -1,6 +1,10 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	vaultapi "github.com/hashicorp/vault/api"
+)
 
 const (
 	// DefaultTLSVerify is the default value for TLS verification.
@@ -101,6 +105,37 @@ func (c *TLSConfig) Finalize() {
 			StringPresent(c.ServerName) ||
 			BoolPresent(c.Verify))
 	}
+	if c.CACert == nil {
+		c.CACert = String("")
+	}
+	if c.CAPath == nil {
+		c.CAPath = String("")
+	}
+	if c.Cert == nil {
+		c.Cert = String("")
+	}
+	if c.Key == nil {
+		c.Key = String("")
+	}
+	if c.ServerName == nil {
+		c.ServerName = String("")
+	}
+	if c.Verify == nil {
+		c.Verify = Bool(DefaultTLSVerify)
+	}
+}
+
+// FinalizeConsul resolves the configuration with environment variables for Consul.
+func (c *TLSConfig) FinalizeConsul() {
+	if c.Enabled == nil {
+		c.Enabled = Bool(false ||
+			StringPresent(c.Cert) ||
+			StringPresent(c.CACert) ||
+			StringPresent(c.CAPath) ||
+			StringPresent(c.Key) ||
+			StringPresent(c.ServerName) ||
+			BoolPresent(c.Verify))
+	}
 
 	if c.Cert == nil {
 		c.Cert = stringFromEnv([]string{
@@ -134,6 +169,32 @@ func (c *TLSConfig) Finalize() {
 
 	if c.Verify == nil {
 		c.Verify = Bool(DefaultTLSVerify)
+	}
+}
+
+// FinalizeVault resolves the configuration with environment variables for Vault.
+func (c *TLSConfig) FinalizeVault() {
+	if c.Enabled == nil {
+		c.Enabled = Bool(true)
+	}
+	if c.CACert == nil {
+		c.CACert = stringFromEnv([]string{vaultapi.EnvVaultCACert}, "")
+	}
+	if c.CAPath == nil {
+		c.CAPath = stringFromEnv([]string{vaultapi.EnvVaultCAPath}, "")
+	}
+	if c.Cert == nil {
+		c.Cert = stringFromEnv([]string{vaultapi.EnvVaultClientCert}, "")
+	}
+	if c.Key == nil {
+		c.Key = stringFromEnv([]string{vaultapi.EnvVaultClientKey}, "")
+	}
+	if c.ServerName == nil {
+		c.ServerName = stringFromEnv([]string{vaultapi.EnvVaultTLSServerName}, "")
+	}
+	if c.Verify == nil {
+		c.Verify = antiboolFromEnv([]string{
+			vaultapi.EnvVaultSkipVerify, vaultapi.EnvVaultInsecure}, true)
 	}
 }
 
