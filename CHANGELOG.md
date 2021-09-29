@@ -5,6 +5,9 @@ BREAKING CHANGES:
 
 FEATURES:
 * Add support for Consul KV triggers. [[GH-150](https://github.com/hashicorp/consul-terraform-sync/issues/150)]
+* **(Enterprise Only)** Add integration with Terraform Cloud remote operations through the Terraform Cloud driver. [[GH-328](https://github.com/hashicorp/consul-terraform-sync/issues/328)]
+
+IMPROVEMENTS:
 * Enhanced http and structured logging. [[GH-332](https://github.com/hashicorp/consul-terraform-sync/issues/332)]
 
 ## 0.3.0 (September 01, 2021)
