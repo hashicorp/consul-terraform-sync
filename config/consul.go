@@ -156,7 +156,7 @@ func (c *ConsulConfig) Finalize() {
 	if c.TLS == nil {
 		c.TLS = DefaultTLSConfig()
 	}
-	c.TLS.Finalize()
+	c.TLS.FinalizeConsul()
 
 	if c.Token == nil {
 		c.Token = stringFromEnv([]string{
