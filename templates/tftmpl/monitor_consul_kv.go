@@ -49,7 +49,7 @@ func (m ConsulKVMonitor) appendTemplate(w io.Writer) error {
 	if m.Recurse {
 		baseTmpl = fmt.Sprintf(consulKVRecurseBaseTmpl, q)
 	} else {
-		baseTmpl = fmt.Sprintf(consulKVBaseTmpl, q, q, m.Path)
+		baseTmpl = fmt.Sprintf(consulKVBaseTmpl, q)
 	}
 	_, err := fmt.Fprintf(w, consulKVIncludesVarTmpl, baseTmpl)
 	if err != nil {
@@ -88,10 +88,10 @@ consul_kv = {%s}
 `
 
 const consulKVBaseTmpl = `
-{{- if keyExists %s }}
-	{{- with $kv := key %s }}
-		"%s" = "{{ $kv }}"
-	{{- end}}
+{{- with $kv := keyExistsGet %s }}
+  {{- if .Exists }}
+  "{{ .Path }}" = "{{ .Value }}"
+  {{- end}}
 {{- end}}
 `
 

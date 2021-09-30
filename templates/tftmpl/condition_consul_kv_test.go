@@ -64,10 +64,8 @@ func TestConsulKVCondition_appendTemplate(t *testing.T) {
 				SourceIncludesVar: false,
 			},
 			`
-{{- if keyExists "path" "dc=dc1" "ns=test-ns"  }}
-	{{- with $kv := key "path" "dc=dc1" "ns=test-ns"  }}
-		{{- /* Empty template. Detects changes in Consul KV */ -}}
-	{{- end}}
+{{- with $kv := keyExistsGet "path" "dc=dc1" "ns=test-ns"  }}
+  {{- /* Empty template. Detects changes in Consul KV */ -}}
 {{- end}}
 `,
 		},
@@ -84,10 +82,10 @@ func TestConsulKVCondition_appendTemplate(t *testing.T) {
 			},
 			`
 consul_kv = {
-{{- if keyExists "path" "dc=dc1" "ns=test-ns"  }}
-	{{- with $kv := key "path" "dc=dc1" "ns=test-ns"  }}
-		"path" = "{{ $kv }}"
-	{{- end}}
+{{- with $kv := keyExistsGet "path" "dc=dc1" "ns=test-ns"  }}
+  {{- if .Exists }}
+  "{{ .Path }}" = "{{ .Value }}"
+  {{- end}}
 {{- end}}
 }
 `,
