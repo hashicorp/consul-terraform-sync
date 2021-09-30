@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/master.svg?style=svg&circle-token=a88491ffa8b02149fc483c29c6b8b91ed771f5a5)](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/master)
+[![CircleCI](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/main.svg?style=svg&circle-token=a88491ffa8b02149fc483c29c6b8b91ed771f5a5)](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/main)
 
 # Consul-Terraform-Sync
 
@@ -44,7 +44,7 @@ $ mv consul-terraform-sync /usr/local/bin/consul-terraform-sync
 You can also build Sync from source.
 
   1. Clone the repository to your local machine.
-  1. Pick a [version](https://github.com/hashicorp/consul-terraform-sync/releases) or build from master.
+  1. Pick a [version](https://github.com/hashicorp/consul-terraform-sync/releases) or build from main.
   1. Build Sync using the [Makefile](Makefile).
   1. The `consul-terraform-sync` binary is now installed to `$GOPATH/bin`.
 

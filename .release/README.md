@@ -8,7 +8,7 @@
 
 - Please ensure that the version in [version/version.go](../version/version.go) or [version/version_ent.go](../version/version_ent.go) is set to the next targeted release version for that branch.
 
-- The `release_branches` key in the [ci.hcl](ci.hcl) file should be set to all branches that release artifacts should be built for (commonly this should be any active release branches and for some products main/master). For any build workflow that successfully completes for commits pushed to these branches, artifacts will be processed and made ready for release.
+- The `release_branches` key in the [ci.hcl](ci.hcl) file should be set to all branches that release artifacts should be built for (commonly this should be any active release branches and for some products `main`). For any build workflow that successfully completes for commits pushed to these branches, artifacts will be processed and made ready for release.
 
 - The crt-orchestrator GitHub app is responsible for processing the artifacts and making them 'release' ready. This includes running jobs like signing and notarization and will include running quality tests and security scans in the future. These GitHub workflows are located in the hashicorp/crt-workflows-common repo and are run in the context of this repo by the crt-orchestrator app. The workflows are mapped to identically named events in the `ci.hcl` file.
 
