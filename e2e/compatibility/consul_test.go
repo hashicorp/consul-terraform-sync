@@ -82,6 +82,11 @@ func TestCompatibility_Consul(t *testing.T) {
 			cleanup := testutils.MakeTempDir(t, tempDir)
 			execPath := downloadConsul(t, tempDir, cv)
 
+			// Output the Consul version
+			consulVersion, err := exec.Command(execPath, "-version").Output()
+			require.NoError(t, err)
+			t.Logf("%s\n%s", t.Name(), consulVersion)
+
 			for _, tc := range cases {
 				t.Run(tc.name, func(t *testing.T) {
 					port := testutils.FreePort(t)
