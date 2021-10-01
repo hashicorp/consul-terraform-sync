@@ -1,6 +1,6 @@
 // +build e2e
 
-// $ go test -run TestCompatibilty_Consul ./e2e/compatibility -tags=e2e -v
+// $ go test -run TestCompatibility_Consul ./e2e/compatibility -tags=e2e -v
 package compatibility
 
 import (
@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,34 +33,39 @@ const (
 	defaultWaitForAPI = 30 * time.Second
 )
 
-func TestCompatibilty_Consul(t *testing.T) {
+func TestCompatibility_Consul(t *testing.T) {
 	// Tested only OSS GA releases for the highest patch version given a
 	// major minor version. v1.4.5 starts losing compatibility, details in
 	// comments. Theoretical compatible versions 0.1.0 GA:
-	consulVersions := []string{"1.9.4", "1.8.9", "1.7.13", "1.6.10", "1.5.3"}
+	consulVersions := []string{"1.10.3", "1.9.10", "1.8.16", "1.7.14", "1.6.10", "1.5.3"}
 
 	cases := []struct {
 		name              string
 		testCompatibility func(t *testing.T, port int)
 	}{
 		{
-			"consulKV terraform backend",
+			// consulKV terraform backend
+			"compat_consul_backend",
 			testConsulBackendCompatibility,
 		},
 		{
-			"adding and removing service instances",
+			// adding and removing service instances
+			"compat_service_instances",
 			testServiceInstanceCompatibility,
 		},
 		{
-			"changing service values",
+			// changing service values
+			"compat_service_values",
 			testServiceValuesCompatibility,
 		},
 		{
-			"filtering health service api by tag",
+			// filtering health service api by tag
+			"compat_tag_api_query",
 			testTagQueryCompatibility,
 		},
 		{
-			"changing node values",
+			// changing node values
+			"compat_node_values",
 			testNodeValuesCompatibility,
 		},
 	}
@@ -68,17 +74,20 @@ func TestCompatibilty_Consul(t *testing.T) {
 	for _, cv := range consulVersions {
 		cleanup := downloadConsul(t, cv)
 
-		for _, tc := range cases {
-			name := fmt.Sprintf("Consul v%s %s", cv, tc.name)
-			t.Run(name, func(t *testing.T) {
-				port := testutils.FreePort(t)
+		t.Run(cv, func(t *testing.T) {
+			for _, tc := range cases {
+				test := tc
+				t.Run(test.name, func(t *testing.T) {
+					port := testutils.FreePort(t)
 
-				stop := runConsul(t, port)
-				defer stop()
+					stop := runConsul(t, port)
+					defer stop()
 
-				tc.testCompatibility(t, port)
-			})
-		}
+					t.Parallel()
+					test.testCompatibility(t, port)
+				})
+			}
+		})
 
 		cleanup()
 	}
@@ -94,7 +103,7 @@ func TestCompatibilty_Consul(t *testing.T) {
 //	  separator, flags)
 //  - Session API (Destroy, Create)
 func testConsulBackendCompatibility(t *testing.T, port int) {
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "compat_consul_backend")
+	tempDir := testTempDirName(t)
 	cleanup := testutils.MakeTempDir(t, tempDir)
 	defer cleanup()
 
@@ -119,9 +128,8 @@ func testConsulBackendCompatibility(t *testing.T, port int) {
 // remove service instances and confirm that CTS task execution and resource
 // creation is successful.
 func testServiceInstanceCompatibility(t *testing.T, port int) {
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "compat_service_instances")
+	tempDir := testTempDirName(t)
 	cleanup := testutils.MakeTempDir(t, tempDir)
-	defer cleanup()
 
 	config := baseConfig(tempDir, port) + basicTask("db_task", "db", "api") +
 		basicTask("web_task", "api", "web")
@@ -143,28 +151,32 @@ func testServiceInstanceCompatibility(t *testing.T, port int) {
 	//    web_task resources unchanged
 
 	// 0. no resources created yet
-	resourcesPath := filepath.Join(tempDir, resourcesDir)
-	testutils.CheckDir(t, false, resourcesPath)
+	dbResourcesPath := filepath.Join(tempDir, "db_task", resourcesDir)
+	webResourcesPath := filepath.Join(tempDir, "web_task", resourcesDir)
+	testutils.CheckDir(t, false, dbResourcesPath)
+	testutils.CheckDir(t, false, webResourcesPath)
 
 	// 1. register db service instances
 	registerService(t, &capi.AgentServiceRegistration{ID: "db1", Name: "db"}, port)
-	testutils.CheckFile(t, true, resourcesPath, "db1.txt")
+	testutils.CheckFile(t, true, dbResourcesPath, "db1.txt")
 	registerService(t, &capi.AgentServiceRegistration{ID: "db2", Name: "db"}, port)
-	testutils.CheckFile(t, true, resourcesPath, "db2.txt")
-	files := testutils.CheckDir(t, true, resourcesPath)
+	testutils.CheckFile(t, true, dbResourcesPath, "db2.txt")
+	files := testutils.CheckDir(t, true, dbResourcesPath)
 	require.Equal(t, 2, len(files))
+	testutils.CheckDir(t, false, webResourcesPath)
 
 	// 2. register a web service instance
 	registerService(t, &capi.AgentServiceRegistration{ID: "web1", Name: "web"}, port)
-	testutils.CheckFile(t, true, resourcesPath, "web1.txt")
-	testutils.CheckFile(t, true, resourcesPath, "db1.txt")
-	testutils.CheckFile(t, true, resourcesPath, "db2.txt")
+	testutils.CheckFile(t, true, webResourcesPath, "web1.txt")
+	testutils.CheckFile(t, true, dbResourcesPath, "db1.txt")
+	testutils.CheckFile(t, true, dbResourcesPath, "db2.txt")
 
 	//3. deregister one db service instance
 	deregisterService(t, "db1", port)
-	testutils.CheckFile(t, false, resourcesPath, "db1.txt")
-	testutils.CheckFile(t, true, resourcesPath, "db2.txt")
-	testutils.CheckFile(t, true, resourcesPath, "web1.txt")
+	testutils.CheckFile(t, false, dbResourcesPath, "db1.txt")
+	testutils.CheckFile(t, true, dbResourcesPath, "db2.txt")
+	testutils.CheckFile(t, true, webResourcesPath, "web1.txt")
+	cleanup()
 }
 
 // testServiceValuesCompatibility tests the compatibility of Consul's Health
@@ -177,9 +189,8 @@ func testServiceInstanceCompatibility(t *testing.T, port int) {
 // registering a new service instance (tested elsewhere). Modifying Name results
 // in registering a new service (unrelated scenario for this particular test).
 func testServiceValuesCompatibility(t *testing.T, port int) {
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "compat_service_values")
+	tempDir := testTempDirName(t)
 	cleanup := testutils.MakeTempDir(t, tempDir)
-	defer cleanup()
 
 	config := baseConfig(tempDir, port) + nullTask()
 	configPath := filepath.Join(tempDir, configFile)
@@ -265,6 +276,7 @@ func testServiceValuesCompatibility(t *testing.T, port int) {
 	registerService(t, serviceInstance, port)
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "critical")
+	cleanup()
 }
 
 // testTagQueryCompatibility tests the compatibility of Consul's Health Service
@@ -273,9 +285,8 @@ func testServiceValuesCompatibility(t *testing.T, port int) {
 // Not tested: Namespace querying (Enterprise), Datacenter querying (manually
 // tested since it requires setting up at least 2 datacenters)
 func testTagQueryCompatibility(t *testing.T, port int) {
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "compat_tag_api_query")
+	tempDir := testTempDirName(t)
 	cleanup := testutils.MakeTempDir(t, tempDir)
-	defer cleanup()
 
 	redisService := `service {
   name = "redis"
@@ -300,7 +311,7 @@ func testTagQueryCompatibility(t *testing.T, port int) {
 	// 3. Register redis service instance with tag v1. Confirm resource created
 
 	// 0. no resources created yet
-	resourcesPath := filepath.Join(tempDir, resourcesDir)
+	resourcesPath := filepath.Join(tempDir, "redis_task", resourcesDir)
 	testutils.CheckDir(t, false, resourcesPath)
 
 	// 2. register filtered-in tag
@@ -313,6 +324,7 @@ func testTagQueryCompatibility(t *testing.T, port int) {
 	registerService(t, &capi.AgentServiceRegistration{ID: "redis_v2",
 		Name: "redis", Tags: []string{"v2"}}, port)
 	testutils.CheckFile(t, false, resourcesPath, "redis_v2.txt")
+	cleanup()
 }
 
 // testNodeValuesCompatibility tests the compatibility of Consul's Health
@@ -323,9 +335,8 @@ func testTagQueryCompatibility(t *testing.T, port int) {
 // Tested node-related values: Node name, node id, node address, tagged address,
 // and node meta. Node datacenter not tested.
 func testNodeValuesCompatibility(t *testing.T, port int) {
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "compat_node_values")
+	tempDir := testTempDirName(t)
 	cleanup := testutils.MakeTempDir(t, tempDir)
-	defer cleanup()
 
 	config := baseConfig(tempDir, port) + nullTask()
 	configPath := filepath.Join(tempDir, configFile)
@@ -413,6 +424,7 @@ func testNodeValuesCompatibility(t *testing.T, port int) {
 	assert.Contains(t, content, "meta_value1_update")
 	assert.NotContains(t, content, "meta_value2")
 	assert.Contains(t, content, "meta_value3")
+	cleanup()
 }
 
 // downloadConsul downloads Consul into the current directory. Returns a function
@@ -444,7 +456,16 @@ func downloadConsul(t *testing.T, version string) func() {
 // runConsul starts running a Consul binary that is in the current directory.
 // Returns a function that stops running Consul. Does not log to standard out.
 func runConsul(t *testing.T, port int) func() {
-	cmd := exec.Command("./consul", "agent", "-dev", fmt.Sprintf("-http-port=%d", port))
+	cmd := exec.Command("./consul", "agent", "-dev",
+		fmt.Sprintf("-http-port=%d", port),
+		// Randomize ports to run multiple consul servers on the same node.
+		// These ports are not used for CTS compatibility testing
+		fmt.Sprintf("-server-port=%d", testutils.FreePort(t)),
+		fmt.Sprintf("-serf-lan-port=%d", testutils.FreePort(t)),
+		fmt.Sprintf("-serf-wan-port=%d", testutils.FreePort(t)),
+		fmt.Sprintf("-dns-port=%d", testutils.FreePort(t)),
+		fmt.Sprintf("-grpc-port=%d", testutils.FreePort(t)),
+	)
 	// uncomment to see logs
 	// cmd.Stdout = os.Stdout
 	// cmd.Stderr = os.Stderr
@@ -453,7 +474,7 @@ func runConsul(t *testing.T, port int) func() {
 	require.NoError(t, err)
 
 	// wait a little for Consul to get fully started up
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	return func() {
 		cmd := exec.Command("consul", "leave",
@@ -552,4 +573,8 @@ task {
 	source = "../test_modules/local_instances_file"
 }
 `, taskName, service1, service2)
+}
+
+func testTempDirName(t *testing.T) string {
+	return fmt.Sprint(tempDirPrefix, strings.ReplaceAll(t.Name(), "/", "_"))
 }
