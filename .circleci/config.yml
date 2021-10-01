@@ -89,9 +89,9 @@ jobs:
             - ct-modcache-v1-{{ checksum "go.mod" }}
       - run: |
           make test-compat
-      # - slack/notify:
-      #     event: fail
-      #     template: basic_fail_1
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
       - save_cache:
           key: ct-modcache-v1-{{ checksum "go.mod" }}
           paths:
@@ -156,9 +156,8 @@ workflows:
   version: 2
   build-test:
     jobs:
-      # - unit_integration_tests
-      # - e2e_tests
-      - consul_compatibility_tests # Temp to test CI job, remove before merge
+      - unit_integration_tests
+      - e2e_tests
   weekly-benchmarks:
     jobs:
       - vault_integration_tests

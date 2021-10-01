@@ -272,7 +272,6 @@ func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
 	registerService(t, serviceInstance, port)
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "critical")
-
 }
 
 // testTagQueryCompatibility tests the compatibility of Consul's Health Service
@@ -317,7 +316,6 @@ func testTagQueryCompatibility(t *testing.T, tempDir string, port int) {
 	registerService(t, &capi.AgentServiceRegistration{ID: "redis_v2",
 		Name: "redis", Tags: []string{"v2"}}, port)
 	testutils.CheckFile(t, false, resourcesPath, "redis_v2.txt")
-
 }
 
 // testNodeValuesCompatibility tests the compatibility of Consul's Health
