@@ -62,6 +62,12 @@ test-setup-e2e: dev
 test-e2e-cirecleci: test-setup-e2e test-e2e
 .PHONY: test-e2e-cirecleci
 
+# test-compat sets up the CTS binary and then runs the compatibility tests
+test-compat: test-setup-e2e
+	@echo "==> Testing ${NAME} compatiblity with Consul"
+	@go test ./e2e/compatibility -timeout 1h -tags=e2e -v -run TestCompatibility_Consul
+.PHONY: test-compat
+
 # test-benchmarks requires Terraform in the path of execution and Consul in $PATH.
 test-benchmarks:
 	@echo "==> Running benchmarks for ${NAME}"
