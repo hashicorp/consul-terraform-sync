@@ -37,7 +37,7 @@ func TestCompatibility_Consul(t *testing.T) {
 	// Tested only OSS GA releases for the highest patch version given a
 	// major minor version. v1.4.5 starts losing compatibility, details in
 	// comments. Theoretical compatible versions 0.1.0 GA:
-	consulVersions := []string{"1.10.3", "1.9.10", "1.8.16", "1.7.14", "1.6.10", "1.5.3"}
+	consulVersions := []string{"1.10.3", "1.9.10"} //, "1.8.16", "1.7.14", "1.6.10", "1.5.3"}
 
 	cases := []struct {
 		name              string
@@ -72,15 +72,15 @@ func TestCompatibility_Consul(t *testing.T) {
 
 	// versions are run sequentially to avoid confusion
 	for _, cv := range consulVersions {
-		cleanup := downloadConsul(t, cv)
-
+		execPath := downloadConsul(t, cv)
+		t.Log(execPath)
 		t.Run(cv, func(t *testing.T) {
 			for _, tc := range cases {
 				test := tc
 				t.Run(test.name, func(t *testing.T) {
 					port := testutils.FreePort(t)
 
-					stop := runConsul(t, port)
+					stop := runConsul(t, execPath, port)
 					defer stop()
 
 					t.Parallel()
@@ -88,8 +88,7 @@ func TestCompatibility_Consul(t *testing.T) {
 				})
 			}
 		})
-
-		cleanup()
+		require.NoError(t, os.RemoveAll(execPath))
 	}
 }
 
@@ -429,12 +428,15 @@ func testNodeValuesCompatibility(t *testing.T, port int) {
 
 // downloadConsul downloads Consul into the current directory. Returns a function
 // to delete the downloaded Consul binary.
-func downloadConsul(t *testing.T, version string) func() {
+func downloadConsul(t *testing.T, version string) string {
 	opsys := runtime.GOOS
 	arch := runtime.GOARCH
 
 	filename := fmt.Sprintf("consul_%s_%s_%s.zip", version, opsys, arch)
 	url := fmt.Sprintf("https://releases.hashicorp.com/consul/%s/%s", version, filename)
+
+	wd, err := os.Getwd()
+	require.NoError(t, err)
 
 	client := getter.Client{
 		Getters: map[string]getter.Getter{
@@ -442,21 +444,18 @@ func downloadConsul(t *testing.T, version string) func() {
 		},
 		Mode: getter.ClientModeDir,
 		Src:  url,
-		Dst:  ".",
+		Dst:  wd,
 	}
-	err := client.Get()
+	err = client.Get()
 	require.NoError(t, err)
 
-	return func() {
-		err := os.RemoveAll("consul")
-		require.NoError(t, err)
-	}
+	return filepath.Join(wd, "consul")
 }
 
 // runConsul starts running a Consul binary that is in the current directory.
 // Returns a function that stops running Consul. Does not log to standard out.
-func runConsul(t *testing.T, port int) func() {
-	cmd := exec.Command("./consul", "agent", "-dev",
+func runConsul(t *testing.T, execPath string, port int) func() {
+	cmd := exec.Command(execPath, "agent", "-dev",
 		fmt.Sprintf("-http-port=%d", port),
 		// Randomize ports to run multiple consul servers on the same node.
 		// These ports are not used for CTS compatibility testing
@@ -469,6 +468,8 @@ func runConsul(t *testing.T, port int) func() {
 	// uncomment to see logs
 	// cmd.Stdout = os.Stdout
 	// cmd.Stderr = os.Stderr
+
+	t.Log(cmd.String())
 
 	err := cmd.Start()
 	require.NoError(t, err)
