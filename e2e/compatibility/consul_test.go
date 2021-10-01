@@ -37,11 +37,11 @@ func TestCompatibility_Consul(t *testing.T) {
 	// Tested only OSS GA releases for the highest patch version given a
 	// major minor version. v1.4.5 starts losing compatibility, details in
 	// comments. Theoretical compatible versions 0.1.0 GA:
-	consulVersions := []string{"1.10.3", "1.9.10"} //, "1.8.16", "1.7.14", "1.6.10", "1.5.3"}
+	consulVersions := []string{"1.10.3", "1.9.10", "1.8.16", "1.7.14", "1.6.10", "1.5.3"}
 
 	cases := []struct {
 		name              string
-		testCompatibility func(t *testing.T, port int)
+		testCompatibility func(t *testing.T, tempDir string, port int)
 	}{
 		{
 			// consulKV terraform backend
@@ -70,25 +70,32 @@ func TestCompatibility_Consul(t *testing.T) {
 		},
 	}
 
-	// versions are run sequentially to avoid confusion
-	for _, cv := range consulVersions {
-		execPath := downloadConsul(t, cv)
-		t.Log(execPath)
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
+	for i := range consulVersions {
+		cv := consulVersions[i]
 		t.Run(cv, func(t *testing.T) {
+			t.Parallel()
+
+			tempDir := filepath.Join(wd, fmt.Sprint(tempDirPrefix, strings.ReplaceAll(t.Name(), "/", "_")))
+			cleanup := testutils.MakeTempDir(t, tempDir)
+			execPath := downloadConsul(t, tempDir, cv)
+
 			for _, tc := range cases {
-				test := tc
-				t.Run(test.name, func(t *testing.T) {
+				t.Run(tc.name, func(t *testing.T) {
 					port := testutils.FreePort(t)
 
 					stop := runConsul(t, execPath, port)
 					defer stop()
 
-					t.Parallel()
-					test.testCompatibility(t, port)
+					testTempDir := filepath.Join(tempDir, tc.name)
+					testutils.MakeTempDir(t, testTempDir)
+					tc.testCompatibility(t, testTempDir, port)
 				})
 			}
+			cleanup()
 		})
-		require.NoError(t, os.RemoveAll(execPath))
 	}
 }
 
@@ -101,11 +108,7 @@ func TestCompatibility_Consul(t *testing.T) {
 //  - Consul KV API query parameters (cas, consistent, wait, acquire, key,
 //	  separator, flags)
 //  - Session API (Destroy, Create)
-func testConsulBackendCompatibility(t *testing.T, port int) {
-	tempDir := testTempDirName(t)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-	defer cleanup()
-
+func testConsulBackendCompatibility(t *testing.T, tempDir string, port int) {
 	config := baseConfig(tempDir, port) + nullTask()
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
@@ -126,10 +129,7 @@ func testConsulBackendCompatibility(t *testing.T, port int) {
 // Service API response's service instances. To test service instances, add and
 // remove service instances and confirm that CTS task execution and resource
 // creation is successful.
-func testServiceInstanceCompatibility(t *testing.T, port int) {
-	tempDir := testTempDirName(t)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
+func testServiceInstanceCompatibility(t *testing.T, tempDir string, port int) {
 	config := baseConfig(tempDir, port) + basicTask("db_task", "db", "api") +
 		basicTask("web_task", "api", "web")
 	configPath := filepath.Join(tempDir, configFile)
@@ -175,7 +175,7 @@ func testServiceInstanceCompatibility(t *testing.T, port int) {
 	testutils.CheckFile(t, false, dbResourcesPath, "db1.txt")
 	testutils.CheckFile(t, true, dbResourcesPath, "db2.txt")
 	testutils.CheckFile(t, true, webResourcesPath, "web1.txt")
-	cleanup()
+
 }
 
 // testServiceValuesCompatibility tests the compatibility of Consul's Health
@@ -187,10 +187,7 @@ func testServiceInstanceCompatibility(t *testing.T, port int) {
 // Does not test: modifying the ID and Name field. Modifying ID results in
 // registering a new service instance (tested elsewhere). Modifying Name results
 // in registering a new service (unrelated scenario for this particular test).
-func testServiceValuesCompatibility(t *testing.T, port int) {
-	tempDir := testTempDirName(t)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
+func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
 	config := baseConfig(tempDir, port) + nullTask()
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
@@ -275,7 +272,7 @@ func testServiceValuesCompatibility(t *testing.T, port int) {
 	registerService(t, serviceInstance, port)
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "critical")
-	cleanup()
+
 }
 
 // testTagQueryCompatibility tests the compatibility of Consul's Health Service
@@ -283,10 +280,7 @@ func testServiceValuesCompatibility(t *testing.T, port int) {
 //
 // Not tested: Namespace querying (Enterprise), Datacenter querying (manually
 // tested since it requires setting up at least 2 datacenters)
-func testTagQueryCompatibility(t *testing.T, port int) {
-	tempDir := testTempDirName(t)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
+func testTagQueryCompatibility(t *testing.T, tempDir string, port int) {
 	redisService := `service {
   name = "redis"
   description = "custom redis service config"
@@ -323,7 +317,7 @@ func testTagQueryCompatibility(t *testing.T, port int) {
 	registerService(t, &capi.AgentServiceRegistration{ID: "redis_v2",
 		Name: "redis", Tags: []string{"v2"}}, port)
 	testutils.CheckFile(t, false, resourcesPath, "redis_v2.txt")
-	cleanup()
+
 }
 
 // testNodeValuesCompatibility tests the compatibility of Consul's Health
@@ -333,10 +327,7 @@ func testTagQueryCompatibility(t *testing.T, port int) {
 //
 // Tested node-related values: Node name, node id, node address, tagged address,
 // and node meta. Node datacenter not tested.
-func testNodeValuesCompatibility(t *testing.T, port int) {
-	tempDir := testTempDirName(t)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
+func testNodeValuesCompatibility(t *testing.T, tempDir string, port int) {
 	config := baseConfig(tempDir, port) + nullTask()
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
@@ -423,20 +414,16 @@ func testNodeValuesCompatibility(t *testing.T, port int) {
 	assert.Contains(t, content, "meta_value1_update")
 	assert.NotContains(t, content, "meta_value2")
 	assert.Contains(t, content, "meta_value3")
-	cleanup()
 }
 
 // downloadConsul downloads Consul into the current directory. Returns a function
 // to delete the downloaded Consul binary.
-func downloadConsul(t *testing.T, version string) string {
+func downloadConsul(t *testing.T, dst string, version string) string {
 	opsys := runtime.GOOS
 	arch := runtime.GOARCH
 
 	filename := fmt.Sprintf("consul_%s_%s_%s.zip", version, opsys, arch)
 	url := fmt.Sprintf("https://releases.hashicorp.com/consul/%s/%s", version, filename)
-
-	wd, err := os.Getwd()
-	require.NoError(t, err)
 
 	client := getter.Client{
 		Getters: map[string]getter.Getter{
@@ -444,12 +431,12 @@ func downloadConsul(t *testing.T, version string) string {
 		},
 		Mode: getter.ClientModeDir,
 		Src:  url,
-		Dst:  wd,
+		Dst:  dst,
 	}
-	err = client.Get()
+	err := client.Get()
 	require.NoError(t, err)
 
-	return filepath.Join(wd, "consul")
+	return filepath.Join(dst, "consul")
 }
 
 // runConsul starts running a Consul binary that is in the current directory.
@@ -469,8 +456,6 @@ func runConsul(t *testing.T, execPath string, port int) func() {
 	// cmd.Stdout = os.Stdout
 	// cmd.Stderr = os.Stderr
 
-	t.Log(cmd.String())
-
 	err := cmd.Start()
 	require.NoError(t, err)
 
@@ -478,7 +463,7 @@ func runConsul(t *testing.T, execPath string, port int) func() {
 	time.Sleep(3 * time.Second)
 
 	return func() {
-		cmd := exec.Command("consul", "leave",
+		cmd := exec.Command(execPath, "leave",
 			fmt.Sprintf("-http-addr=localhost:%d", port))
 		err := cmd.Run() // Run() waits for `consul leave` to finish
 		require.NoError(t, err)
@@ -528,11 +513,6 @@ func registerCatalog(t *testing.T, entity *capi.CatalogRegistration, port int) {
 }
 
 func baseConfig(dir string, port int) string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
 	return fmt.Sprintf(`log_level = "INFO"
 
 # port 0 will automatically select next free port
@@ -547,7 +527,7 @@ driver "terraform" {
 consul {
 	address = "localhost:%d"
 }
-`, dir, cwd, port)
+`, dir, dir, port)
 }
 
 // nullTask returns config for a task with null resource module
@@ -574,8 +554,4 @@ task {
 	source = "../test_modules/local_instances_file"
 }
 `, taskName, service1, service2)
-}
-
-func testTempDirName(t *testing.T) string {
-	return fmt.Sprint(tempDirPrefix, strings.ReplaceAll(t.Name(), "/", "_"))
 }
