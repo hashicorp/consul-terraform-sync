@@ -75,6 +75,28 @@ jobs:
           paths:
             - /go/pkg/mod
 
+  consul_compatibility_tests:
+    environment:
+      GO111MODULE: "on"
+      GO_VERSION: "1.16"
+    docker:
+      - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
+    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - ct-modcache-v1-{{ checksum "go.mod" }}
+      - run: |
+          make test-compat
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - save_cache:
+          key: ct-modcache-v1-{{ checksum "go.mod" }}
+          paths:
+            - /go/pkg/mod
+
   benchmarks:
     parameters:
       no_output_timeout:
@@ -140,6 +162,7 @@ workflows:
     jobs:
       - vault_integration_tests
       - benchmarks
+      - consul_compatibility_tests
     triggers:
       - schedule:
           # 02:10 UTC every Wednesday
