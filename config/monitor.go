@@ -4,6 +4,8 @@ import (
 	"reflect"
 )
 
+// MonitorConfig represents the base object for objects like source_input and condition, both of which
+// "monitor" some entity or key-store in order to perform some action
 type MonitorConfig interface {
 	Copy() MonitorConfig
 	Merge(MonitorConfig) MonitorConfig

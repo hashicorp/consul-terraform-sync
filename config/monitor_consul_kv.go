@@ -4,16 +4,18 @@ import (
 	"fmt"
 )
 
-const consulKVMonitorType = "consul-kv"
+const consulKVType = "consul-kv"
 
 var _ MonitorConfig = (*ConsulKVMonitorConfig)(nil)
 
+// ConsulKVMonitorConfig configures a configuration block adhering to the monitor interface
+// of type 'consul-kv'. A consul-kv monitor watches for changes
+// that occur in the consul kv.
 type ConsulKVMonitorConfig struct {
-	Path              *string `mapstructure:"path"`
-	SourceIncludesVar *bool   `mapstructure:"source_includes_var"`
-	Recurse           *bool   `mapstructure:"recurse"`
-	Datacenter        *string `mapstructure:"datacenter"`
-	Namespace         *string `mapstructure:"namespace"`
+	Path       *string `mapstructure:"path"`
+	Recurse    *bool   `mapstructure:"recurse"`
+	Datacenter *string `mapstructure:"datacenter"`
+	Namespace  *string `mapstructure:"namespace"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -25,7 +27,6 @@ func (c *ConsulKVMonitorConfig) Copy() MonitorConfig {
 	var o ConsulKVMonitorConfig
 	o.Path = StringCopy(c.Path)
 	o.Recurse = BoolCopy(c.Recurse)
-	o.SourceIncludesVar = BoolCopy(c.SourceIncludesVar)
 	o.Datacenter = StringCopy(c.Datacenter)
 	o.Namespace = StringCopy(c.Namespace)
 
@@ -58,10 +59,6 @@ func (c *ConsulKVMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 		r2.Path = StringCopy(o2.Path)
 	}
 
-	if o2.SourceIncludesVar != nil {
-		r2.SourceIncludesVar = BoolCopy(o2.SourceIncludesVar)
-	}
-
 	if o2.Recurse != nil {
 		r2.Recurse = BoolCopy(o2.Recurse)
 	}
@@ -85,10 +82,6 @@ func (c *ConsulKVMonitorConfig) Finalize([]string) {
 
 	if c.Path == nil {
 		c.Path = String("")
-	}
-
-	if c.SourceIncludesVar == nil {
-		c.SourceIncludesVar = Bool(false)
 	}
 
 	if c.Recurse == nil {
@@ -127,13 +120,11 @@ func (c *ConsulKVMonitorConfig) GoString() string {
 
 	return fmt.Sprintf("&ConsulKVMonitorConfig{"+
 		"Path:%s, "+
-		"SourceIncludesVar:%v, "+
 		"Recurse:%v, "+
 		"Datacenter:%v, "+
 		"Namespace:%v, "+
 		"}",
 		StringVal(c.Path),
-		BoolVal(c.SourceIncludesVar),
 		BoolVal(c.Recurse),
 		StringVal(c.Datacenter),
 		StringVal(c.Namespace),

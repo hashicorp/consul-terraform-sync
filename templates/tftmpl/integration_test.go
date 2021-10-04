@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package tftmpl
@@ -109,12 +110,38 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		registerAPI2    bool
 		registerAPISrv2 bool
 		registerWeb     bool
+		registerKV      bool
+		registerKVMulti bool
 	}{
 		{
 			"happy path",
 			"testdata/terraform.tfvars",
 			"testdata/terraform.tfvars.tmpl",
 			true,
+			true,
+			false,
+			true,
+			false,
+			false,
+		},
+		{
+			"happy path (consul kv)",
+			"testdata/consul-kv/terraform.tfvars",
+			"testdata/consul-kv/terraform_includes_vars.tfvars.tmpl",
+			true,
+			true,
+			false,
+			true,
+			true,
+			false,
+		},
+		{
+			"happy path (consul kv - recurse)",
+			"testdata/consul-kv/terraform_recurse_true.tfvars",
+			"testdata/consul-kv/terraform_recurse_true.tfvars.tmpl",
+			true,
+			true,
+			false,
 			true,
 			false,
 			true,
@@ -127,6 +154,8 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			true,
 			false,
 			true,
+			false,
+			false,
 		},
 		{
 			"happy path (catalog-services condition - source_includes_var)",
@@ -136,6 +165,8 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			true,
 			false,
 			true,
+			false,
+			false,
 		},
 		{
 			"happy path (catalog-services condition - with filtering)",
@@ -145,11 +176,15 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			false,
 			true,
 			true,
+			false,
+			false,
 		},
 		{
 			"no instances of any service registered",
 			"testdata/no_services.tfvars",
 			"testdata/terraform.tfvars.tmpl",
+			false,
+			false,
 			false,
 			false,
 			false,
@@ -163,6 +198,8 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			false,
 			false,
 			true,
+			false,
+			false,
 		},
 		{
 			"no instances of service alphabetically last registered",
@@ -171,6 +208,8 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			true,
 			true,
 			true,
+			false,
+			false,
 			false,
 		},
 	}
@@ -240,11 +279,27 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 					"1.2.3.4", 8080, []string{"tag"})
 			}
 
+			// setup KV
+			if tc.registerKV {
+				srv.SetKVString(t, "key-path", "red")
+			}
+
+			// setup KV multi
+			if tc.registerKVMulti {
+				// limitation of test is that each path needs to be the same length, else
+				// the formatting will be off as the expected file is formatted, but the CTS
+				// output will not be
+				srv.SetKVString(t, "key-path/co", "Canada")
+				srv.SetKVString(t, "key-path/pr", "BC")
+				srv.SetKVString(t, "key-path/ci", "Vancouver")
+			}
+
 			// Setup watcher
 			clients := hcat.NewClientSet()
-			clients.AddConsul(hcat.ConsulInput{
+			err = clients.AddConsul(hcat.ConsulInput{
 				Address: srv.HTTPAddr,
 			})
+			require.NoError(t, err)
 			defer clients.Stop()
 
 			w := hcat.NewWatcher(hcat.WatcherInput{
@@ -256,12 +311,13 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			// Load template from disk and render
 			contents := testutils.CheckFile(t, true, tc.templateFile, "")
 			input := hcat.TemplateInput{
-				Contents:      string(contents),
+				Contents:      contents,
 				ErrMissingKey: true,
 				FuncMapMerge:  tmplfunc.HCLMap(nil),
 			}
 			tmpl := hcat.NewTemplate(input)
-			w.Register(tmpl)
+			err = w.Register(tmpl)
+			require.NoError(t, err)
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
 			defer cancel()

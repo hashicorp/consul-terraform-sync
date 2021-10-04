@@ -15,10 +15,6 @@ var (
 // generated files
 type Condition interface {
 	Monitor
-
-	// SourceIncludesVariable returns if the module source expects to
-	// include the monitor variable.
-	SourceIncludesVariable() bool
 }
 
 // ServicesCondition handles appending templating for the services run condition

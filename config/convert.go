@@ -26,12 +26,9 @@ func BoolCopy(b *bool) *bool {
 }
 
 // BoolPresent returns a boolean indicating if the pointer is nil, or if the
-// pointer is pointing to the zero value..
+// pointer is pointing to the zero value.
 func BoolPresent(b *bool) bool {
-	if b == nil {
-		return false
-	}
-	return true
+	return b != nil
 }
 
 // Int returns a pointer to the given int.
@@ -110,13 +107,4 @@ func TimeDurationCopy(t *time.Duration) *time.Duration {
 	}
 
 	return TimeDuration(*t)
-}
-
-// TimeDurationPresent returns a boolean indicating if the pointer is nil, or
-// if the pointer is pointing to the zero value.
-func TimeDurationPresent(t *time.Duration) bool {
-	if t == nil {
-		return false
-	}
-	return *t != 0
 }

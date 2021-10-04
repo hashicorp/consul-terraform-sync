@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const catalogServicesMonitorType = "catalog-services"
+const catalogServicesType = "catalog-services"
 
 var _ ConditionConfig = (*CatalogServicesConditionConfig)(nil)
 

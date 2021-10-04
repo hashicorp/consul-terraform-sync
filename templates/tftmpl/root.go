@@ -248,8 +248,7 @@ func newMainTF(w io.Writer, filename string, input *RootModuleInputData) error {
 	rootBody.AppendNewline()
 	appendRootProviderBlocks(rootBody, input.Providers)
 	rootBody.AppendNewline()
-	appendRootModuleBlock(rootBody, input.Task, input.Condition,
-		input.Variables.Keys())
+	appendRootModuleBlock(rootBody, input.Task, input.Variables.Keys(), input.Condition, input.SourceInput)
 
 	// Format the file before writing
 	content := hclFile.Bytes()
@@ -346,8 +345,7 @@ func appendRootProviderBlocks(body *hclwrite.Body, providers []hcltmpl.NamedBloc
 }
 
 // appendRootModuleBlock appends a Terraform module block for the task
-func appendRootModuleBlock(body *hclwrite.Body, task Task, cond Condition,
-	varNames []string) {
+func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string, monitors ...Monitor) {
 
 	// Add user description for task above the module block
 	if task.Description != "" {
@@ -368,8 +366,10 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task, cond Condition,
 		hcl.TraverseAttr{Name: "services"},
 	})
 
-	if cond != nil && cond.SourceIncludesVariable() {
-		cond.appendModuleAttribute(moduleBody)
+	for _, m := range monitors {
+		if m != nil && m.SourceIncludesVariable() {
+			m.appendModuleAttribute(moduleBody)
+		}
 	}
 
 	if len(varNames) != 0 {

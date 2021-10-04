@@ -24,8 +24,17 @@ type ConsulKVMonitor struct {
 	Namespace  string
 }
 
+// ServicesAppended always returns false for consul-kv as it doesn't
+// deal with services
 func (m ConsulKVMonitor) ServicesAppended() bool {
 	return false
+}
+
+// SourceIncludesVariable returns true if the source variables are to be included in the template.
+// For the case of a consul-kv monitor, this always returns true and must be overridden to
+// return based on other conditions.
+func (m ConsulKVMonitor) SourceIncludesVariable() bool {
+	return true
 }
 
 func (m ConsulKVMonitor) appendModuleAttribute(body *hclwrite.Body) {
@@ -78,7 +87,7 @@ func (m ConsulKVMonitor) hcatQuery() string {
 	}
 
 	if len(opts) > 0 {
-		return `"` + strings.Join(opts, `" "`) + `" ` // deliberate space at end
+		return `"` + strings.Join(opts, `" "`) + `"`
 	}
 	return ""
 }
@@ -97,9 +106,9 @@ const consulKVBaseTmpl = `
 
 const consulKVRecurseBaseTmpl = `
 {{- with $kv := keys %s }}
-	{{- range $k := $kv }}
-	"{{ .Path }}" = "{{ .Value }}"
-	{{- end}}
+  {{- range $k := $kv }}
+  "{{ .Path }}" = "{{ .Value }}"
+  {{- end}}
 {{- end}}
 `
 
@@ -109,7 +118,7 @@ const consulKVRecurseBaseTmpl = `
 var variableConsulKV = []byte(`
 # Consul KV definition protocol v0
 variable "consul_kv" {
-	description = "Consul KV pair"
-	type = map(string)
+  description = "Consul KV pair"
+  type        = map(string)
 }
 `)

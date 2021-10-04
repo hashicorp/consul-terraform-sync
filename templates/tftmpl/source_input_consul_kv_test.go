@@ -8,31 +8,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConsulKVCondition_hcatQuery(t *testing.T) {
+func TestConsulKVSourceInput_hcatQuery(t *testing.T) {
 	testcase := []struct {
 		name string
-		c    *ConsulKVCondition
+		c    *ConsulKVSourceInput
 		exp  string
 	}{
 		{
 			"path only",
-			&ConsulKVCondition{
+			&ConsulKVSourceInput{
 				ConsulKVMonitor{
 					Path: "key-path",
 				},
-				false,
 			},
 			"\"key-path\"",
 		},
 		{
 			"all_parameters",
-			&ConsulKVCondition{
+			&ConsulKVSourceInput{
 				ConsulKVMonitor{
 					Path:       "key-path",
 					Datacenter: "dc2",
 					Namespace:  "test-ns",
 				},
-				false,
 			},
 			"\"key-path\" \"dc=dc2\" \"ns=test-ns\"",
 		},
@@ -46,39 +44,21 @@ func TestConsulKVCondition_hcatQuery(t *testing.T) {
 	}
 }
 
-func TestConsulKVCondition_appendTemplate(t *testing.T) {
+func TestConsulKVSourceInput_appendTemplate(t *testing.T) {
 	testcases := []struct {
 		name string
-		c    *ConsulKVCondition
+		c    *ConsulKVSourceInput
 		exp  string
 	}{
 		{
-			"recurse false includes var false",
-			&ConsulKVCondition{
+			"recurse false",
+			&ConsulKVSourceInput{
 				ConsulKVMonitor: ConsulKVMonitor{
 					Path:       "path",
 					Recurse:    false,
 					Datacenter: "dc1",
 					Namespace:  "test-ns",
 				},
-				SourceIncludesVar: false,
-			},
-			`
-{{- with $kv := keyExistsGet "path" "dc=dc1" "ns=test-ns" }}
-  {{- /* Empty template. Detects changes in Consul KV */ -}}
-{{- end}}
-`,
-		},
-		{
-			"recurse false includes var true",
-			&ConsulKVCondition{
-				ConsulKVMonitor: ConsulKVMonitor{
-					Path:       "path",
-					Recurse:    false,
-					Datacenter: "dc1",
-					Namespace:  "test-ns",
-				},
-				SourceIncludesVar: true,
 			},
 			`
 consul_kv = {
@@ -91,34 +71,14 @@ consul_kv = {
 `,
 		},
 		{
-			"recurse true includes var false",
-			&ConsulKVCondition{
+			"recurse true",
+			&ConsulKVSourceInput{
 				ConsulKVMonitor: ConsulKVMonitor{
 					Path:       "path",
 					Recurse:    true,
 					Datacenter: "dc1",
 					Namespace:  "test-ns",
 				},
-				SourceIncludesVar: false,
-			},
-			`
-{{- with $kv := keys "path" "dc=dc1" "ns=test-ns" }}
-  {{- range $k, $v := $kv }}
-  {{- /* Empty template. Detects changes in Consul KV */ -}}
-  {{- end}}
-{{- end}}
-`,
-		},
-		{
-			"recurse true includes var true",
-			&ConsulKVCondition{
-				ConsulKVMonitor: ConsulKVMonitor{
-					Path:       "path",
-					Recurse:    true,
-					Datacenter: "dc1",
-					Namespace:  "test-ns",
-				},
-				SourceIncludesVar: true,
 			},
 			`
 consul_kv = {

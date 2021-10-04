@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 package e2e
@@ -16,7 +17,7 @@ import (
 )
 
 // TestCondition_Schedule_Basic runs CTS in daemon-mode to test a task
-// configured with a schedule condition and monitoring either task.services or task.source_input. This test
+// configured with a schedule condition and monitoring task.services, task.source_input or both. This test
 // confirms some basic schedule condition behavior:
 // 1. Task successfully passes through once-mode and does not hang
 // 2. Task runs at the scheduled interval even when no dependency changes
@@ -46,26 +47,75 @@ func TestCondition_Schedule_Basic(t *testing.T) {
     }
 }
 `, taskName)
+	sourceInputConsulKV := fmt.Sprintf(`task {
+	name = "%s"
+	services = ["api", "web"]
+	source = "./test_modules/consul_kv_file"
+	condition "schedule" {
+      cron = "*/10 * * * * * *"
+	}
+    source_input "consul-kv" {
+      path = "key-path"
+      datacenter = "dc1"
+    }
+}
+`, taskName)
+	sourceInputConsulKVRecurse := fmt.Sprintf(`task {
+	name = "%s"
+	source = "./test_modules/consul_kv_file"
+    services = ["api", "web"]
+	condition "schedule" {
+      cron = "*/10 * * * * * *"
+	}
+    source_input "consul-kv" {
+      path = "key-path"
+      datacenter = "dc1"
+      recurse = true
+    }
+}
+`, taskName)
 
 	testcases := []struct {
 		name          string
 		conditionTask string
 		tempDir       string
+		isConsulKV    bool
+		isRecurse     bool
 	}{
 		{
-			"with services",
-			conditionWithServices,
-			"schedule_basic_services",
+			name:          "with services",
+			conditionTask: conditionWithServices,
+			tempDir:       "schedule_basic_services",
+			isConsulKV:    false,
+			isRecurse:     false,
 		},
 		{
-			"with source_input",
-			conditionWithSourceInput,
-			"schedule_basic_source_input",
+			name:          "with source_input services",
+			conditionTask: conditionWithSourceInput,
+			tempDir:       "schedule_basic_source_input",
+			isConsulKV:    false,
+			isRecurse:     false,
+		},
+		{
+			name:          "with source_input consul_kv recurse false",
+			conditionTask: sourceInputConsulKV,
+			tempDir:       "schedule_consulKV",
+			isConsulKV:    true,
+			isRecurse:     false,
+		},
+		{
+			name:          "with source_input consul_kvrecurse true",
+			conditionTask: sourceInputConsulKVRecurse,
+			tempDir:       "schedule_consulKV_recurse",
+			isConsulKV:    true,
+			isRecurse:     true,
 		},
 	}
 
 	for _, tc := range testcases {
+		tc := tc // rebind tc into this lexical scope for parallel use
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel() // Run table tests in parallel as they can take a lot of time
 			srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 				HTTPSRelPath: "../testutils",
 			})
@@ -128,10 +178,41 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
 			checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
 
-			// confirm resources created
+			// confirm service resources created
 			resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
 			testutils.CheckFile(t, true, resourcesPath, "api-1.txt")
 			testutils.CheckFile(t, true, resourcesPath, "web-1.txt")
+
+			// Check KV events
+			if tc.isConsulKV {
+				// 3. Add KV. Confirm task only triggered on schedule
+				// wait for next event before starting this process
+				api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
+				registerTime = time.Now()
+
+				// add two keys and values, expected that the recursive key will only be
+				// checked when recurse is enabled
+				expectedKV := "red"
+				expectedRecurseKV := "blue"
+				srv.SetKVString(t, "key-path", expectedKV)
+				srv.SetKVString(t, "key-path/recursive", expectedRecurseKV)
+
+				// check scheduled task did not trigger immediately and ran only on schedule
+				api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
+				checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
+
+				// confirm key-value resources created, and that the values are as expected
+				val := testutils.CheckFile(t, true, resourcesPath, "key-path.txt")
+				assert.Equal(t, expectedKV, val)
+
+				if tc.isRecurse {
+					val = testutils.CheckFile(t, true, resourcesPath, "key-path/recursive.txt")
+					assert.Equal(t, expectedRecurseKV, val)
+				} else {
+					// if recurse is disabled, then the recursive key should not be present
+					testutils.CheckFile(t, false, resourcesPath, "key-path/recursive.txt")
+				}
+			}
 
 			cleanup()
 		})
