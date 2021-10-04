@@ -41,7 +41,7 @@ func (c ConsulKVCondition) appendTemplate(w io.Writer) error {
 		if c.Recurse {
 			conditionTmpl = fmt.Sprintf(consulKVRecurseConditionTmpl, q)
 		} else {
-			conditionTmpl = fmt.Sprintf(consulKVConditionTmpl, q, q)
+			conditionTmpl = fmt.Sprintf(consulKVConditionTmpl, q)
 		}
 		_, err = w.Write([]byte(conditionTmpl))
 		if err != nil {
@@ -56,10 +56,8 @@ func (c ConsulKVCondition) appendTemplate(w io.Writer) error {
 }
 
 const consulKVConditionTmpl = `
-{{- if keyExists %s }}
-	{{- with $kv := key %s }}
-		{{- /* Empty template. Detects changes in Consul KV */ -}}
-	{{- end}}
+{{- with $kv := keyExistsGet %s }}
+  {{- /* Empty template. Detects changes in Consul KV */ -}}
 {{- end}}
 `
 const consulKVRecurseConditionTmpl = `

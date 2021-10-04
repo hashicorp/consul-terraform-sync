@@ -170,7 +170,7 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 
 // TestConditionConsulKV_ExistingKey runs the CTS binary using a task with a consul-kv
 // condition block, where the monitored KV pair will exist initially in Consul. The
-// test will update the value and delete the key.
+// test will update the value, delete the key, and then add the same key back.
 func TestConditionConsulKV_ExistingKey(t *testing.T) {
 	t.Parallel()
 
@@ -270,6 +270,18 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 			require.Equal(t, eventCountBase, eventCountNow,
 				"event count did not increment once. task was not triggered as expected")
 			content = testutils.CheckFile(t, false, resourcesPath, fmt.Sprintf("%s.txt", path))
+
+			// Add the key back, check for event
+			now = time.Now()
+			value = "new-test-value-2"
+			srv.SetKVString(t, path, value)
+			api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+			eventCountNow = eventCount(t, taskName, cts.Port())
+			eventCountBase++
+			require.Equal(t, eventCountBase, eventCountNow,
+				"event count did not increment once. task was not triggered as expected")
+			content = testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", path))
+			assert.Equal(t, value, content)
 		})
 	}
 }

@@ -28,7 +28,7 @@ type ConsulKV struct {
 func NewConsulKV(tmpl templates.Template, serviceCount int) *ConsulKV {
 	return &ConsulKV{
 		Template: tmpl,
-		// there will be at minimum either []*dep.KeyPair or dep.KVExists
+		// expect services and either []*dep.KeyPair or *dep.KeyPair
 		depTotal: serviceCount + 1,
 		logger:   logging.Global().Named(logSystemName).Named(kvSubsystemName),
 	}
@@ -37,14 +37,11 @@ func NewConsulKV(tmpl templates.Template, serviceCount int) *ConsulKV {
 // Notify notifies when a Consul KV pair or set of pairs changes.
 //
 // Notifications are sent when:
-// A. There is a change in the Consul KV dependency for whether a single key
-//    pair (recurse=false) exists or no longer exists (dep.KVExists)
-// B. There is a change in the Consul KV dependency for a single key pair (recurse=false)
-//    where  only the value of the key pair is returned (dep.KvValue), which only occurs
-//    if the key exists
-// C. There is a change in the Consul KV dependency for a set of key pairs (recurse=true)
+// A. There is a change in the Consul KV dependency for a single key
+//    pair (recurse=false) where the pair is returned (*dep.KeyPair)
+// B. There is a change in the Consul KV dependency for a set of key pairs (recurse=true)
 //    where a list of key pairs is returned ([]*dep.KeyPair)
-// D. All the dependencies have been received for the first time. This is
+// C. All the dependencies have been received for the first time. This is
 //    regardless of the dependency type that "completes" having received all the
 //    dependencies.
 //
@@ -54,16 +51,6 @@ func NewConsulKV(tmpl templates.Template, serviceCount int) *ConsulKV {
 func (n *ConsulKV) Notify(d interface{}) (notify bool) {
 	n.logger.Debug("received dependency change", "dependency_type", fmt.Sprintf("%T", d))
 	notify = false
-
-	if exists, ok := d.(dep.KVExists); ok {
-		n.logger.Debug("notify Consul KV pair exists change")
-		notify = true
-
-		if !n.once && bool(exists) {
-			// only if the key exists, then expect an additional KvValue dependency
-			n.depTotal++
-		}
-	}
 
 	if !n.once {
 		n.counter++
@@ -75,8 +62,8 @@ func (n *ConsulKV) Notify(d interface{}) (notify bool) {
 		}
 	}
 
-	if _, ok := d.(dep.KvValue); ok {
-		n.logger.Debug("notify Consul KV pair value change")
+	if _, ok := d.(*dep.KeyPair); ok {
+		n.logger.Debug("notify Consul KV pair change")
 		notify = true
 	}
 
