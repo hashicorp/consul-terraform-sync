@@ -5,10 +5,12 @@ import (
 	"regexp"
 )
 
-const servicesMonitorType = "services"
+const servicesType = "services"
 
 var _ MonitorConfig = (*ServicesMonitorConfig)(nil)
 
+// ServicesMonitorConfig configures a configuration block adhering to the monitor interface
+// of type 'services'. A services monitor watches for changes that occur to services.
 type ServicesMonitorConfig struct {
 	Regexp *string `mapstructure:"regexp"`
 }

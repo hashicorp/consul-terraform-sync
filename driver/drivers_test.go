@@ -78,7 +78,8 @@ func TestDrivers_Get(t *testing.T) {
 	}
 
 	drivers := NewDrivers()
-	drivers.Add("task_a", &Terraform{})
+	err := drivers.Add("task_a", &Terraform{})
+	require.NoError(t, err)
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -96,8 +97,10 @@ func TestDrivers_Get(t *testing.T) {
 func TestDrivers_Map(t *testing.T) {
 	t.Run("drivers map", func(t *testing.T) {
 		drivers := NewDrivers()
-		drivers.Add("task_a", &Terraform{})
-		drivers.Add("task_b", &Terraform{})
+		err := drivers.Add("task_a", &Terraform{})
+		require.NoError(t, err)
+		err = drivers.Add("task_b", &Terraform{})
+		require.NoError(t, err)
 
 		m := drivers.Map()
 
@@ -108,7 +111,8 @@ func TestDrivers_Map(t *testing.T) {
 		require.True(t, ok)
 
 		// check that adding a driver does not modify returned map
-		drivers.Add("task_c", &Terraform{})
+		err = drivers.Add("task_c", &Terraform{})
+		require.NoError(t, err)
 		_, ok = m["task_c"]
 		require.False(t, ok)
 	})

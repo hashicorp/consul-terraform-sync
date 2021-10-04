@@ -27,6 +27,13 @@ func (m CatalogServicesMonitor) ServicesAppended() bool {
 	return false
 }
 
+// SourceIncludesVariable returns true if the source variables are to be included in the template.
+// For the case of a catalog-service monitor, this always returns true and must be overridden to
+// return based on other conditions.
+func (m CatalogServicesMonitor) SourceIncludesVariable() bool {
+	return true
+}
+
 func (m CatalogServicesMonitor) appendModuleAttribute(body *hclwrite.Body) {
 	body.SetAttributeTraversal("catalog_services", hcl.Traversal{
 		hcl.TraverseRoot{Name: "var"},

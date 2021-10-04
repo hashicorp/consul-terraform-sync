@@ -119,7 +119,12 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		for k, v := range taskEnv {
 			env[k] = v
 		}
-		tfClient.SetEnv(env)
+		err = tfClient.SetEnv(env)
+		if err != nil {
+			logger.Error("error setting the environment for the client",
+				"client_type", config.ClientType, "error", err)
+			return nil, err
+		}
 	}
 
 	h, err := getTerraformHandlers(taskName, task.Providers())
@@ -523,18 +528,7 @@ func (tf *Terraform) initTaskTemplate() error {
 		tf.watcher.Sweep(tf.template)
 	}
 
-	switch tf.task.Condition().(type) {
-	case *config.CatalogServicesConditionConfig:
-		tf.template = notifier.NewCatalogServicesRegistration(tmpl,
-			len(services))
-	case *config.ConsulKVConditionConfig:
-		tf.template = notifier.NewConsulKV(tmpl,
-			len(services))
-	case *config.ScheduleConditionConfig:
-		tf.template = notifier.NewSuppressNotification(tmpl, len(services))
-	default:
-		tf.template = tmpl
-	}
+	tf.setNotifier(tmpl, len(services))
 
 	if !tf.watcher.Watching(tf.template.ID()) {
 		err = tf.watcher.Register(tf.template)
@@ -545,6 +539,26 @@ func (tf *Terraform) initTaskTemplate() error {
 	}
 
 	return nil
+}
+
+func (tf *Terraform) setNotifier(tmpl templates.Template, serviceCount int) {
+	switch tf.task.Condition().(type) {
+	case *config.CatalogServicesConditionConfig:
+		tf.template = notifier.NewCatalogServicesRegistration(tmpl, serviceCount)
+	case *config.ConsulKVConditionConfig:
+		tf.template = notifier.NewConsulKV(tmpl, serviceCount)
+	case *config.ScheduleConditionConfig:
+		additionalDepCount := 0
+		switch tf.task.SourceInput().(type) {
+		case *config.ConsulKVSourceInputConfig:
+			// If a ConsulKVSourceInputConfig is specified, then we need to add
+			// to the number of dependencies passed to the notifier, since consul-kv adds a dependency
+			additionalDepCount = 1
+		}
+		tf.template = notifier.NewSuppressNotification(tmpl, serviceCount+additionalDepCount)
+	default:
+		tf.template = tmpl
+	}
 }
 
 func (tf *Terraform) validateTask(ctx context.Context) error {

@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -134,6 +135,13 @@ func (t *Task) Condition() config.ConditionConfig {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.condition
+}
+
+// SourceInput returns the type of sourceInput for the task to run
+func (t *Task) SourceInput() config.SourceInputConfig {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.sourceInput
 }
 
 // IsScheduled returns if the task is a scheduled task or not (a dynamic task)
@@ -357,6 +365,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			"task_name", t.name)
 		condition = &tftmpl.ServicesCondition{}
 	}
+	t.logger.Trace("condition configured", "source_input_type", fmt.Sprintf("%T", condition))
 	input.Condition = condition
 
 	var sourceInput tftmpl.SourceInput
@@ -367,12 +376,23 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 				Regexp: *v.Regexp,
 			},
 		}
+	case *config.ConsulKVSourceInputConfig:
+		sourceInput = &tftmpl.ConsulKVSourceInput{
+			ConsulKVMonitor: tftmpl.ConsulKVMonitor{
+				Path:       *v.Path,
+				Datacenter: *v.Datacenter,
+				Recurse:    *v.Recurse,
+				Namespace:  *v.Namespace,
+			},
+		}
 	default:
 		// expected only for test scenarios
 		t.logger.Warn("task source_input config unset. defaulting to services source_input",
 			"task_name", t.name)
 		sourceInput = &tftmpl.ServicesSourceInput{}
 	}
+	t.logger.Trace("source_input configured", "source_input_type", fmt.Sprintf("%T", sourceInput))
+
 	input.SourceInput = sourceInput
 
 	input.Providers = t.providers.ProviderBlocks()

@@ -6,8 +6,12 @@ import (
 
 var _ ConditionConfig = (*ConsulKVConditionConfig)(nil)
 
+// ConsulKVConditionConfig configures a condition configuration block
+// of type 'consul-kv'. A consul-kv condition is triggered by changes
+// that occur to consul key-values.
 type ConsulKVConditionConfig struct {
 	ConsulKVMonitorConfig `mapstructure:",squash"`
+	SourceIncludesVar     *bool `mapstructure:"source_includes_var"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -16,13 +20,17 @@ func (c *ConsulKVConditionConfig) Copy() MonitorConfig {
 		return nil
 	}
 
+	var o ConsulKVConditionConfig
+	o.SourceIncludesVar = BoolCopy(c.SourceIncludesVar)
+
 	m, ok := c.ConsulKVMonitorConfig.Copy().(*ConsulKVMonitorConfig)
 	if !ok {
 		return nil
 	}
-	return &ConsulKVConditionConfig{
-		ConsulKVMonitorConfig: *m,
-	}
+
+	o.ConsulKVMonitorConfig = *m
+
+	return &o
 }
 
 // Merge combines all values in this configuration with the values in the other
@@ -39,25 +47,34 @@ func (c *ConsulKVConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 		return c.Copy()
 	}
 
-	ckvc, ok := o.(*ConsulKVConditionConfig)
+	r := c.Copy()
+	o2, ok := o.(*ConsulKVConditionConfig)
 	if !ok {
 		return nil
 	}
 
-	merged, ok := c.ConsulKVMonitorConfig.Merge(&ckvc.ConsulKVMonitorConfig).(*ConsulKVMonitorConfig)
+	r2 := r.(*ConsulKVConditionConfig)
+	if o2.SourceIncludesVar != nil {
+		r2.SourceIncludesVar = BoolCopy(o2.SourceIncludesVar)
+	}
+
+	mm, ok := c.ConsulKVMonitorConfig.Merge(&o2.ConsulKVMonitorConfig).(*ConsulKVMonitorConfig)
 	if !ok {
 		return nil
 	}
+	r2.ConsulKVMonitorConfig = *mm
 
-	return &ConsulKVConditionConfig{
-		ConsulKVMonitorConfig: *merged,
-	}
+	return r2
 }
 
 // Finalize ensures there no nil pointers.
 func (c *ConsulKVConditionConfig) Finalize(consulkv []string) {
 	if c == nil { // config not required, return early
 		return
+	}
+
+	if c.SourceIncludesVar == nil {
+		c.SourceIncludesVar = Bool(false)
 	}
 
 	c.ConsulKVMonitorConfig.Finalize(consulkv)
@@ -80,8 +97,10 @@ func (c *ConsulKVConditionConfig) GoString() string {
 	}
 
 	return fmt.Sprintf("&ConsulKVConditionConfig{"+
+		"SourceIncludesVar:%v, "+
 		"%s"+
 		"}",
+		BoolVal(c.SourceIncludesVar),
 		c.ConsulKVMonitorConfig.GoString(),
 	)
 }

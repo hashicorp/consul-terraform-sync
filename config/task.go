@@ -264,7 +264,7 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	}
 	c.Condition.Finalize(c.Services)
 
-	if isConditionNil(c.SourceInput) {
+	if isSourceInputNil(c.SourceInput) {
 		c.SourceInput = DefaultSourceInputConfig()
 	}
 	c.SourceInput.Finalize(c.Services)
@@ -518,9 +518,9 @@ func (c *TaskConfig) validateCondition() error {
 			return fmt.Errorf("consul-kv condition requires at least one service to " +
 				"be configured in task.services")
 		case *ScheduleConditionConfig:
-			if isSourceInputEmpty(c.SourceInput) || isSourceInputNil(c.SourceInput) {
+			if isSourceInputNil(c.SourceInput) || isSourceInputEmpty(c.SourceInput) {
 				return fmt.Errorf("schedule condition requires at least one service to " +
-					"be configured in task.services")
+					"be configured in task.services or a source_input must be provided")
 			}
 		}
 	} else {
@@ -555,13 +555,16 @@ func (c *TaskConfig) validateSourceInput() error {
 					return fmt.Errorf("at least one service is required in task.services " +
 						"or task.source_input.regexp must be configured")
 				}
+			case *ConsulKVSourceInputConfig:
+				return fmt.Errorf("consul-kv source_input requires at least one service to " +
+					"be configured in task.services")
 			}
 		} else {
 			switch si := c.SourceInput.(type) {
 			case *ServicesSourceInputConfig:
 				if si.Regexp != nil && *si.Regexp != "" {
 					err := fmt.Errorf("task.services is not allowed if task.source_input.regexp " +
-						"is configured for a services condition")
+						"is configured for a services source_input")
 					logging.Global().Named(logSystemName).Named(taskSubsystemName).
 						Error("list of services and service condition regex both "+
 							"provided. If both are needed, consider including the "+
