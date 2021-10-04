@@ -8,7 +8,7 @@ jobs:
     environment:
       GO111MODULE: "on"
       GO_VERSION: "1.16"
-      CONSUL_VERSION: 1.8.0
+      CONSUL_VERSION: "1.10.3"
     docker:
       - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
@@ -36,7 +36,7 @@ jobs:
     environment:
       GO111MODULE: "on"
       GO_VERSION: "1.16"
-      VAULT_VERSION: "1.7.1"
+      VAULT_VERSION: "1.8.3"
     docker:
       - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
@@ -63,7 +63,7 @@ jobs:
     environment:
       GO111MODULE: "on"
       GO_VERSION: "1.16"
-      CONSUL_VERSION: 1.8.0
+      CONSUL_VERSION: "1.10.3"
     docker:
       - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
@@ -117,8 +117,8 @@ jobs:
         default: 30m
     environment:
       GO_VERSION: "1.16"
-      CONSUL_VERSION: "1.8.0"
-      TERRAFORM_VERSION: "0.14.10"
+      CONSUL_VERSION: "1.10.3"
+      TERRAFORM_VERSION: "1.0.8"
     docker:
       - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
