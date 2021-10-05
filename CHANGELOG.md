@@ -1,3 +1,8 @@
+## UNRELEASED
+
+IMPROVEMENTS:
+* **(Enterprise Only)** Add TLS configuration for the Terraform Cloud driver when connecting with Terraform Enterprise.
+
 ## 0.4.0-beta1 (September 29, 2021)
 BREAKING CHANGES:
 * Remove deprecated `tag` filtering option from `service` configuration, which has been replaced by the more general `filter` option. [[GH-312](https://github.com/hashicorp/consul-terraform-sync/issues/312)]
