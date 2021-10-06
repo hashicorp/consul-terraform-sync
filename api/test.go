@@ -62,8 +62,8 @@ func StartCTS(t *testing.T, configPath string, opts ...string) (*Client, func(t 
 			// if the test has failed for any reason, print log snippet
 			if t.Failed() && logLen > 0 {
 				logStr := buf.String()
-				numChar := 3000
-				if logLen < 3000 {
+				numChar := 6000
+				if logLen < 6000 {
 					numChar = logLen
 				}
 				t.Logf("\nFailed Test: %s\nCTS logs:\n\n...%s", t.Name(),
@@ -108,6 +108,7 @@ func WaitForEvent(t *testing.T, client *Client, taskName string, start time.Time
 					polling <- struct{}{}
 					return
 				}
+				time.Sleep(500 * time.Millisecond)
 			}
 		}
 	}()
