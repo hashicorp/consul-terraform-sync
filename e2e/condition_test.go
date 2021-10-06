@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
-	"github.com/hashicorp/consul-terraform-sync/testutils/sdk"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -298,7 +297,7 @@ task {
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForAPI(defaultWaitForAPI * 3)
 	require.NoError(t, err)
 
 	// Test that the appropriate task is triggered given a particular service
@@ -605,15 +604,12 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	//    (no new event) and its data is filtered out of services variable.
 	// 2. Register api-web service instance. Confirm that task was triggered
 	//    (one new event) and its data exists in the services variable.
-	// 3. Add a check to the api-web service instance. Confirm that task was triggered
+	// 3. Register a second node to the api-web service. Confirm that task was triggered
 	//    (one new event) and its data exists in the services variable.
-	// 4. Set the check of the api-web service instance to Critical. Confirm that
-	//    task was triggered (one new event) and the status is updated in the
-	//    services variable.
 
 	// 0. Confirm only one event. Confirm empty var catalog_services
-	eventCountBase := eventCount(t, taskName, cts.Port())
-	require.Equal(t, 1, eventCountBase)
+	eventCountExpected := eventCount(t, taskName, cts.Port())
+	require.Equal(t, 1, eventCountExpected)
 
 	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
 	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -625,7 +621,7 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	time.Sleep(defaultWaitForNoEvent)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
-	require.Equal(t, eventCountBase, eventCountNow,
+	require.Equal(t, eventCountExpected, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
@@ -636,36 +632,26 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	service = testutil.TestService{ID: "api-web-1", Name: "api-web"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
-
 	eventCountNow = eventCount(t, taskName, cts.Port())
-	require.Equal(t, eventCountBase+1, eventCountNow,
+	eventCountExpected++
+	require.Equal(t, eventCountExpected, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, `"api-web"`)
 	assert.Contains(t, content, `"api-web-1"`)
 
-	// 3. Add a check to the service "api-web"
+	// 3. Add a second node to the service "api-web"
 	now = time.Now()
-	sdk.AddCheck(srv, t, service.ID, service.ID, testutil.HealthPassing)
+	service = testutil.TestService{ID: "api-web-2", Name: "api-web"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 	eventCountNow = eventCount(t, taskName, cts.Port())
-	require.Equal(t, eventCountBase+2, eventCountNow,
+	eventCountExpected++
+	require.Equal(t, eventCountExpected, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, testutil.HealthPassing)
-
-	// 4. Update check status to critical for service "api-web"
-	now = time.Now()
-	sdk.UpdateCheck(srv, t, service.ID, service.ID, testutil.HealthCritical)
-	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
-	eventCountNow = eventCount(t, taskName, cts.Port())
-	require.Equal(t, eventCountBase+3, eventCountNow,
-		"event count did not increment once. task was not triggered as expected")
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, `"api-web"`)
-	assert.Contains(t, content, `"api-web-1"`)
-	assert.Contains(t, content, testutil.HealthCritical)
+	assert.Contains(t, content, `"api-web-2"`)
 
 	cleanup()
 }
