@@ -66,6 +66,7 @@ jobs:
       CONSUL_VERSION: "1.10.3"
     docker:
       - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
+    resource_class: medium+
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout

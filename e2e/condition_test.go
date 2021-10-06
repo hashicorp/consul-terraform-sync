@@ -298,7 +298,7 @@ task {
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForAPI(defaultWaitForAPI * 3)
 	require.NoError(t, err)
 
 	// Test that the appropriate task is triggered given a particular service
