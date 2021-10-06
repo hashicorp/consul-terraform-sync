@@ -50,8 +50,8 @@ task {
 	defer stop(t)
 
 	t.Run("once mode", func(t *testing.T) {
-		// Wait for tasks to execute once
-		err := cts.WaitForAPI(defaultWaitForAPI)
+		// Wait for all three tasks to execute once
+		err := cts.WaitForAPI(defaultWaitForAPI * 3)
 		require.NoError(t, err)
 
 		// Verify Catalog information is reflected in terraform.tfvars
