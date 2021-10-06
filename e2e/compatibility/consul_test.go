@@ -83,7 +83,7 @@ func TestCompatibility_Consul(t *testing.T) {
 			execPath := downloadConsul(t, tempDir, cv)
 
 			// Output the Consul version
-			consulVersion, err := exec.Command(execPath, "-version").Output()
+			consulVersion, err := exec.Command(execPath, "version").Output()
 			require.NoError(t, err)
 			t.Logf("%s\n%s", t.Name(), consulVersion)
 
