@@ -3,6 +3,10 @@
 IMPROVEMENTS:
 * **(Enterprise Only)** Add TLS configuration for the Terraform Cloud driver when connecting with Terraform Enterprise.
 
+FEATURES:
+* Add support for new services source input block which can be used in conjunction with the scheduled task trigger `task.source_input "services"`. This allows for service regex to be defined in lieu of `task.services`. [[GH-382](https://github.com/hashicorp/consul-terraform-sync/issues/382)]
+* Add support for new Consul KV source input block which can be used in conjunction with the scheduled task trigger `task.source_input "consul-kv"`. This allows for Consul key-values to be used as input to the Terraform Module. [[GH-389](https://github.com/hashicorp/consul-terraform-sync/issues/389)]
+
 ## 0.4.0-beta1 (September 29, 2021)
 BREAKING CHANGES:
 * Remove deprecated `tag` filtering option from `service` configuration, which has been replaced by the more general `filter` option. [[GH-312](https://github.com/hashicorp/consul-terraform-sync/issues/312)]
