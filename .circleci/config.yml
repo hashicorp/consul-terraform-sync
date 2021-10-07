@@ -151,8 +151,7 @@ jobs:
           no_output_timeout: << parameters.no_output_timeout >>
           command:
             # make test-benchmarks | /usr/bin/tee /tmp/benchmarks.json
-            go test -json ./e2e/benchmarks -timeout 2h -tags e2e \
-            -bench=BenchmarkTasksConcurrent_t01_s50 | /usr/bin/tee /tmp/benchmarks.json
+            go test ./e2e/benchmarks -timeout 2h -tags e2e -bench=BenchmarkTasksConcurrent
       # - slack/notify:
       #     event: fail
       #     template: basic_fail_1
