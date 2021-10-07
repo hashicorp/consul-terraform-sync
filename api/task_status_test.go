@@ -79,12 +79,14 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	cases := []struct {
 		name       string
 		path       string
+		method     string
 		statusCode int
 		expected   map[string]TaskStatus
 	}{
 		{
 			"all task statuses",
 			"/v1/status/tasks",
+			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
 				"task_a": TaskStatus{
@@ -124,6 +126,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		{
 			"all task statuses with events",
 			"/v1/status/tasks?include=events",
+			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
 				"task_a": TaskStatus{
@@ -167,6 +170,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		{
 			"all task statuses filtered by status critical",
 			"/v1/status/tasks?status=critical",
+			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
 				"task_b": TaskStatus{
@@ -182,6 +186,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		{
 			"all task statuses filtered by status unknown",
 			"/v1/status/tasks?status=unknown",
+			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
 				"task_d": TaskStatus{
@@ -197,6 +202,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		{
 			"single task",
 			"/v1/status/tasks/task_b",
+			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
 				"task_b": TaskStatus{
@@ -212,6 +218,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		{
 			"single task with events",
 			"/v1/status/tasks/task_b?include=events",
+			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
 				"task_b": TaskStatus{
@@ -228,6 +235,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		{
 			"single task that has no event data",
 			"/v1/status/tasks/task_d",
+			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
 				"task_d": TaskStatus{
@@ -243,38 +251,50 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		{
 			"non-existent task",
 			"/v1/status/tasks/task_nonexistent",
+			http.MethodGet,
 			http.StatusNotFound,
 			map[string]TaskStatus{},
 		},
 		{
 			"non-existent task with events",
 			"/v1/status/tasks/task_nonexistent?include=events",
+			http.MethodGet,
 			http.StatusNotFound,
 			map[string]TaskStatus{},
 		},
 		{
 			"bad include parameter",
 			"/v1/status/tasks?include=wrongparam",
+			http.MethodGet,
 			http.StatusBadRequest,
 			map[string]TaskStatus{},
 		},
 		{
 			"bad status parameter",
 			"/v1/status/tasks?status=invalidparam",
+			http.MethodGet,
 			http.StatusBadRequest,
 			map[string]TaskStatus{},
 		},
 		{
 			"bad url path",
 			"/v1/status/tasks/task_b/events",
+			http.MethodGet,
 			http.StatusBadRequest,
+			map[string]TaskStatus{},
+		},
+		{
+			"bad http method",
+			"/v1/status/tasks",
+			http.MethodPut,
+			http.StatusMethodNotAllowed,
 			map[string]TaskStatus{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", tc.path, nil)
+			req, err := http.NewRequest(tc.method, tc.path, nil)
 			require.NoError(t, err)
 			resp := httptest.NewRecorder()
 
