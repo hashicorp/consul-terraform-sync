@@ -3,7 +3,8 @@ schema = "1"
 project "consul-terraform-sync" {
   team = "consul api tooling"
   slack {
-    notification_channel = "#feed-releng" #TODO update slack channel
+    # feed-consul-api-gh
+    notification_channel = "C026W707YHJ"
   }
   github {
     organization = "hashicorp"
@@ -32,7 +33,6 @@ event "upload-dev" {
 
   notification {
     on = "fail"
-    message_template = "{{stage_name}} failed with {{stage_output}}"
   }
 }
 
@@ -47,7 +47,6 @@ event "notarize-darwin-amd64" {
 
   notification {
     on = "fail"
-    message_template = "{{stage_name}} {{version}} failed with {{stage_output}}"
   }
 }
 
@@ -62,7 +61,6 @@ event "notarize-windows-386" {
 
   notification {
     on = "fail"
-    message_template = "{{stage_name}} {{version}} failed with {{stage_output}}"
   }
 }
 
@@ -76,7 +74,6 @@ event "notarize-windows-amd64" {
 
   notification {
     on = "fail"
-    message_template = "{{stage_name}} {{version}} failed with {{stage_output}}"
   }
 }
 
@@ -91,7 +88,6 @@ event "sign" {
 
   notification {
     on = "fail"
-    message_template = "{{stage_name}} {{version}} failed with {{stage_output}}"
   }
 }
 
@@ -105,6 +101,5 @@ event "verify" {
 
   notification {
     on = "fail"
-    message_template = "{{stage_name}} {{version}} failed with {{stage_output}}"
   }
 }
