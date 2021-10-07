@@ -42,11 +42,25 @@ func newTaskStatusHandler(store *event.Store, drivers *driver.Drivers, version s
 	}
 }
 
-// ServeHTTP serves the task status endpoint which returns a map of taskname to
-// task status
+// ServeHTTP serves the task status endpoint
 func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger := logging.FromContext(r.Context()).Named(taskStatusSubsystemName)
 	logger.Trace("request task status", "url_path", r.URL.Path)
+
+	switch r.Method {
+	case http.MethodGet:
+		h.getTaskStatus(w, r)
+	default:
+		err := fmt.Errorf("'%s' in an unsupported method. The task status API "+
+			"currently supports the method(s): '%s'", r.Method, http.MethodGet)
+		logger.Trace("unsupported method: %s", err)
+		jsonErrorResponse(r.Context(), w, http.StatusMethodNotAllowed, err)
+	}
+}
+
+// getTaskStatus returns a map of taskname to task status
+func (h *taskStatusHandler) getTaskStatus(w http.ResponseWriter, r *http.Request) {
+	logger := logging.FromContext(r.Context()).Named(taskStatusSubsystemName)
 
 	taskName, err := getTaskName(r.URL.Path, taskStatusPath, h.version)
 	if err != nil {
