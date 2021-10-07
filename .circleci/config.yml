@@ -150,10 +150,12 @@ jobs:
           name: Run benchmark suite
           no_output_timeout: << parameters.no_output_timeout >>
           command:
-            make test-benchmarks | /usr/bin/tee /tmp/benchmarks.json
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
+            # make test-benchmarks | /usr/bin/tee /tmp/benchmarks.json
+            go test -json ./e2e/benchmarks -timeout 2h -tags e2e \
+            -bench=BenchmarkTasksConcurrent_t01_s50 | /usr/bin/tee /tmp/benchmarks.json
+      # - slack/notify:
+      #     event: fail
+      #     template: basic_fail_1
       - run:
           name: Output benchmark results
           command: |
@@ -170,20 +172,20 @@ jobs:
 
 workflows:
   version: 2
-  build-test:
-    jobs:
-      - unit_integration_tests
-      - e2e_tests
+  # build-test:
+  #   jobs:
+  #     - unit_integration_tests
+  #     - e2e_tests
   weekly-benchmarks:
     jobs:
-      - vault_integration_tests
+      # - vault_integration_tests
       - benchmarks
-      - consul_compatibility_tests
-    triggers:
-      - schedule:
-          # 02:10 UTC every Wednesday
-          cron: 10 2 * * 3
-          filters:
-            branches:
-              only:
-              - main
+      # - consul_compatibility_tests
+    # triggers:
+    #   - schedule:
+    #       # 02:10 UTC every Wednesday
+    #       cron: 10 2 * * 3
+    #       filters:
+    #         branches:
+    #           only:
+    #           - main
