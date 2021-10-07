@@ -25,6 +25,25 @@ jobs:
           make version
           echo "::set-output name=product-version::$(make version)"
 
+  generate-metadata-file:
+    needs: get-product-version
+    runs-on: ubuntu-latest
+    outputs:
+      filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
+    steps:
+      - name: 'Checkout directory'
+        uses: actions/checkout@v2
+      - name: Generate metadata file
+        id: generate-metadata-file
+        uses: hashicorp/actions-generate-metadata@main
+        with:
+          version: ${{ needs.get-product-version.outputs.product-version }}
+          product: ${{ github.event.repository.name }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: metadata.json
+          path: ${{ steps.generate-metadata-file.outputs.filepath }}
   build-386:
     needs: get-product-version
     runs-on: ubuntu-latest
