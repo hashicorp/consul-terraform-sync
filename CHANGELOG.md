@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 * **(Enterprise Only)** Add TLS configuration for the Terraform Cloud driver when connecting with Terraform Enterprise.
+* Enforce GET request method for `/v1/status/tasks` endpoint. [[GH-419](https://github.com/hashicorp/consul-terraform-sync/pull/419)]
 
 FEATURES:
 * Add support for triggering a task on schedule for a task module requiring only services input. Supports a new schedule condition that is configured in conjunction with `task.services`. [[GH-308](https://github.com/hashicorp/consul-terraform-sync/issues/308)]
