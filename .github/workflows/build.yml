@@ -362,19 +362,3 @@ jobs:
         with:
           name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
           path: .release/docker/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
-
-  generate_metadata:
-    needs: get-product-version
-    runs-on: ubuntu-latest
-    name: Generate Metadata
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Generate Metadata
-        run: .github/scripts/generate_metadata.sh | tee metadata.json
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: metadata.json
-          path: metadata.json
