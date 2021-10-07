@@ -9,7 +9,13 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 )
 
-var _ Controller = (*ReadOnly)(nil)
+var (
+	_ Controller = (*ReadOnly)(nil)
+
+	// MuteReadOnlyController is used to toggle muting the ReadOnlyController
+	// from forcing Terraform output, useful for benchmarks
+	MuteReadOnlyController bool
+)
 
 // ReadOnly is the controller to run in read-only mode
 type ReadOnly struct {
@@ -19,7 +25,7 @@ type ReadOnly struct {
 // NewReadOnly configures and initializes a new ReadOnly controller
 func NewReadOnly(conf *config.Config) (Controller, error) {
 	// Run the driver with logging to output the Terraform plan to stdout
-	if tfConfig := conf.Driver.Terraform; tfConfig != nil {
+	if tfConfig := conf.Driver.Terraform; tfConfig != nil && !MuteReadOnlyController {
 		tfConfig.Log = config.Bool(true)
 	}
 

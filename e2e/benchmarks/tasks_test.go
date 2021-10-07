@@ -69,6 +69,10 @@ func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 		numServices: numServices,
 	})
 
+	// Override Terraform output logging for benchmark readability
+	// when running the ReadOnlyController
+	controller.MuteReadOnlyController = true
+
 	b.Run("ReadOnlyCtrl", func(b *testing.B) {
 		ctrl, err := controller.NewReadOnly(conf)
 		require.NoError(b, err)
