@@ -1,0 +1,27 @@
+---
+  name: Upstream Assistant Trigger
+
+  on:
+    push:
+      branches:
+        - main
+        - 'release/**'
+
+  jobs:
+    trigger-oss-merge:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Trigger Upstream Assistant
+          run: |
+            GITHUB_BRANCH=${GITHUB_REF#refs/heads/}
+            STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null \
+              -XPOST https://api.github.com/repos/${{ github.repository }}-enterprise/dispatches \
+              -H "Authorization: token ${{ secrets.ELEVATED_GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Content-Type: application/json" \
+              --data '{"event_type": "trigger_oss_merge", "client_payload": {"repository": "${{ github.repository }}", "branch": "'$GITHUB_BRANCH'"}}'
+            )
+            echo "$STATUS_CODE"
+            if [ "$STATUS_CODE" != "204" ]; then
+              exit 1
+            fi
