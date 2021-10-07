@@ -73,36 +73,26 @@ func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 	// when running the ReadOnlyController
 	controller.MuteReadOnlyController = true
 
-	b.Run("ReadOnlyCtrl", func(b *testing.B) {
-		ctrl, err := controller.NewReadOnly(conf)
-		require.NoError(b, err)
+	ctrl, err := controller.NewReadOnly(conf)
+	require.NoError(b, err)
 
-		b.Run("task setup", func(b *testing.B) {
-			for n := 0; n < b.N; n++ {
-				err = ctrl.Init(ctx)
-				require.NoError(b, err)
-			}
-		})
+	err = ctrl.Init(ctx)
+	require.NoError(b, err)
 
-		b.Run("task execution", func(b *testing.B) {
-			for n := 0; n < b.N; n++ {
-				// Make an initial dependency change as setup, reset timer
-				random := rand.New(rand.NewSource(time.Now().UnixNano()))
-				service := testutil.TestService{
-					ID:      fmt.Sprintf("service-000-%d", random.Intn(99999)),
-					Name:    "service-000",
-					Address: "5.6.7.8",
-					Port:    8080,
-				}
-				testutils.RegisterConsulServiceHealth(b, srv, service, 0, testutil.HealthPassing)
-				b.ResetTimer()
+	// Make an initial dependency change as setup, reset timer
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	service := testutil.TestService{
+		ID:      fmt.Sprintf("service-000-%d", random.Intn(99999)),
+		Name:    "service-000",
+		Address: "5.6.7.8",
+		Port:    8080,
+	}
+	testutils.RegisterConsulServiceHealth(b, srv, service, 0, testutil.HealthPassing)
+	b.ResetTimer()
 
-				// Run task execution
-				err = ctrl.Run(ctx)
-				require.NoError(b, err)
-			}
-		})
-	})
+	// Run task execution
+	err = ctrl.Run(ctx)
+	require.NoError(b, err)
 }
 
 type benchmarkConfig struct {
