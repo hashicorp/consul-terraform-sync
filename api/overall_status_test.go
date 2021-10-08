@@ -37,12 +37,14 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 	cases := []struct {
 		name       string
 		path       string
+		method     string
 		statusCode int
 		expected   OverallStatus
 	}{
 		{
 			"happy path",
 			"/v1/status",
+			http.MethodGet,
 			http.StatusOK,
 			OverallStatus{
 				TaskSummary: TaskSummary{
@@ -58,6 +60,13 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			"method not allowed",
+			"/v1/status",
+			http.MethodPatch,
+			http.StatusMethodNotAllowed,
+			OverallStatus{},
 		},
 	}
 
@@ -84,7 +93,7 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", tc.path, nil)
+			req, err := http.NewRequest(tc.method, tc.path, nil)
 			require.NoError(t, err)
 			resp := httptest.NewRecorder()
 
