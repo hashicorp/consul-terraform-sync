@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/consul-terraform-sync/driver"
@@ -59,42 +60,50 @@ func newOverallStatusHandler(store *event.Store, drivers *driver.Drivers, versio
 func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger := logging.FromContext(r.Context()).Named(overallStatusSubsystemName)
 	logger.Trace("requesting task status", "url_path", r.URL.Path)
+	switch r.Method {
+	case http.MethodGet:
 
-	data := h.store.Read("")
-	taskSummary := TaskSummary{}
-	for _, events := range data {
-		successes := make([]bool, len(events))
-		for i, event := range events {
-			successes[i] = event.Success
-		}
-		status := successToStatus(successes)
-		switch status {
-		case StatusSuccessful:
-			taskSummary.Status.Successful++
-		case StatusErrored:
-			taskSummary.Status.Errored++
-		case StatusCritical:
-			taskSummary.Status.Critical++
-		}
-	}
-
-	for taskName, d := range h.drivers.Map() {
-		// look for any tasks that have a driver but no events
-		if _, ok := data[taskName]; !ok {
-			taskSummary.Status.Unknown++
+		data := h.store.Read("")
+		taskSummary := TaskSummary{}
+		for _, events := range data {
+			successes := make([]bool, len(events))
+			for i, event := range events {
+				successes[i] = event.Success
+			}
+			status := successToStatus(successes)
+			switch status {
+			case StatusSuccessful:
+				taskSummary.Status.Successful++
+			case StatusErrored:
+				taskSummary.Status.Errored++
+			case StatusCritical:
+				taskSummary.Status.Critical++
+			}
 		}
 
-		if d.Task().IsEnabled() {
-			taskSummary.Enabled.True++
-		} else {
-			taskSummary.Enabled.False++
-		}
-	}
+		for taskName, d := range h.drivers.Map() {
+			// look for any tasks that have a driver but no events
+			if _, ok := data[taskName]; !ok {
+				taskSummary.Status.Unknown++
+			}
 
-	err := jsonResponse(w, http.StatusOK, OverallStatus{
-		TaskSummary: taskSummary,
-	})
-	if err != nil {
-		logger.Error("error, could not generate json error response", "error", err)
+			if d.Task().IsEnabled() {
+				taskSummary.Enabled.True++
+			} else {
+				taskSummary.Enabled.False++
+			}
+		}
+
+		err := jsonResponse(w, http.StatusOK, OverallStatus{
+			TaskSummary: taskSummary,
+		})
+		if err != nil {
+			logger.Error("error, could not generate json error response", "error", err)
+		}
+	default:
+		err := fmt.Errorf("'%s' in an unsupported method. The overallStatus API "+
+			"currently supports the method(s): '%s'", r.Method, http.MethodGet)
+		logger.Trace("unsupported method: %s", err)
+		jsonErrorResponse(r.Context(), w, http.StatusMethodNotAllowed, err)
 	}
 }
