@@ -38,7 +38,7 @@ jobs:
         uses: hashicorp/actions-generate-metadata@main
         with:
           version: ${{ needs.get-product-version.outputs.product-version }}
-          product: ${{ github.event.repository.name }}
+          product: ${{ env.PKG_NAME }}
 
       - uses: actions/upload-artifact@v2
         with:
