@@ -60,64 +60,56 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 	require.NoError(b, err)
 	rwCtrl := ctrl.(*controller.ReadWrite)
 
-	b.Run("task setup", func(b *testing.B) {
-		for n := 0; n < b.N; n++ {
-			err = rwCtrl.Init(context.Background())
-			require.NoError(b, err)
-		}
-	})
+	err = rwCtrl.Init(context.Background())
+	require.NoError(b, err)
 
 	err = rwCtrl.Once(context.Background())
 	require.NoError(b, err)
 
-	b.Run("task concurrent execution", func(b *testing.B) {
-		// This is the crux of the benchmark which evaluates the performance of
-		// tasks triggered and executing concurrently.
-		for n := 0; n < b.N; n++ {
-			ctx, ctxCancel := context.WithCancel(context.Background())
-			defer ctxCancel()
-			ctrlStopped := make(chan error)
-			completedTasksCh := rwCtrl.EnableTestMode()
+	// This is the crux of the benchmark which evaluates the performance of
+	// tasks triggered and executing concurrently.
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	defer ctxCancel()
+	ctrlStopped := make(chan error)
+	completedTasksCh := rwCtrl.EnableTestMode()
 
-			go func() {
-				ctrlStopped <- rwCtrl.Run(ctx)
-			}()
+	go func() {
+		ctrlStopped <- rwCtrl.Run(ctx)
+	}()
 
-			// Benchmark setup is done, reset the timer
-			b.ResetTimer()
+	// Benchmark setup is done, reset the timer
+	b.ResetTimer()
 
-			// Register service instance to Consul catalog. This triggers task execution
-			// for all tasks watching service-000
-			random := rand.New(rand.NewSource(time.Now().UnixNano()))
-			service := testutil.TestService{
-				ID:      fmt.Sprintf("service-000-%s-%d-%d", b.Name(), n, random.Intn(99999)),
-				Name:    "service-000",
-				Address: "5.6.7.8",
-				Port:    8080,
+	// Register service instance to Consul catalog. This triggers task execution
+	// for all tasks watching service-000
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	service := testutil.TestService{
+		ID:      fmt.Sprintf("service-000-%s-%d", b.Name(), random.Intn(99999)),
+		Name:    "service-000",
+		Address: "5.6.7.8",
+		Port:    8080,
+	}
+	testutils.RegisterConsulServiceHealth(b, srv, service, 0, testutil.HealthPassing)
+
+	ctxTimeout, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	completedTasks := make(map[string]bool, len(*conf.Tasks))
+RunLoop:
+	for {
+		select {
+		case taskName := <-completedTasksCh:
+			completedTasks[taskName] = true
+			b.Logf("%s completed (%d/%d)", taskName, len(completedTasks), numTasks)
+			if len(completedTasks) == numTasks {
+				ctxCancel() // Benchmark completed before timing out, stop the controller
 			}
-			testutils.RegisterConsulServiceHealth(b, srv, service, 0, testutil.HealthPassing)
 
-			ctxTimeout, _ := context.WithTimeout(context.Background(), 30*time.Second)
-			completedTasks := make(map[string]bool, len(*conf.Tasks))
-		RunLoop:
-			for {
-				select {
-				case taskName := <-completedTasksCh:
-					completedTasks[taskName] = true
-					b.Logf("%s completed (%d/%d)", taskName, len(completedTasks), numTasks)
-					if len(completedTasks) == numTasks {
-						ctxCancel() // Benchmark completed before timing out, stop the controller
-					}
+		case <-ctxTimeout.Done():
+			ctxCancel() // Benchmark timed out, stop the controller
 
-				case <-ctxTimeout.Done():
-					ctxCancel() // Benchmark timed out, stop the controller
-
-				case err := <-ctrlStopped:
-					assert.Equal(b, err, context.Canceled)
-					assert.Len(b, completedTasks, numTasks, "%s timed out before tasks were triggered and had executed", b.Name())
-					break RunLoop
-				}
-			}
+		case err := <-ctrlStopped:
+			assert.Equal(b, err, context.Canceled)
+			assert.Len(b, completedTasks, numTasks, "%s timed out before tasks were triggered and had executed", b.Name())
+			break RunLoop
 		}
-	})
+	}
 }
