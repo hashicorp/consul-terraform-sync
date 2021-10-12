@@ -8,6 +8,12 @@ import (
 	"sort"
 )
 
+// isConsul satisfies the hcat dependency interface to denote Consul type for
+// managing the Consul retry function.
+type isConsul struct{}
+
+func (isConsul) Consul() {}
+
 // deepCopyAndSortTags deep copies the tags in the given string slice and then
 // sorts and returns the copied result.
 func deepCopyAndSortTags(tags []string) []string {

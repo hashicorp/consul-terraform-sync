@@ -40,6 +40,7 @@ func catalogServicesRegistrationFunc(recall hcat.Recaller) interface{} {
 // catalogServicesRegistrationQuery is the representation of a requested catalog
 // service registration query from inside a template.
 type catalogServicesRegistrationQuery struct {
+	isConsul
 	stopCh chan struct{}
 
 	regexp   *regexp.Regexp // custom
