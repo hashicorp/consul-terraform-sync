@@ -1,17 +1,4 @@
 ## UNRELEASED
-
-IMPROVEMENTS:
-* **(Enterprise Only)** Add TLS configuration for the Terraform Cloud driver when connecting with Terraform Enterprise.
-
-FEATURES:
-* Add support for triggering a task on schedule for a task module requiring only services input. Supports a new schedule condition that is configured in conjunction with `task.services`. [[GH-308](https://github.com/hashicorp/consul-terraform-sync/issues/308)]
-* Add support for new services source input block which can be used in conjunction with the scheduled task trigger `task.source_input "services"`. This allows for service regex to be defined in lieu of `task.services`. [[GH-382](https://github.com/hashicorp/consul-terraform-sync/issues/382)]
-* Add support for new Consul KV source input block which can be used in conjunction with the scheduled task trigger `task.source_input "consul-kv"`. This allows for Consul key-values to be used as input to the Terraform Module. [[GH-389](https://github.com/hashicorp/consul-terraform-sync/issues/389)]
-
-BUG FIXES:
-* Fix enforcing GET method for Overall Status API so that other methods return 405 Method Not Allowed. [[GH-427](https://github.com/hashicorp/consul-terraform-sync/issues/427)]
-
-## 0.4.0-beta1 (September 29, 2021)
 BREAKING CHANGES:
 * Remove deprecated `tag` filtering option from `service` configuration, which has been replaced by the more general `filter` option. [[GH-312](https://github.com/hashicorp/consul-terraform-sync/issues/312)]
 * The logging timestamps are now reported using the timezone of the system CTS is running on, instead of defaulting to UTC time. [[GH-332](https://github.com/hashicorp/consul-terraform-sync/issues/332)]
@@ -19,9 +6,17 @@ BREAKING CHANGES:
 FEATURES:
 * Add support for Consul KV triggers. [[GH-150](https://github.com/hashicorp/consul-terraform-sync/issues/150)]
 * **(Enterprise Only)** Add integration with Terraform Cloud remote operations through the Terraform Cloud driver. [[GH-328](https://github.com/hashicorp/consul-terraform-sync/issues/328)]
+* Add support for triggering a task on schedule for a task module requiring only services input. Supports a new schedule condition that is configured in conjunction with `task.services`. [[GH-308](https://github.com/hashicorp/consul-terraform-sync/issues/308)]
+* Add support for new services source input block which can be used in conjunction with the scheduled task trigger `task.source_input "services"`. This allows for service regex to be defined in lieu of `task.services`. [[GH-382](https://github.com/hashicorp/consul-terraform-sync/issues/382)]
+* Add support for new Consul KV source input block which can be used in conjunction with the scheduled task trigger `task.source_input "consul-kv"`. This allows for Consul key-values to be used as input to the Terraform Module. [[GH-389](https://github.com/hashicorp/consul-terraform-sync/issues/389)]
 
 IMPROVEMENTS:
+* **(Enterprise Only)** Add TLS configuration for the Terraform Cloud driver when connecting with Terraform Enterprise.
 * Enhanced http and structured logging. [[GH-332](https://github.com/hashicorp/consul-terraform-sync/issues/332)]
+
+BUG FIXES:
+* Enforce GET request method for Overall Status API (`/v1/status`) so that other methods return 405 Method Not Allowed. [[GH-427](https://github.com/hashicorp/consul-terraform-sync/issues/427)]
+* Enforce GET request method for Task Status API (`/v1/status/tasks`) so that other methods return 405 Method Not Allowed. [[GH-360](https://github.com/hashicorp/consul-terraform-sync/issues/360)]
 
 ## 0.3.0 (September 01, 2021)
 BREAKING CHANGES:
