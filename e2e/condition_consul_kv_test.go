@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"fmt"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -356,6 +357,81 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 			content := testutils.CheckFile(t, true, resourcesPath, pathFile)
 			assert.Equal(t, value, content)
 			testutils.CheckFile(t, false, resourcesPath, "web.txt")
+		})
+	}
+}
+
+// TestConditionConsul_namespace_oss tests conditions with configured namespace
+// meanwhile connecting with Consul OSS.
+func TestConditionConsul_namespace_oss(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	testCases := []struct {
+		name  string
+		task  string
+		event func()
+	}{
+		{
+			name: "catalog-services",
+			task: `
+task {
+  name = "catalog-services"
+  source = "./test_modules/null_resource"
+  condition "catalog-services" {
+    regexp = ".*"
+    namespace = "dne"
+  }
+}`,
+			event: func() {
+				service := testutil.TestService{ID: "api", Name: "api"}
+				testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+			},
+		}, {
+			name: "consul-kv",
+			task: `
+task {
+  name = "consul-kv"
+  source = "./test_modules/null_resource"
+  services = ["foobar"]
+  condition "consul-kv" {
+    path = "foo"
+    namespace = "dne"
+  }
+}`,
+			event: func() {
+				srv.SetKVString(t, "foo", "bar")
+			},
+		},
+	}
+
+	port := testutils.FreePort(t)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tempDir := fmt.Sprintf("%snamespace_oss_%s", tempDirPrefix, tc.name)
+			cleanup := testutils.MakeTempDir(t, tempDir)
+			defer cleanup()
+
+			config := baseConfig(tempDir).appendConsulBlock(srv).appendString(tc.task).
+				appendString(fmt.Sprintf("port = %d", port))
+			configPath := filepath.Join(tempDir, configFile)
+			config.write(t, configPath)
+
+			errCh := make(chan error, 1)
+			cmd := exec.Command("consul-terraform-sync", "--once", fmt.Sprintf("--config-file=%s", configPath))
+			go func() {
+				errCh <- cmd.Run()
+			}()
+
+			timeout := time.After(defaultWaitForAPI)
+			select {
+			case err := <-errCh:
+				assert.Error(t, err, "namespace query should error and cause once-mode to not stop successfully")
+			case <-timeout:
+				t.Fatalf("expected CTS to error during once mode with first 400 API response from Consul")
+			}
 		})
 	}
 }
