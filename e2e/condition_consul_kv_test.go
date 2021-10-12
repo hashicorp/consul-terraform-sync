@@ -370,9 +370,8 @@ func TestConditionConsul_namespace_oss(t *testing.T) {
 	defer srv.Stop()
 
 	testCases := []struct {
-		name  string
-		task  string
-		event func()
+		name string
+		task string
 	}{
 		{
 			name: "catalog-services",
@@ -385,10 +384,6 @@ task {
     namespace = "dne"
   }
 }`,
-			event: func() {
-				service := testutil.TestService{ID: "api", Name: "api"}
-				testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-			},
 		}, {
 			name: "consul-kv",
 			task: `
@@ -401,9 +396,6 @@ task {
     namespace = "dne"
   }
 }`,
-			event: func() {
-				srv.SetKVString(t, "foo", "bar")
-			},
 		},
 	}
 
