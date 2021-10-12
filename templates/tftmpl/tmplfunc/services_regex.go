@@ -51,6 +51,7 @@ func servicesRegexFunc(recall hcat.Recaller) interface{} {
 // servicesRegexQuery is the representation of the regex service
 // query from inside a template.
 type servicesRegexQuery struct {
+	isConsul
 	stopCh chan struct{}
 
 	regexp *regexp.Regexp
