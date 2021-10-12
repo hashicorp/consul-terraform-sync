@@ -221,6 +221,10 @@ func TestCatalogServicesRegistrationQuery_Fetch(t *testing.T) {
 	client, err := consulapi.NewClient(consulConfig)
 	require.NoError(t, err, "failed to make consul client")
 
+	// wait for consul service to be registered in dc2
+	WaitForCatalogRegistration(t, client, &consulapi.QueryOptions{Datacenter: "dc2"},
+		"consul", 8*time.Second)
+
 	cases := []struct {
 		name     string
 		i        []string
@@ -300,4 +304,35 @@ func (c *testClient) Consul() *consulapi.Client {
 func (c *testClient) Vault() *vaultapi.Client {
 	// no-op: currently no need to support Vault
 	return nil
+}
+
+// WaitForCatalogRegistration polls and waits for a service to be registered in the Consul catalog
+func WaitForCatalogRegistration(tb testing.TB, client *consulapi.Client, queryOpts *consulapi.QueryOptions,
+	serviceID string, wait time.Duration) {
+	polling := make(chan struct{})
+	stopPolling := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-stopPolling:
+				return
+			default:
+				resp, _, err := client.Catalog().Services(queryOpts)
+				require.NoError(tb, err)
+				if _, ok := resp[serviceID]; ok {
+					polling <- struct{}{}
+					return
+				}
+			}
+		}
+	}()
+
+	select {
+	case <-polling:
+		return
+	case <-time.After(wait):
+		close(stopPolling)
+		tb.Fatalf("timed out after waiting for %v for service %q to register "+
+			"with in the Consul catalog", wait, serviceID)
+	}
 }

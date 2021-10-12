@@ -126,7 +126,7 @@ func TestServicesRegexQuery_Fetch(t *testing.T) {
 	//      - server instance: web-1
 	// dc2:
 	//   - node: srv3 (no node-meta)
-	//      - server instance: db-1
+	//      - server instance: api-db-1
 
 	// set up nodes
 	srv1 := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{})
@@ -194,7 +194,7 @@ func TestServicesRegexQuery_Fetch(t *testing.T) {
 	service = testutil.TestService{ID: webSrv.ID, Name: webSrv.Name}
 	testutils.RegisterConsulServiceHealth(t, srv2, service, 8*time.Second, testutil.HealthPassing)
 
-	dbSrv := &dep.HealthService{ID: "db-1", Name: "db", Node: consulSrv3.Node, NodeID: consulSrv3.NodeID}
+	dbSrv := &dep.HealthService{ID: "db-1", Name: "api-db", Node: consulSrv3.Node, NodeID: consulSrv3.NodeID}
 	service = testutil.TestService{ID: dbSrv.ID, Name: dbSrv.Name}
 	testutils.RegisterConsulServiceHealth(t, srv3, service, 8*time.Second, testutil.HealthPassing)
 
@@ -227,9 +227,8 @@ func TestServicesRegexQuery_Fetch(t *testing.T) {
 		},
 		{
 			"dc",
-			[]string{"regexp=.*", "dc=dc2"},
+			[]string{"regexp=api", "dc=dc2"},
 			[]*dep.HealthService{
-				consulSrv3,
 				dbSrv,
 			},
 		},
