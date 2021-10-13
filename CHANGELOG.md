@@ -1,4 +1,7 @@
-## UNRELEASED
+## 0.4.0 (October 13, 2021)
+KNOWN ISSUES:
+* The formatting of the Terraform Plan outputted in the terminal when using the Enable CLI is difficult to read when using the TFC driver with certain Terraform versions. See issue for workaround. [[GH-425](https://github.com/hashicorp/consul-terraform-sync/issues/425)]
+
 BREAKING CHANGES:
 * Remove deprecated `tag` filtering option from `service` configuration, which has been replaced by the more general `filter` option. [[GH-312](https://github.com/hashicorp/consul-terraform-sync/issues/312)]
 * The logging timestamps are now reported using the timezone of the system CTS is running on, instead of defaulting to UTC time. [[GH-332](https://github.com/hashicorp/consul-terraform-sync/issues/332)]
