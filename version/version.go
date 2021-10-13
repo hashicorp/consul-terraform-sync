@@ -38,9 +38,11 @@ func GetHumanVersion() string {
 	}
 
 	release := VersionPrerelease
-	if GitDescribe == "" && release == "" {
-		release = "dev"
-	}
+	// Temporary remove dev pre-release information to work-around CRT
+	// build mismatch without expected variable link flags.
+	// if GitDescribe == "" && release == "" {
+	// 	release = "dev"
+	// }
 	if release != "" {
 		version += fmt.Sprintf("-%s", release)
 	}
