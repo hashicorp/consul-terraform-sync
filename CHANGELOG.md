@@ -1,6 +1,6 @@
 ## 0.4.0 (October 13, 2021)
 KNOWN ISSUES:
-* The formatting of the Terraform Plan outputted in the terminal when using the Enable CLI is difficult to read when using the TFC driver with certain Terraform versions. See issue for workaround. [[GH-425](https://github.com/hashicorp/consul-terraform-sync/issues/425)]
+* The formatting of the Terraform Plan outputted in the terminal by the Enable CLI and Inspect Mode is difficult to read when used with the TFC driver for certain Terraform versions. See issue for workaround. [[GH-425](https://github.com/hashicorp/consul-terraform-sync/issues/425)]
 
 BREAKING CHANGES:
 * Remove deprecated `tag` filtering option from `service` configuration, which has been replaced by the more general `filter` option. [[GH-312](https://github.com/hashicorp/consul-terraform-sync/issues/312)]
