@@ -11,6 +11,7 @@ on:
 
 env:
   PKG_NAME: "consul-terraform-sync"
+  GO_TAGS: ""
 
 jobs:
   get-product-version:
@@ -68,8 +69,14 @@ jobs:
           go-version: ${{ matrix.go }}
       - name: Build
         run: |
+          LD_FLAGS="-s -w \
+            -X '"${{ env.PKG_NAME }}"/version.Name="${{ env.PKG_NAME }}"' \
+            -X '"${{ env.PKG_NAME }}"/version.GitCommit="${GITHUB_SHA}"' \
+            -X '"${{ env.PKG_NAME }}"/version.GitDescribe="${{ needs.get-product-version.outputs.product-version }}"'
           mkdir dist out
-          go build -o dist/ .
+          go build -o dist/ \
+            -ldflags "${LD_FLAGS}" \
+            -tags '${{ env.GO_TAGS }}'
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -130,8 +137,14 @@ jobs:
 
       - name: Build
         run: |
+          LD_FLAGS="-s -w \
+            -X '"${{ env.PKG_NAME }}"/version.Name="${{ env.PKG_NAME }}"' \
+            -X '"${{ env.PKG_NAME }}"/version.GitCommit="${GITHUB_SHA}"' \
+            -X '"${{ env.PKG_NAME }}"/version.GitDescribe="${{ needs.get-product-version.outputs.product-version }}"'
           mkdir dist out
-          go build -o dist/
+          go build -o dist/ \
+            -ldflags "${LD_FLAGS}" \
+            -tags '${{ env.GO_TAGS }}'
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
 
       - uses: actions/upload-artifact@v2
@@ -193,9 +206,14 @@ jobs:
 
       - name: Build
         run: |
+          LD_FLAGS="-s -w \
+            -X '"${{ env.PKG_NAME }}"/version.Name="${{ env.PKG_NAME }}"' \
+            -X '"${{ env.PKG_NAME }}"/version.GitCommit="${GITHUB_SHA}"' \
+            -X '"${{ env.PKG_NAME }}"/version.GitDescribe="${{ needs.get-product-version.outputs.product-version }}"'
           mkdir dist out
-          go build -o dist/
-
+          go build -o dist/ \
+            -ldflags "${LD_FLAGS}" \
+            -tags '${{ env.GO_TAGS }}'
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
 
       - uses: actions/upload-artifact@v2
@@ -255,8 +273,14 @@ jobs:
 
       - name: Build
         run: |
+          LD_FLAGS="-s -w \
+            -X '"${{ env.PKG_NAME }}"/version.Name="${{ env.PKG_NAME }}"' \
+            -X '"${{ env.PKG_NAME }}"/version.GitCommit="${GITHUB_SHA}"' \
+            -X '"${{ env.PKG_NAME }}"/version.GitDescribe="${{ needs.get-product-version.outputs.product-version }}"'
           mkdir dist out
-          go build -o dist/
+          go build -o dist/ \
+            -ldflags "${LD_FLAGS}" \
+            -tags '${{ env.GO_TAGS }}'
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -316,8 +340,14 @@ jobs:
 
       - name: Build
         run: |
+          LD_FLAGS="-s -w \
+            -X '"${{ env.PKG_NAME }}"/version.Name="${{ env.PKG_NAME }}"' \
+            -X '"${{ env.PKG_NAME }}"/version.GitCommit="${GITHUB_SHA}"' \
+            -X '"${{ env.PKG_NAME }}"/version.GitDescribe="${{ needs.get-product-version.outputs.product-version }}"'
           mkdir dist out
-          go build -o dist/
+          go build -o dist/ \
+            -ldflags "${LD_FLAGS}" \
+            -tags '${{ env.GO_TAGS }}'
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
