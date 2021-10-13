@@ -4,7 +4,7 @@ BREAKING CHANGES:
 * The logging timestamps are now reported using the timezone of the system CTS is running on, instead of defaulting to UTC time. [[GH-332](https://github.com/hashicorp/consul-terraform-sync/issues/332)]
 
 FEATURES:
-* Add support for Consul KV triggers. [[GH-150](https://github.com/hashicorp/consul-terraform-sync/issues/150)]
+* Add support for triggering tasks based on Consul KV changes. [[GH-150](https://github.com/hashicorp/consul-terraform-sync/issues/150)]
 * **(Enterprise Only)** Add integration with Terraform Cloud remote operations through the Terraform Cloud driver. [[GH-328](https://github.com/hashicorp/consul-terraform-sync/issues/328)]
 * Add support for triggering a task on schedule for a task module requiring only services input. Supports a new schedule condition that is configured in conjunction with `task.services`. [[GH-308](https://github.com/hashicorp/consul-terraform-sync/issues/308)]
 * Add support for new services source input block which can be used in conjunction with the scheduled task trigger `task.source_input "services"`. This allows for service regex to be defined in lieu of `task.services`. [[GH-382](https://github.com/hashicorp/consul-terraform-sync/issues/382)]
