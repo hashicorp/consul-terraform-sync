@@ -8,9 +8,8 @@
 # Description: user description for task named 'test'
 
 catalog_services = {
-  "api"    = ["tag"]
-  "consul" = []
-  "web"    = ["tag_a", "tag_b"]
+  "api" = ["tag"]
+  "web" = ["tag_a", "tag_b"]
 }
 
 services = {

@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 // Tests CTS API endpoints /v1/status and /v1/tasks
