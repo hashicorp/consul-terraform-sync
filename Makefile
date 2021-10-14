@@ -85,6 +85,12 @@ generate:
 	go generate ./...
 .PHONY: generate
 
+go-fmt-check:
+	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+
+terraform-fmt-check:
+	@sh -c "'$(CURDIR)/scripts/terraformfmtcheck.sh'"
+
 # temp noop command to get build pipeline working
 dev-tree:
 	@true

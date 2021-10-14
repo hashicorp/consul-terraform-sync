@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 // Tests CTS CLI commands interacting with a running CTS in daemon mode.

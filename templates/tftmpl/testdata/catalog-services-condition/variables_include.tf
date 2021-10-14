@@ -37,5 +37,5 @@ variable "services" {
 # Catalog Services definition protocol v0
 variable "catalog_services" {
   description = "Consul catalog service names and list of all known tags for a given service"
-  type = map(list(string))
+  type        = map(list(string))
 }

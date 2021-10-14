@@ -9,7 +9,6 @@
 
 catalog_services = {
   "api" = ["tag"]
-  "consul" = []
 }
 
 services = {
