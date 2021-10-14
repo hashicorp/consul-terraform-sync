@@ -1,3 +1,9 @@
+## UNRELEASED
+
+IMPROVEMENTS:
+* **(Enterprise Only)** Add default address for the Terraform Cloud driver to https://app.terraform.io.
+
+
 ## 0.4.0 (October 13, 2021)
 KNOWN ISSUES:
 * The formatting of the Terraform Plan outputted in the terminal by the Enable CLI and Inspect Mode is difficult to read when used with the TFC driver for certain Terraform versions. See issue for workaround. [[GH-425](https://github.com/hashicorp/consul-terraform-sync/issues/425)]
