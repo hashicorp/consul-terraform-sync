@@ -57,7 +57,7 @@ jobs:
         id: generate-ld-flags
         run: |
           project="$(go list -m)"
-          sha="$GITHUB_SHA"
+          sha="$(git rev-parse --short HEAD)"
           echo "::set-output name=ldflags::"-s -w -X \'$project/version.Name=${{ env.PKG_NAME }}\' \
           -X \'$project/version.GitCommit=$sha\' \
           -X \'$project/version.GitDescribe=${{ needs.get-product-version.outputs.product-version }}\'""
