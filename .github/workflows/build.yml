@@ -60,7 +60,7 @@ jobs:
           sha="$(git rev-parse --short HEAD)"
           echo "::set-output name=ldflags::"-s -w -X \'$project/version.Name=${{ env.PKG_NAME }}\' \
           -X \'$project/version.GitCommit=$sha\' \
-          -X \'$project/version.GitDescribe=${{ needs.get-product-version.outputs.product-version }}\'""
+          -X \'$project/version.GitDescribe=v${{ needs.get-product-version.outputs.product-version }}\'""
     
   build-386:
     needs: [get-product-version, set-ld-flags]
