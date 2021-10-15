@@ -18,6 +18,7 @@ FEATURES:
 
 BREAKING CHANGES:
 * **(Enterprise Only)** Remove unexpected `-` character added between `workspace_prefix` and the task name. [[GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442)]
+  * If the `workspace_prefix` option is in use by CTS v0.3.x or v0.4.x for the Terraform Cloud driver, append "-" to the prefix in the configuration file prior to updating to v0.5.0 to continue automating the same Terraform Cloud workspaces for your CTS tasks.
 
 IMPROVEMENTS:
 * **(Enterprise Only)** Add default address for the Terraform Cloud driver to https://app.terraform.io.
