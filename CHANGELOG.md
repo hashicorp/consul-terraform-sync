@@ -16,6 +16,9 @@ FEATURES:
 * Support TLS and mutual TLS for the CTS API and CLI. [[GH-466](https://github.com/hashicorp/consul-terraform-sync/issues/466)]
 * **(Enterprise Only)** Add Terraform Cloud workspace tagging support to add, require, and restrict tags with new `driver.terraform-cloud.workspaces` options.
 
+BREAKING CHANGES:
+* **(Enterprise Only)** Remove unexpected `-` character added between `workspace_prefix` and the task name. [[GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442)]
+
 IMPROVEMENTS:
 * **(Enterprise Only)** Add default address for the Terraform Cloud driver to https://app.terraform.io.
 
