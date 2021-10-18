@@ -360,17 +360,21 @@ func TestE2E_FilterStatus(t *testing.T) {
 		checkTfvars  func(*testing.T, string)
 	}{
 		{
-			"default config exclues non-passing service instances",
+			"default config excludes non-passing service instances",
 			"_default",
 			`task {
 				name = "%s"
 				source = "./test_modules/null_resource"
-				services = ["unhealthy-service"]
+				services = ["api", "unhealthy-service"]
 			}
 			`,
 			func(t *testing.T, contents string) {
 				assert.NotContains(t, contents, "unhealthy-service")
 				assert.NotContains(t, contents, `= "critical"`)
+
+				// confirm that healthy service is still included
+				assert.Contains(t, contents, "api")
+				assert.Contains(t, contents, `= "passing"`)
 			},
 		},
 		{
@@ -379,7 +383,7 @@ func TestE2E_FilterStatus(t *testing.T) {
 			`task {
 				name = "%s"
 				source = "./test_modules/null_resource"
-				services = ["unhealthy-service"]
+				services = ["api", "unhealthy-service"]
 			}
 			service {
 				name = "unhealthy-service"
@@ -389,6 +393,10 @@ func TestE2E_FilterStatus(t *testing.T) {
 			func(t *testing.T, contents string) {
 				assert.Contains(t, contents, "unhealthy-service")
 				assert.Contains(t, contents, `= "critical"`)
+
+				// confirm that healthy service is still included
+				assert.Contains(t, contents, "api")
+				assert.Contains(t, contents, `= "passing"`)
 			},
 		},
 	}
@@ -403,7 +411,7 @@ func TestE2E_FilterStatus(t *testing.T) {
 			tempDir := fmt.Sprintf("%s%s%s", tempDirPrefix, "filter_statuses", tc.tmpDirSuffix)
 			delete := testutils.MakeTempDir(t, tempDir)
 
-			taskName := "unhealthy_service_task"
+			taskName := "status_filter_task"
 
 			configPath := filepath.Join(tempDir, configFile)
 			config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
