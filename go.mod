@@ -27,7 +27,7 @@ require (
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.3.0
-	github.com/hashicorp/hcat v0.0.0-20211012152203-a2ff56451145
+	github.com/hashicorp/hcat v0.0.0-20211018135533-a5044b0c572e
 	github.com/hashicorp/hcl v1.0.1-vault-2
 	github.com/hashicorp/hcl/v2 v2.8.2
 	github.com/hashicorp/logutils v1.0.0
