@@ -403,8 +403,6 @@ func TestE2E_FilterStatus(t *testing.T) {
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
-	srv.AddAddressableService(t, "unhealthy-service", testutil.HealthCritical,
-		"1.2.3.4", 8080, []string{})
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -442,6 +440,9 @@ func newTestConsulServer(t *testing.T) *testutil.TestServer {
 		"5.6.7.8", 8000, []string{"tag2"})
 	srv.AddAddressableService(t, "db", testutil.HealthPassing,
 		"10.10.10.10", 8000, []string{"tag3", "tag4"})
+	srv.AddAddressableService(t, "unhealthy-service", testutil.HealthCritical,
+		"1.2.3.4", 8080, []string{})
+
 	return srv
 }
 
