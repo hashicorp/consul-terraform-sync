@@ -1,7 +1,8 @@
 // +build e2e
 
 // BenchmarkTasksConcurrent executes the ReadWrite controller directly to
-// benchmark tasks running concurrently. This emulates CTS in daemon mode.
+// benchmark tasks running concurrently with the default TF driver. This
+// emulates CTS in daemon mode.
 // $ go test ./e2e/benchmarks -bench=BenchmarkTasksConcurrent_ -tags e2e
 package benchmarks
 
@@ -20,41 +21,57 @@ import (
 )
 
 func BenchmarkTasksConcurrent_t01_s50(b *testing.B) {
-	benchmarkTasksConcurrent(b, 1, 50)
+	benchmarkTasksConcurrent(b, benchmarkConfig{
+		numTasks:    1,
+		numServices: 50,
+		timeout:     30 * time.Second,
+	})
 }
 
 func BenchmarkTasksConcurrent_t02_s50(b *testing.B) {
-	benchmarkTasksConcurrent(b, 2, 50)
+	benchmarkTasksConcurrent(b, benchmarkConfig{
+		numTasks:    2,
+		numServices: 50,
+		timeout:     30 * time.Second,
+	})
 }
 
 func BenchmarkTasksConcurrent_t10_s50(b *testing.B) {
-	benchmarkTasksConcurrent(b, 10, 50)
+	benchmarkTasksConcurrent(b, benchmarkConfig{
+		numTasks:    10,
+		numServices: 50,
+		timeout:     30 * time.Second,
+	})
 }
 
 func BenchmarkTasksConcurrent_t50_s50(b *testing.B) {
-	benchmarkTasksConcurrent(b, 50, 50)
+	benchmarkTasksConcurrent(b, benchmarkConfig{
+		numTasks:    50,
+		numServices: 50,
+		timeout:     30 * time.Second,
+	})
 }
 
-func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
+func benchmarkTasksConcurrent(b *testing.B, bConf benchmarkConfig) {
 	// Benchmarks Run for the ReadWrite controller
 	//
 	// ReadWriteController.Run involves executing Terraform apply concurrently
-	srv := testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
-		HTTPSRelPath: "../../testutils",
-	})
+	srv := bConf.consul
+	if srv == nil {
+		srv = testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
+			HTTPSRelPath: "../../testutils",
+		})
+		defer srv.Stop()
+		bConf.consul = srv
+	}
 
-	defer srv.Stop()
+	if bConf.tempDir == "" {
+		bConf.tempDir = b.Name()
+		cleanup := testutils.MakeTempDir(b, bConf.tempDir)
+		defer cleanup()
+	}
 
-	tempDir := b.Name()
-	cleanup := testutils.MakeTempDir(b, tempDir)
-	defer cleanup()
-
-	conf := generateConf(benchmarkConfig{
-		consul:      srv,
-		tempDir:     tempDir,
-		numTasks:    numTasks,
-		numServices: numServices,
-	})
+	conf := generateConf(b, bConf)
 
 	ctrl, err := controller.NewReadWrite(conf)
 	require.NoError(b, err)
@@ -91,15 +108,17 @@ func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
 	}
 	testutils.RegisterConsulServiceHealth(b, srv, service, 0, testutil.HealthPassing)
 
-	ctxTimeout, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	ctxTimeout, ctxTimeoutCancel := context.WithTimeout(context.Background(), bConf.timeout)
+	defer ctxTimeoutCancel()
+
 	completedTasks := make(map[string]bool, len(*conf.Tasks))
 RunLoop:
 	for {
 		select {
 		case taskName := <-completedTasksCh:
 			completedTasks[taskName] = true
-			b.Logf("%s completed (%d/%d)", taskName, len(completedTasks), numTasks)
-			if len(completedTasks) == numTasks {
+			b.Logf("%s completed (%d/%d)", taskName, len(completedTasks), bConf.numTasks)
+			if len(completedTasks) == bConf.numTasks {
 				ctxCancel() // Benchmark completed before timing out, stop the controller
 			}
 
@@ -108,7 +127,7 @@ RunLoop:
 
 		case err := <-ctrlStopped:
 			assert.Equal(b, err, context.Canceled)
-			assert.Len(b, completedTasks, numTasks, "%s timed out before tasks were triggered and had executed", b.Name())
+			assert.Len(b, completedTasks, bConf.numTasks, "%s timed out before tasks were triggered and had executed", b.Name())
 			break RunLoop
 		}
 	}
