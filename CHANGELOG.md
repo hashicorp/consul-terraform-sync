@@ -1,3 +1,10 @@
+## UNRELEASED
+
+BREAKING CHANGES:
+* **(Enterprise Only)** Remove unexpected `-` character added between `workspace_prefix` and the task name. [[GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442)]
+  * If the `workspace_prefix` option is in use by CTS v0.3.x or v0.4.x for the Terraform Cloud driver, append "-" to the prefix in the configuration file prior to updating to v0.5.0 to continue automating the same Terraform Cloud workspaces for your CTS tasks.
+* Stop monitoring and including non-passing service instances in `terraform.tfvars` by default. CTS should only monitor passing service instances unless configured otherwise. [[GH-430](https://github.com/hashicorp/consul-terraform-sync/issues/430)]
+
 ## 0.4.3 (January 14, 2022)
 SECURITY:
 * Upgrade Go to address [CVE-2021-44716](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44716) and [CVE-2021-44717](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44717)
@@ -15,11 +22,6 @@ KNOWN ISSUES:
 FEATURES:
 * Support TLS and mutual TLS for the CTS API and CLI. [[GH-466](https://github.com/hashicorp/consul-terraform-sync/issues/466)]
 * **(Enterprise Only)** Add Terraform Cloud workspace tagging support to add, require, and restrict tags with new `driver.terraform-cloud.workspaces` options.
-
-BREAKING CHANGES:
-* **(Enterprise Only)** Remove unexpected `-` character added between `workspace_prefix` and the task name. [[GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442)]
-  * If the `workspace_prefix` option is in use by CTS v0.3.x or v0.4.x for the Terraform Cloud driver, append "-" to the prefix in the configuration file prior to updating to v0.5.0 to continue automating the same Terraform Cloud workspaces for your CTS tasks.
-* Stop monitoring and including non-passing service instances in `terraform.tfvars` by default. CTS should only monitor passing service instances unless configured otherwise. [[GH-430](https://github.com/hashicorp/consul-terraform-sync/issues/430)]
 
 IMPROVEMENTS:
 * **(Enterprise Only)** Add default address for the Terraform Cloud driver to https://app.terraform.io.
