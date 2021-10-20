@@ -37,7 +37,15 @@ func TestCompatibility_Consul(t *testing.T) {
 	// Tested only OSS GA releases for the highest patch version given a
 	// major minor version. v1.4.5 starts losing compatibility, details in
 	// comments. Theoretical compatible versions 0.1.0 GA:
-	consulVersions := []string{"1.10.3", "1.9.10", "1.8.16", "1.7.14", "1.6.10", "1.5.3"}
+	consulVersions := []string{
+		"1.11.0-beta1",
+		"1.10.3",
+		"1.9.10",
+		"1.8.16",
+		"1.7.14",
+		"1.6.10",
+		"1.5.3",
+	}
 
 	cases := []struct {
 		name              string
@@ -267,7 +275,7 @@ func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
 	assert.Contains(t, content, "tag3")
 
 	// 2. change health status. when no health check, 'passing' by default.
-	// add a 'critical' health check
+	// add a 'critical' health check. Critical services do not render by default.
 	serviceInstance.Check = &capi.AgentServiceCheck{
 		CheckID:  "db1_check",
 		HTTP:     "fake_url",
@@ -276,7 +284,7 @@ func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
 	}
 	registerService(t, serviceInstance, port)
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "critical")
+	assert.NotContains(t, content, "critical")
 }
 
 // testTagQueryCompatibility tests the compatibility of Consul's Health Service
