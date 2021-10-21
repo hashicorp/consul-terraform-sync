@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,7 +63,7 @@ func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 	defer cleanup()
 
 	ctx := context.Background()
-	conf := generateConf(benchmarkConfig{
+	conf := generateConf(b, benchmarkConfig{
 		consul:      srv,
 		tempDir:     tempDir,
 		numTasks:    numTasks,
@@ -97,12 +98,18 @@ func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 
 type benchmarkConfig struct {
 	consul      *testutil.TestServer
+	driver      *config.DriverConfig
 	tempDir     string
 	numTasks    int
 	numServices int
+	timeout     time.Duration
 }
 
-func generateConf(bConf benchmarkConfig) *config.Config {
+func benchmarkTaskName(tb testing.TB, i int) string {
+	return fmt.Sprintf("%s_task_%03d", strings.ReplaceAll(tb.Name(), "/", "-"), i)
+}
+
+func generateConf(tb testing.TB, bConf benchmarkConfig) *config.Config {
 	serviceNames := make([]string, bConf.numServices)
 	for i := 0; i < bConf.numServices; i++ {
 		serviceNames[i] = fmt.Sprintf("service-%03d", i)
@@ -111,7 +118,7 @@ func generateConf(bConf benchmarkConfig) *config.Config {
 	taskConfigs := make(config.TaskConfigs, bConf.numTasks)
 	for i := 0; i < bConf.numTasks; i++ {
 		taskConfigs[i] = &config.TaskConfig{
-			Name:     config.String(fmt.Sprintf("task_%03d", i)),
+			Name:     config.String(benchmarkTaskName(tb, i)),
 			Source:   config.String("../test_modules/local_file"),
 			Services: serviceNames,
 		}
@@ -130,8 +137,13 @@ func generateConf(bConf benchmarkConfig) *config.Config {
 		// connecting over HTTP/2 using TLS.
 		CACert: config.String(bConf.consul.Config.CertFile),
 	}
+	if bConf.driver != nil {
+		conf.Driver = bConf.driver
+	}
+
 	conf.Finalize()
-	conf.Driver.Terraform.WorkingDir = config.String(bConf.tempDir)
-	conf.Driver.Terraform.Path = config.String("../../../")
+	if conf.Driver.Terraform != nil {
+		conf.Driver.Terraform.Path = config.String("../../../")
+	}
 	return conf
 }
