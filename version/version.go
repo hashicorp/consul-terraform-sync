@@ -27,6 +27,8 @@ var (
 	// (empty string) then it means that it is a final release. Otherwise, this
 	// is a pre-release such as "dev" (in development), "beta", "rc1", etc.
 	VersionPrerelease = ""
+
+	VersionMetadata = ""
 )
 
 // GetHumanVersion composes the parts of the version in a way that's suitable
@@ -45,6 +47,11 @@ func GetHumanVersion() string {
 	// }
 	if release != "" {
 		version += fmt.Sprintf("-%s", release)
+	}
+
+	metadata := VersionMetadata
+	if metadata != "" {
+		version += fmt.Sprintf("+%s", metadata)
 	}
 
 	if GitCommit != "" && GitDirty != "" {
