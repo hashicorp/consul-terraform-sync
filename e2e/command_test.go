@@ -85,8 +85,9 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 	delete()
 }
 
-// TestE2E_EnableTaskCommand tests the CLI to enable a disabled task. This starts
-// up a local Consul server and runs CTS in dev mode.
+// TestE2E_EnableTaskCommand tests the Enable CLI and confirms the expected
+// output and state given different paths. This starts up a local Consul server
+// and runs CTS with a disabled task.
 func TestE2E_EnableTaskCommand(t *testing.T) {
 	t.Parallel()
 
@@ -95,24 +96,28 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 		args           []string
 		input          string
 		outputContains string
+		expectEnabled  bool
 	}{
 		{
 			"happy path",
 			[]string{disabledTaskName},
 			"yes\n",
 			"enable complete!",
+			true,
 		},
 		{
 			"user does not approve plan",
 			[]string{disabledTaskName},
 			"no\n",
 			"Cancelled enabling task",
+			false,
 		},
 		{
 			"help flag",
 			[]string{"-help"},
 			"",
 			"Usage: consul-terraform-sync task enable [options] <task name>",
+			false,
 		},
 	}
 
@@ -131,6 +136,13 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			output, err := runSubcommand(t, tc.input, subcmd...)
 			assert.NoError(t, err)
 			assert.Contains(t, output, tc.outputContains)
+
+			// confirm that the task's final enabled state
+			taskStatuses, err := cts.Status().Task(disabledTaskName, nil)
+			require.NoError(t, err)
+			status, ok := taskStatuses[disabledTaskName]
+			require.True(t, ok)
+			assert.Equal(t, tc.expectEnabled, status.Enabled)
 		})
 	}
 }

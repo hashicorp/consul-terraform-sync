@@ -285,6 +285,13 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	// Confirm that resources were not generated during inspect mode
 	testutils.CheckDir(t, false, resourcesPath)
 
+	// Confirm that task remained disabled
+	taskStatuses, err := cts.Status().Task(disabledTaskName, nil)
+	require.NoError(t, err)
+	status, ok := taskStatuses[disabledTaskName]
+	require.True(t, ok)
+	assert.False(t, status.Enabled, "task should still be disabled")
+
 	// Update Task API: enable task with run now option
 	u = fmt.Sprintf("%s?run=now", baseUrl)
 	resp1 := testutils.RequestHTTP(t, http.MethodPatch, u, `{"enabled":true}`)
