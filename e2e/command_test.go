@@ -90,22 +90,6 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 func TestE2E_EnableTaskCommand(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestConsulServer(t)
-	defer srv.Stop()
-
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "enable_cmd")
-	delete := testutils.MakeTempDir(t, tempDir)
-	// no defer to delete directory: only delete at end of test if no errors
-
-	configPath := filepath.Join(tempDir, configFile)
-	config := disabledTaskConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock()
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
-	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
-
 	cases := []struct {
 		name           string
 		args           []string
@@ -114,13 +98,13 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 	}{
 		{
 			"happy path",
-			[]string{fmt.Sprintf("-port=%d", cts.Port()), disabledTaskName},
+			[]string{disabledTaskName},
 			"yes\n",
 			"enable complete!",
 		},
 		{
 			"user does not approve plan",
-			[]string{fmt.Sprintf("-port=%d", cts.Port()), disabledTaskName},
+			[]string{disabledTaskName},
 			"no\n",
 			"Cancelled enabling task",
 		},
@@ -134,7 +118,14 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			subcmd := []string{"task", "enable"}
+			srv := newTestConsulServer(t)
+			defer srv.Stop()
+
+			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "enable_cmd")
+
+			cts := ctsSetup(t, srv, tempDir, disabledTaskConfig(tempDir))
+
+			subcmd := []string{"task", "enable", fmt.Sprintf("-port=%d", cts.Port())}
 			subcmd = append(subcmd, tc.args...)
 
 			output, err := runSubcommand(t, tc.input, subcmd...)
@@ -142,8 +133,6 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			assert.Contains(t, output, tc.outputContains)
 		})
 	}
-
-	delete()
 }
 
 // TestE2E_DisableTaskCommand tests the CLI to disable an enabled task. This
