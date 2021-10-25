@@ -121,9 +121,14 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		RunOption: runOp,
 	}
 	if conf.Enabled != nil {
-		logger.Info("update task enabled status",
-			"task_name", taskName, fmt.Sprintf("%t", config.BoolVal(conf.Enabled)))
 		patch.Enabled = config.BoolVal(conf.Enabled)
+
+		if runOp == driver.RunOptionInspect {
+			logger.Info("generating inspect plan if task becomes enabled",
+				"task_name", taskName)
+		} else {
+			logger.Info("enabling task", "task_name", taskName)
+		}
 	}
 
 	var storedErr error

@@ -200,7 +200,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	delete()
 }
 
-// TestE2E_ReenableTaskTriggers specifically tests the case were an enabled task
+// TestE2E_ReenableTaskTriggers specifically tests the case where an enabled task
 // is disabled and then re-enabled. It confirms that the task triggered as
 // expected once re-enabled.
 // See https://github.com/hashicorp/consul-terraform-sync/issues/320

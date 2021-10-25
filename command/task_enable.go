@@ -110,6 +110,17 @@ func (c *taskEnableCommand) Run(args []string) int {
 	c.UI.Output(resp.Inspect.Plan)
 
 	if !resp.Inspect.ChangesPresent {
+		// enable the task but no need to run it now
+		_, err = client.Task().Update(taskName, api.UpdateTaskConfig{
+			Enabled: config.Bool(true)}, nil)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error: unable to enable '%s'", taskName))
+			msg := wordwrap.WrapString(err.Error(), uint(78))
+			c.UI.Output(msg)
+
+			return ExitCodeError
+		}
+
 		c.UI.Info(fmt.Sprintf("'%s' enable complete!", taskName))
 		return ExitCodeOK
 	}
@@ -123,7 +134,7 @@ func (c *taskEnableCommand) Run(args []string) int {
 		Enabled: config.Bool(true),
 	}, &api.QueryParam{Run: driver.RunOptionNow})
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error: unable to enable '%s'", taskName))
+		c.UI.Error(fmt.Sprintf("Error: unable to enable and run '%s'", taskName))
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 
