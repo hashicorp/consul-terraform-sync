@@ -29,15 +29,15 @@ type kvTaskOpts struct {
 func newKVTaskConfig(taskName string, opts kvTaskOpts) string {
 	var module string
 	if opts.sourceIncludesVar {
-		module = "consul_kv_file"
+		module = "lornasong/cts_kv_file/local"
 	} else {
-		module = "local_instances_file"
+		module = "mkam/hello/cts"
 	}
 
 	conditionTask := fmt.Sprintf(`task {
 		name = "%s"
 		services = ["web", "api"]
-		source = "./test_modules/%s"
+		source = "%s"
 		condition "consul-kv" {
 			path = "%s"
 			source_includes_var = %t
@@ -75,6 +75,17 @@ func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig
 	return cts
 }
 
+func validateConsulKVFile(t *testing.T, srcIncludesVar, expected bool, resourcesPath, key, value string) {
+	if !srcIncludesVar {
+		// no files to validate
+		return
+	}
+	content := testutils.CheckFile(t, expected, resourcesPath, fmt.Sprintf("%s.txt", key))
+	if expected {
+		assert.Equal(t, content, value)
+	}
+}
+
 // TestConditionConsulKV_NewKey runs the CTS binary using a task with a consul-kv
 // condition block, where the KV pair for the configured path will not exist initially
 // in Consul. The test will add a key with the configured path, add a key with
@@ -84,21 +95,36 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 	t.Parallel()
 
 	testcases := []struct {
-		name    string
-		recurse bool
+		name              string
+		recurse           bool
+		sourceIncludesVar bool
 	}{
 		{
-			"single key",
+			"single_key",
+			false,
 			false,
 		},
 		{
 			"recurse",
 			true,
+			false,
+		},
+		{
+			"single_key_source_includes_var_true",
+			false,
+			true,
+		},
+		{
+			"recurse_source_includes_var_true",
+			true,
+			true,
 		},
 	}
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// Set up Consul server
 			srv := newTestConsulServer(t)
 			t.Cleanup(func() {
@@ -106,23 +132,26 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 			})
 
 			// Configure and start CTS
-			taskName := "consul_kv_condition_new"
+			taskName := "consul_kv_condition_new_" + tc.name
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, taskName)
 			path := "test-key/path"
 			config := newKVTaskConfig(taskName, kvTaskOpts{
 				path:              path,
 				recurse:           tc.recurse,
-				sourceIncludesVar: true,
+				sourceIncludesVar: tc.sourceIncludesVar,
 			})
 			cts := ctsSetup(t, srv, tempDir, config)
 
-			// Confirm only one event. Confirm empty var consul_kv
+			// Confirm only one event
 			eventCountBase := eventCount(t, taskName, cts.Port())
 			require.Equal(t, 1, eventCountBase)
 			workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
 			resourcesPath := filepath.Join(workingDir, resourcesDir)
-			content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-			assert.Contains(t, content, "consul_kv = {\n}")
+			if tc.sourceIncludesVar {
+				// Confirm empty var consul_kv
+				content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+				assert.Contains(t, content, "consul_kv = {\n}")
+			}
 
 			// Add a key that is monitored by task, check for event
 			now := time.Now()
@@ -133,8 +162,7 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 			eventCountBase++
 			require.Equal(t, eventCountBase, eventCountNow,
 				"event count did not increment once. task was not triggered as expected")
-			content = testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", path))
-			assert.Equal(t, v, content)
+			validateConsulKVFile(t, tc.sourceIncludesVar, true, resourcesPath, path, v)
 
 			// Add a key that is not monitored, check for no event
 			ignored := "not/related/path"
@@ -143,7 +171,7 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 			eventCountNow = eventCount(t, taskName, cts.Port())
 			require.Equal(t, eventCountBase, eventCountNow,
 				"change in event count. task was unexpectedly triggered")
-			testutils.CheckFile(t, false, resourcesPath, fmt.Sprintf("%s.txt", ignored))
+			validateConsulKVFile(t, tc.sourceIncludesVar, false, resourcesPath, ignored, "")
 
 			// Add a key prefixed by the existing path
 			prefixed := fmt.Sprintf("%s/prefixed", path)
@@ -157,14 +185,13 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 				eventCountBase++
 				require.Equal(t, eventCountBase, eventCountNow,
 					"event count did not increment once. task was not triggered as expected")
-				content = testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", prefixed))
-				assert.Equal(t, pv, content)
+				validateConsulKVFile(t, tc.sourceIncludesVar, true, resourcesPath, prefixed, pv)
 			} else {
 				time.Sleep(defaultWaitForNoEvent)
 				eventCountNow = eventCount(t, taskName, cts.Port())
 				require.Equal(t, eventCountBase, eventCountNow,
 					"change in event count. task was unexpectedly triggered")
-				testutils.CheckFile(t, false, resourcesPath, fmt.Sprintf("%s.txt", prefixed))
+				validateConsulKVFile(t, tc.sourceIncludesVar, false, resourcesPath, prefixed, "")
 			}
 		})
 	}
@@ -177,21 +204,36 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 	t.Parallel()
 
 	testcases := []struct {
-		name    string
-		recurse bool
+		name              string
+		recurse           bool
+		sourceIncludesVar bool
 	}{
 		{
-			"single key",
+			"single_key",
+			false,
 			false,
 		},
 		{
 			"recurse",
 			true,
+			false,
+		},
+		{
+			"single_key_source_includes_var_true",
+			false,
+			true,
+		},
+		{
+			"recurse_source_includes_var_true",
+			true,
+			true,
 		},
 	}
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// Set up Consul server
 			srv := newTestConsulServer(t)
 			t.Cleanup(func() {
@@ -206,12 +248,12 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 			srv.SetKVString(t, childPath, childValue)
 
 			// Configure and start CTS
-			taskName := "consul_kv_condition_existing"
+			taskName := "consul_kv_condition_existing_" + tc.name
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, taskName)
 			config := newKVTaskConfig(taskName, kvTaskOpts{
 				path:              path,
 				recurse:           tc.recurse,
-				sourceIncludesVar: true,
+				sourceIncludesVar: tc.sourceIncludesVar,
 			})
 			cts := ctsSetup(t, srv, tempDir, config)
 
@@ -220,15 +262,13 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 			require.Equal(t, 1, eventCountBase)
 			workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
 			resourcesPath := filepath.Join(workingDir, resourcesDir)
-			content := testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", path))
-			assert.Equal(t, value, content)
+			validateConsulKVFile(t, tc.sourceIncludesVar, true, resourcesPath, path, value)
 
 			// Confirm existence of child key depending on if recurse is true or not
 			if tc.recurse {
-				content := testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", childPath))
-				assert.Equal(t, childValue, content)
+				validateConsulKVFile(t, tc.sourceIncludesVar, true, resourcesPath, childPath, childValue)
 			} else {
-				testutils.CheckFile(t, false, resourcesPath, fmt.Sprintf("%s.txt", childPath))
+				validateConsulKVFile(t, tc.sourceIncludesVar, false, resourcesPath, childPath, "")
 			}
 
 			// Update key with new value, check for event
@@ -240,8 +280,7 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 			eventCountBase++
 			require.Equal(t, eventCountBase, eventCountNow,
 				"event count did not increment once. task was not triggered as expected")
-			content = testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", path))
-			assert.Equal(t, value, content)
+			validateConsulKVFile(t, tc.sourceIncludesVar, true, resourcesPath, path, value)
 
 			// Update child key with new value, check for event only if recurse
 			now = time.Now()
@@ -253,14 +292,13 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 				eventCountBase++
 				require.Equal(t, eventCountBase, eventCountNow,
 					"event count did not increment once. task was not triggered as expected")
-				content := testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", childPath))
-				assert.Equal(t, childValue, content)
+				validateConsulKVFile(t, tc.sourceIncludesVar, true, resourcesPath, childPath, childValue)
 			} else {
 				time.Sleep(defaultWaitForNoEvent)
 				eventCountNow = eventCount(t, taskName, cts.Port())
 				require.Equal(t, eventCountBase, eventCountNow,
 					"change in event count. task was unexpectedly triggered")
-				testutils.CheckFile(t, false, resourcesPath, fmt.Sprintf("%s.txt", childPath))
+				validateConsulKVFile(t, tc.sourceIncludesVar, false, resourcesPath, childPath, "")
 			}
 
 			// Delete key, check for event
@@ -271,7 +309,7 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 			eventCountBase++
 			require.Equal(t, eventCountBase, eventCountNow,
 				"event count did not increment once. task was not triggered as expected")
-			content = testutils.CheckFile(t, false, resourcesPath, fmt.Sprintf("%s.txt", path))
+			validateConsulKVFile(t, tc.sourceIncludesVar, false, resourcesPath, path, "")
 
 			// Add the key back, check for event
 			now = time.Now()
@@ -282,8 +320,7 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 			eventCountBase++
 			require.Equal(t, eventCountBase, eventCountNow,
 				"event count did not increment once. task was not triggered as expected")
-			content = testutils.CheckFile(t, true, resourcesPath, fmt.Sprintf("%s.txt", path))
-			assert.Equal(t, value, content)
+			validateConsulKVFile(t, tc.sourceIncludesVar, true, resourcesPath, path, value)
 		})
 	}
 }
@@ -294,20 +331,35 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 	t.Parallel()
 
 	testcases := []struct {
-		name    string
-		recurse bool
+		name              string
+		recurse           bool
+		sourceIncludesVar bool
 	}{
 		{
-			"single key",
+			"single_key",
+			false,
 			false,
 		},
 		{
 			"recurse",
 			true,
+			false,
+		},
+		{
+			"single_key_source_includes_var_true",
+			false,
+			true,
+		},
+		{
+			"recurse_source_includes_var_true",
+			true,
+			true,
 		},
 	}
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// Set up Consul server
 			srv := newTestConsulServer(t)
 			t.Cleanup(func() {
@@ -319,7 +371,7 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 			srv.SetKVString(t, path, value)
 
 			// Configure and start CTS
-			taskName := "consul_kv_condition_suppress_triggers"
+			taskName := "consul_kv_condition_suppress_" + tc.name
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, taskName)
 			config := newKVTaskConfig(taskName, kvTaskOpts{
 				path:              path,
