@@ -190,15 +190,13 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 				checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
 
 				// confirm key-value resources created, and that the values are as expected
-				val := testutils.CheckFile(t, true, resourcesPath, "key-path.txt")
-				assert.Equal(t, expectedKV, val)
+				validateModuleFile(t, true, true, resourcesPath, "key-path", expectedKV)
 
 				if tc.isRecurse {
-					val = testutils.CheckFile(t, true, resourcesPath, "key-path/recursive.txt")
-					assert.Equal(t, expectedRecurseKV, val)
+					validateModuleFile(t, true, true, resourcesPath, "key-path/recursive", expectedRecurseKV)
 				} else {
 					// if recurse is disabled, then the recursive key should not be present
-					testutils.CheckFile(t, false, resourcesPath, "key-path/recursive.txt")
+					validateModuleFile(t, true, false, resourcesPath, "key-path/recursive", "")
 				}
 			}
 		})
