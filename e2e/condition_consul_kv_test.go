@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
-	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -46,33 +45,6 @@ func newKVTaskConfig(taskName string, opts kvTaskOpts) string {
 	}
 	`, taskName, module, opts.path, opts.sourceIncludesVar, opts.recurse)
 	return conditionTask
-}
-
-// ctsSetup executes the following setup steps:
-// 1. Creates a temporary working directory,
-// 2. Creates a CTS configuration file with the provided task
-// 3. Starts CTS
-// 4. Waits for the CTS API to start without error, indicating that all initialization is complete
-func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig string) *api.Client {
-	cleanup := testutils.MakeTempDir(t, tempDir)
-	t.Cleanup(func() {
-		cleanup()
-	})
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(taskConfig)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	t.Cleanup(func() {
-		stop(t)
-	})
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
-
-	return cts
 }
 
 func validateConsulKVFile(t *testing.T, srcIncludesVar, expected bool, resourcesPath, key, value string) {
