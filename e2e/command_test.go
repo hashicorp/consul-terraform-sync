@@ -85,65 +85,66 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 	delete()
 }
 
-// TestE2E_EnableTaskCommand tests the CLI to enable a disabled task. This starts
-// up a local Consul server and runs CTS in dev mode.
+// TestE2E_EnableTaskCommand tests the Enable CLI and confirms the expected
+// output and state given different paths. This starts up a local Consul server
+// and runs CTS with a disabled task.
 func TestE2E_EnableTaskCommand(t *testing.T) {
 	t.Parallel()
-
-	srv := newTestConsulServer(t)
-	defer srv.Stop()
-
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "enable_cmd")
-	delete := testutils.MakeTempDir(t, tempDir)
-	// no defer to delete directory: only delete at end of test if no errors
-
-	configPath := filepath.Join(tempDir, configFile)
-	config := disabledTaskConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock()
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
-	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
 
 	cases := []struct {
 		name           string
 		args           []string
 		input          string
 		outputContains string
+		expectEnabled  bool
 	}{
 		{
 			"happy path",
-			[]string{fmt.Sprintf("-port=%d", cts.Port()), disabledTaskName},
+			[]string{disabledTaskName},
 			"yes\n",
 			"enable complete!",
+			true,
 		},
 		{
 			"user does not approve plan",
-			[]string{fmt.Sprintf("-port=%d", cts.Port()), disabledTaskName},
+			[]string{disabledTaskName},
 			"no\n",
 			"Cancelled enabling task",
+			false,
 		},
 		{
 			"help flag",
 			[]string{"-help"},
 			"",
 			"Usage: consul-terraform-sync task enable [options] <task name>",
+			false,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			subcmd := []string{"task", "enable"}
+			srv := newTestConsulServer(t)
+			defer srv.Stop()
+
+			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "enable_cmd")
+
+			cts := ctsSetup(t, srv, tempDir, disabledTaskConfig(tempDir))
+
+			subcmd := []string{"task", "enable", fmt.Sprintf("-port=%d", cts.Port())}
 			subcmd = append(subcmd, tc.args...)
 
 			output, err := runSubcommand(t, tc.input, subcmd...)
 			assert.NoError(t, err)
 			assert.Contains(t, output, tc.outputContains)
+
+			// confirm that the task's final enabled state
+			taskStatuses, err := cts.Status().Task(disabledTaskName, nil)
+			require.NoError(t, err)
+			status, ok := taskStatuses[disabledTaskName]
+			require.True(t, ok)
+			assert.Equal(t, tc.expectEnabled, status.Enabled)
 		})
 	}
-
-	delete()
 }
 
 // TestE2E_DisableTaskCommand tests the CLI to disable an enabled task. This
@@ -199,7 +200,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	delete()
 }
 
-// TestE2E_ReenableTaskTriggers specifically tests the case were an enabled task
+// TestE2E_ReenableTaskTriggers specifically tests the case where an enabled task
 // is disabled and then re-enabled. It confirms that the task triggered as
 // expected once re-enabled.
 // See https://github.com/hashicorp/consul-terraform-sync/issues/320

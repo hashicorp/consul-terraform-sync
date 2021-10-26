@@ -241,27 +241,20 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	t.Parallel()
 	// Test enabling and disabling a task
-	// 1. Start with disabled task. Confirm task not initialized, resources not created
-	// 2. API to inspect enabling task. Confirm plan looks good, resources not created
+	// 1. Start with disabled task. Confirm task not initialized, resources not
+	//    created
+	// 2. API to inspect enabling task. Confirm plan looks good, resources not
+	//    created, and task not actually enabled.
 	// 3. API to actually enable task. Confirm resources are created
 	// 4. API to disable task. Delete resources. Register new service. Confirm
-	// new service registering does not trigger creating resources
+	//    new service registering does not trigger creating resources
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disabled_task")
-	delete := testutils.MakeTempDir(t, tempDir)
-	// no defer to delete directory: only delete at end of test if no errors
 
-	configPath := filepath.Join(tempDir, configFile)
-	config := disabledTaskConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock()
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, disabledTaskConfig(tempDir))
 
 	// Confirm that terraform files were not generated for a disabled task
 	files := testutils.CheckDir(t, true, fmt.Sprintf("%s/%s", tempDir, "disabled_task"))
@@ -281,7 +274,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	var r api.UpdateTaskResponse
 	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(&r)
+	err := decoder.Decode(&r)
 	require.NoError(t, err)
 
 	// Confirm inspect plan response: changes present, plan not empty
@@ -291,6 +284,13 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	// Confirm that resources were not generated during inspect mode
 	testutils.CheckDir(t, false, resourcesPath)
+
+	// Confirm that task remained disabled
+	taskStatuses, err := cts.Status().Task(disabledTaskName, nil)
+	require.NoError(t, err)
+	status, ok := taskStatuses[disabledTaskName]
+	require.True(t, ok)
+	assert.False(t, status.Enabled, "task should still be disabled")
 
 	// Update Task API: enable task with run now option
 	u = fmt.Sprintf("%s?run=now", baseUrl)
@@ -320,8 +320,6 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	// Confirm that resources are not recreated for disabled task
 	testutils.CheckDir(t, false, resourcesPath)
-
-	delete()
 }
 
 // checkEvents does some basic checks to loosely ensure returned events in

@@ -162,10 +162,8 @@ task {
 }
 
 // disabledTaskConfig returns a config file with a task that is disabled
-func disabledTaskConfig(dir string) hclConfig {
-	return hclConfig(fmt.Sprintf(`
-working_dir = "%s"
-
+func disabledTaskConfig(dir string) string {
+	return fmt.Sprintf(`
 task {
 	name = "%s"
 	description = "task is configured as disabled"
@@ -174,12 +172,7 @@ task {
 	providers = ["local"]
 	source = "./test_modules/local_instances_file"
 }
-
-service {
-	name = "api"
-	description = "backend"
-}
-`, dir, disabledTaskName))
+`, disabledTaskName)
 }
 
 func panosBadCredConfig() hclConfig {
