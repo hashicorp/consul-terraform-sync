@@ -64,16 +64,19 @@ driver "terraform" {
 `, cwd, optsConfig))
 }
 
-func (c hclConfig) appendDBTask() hclConfig {
-	return c.appendString(fmt.Sprintf(`
+func dbTask() string {
+	return fmt.Sprintf(`
 task {
 	name = "%s"
 	description = "basic read-write e2e task for api & db"
 	services = ["api", "db"]
 	providers = ["local"]
 	source = "./test_modules/local_instances_file"
+}`, dbTaskName)
 }
-`, dbTaskName))
+
+func (c hclConfig) appendDBTask() hclConfig {
+	return c.appendString(dbTask())
 }
 
 func (c hclConfig) appendWebTask() hclConfig {

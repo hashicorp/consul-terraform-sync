@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -31,8 +30,6 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "services_condition_regexp")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
 	taskName := "services_condition_task"
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
@@ -43,16 +40,7 @@ func TestCondition_Services_Regexp(t *testing.T) {
 }
 `, taskName)
 
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(conditionTask)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, conditionTask)
 
 	// Test that regex filter is filtering service registration information and
 	// task triggers
@@ -110,6 +98,4 @@ func TestCondition_Services_Regexp(t *testing.T) {
 		"event count did not increment once. task was not triggered as expected")
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, `"api-web-2"`)
-
-	cleanup()
 }
