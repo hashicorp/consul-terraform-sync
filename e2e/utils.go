@@ -123,3 +123,10 @@ func events(t *testing.T, taskName string, port int) []event.Event {
 	require.True(t, ok, taskStatuses)
 	return taskStatus.Events
 }
+
+// validateServices checks that files for each given service instance either exist or do not exist.
+func validateServices(t *testing.T, expected bool, services []string, servicesPath string) {
+	for _, service := range services {
+		testutils.CheckFile(t, expected, servicesPath, fmt.Sprintf("%s.txt", service))
+	}
+}

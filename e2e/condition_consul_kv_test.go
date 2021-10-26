@@ -358,9 +358,8 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 			workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
 			resourcesPath := filepath.Join(workingDir, resourcesDir)
 			testutils.CheckFile(t, true, resourcesPath, pathFile)
-			testutils.CheckFile(t, true, resourcesPath, "api.txt")
-			testutils.CheckFile(t, true, resourcesPath, "web.txt")
-			testutils.CheckFile(t, false, resourcesPath, "db.txt")
+			validateServices(t, true, []string{"api", "web"}, resourcesPath)
+			validateServices(t, false, []string{"db"}, resourcesPath)
 
 			// Deregister a service, confirm no event and no update to service file
 			testutils.DeregisterConsulService(t, srv, "web")
@@ -368,7 +367,7 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 			eventCountNow := eventCount(t, taskName, cts.Port())
 			require.Equal(t, eventCountBase, eventCountNow,
 				"change in event count. task was unexpectedly triggered")
-			testutils.CheckFile(t, true, resourcesPath, "web.txt")
+			validateServices(t, true, []string{"web"}, resourcesPath)
 
 			// Update key, confirm event, confirm latest service information
 			now := time.Now()
@@ -381,7 +380,7 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 				"event count did not increment once. task was not triggered as expected")
 			content := testutils.CheckFile(t, true, resourcesPath, pathFile)
 			assert.Equal(t, value, content)
-			testutils.CheckFile(t, false, resourcesPath, "web.txt")
+			validateServices(t, false, []string{"web"}, resourcesPath)
 		})
 	}
 }

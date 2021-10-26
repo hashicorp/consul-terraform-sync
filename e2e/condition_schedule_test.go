@@ -169,8 +169,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 
 			// confirm service resources created
 			resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
-			testutils.CheckFile(t, true, resourcesPath, "api-1.txt")
-			testutils.CheckFile(t, true, resourcesPath, "web-1.txt")
+			validateServices(t, true, []string{"api-1", "web-1"}, resourcesPath)
 
 			// Check KV events
 			if tc.isConsulKV {

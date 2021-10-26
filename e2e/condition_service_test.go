@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -82,10 +83,8 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	eventCountExpected++
 	require.Equal(t, eventCountExpected, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
-
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, `"api-web"`)
-	assert.Contains(t, content, `"api-web-1"`)
+	resourcesPath := filepath.Join(workingDir, resourcesDir)
+	validateServices(t, true, []string{"api-web-1"}, resourcesPath)
 
 	// 3. Add a second node to the service "api-web"
 	now = time.Now()
@@ -96,6 +95,5 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	eventCountExpected++
 	require.Equal(t, eventCountExpected, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, `"api-web-2"`)
+	validateServices(t, true, []string{"api-web-1", "api-web-2"}, resourcesPath)
 }

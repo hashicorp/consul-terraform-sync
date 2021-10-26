@@ -4,6 +4,7 @@
 package testutils
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -77,11 +78,11 @@ func CheckFile(t testing.TB, exists bool, path, filename string) string {
 	fp := filepath.Join(path, filename) // handles if filename is empty
 	content, err := ioutil.ReadFile(fp)
 	if !exists {
-		require.Error(t, err)
+		require.Error(t, err, fmt.Sprintf("file '%s' is not supposed to exist", filename))
 		return ""
 	}
 
-	require.NoError(t, err)
+	require.NoError(t, err, fmt.Sprintf("file '%s' does not exist", filename))
 	return string(content)
 }
 
