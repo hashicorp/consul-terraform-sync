@@ -6,7 +6,16 @@ package tmplfunc
 
 import (
 	"sort"
+
+	"github.com/hashicorp/hcat"
+	"github.com/hashicorp/hcat/dep"
 )
+
+type hcatQuery interface {
+	hcat.QueryOptionsSetter
+	dep.Dependency
+	Consul()
+}
 
 // isConsul satisfies the hcat dependency interface to denote Consul type for
 // managing the Consul retry function.
