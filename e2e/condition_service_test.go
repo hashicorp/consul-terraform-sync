@@ -10,10 +10,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
-	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -59,8 +57,7 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	require.Equal(t, 1, eventCountExpected)
 
 	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
-	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "services = {\n}")
+	validateVariable(t, true, workingDir, "services", "{\n}")
 
 	// 1. Register a filtered out service "db"
 	service := testutil.TestService{ID: "db-1", Name: "db"}
@@ -71,8 +68,7 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	require.Equal(t, eventCountExpected, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "services = {\n}")
+	validateVariable(t, true, workingDir, "services", "{\n}")
 
 	// 2. Register a matched service "api-web"
 	now := time.Now()
