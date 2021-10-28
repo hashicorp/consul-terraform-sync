@@ -128,8 +128,6 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_include")
-	delete := testutils.MakeTempDir(t, tempDir)
-
 	conditionTask := `task {
 	name = "catalog_task"
 	services = ["api"]
@@ -140,12 +138,7 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	}
 }
 `
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(conditionTask)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	api.StartCTS(t, configPath, api.CTSOnceModeFlag)
+	ctsSetup(t, srv, tempDir, conditionTask)
 
 	// confirm that only two files were generated, one for db and one for web
 	resourcesPath := filepath.Join(tempDir, "catalog_task", resourcesDir)
@@ -157,8 +150,6 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 
 	contents = testutils.CheckFile(t, true, resourcesPath, "web_tags.txt")
 	require.Equal(t, "tag2", string(contents))
-
-	delete()
 }
 
 // TestCondition_CatalogServices_Regexp runs the CTS binary. It specifically
@@ -177,8 +168,6 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_regexp")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
 	taskName := "catalog_task"
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
@@ -190,16 +179,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 }
 `, taskName)
 
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(conditionTask)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, conditionTask)
 
 	// Test that regex filter is filtering service registration information and
 	// task triggers
@@ -242,8 +222,6 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, `"api-web" = []`)
-
-	cleanup()
 }
 
 func TestCondition_CatalogServices_MultipleTasks(t *testing.T) {
@@ -285,18 +263,7 @@ task {
 `, apiTaskName, apiWebTaskName, allTaskName)
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_multi")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(tasks)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI * 3)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, tasks)
 
 	// Test that the appropriate task is triggered given a particular service
 	// registration
@@ -342,8 +309,6 @@ task {
 	testutils.CheckFile(t, true, allResourcesPath, "db_tags.txt")
 	testutils.CheckFile(t, false, apiWebResourcesPath, "db_tags.txt")
 	testutils.CheckFile(t, false, apiResourcesPath, "db_tags.txt")
-
-	cleanup()
 }
 
 func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirName, resource string) {
@@ -353,18 +318,7 @@ func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirNa
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(taskConf)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, taskConf)
 
 	// Test that task is triggered on service registration and deregistration
 	// 0. Confirm baseline: nothing is registered so no resource created yet
@@ -389,8 +343,6 @@ func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirNa
 	api.WaitForEvent(t, cts, taskName, now,
 		defaultWaitForRegistration+defaultWaitForEvent)
 	testutils.CheckFile(t, false, resourcesPath, resource)
-
-	cleanup()
 }
 
 func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, tempDirName string) {
@@ -403,18 +355,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(taskConf)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, taskConf)
 
 	// Test that task is not triggered by service-instance specific changes and
 	// only by service registration changes.
@@ -458,8 +399,6 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "api-2")
 	assert.Contains(t, content, "db-1")
-
-	cleanup()
 }
 
 func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirName string) {
@@ -472,18 +411,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(taskConf)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, taskConf)
 
 	// Test that task is not triggered by service tag changes and only by
 	// service registration changes.
@@ -527,6 +455,4 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "tag_b")
 	assert.Contains(t, content, "tag_c")
-
-	cleanup()
 }

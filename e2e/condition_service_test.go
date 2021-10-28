@@ -31,8 +31,6 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "services_condition_regexp")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
 	taskName := "services_condition_task"
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
@@ -43,16 +41,7 @@ func TestCondition_Services_Regexp(t *testing.T) {
 }
 `, taskName)
 
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(conditionTask)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, conditionTask)
 
 	// Test that regex filter is filtering service registration information and
 	// task triggers
@@ -94,10 +83,8 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	eventCountExpected++
 	require.Equal(t, eventCountExpected, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
-
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, `"api-web"`)
-	assert.Contains(t, content, `"api-web-1"`)
+	resourcesPath := filepath.Join(workingDir, resourcesDir)
+	validateServices(t, true, []string{"api-web-1"}, resourcesPath)
 
 	// 3. Add a second node to the service "api-web"
 	now = time.Now()
@@ -108,8 +95,5 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	eventCountExpected++
 	require.Equal(t, eventCountExpected, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, `"api-web-2"`)
-
-	cleanup()
+	validateServices(t, true, []string{"api-web-1", "api-web-2"}, resourcesPath)
 }

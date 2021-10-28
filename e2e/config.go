@@ -64,16 +64,19 @@ driver "terraform" {
 `, cwd, optsConfig))
 }
 
-func (c hclConfig) appendDBTask() hclConfig {
-	return c.appendString(fmt.Sprintf(`
+func dbTask() string {
+	return fmt.Sprintf(`
 task {
 	name = "%s"
 	description = "basic read-write e2e task for api & db"
 	services = ["api", "db"]
 	providers = ["local"]
 	source = "./test_modules/local_instances_file"
+}`, dbTaskName)
 }
-`, dbTaskName))
+
+func (c hclConfig) appendDBTask() hclConfig {
+	return c.appendString(dbTask())
 }
 
 func (c hclConfig) appendWebTask() hclConfig {
@@ -86,6 +89,31 @@ task {
 	source = "./test_modules/local_instances_file"
 }
 `, webTaskName))
+}
+
+// appendModuleTask adds a task configuration with the given name and source, along with any additional
+// task configurations (e.g., condition, providers) provided with the opts parameter
+func (c hclConfig) appendModuleTask(name string, source string, opts ...string) hclConfig {
+	return c.appendString(moduleTaskConfig(name, source, opts...))
+}
+
+// moduleTaskConfig generates a task configuration string with the given name and source, along with any
+// additional task configurations (e.g., condition, providers) provided with the opts parameter
+func moduleTaskConfig(name string, source string, opts ...string) string {
+	var optsConfig string
+	if len(opts) > 0 {
+		optsConfig = "\n" + strings.Join(opts, "\n")
+	}
+
+	return fmt.Sprintf(`
+task {
+	name = "%s"
+	description = "e2e test"
+	services = ["api", "web"]
+	source = "%s"
+	%s
+}
+`, name, source, optsConfig)
 }
 
 func baseConfig(wd string) hclConfig {

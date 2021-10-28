@@ -156,18 +156,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disable_cmd")
-	delete := testutils.MakeTempDir(t, tempDir)
-	// no defer to delete directory: only delete at end of test if no errors
-
-	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig(tempDir).appendTerraformBlock().
-		appendConsulBlock(srv).appendDBTask()
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
-	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, dbTask())
 
 	cases := []struct {
 		name           string
@@ -196,8 +185,6 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
-
-	delete()
 }
 
 // TestE2E_ReenableTaskTriggers specifically tests the case where an enabled task
@@ -213,17 +200,7 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "reenable_trigger")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
-	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().appendDBTask()
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
-
+	cts := ctsSetup(t, srv, tempDir, dbTask())
 	// Test that regex filter is filtering service registration information and
 	// task triggers
 	// 0. Setup: disable task, re-enable it
@@ -254,8 +231,6 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 	eventCountNow := eventCount(t, dbTaskName, cts.Port())
 	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
-
-	cleanup()
 }
 
 // runSubcommand runs a CTS subcommand and its arguments. If user input is
