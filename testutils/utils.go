@@ -4,6 +4,7 @@
 package testutils
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -76,13 +77,19 @@ func WriteFile(t testing.TB, path, content string) {
 // leave filename parameter as an empty string.
 func CheckFile(t testing.TB, exists bool, path, filename string) string {
 	fp := filepath.Join(path, filename) // handles if filename is empty
-	content, err := ioutil.ReadFile(fp)
+	// Check if file exists
+	_, err := os.Stat(fp)
 	if !exists {
 		require.Error(t, err, fmt.Sprintf("file '%s' is not supposed to exist", filename))
+		require.True(t, errors.Is(err, os.ErrNotExist),
+			fmt.Sprintf("unexpected error when file '%s' is not supposed to exist", filename))
 		return ""
 	}
-
 	require.NoError(t, err, fmt.Sprintf("file '%s' does not exist", filename))
+
+	// Return content of file if exists
+	content, err := ioutil.ReadFile(fp)
+	require.NoError(t, err, fmt.Sprintf("unable to read file '%s'", filename))
 	return string(content)
 }
 
