@@ -10,10 +10,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
-	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -195,8 +193,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	require.Equal(t, 1, eventCountBase)
 
 	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
-	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "catalog_services = {\n}")
+	validateVariable(t, true, workingDir, "catalog_services", "{\n}")
 
 	// 1. Register a filtered out service "db"
 	service := testutil.TestService{ID: "db-1", Name: "db"}
@@ -207,8 +204,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	require.Equal(t, eventCountBase, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "catalog_services = {\n}")
+	validateVariable(t, true, workingDir, "catalog_services", "{\n}")
 	resourcesPath := filepath.Join(workingDir, resourcesDir)
 	validateModuleFile(t, true, false, resourcesPath, "db_tags", "")
 
@@ -222,8 +218,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, `"api-web" = []`)
+	validateVariable(t, true, workingDir, "catalog_services", `"api-web" = []`)
 	validateModuleFile(t, true, true, resourcesPath, "api-web_tags", "")
 	validateModuleFile(t, true, false, resourcesPath, "db_tags", "")
 }
@@ -374,8 +369,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	require.Equal(t, 1, eventCountBase)
 
 	workingDir := filepath.Join(tempDir, taskName)
-	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "api-1")
+	validateVariable(t, true, workingDir, "services", "api-1")
 	resourcesPath := filepath.Join(workingDir, resourcesDir)
 	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
 
@@ -388,8 +382,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	require.Equal(t, eventCountBase, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.NotContains(t, content, "api-2")
+	validateVariable(t, false, workingDir, "services", "api-2")
 	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
 
 	// 2. Register db service (trigger + render template)
@@ -402,9 +395,8 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "api-2")
-	assert.Contains(t, content, "db-1")
+	validateVariable(t, true, workingDir, "services", "api-2")
+	validateVariable(t, true, workingDir, "services", "db-1")
 	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
 	validateModuleFile(t, include, true, resourcesPath, "db_tags", "")
 }
@@ -435,8 +427,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	require.Equal(t, 1, eventCountBase)
 
 	workingDir := filepath.Join(tempDir, taskName)
-	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "tag_a")
+	validateVariable(t, true, workingDir, "services", "tag_a")
 
 	resourcesPath := filepath.Join(tempDir, "catalog_task", resourcesDir)
 	validateModuleFile(t, include, true, resourcesPath, "api_tags", "tag_a")
@@ -450,8 +441,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	require.Equal(t, eventCountBase, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.NotContains(t, content, "tag_b")
+	validateVariable(t, false, workingDir, "services", "tag_b")
 	validateModuleFile(t, include, true, resourcesPath, "api_tags", "tag_a")
 
 	// 2. Register new db service (trigger + render template)
@@ -464,9 +454,8 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "tag_b")
-	assert.Contains(t, content, "tag_c")
+	validateVariable(t, true, workingDir, "services", "tag_b")
+	validateVariable(t, true, workingDir, "services", "tag_c")
 	validateModuleFile(t, include, true, resourcesPath, "api_tags", "tag_a,tag_b")
 	validateModuleFile(t, include, true, resourcesPath, "db_tags", "tag_c")
 }

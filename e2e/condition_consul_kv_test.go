@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
-	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -110,8 +109,7 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 			resourcesPath := filepath.Join(workingDir, resourcesDir)
 			if tc.sourceIncludesVar {
 				// Confirm empty var consul_kv
-				content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-				assert.Contains(t, content, "consul_kv = {\n}")
+				validateVariable(t, true, workingDir, "consul_kv", "{\n}")
 			}
 
 			// Add a key that is monitored by task, check for event

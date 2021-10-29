@@ -1,3 +1,6 @@
+//go:build e2e
+// +build e2e
+
 package e2e
 
 import (
@@ -5,11 +8,13 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
@@ -147,4 +152,28 @@ func validateModuleFile(t *testing.T, srcIncludesVar, expected bool, resourcesPa
 	if expected {
 		assert.Equal(t, expectedContent, content)
 	}
+}
+
+// validateVariable checks whether a variable in the .tfvars file contains or does not contain
+// a specified value. Will fail if the variable does not exist.
+func validateVariable(t *testing.T, contains bool, workingDir, name, value string) {
+	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
+
+	// Split the variable, assumes two new lines are only between variables
+	vars := strings.Split(content, "\n\n")
+
+	// Check individual variables, skipping preamble comment
+	for _, v := range vars[1:] {
+		v = strings.TrimLeft(v, "\n")
+		if strings.HasPrefix(v, name) {
+			if contains {
+				assert.Contains(t, v, value)
+				return
+			} else {
+				assert.NotContains(t, v, value)
+				return
+			}
+		}
+	}
+	assert.Fail(t, fmt.Sprintf("variable '%s' not found in terraform.tfvars", name))
 }
