@@ -31,6 +31,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 		tempDirName string
 		resource    string
 		taskConf    string
+		include     bool
 	}{
 		{
 			"source_includes_var=true",
@@ -44,6 +45,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 		source_includes_var = true
 	}
 }`,
+			true,
 		},
 		{
 			"source_includes_var=false",
@@ -55,13 +57,14 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 	source = "./test_modules/local_instances_file"
 	condition "catalog-services" {}
 }`,
+			false,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			testCatalogServicesRegistration(t, tc.taskConf, "catalog_task",
-				tc.tempDirName, tc.resource)
+				tc.tempDirName, tc.resource, tc.include)
 		})
 	}
 }
@@ -107,12 +110,12 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(fmt.Sprintf("%s/ServicesTrigger", tc.name), func(t *testing.T) {
 			testCatalogServicesNoServicesTrigger(t, tc.taskConf, "catalog_task",
-				fmt.Sprintf("cs_condition_no_services_trigger_include_%t", tc.include))
+				"cs_condition_no_services_trigger_include_", tc.include)
 		})
 
 		t.Run(fmt.Sprintf("%s/TagsTrigger", tc.name), func(t *testing.T) {
 			testCatalogServicesNoTagsTrigger(t, tc.taskConf, "catalog_task",
-				fmt.Sprintf("cs_condition_no_tags_trigger_include_%t", tc.include))
+				"cs_condition_no_tags_trigger_include_", tc.include)
 		})
 	}
 }
@@ -145,11 +148,8 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	files := testutils.CheckDir(t, true, resourcesPath)
 	require.Equal(t, 2, len(files))
 
-	contents := testutils.CheckFile(t, true, resourcesPath, "db_tags.txt")
-	require.Equal(t, "tag3,tag4", string(contents))
-
-	contents = testutils.CheckFile(t, true, resourcesPath, "web_tags.txt")
-	require.Equal(t, "tag2", string(contents))
+	validateModuleFile(t, true, true, resourcesPath, "db_tags", "tag3,tag4")
+	validateModuleFile(t, true, true, resourcesPath, "web_tags", "tag2")
 }
 
 // TestCondition_CatalogServices_Regexp runs the CTS binary. It specifically
@@ -209,6 +209,8 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "catalog_services = {\n}")
+	resourcesPath := filepath.Join(workingDir, resourcesDir)
+	validateModuleFile(t, true, false, resourcesPath, "db_tags", "")
 
 	// 2. Register a matched service "api-web"
 	now := time.Now()
@@ -222,6 +224,8 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, `"api-web" = []`)
+	validateModuleFile(t, true, true, resourcesPath, "api-web_tags", "")
+	validateModuleFile(t, true, false, resourcesPath, "db_tags", "")
 }
 
 func TestCondition_CatalogServices_MultipleTasks(t *testing.T) {
@@ -284,9 +288,9 @@ task {
 	api.WaitForEvent(t, cts, apiWebTaskName, now, defaultWaitForEvent*2)
 	api.WaitForEvent(t, cts, apiTaskName, now, defaultWaitForEvent*2)
 
-	testutils.CheckFile(t, true, allResourcesPath, "api_tags.txt")
-	testutils.CheckFile(t, true, apiWebResourcesPath, "api_tags.txt")
-	testutils.CheckFile(t, true, apiResourcesPath, "api_tags.txt")
+	validateModuleFile(t, true, true, allResourcesPath, "api_tags", "")
+	validateModuleFile(t, true, true, apiWebResourcesPath, "api_tags", "")
+	validateModuleFile(t, true, true, apiResourcesPath, "api_tags", "")
 
 	// 2. Register web, only all_task and api_web_task create resource
 	now = time.Now()
@@ -295,9 +299,9 @@ task {
 	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent*2)
 	api.WaitForEvent(t, cts, apiWebTaskName, now, defaultWaitForEvent*2)
 
-	testutils.CheckFile(t, true, allResourcesPath, "web_tags.txt")
-	testutils.CheckFile(t, true, apiWebResourcesPath, "web_tags.txt")
-	testutils.CheckFile(t, false, apiResourcesPath, "web_tags.txt")
+	validateModuleFile(t, true, true, allResourcesPath, "web_tags", "")
+	validateModuleFile(t, true, true, apiWebResourcesPath, "web_tags", "")
+	validateModuleFile(t, true, false, apiResourcesPath, "web_tags", "")
 
 	// 3. Register db, only all_task create resource
 	now = time.Now()
@@ -306,12 +310,12 @@ task {
 	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent)
 	time.Sleep(defaultWaitForNoEvent) // ensure api_web_task & api_task don't trigger
 
-	testutils.CheckFile(t, true, allResourcesPath, "db_tags.txt")
-	testutils.CheckFile(t, false, apiWebResourcesPath, "db_tags.txt")
-	testutils.CheckFile(t, false, apiResourcesPath, "db_tags.txt")
+	validateModuleFile(t, true, true, allResourcesPath, "db_tags", "")
+	validateModuleFile(t, true, false, apiWebResourcesPath, "db_tags", "")
+	validateModuleFile(t, true, false, apiResourcesPath, "db_tags", "")
 }
 
-func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirName, resource string) {
+func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirName, resource string, include bool) {
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
 	})
@@ -334,18 +338,17 @@ func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirNa
 	service := testutil.TestService{ID: "api-1", Name: "api"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
-
-	testutils.CheckFile(t, true, resourcesPath, resource)
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
 
 	// 2. Deregister api, resource destroyed
 	now = time.Now()
 	testutils.DeregisterConsulService(t, srv, "api-1")
 	api.WaitForEvent(t, cts, taskName, now,
 		defaultWaitForRegistration+defaultWaitForEvent)
-	testutils.CheckFile(t, false, resourcesPath, resource)
+	validateModuleFile(t, include, false, resourcesPath, "api_tags", "")
 }
 
-func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, tempDirName string) {
+func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, tempDirName string, include bool) {
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
 	})
@@ -354,7 +357,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	service := testutil.TestService{ID: "api-1", Name: "api"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
+	tempDir := fmt.Sprintf("%s%s%t", tempDirPrefix, tempDirName, include)
 	cts := ctsSetup(t, srv, tempDir, taskConf)
 
 	// Test that task is not triggered by service-instance specific changes and
@@ -373,6 +376,8 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	workingDir := filepath.Join(tempDir, taskName)
 	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "api-1")
+	resourcesPath := filepath.Join(workingDir, resourcesDir)
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
 
 	// 1. Register second api service instance "api-2" (no trigger)
 	service = testutil.TestService{ID: "api-2", Name: "api"}
@@ -385,6 +390,7 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.NotContains(t, content, "api-2")
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
 
 	// 2. Register db service (trigger + render template)
 	now := time.Now()
@@ -399,9 +405,11 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "api-2")
 	assert.Contains(t, content, "db-1")
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
+	validateModuleFile(t, include, true, resourcesPath, "db_tags", "")
 }
 
-func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirName string) {
+func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirName string, include bool) {
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
 	})
@@ -410,7 +418,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	service := testutil.TestService{ID: "api-1", Name: "api", Tags: []string{"tag_a"}}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
+	tempDir := fmt.Sprintf("%s%s%t", tempDirPrefix, tempDirName, include)
 	cts := ctsSetup(t, srv, tempDir, taskConf)
 
 	// Test that task is not triggered by service tag changes and only by
@@ -430,6 +438,9 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "tag_a")
 
+	resourcesPath := filepath.Join(tempDir, "catalog_task", resourcesDir)
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "tag_a")
+
 	// 1. Register another api service instance with new tags (no trigger)
 	service = testutil.TestService{ID: "api-2", Name: "api", Tags: []string{"tag_b"}}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
@@ -441,6 +452,7 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.NotContains(t, content, "tag_b")
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "tag_a")
 
 	// 2. Register new db service (trigger + render template)
 	now := time.Now()
@@ -455,4 +467,6 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "tag_b")
 	assert.Contains(t, content, "tag_c")
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "tag_a,tag_b")
+	validateModuleFile(t, include, true, resourcesPath, "db_tags", "tag_c")
 }
