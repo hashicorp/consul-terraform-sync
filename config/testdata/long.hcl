@@ -1,10 +1,17 @@
 log_level = "ERR"
+
 port = 8502
+
 working_dir = "working"
+
+acl {
+  enabled         = true
+  bootstrap_token = "+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q"
+}
 
 syslog {
   enabled = true
-  name = "syslog"
+  name    = "syslog"
 }
 
 buffer_period {
@@ -14,77 +21,88 @@ buffer_period {
 
 consul {
   address = "consul-example.com"
+
   auth {
-    enabled = true
+    enabled  = true
     username = "username"
     password = "password"
   }
+
   kv_path = "kv_path"
+
   tls {
-    ca_cert = "ca_cert"
-    ca_path = "ca_path"
-    enabled = true
-    key = "key"
+    ca_cert     = "ca_cert"
+    ca_path     = "ca_path"
+    enabled     = true
+    key         = "key"
     server_name = "server_name"
-    verify = false
+    verify      = false
   }
+
   token = "token"
+
   transport {
-    dial_keep_alive = "5s"
-    dial_timeout = "10s"
-    disable_keep_alives = false
-    idle_conn_timeout = "1m"
+    dial_keep_alive         = "5s"
+    dial_timeout            = "10s"
+    disable_keep_alives     = false
+    idle_conn_timeout       = "1m"
     max_idle_conns_per_host = 100
-    tls_handshake_timeout = "10s"
+    tls_handshake_timeout   = "10s"
   }
 }
 
 driver "terraform" {
-  log = true
+  log  = true
   path = "path"
+
   backend "consul" {
     address = "consul-example.com"
-    path = "kv-path/terraform"
-    gzip = true
+    path    = "kv-path/terraform"
+    gzip    = true
   }
+
   required_providers {
     pName1 = "v0.0.0"
+
     pName2 = {
-      version = "v0.0.1",
-      source = "namespace/pName2"
+      version = "v0.0.1"
+      source  = "namespace/pName2"
     }
   }
 }
 
 service {
-  name = "serviceA"
+  name        = "serviceA"
   description = "descriptionA"
 }
 
 service {
-  name = "serviceB"
-  namespace = "teamB"
+  name        = "serviceB"
+  namespace   = "teamB"
   description = "descriptionB"
 }
 
 terraform_provider "X" {}
 
 task {
-  name = "task"
+  name        = "task"
   description = "automate services for X to do Y"
-  services = ["serviceA", "serviceB", "serviceC"]
-  providers = ["X"]
-  source = "Y"
+  services    = ["serviceA", "serviceB", "serviceC"]
+  providers   = ["X"]
+  source      = "Y"
+
   condition "catalog-services" {
-    regexp = ".*"
+    regexp              = ".*"
     source_includes_var = true
-    namespace = "ns2"
-    datacenter = "dc2"
+    namespace           = "ns2"
+    datacenter          = "dc2"
+
     node_meta {
       "key1" = "value1"
       "key2" = "value2"
     }
   }
+
   source_input "services" {
     regexp = ""
   }

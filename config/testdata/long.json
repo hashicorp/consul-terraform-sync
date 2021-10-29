@@ -10,6 +10,10 @@
     "min": "20s",
     "max": "60s"
   },
+  "acl": {
+    "enabled": true,
+    "bootstrap_token": "+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q"
+  },
   "consul": {
     "address": "consul-example.com",
     "auth": {

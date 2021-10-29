@@ -26,6 +26,10 @@ var (
 		LogLevel:   String("ERR"),
 		Port:       Int(8502),
 		WorkingDir: String("working"),
+		ACL: &ACLConfig{
+			Enabled:        Bool(true),
+			BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q"),
+		},
 		Syslog: &SyslogConfig{
 			Enabled: Bool(true),
 			Name:    String("syslog"),
@@ -285,6 +289,7 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.ClientType = String("")
 	expected.Port = Int(8502)
 	expected.WorkingDir = String("working")
+	expected.ACL.BootstrapToken = String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q")
 	expected.Syslog.Facility = String("LOCAL0")
 	expected.BufferPeriod.Enabled = Bool(true)
 	expected.Consul.KVNamespace = String("")

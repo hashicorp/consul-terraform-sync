@@ -38,6 +38,7 @@ type Config struct {
 	Port       *int    `mapstructure:"port"`
 	WorkingDir *string `mapstructure:"working_dir"`
 
+	ACL                *ACLConfig                `mapstructure:"acl"`
 	Syslog             *SyslogConfig             `mapstructure:"syslog"`
 	Consul             *ConsulConfig             `mapstructure:"consul"`
 	Vault              *VaultConfig              `mapstructure:"vault"`
@@ -77,6 +78,7 @@ func DefaultConfig() *Config {
 	consul := DefaultConsulConfig()
 	return &Config{
 		LogLevel:           String(DefaultLogLevel),
+		ACL:                DefaultACLConfig(),
 		Syslog:             DefaultSyslogConfig(),
 		Port:               Int(DefaultPort),
 		Consul:             consul,
@@ -100,6 +102,7 @@ func (c *Config) Copy() *Config {
 		Syslog:             c.Syslog.Copy(),
 		Port:               IntCopy(c.Port),
 		WorkingDir:         StringCopy(c.WorkingDir),
+		ACL:                c.ACL.Copy(),
 		Consul:             c.Consul.Copy(),
 		Vault:              c.Vault.Copy(),
 		Driver:             c.Driver.Copy(),
@@ -138,6 +141,10 @@ func (c *Config) Merge(o *Config) *Config {
 
 	if o.WorkingDir != nil {
 		r.WorkingDir = StringCopy(o.WorkingDir)
+	}
+
+	if o.ACL != nil {
+		r.ACL = r.ACL.Merge(o.ACL)
 	}
 
 	if o.Syslog != nil {
@@ -223,6 +230,11 @@ func (c *Config) Finalize() {
 		}
 	}
 
+	if c.ACL == nil {
+		c.ACL = DefaultACLConfig()
+	}
+	c.ACL.Finalize()
+
 	// global buffer period must be finalized before finalizing task in order
 	// to resolve task's buffer period
 	if c.BufferPeriod == nil {
@@ -257,6 +269,10 @@ func (c *Config) Validate() error {
 	}
 
 	if err := c.Tasks.Validate(); err != nil {
+		return err
+	}
+
+	if err := c.ACL.Validate(); err != nil {
 		return err
 	}
 
@@ -325,6 +341,7 @@ func (c *Config) GoString() string {
 		"LogLevel:%s, "+
 		"Port:%d, "+
 		"WorkingDir:%s, "+
+		"ACL:%s, "+
 		"Syslog:%s, "+
 		"Consul:%s, "+
 		"Vault:%s, "+
@@ -337,6 +354,7 @@ func (c *Config) GoString() string {
 		StringVal(c.LogLevel),
 		IntVal(c.Port),
 		StringVal(c.WorkingDir),
+		c.ACL.GoString(),
 		c.Syslog.GoString(),
 		c.Consul.GoString(),
 		c.Vault.GoString(),
