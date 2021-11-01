@@ -25,8 +25,10 @@ func TestACLConfig_Copy(t *testing.T) {
 		{
 			"copy",
 			&ACLConfig{
-				Enabled:        Bool(true),
-				BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q"),
+				Enabled: Bool(true),
+				Tokens: &TokensConfig{
+					Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb"),
+				},
 			},
 		},
 	}
@@ -97,28 +99,28 @@ func TestACLConfig_Merge(t *testing.T) {
 			&ACLConfig{Enabled: Bool(true)},
 		},
 		{
-			"bootstrap_token_overrides",
-			&ACLConfig{BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q")},
-			&ACLConfig{BootstrapToken: String("")},
-			&ACLConfig{BootstrapToken: String("")},
+			"token_overrides",
+			&ACLConfig{Tokens: &TokensConfig{Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb")}},
+			&ACLConfig{Tokens: &TokensConfig{Root: String("")}},
+			&ACLConfig{Tokens: &TokensConfig{Root: String("")}},
 		},
 		{
-			"bootstrap_token_empty_one",
-			&ACLConfig{BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q")},
+			"token_empty_one",
+			&ACLConfig{Tokens: &TokensConfig{Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb")}},
 			&ACLConfig{},
-			&ACLConfig{BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q")},
+			&ACLConfig{Tokens: &TokensConfig{Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb")}},
 		},
 		{
-			"bootstrap_token_empty_two",
-			&ACLConfig{},
-			&ACLConfig{BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q")},
-			&ACLConfig{BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q")},
+			"token_empty_two",
+			&ACLConfig{Tokens: &TokensConfig{Root: String("")}},
+			&ACLConfig{Tokens: &TokensConfig{Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb")}},
+			&ACLConfig{Tokens: &TokensConfig{Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb")}},
 		},
 		{
-			"bootstrap_token_same",
-			&ACLConfig{BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q")},
-			&ACLConfig{BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q")},
-			&ACLConfig{BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q")},
+			"token_same",
+			&ACLConfig{Tokens: &TokensConfig{Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb")}},
+			&ACLConfig{Tokens: &TokensConfig{Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb")}},
+			&ACLConfig{Tokens: &TokensConfig{Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb")}},
 		},
 	}
 
@@ -142,8 +144,8 @@ func TestACLConfig_Finalize(t *testing.T) {
 			"empty",
 			&ACLConfig{},
 			&ACLConfig{
-				Enabled:        Bool(defaultACLIsEnabled),
-				BootstrapToken: String(""),
+				Enabled: Bool(defaultACLIsEnabled),
+				Tokens:  &TokensConfig{Root: String("")},
 			},
 		},
 		{
@@ -152,18 +154,22 @@ func TestACLConfig_Finalize(t *testing.T) {
 				Enabled: Bool(true),
 			},
 			&ACLConfig{
-				Enabled:        Bool(true),
-				BootstrapToken: String(""),
+				Enabled: Bool(true),
+				Tokens:  &TokensConfig{Root: String("")},
 			},
 		},
 		{
-			"with_bootstrap_token",
+			"with_token",
 			&ACLConfig{
-				BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q"),
+				Tokens: &TokensConfig{
+					Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb"),
+				},
 			},
 			&ACLConfig{
-				Enabled:        Bool(defaultACLIsEnabled),
-				BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q"),
+				Enabled: Bool(defaultACLIsEnabled),
+				Tokens: &TokensConfig{
+					Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb"),
+				},
 			},
 		},
 	}
@@ -188,19 +194,23 @@ func TestACLConfig_Validate(t *testing.T) {
 			"happy_path",
 			false,
 			&ACLConfig{
-				Enabled:        Bool(defaultACLIsEnabled),
-				BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q"),
+				Enabled: Bool(defaultACLIsEnabled),
+				Tokens: &TokensConfig{
+					Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb"),
+				},
 			},
 		},
 		{
 			"invalid_enabled",
 			true,
 			&ACLConfig{
-				BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q"),
+				Tokens: &TokensConfig{
+					Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb"),
+				},
 			},
 		},
 		{
-			"invalid_bootstrap_token",
+			"invalid_token",
 			true,
 			&ACLConfig{
 				Enabled: Bool(defaultACLIsEnabled),

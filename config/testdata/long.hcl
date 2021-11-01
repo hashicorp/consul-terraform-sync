@@ -5,8 +5,11 @@ port = 8502
 working_dir = "working"
 
 acl {
-  enabled         = true
-  bootstrap_token = "+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q"
+  enabled = true
+
+  tokens = {
+    root = "da666809-98ca-0e94-a99c-893c4bf5f9eb"
+  }
 }
 
 syslog {

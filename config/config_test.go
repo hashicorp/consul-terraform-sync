@@ -27,8 +27,10 @@ var (
 		Port:       Int(8502),
 		WorkingDir: String("working"),
 		ACL: &ACLConfig{
-			Enabled:        Bool(true),
-			BootstrapToken: String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q"),
+			Enabled: Bool(true),
+			Tokens: &TokensConfig{
+				Root: String("da666809-98ca-0e94-a99c-893c4bf5f9eb"),
+			},
 		},
 		Syslog: &SyslogConfig{
 			Enabled: Bool(true),
@@ -289,7 +291,8 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.ClientType = String("")
 	expected.Port = Int(8502)
 	expected.WorkingDir = String("working")
-	expected.ACL.BootstrapToken = String("+aHuWFH0bNzERaJpwdAPteD5EYzEQSWWNUxFsiVWt4ADIbHDU95ytJoYfHd/M22Q")
+	expected.ACL.Tokens = &TokensConfig{}
+	expected.ACL.Tokens.Root = String("da666809-98ca-0e94-a99c-893c4bf5f9eb")
 	expected.Syslog.Facility = String("LOCAL0")
 	expected.BufferPeriod.Enabled = Bool(true)
 	expected.Consul.KVNamespace = String("")

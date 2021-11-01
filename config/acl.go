@@ -14,9 +14,8 @@ type ACLConfig struct {
 	// Boolean if ACLs are enabled or not. True if enabled, false otherwise.
 	Enabled *bool `mapstructure:"enabled"`
 
-	// The encrypted bootstrap token to be used by CTS. If this is configured then
-	// CTS will not need to be bootstrapped on restart
-	BootstrapToken *string `mapstructure:"bootstrap_token"`
+	// The list of tokens supported for this CTS instance
+	Tokens *TokensConfig `mapstructure:"tokens"`
 }
 
 // DefaultACLConfig returns the default configuration struct.
@@ -34,7 +33,7 @@ func (c *ACLConfig) Copy() *ACLConfig {
 
 	var o ACLConfig
 	o.Enabled = BoolCopy(c.Enabled)
-	o.BootstrapToken = StringCopy(c.BootstrapToken)
+	o.Tokens = c.Tokens.Copy()
 
 	return &o
 }
@@ -61,8 +60,8 @@ func (c *ACLConfig) Merge(o *ACLConfig) *ACLConfig {
 		r.Enabled = BoolCopy(o.Enabled)
 	}
 
-	if o.BootstrapToken != nil {
-		r.BootstrapToken = StringCopy(o.BootstrapToken)
+	if o.Tokens != nil {
+		r.Tokens = o.Tokens.Copy()
 	}
 
 	return r
@@ -78,9 +77,10 @@ func (c *ACLConfig) Finalize() {
 		c.Enabled = Bool(defaultACLIsEnabled)
 	}
 
-	if c.BootstrapToken == nil {
-		c.BootstrapToken = String("")
+	if c.Tokens == nil {
+		c.Tokens = &TokensConfig{}
 	}
+	c.Tokens.Finalize()
 }
 
 // Validate validates the values and required options. This method is recommended
@@ -94,8 +94,8 @@ func (c *ACLConfig) Validate() error {
 		return fmt.Errorf("enabled must not be nil")
 	}
 
-	if c.BootstrapToken == nil {
-		return fmt.Errorf("bootstrap token must not be nil")
+	if c.Tokens == nil {
+		return fmt.Errorf("tokens must not be nil")
 	}
 
 	return nil
@@ -110,9 +110,9 @@ func (c *ACLConfig) GoString() string {
 
 	return fmt.Sprintf("&ACLConfig{"+
 		"Enabled:%t, "+
-		"BootstrapToken:%s, "+
+		"Tokens:%v, "+
 		"}",
 		BoolVal(c.Enabled),
-		StringVal(c.BootstrapToken),
+		c.Tokens.GoString(),
 	)
 }
