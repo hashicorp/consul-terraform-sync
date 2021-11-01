@@ -398,7 +398,7 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 	// initialize workspace
 	taskName := tf.task.Name()
 	if err := tf.init(ctx); err != nil {
-		tf.logger.Error("error initializing worksapce for task", taskNameLogKey, taskName)
+		tf.logger.Error("error initializing workspace for task", taskNameLogKey, taskName)
 		return err
 	}
 
