@@ -253,3 +253,33 @@ func (c *TLSConfig) ConsulEnv() map[string]string {
 
 	return env
 }
+
+func (c *TLSConfig) Validate() error {
+	if c == nil { // config not required, return early
+		return nil
+	}
+
+	if (StringVal(c.Key) == "") && (StringVal(c.Cert) != "") {
+		return fmt.Errorf("key is required if cert is configured")
+	}
+
+	return nil
+}
+
+// Validates TLS configuration for serving the CTS API
+func (c *TLSConfig) ValidateCTS() error {
+	if c == nil { // config not required, return early
+		return nil
+	}
+
+	if err := c.Validate(); err != nil {
+		return err
+	}
+
+	// Certificate and key required if TLS is enabled
+	if BoolVal(c.Enabled) && ((StringVal(c.Key) == "") || (StringVal(c.Cert) == "")) {
+		return fmt.Errorf("key and cert are required if TLS is enabled")
+	}
+
+	return nil
+}
