@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -61,10 +62,11 @@ type API struct {
 	port    int
 	version string
 	srv     *http.Server
+	tls     *config.TLSConfig
 }
 
 // NewAPI create a new API object
-func NewAPI(store *event.Store, drivers *driver.Drivers, port int) *API {
+func NewAPI(store *event.Store, drivers *driver.Drivers, port int, tls *config.TLSConfig) *API {
 	mux := http.NewServeMux()
 
 	// retrieve overall status
@@ -95,6 +97,7 @@ func NewAPI(store *event.Store, drivers *driver.Drivers, port int) *API {
 		store:   store,
 		version: defaultAPIVersion,
 		srv:     srv,
+		tls:     tls,
 	}
 }
 
@@ -124,9 +127,16 @@ func (api *API) Serve(ctx context.Context) error {
 	}()
 
 	logger.Info("starting server", "port", api.port)
-	if err := api.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		logger.Error("error serving api", "port", api.port, "error", err)
-		return err
+	if config.BoolVal(api.tls.Enabled) {
+		if err := api.srv.ListenAndServeTLS(*api.tls.Cert, *api.tls.Key); err != nil && err != http.ErrServerClosed {
+			logger.Error("error serving api", "port", api.port, "error", err)
+			return err
+		}
+	} else {
+		if err := api.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("error serving api", "port", api.port, "error", err)
+			return err
+		}
 	}
 
 	// wait for shutdown

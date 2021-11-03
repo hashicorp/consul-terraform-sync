@@ -122,7 +122,7 @@ func TestStatus(t *testing.T) {
 	port := testutils.FreePort(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	api := NewAPI(store, drivers, port)
+	api := NewAPI(store, drivers, port, config.DefaultTLSConfig())
 	go api.Serve(ctx)
 
 	c := NewClient(&ClientConfig{Port: port}, nil)
@@ -276,7 +276,7 @@ func Test_Task_Update(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	drivers := driver.NewDrivers()
-	api := NewAPI(event.NewStore(), drivers, port)
+	api := NewAPI(event.NewStore(), drivers, port, config.DefaultTLSConfig())
 	go api.Serve(ctx)
 
 	c := NewClient(&ClientConfig{Port: port}, nil)
@@ -350,7 +350,7 @@ func TestWaitForAPI(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		drivers := driver.NewDrivers()
-		api := NewAPI(event.NewStore(), drivers, port)
+		api := NewAPI(event.NewStore(), drivers, port, config.DefaultTLSConfig())
 		go api.Serve(ctx)
 
 		cts := NewClient(&ClientConfig{Port: port}, nil)

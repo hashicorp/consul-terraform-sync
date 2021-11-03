@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
@@ -73,7 +74,7 @@ func TestServe(t *testing.T) {
 	d.On("Task").Return(task)
 	drivers.Add("task_b", d)
 
-	api := NewAPI(event.NewStore(), drivers, port)
+	api := NewAPI(event.NewStore(), drivers, port, config.DefaultTLSConfig())
 	go api.Serve(ctx)
 	time.Sleep(3 * time.Second)
 
@@ -93,7 +94,7 @@ func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	port := testutils.FreePort(t)
-	api := NewAPI(event.NewStore(), driver.NewDrivers(), port)
+	api := NewAPI(event.NewStore(), driver.NewDrivers(), port, config.DefaultTLSConfig())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
