@@ -14,8 +14,8 @@ buffer_period {
 
 tls {
   enabled = true
-  cert = "cert.pem"
-  key = "key.pem"
+  cert = "../testutils/cert.pem"
+  key = "../testutils/key.pem"
   server_name = "server_name"
 }
 

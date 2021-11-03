@@ -384,10 +384,10 @@ func TestTLSConfig_Validate(t *testing.T) {
 			true,
 			&TLSConfig{
 				Enabled:    Bool(true),
-				Cert:       String("cert.pem"),
+				Cert:       String("../testutils/cert.pem"),
 				CACert:     String("ca_cert.pem"),
 				CAPath:     String("ca_path"),
-				Key:        String("key.pem"),
+				Key:        String("../testutils/key.pem"),
 				ServerName: String("name"),
 				Verify:     Bool(true),
 			},
@@ -397,6 +397,14 @@ func TestTLSConfig_Validate(t *testing.T) {
 			false,
 			&TLSConfig{
 				Cert: String("cert"),
+			},
+		},
+		{
+			"key_and_cert_swapped",
+			false,
+			&TLSConfig{
+				Cert: String("../testutils/key.pem"),
+				Key:  String("../testutils/cert.pem"),
 			},
 		},
 	}
@@ -436,8 +444,8 @@ func TestTLSConfig_ValidateCTS(t *testing.T) {
 			true,
 			&TLSConfig{
 				Enabled: Bool(true),
-				Cert:    String("cert.pem"),
-				Key:     String("key.pem"),
+				Cert:    String("../testutils/cert.pem"),
+				Key:     String("../testutils/key.pem"),
 			},
 		},
 		{
@@ -452,7 +460,7 @@ func TestTLSConfig_ValidateCTS(t *testing.T) {
 			false,
 			&TLSConfig{
 				Enabled: Bool(true),
-				Cert:    String("cert.pem"),
+				Cert:    String("../testutils/cert.pem"),
 			},
 		},
 	}

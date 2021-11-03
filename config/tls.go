@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"fmt"
 
 	vaultapi "github.com/hashicorp/vault/api"
@@ -263,6 +264,12 @@ func (c *TLSConfig) Validate() error {
 		return fmt.Errorf("key is required if cert is configured")
 	}
 
+	if (StringVal(c.Key) != "") && (StringVal(c.Cert) != "") {
+		if _, err := tls.LoadX509KeyPair(*c.Cert, *c.Key); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -276,7 +283,7 @@ func (c *TLSConfig) ValidateCTS() error {
 		return err
 	}
 
-	// Certificate and key required if TLS is enabled
+	// both certificate and key required if TLS is enabled
 	if BoolVal(c.Enabled) && ((StringVal(c.Key) == "") || (StringVal(c.Cert) == "")) {
 		return fmt.Errorf("key and cert are required if TLS is enabled")
 	}
