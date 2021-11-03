@@ -12,7 +12,7 @@ LABEL version=$VERSION
 ENV NAME=$NAME
 ENV VERSION=$VERSION
 
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init git
 
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
