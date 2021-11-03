@@ -1,3 +1,9 @@
+## 0.4.1 (November 03, 2021)
+
+BUG FIXES:
+* Compile 0.4.0 binaries with statically linked C bindings. [[GH-475](https://github.com/hashicorp/consul-terraform-sync/pull/475)]
+* Fix 0.4.0 docker image to use static binaries. [[GH-474](https://github.com/hashicorp/consul-terraform-sync/issues/474)]
+
 ## 0.4.0 (October 13, 2021)
 KNOWN ISSUES:
 * The formatting of the Terraform Plan outputted in the terminal by the Enable CLI and Inspect Mode is difficult to read when used with the TFC driver for certain Terraform versions. See issue for workaround. [[GH-425](https://github.com/hashicorp/consul-terraform-sync/issues/425)]
