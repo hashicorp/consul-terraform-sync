@@ -2,7 +2,10 @@ package api
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -114,6 +117,53 @@ func TestServe_context_cancel(t *testing.T) {
 	case <-time.After(time.Second * 5):
 		t.Fatal("Run did not exit properly from cancelling context")
 	}
+}
+
+func TestServeWithTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	port := testutils.FreePort(t)
+
+	task, err := driver.NewTask(driver.TaskConfig{Enabled: true})
+	require.NoError(t, err)
+
+	drivers := driver.NewDrivers()
+	d := new(mocks.Driver)
+	d.On("UpdateTask", mock.Anything, mock.Anything).
+		Return(driver.InspectPlan{}, nil).Once()
+	d.On("Task").Return(task)
+	drivers.Add("task_b", d)
+
+	cert := "../testutils/localhost_cert.pem"
+	tlsConfig := &config.TLSConfig{
+		Enabled: config.Bool(true),
+		Cert:    config.String(cert),
+		Key:     config.String("../testutils/localhost_key.pem"),
+	}
+	api := NewAPI(event.NewStore(), drivers, port, tlsConfig)
+	go api.Serve(ctx)
+	time.Sleep(3 * time.Second)
+
+	// Set up a client that trusts the self-signed certificate
+	caCert, err := ioutil.ReadFile(cert)
+	require.NoError(t, err)
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs: caCertPool,
+		},
+	}}
+
+	// Make request to HTTPS endpoint
+	u := fmt.Sprintf("https://localhost:%d/%s/status",
+		port, defaultAPIVersion)
+	resp, err := client.Get(u)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestJsonResponse(t *testing.T) {
