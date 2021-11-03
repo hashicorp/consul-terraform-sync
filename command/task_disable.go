@@ -76,8 +76,16 @@ func (c *taskDisableCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("Waiting to disable '%s'...", taskName))
 	c.UI.Output("")
 
-	client := c.meta.client()
-	_, err := client.Task().Update(taskName, api.UpdateTaskConfig{
+	client, err := c.meta.client()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error: unable to create client for '%s'", taskName))
+		msg := wordwrap.WrapString(err.Error(), uint(78))
+		c.UI.Output(msg)
+
+		return ExitCodeError
+	}
+
+	_, err = client.Task().Update(taskName, api.UpdateTaskConfig{
 		Enabled: config.Bool(false),
 	}, nil)
 	if err != nil {

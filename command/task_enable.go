@@ -91,7 +91,15 @@ func (c *taskEnableCommand) Run(args []string) int {
 		taskName))
 	c.UI.Output("Generating plan that Consul Terraform Sync will use Terraform to execute\n")
 
-	client := c.meta.client()
+	client, err := c.meta.client()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error: unable to create client for '%s'", taskName))
+		msg := wordwrap.WrapString(err.Error(), uint(78))
+		c.UI.Output(msg)
+
+		return ExitCodeError
+	}
+
 	resp, err := client.Task().Update(taskName, api.UpdateTaskConfig{
 		Enabled: config.Bool(true),
 	}, &api.QueryParam{Run: driver.RunOptionInspect})

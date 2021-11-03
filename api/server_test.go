@@ -84,7 +84,8 @@ func TestRequest(t *testing.T) {
 			}
 			hc.On("Do", mock.Anything).Return(mockResp, tc.httpError).Once()
 
-			c := NewClient(&ClientConfig{Port: 8558}, hc)
+			c, err := NewClient(&ClientConfig{Port: 8558}, hc)
+			require.NoError(t, err)
 			resp, err := c.request("GET", "v1/some/endpoint", "test=true", "body")
 			if tc.expectError {
 				assert.Error(t, err)
@@ -129,8 +130,9 @@ func TestStatus(t *testing.T) {
 	})
 	go api.Serve(ctx)
 
-	c := NewClient(&ClientConfig{Port: port}, nil)
-	err := c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
+	c, err := NewClient(&ClientConfig{Port: port}, nil)
+	require.NoError(t, err)
+	err = c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
 	require.NoError(t, err)
 
 	t.Run("overall-status", func(t *testing.T) {
@@ -286,8 +288,9 @@ func Test_Task_Update(t *testing.T) {
 	})
 	go api.Serve(ctx)
 
-	c := NewClient(&ClientConfig{Port: port}, nil)
-	err := c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
+	c, err := NewClient(&ClientConfig{Port: port}, nil)
+	require.NoError(t, err)
+	err = c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
 	require.NoError(t, err)
 
 	t.Run("disable-then-enable", func(t *testing.T) {
@@ -346,8 +349,9 @@ func TestWaitForAPI(t *testing.T) {
 	t.Parallel()
 
 	t.Run("timeout", func(t *testing.T) {
-		cts := NewClient(&ClientConfig{Port: 0}, nil)
-		err := cts.WaitForAPI(time.Second)
+		cts, err := NewClient(&ClientConfig{Port: 0}, nil)
+		require.NoError(t, err)
+		err = cts.WaitForAPI(time.Second)
 		assert.Error(t, err, "No CTS API server running, test is expected to timeout")
 	})
 
@@ -361,8 +365,9 @@ func TestWaitForAPI(t *testing.T) {
 		})
 		go api.Serve(ctx)
 
-		cts := NewClient(&ClientConfig{Port: port}, nil)
-		err := cts.WaitForAPI(3 * time.Second)
+		cts, err := NewClient(&ClientConfig{Port: port}, nil)
+		require.NoError(t, err)
+		err = cts.WaitForAPI(3 * time.Second)
 		assert.NoError(t, err, "CTS API server should be available")
 	})
 }

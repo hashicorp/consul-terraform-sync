@@ -54,7 +54,8 @@ func StartCTS(t *testing.T, configPath string, opts ...string) (*Client, func(t 
 	err = cmd.Start()
 	require.NoError(t, err)
 
-	ctsClient := NewClient(&ClientConfig{Port: port}, nil)
+	ctsClient, err := NewClient(&ClientConfig{Port: port}, nil)
+	require.NoError(t, err)
 
 	return ctsClient, func(t *testing.T) {
 		defer func() {
