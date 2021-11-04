@@ -65,40 +65,60 @@ type API struct {
 	tls     *config.TLSConfig
 }
 
+type APIConfig struct {
+	Store   *event.Store
+	Drivers *driver.Drivers
+	Port    int
+	TLS     *config.TLSConfig
+}
+
 // NewAPI create a new API object
-func NewAPI(store *event.Store, drivers *driver.Drivers, port int, tls *config.TLSConfig) *API {
+func NewAPI(conf *APIConfig) *API {
 	mux := http.NewServeMux()
+
+	api := &API{
+		port:    conf.Port,
+		drivers: conf.Drivers,
+		store:   conf.Store,
+		version: defaultAPIVersion,
+		tls:     conf.TLS,
+	}
+
+	if conf.Store == nil {
+		api.store = event.NewStore()
+	}
+
+	if conf.Drivers == nil {
+		api.drivers = driver.NewDrivers()
+	}
+
+	if conf.TLS == nil {
+		api.tls = config.DefaultTLSConfig()
+	}
 
 	// retrieve overall status
 	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, overallStatusPath),
-		withLogging(newOverallStatusHandler(store, drivers, defaultAPIVersion)))
+		withLogging(newOverallStatusHandler(api.store, api.drivers, defaultAPIVersion)))
 	// retrieve task status for a task-name
 	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskStatusPath),
-		withLogging(newTaskStatusHandler(store, drivers, defaultAPIVersion)))
+		withLogging(newTaskStatusHandler(api.store, api.drivers, defaultAPIVersion)))
 	// retrieve all task statuses
 	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, taskStatusPath),
-		withLogging(newTaskStatusHandler(store, drivers, defaultAPIVersion)))
+		withLogging(newTaskStatusHandler(api.store, api.drivers, defaultAPIVersion)))
 
 	// crud task
 	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskPath),
-		withLogging(newTaskHandler(store, drivers, defaultAPIVersion)))
+		withLogging(newTaskHandler(api.store, api.drivers, defaultAPIVersion)))
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", port),
+	api.srv = &http.Server{
+		Addr:         fmt.Sprintf(":%d", conf.Port),
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,
 		Handler:      mux,
 	}
 
-	return &API{
-		port:    port,
-		drivers: drivers,
-		store:   store,
-		version: defaultAPIVersion,
-		srv:     srv,
-		tls:     tls,
-	}
+	return api
 }
 
 // Serve starts up and handles shutdown for the http server to serve
