@@ -127,16 +127,15 @@ func (api *API) Serve(ctx context.Context) error {
 	}()
 
 	logger.Info("starting server", "port", api.port)
+	var err error
 	if config.BoolVal(api.tls.Enabled) {
-		if err := api.srv.ListenAndServeTLS(*api.tls.Cert, *api.tls.Key); err != nil && err != http.ErrServerClosed {
-			logger.Error("error serving api", "port", api.port, "error", err)
-			return err
-		}
+		err = api.srv.ListenAndServeTLS(*api.tls.Cert, *api.tls.Key)
 	} else {
-		if err := api.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("error serving api", "port", api.port, "error", err)
-			return err
-		}
+		err = api.srv.ListenAndServe()
+	}
+	if err != nil && err != http.ErrServerClosed {
+		logger.Error("error serving api", "port", api.port, "error", err)
+		return err
 	}
 
 	// wait for shutdown
