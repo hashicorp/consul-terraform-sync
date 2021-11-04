@@ -124,7 +124,35 @@ func TestServe_context_cancel(t *testing.T) {
 
 func TestServeWithTLS(t *testing.T) {
 	t.Parallel()
+	cert := "../testutils/localhost_cert.pem"
+	key := "../testutils/localhost_key.pem"
 
+	cases := []struct {
+		name         string
+		valid        bool
+		clientCACert string
+	}{
+		{
+			"client_ca_trusted",
+			true,
+			cert,
+		},
+		{
+			// client does not trust the CTS certificate
+			"client_ca_untrusted",
+			false,
+			"../testutils/cert.pem",
+		},
+		{
+			// client uses the default global CA, but server cert is
+			// self-signed, so would not be trusted
+			"client_ca_default",
+			false,
+			"",
+		},
+	}
+
+	// Serve CTS API with TLS enabled
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -140,11 +168,10 @@ func TestServeWithTLS(t *testing.T) {
 	d.On("Task").Return(task)
 	drivers.Add("task_b", d)
 
-	cert := "../testutils/localhost_cert.pem"
 	tlsConfig := &config.TLSConfig{
 		Enabled: config.Bool(true),
 		Cert:    config.String(cert),
-		Key:     config.String("../testutils/localhost_key.pem"),
+		Key:     config.String(key),
 	}
 	api := NewAPI(&APIConfig{
 		Drivers: drivers,
@@ -154,23 +181,42 @@ func TestServeWithTLS(t *testing.T) {
 	go api.Serve(ctx)
 	time.Sleep(3 * time.Second)
 
-	// Set up a client that trusts the self-signed certificate
-	caCert, err := ioutil.ReadFile(cert)
-	require.NoError(t, err)
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs: caCertPool,
-		},
-	}}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Set up a client with the CA for the test case
+			tlsConf := &tls.Config{}
+			if tc.clientCACert != "" {
+				caCertPool := x509.NewCertPool()
+				caCert, err := ioutil.ReadFile(tc.clientCACert)
+				require.NoError(t, err)
+				caCertPool.AppendCertsFromPEM(caCert)
+				tlsConf = &tls.Config{
+					RootCAs: caCertPool,
+				}
+			}
+			client := &http.Client{Transport: &http.Transport{
+				TLSClientConfig: tlsConf,
+			}}
 
-	// Make request to HTTPS endpoint
-	u := fmt.Sprintf("https://localhost:%d/%s/status",
-		port, defaultAPIVersion)
-	resp, err := client.Get(u)
-	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+			// Make request to HTTPS endpoint
+			u := fmt.Sprintf("https://localhost:%d/%s/status",
+				port, defaultAPIVersion)
+			resp, err := client.Get(u)
+			if tc.valid {
+				require.NoError(t, err)
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			} else {
+				require.Error(t, err)
+			}
+
+			// Make request to HTTP endpoint, expect a 400 Bad Request
+			u = fmt.Sprintf("http://localhost:%d/%s/status",
+				port, defaultAPIVersion)
+			resp, err = client.Get(u)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+	}
 }
 
 func TestJsonResponse(t *testing.T) {
