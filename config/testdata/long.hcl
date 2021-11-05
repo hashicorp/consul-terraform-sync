@@ -12,6 +12,13 @@ buffer_period {
   max = "60s"
 }
 
+tls {
+  enabled = true
+  cert = "../testutils/cert.pem"
+  key = "../testutils/key.pem"
+  server_name = "server_name"
+}
+
 consul {
   address = "consul-example.com"
   auth {

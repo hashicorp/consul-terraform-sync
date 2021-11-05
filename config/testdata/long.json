@@ -10,6 +10,12 @@
     "min": "20s",
     "max": "60s"
   },
+  "tls": {
+    "enabled": true,
+    "cert": "../testutils/cert.pem",
+    "key": "../testutils/key.pem",
+    "server_name": "server_name"
+  },
   "consul": {
     "address": "consul-example.com",
     "auth": {
@@ -76,8 +82,14 @@
     {
       "name": "task",
       "description": "automate services for X to do Y",
-      "services": ["serviceA", "serviceB", "serviceC"],
-      "providers": ["X"],
+      "services": [
+        "serviceA",
+        "serviceB",
+        "serviceC"
+      ],
+      "providers": [
+        "X"
+      ],
       "source": "Y",
       "condition": {
         "catalog-services": {

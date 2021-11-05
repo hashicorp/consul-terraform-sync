@@ -2,7 +2,10 @@ package api
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
@@ -73,7 +77,10 @@ func TestServe(t *testing.T) {
 	d.On("Task").Return(task)
 	drivers.Add("task_b", d)
 
-	api := NewAPI(event.NewStore(), drivers, port)
+	api := NewAPI(&APIConfig{
+		Drivers: drivers,
+		Port:    port,
+	})
 	go api.Serve(ctx)
 	time.Sleep(3 * time.Second)
 
@@ -93,7 +100,7 @@ func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	port := testutils.FreePort(t)
-	api := NewAPI(event.NewStore(), driver.NewDrivers(), port)
+	api := NewAPI(&APIConfig{Port: port})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -112,6 +119,103 @@ func TestServe_context_cancel(t *testing.T) {
 		}
 	case <-time.After(time.Second * 5):
 		t.Fatal("Run did not exit properly from cancelling context")
+	}
+}
+
+func TestServeWithTLS(t *testing.T) {
+	t.Parallel()
+	cert := "../testutils/localhost_cert.pem"
+	key := "../testutils/localhost_key.pem"
+
+	cases := []struct {
+		name         string
+		valid        bool
+		clientCACert string
+	}{
+		{
+			"client_ca_trusted",
+			true,
+			cert,
+		},
+		{
+			// client does not trust the CTS certificate
+			"client_ca_untrusted",
+			false,
+			"../testutils/cert.pem",
+		},
+		{
+			// client uses the default global CA, but server cert is
+			// self-signed, so would not be trusted
+			"client_ca_default",
+			false,
+			"",
+		},
+	}
+
+	// Serve CTS API with TLS enabled
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	port := testutils.FreePort(t)
+
+	task, err := driver.NewTask(driver.TaskConfig{Enabled: true})
+	require.NoError(t, err)
+
+	drivers := driver.NewDrivers()
+	d := new(mocks.Driver)
+	d.On("UpdateTask", mock.Anything, mock.Anything).
+		Return(driver.InspectPlan{}, nil).Once()
+	d.On("Task").Return(task)
+	drivers.Add("task_b", d)
+
+	tlsConfig := &config.TLSConfig{
+		Enabled: config.Bool(true),
+		Cert:    config.String(cert),
+		Key:     config.String(key),
+	}
+	api := NewAPI(&APIConfig{
+		Drivers: drivers,
+		Port:    port,
+		TLS:     tlsConfig,
+	})
+	go api.Serve(ctx)
+	time.Sleep(3 * time.Second)
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Set up a client with the CA for the test case
+			tlsConf := &tls.Config{}
+			if tc.clientCACert != "" {
+				caCertPool := x509.NewCertPool()
+				caCert, err := ioutil.ReadFile(tc.clientCACert)
+				require.NoError(t, err)
+				caCertPool.AppendCertsFromPEM(caCert)
+				tlsConf = &tls.Config{
+					RootCAs: caCertPool,
+				}
+			}
+			client := &http.Client{Transport: &http.Transport{
+				TLSClientConfig: tlsConf,
+			}}
+
+			// Make request to HTTPS endpoint
+			u := fmt.Sprintf("https://localhost:%d/%s/status",
+				port, defaultAPIVersion)
+			resp, err := client.Get(u)
+			if tc.valid {
+				require.NoError(t, err)
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			} else {
+				require.Error(t, err)
+			}
+
+			// Make request to HTTP endpoint, expect a 400 Bad Request
+			u = fmt.Sprintf("http://localhost:%d/%s/status",
+				port, defaultAPIVersion)
+			resp, err = client.Get(u)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
 	}
 }
 
