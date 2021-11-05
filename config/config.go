@@ -46,7 +46,7 @@ type Config struct {
 	Services           *ServiceConfigs           `mapstructure:"service"`
 	TerraformProviders *TerraformProviderConfigs `mapstructure:"terraform_provider"`
 	BufferPeriod       *BufferPeriodConfig       `mapstructure:"buffer_period"`
-	TLS                *TLSConfig                `mapstructure:"tls"`
+	TLS                *CTSTLSConfig             `mapstructure:"tls"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -86,7 +86,7 @@ func DefaultConfig() *Config {
 		Services:           DefaultServiceConfigs(),
 		TerraformProviders: DefaultTerraformProviderConfigs(),
 		BufferPeriod:       DefaultBufferPeriodConfig(),
-		TLS:                DefaultTLSConfig(),
+		TLS:                DefaultCTSTLSConfig(),
 	}
 }
 
@@ -253,7 +253,7 @@ func (c *Config) Finalize() {
 	c.TerraformProviders.Finalize()
 
 	if c.TLS == nil {
-		c.TLS = DefaultTLSConfig()
+		c.TLS = DefaultCTSTLSConfig()
 	}
 	c.TLS.Finalize()
 }
@@ -292,7 +292,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	if err := c.TLS.ValidateCTS(); err != nil {
+	if err := c.TLS.Validate(); err != nil {
 		return err
 	}
 
