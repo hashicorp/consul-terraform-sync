@@ -77,10 +77,12 @@ func TestServe(t *testing.T) {
 	d.On("Task").Return(task)
 	drivers.Add("task_b", d)
 
-	api := NewAPI(&APIConfig{
+	api, err := NewAPI(&APIConfig{
 		Drivers: drivers,
 		Port:    port,
 	})
+	require.NoError(t, err)
+
 	go api.Serve(ctx)
 	time.Sleep(3 * time.Second)
 
@@ -100,7 +102,8 @@ func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	port := testutils.FreePort(t)
-	api := NewAPI(&APIConfig{Port: port})
+	api, err := NewAPI(&APIConfig{Port: port})
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -173,11 +176,12 @@ func TestServeWithTLS(t *testing.T) {
 		Cert:    config.String(cert),
 		Key:     config.String(key),
 	}
-	api := NewAPI(&APIConfig{
+	api, err := NewAPI(&APIConfig{
 		Drivers: drivers,
 		Port:    port,
 		TLS:     tlsConfig,
 	})
+	require.NoError(t, err)
 	go api.Serve(ctx)
 	time.Sleep(3 * time.Second)
 

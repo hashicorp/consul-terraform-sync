@@ -126,11 +126,12 @@ func TestStatus(t *testing.T) {
 	port := testutils.FreePort(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	api := NewAPI(&APIConfig{
+	api, err := NewAPI(&APIConfig{
 		Store:   store,
 		Drivers: drivers,
 		Port:    port,
 	})
+	require.NoError(t, err)
 	go api.Serve(ctx)
 
 	c, err := NewClient(&ClientConfig{Port: port}, nil)
@@ -285,10 +286,11 @@ func Test_Task_Update(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	drivers := driver.NewDrivers()
-	api := NewAPI(&APIConfig{
+	api, err := NewAPI(&APIConfig{
 		Drivers: drivers,
 		Port:    port,
 	})
+	require.NoError(t, err)
 	go api.Serve(ctx)
 
 	c, err := NewClient(&ClientConfig{Port: port}, nil)
@@ -365,9 +367,10 @@ func TestWaitForAPI(t *testing.T) {
 		port := testutils.FreePort(t)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		api := NewAPI(&APIConfig{
+		api, err := NewAPI(&APIConfig{
 			Port: port,
 		})
+		require.NoError(t, err)
 		go api.Serve(ctx)
 
 		cts, err := NewClient(&ClientConfig{Port: port}, nil)
