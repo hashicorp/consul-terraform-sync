@@ -123,7 +123,7 @@ func (m *meta) clientConfig() *api.ClientConfig {
 	if m.isFlagParsedAndFound(FlagPort) {
 		c.Port = *m.port
 	}
-	if m.addr != nil && *m.addr != "" {
+	if m.isFlagParsedAndFound(FlagHTTPAddr) {
 		c.Addr = *m.addr
 	}
 
