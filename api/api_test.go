@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
+	"github.com/hashicorp/go-rootcerts"
 )
 
 func TestServe(t *testing.T) {
@@ -236,6 +238,219 @@ func TestServeWithTLS(t *testing.T) {
 			resp, err = client.Get(u)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+	}
+}
+
+func TestServeWithMutualTLS(t *testing.T) {
+	t.Parallel()
+
+	caCert := "../testutils/certs/localhost_cert.pem"
+	cases := []struct {
+		name       string
+		valid      bool
+		clientCert string
+		clientKey  string
+	}{
+		{
+			"valid_client_cert",
+			true,
+			"../testutils/certs/localhost_leaf_cert.pem",
+			"../testutils/certs/localhost_leaf_key.pem",
+		},
+		{
+			"ca_cert_for_client_cert",
+			true,
+			"../testutils/certs/localhost_cert.pem",
+			"../testutils/certs/localhost_key.pem",
+		},
+		{
+			"no_client_cert",
+			false,
+			"",
+			"",
+		},
+		{
+			"untrusted_client_cert",
+			false,
+			"../testutils/certs/localhost_cert2.pem",
+			"../testutils/certs/localhost_key2.pem",
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	port := testutils.FreePort(t)
+	serverCert := "../testutils/certs/localhost_cert2.pem"
+	serverKey := "../testutils/certs/localhost_key2.pem"
+	tlsConfig := &config.CTSTLSConfig{
+		Enabled:        config.Bool(true),
+		Cert:           config.String(serverCert),
+		Key:            config.String(serverKey),
+		VerifyIncoming: config.Bool(true),
+		CACert:         config.String(caCert),
+	}
+	api, err := NewAPI(&APIConfig{
+		Port: port,
+		TLS:  tlsConfig,
+	})
+	require.NoError(t, err)
+	go api.Serve(ctx)
+	time.Sleep(3 * time.Second)
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Set up a client that trusts the server's self-signed certificate and
+			// uses the client certificate of the test case
+			clientTLS := &tls.Config{}
+			rootcerts.ConfigureTLS(clientTLS, &rootcerts.Config{
+				CAFile: serverCert,
+			})
+			if tc.clientCert != "" {
+				clientCert, err := tls.LoadX509KeyPair(tc.clientCert, tc.clientKey)
+				require.NoError(t, err)
+				clientTLS.Certificates = []tls.Certificate{clientCert}
+			}
+			client := &http.Client{Transport: &http.Transport{
+				TLSClientConfig: clientTLS,
+			}}
+
+			// Make request to HTTPS endpoint
+			u := fmt.Sprintf("https://localhost:%d/%s/status",
+				port, defaultAPIVersion)
+			resp, err := client.Get(u)
+			if tc.valid {
+				require.NoError(t, err)
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			} else {
+				require.Error(t, err)
+			}
+
+			// Make request to HTTP endpoint, expect a 400 Bad Request
+			u = fmt.Sprintf("http://localhost:%d/%s/status",
+				port, defaultAPIVersion)
+			resp, err = client.Get(u)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+	}
+}
+
+// TestServeWithMutualTLS_MultipleCA tests using ca_path to set multiple
+// CAs when verify_incoming is enabled. It checks that only client certs
+// issued by any of the CAs in the path are considered valid.
+func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
+	t.Parallel()
+
+	caFiles := []string{
+		"../testutils/certs/localhost_cert.pem",
+		"../testutils/certs/localhost_cert2.pem",
+	}
+
+	cases := []struct {
+		name       string
+		valid      bool
+		clientCert string
+		clientKey  string
+	}{
+		{
+			// localhost_leaf_cert was issued by localhost_cert
+			"client_uses_leaf_cert",
+			true,
+			"../testutils/certs/localhost_leaf_cert.pem",
+			"../testutils/certs/localhost_leaf_key.pem",
+		},
+		{
+			"client_uses_valid_ca_cert",
+			true,
+			"../testutils/certs/localhost_cert.pem",
+			"../testutils/certs/localhost_key.pem",
+		},
+		{
+			"client_uses_valid_ca_cert2",
+			true,
+			"../testutils/certs/localhost_cert2.pem",
+			"../testutils/certs/localhost_key2.pem",
+		},
+		{
+			"no_client_cert",
+			false,
+			"",
+			"",
+		},
+		{
+			"untrusted_client_cert",
+			false,
+			"../testutils/certs/localhost_cert3.pem",
+			"../testutils/certs/localhost_key3.pem",
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	port := testutils.FreePort(t)
+	serverCert := "../testutils/certs/localhost_cert.pem"
+	serverKey := "../testutils/certs/localhost_key.pem"
+
+	// Copy multiple CA files to a temporary directory
+	tmpDir := "tmp_ca_path_mtls"
+	cleanup := testutils.MakeTempDir(t, tmpDir)
+	defer cleanup()
+	for _, src := range caFiles {
+		input, err := ioutil.ReadFile(src)
+		file := filepath.Base(src)
+		dest := filepath.Join(tmpDir, file)
+		require.NoError(t, err)
+		err = ioutil.WriteFile(dest, input, 0644)
+		require.NoError(t, err)
+	}
+
+	// Configure and start CTS with mTLS enabled using ca_path
+	tlsConfig := &config.CTSTLSConfig{
+		Enabled:        config.Bool(true),
+		Cert:           config.String(serverCert),
+		Key:            config.String(serverKey),
+		VerifyIncoming: config.Bool(true),
+		CAPath:         config.String(tmpDir),
+	}
+	api, err := NewAPI(&APIConfig{
+		Port: port,
+		TLS:  tlsConfig,
+	})
+	require.NoError(t, err)
+	go api.Serve(ctx)
+	time.Sleep(3 * time.Second)
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Set up a client that trusts the server's self-signed certificate and
+			// uses the client certificate of the test case
+			clientTLS := &tls.Config{}
+			rootcerts.ConfigureTLS(clientTLS, &rootcerts.Config{
+				CAFile: serverCert,
+			})
+			if tc.clientCert != "" {
+				clientCert, err := tls.LoadX509KeyPair(tc.clientCert, tc.clientKey)
+				require.NoError(t, err)
+				clientTLS.Certificates = []tls.Certificate{clientCert}
+			}
+			client := &http.Client{Transport: &http.Transport{
+				TLSClientConfig: clientTLS,
+			}}
+
+			// Make request to HTTPS endpoint
+			u := fmt.Sprintf("https://localhost:%d/%s/status",
+				port, defaultAPIVersion)
+			resp, err := client.Get(u)
+
+			if tc.valid {
+				require.NoError(t, err)
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			} else {
+				require.Error(t, err)
+			}
 		})
 	}
 }

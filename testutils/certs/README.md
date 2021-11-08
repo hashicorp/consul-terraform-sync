@@ -34,7 +34,7 @@ consul {
 
 ## Localhost Root Certificates
 
-`localhost_cert.pem` and `localhost_cert2.pem` are self-signed certificates for configuring TLS on the CTS API. The DNS names for the certificates are both `localhost`, and their respective private keys are `localhost_key.pem` and `localhost_cert2.pem`.
+`localhost_cert.pem`, `localhost_cert2.pem`, and `localhost_cert3` are self-signed certificates for configuring TLS on the CTS API. The DNS names for the certificates are both `localhost`, and their respective private keys are `localhost_key.pem`, `localhost_key2.pem`, and `localhost_key3.pem`.
 
 The certificates were generated via openssl with the following command:
 ```
