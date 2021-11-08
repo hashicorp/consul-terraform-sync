@@ -176,6 +176,10 @@ func (c *Client) Port() int {
 	return c.port
 }
 
+func (c *Client) FullAddress() string {
+	return fmt.Sprintf("%s://%s", c.scheme, c.addr)
+}
+
 // WaitForAPI polls the /v1/status endpoint to check when the CTS API is
 // available. The API is started when CTS is run as a daemon and completes
 // all tasks once.
