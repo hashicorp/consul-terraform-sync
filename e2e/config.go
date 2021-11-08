@@ -48,6 +48,17 @@ consul {
 `, consul.HTTPSAddr, consul.Config.CertFile))
 }
 
+func (c hclConfig) appendTLSBlock(clientCert, clientKey, caCert string) hclConfig {
+	return c.appendString(fmt.Sprintf(`
+tls {
+  enabled = true
+  cert = "%s"
+  key = "%s"
+  ca_cert = "%s"
+}
+`, clientCert, clientKey, caCert))
+}
+
 func (c hclConfig) appendTerraformBlock(opts ...string) hclConfig {
 	cwd, err := os.Getwd()
 	if err != nil {
