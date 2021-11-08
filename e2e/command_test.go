@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	invalidCert = "../testutils/cert.pem"
+	invalidCert = "../testutils/certs/consul_cert.pem"
 )
 
 // TestE2E_MetaCommandErrors tests cases that cross subcommands coded in

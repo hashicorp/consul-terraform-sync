@@ -127,8 +127,8 @@ func TestServe_context_cancel(t *testing.T) {
 
 func TestServeWithTLS(t *testing.T) {
 	t.Parallel()
-	cert := "../testutils/localhost_cert.pem"
-	key := "../testutils/localhost_key.pem"
+	cert := "../testutils/certs/localhost_cert.pem"
+	key := "../testutils/certs/localhost_key.pem"
 
 	cases := []struct {
 		name         string
@@ -144,7 +144,7 @@ func TestServeWithTLS(t *testing.T) {
 			// client does not trust the CTS certificate
 			"client_ca_untrusted",
 			false,
-			"../testutils/cert.pem",
+			"../testutils/certs/localhost_cert2.pem",
 		},
 		{
 			// client uses the default global CA, but server cert is

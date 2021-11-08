@@ -14,10 +14,10 @@ buffer_period {
 
 tls {
   enabled = true
-  cert = "../testutils/cert.pem"
-  key = "../testutils/key.pem"
+  cert = "../testutils/certs/consul_cert.pem"
+  key = "../testutils/certs/consul_key.pem"
   verify_incoming = true
-  ca_cert = "../testutils/cert.pem"
+  ca_cert = "../testutils/certs/consul_cert.pem"
 }
 
 consul {

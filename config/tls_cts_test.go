@@ -339,10 +339,10 @@ func TestCTSTLSConfig_Validate(t *testing.T) {
 			true,
 			&CTSTLSConfig{
 				Enabled:        Bool(true),
-				Cert:           String("../testutils/cert.pem"),
+				Cert:           String("../testutils/certs/consul_cert.pem"),
 				CACert:         String("ca_cert.pem"),
 				CAPath:         String("ca_path"),
-				Key:            String("../testutils/key.pem"),
+				Key:            String("../testutils/certs/consul_key.pem"),
 				VerifyIncoming: Bool(true),
 			},
 		},
@@ -364,8 +364,8 @@ func TestCTSTLSConfig_Validate(t *testing.T) {
 			"key_and_cert_swapped",
 			false,
 			&CTSTLSConfig{
-				Cert: String("../testutils/key.pem"),
-				Key:  String("../testutils/cert.pem"),
+				Cert: String("../testutils/certs/consul_key.pem"),
+				Key:  String("../testutils/certs/consul_cert.pem"),
 			},
 		},
 	}
