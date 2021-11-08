@@ -9,14 +9,23 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	ctsClientCert = "../testutils/localhost_cert.pem"
+	ctsClientKey  = "../testutils/localhost_key.pem"
+	ctsCACert     = "../testutils/localhost_cert.pem"
+	invalidCert   = "../testutils/cert.pem"
 )
 
 // TestE2E_MetaCommandErrors tests cases that cross subcommands coded in
@@ -85,6 +94,81 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 	delete()
 }
 
+// TestE2E_TLSErrors tests the CLI to disable an enabled task. This
+// starts up a local Consul server and runs CTS with TLS in dev mode.
+func TestE2E_TLSErrors(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "command_tls_errors")
+
+	tlsc := tlsConfig{
+		clientCert: ctsClientCert,
+		clientKey:  ctsClientKey,
+		caCert:     ctsCACert,
+	}
+	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
+	address := cts.FullAddress()
+
+	commands := map[string][]string{
+		"task disable": {"task", "disable"},
+		"task enable":  {"task", "disable"},
+	}
+
+	cases := []struct {
+		name           string
+		args           []string
+		outputContains string
+	}{
+		{
+			"connect using wrong scheme",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, strings.Replace(address, "https", "http", 1)),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			"EOF",
+		},
+		{
+			"connect with invalid cert",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, address),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, invalidCert),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			"signed by unknown authority",
+		},
+		{
+			"no cert",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, address),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			"signed by unknown authority",
+		},
+	}
+
+	for name, cmd := range commands {
+		for _, tc := range cases {
+			testName := fmt.Sprintf("%s_%s", tc.name, name)
+			t.Run(testName, func(t *testing.T) {
+
+				subcmd := cmd
+				subcmd = append(subcmd, tc.args...)
+
+				output, err := runSubcommand(t, "", subcmd...)
+				assert.Contains(t, output, tc.outputContains)
+				assert.Error(t, err)
+			})
+		}
+	}
+}
+
 // TestE2E_EnableTaskCommand tests the Enable CLI and confirms the expected
 // output and state given different paths. This starts up a local Consul server
 // and runs CTS with a disabled task.
@@ -97,27 +181,75 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 		input          string
 		outputContains string
 		expectEnabled  bool
+		tlsConfig      *tlsConfig
 	}{
 		{
-			"happy path",
-			[]string{disabledTaskName},
-			"yes\n",
-			"enable complete!",
-			true,
+			name:           "happy path",
+			args:           []string{disabledTaskName},
+			input:          "yes\n",
+			outputContains: "enable complete!",
+			expectEnabled:  true,
 		},
 		{
-			"user does not approve plan",
-			[]string{disabledTaskName},
-			"no\n",
-			"Cancelled enabling task",
-			false,
+			name:           "user does not approve plan",
+			args:           []string{disabledTaskName},
+			input:          "no\n",
+			outputContains: "Cancelled enabling task",
+			expectEnabled:  false,
 		},
 		{
-			"help flag",
-			[]string{"-help"},
-			"",
-			"Usage: consul-terraform-sync task enable [options] <task name>",
-			false,
+			name:           "help flag",
+			args:           []string{"-help"},
+			input:          "",
+			outputContains: "Usage: consul-terraform-sync task enable [options] <task name>",
+			expectEnabled:  false,
+		},
+		{
+			name: "happy path tls",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				disabledTaskName,
+			},
+			input:          "yes\n",
+			outputContains: "enable complete!",
+			expectEnabled:  true,
+			tlsConfig: &tlsConfig{
+				clientCert: ctsClientCert,
+				clientKey:  ctsClientKey,
+				caCert:     ctsCACert,
+			},
+		},
+		{
+			name: "happy path tl ssl false",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "false"),
+				disabledTaskName,
+			},
+			input:          "yes\n",
+			outputContains: "enable complete!",
+			expectEnabled:  true,
+			tlsConfig: &tlsConfig{
+				clientCert: ctsClientCert,
+				clientKey:  ctsClientKey,
+				caCert:     ctsCACert,
+			},
+		},
+		{
+			name: "user does not approve plan with tls",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				disabledTaskName,
+			},
+			input:          "no\n",
+			outputContains: "Cancelled enabling task",
+			expectEnabled:  false,
+			tlsConfig: &tlsConfig{
+				clientCert: ctsClientCert,
+				clientKey:  ctsClientKey,
+				caCert:     ctsCACert,
+			},
 		},
 	}
 
@@ -128,9 +260,17 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "enable_cmd")
 
-			cts := ctsSetup(t, srv, tempDir, disabledTaskConfig(tempDir))
+			var cts *api.Client
+			if tc.tlsConfig == nil {
+				cts = ctsSetup(t, srv, tempDir, disabledTaskConfig(tempDir))
+			} else {
+				cts = ctsSetupTLS(t, srv, tempDir, disabledTaskConfig(tempDir), *tc.tlsConfig)
+			}
 
-			subcmd := []string{"task", "enable", fmt.Sprintf("-port=%d", cts.Port())}
+			subcmd := []string{"task", "enable",
+				fmt.Sprintf("-%s=%d", command.FlagPort, cts.Port()),
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+			}
 			subcmd = append(subcmd, tc.args...)
 
 			output, err := runSubcommand(t, tc.input, subcmd...)
@@ -172,6 +312,61 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 			"help flag",
 			[]string{"-help"},
 			"consul-terraform-sync task disable [options] <task name>",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			subcmd := []string{"task", "disable"}
+			subcmd = append(subcmd, tc.args...)
+
+			output, err := runSubcommand(t, "", subcmd...)
+			assert.Contains(t, output, tc.outputContains)
+			assert.NoError(t, err)
+		})
+	}
+}
+
+// TestE2E_DisableTaskCommand tests the CLI to disable an enabled task. This
+// starts up a local Consul server and runs CTS with in dev mode.
+func TestE2E_DisableTaskCommand_TLS(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disable_tls_cmd")
+
+	tlsc := tlsConfig{
+		clientCert: ctsClientCert,
+		clientKey:  ctsClientKey,
+		caCert:     ctsCACert,
+	}
+	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
+
+	cases := []struct {
+		name           string
+		args           []string
+		outputContains string
+	}{
+		{
+			"happy path",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			"disable complete!",
+		},
+		{
+			"ssl verify disabled",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "false"),
+				dbTaskName,
+			},
+			"disable complete!",
 		},
 	}
 
