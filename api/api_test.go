@@ -127,39 +127,54 @@ func TestServe_context_cancel(t *testing.T) {
 
 func TestServeWithTLS(t *testing.T) {
 	t.Parallel()
-	cert := "../testutils/certs/localhost_cert.pem"
-	key := "../testutils/certs/localhost_key.pem"
+	rootCert := "../testutils/certs/localhost_cert.pem"
+	rootKey := "../testutils/certs/localhost_key.pem"
+
+	leafCert := "../testutils/certs/localhost_leaf_cert.pem"
+	leafKey := "../testutils/certs/localhost_leaf_key.pem"
 
 	cases := []struct {
 		name         string
 		valid        bool
+		serverCert   string
+		serverKey    string
 		clientCACert string
 	}{
 		{
-			"client_ca_trusted",
+			"self_signed_trusted",
 			true,
-			cert,
+			rootCert,
+			rootKey,
+			rootCert,
+		},
+		{
+			"leaf_cert_trusted",
+			true,
+			leafCert,
+			leafKey,
+			rootCert,
 		},
 		{
 			// client does not trust the CTS certificate
-			"client_ca_untrusted",
+			"ca_untrusted",
 			false,
+			rootCert,
+			rootKey,
 			"../testutils/certs/localhost_cert2.pem",
 		},
 		{
 			// client uses the default global CA, but server cert is
 			// self-signed, so would not be trusted
-			"client_ca_default",
+			"ca_default",
 			false,
+			rootCert,
+			rootKey,
 			"",
 		},
 	}
 
-	// Serve CTS API with TLS enabled
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	port := testutils.FreePort(t)
 
 	task, err := driver.NewTask(driver.TaskConfig{Enabled: true})
 	require.NoError(t, err)
@@ -171,22 +186,24 @@ func TestServeWithTLS(t *testing.T) {
 	d.On("Task").Return(task)
 	drivers.Add("task_b", d)
 
-	tlsConfig := &config.CTSTLSConfig{
-		Enabled: config.Bool(true),
-		Cert:    config.String(cert),
-		Key:     config.String(key),
-	}
-	api, err := NewAPI(&APIConfig{
-		Drivers: drivers,
-		Port:    port,
-		TLS:     tlsConfig,
-	})
-	require.NoError(t, err)
-	go api.Serve(ctx)
-	time.Sleep(3 * time.Second)
-
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Serve CTS API with TLS enabled
+			port := testutils.FreePort(t)
+			tlsConfig := &config.CTSTLSConfig{
+				Enabled: config.Bool(true),
+				Cert:    config.String(tc.serverCert),
+				Key:     config.String(tc.serverKey),
+			}
+			api, err := NewAPI(&APIConfig{
+				Drivers: drivers,
+				Port:    port,
+				TLS:     tlsConfig,
+			})
+			require.NoError(t, err)
+			go api.Serve(ctx)
+			time.Sleep(3 * time.Second)
+
 			// Set up a client with the CA for the test case
 			tlsConf := &tls.Config{}
 			if tc.clientCACert != "" {
