@@ -23,10 +23,7 @@ import (
 )
 
 const (
-	ctsClientCert = "../testutils/localhost_cert.pem"
-	ctsClientKey  = "../testutils/localhost_key.pem"
-	ctsCACert     = "../testutils/localhost_cert.pem"
-	invalidCert   = "../testutils/cert.pem"
+	invalidCert = "../testutils/cert.pem"
 )
 
 // TestE2E_MetaCommandErrors tests cases that cross subcommands coded in
@@ -51,6 +48,8 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 	err := cts.WaitForAPI(defaultWaitForAPI)
 	require.NoError(t, err)
 
+	address := cts.FullAddress()
+
 	cases := []struct {
 		name           string
 		args           []string
@@ -60,6 +59,14 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 			"missing required arguments",
 			[]string{},
 			"Error: this command requires one argument",
+		},
+		{
+			"connect using wrong scheme",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, strings.Replace(address, "http", "https", 1)),
+				dbTaskName,
+			},
+			"HTTP response to HTTPS client",
 		},
 		{
 			"unsupported argument",
@@ -105,11 +112,7 @@ func TestE2E_TLSErrors(t *testing.T) {
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "command_tls_errors")
 
-	tlsc := tlsConfig{
-		clientCert: ctsClientCert,
-		clientKey:  ctsClientKey,
-		caCert:     ctsCACert,
-	}
+	tlsc := defaultTLSConfig()
 	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
 	address := cts.FullAddress()
 
@@ -128,7 +131,7 @@ func TestE2E_TLSErrors(t *testing.T) {
 			"connect using wrong scheme",
 			[]string{
 				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, strings.Replace(address, "https", "http", 1)),
-				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
 				dbTaskName,
 			},
@@ -139,7 +142,7 @@ func TestE2E_TLSErrors(t *testing.T) {
 			"connect using wrong scheme override right scheme from environment",
 			[]string{
 				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, strings.Replace(address, "https", "http", 1)),
-				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
 				dbTaskName,
 			},
@@ -258,11 +261,7 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 func TestE2E_EnableTaskCommand_TLS(t *testing.T) {
 	t.Parallel()
 
-	tlsc := tlsConfig{
-		clientCert: ctsClientCert,
-		clientKey:  ctsClientKey,
-		caCert:     ctsCACert,
-	}
+	tlsc := defaultTLSConfig()
 
 	cases := []struct {
 		name           string
@@ -276,7 +275,7 @@ func TestE2E_EnableTaskCommand_TLS(t *testing.T) {
 
 			name: "happy path tls",
 			args: []string{
-				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
 				disabledTaskName,
 			},
@@ -293,14 +292,14 @@ func TestE2E_EnableTaskCommand_TLS(t *testing.T) {
 			outputContains: "enable complete!",
 			expectEnabled:  true,
 			envVariables: []string{
-				fmt.Sprintf("%s=%s", api.EnvTLSCACert, ctsCACert),
+				fmt.Sprintf("%s=%s", api.EnvTLSCACert, defaultCTSCACert),
 				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "true"),
 			},
 		},
 		{
 			name: "happy path tls flags override",
 			args: []string{
-				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
 				disabledTaskName,
 			},
@@ -338,7 +337,7 @@ func TestE2E_EnableTaskCommand_TLS(t *testing.T) {
 
 			name: "user does not approve plan with tls",
 			args: []string{
-				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
 				disabledTaskName,
 			},
@@ -439,11 +438,7 @@ func TestE2E_DisableTaskCommand_TLS(t *testing.T) {
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disable_tls_cmd")
 
-	tlsc := tlsConfig{
-		clientCert: ctsClientCert,
-		clientKey:  ctsClientKey,
-		caCert:     ctsCACert,
-	}
+	tlsc := defaultTLSConfig()
 	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
 
 	cases := []struct {
@@ -456,7 +451,7 @@ func TestE2E_DisableTaskCommand_TLS(t *testing.T) {
 			"happy path",
 			[]string{
 				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
-				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
 				dbTaskName,
 			},
@@ -470,7 +465,7 @@ func TestE2E_DisableTaskCommand_TLS(t *testing.T) {
 			},
 			[]string{
 				fmt.Sprintf("%s=%s", api.EnvAddress, cts.FullAddress()),
-				fmt.Sprintf("%s=%s", api.EnvTLSCACert, ctsCACert),
+				fmt.Sprintf("%s=%s", api.EnvTLSCACert, defaultCTSCACert),
 				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "true"),
 			},
 			"disable complete!",
@@ -479,7 +474,7 @@ func TestE2E_DisableTaskCommand_TLS(t *testing.T) {
 			"happy path flags override env",
 			[]string{
 				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
-				fmt.Sprintf("-%s=%s", command.FlagCACert, ctsCACert),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
 				dbTaskName,
 			},
