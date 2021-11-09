@@ -56,11 +56,12 @@ var (
 				TLSHandshakeTimeout: TimeDuration(10 * time.Second),
 			},
 		},
-		TLS: &TLSConfig{
-			Enabled:    Bool(true),
-			Cert:       String("../testutils/cert.pem"),
-			Key:        String("../testutils/key.pem"),
-			ServerName: String("server_name"),
+		TLS: &CTSTLSConfig{
+			Enabled:        Bool(true),
+			Cert:           String("../testutils/cert.pem"),
+			Key:            String("../testutils/key.pem"),
+			VerifyIncoming: Bool(true),
+			CACert:         String("../testutils/cert.pem"),
 		},
 		Driver: &DriverConfig{
 			Terraform: &TerraformConfig{
@@ -300,7 +301,8 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.Vault.Finalize()
 	expected.TLS.Cert = String("../testutils/cert.pem")
 	expected.TLS.Key = String("../testutils/key.pem")
-	expected.TLS.ServerName = String("server_name")
+	expected.TLS.VerifyIncoming = Bool(true)
+	expected.TLS.CACert = String("../testutils/cert.pem")
 	expected.TLS.Finalize()
 	expected.Driver.consul = expected.Consul
 	expected.Driver.Terraform.Version = String("")

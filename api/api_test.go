@@ -168,7 +168,7 @@ func TestServeWithTLS(t *testing.T) {
 	d.On("Task").Return(task)
 	drivers.Add("task_b", d)
 
-	tlsConfig := &config.TLSConfig{
+	tlsConfig := &config.CTSTLSConfig{
 		Enabled: config.Bool(true),
 		Cert:    config.String(cert),
 		Key:     config.String(key),

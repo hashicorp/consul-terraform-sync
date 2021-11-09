@@ -62,14 +62,14 @@ type API struct {
 	port    int
 	version string
 	srv     *http.Server
-	tls     *config.TLSConfig
+	tls     *config.CTSTLSConfig
 }
 
 type APIConfig struct {
 	Store   *event.Store
 	Drivers *driver.Drivers
 	Port    int
-	TLS     *config.TLSConfig
+	TLS     *config.CTSTLSConfig
 }
 
 // NewAPI create a new API object
@@ -93,7 +93,7 @@ func NewAPI(conf *APIConfig) *API {
 	}
 
 	if conf.TLS == nil {
-		api.tls = config.DefaultTLSConfig()
+		api.tls = config.DefaultCTSTLSConfig()
 	}
 
 	// retrieve overall status

@@ -16,7 +16,8 @@ tls {
   enabled = true
   cert = "../testutils/cert.pem"
   key = "../testutils/key.pem"
-  server_name = "server_name"
+  verify_incoming = true
+  ca_cert = "../testutils/cert.pem"
 }
 
 consul {
