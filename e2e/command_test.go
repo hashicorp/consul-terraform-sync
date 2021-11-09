@@ -7,7 +7,6 @@ package e2e
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -102,9 +101,9 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 	deleteTemp()
 }
 
-// TestE2E_TLSErrors tests the CLI to disable an enabled task. This
+// TestE2E_CommandTLSErrors tests error scenarios using CLI commands with TLS. This
 // starts up a local Consul server and runs CTS with TLS in dev mode.
-func TestE2E_TLSErrors(t *testing.T) {
+func TestE2E_CommandTLSErrors(t *testing.T) {
 	t.Parallel()
 
 	srv := newTestConsulServer(t)
@@ -190,6 +189,109 @@ func TestE2E_TLSErrors(t *testing.T) {
 	}
 }
 
+// TestE2E_CommandTLS tests CLI commands using TLS. This
+// starts up a local Consul server and runs CTS with TLS in dev mode.
+func TestE2E_CommandTLS(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "command_tls")
+
+	tlsc := defaultTLSConfig()
+	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
+
+	commands := []struct {
+		name           string
+		subcmd         []string
+		outputContains string
+	}{
+		{
+			name:           "task disable",
+			subcmd:         []string{"task", "disable"},
+			outputContains: "disable complete!",
+		},
+		{
+			name:           "task enable",
+			subcmd:         []string{"task", "enable"},
+			outputContains: "Your infrastructure matches the configuration.",
+		},
+	}
+
+	cases := []struct {
+		name         string
+		args         []string
+		envVariables []string
+	}{
+		{
+			name: "happy path",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+		},
+		{
+			name: "happy path environment variables",
+			args: []string{
+				dbTaskName,
+			},
+			envVariables: []string{
+				fmt.Sprintf("%s=%s", api.EnvAddress, cts.FullAddress()),
+				fmt.Sprintf("%s=%s", api.EnvTLSCACert, defaultCTSCACert),
+				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "true"),
+			},
+		},
+		{
+			name: "flags override environment variables",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			envVariables: []string{
+				fmt.Sprintf("%s=%s", api.EnvAddress, "bogus_address"),
+				fmt.Sprintf("%s=%s", api.EnvTLSCACert, "bogus_cert"),
+			},
+		},
+		{
+			name: "ssl verify flag set to false",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "false"),
+				dbTaskName,
+			},
+		},
+		{
+			name: "ssl verify environment set to false",
+			args: []string{
+				dbTaskName,
+			},
+			envVariables: []string{
+				fmt.Sprintf("%s=%s", api.EnvAddress, cts.FullAddress()),
+				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "false"),
+			},
+		},
+	}
+
+	for _, cmd := range commands {
+		for _, tc := range cases {
+			testName := fmt.Sprintf("%s_%s", tc.name, cmd.name)
+			t.Run(testName, func(t *testing.T) {
+				subcmd := cmd.subcmd
+				subcmd = append(subcmd, tc.args...)
+
+				output, err := runSubCommandWithEnvVars(t, "", tc.envVariables, subcmd...)
+				assert.Contains(t, output, cmd.outputContains)
+				assert.NoError(t, err)
+			})
+		}
+	}
+}
+
 // TestE2E_EnableTaskCommand tests the Enable CLI and confirms the expected
 // output and state given different paths. This starts up a local Consul server
 // and runs CTS with a disabled task.
@@ -255,139 +357,6 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 	}
 }
 
-// TestE2E_EnableTaskCommand tests the task Enable CLI and confirms the expected
-// output and state given different paths. This test starts up a local Consul server
-// and runs CTS with TLS enabled, with a disabled task.
-func TestE2E_EnableTaskCommand_TLS(t *testing.T) {
-	t.Parallel()
-
-	tlsc := defaultTLSConfig()
-
-	cases := []struct {
-		name           string
-		args           []string
-		input          string
-		outputContains string
-		expectEnabled  bool
-		envVariables   []string
-	}{
-		{
-
-			name: "happy path tls",
-			args: []string{
-				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
-				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
-				disabledTaskName,
-			},
-			input:          "yes\n",
-			outputContains: "enable complete!",
-			expectEnabled:  true,
-		},
-		{
-			name: "happy path tls environment variables",
-			args: []string{
-				disabledTaskName,
-			},
-			input:          "yes\n",
-			outputContains: "enable complete!",
-			expectEnabled:  true,
-			envVariables: []string{
-				fmt.Sprintf("%s=%s", api.EnvTLSCACert, defaultCTSCACert),
-				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "true"),
-			},
-		},
-		{
-			name: "happy path tls flags override",
-			args: []string{
-				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
-				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
-				disabledTaskName,
-			},
-			input:          "yes\n",
-			outputContains: "enable complete!",
-			expectEnabled:  true,
-			envVariables: []string{
-				fmt.Sprintf("%s=%s", api.EnvTLSCACert, "invalid cert"),
-			},
-		},
-		{
-			name: "happy path tls ssl false",
-			args: []string{
-				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "false"),
-				disabledTaskName,
-			},
-			input:          "yes\n",
-			outputContains: "enable complete!",
-			expectEnabled:  true,
-		},
-		{
-
-			name: "happy path tls ssl false with environment variable",
-			args: []string{
-				disabledTaskName,
-			},
-			input:          "yes\n",
-			outputContains: "enable complete!",
-			expectEnabled:  true,
-			envVariables: []string{
-				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "false"),
-			},
-		},
-		{
-
-			name: "user does not approve plan with tls",
-			args: []string{
-				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
-				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
-				disabledTaskName,
-			},
-			input:          "no\n",
-			outputContains: "Cancelled enabling task",
-			expectEnabled:  false,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			srv := newTestConsulServer(t)
-			defer srv.Stop()
-
-			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "enable_tls_cmd")
-
-			cts := ctsSetupTLS(t, srv, tempDir, disabledTaskConfig(tempDir), tlsc)
-
-			subcmd := []string{"task", "enable"}
-
-			var envVars []string
-
-			// If we're not providing environment variables, set these flags
-			if len(tc.envVariables) == 0 {
-				subcmd = append(subcmd,
-					fmt.Sprintf("-%s=%d", command.FlagPort, cts.Port()),
-					fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
-				)
-			} else {
-				envVars = []string{fmt.Sprintf("%s=%s", api.EnvAddress, cts.FullAddress())}
-				envVars = append(envVars, tc.envVariables...)
-			}
-
-			subcmd = append(subcmd, tc.args...)
-
-			output, err := runSubCommandWithEnvVars(t, tc.input, envVars, subcmd...)
-			assert.NoError(t, err)
-
-			assert.Contains(t, output, tc.outputContains)
-
-			// confirm that the task's final enabled state
-			taskStatuses, err := cts.Status().Task(disabledTaskName, nil)
-			require.NoError(t, err)
-			status, ok := taskStatuses[disabledTaskName]
-			require.True(t, ok)
-			assert.Equal(t, tc.expectEnabled, status.Enabled)
-		})
-	}
-}
-
 // TestE2E_DisableTaskCommand tests the CLI to disable an enabled task. This test
 // starts up a local Consul server and runs CTS in dev mode.
 func TestE2E_DisableTaskCommand(t *testing.T) {
@@ -422,97 +391,6 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 			subcmd = append(subcmd, tc.args...)
 
 			output, err := runSubcommand(t, "", subcmd...)
-			assert.Contains(t, output, tc.outputContains)
-			assert.NoError(t, err)
-		})
-	}
-}
-
-// TestE2E_DisableTaskCommand_TLS tests the CLI to disable an enabled task. This test
-// starts up a local Consul server and runs CTS with TLS enabled in dev mode.
-func TestE2E_DisableTaskCommand_TLS(t *testing.T) {
-	t.Parallel()
-
-	srv := newTestConsulServer(t)
-	defer srv.Stop()
-
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disable_tls_cmd")
-
-	tlsc := defaultTLSConfig()
-	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
-
-	cases := []struct {
-		name                 string
-		args                 []string
-		environmentVariables []string
-		outputContains       string
-	}{
-		{
-			"happy path",
-			[]string{
-				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
-				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
-				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
-				dbTaskName,
-			},
-			[]string{},
-			"disable complete!",
-		},
-		{
-			"happy path with env variables",
-			[]string{
-				dbTaskName,
-			},
-			[]string{
-				fmt.Sprintf("%s=%s", api.EnvAddress, cts.FullAddress()),
-				fmt.Sprintf("%s=%s", api.EnvTLSCACert, defaultCTSCACert),
-				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "true"),
-			},
-			"disable complete!",
-		},
-		{
-			"happy path flags override env",
-			[]string{
-				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
-				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
-				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
-				dbTaskName,
-			},
-			[]string{
-				fmt.Sprintf("%s=%s", api.EnvAddress, "http://localhost:8458"),
-				fmt.Sprintf("%s=%s", api.EnvTLSCACert, "invalid cert"),
-			},
-			"disable complete!",
-		},
-		{
-			"ssl verify disabled",
-			[]string{
-				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
-				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "false"),
-				dbTaskName,
-			},
-			[]string{},
-			"disable complete!",
-		},
-		{
-			"ssl verify disabled using env variable",
-			[]string{
-				dbTaskName,
-			},
-			[]string{
-				fmt.Sprintf("%s=%s", api.EnvAddress, cts.FullAddress()),
-				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "false"),
-			},
-			"disable complete!",
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			subcmd := []string{"task", "disable"}
-			subcmd = append(subcmd, tc.args...)
-
-			output, err := runSubCommandWithEnvVars(t, "", tc.environmentVariables, subcmd...)
 			assert.Contains(t, output, tc.outputContains)
 			assert.NoError(t, err)
 		})
@@ -575,7 +453,6 @@ func runSubcommand(t *testing.T, input string, subcmd ...string) (string, error)
 
 func runSubCommandWithEnvVars(t *testing.T, input string, envVars []string, subcmd ...string) (string, error) {
 	cmd := exec.Command("consul-terraform-sync", subcmd...)
-	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, envVars...)
 
 	var b bytes.Buffer
