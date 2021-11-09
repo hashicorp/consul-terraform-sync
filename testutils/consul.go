@@ -32,8 +32,8 @@ func NewTestConsulServer(tb testing.TB, config TestConsulServerConfig) *testutil
 	if config.HTTPSRelPath != "" {
 		path, err := filepath.Abs(config.HTTPSRelPath)
 		require.NoError(tb, err, "unable to get absolute path of test certs")
-		certFile = filepath.Join(path, "../testutils/cert.pem")
-		keyFile = filepath.Join(path, "../testutils/key.pem")
+		certFile = filepath.Join(path, "../testutils/certs/consul_cert.pem")
+		keyFile = filepath.Join(path, "../testutils/certs/consul_key.pem")
 	}
 
 	srv, err := testutil.NewTestServerConfigT(tb,

@@ -54,8 +54,8 @@ func (c hclConfig) appendTLSBlock(config tlsConfig) hclConfig {
 	/* Example:
 	tls {
 	  enabled = true
-	  cert = "../testutils/localhost_cert.pem"
-	  key = "../testutils/localhost_key.pem"
+	  cert = "../testutils/certs/localhost_cert.pem"
+	  key = "../testutils/certs/localhost_key.pem"
 	}
 	*/
 	s := `

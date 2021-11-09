@@ -240,12 +240,16 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 
 // ServeAPI runs the API server for the controller
 func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
-	return api.NewAPI(&api.APIConfig{
+	a, err := api.NewAPI(&api.APIConfig{
 		Store:   rw.store,
 		Drivers: rw.drivers,
 		Port:    config.IntVal(rw.conf.Port),
 		TLS:     rw.conf.TLS},
-	).Serve(ctx)
+	)
+	if err != nil {
+		return err
+	}
+	return a.Serve(ctx)
 }
 
 // checkApply runs a task by attempting to render the template and applying the

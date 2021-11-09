@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	"github.com/hashicorp/go-rootcerts"
 )
 
 const (
@@ -73,7 +75,7 @@ type APIConfig struct {
 }
 
 // NewAPI create a new API object
-func NewAPI(conf *APIConfig) *API {
+func NewAPI(conf *APIConfig) (*API, error) {
 	mux := http.NewServeMux()
 
 	api := &API{
@@ -110,15 +112,31 @@ func NewAPI(conf *APIConfig) *API {
 	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskPath),
 		withLogging(newTaskHandler(api.store, api.drivers, defaultAPIVersion)))
 
+	t := &tls.Config{}
+	if config.BoolVal(api.tls.Enabled) && config.BoolVal(api.tls.VerifyIncoming) {
+		certPool, err := rootcerts.LoadCACerts(&rootcerts.Config{
+			CAFile: config.StringVal(api.tls.CACert),
+			CAPath: config.StringVal(api.tls.CAPath),
+		})
+		if err != nil {
+			logger := logging.Global().Named(logSystemName)
+			logger.Error("error loading TLS configs for api server", "error", err)
+			return nil, err
+		}
+		t.ClientCAs = certPool
+		t.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+
 	api.srv = &http.Server{
-		Addr:         fmt.Sprintf(":%d", conf.Port),
+		Addr:         fmt.Sprintf(":%d", api.port),
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,
 		Handler:      mux,
+		TLSConfig:    t,
 	}
 
-	return api
+	return api, nil
 }
 
 // Serve starts up and handles shutdown for the http server to serve

@@ -43,9 +43,9 @@ const (
 	defaultWaitForNoEvent = 6 * time.Second
 
 	// default TLS
-	defaultCTSClientCert = "../testutils/localhost_cert.pem"
-	defaultCTSClientKey  = "../testutils/localhost_key.pem"
-	defaultCTSCACert     = "../testutils/localhost_cert.pem"
+	defaultCTSClientCert = "../testutils/certs/localhost_cert.pem"
+	defaultCTSClientKey  = "../testutils/certs/localhost_key.pem"
+	defaultCTSCACert     = "../testutils/certs/localhost_cert.pem"
 )
 
 type tlsConfig struct {
