@@ -48,6 +48,41 @@ consul {
 `, consul.HTTPSAddr, consul.Config.CertFile))
 }
 
+func (c hclConfig) appendTLSBlock(config tlsConfig) hclConfig {
+
+	// Build block based on tlsConfig
+	/* Example:
+	tls {
+	  enabled = true
+	  cert = "../testutils/localhost_cert.pem"
+	  key = "../testutils/localhost_key.pem"
+	}
+	*/
+	s := `
+tls {
+  enabled = true`
+
+	if config.clientCert != "" {
+		s = fmt.Sprintf(s+`
+  cert = "%s"`, config.clientCert)
+	}
+
+	if config.clientKey != "" {
+		s = fmt.Sprintf(s+`
+  key = "%s"`, config.clientKey)
+	}
+
+	if config.caCert != "" {
+		s = fmt.Sprintf(s+`
+  ca_cert = "%s"`, config.clientCert)
+	}
+
+	s = s + `
+}
+`
+	return c.appendString(s)
+}
+
 func (c hclConfig) appendTerraformBlock(opts ...string) hclConfig {
 	cwd, err := os.Getwd()
 	if err != nil {

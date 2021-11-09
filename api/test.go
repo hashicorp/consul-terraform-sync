@@ -24,6 +24,17 @@ const (
 // running once-mode, the function will block until complete so no need to use
 // stop function
 func StartCTS(t *testing.T, configPath string, opts ...string) (*Client, func(t *testing.T)) {
+	return configureCTS(t, httpScheme, configPath, opts...)
+}
+
+// StartCTSSecure starts the CTS from binary using the https scheme for connections and returns a function to stop CTS. If
+// running once-mode, the function will block until complete so no need to use
+// stop function
+func StartCTSSecure(t *testing.T, configPath string, opts ...string) (*Client, func(t *testing.T)) {
+	return configureCTS(t, httpsScheme, configPath, opts...)
+}
+
+func configureCTS(t *testing.T, scheme string, configPath string, opts ...string) (*Client, func(t *testing.T)) {
 	opts = append(opts, fmt.Sprintf("--config-file=%s", configPath))
 	cmd := exec.Command("consul-terraform-sync", opts...)
 	// capture logging to output on error
@@ -54,7 +65,7 @@ func StartCTS(t *testing.T, configPath string, opts ...string) (*Client, func(t 
 	err = cmd.Start()
 	require.NoError(t, err)
 
-	ctsClient, err := NewClient(&ClientConfig{Port: port}, nil)
+	ctsClient, err := NewClient(&ClientConfig{Port: port, Addr: fmt.Sprintf("%s://localhost:%d", scheme, port)}, nil)
 	require.NoError(t, err)
 
 	return ctsClient, func(t *testing.T) {

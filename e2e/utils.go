@@ -41,7 +41,25 @@ const (
 
 	// liberal wait time to ensure event doesn't happen
 	defaultWaitForNoEvent = 6 * time.Second
+
+	// default TLS
+	defaultCTSClientCert = "../testutils/localhost_cert.pem"
+	defaultCTSClientKey  = "../testutils/localhost_key.pem"
+	defaultCTSCACert     = "../testutils/localhost_cert.pem"
 )
+
+type tlsConfig struct {
+	clientCert string
+	clientKey  string
+	caCert     string
+}
+
+func defaultTLSConfig() tlsConfig {
+	return tlsConfig{
+		clientCert: defaultCTSClientCert,
+		clientKey:  defaultCTSClientKey,
+	}
+}
 
 func newTestConsulServer(t *testing.T) *testutil.TestServer {
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
@@ -93,6 +111,28 @@ func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig
 	config.write(t, configPath)
 
 	cts, stop := api.StartCTS(t, configPath)
+	t.Cleanup(func() {
+		stop(t)
+	})
+
+	err := cts.WaitForAPI(defaultWaitForAPI)
+	require.NoError(t, err)
+
+	return cts
+}
+
+func ctsSetupTLS(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig string, tlsConfig tlsConfig) *api.Client {
+	cleanup := testutils.MakeTempDir(t, tempDir)
+	t.Cleanup(func() {
+		cleanup()
+	})
+
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
+		appendString(taskConfig).appendTLSBlock(tlsConfig)
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	cts, stop := api.StartCTSSecure(t, configPath)
 	t.Cleanup(func() {
 		stop(t)
 	})
