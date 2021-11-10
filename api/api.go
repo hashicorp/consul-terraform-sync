@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-rootcerts"
 )
 
@@ -77,6 +78,7 @@ type APIConfig struct {
 // NewAPI create a new API object
 func NewAPI(conf *APIConfig) (*API, error) {
 	mux := http.NewServeMux()
+	logger := logging.Global().Named(logSystemName)
 
 	api := &API{
 		port:    conf.Port,
@@ -119,7 +121,6 @@ func NewAPI(conf *APIConfig) (*API, error) {
 			CAPath: config.StringVal(api.tls.CAPath),
 		})
 		if err != nil {
-			logger := logging.Global().Named(logSystemName)
 			logger.Error("error loading TLS configs for api server", "error", err)
 			return nil, err
 		}
@@ -134,6 +135,10 @@ func NewAPI(conf *APIConfig) (*API, error) {
 		IdleTimeout:  time.Second * 60,
 		Handler:      mux,
 		TLSConfig:    t,
+		ErrorLog: logger.StandardLogger(&hclog.StandardLoggerOptions{
+			InferLevels: false,
+			ForceLevel:  hclog.Warn,
+		}),
 	}
 
 	return api, nil
