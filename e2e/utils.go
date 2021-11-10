@@ -49,15 +49,26 @@ const (
 )
 
 type tlsConfig struct {
-	clientCert string
-	clientKey  string
-	caCert     string
+	clientCert     string
+	clientKey      string
+	caCert         string
+	verifyIncoming *bool
 }
 
 func defaultTLSConfig() tlsConfig {
 	return tlsConfig{
 		clientCert: defaultCTSClientCert,
 		clientKey:  defaultCTSClientKey,
+	}
+}
+
+func defaultMTLSConfig() tlsConfig {
+	verifyIncoming := true
+	return tlsConfig{
+		clientCert:     defaultCTSClientCert,
+		clientKey:      defaultCTSClientKey,
+		caCert:         defaultCTSCACert,
+		verifyIncoming: &verifyIncoming,
 	}
 }
 
@@ -132,7 +143,12 @@ func ctsSetupTLS(t *testing.T, srv *testutil.TestServer, tempDir string, taskCon
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
 
-	cts, stop := api.StartCTSSecure(t, configPath)
+	cts, stop := api.StartCTSSecure(t, configPath, api.TLSConfig{
+		CACert:     tlsConfig.caCert,
+		ClientCert: tlsConfig.clientCert,
+		ClientKey:  tlsConfig.clientKey,
+		SSLVerify:  false,
+	})
 	t.Cleanup(func() {
 		stop(t)
 	})
