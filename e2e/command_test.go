@@ -117,7 +117,7 @@ func TestE2E_CommandTLSErrors(t *testing.T) {
 
 	commands := map[string][]string{
 		"task disable": {"task", "disable"},
-		"task enable":  {"task", "disable"},
+		"task enable":  {"task", "enable"},
 	}
 
 	cases := []struct {
@@ -273,6 +273,181 @@ func TestE2E_CommandTLS(t *testing.T) {
 			envVariables: []string{
 				fmt.Sprintf("%s=%s", api.EnvAddress, cts.FullAddress()),
 				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "false"),
+			},
+		},
+	}
+
+	for _, cmd := range commands {
+		for _, tc := range cases {
+			testName := fmt.Sprintf("%s_%s", tc.name, cmd.name)
+			t.Run(testName, func(t *testing.T) {
+				subcmd := cmd.subcmd
+				subcmd = append(subcmd, tc.args...)
+
+				output, err := runSubCommandWithEnvVars(t, "", tc.envVariables, subcmd...)
+				assert.Contains(t, output, cmd.outputContains)
+				assert.NoError(t, err)
+			})
+		}
+	}
+}
+
+// TestE2E_CommandMTLSErrors tests error scenarios using CLI commands with mTLS. This
+// starts up a local Consul server and runs CTS with TLS in dev mode.
+func TestE2E_CommandMTLSErrors(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "command_mtls_errors")
+
+	tlsc := defaultMTLSConfig()
+	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
+
+	commands := map[string][]string{
+		"task disable": {"task", "disable"},
+		"task enable":  {"task", "enable"},
+	}
+
+	cases := []struct {
+		name           string
+		args           []string
+		outputContains string
+	}{
+		{
+			"connect with invalid ca",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, invalidCert),
+				fmt.Sprintf("-%s=%s", command.FlagClientCert, defaultCTSClientCert),
+				fmt.Sprintf("-%s=%s", command.FlagClientKey, defaultCTSClientKey),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			"signed by unknown authority",
+		},
+		{
+			"no client cert key pair provided",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			"bad certificate",
+		},
+		{
+			"ssl verify disabled and no cert key pair provided",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "false"),
+				dbTaskName,
+			},
+			"bad certificate",
+		},
+	}
+
+	for name, cmd := range commands {
+		for _, tc := range cases {
+			testName := fmt.Sprintf("%s_%s", tc.name, name)
+			t.Run(testName, func(t *testing.T) {
+				subcmd := cmd
+				subcmd = append(subcmd, tc.args...)
+
+				output, err := runSubcommand(t, "", subcmd...)
+				assert.Contains(t, output, tc.outputContains)
+				assert.Error(t, err)
+			})
+		}
+	}
+}
+
+// TestE2E_CommandMTLS tests CLI commands using mTLS. This
+// starts up a local Consul server and runs CTS with TLS in dev mode.
+func TestE2E_CommandMTLS(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "command_mtls")
+
+	tlsc := defaultMTLSConfig()
+	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
+
+	commands := []struct {
+		name           string
+		subcmd         []string
+		outputContains string
+	}{
+		{
+			name:           "task disable",
+			subcmd:         []string{"task", "disable"},
+			outputContains: "disable complete!",
+		},
+		{
+			name:           "task enable",
+			subcmd:         []string{"task", "enable"},
+			outputContains: "Your infrastructure matches the configuration.",
+		},
+	}
+
+	cases := []struct {
+		name         string
+		args         []string
+		envVariables []string
+	}{
+		{
+			name: "happy path",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
+				fmt.Sprintf("-%s=%s", command.FlagClientCert, defaultCTSClientCert),
+				fmt.Sprintf("-%s=%s", command.FlagClientKey, defaultCTSClientKey),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+		},
+		{
+			name: "happy path environment variables",
+			args: []string{
+				dbTaskName,
+			},
+			envVariables: []string{
+				fmt.Sprintf("%s=%s", api.EnvAddress, cts.FullAddress()),
+				fmt.Sprintf("%s=%s", api.EnvTLSCACert, defaultCTSCACert),
+				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "true"),
+				fmt.Sprintf("%s=%s", api.EnvTLSClientCert, defaultCTSClientCert),
+				fmt.Sprintf("%s=%s", api.EnvTLSClientKey, defaultCTSClientKey),
+			},
+		},
+		{
+			name: "flags override environment variables",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
+				fmt.Sprintf("-%s=%s", command.FlagClientCert, defaultCTSClientCert),
+				fmt.Sprintf("-%s=%s", command.FlagClientKey, defaultCTSClientKey),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			envVariables: []string{
+				fmt.Sprintf("%s=%s", api.EnvAddress, "bogus_address"),
+				fmt.Sprintf("%s=%s", api.EnvTLSCACert, "bogus_ca_cert"),
+				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "true"),
+				fmt.Sprintf("%s=%s", api.EnvTLSClientCert, "bogus_client_cert"),
+				fmt.Sprintf("%s=%s", api.EnvTLSClientKey, "bogus_client_key"),
+			},
+		},
+		{
+			name: "ssl verify disabled",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagClientCert, defaultCTSClientCert),
+				fmt.Sprintf("-%s=%s", command.FlagClientKey, defaultCTSClientKey),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "false"),
+				dbTaskName,
 			},
 		},
 	}
