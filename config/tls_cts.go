@@ -3,6 +3,8 @@ package config
 import (
 	"crypto/tls"
 	"fmt"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 const (
@@ -144,8 +146,12 @@ func (c *CTSTLSConfig) Validate() error {
 	}
 
 	// TLS validation
+	if BoolVal(c.Enabled) && ((StringVal(c.Key) == "") || (StringVal(c.Cert) == "")) {
+		return fmt.Errorf("key and cert are required if TLS is enabled on the CTS API")
+	}
+
 	if (StringVal(c.Cert) != "") && (StringVal(c.Key) == "") {
-		return fmt.Errorf("key is required if cert is configured")
+		return fmt.Errorf("key is required if cert is configured for TLS on the CTS API")
 	}
 
 	if (StringVal(c.Cert) != "") && (StringVal(c.Key) != "") {
@@ -154,13 +160,14 @@ func (c *CTSTLSConfig) Validate() error {
 		}
 	}
 
-	if BoolVal(c.Enabled) && ((StringVal(c.Key) == "") || (StringVal(c.Cert) == "")) {
-		return fmt.Errorf("key and cert are required if TLS is enabled")
+	// mTLS validation
+	if BoolVal(c.VerifyIncoming) && (StringVal(c.CACert) == "") && (StringVal(c.CAPath) == "") {
+		return fmt.Errorf("either ca_cert or ca_path is required if verify_incoming is enabled on the CTS API")
 	}
 
-	// mTLS validation
-	if BoolVal(c.VerifyIncoming) && ((StringVal(c.Key) == "") || (StringVal(c.Cert) == "")) {
-		return fmt.Errorf("key and cert are required if verify_incoming is enabled")
+	if BoolVal(c.VerifyIncoming) && (StringVal(c.CACert) != "") && (StringVal(c.CAPath) != "") {
+		logging.Global().Named(logSystemName).Warn(
+			"ca_cert and ca_path are both configured, but only ca_cert will be used for TLS on the CTS API")
 	}
 
 	return nil
