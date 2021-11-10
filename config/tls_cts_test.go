@@ -335,15 +335,12 @@ func TestCTSTLSConfig_Validate(t *testing.T) {
 			&CTSTLSConfig{},
 		},
 		{
-			"valid_fully_configured",
+			"valid_tls",
 			true,
 			&CTSTLSConfig{
-				Enabled:        Bool(true),
-				Cert:           String("../testutils/certs/consul_cert.pem"),
-				CACert:         String("ca_cert.pem"),
-				CAPath:         String("ca_path"),
-				Key:            String("../testutils/certs/consul_key.pem"),
-				VerifyIncoming: Bool(true),
+				Enabled: Bool(true),
+				Cert:    String("../testutils/certs/localhost_cert.pem"),
+				Key:     String("../testutils/certs/localhost_key.pem"),
 			},
 		},
 		{
@@ -364,8 +361,48 @@ func TestCTSTLSConfig_Validate(t *testing.T) {
 			"key_and_cert_swapped",
 			false,
 			&CTSTLSConfig{
-				Cert: String("../testutils/certs/consul_key.pem"),
-				Key:  String("../testutils/certs/consul_cert.pem"),
+				Cert: String("../testutils/certs/localhost_key.pem"),
+				Key:  String("../testutils/certs/localhost_cert.pem"),
+			},
+		},
+		{
+			"verify_incoming_ca_cert",
+			true,
+			&CTSTLSConfig{
+				Cert:           String("../testutils/certs/localhost_cert.pem"),
+				Key:            String("../testutils/certs/localhost_key.pem"),
+				VerifyIncoming: Bool(true),
+				CACert:         String("ca_cert.pem"),
+			},
+		},
+		{
+			"verify_incoming_ca_path",
+			true,
+			&CTSTLSConfig{
+				Cert:           String("../testutils/certs/localhost_cert.pem"),
+				Key:            String("../testutils/certs/localhost_key.pem"),
+				VerifyIncoming: Bool(true),
+				CAPath:         String("ca"),
+			},
+		},
+		{
+			"verify_incoming_both_ca",
+			true, // logs a warning, but is valid
+			&CTSTLSConfig{
+				Cert:           String("../testutils/certs/localhost_cert.pem"),
+				Key:            String("../testutils/certs/localhost_key.pem"),
+				VerifyIncoming: Bool(true),
+				CACert:         String("ca_cert.pem"),
+				CAPath:         String("ca"),
+			},
+		},
+		{
+			"verify_incoming_no_ca",
+			false,
+			&CTSTLSConfig{
+				Cert:           String("../testutils/certs/localhost_cert.pem"),
+				Key:            String("../testutils/certs/localhost_key.pem"),
+				VerifyIncoming: Bool(true),
 			},
 		},
 	}
