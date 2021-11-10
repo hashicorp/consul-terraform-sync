@@ -6,6 +6,7 @@ package e2e
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -75,6 +76,11 @@ tls {
 	if config.caCert != "" {
 		s = fmt.Sprintf(s+`
   ca_cert = "%s"`, config.clientCert)
+	}
+
+	if config.verifyIncoming != nil {
+		s = fmt.Sprintf(s+`
+  verify_incoming = %s`, strconv.FormatBool(*config.verifyIncoming))
 	}
 
 	s = s + `
