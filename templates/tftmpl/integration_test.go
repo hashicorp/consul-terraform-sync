@@ -147,6 +147,17 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			true,
 		},
 		{
+			"happy path (services-regex)",
+			"testdata/services-regex/terraform.tfvars",
+			"testdata/services-regex/terraform.tfvars.tmpl",
+			true,
+			true,
+			false,
+			true,
+			false,
+			false,
+		},
+		{
 			"happy path (catalog-services condition - default values)",
 			"testdata/terraform.tfvars",
 			"testdata/catalog-services-condition/terraform.tfvars.tmpl",
