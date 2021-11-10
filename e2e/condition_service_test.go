@@ -35,6 +35,7 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	source = "./test_modules/local_instances_file"
 	condition "services" {
 		regexp = "api-"
+		filter = "Service.Tags not contains \"tag_a\""
 	}
 }
 `, taskName)
@@ -51,6 +52,8 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	//    (one new event) and its data exists in the services variable.
 	// 3. Register a second node to the api-web service. Confirm that task was triggered
 	//    (one new event) and its data exists in the services variable.
+	// 4. Register a third node to the api-web service with tag_a. Confirm that
+	//    task was not triggered and the data is not in the services variable.
 
 	// 0. Confirm only one event. Confirm empty var catalog_services
 	eventCountExpected := eventCount(t, taskName, cts.Port())
@@ -92,4 +95,14 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	require.Equal(t, eventCountExpected, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 	validateServices(t, true, []string{"api-web-1", "api-web-2"}, resourcesPath)
+
+	// 4. Register a matched service "api-web" with tag_a
+	now = time.Now()
+	service = testutil.TestService{ID: "api-web-3", Name: "api-web", Tags: []string{"tag_a"}}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
+	eventCountNow = eventCount(t, taskName, cts.Port())
+	require.Equal(t, eventCountExpected, eventCountNow,
+		"change in event count. task was unexpectedly triggered")
+	validateServices(t, false, []string{"api-web-3"}, resourcesPath)
 }
