@@ -8,6 +8,7 @@ on:
       - main
       # Push events to branches matching refs/heads/release/**
       - 'release/**'
+      - releng-1025/use-docker-action
 
 env:
   PKG_NAME: "consul-terraform-sync"
@@ -369,6 +370,9 @@ jobs:
       matrix:
         arch: ["arm", "arm64", "386", "amd64"]
     name: Docker ${{ matrix.arch }} build
+    env:
+      repo: ${{github.event.repository.name}}
+      version: ${{needs.get-product-version.outputs.product-version}}
 
     steps:
       - uses: actions/checkout@v2
@@ -379,17 +383,16 @@ jobs:
           name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
 
       # build docker image
-      - name: Docker build
-        working-directory: ./.release/docker
-        run: |
-          docker version
-          unzip -j ${GITHUB_WORKSPACE}/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
-          # arm32 bit docker images are set with --platform=linux/arm/v6
-          if [ "${{ matrix.arch }}" = "arm" ]; then
-            make docker ARCH=${{ matrix.arch }} GOARM_DOCKER="/v6"
-          else
-            make docker ARCH=${{ matrix.arch }}
-          fi
+      - name: Docker build (Action)
+        uses: hashicorp/actions-docker-build@v1
+        with:
+          version: ${{env.version}}
+          target: default
+          dockerfile: .release/docker/Dockerfile
+          arch: ${{matrix.arch}}
+          tags: |
+            docker.io/hashicorp/${{env.repo}}:${{env.version}}
+            ecr.public.aws/hashicorp/${{env.repo}}:${{env.version}}
       # upload image tarball
       - uses: actions/upload-artifact@v2
         with:
