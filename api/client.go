@@ -18,8 +18,8 @@ import (
 //go:generate mockery --name=httpClient  --structname=HttpClient --output=../mocks/api
 
 const (
-	httpScheme  = "http"
-	httpsScheme = "https"
+	HTTPScheme  = "http"
+	HTTPSScheme = "https"
 
 	DefaultAddress   = "http://localhost:8558"
 	DefaultSSLVerify = true
@@ -172,12 +172,19 @@ func setupTLSConfig(c *ClientConfig) (*tls.Config, error) {
 	return tlsClientConfig, nil
 }
 
+// Port returns the port being used by the client
 func (c *Client) Port() int {
 	return c.port
 }
 
+// FullAddress returns the client address including the scheme. eg. http://localhost:8558
 func (c *Client) FullAddress() string {
 	return fmt.Sprintf("%s://%s", c.scheme, c.addr)
+}
+
+// Scheme returns the scheme being used by the client
+func (c *Client) Scheme() string {
+	return fmt.Sprintf(c.scheme)
 }
 
 // WaitForAPI polls the /v1/status endpoint to check when the CTS API is
@@ -395,14 +402,14 @@ func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (Upda
 
 func parseAddress(addr string) (addressComposite, error) {
 	ac := addressComposite{}
-	ac.scheme = httpScheme
+	ac.scheme = HTTPScheme
 	parts := strings.SplitN(addr, "://", 2)
 	if len(parts) == 2 {
 		switch parts[0] {
-		case httpScheme:
-			ac.scheme = httpScheme
-		case httpsScheme:
-			ac.scheme = httpsScheme
+		case HTTPScheme:
+			ac.scheme = HTTPScheme
+		case HTTPSScheme:
+			ac.scheme = HTTPSScheme
 		default:
 			return addressComposite{}, fmt.Errorf("unknown protocol scheme: %s", parts[0])
 		}
