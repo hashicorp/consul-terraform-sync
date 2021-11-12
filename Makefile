@@ -13,7 +13,7 @@ GOVERSION := 1.16
 PROJECT := $(shell go list -m)
 NAME := $(notdir $(PROJECT))
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
-GIT_DESCRIBE ?= $(shell git describe --tags `git rev-list --tags --max-count=1`)
+GIT_DESCRIBE ?=
 GIT_DIRTY ?= $(shell git diff --stat)
 VERSION := $(shell awk -F\" '/Version =/ { print $2; exit }' "${CURRENT_DIR}/version/version.go")
 
