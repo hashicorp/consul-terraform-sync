@@ -8,7 +8,6 @@ on:
       - main
       # Push events to branches matching refs/heads/release/**
       - 'release/**'
-      - releng-1025/use-docker-action
 
 env:
   PKG_NAME: "consul-terraform-sync"
@@ -393,8 +392,3 @@ jobs:
           tags: |
             docker.io/hashicorp/${{env.repo}}:${{env.version}}
             ecr.public.aws/hashicorp/${{env.repo}}:${{env.version}}
-      # upload image tarball
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
-          path: .release/docker/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
