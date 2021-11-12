@@ -12,12 +12,15 @@ LABEL version=$VERSION
 ENV NAME=$NAME
 ENV VERSION=$VERSION
 
+# TARGETARCH and TARGETOS are set automatically when --platform is provided.
+ARG TARGETOS TARGETARCH
+
 RUN apk add --no-cache dumb-init git
 
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
-COPY consul-terraform-sync /bin/consul-terraform-sync
+COPY dist/$TARGETOS/$TARGETARCH/consul-terraform-sync /bin/consul-terraform-sync
 
 ### Added for CTS
 RUN mkdir -p /consul-terraform-sync/config \
