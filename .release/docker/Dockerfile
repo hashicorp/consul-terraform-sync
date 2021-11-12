@@ -23,7 +23,7 @@ COPY consul-terraform-sync /bin/consul-terraform-sync
 RUN mkdir -p /consul-terraform-sync/config \
 	&& chown -R ${NAME}:${NAME} /consul-terraform-sync
 VOLUME /consul-terraform-sync/config
-COPY docker-entrypoint.sh /bin/docker-entrypoint.sh
+COPY .release/docker/docker-entrypoint.sh /bin/docker-entrypoint.sh
 WORKDIR /consul-terraform-sync
 ENTRYPOINT ["/bin/docker-entrypoint.sh"]
 ###
