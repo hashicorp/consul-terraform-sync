@@ -330,6 +330,12 @@ func (c *TerraformConfig) GoString() string {
 	)
 }
 
+// KeyValues defines queryable version of this struct
+func (c *TerraformConfig) KeyValues() []interface{} {
+	kv := []interface{}{"Version", *c.Version, "Log", *c.Log, "PersistLog", *c.PersistLog, "Path", *c.Path, "WorkingDir", *c.WorkingDir, "Backend", c.Backend, "RequiredProviders", c.RequiredProviders}
+	return kv
+}
+
 // IsConsulBackend returns if the Terraform backend is using Consul KV for
 // remote state store.
 func (c *TerraformConfig) IsConsulBackend() bool {
