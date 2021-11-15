@@ -24,14 +24,14 @@ const (
 // running once-mode, the function will block until complete so no need to use
 // stop function
 func StartCTS(t *testing.T, configPath string, opts ...string) (*Client, func(t *testing.T)) {
-	return configureCTS(t, httpScheme, configPath, TLSConfig{}, opts...)
+	return configureCTS(t, HTTPScheme, configPath, TLSConfig{}, opts...)
 }
 
 // StartCTSSecure starts the CTS from binary using the https scheme for connections and returns a function to stop CTS. If
 // running once-mode, the function will block until complete so no need to use
 // stop function
 func StartCTSSecure(t *testing.T, configPath string, tlsConfig TLSConfig, opts ...string) (*Client, func(t *testing.T)) {
-	return configureCTS(t, httpsScheme, configPath, tlsConfig, opts...)
+	return configureCTS(t, HTTPSScheme, configPath, tlsConfig, opts...)
 }
 
 func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSConfig, opts ...string) (*Client, func(t *testing.T)) {

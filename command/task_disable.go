@@ -90,6 +90,7 @@ func (c *taskDisableCommand) Run(args []string) int {
 	}, nil)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to disable '%s'", taskName))
+		err = processEOFError(client.Scheme(), err)
 
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
@@ -100,4 +101,14 @@ func (c *taskDisableCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("'%s' disable complete!", taskName))
 
 	return ExitCodeOK
+}
+
+func processEOFError(scheme string, err error) error {
+	if strings.Contains(err.Error(), "EOF") && scheme == api.HTTPScheme {
+		err = fmt.Errorf("%s. Scheme %s was used, "+
+			"this error can be caused by a client using http to connect to a CTS server with TLS enabled, "+
+			"consider using %s scheme instead", err, scheme, api.HTTPSScheme)
+	}
+
+	return err
 }

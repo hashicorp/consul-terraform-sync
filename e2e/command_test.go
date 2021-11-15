@@ -135,7 +135,7 @@ func TestE2E_CommandTLSErrors(t *testing.T) {
 				dbTaskName,
 			},
 			[]string{},
-			"EOF",
+			"consider using https scheme",
 		},
 		{
 			"connect using wrong scheme override right scheme from environment",
@@ -148,7 +148,7 @@ func TestE2E_CommandTLSErrors(t *testing.T) {
 			[]string{
 				fmt.Sprintf("%s-%s", api.EnvAddress, address),
 			},
-			"EOF",
+			"consider using https scheme",
 		},
 		{
 			"connect with invalid cert",
