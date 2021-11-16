@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	invalidCert = "../testutils/certs/consul_cert.pem"
+	invalidCACert = "../testutils/certs/consul_cert.pem"
+	missingCACert = "../testutils/certs/localhost_cert2.pem"
 )
 
 // TestE2E_MetaCommandErrors tests cases that cross subcommands coded in
@@ -115,6 +116,13 @@ func TestE2E_CommandTLSErrors(t *testing.T) {
 	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
 	address := cts.FullAddress()
 
+	// Get all test certs and move them to the CA path directory
+	certs := []string{
+		invalidCACert,
+		missingCACert,
+	}
+	clientCAPath := copyClientCerts(t, certs, tempDir)
+
 	commands := map[string][]string{
 		"task disable": {"task", "disable"},
 		"task enable":  {"task", "enable"},
@@ -154,7 +162,18 @@ func TestE2E_CommandTLSErrors(t *testing.T) {
 			"connect with invalid cert",
 			[]string{
 				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, address),
-				fmt.Sprintf("-%s=%s", command.FlagCACert, invalidCert),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, invalidCACert),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			[]string{},
+			"signed by unknown authority",
+		},
+		{
+			"connect with ca path that does not include the server certificate ca",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, address),
+				fmt.Sprintf("-%s=%s", command.FlagCAPath, clientCAPath),
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
 				dbTaskName,
 			},
@@ -292,6 +311,101 @@ func TestE2E_CommandTLS(t *testing.T) {
 	}
 }
 
+// TestE2E_CommandTLS_CAPath tests CLI commands using TLS providing a CA path instead of a CA cert file. This
+// starts up a local Consul server and runs CTS with TLS in dev mode.
+func TestE2E_CommandTLS_CAPath(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "command_tls_capath")
+
+	tlsc := tlsConfigWithCAPath(tempDir)
+	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
+
+	commands := []struct {
+		name           string
+		subcmd         []string
+		outputContains string
+	}{
+		{
+			name:           "task disable",
+			subcmd:         []string{"task", "disable"},
+			outputContains: "disable complete!",
+		},
+		{
+			name:           "task enable",
+			subcmd:         []string{"task", "enable"},
+			outputContains: "Your infrastructure matches the configuration.",
+		},
+	}
+
+	cases := []struct {
+		name         string
+		args         []string
+		envVariables []string
+	}{
+		{
+			name: "ca path flag",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCAPath, tlsc.caPath),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+		},
+		{
+			name: "ca path environment variables",
+			args: []string{
+				dbTaskName,
+			},
+			envVariables: []string{
+				fmt.Sprintf("%s=%s", api.EnvAddress, cts.FullAddress()),
+				fmt.Sprintf("%s=%s", api.EnvTLSCAPath, tlsc.caPath),
+				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "true"),
+			},
+		},
+		{
+			name: "ca path flags override environment variables",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCAPath, tlsc.caPath),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			envVariables: []string{
+				fmt.Sprintf("%s=%s", api.EnvAddress, "bogus_address"),
+				fmt.Sprintf("%s=%s", api.EnvTLSCAPath, "/path/bogus_cert"),
+			},
+		},
+		{
+			name: "ca path overrides ca cert",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
+				fmt.Sprintf("-%s=%s", command.FlagCAPath, "/path/bogus_cert"),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+		},
+	}
+
+	for _, cmd := range commands {
+		for _, tc := range cases {
+			testName := fmt.Sprintf("%s_%s", tc.name, cmd.name)
+			t.Run(testName, func(t *testing.T) {
+				subcmd := cmd.subcmd
+				subcmd = append(subcmd, tc.args...)
+
+				output, err := runSubCommandWithEnvVars(t, "", tc.envVariables, subcmd...)
+				assert.Contains(t, output, cmd.outputContains)
+				assert.NoError(t, err)
+			})
+		}
+	}
+}
+
 // TestE2E_CommandMTLSErrors tests error scenarios using CLI commands with mTLS. This
 // starts up a local Consul server and runs CTS with TLS in dev mode.
 func TestE2E_CommandMTLSErrors(t *testing.T) {
@@ -302,8 +416,16 @@ func TestE2E_CommandMTLSErrors(t *testing.T) {
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "command_mtls_errors")
 
-	tlsc := defaultMTLSConfig()
+	tlsc := mtlsConfigWithCAPath(tempDir)
 	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
+
+	// Get all test certs and move them to the CA path directory
+	certs := []string{
+		missingCACert,
+		invalidCACert,
+	}
+
+	clientCAPath := copyClientCerts(t, certs, tempDir)
 
 	commands := map[string][]string{
 		"task disable": {"task", "disable"},
@@ -316,10 +438,22 @@ func TestE2E_CommandMTLSErrors(t *testing.T) {
 		outputContains string
 	}{
 		{
-			"connect with invalid ca",
+			"connect with invalid ca cert",
 			[]string{
 				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
-				fmt.Sprintf("-%s=%s", command.FlagCACert, invalidCert),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, invalidCACert),
+				fmt.Sprintf("-%s=%s", command.FlagClientCert, defaultCTSClientCert),
+				fmt.Sprintf("-%s=%s", command.FlagClientKey, defaultCTSClientKey),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			"signed by unknown authority",
+		},
+		{
+			"connect with client ca path that does not include server cert ca",
+			[]string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCAPath, clientCAPath),
 				fmt.Sprintf("-%s=%s", command.FlagClientCert, defaultCTSClientCert),
 				fmt.Sprintf("-%s=%s", command.FlagClientKey, defaultCTSClientKey),
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
@@ -448,6 +582,111 @@ func TestE2E_CommandMTLS(t *testing.T) {
 				fmt.Sprintf("-%s=%s", command.FlagClientKey, defaultCTSClientKey),
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "false"),
 				dbTaskName,
+			},
+		},
+	}
+
+	for _, cmd := range commands {
+		for _, tc := range cases {
+			testName := fmt.Sprintf("%s_%s", tc.name, cmd.name)
+			t.Run(testName, func(t *testing.T) {
+				subcmd := cmd.subcmd
+				subcmd = append(subcmd, tc.args...)
+
+				output, err := runSubCommandWithEnvVars(t, "", tc.envVariables, subcmd...)
+				assert.Contains(t, output, cmd.outputContains)
+				assert.NoError(t, err)
+			})
+		}
+	}
+}
+
+// TestE2E_CommandMTLS_CAPath tests CLI commands using mTLS providing a CAPath rather than a CA cert file. This
+// starts up a local Consul server and runs CTS with TLS in dev mode.
+func TestE2E_CommandMTLS_CAPath(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "command_mtls_capath")
+
+	tlsc := mtlsConfigWithCAPath(tempDir)
+	cts := ctsSetupTLS(t, srv, tempDir, dbTask(), tlsc)
+
+	commands := []struct {
+		name           string
+		subcmd         []string
+		outputContains string
+	}{
+		{
+			name:           "task disable",
+			subcmd:         []string{"task", "disable"},
+			outputContains: "disable complete!",
+		},
+		{
+			name:           "task enable",
+			subcmd:         []string{"task", "enable"},
+			outputContains: "Your infrastructure matches the configuration.",
+		},
+	}
+
+	cases := []struct {
+		name         string
+		args         []string
+		envVariables []string
+	}{
+		{
+			name: "ca path flag",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCAPath, tlsc.caPath),
+				fmt.Sprintf("-%s=%s", command.FlagClientCert, defaultCTSClientCert),
+				fmt.Sprintf("-%s=%s", command.FlagClientKey, defaultCTSClientKey),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+		},
+		{
+			name: "using alternate cert",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCACert, defaultCTSCACert),
+				fmt.Sprintf("-%s=%s", command.FlagClientCert, alternateCert),
+				fmt.Sprintf("-%s=%s", command.FlagClientKey, alternateKey),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+		},
+		{
+			name: "ca path environment variables",
+			args: []string{
+				dbTaskName,
+			},
+			envVariables: []string{
+				fmt.Sprintf("%s=%s", api.EnvAddress, cts.FullAddress()),
+				fmt.Sprintf("%s=%s", api.EnvTLSCAPath, tlsc.caPath),
+				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "true"),
+				fmt.Sprintf("%s=%s", api.EnvTLSClientCert, defaultCTSClientCert),
+				fmt.Sprintf("%s=%s", api.EnvTLSClientKey, defaultCTSClientKey),
+			},
+		},
+		{
+			name: "ca override environment variables",
+			args: []string{
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-%s=%s", command.FlagCAPath, tlsc.caPath),
+				fmt.Sprintf("-%s=%s", command.FlagClientCert, defaultCTSClientCert),
+				fmt.Sprintf("-%s=%s", command.FlagClientKey, defaultCTSClientKey),
+				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
+				dbTaskName,
+			},
+			envVariables: []string{
+				fmt.Sprintf("%s=%s", api.EnvAddress, "bogus_address"),
+				fmt.Sprintf("%s=%s", api.EnvTLSCAPath, "path/bogus_ca_path"),
+				fmt.Sprintf("%s=%s", api.EnvTLSSSLVerify, "true"),
+				fmt.Sprintf("%s=%s", api.EnvTLSClientCert, "bogus_client_cert"),
+				fmt.Sprintf("%s=%s", api.EnvTLSClientKey, "bogus_client_key"),
 			},
 		},
 	}
@@ -646,4 +885,16 @@ func runSubCommandWithEnvVars(t *testing.T, input string, envVars []string, subc
 
 	err = cmd.Wait()
 	return b.String(), err
+}
+
+func copyClientCerts(t *testing.T, certsToCopy []string, tempDir string) string {
+	// Get all test certs and move them to the CA path directory
+	clientCAPath := filepath.Join(tempDir, "clientCert")
+	delClientDir := testutils.MakeTempDir(t, clientCAPath)
+	t.Cleanup(func() {
+		delClientDir()
+	})
+	testutils.CopyFiles(t, certsToCopy, clientCAPath)
+
+	return clientCAPath
 }

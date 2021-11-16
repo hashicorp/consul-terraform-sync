@@ -75,7 +75,12 @@ tls {
 
 	if config.caCert != "" {
 		s = fmt.Sprintf(s+`
-  ca_cert = "%s"`, config.clientCert)
+  ca_cert = "%s"`, config.caCert)
+	}
+
+	if config.caPath != "" {
+		s = fmt.Sprintf(s+`
+  ca_path = "%s"`, config.caPath)
 	}
 
 	if config.verifyIncoming != nil {
