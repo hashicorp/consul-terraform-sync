@@ -20,3 +20,10 @@
             BACKPORT_LABEL_REGEXP: "backport/(?P<target>\\d+\\.\\d+)"
             BACKPORT_TARGET_TEMPLATE: "release/{{.target}}.x"
             GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+        - name: Run Backport Assistant (custom for 0.4.2)
+          run: |
+            backport-assistant backport -automerge
+          env:
+            BACKPORT_LABEL_REGEXP: "backport/0.4.2"
+            BACKPORT_TARGET_TEMPLATE: "release/0.4.2"
+            GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
