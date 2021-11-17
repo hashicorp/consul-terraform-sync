@@ -387,7 +387,6 @@ jobs:
         with:
           version: ${{env.version}}
           target: default
-          dockerfile: .release/docker/Dockerfile
           arch: ${{matrix.arch}}
           tags: |
             docker.io/hashicorp/${{env.repo}}:${{env.version}}
