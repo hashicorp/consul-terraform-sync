@@ -20,12 +20,20 @@ func processUnusedConfigKeys(md mapstructure.Metadata, file string) error {
 	err := fmt.Errorf("'%s' has invalid keys: %s", file, strings.Join(md.Unused, ", "))
 
 	for _, key := range md.Unused {
-		if key == "provider" {
-			err = fmt.Errorf(`%s
-	'provider' is an invalid key for Consul Terraform Sync configuration, try 'terraform_provider'.
-	terraform_provider configuration blocks are similar to provider blocks in Terraform but have additional features supported only by Consul Terraform Sync.
+		switch key {
+		case "provider":
+			return fmt.Errorf(`%s
 
-`, err)
+'provider' is an invalid key for Consul-Terraform-Sync (CTS) configuration,
+try 'terraform_provider'. The terraform_provider configuration blocks are
+similar to provider blocks in Terraform but have additional features
+supported only by CTS.`, err)
+
+		case "driver.terraform-cloud":
+			return fmt.Errorf(`%s
+
+Terraform Cloud is a Consul-Terraform-Sync (CTS) Enterprise feature.
+Upgrade to Consul Enterprise to enable CTS Enterprise features.`, err)
 		}
 	}
 	return err
