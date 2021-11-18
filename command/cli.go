@@ -98,8 +98,8 @@ func (cli *CLI) Run(args []string) int {
 
 	// Development only flags. Not printed with -h, -help
 	f.StringVar(&clientType, "client-type", "", "Use only when developing"+
-		"consul-terraform-sync binary. Defaults to Terraform client if empty or"+
-		"unknown value. Values can also be 'development' or 'test'.")
+		" consul-terraform-sync binary. Defaults to Terraform client if empty or"+
+		" unknown value. Values can also be 'development' or 'test'.")
 
 	err := f.Parse(args[1:])
 	if err != nil {

@@ -56,6 +56,13 @@ var (
 				TLSHandshakeTimeout: TimeDuration(10 * time.Second),
 			},
 		},
+		TLS: &CTSTLSConfig{
+			Enabled:        Bool(true),
+			Cert:           String("../testutils/certs/consul_cert.pem"),
+			Key:            String("../testutils/certs/consul_key.pem"),
+			VerifyIncoming: Bool(true),
+			CACert:         String("../testutils/certs/consul_cert.pem"),
+		},
 		Driver: &DriverConfig{
 			Terraform: &TerraformConfig{
 				Log:  Bool(true),
@@ -292,6 +299,11 @@ func TestConfig_Finalize(t *testing.T) {
 	expected.Consul.Transport.MaxIdleConns = Int(0)
 	expected.Vault = DefaultVaultConfig()
 	expected.Vault.Finalize()
+	expected.TLS.Cert = String("../testutils/certs/consul_cert.pem")
+	expected.TLS.Key = String("../testutils/certs/consul_key.pem")
+	expected.TLS.VerifyIncoming = Bool(true)
+	expected.TLS.CACert = String("../testutils/certs/consul_cert.pem")
+	expected.TLS.Finalize()
 	expected.Driver.consul = expected.Consul
 	expected.Driver.Terraform.Version = String("")
 	expected.Driver.Terraform.PersistLog = Bool(false)

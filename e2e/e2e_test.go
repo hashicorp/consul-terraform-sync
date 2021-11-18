@@ -18,28 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	// tempDirPrefix is the prefix for the directory for a given e2e test
-	// where files generated from e2e are stored. This directory is
-	// destroyed after e2e testing if no errors.
-	tempDirPrefix = "tmp_"
-
-	// resourcesDir is the sub-directory of tempDir where the
-	// Terraform resources created from running consul-terraform-sync are stored
-	resourcesDir = "resources"
-
-	// configFile is the name of the sync config file
-	configFile = "config.hcl"
-
-	// liberal default times to wait
-	defaultWaitForRegistration = 8 * time.Second
-	defaultWaitForEvent        = 8 * time.Second
-	defaultWaitForAPI          = 30 * time.Second
-
-	// liberal wait time to ensure event doesn't happen
-	defaultWaitForNoEvent = 6 * time.Second
-)
-
 // TestE2EBasic runs the CTS binary in daemon mode with a configuration with 2
 // tasks and a test module that writes IP addresses to disk. Tests that CTS:
 // 1. executes the 2 tasks upon startup
@@ -340,34 +318,4 @@ func TestE2EValidateError(t *testing.T) {
 		fmt.Sprintf(`module for task "%s" is missing the "catalog_services" variable, add to module or set "source_includes_var" to false`,
 			taskName))
 	delete()
-}
-
-func newTestConsulServer(t *testing.T) *testutil.TestServer {
-	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
-		HTTPSRelPath: "../testutils",
-	})
-
-	// Register services
-	srv.AddAddressableService(t, "api", testutil.HealthPassing,
-		"1.2.3.4", 8080, []string{"tag1"})
-	srv.AddAddressableService(t, "web", testutil.HealthPassing,
-		"5.6.7.8", 8000, []string{"tag2"})
-	srv.AddAddressableService(t, "db", testutil.HealthPassing,
-		"10.10.10.10", 8000, []string{"tag3", "tag4"})
-	return srv
-}
-
-func runSyncStop(t *testing.T, configPath string, dur time.Duration) {
-	cts, stop := api.StartCTS(t, configPath)
-	cts.WaitForAPI(dur)
-	stop(t)
-}
-
-// checkStateFileLocally checks if statefile exists
-func checkStateFileLocally(t *testing.T, stateFilePath string) {
-	files := testutils.CheckDir(t, true, stateFilePath)
-	require.Equal(t, 1, len(files))
-
-	stateFile := files[0]
-	require.Equal(t, "terraform.tfstate", stateFile.Name())
 }

@@ -6,11 +6,12 @@ import (
 	"sort"
 	"strings"
 
-	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
+
+var _ hcatQuery = (*catalogServicesRegistrationQuery)(nil)
 
 // catalogServicesRegistrationFunc returns information on registered Consul
 // services. It queries the Catalog List Services API and supports the query
@@ -47,7 +48,7 @@ type catalogServicesRegistrationQuery struct {
 	dc       string
 	ns       string
 	nodeMeta map[string]string
-	opts     consulapi.QueryOptions
+	opts     hcat.QueryOptions
 }
 
 // newCatalogServicesRegistrationQuery processes options in the format of
@@ -107,18 +108,16 @@ func (d *catalogServicesRegistrationQuery) Fetch(clients dep.Clients) (interface
 	default:
 	}
 
-	opts := d.opts
-	if d.dc != "" {
-		opts.Datacenter = d.dc
+	hcatOpts := &hcat.QueryOptions{
+		Datacenter: d.dc,
+		Namespace:  d.ns,
 	}
-	if d.ns != "" {
-		opts.Namespace = d.ns
-	}
+	opts := hcatOpts.ToConsulOpts()
 	if len(d.nodeMeta) != 0 {
 		opts.NodeMeta = d.nodeMeta
 	}
 
-	entries, qm, err := clients.Consul().Catalog().Services(&opts)
+	entries, qm, err := clients.Consul().Catalog().Services(opts)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
@@ -142,6 +141,12 @@ func (d *catalogServicesRegistrationQuery) Fetch(clients dep.Clients) (interface
 	}
 
 	return catalogServices, rm, nil
+}
+
+// SetOptions satisfies the hcat.QueryOptionsSetter interface which enables
+// blocking queries.
+func (d *catalogServicesRegistrationQuery) SetOptions(opts hcat.QueryOptions) {
+	d.opts = opts
 }
 
 // String returns the human-friendly version of this query.
@@ -170,10 +175,6 @@ func (d *catalogServicesRegistrationQuery) String() string {
 // Stop halts the query's fetch function.
 func (d *catalogServicesRegistrationQuery) Stop() {
 	close(d.stopCh)
-}
-
-func (d *catalogServicesRegistrationQuery) SetOptions(opts consulapi.QueryOptions) {
-	d.opts = opts
 }
 
 // ByName is a sortable slice of CatalogSnippet structs.

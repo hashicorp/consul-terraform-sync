@@ -18,6 +18,8 @@ var (
 	// params and filters, excluding the regex parameter. Non-regex query parameters
 	// only have one "=" where as filters can have "==" or "!=" operators.
 	queryParamOptRe = regexp.MustCompile(`[\w\d\s]=[\w\d\s]`)
+
+	_ hcatQuery = (*servicesRegexQuery)(nil)
 )
 
 // servicesRegexFunc returns information on registered Consul
@@ -60,7 +62,7 @@ type servicesRegexQuery struct {
 	dc       string
 	ns       string
 	nodeMeta map[string]string
-	opts     consulapi.QueryOptions
+	opts     hcat.QueryOptions
 }
 
 // newServicesRegexQuery processes options in the format of
@@ -142,17 +144,15 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	}
 
 	// Fetch all services via catalog services
-	opts := d.opts
-	if d.dc != "" {
-		opts.Datacenter = d.dc
+	hcatOpts := &hcat.QueryOptions{
+		Datacenter: d.dc,
+		Namespace:  d.ns,
 	}
-	if d.ns != "" {
-		opts.Namespace = d.ns
-	}
+	opts := hcatOpts.ToConsulOpts()
 	if len(d.nodeMeta) != 0 {
 		opts.NodeMeta = d.nodeMeta
 	}
-	catalog, qm, err := clients.Consul().Catalog().Services(&opts)
+	catalog, qm, err := clients.Consul().Catalog().Services(opts)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
@@ -173,7 +173,7 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	var services []*dep.HealthService
 	for _, s := range matchServices {
 		var entries []*consulapi.ServiceEntry
-		entries, qm, err = clients.Consul().Health().Service(s, "", false, &opts)
+		entries, qm, err = clients.Consul().Health().Service(s, "", false, opts)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, d.String())
 		}
@@ -213,6 +213,12 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	}
 
 	return services, rm, nil
+}
+
+// SetOptions satisfies the hcat.QueryOptionsSetter interface which enables
+// blocking queries.
+func (d *servicesRegexQuery) SetOptions(opts hcat.QueryOptions) {
+	d.opts = opts
 }
 
 // String returns the human-friendly version of this query.

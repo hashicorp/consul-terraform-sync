@@ -32,7 +32,7 @@ func BenchmarkTaskTrigger(b *testing.B) {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	defer ctxCancel()
-	conf := generateConf(benchmarkConfig{
+	conf := generateConf(b, benchmarkConfig{
 		consul:      srv,
 		tempDir:     tempDir,
 		numTasks:    1,
@@ -54,7 +54,7 @@ func BenchmarkTaskTrigger(b *testing.B) {
 	}()
 
 	// Monitor templated file for updates
-	tfvarsFile := filepath.Join(tempDir, "task_000", "terraform.tfvars")
+	tfvarsFile := filepath.Join(tempDir, benchmarkTaskName(b, 0), "terraform.tfvars")
 	fileLastUpdated := getFileModTime(b, tfvarsFile)
 	fileUpdated := make(chan struct{}, b.N)
 	go func(lastUpdate *time.Time) {

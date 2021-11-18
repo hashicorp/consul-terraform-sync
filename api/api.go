@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,9 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-rootcerts"
 )
 
 const (
@@ -61,41 +65,83 @@ type API struct {
 	port    int
 	version string
 	srv     *http.Server
+	tls     *config.CTSTLSConfig
+}
+
+type APIConfig struct {
+	Store   *event.Store
+	Drivers *driver.Drivers
+	Port    int
+	TLS     *config.CTSTLSConfig
 }
 
 // NewAPI create a new API object
-func NewAPI(store *event.Store, drivers *driver.Drivers, port int) *API {
+func NewAPI(conf *APIConfig) (*API, error) {
 	mux := http.NewServeMux()
+	logger := logging.Global().Named(logSystemName)
+
+	api := &API{
+		port:    conf.Port,
+		drivers: conf.Drivers,
+		store:   conf.Store,
+		version: defaultAPIVersion,
+		tls:     conf.TLS,
+	}
+
+	if conf.Store == nil {
+		api.store = event.NewStore()
+	}
+
+	if conf.Drivers == nil {
+		api.drivers = driver.NewDrivers()
+	}
+
+	if conf.TLS == nil {
+		api.tls = config.DefaultCTSTLSConfig()
+	}
 
 	// retrieve overall status
 	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, overallStatusPath),
-		withLogging(newOverallStatusHandler(store, drivers, defaultAPIVersion)))
+		withLogging(newOverallStatusHandler(api.store, api.drivers, defaultAPIVersion)))
 	// retrieve task status for a task-name
 	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskStatusPath),
-		withLogging(newTaskStatusHandler(store, drivers, defaultAPIVersion)))
+		withLogging(newTaskStatusHandler(api.store, api.drivers, defaultAPIVersion)))
 	// retrieve all task statuses
 	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, taskStatusPath),
-		withLogging(newTaskStatusHandler(store, drivers, defaultAPIVersion)))
+		withLogging(newTaskStatusHandler(api.store, api.drivers, defaultAPIVersion)))
 
 	// crud task
 	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskPath),
-		withLogging(newTaskHandler(store, drivers, defaultAPIVersion)))
+		withLogging(newTaskHandler(api.store, api.drivers, defaultAPIVersion)))
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", port),
+	t := &tls.Config{}
+	if config.BoolVal(api.tls.Enabled) && config.BoolVal(api.tls.VerifyIncoming) {
+		certPool, err := rootcerts.LoadCACerts(&rootcerts.Config{
+			CAFile: config.StringVal(api.tls.CACert),
+			CAPath: config.StringVal(api.tls.CAPath),
+		})
+		if err != nil {
+			logger.Error("error loading TLS configs for api server", "error", err)
+			return nil, err
+		}
+		t.ClientCAs = certPool
+		t.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+
+	api.srv = &http.Server{
+		Addr:         fmt.Sprintf(":%d", api.port),
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,
 		Handler:      mux,
+		TLSConfig:    t,
+		ErrorLog: logger.StandardLogger(&hclog.StandardLoggerOptions{
+			InferLevels: false,
+			ForceLevel:  hclog.Warn,
+		}),
 	}
 
-	return &API{
-		port:    port,
-		drivers: drivers,
-		store:   store,
-		version: defaultAPIVersion,
-		srv:     srv,
-	}
+	return api, nil
 }
 
 // Serve starts up and handles shutdown for the http server to serve
@@ -124,7 +170,13 @@ func (api *API) Serve(ctx context.Context) error {
 	}()
 
 	logger.Info("starting server", "port", api.port)
-	if err := api.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	var err error
+	if config.BoolVal(api.tls.Enabled) {
+		err = api.srv.ListenAndServeTLS(*api.tls.Cert, *api.tls.Key)
+	} else {
+		err = api.srv.ListenAndServe()
+	}
+	if err != nil && err != http.ErrServerClosed {
 		logger.Error("error serving api", "port", api.port, "error", err)
 		return err
 	}

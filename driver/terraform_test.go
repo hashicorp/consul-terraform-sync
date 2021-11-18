@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -384,6 +385,93 @@ func TestUpdateTask(t *testing.T) {
 
 			_, err := tf.UpdateTask(ctx, tc.patch)
 			require.Error(t, err)
+		})
+	}
+}
+
+func TestUpdateTask_Inspect(t *testing.T) {
+	t.Parallel()
+	// test cases confirm that updating a task with ?run=inspect runs task in
+	// dry-run and does not change the task
+
+	cases := []struct {
+		name  string
+		task  *Task
+		patch PatchTask
+	}{
+		{
+			"disable an enabled task",
+			&Task{
+				enabled: true,
+			},
+			PatchTask{
+				RunOption: RunOptionInspect,
+				Enabled:   false,
+			},
+		},
+		{
+			"enable a disabled task",
+			&Task{
+				enabled: false,
+			},
+			PatchTask{
+				RunOption: RunOptionInspect,
+				Enabled:   true,
+			},
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			workingDir := strings.ReplaceAll(tc.name, " ", "_")
+			deleteTemp := testutils.MakeTempDir(t, workingDir)
+			defer deleteTemp()
+
+			// set up mocks
+			r := new(mocksTmpl.Resolver)
+			r.On("Run", mock.Anything, mock.Anything).
+				Return(hcat.ResolveEvent{Complete: true, NoChange: false}, nil)
+
+			c := new(mocks.Client)
+			c.On("Init", ctx).Return(nil).Once()
+			c.On("Validate", ctx).Return(nil).Once()
+			c.On("Plan", ctx).Return(true, nil)
+			c.On("SetStdout", mock.Anything)
+
+			w := new(mocksTmpl.Watcher)
+			w.On("Watching", mock.Anything).Return(false)
+			w.On("Register", mock.Anything).Return(nil)
+
+			tf := &Terraform{
+				mu:       &sync.RWMutex{},
+				task:     tc.task,
+				client:   c,
+				resolver: r,
+				watcher:  w,
+				logger:   logging.NewNullLogger(),
+				fileReader: func(string) ([]byte, error) {
+					return []byte{}, nil
+				},
+			}
+
+			// set some fields on task
+			tc.name = "task_a"
+			tc.task.logger = logging.NewNullLogger()
+			tc.task.workingDir = workingDir
+
+			copyTask := &Task{
+				name:       tc.task.Name(),
+				enabled:    tc.task.IsEnabled(),
+				logger:     tc.task.logger,
+				workingDir: tc.task.workingDir,
+			}
+
+			_, err := tf.UpdateTask(ctx, tc.patch)
+			require.NoError(t, err)
+
+			// confirm that task is unchanged
+			assert.Equal(t, copyTask, tf.Task())
 		})
 	}
 }

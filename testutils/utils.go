@@ -4,6 +4,9 @@
 package testutils
 
 import (
+	"errors"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -48,6 +51,66 @@ func MakeTempDir(t testing.TB, tempDir string) func() error {
 	}
 }
 
+// FindFileMatches walks a root directory and returns a list of all files that match
+// a particular pattern string.
+// eg. If you want to find all files that end with .txt, pattern=*.txt
+func FindFileMatches(t testing.TB, rootDir, pattern string) []string {
+	var matches []string
+	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+		require.NoError(t, err)
+		if info.IsDir() {
+			return nil
+		}
+		if matched, err := filepath.Match(pattern, filepath.Base(path)); err != nil {
+			require.NoError(t, err)
+		} else if matched {
+			matches = append(matches, path)
+		}
+		return nil
+	})
+	require.NoError(t, err)
+	return matches
+}
+
+// CopyFiles copies a list of files to a destination (dst) directory
+func CopyFiles(t testing.TB, srcFiles []string, dst string) {
+	for _, src := range srcFiles {
+		file := filepath.Base(src)
+		dst := filepath.Join(dst, file)
+		CopyFile(t, src, dst)
+	}
+}
+
+// CopyFile copies a file from src to dst.
+func CopyFile(t testing.TB, src, dst string) {
+	sourceFI, err := os.Stat(src)
+	require.NoError(t, err)
+	if !sourceFI.Mode().IsRegular() {
+		// cannot copy non-regular files (e.g., directories,
+		// symlinks, devices, etc.)
+		err = fmt.Errorf("non-regular source file %s (%q)", sourceFI.Name(), sourceFI.Mode().String())
+		require.NoError(t, err)
+	}
+
+	destFI, err := os.Stat(dst)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			require.NoError(t, err)
+		}
+	} else {
+		if !(destFI.Mode().IsRegular()) {
+			err = fmt.Errorf("non-regular destination file %s (%q)", destFI.Name(), destFI.Mode().String())
+			require.NoError(t, err)
+		}
+		if os.SameFile(sourceFI, destFI) {
+			return
+		}
+	}
+
+	err = copyFileContents(src, dst)
+	require.NoError(t, err)
+}
+
 // CheckDir checks whether or not a directory exists. If it exists, returns the
 // file infos for further checking.
 func CheckDir(t testing.TB, exists bool, dir string) []os.FileInfo {
@@ -75,13 +138,19 @@ func WriteFile(t testing.TB, path, content string) {
 // leave filename parameter as an empty string.
 func CheckFile(t testing.TB, exists bool, path, filename string) string {
 	fp := filepath.Join(path, filename) // handles if filename is empty
-	content, err := ioutil.ReadFile(fp)
+	// Check if file exists
+	_, err := os.Stat(fp)
 	if !exists {
-		require.Error(t, err)
+		require.Error(t, err, fmt.Sprintf("file '%s' is not supposed to exist", filename))
+		require.True(t, errors.Is(err, os.ErrNotExist),
+			fmt.Sprintf("unexpected error when file '%s' is not supposed to exist", filename))
 		return ""
 	}
+	require.NoError(t, err, fmt.Sprintf("file '%s' does not exist", filename))
 
-	require.NoError(t, err)
+	// Return content of file if exists
+	content, err := ioutil.ReadFile(fp)
+	require.NoError(t, err, fmt.Sprintf("unable to read file '%s'", filename))
 	return string(content)
 }
 
@@ -150,4 +219,28 @@ func (t *TestingTB) Cleanup(f func()) {
 			prev()
 		}
 	}
+}
+
+// copyFileContents copies the contents of the file named src to the file named
+// by dst. The file will be created if it does not already exist. If the
+// destination file exists, all it's contents will be replaced by the contents
+// of the source file.
+func copyFileContents(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err = io.Copy(out, in); err != nil {
+		return err
+	}
+	err = out.Sync()
+	return err
 }

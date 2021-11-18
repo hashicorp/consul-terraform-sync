@@ -68,7 +68,7 @@ $ docker run --name cts -d --rm \
 
 ## How to build this image
 
-The [Dockerfile](https://github.com/hashicorp/consul-terraform-sync/blob/master/docker/Dockerfile) can be used to build a local Docker image with the below command and required argument. `VERSION` is the Consul-Terraform-Sync version to install from [releases.hashicorp.com](https://releases.hashicorp.com/consul-terraform-sync/) and build the image with.
+The [Dockerfile](https://github.com/hashicorp/consul-terraform-sync/blob/main/docker/Dockerfile) can be used to build a local Docker image with the below command and required argument. `VERSION` is the Consul-Terraform-Sync version to install from [releases.hashicorp.com](https://releases.hashicorp.com/consul-terraform-sync/) and build the image with.
 
 ```
 $ cd consul-terraform-sync/docker

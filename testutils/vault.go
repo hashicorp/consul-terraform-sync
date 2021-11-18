@@ -1,5 +1,5 @@
-// +build integration
-// +build vault
+//go:build integration && vault
+// +build integration,vault
 
 package testutils
 
