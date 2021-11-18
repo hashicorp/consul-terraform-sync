@@ -1,7 +1,8 @@
 // +build e2e
 
 // BenchmarkTasksConcurrent executes the ReadWrite controller directly to
-// benchmark tasks running concurrently. This emulates CTS in daemon mode.
+// benchmark tasks running concurrently with the default TF driver. This
+// emulates CTS in daemon mode.
 // $ go test ./e2e/benchmarks -bench=BenchmarkTasksConcurrent_ -tags e2e
 package benchmarks
 
@@ -20,104 +21,114 @@ import (
 )
 
 func BenchmarkTasksConcurrent_t01_s50(b *testing.B) {
-	benchmarkTasksConcurrent(b, 1, 50)
+	benchmarkTasksConcurrent(b, benchmarkConfig{
+		numTasks:    1,
+		numServices: 50,
+		timeout:     30 * time.Second,
+	})
 }
 
 func BenchmarkTasksConcurrent_t02_s50(b *testing.B) {
-	benchmarkTasksConcurrent(b, 2, 50)
+	benchmarkTasksConcurrent(b, benchmarkConfig{
+		numTasks:    2,
+		numServices: 50,
+		timeout:     30 * time.Second,
+	})
 }
 
 func BenchmarkTasksConcurrent_t10_s50(b *testing.B) {
-	benchmarkTasksConcurrent(b, 10, 50)
+	benchmarkTasksConcurrent(b, benchmarkConfig{
+		numTasks:    10,
+		numServices: 50,
+		timeout:     30 * time.Second,
+	})
 }
 
 func BenchmarkTasksConcurrent_t50_s50(b *testing.B) {
-	benchmarkTasksConcurrent(b, 50, 50)
+	benchmarkTasksConcurrent(b, benchmarkConfig{
+		numTasks:    50,
+		numServices: 50,
+		timeout:     30 * time.Second,
+	})
 }
 
-func benchmarkTasksConcurrent(b *testing.B, numTasks, numServices int) {
+func benchmarkTasksConcurrent(b *testing.B, bConf benchmarkConfig) {
 	// Benchmarks Run for the ReadWrite controller
 	//
 	// ReadWriteController.Run involves executing Terraform apply concurrently
-	srv := testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
-		HTTPSRelPath: "../../testutils",
-	})
+	srv := bConf.consul
+	if srv == nil {
+		srv = testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
+			HTTPSRelPath: "../../testutils",
+		})
+		defer srv.Stop()
+		bConf.consul = srv
+	}
 
-	defer srv.Stop()
+	if bConf.tempDir == "" {
+		bConf.tempDir = b.Name()
+		cleanup := testutils.MakeTempDir(b, bConf.tempDir)
+		defer cleanup()
+	}
 
-	tempDir := b.Name()
-	cleanup := testutils.MakeTempDir(b, tempDir)
-	defer cleanup()
-
-	conf := generateConf(benchmarkConfig{
-		consul:      srv,
-		tempDir:     tempDir,
-		numTasks:    numTasks,
-		numServices: numServices,
-	})
+	conf := generateConf(b, bConf)
 
 	ctrl, err := controller.NewReadWrite(conf)
 	require.NoError(b, err)
 	rwCtrl := ctrl.(*controller.ReadWrite)
 
-	b.Run("task setup", func(b *testing.B) {
-		for n := 0; n < b.N; n++ {
-			err = rwCtrl.Init(context.Background())
-			require.NoError(b, err)
-		}
-	})
+	err = rwCtrl.Init(context.Background())
+	require.NoError(b, err)
 
 	err = rwCtrl.Once(context.Background())
 	require.NoError(b, err)
 
-	b.Run("task concurrent execution", func(b *testing.B) {
-		// This is the crux of the benchmark which evaluates the performance of
-		// tasks triggered and executing concurrently.
-		for n := 0; n < b.N; n++ {
-			ctx, ctxCancel := context.WithCancel(context.Background())
-			defer ctxCancel()
-			ctrlStopped := make(chan error)
-			completedTasksCh := rwCtrl.EnableTestMode()
+	// This is the crux of the benchmark which evaluates the performance of
+	// tasks triggered and executing concurrently.
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	defer ctxCancel()
+	ctrlStopped := make(chan error)
+	completedTasksCh := rwCtrl.EnableTestMode()
 
-			go func() {
-				ctrlStopped <- rwCtrl.Run(ctx)
-			}()
+	go func() {
+		ctrlStopped <- rwCtrl.Run(ctx)
+	}()
 
-			// Benchmark setup is done, reset the timer
-			b.ResetTimer()
+	// Benchmark setup is done, reset the timer
+	b.ResetTimer()
 
-			// Register service instance to Consul catalog. This triggers task execution
-			// for all tasks watching service-000
-			random := rand.New(rand.NewSource(time.Now().UnixNano()))
-			service := testutil.TestService{
-				ID:      fmt.Sprintf("service-000-%s-%d-%d", b.Name(), n, random.Intn(99999)),
-				Name:    "service-000",
-				Address: "5.6.7.8",
-				Port:    8080,
+	// Register service instance to Consul catalog. This triggers task execution
+	// for all tasks watching service-000
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	service := testutil.TestService{
+		ID:      fmt.Sprintf("service-000-%s-%d", b.Name(), random.Intn(99999)),
+		Name:    "service-000",
+		Address: "5.6.7.8",
+		Port:    8080,
+	}
+	testutils.RegisterConsulServiceHealth(b, srv, service, 0, testutil.HealthPassing)
+
+	ctxTimeout, ctxTimeoutCancel := context.WithTimeout(context.Background(), bConf.timeout)
+	defer ctxTimeoutCancel()
+
+	completedTasks := make(map[string]bool, len(*conf.Tasks))
+RunLoop:
+	for {
+		select {
+		case taskName := <-completedTasksCh:
+			completedTasks[taskName] = true
+			b.Logf("%s completed (%d/%d)", taskName, len(completedTasks), bConf.numTasks)
+			if len(completedTasks) == bConf.numTasks {
+				ctxCancel() // Benchmark completed before timing out, stop the controller
 			}
-			testutils.RegisterConsulServiceHealth(b, srv, service, 0, testutil.HealthPassing)
 
-			ctxTimeout, _ := context.WithTimeout(context.Background(), 30*time.Second)
-			completedTasks := make(map[string]bool, len(*conf.Tasks))
-		RunLoop:
-			for {
-				select {
-				case taskName := <-completedTasksCh:
-					completedTasks[taskName] = true
-					b.Logf("%s completed (%d/%d)", taskName, len(completedTasks), numTasks)
-					if len(completedTasks) == numTasks {
-						ctxCancel() // Benchmark completed before timing out, stop the controller
-					}
+		case <-ctxTimeout.Done():
+			ctxCancel() // Benchmark timed out, stop the controller
 
-				case <-ctxTimeout.Done():
-					ctxCancel() // Benchmark timed out, stop the controller
-
-				case err := <-ctrlStopped:
-					assert.Equal(b, err, context.Canceled)
-					assert.Len(b, completedTasks, numTasks, "%s timed out before tasks were triggered and had executed", b.Name())
-					break RunLoop
-				}
-			}
+		case err := <-ctrlStopped:
+			assert.Equal(b, err, context.Canceled)
+			assert.Len(b, completedTasks, bConf.numTasks, "%s timed out before tasks were triggered and had executed", b.Name())
+			break RunLoop
 		}
-	})
+	}
 }

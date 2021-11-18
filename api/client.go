@@ -1,15 +1,39 @@
 package api
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/go-rootcerts"
 )
 
 //go:generate mockery --name=httpClient  --structname=HttpClient --output=../mocks/api
+
+const (
+	HTTPScheme  = "http"
+	HTTPSScheme = "https"
+
+	DefaultAddress   = "http://localhost:8558"
+	DefaultSSLVerify = true
+
+	// Environment Variables
+	EnvAddress = "CTS_ADDRESS" // The address of the CTS daemon, supports http or https by specifying as part of the address (e.g. https://localhost:8558)
+
+	// TLS Environment Variables
+	EnvTLSCACert     = "CTS_CACERT"      // Path to a directory of CA certificates to use for TLS when communicating with Consul-Terraform-Sync
+	EnvTLSCAPath     = "CTS_CAPATH"      // Path to a CA file to use for TLS when communicating with Consul-Terraform-Sync
+	EnvTLSClientCert = "CTS_CLIENT_CERT" // Path to a client cert file to use for TLS when verify_incoming is enabled
+	EnvTLSClientKey  = "CTS_CLIENT_KEY"  // Path to a client key file to use for TLS when verify_incoming is enabled
+	EnvTLSSSLVerify  = "CTS_SSL_VERIFY"  // Boolean to verify SSL or not. Set to true to verify SSL. Default is true
+)
 
 // httpClient describes the interface for the client to make http calls
 type httpClient interface {
@@ -18,7 +42,8 @@ type httpClient interface {
 
 // Client to make api requests
 type Client struct {
-	port    int
+	port    int // remain for backwards compatibility but prefer addr
+	addr    string
 	version string
 	scheme  string
 	http    httpClient
@@ -26,24 +51,140 @@ type Client struct {
 
 // ClientConfig configures the client to make api requests
 type ClientConfig struct {
-	Port int
+	Port   int // Stay for now for backwards compatibility, but prefer Addr
+	Addr   string
+	Scheme string
+
+	TLSConfig TLSConfig
+}
+
+type TLSConfig struct {
+	// TLS variables
+	CAPath     string
+	CACert     string
+	ClientCert string
+	ClientKey  string
+	SSLVerify  bool
+}
+
+type addressComposite struct {
+	scheme  string
+	address string
+}
+
+// DefaultClientConfig returns a default configuration for the client
+func DefaultClientConfig() *ClientConfig {
+	c := &ClientConfig{
+		Port: config.DefaultPort,
+		Addr: DefaultAddress,
+		TLSConfig: TLSConfig{
+			SSLVerify: true,
+		},
+	}
+
+	// Read env vars
+	if v := os.Getenv(EnvAddress); v != "" {
+		c.Addr = v
+	}
+
+	// Read TLS env vars
+	if v := os.Getenv(EnvTLSCACert); v != "" {
+		c.TLSConfig.CACert = v
+	}
+	if v := os.Getenv(EnvTLSCAPath); v != "" {
+		c.TLSConfig.CAPath = v
+	}
+	if v := os.Getenv(EnvTLSClientCert); v != "" {
+		c.TLSConfig.ClientCert = v
+	}
+
+	if v := os.Getenv(EnvTLSClientKey); v != "" {
+		c.TLSConfig.ClientKey = v
+	}
+
+	if v := os.Getenv(EnvTLSSSLVerify); v != "" {
+		if verify, err := strconv.ParseBool(v); err == nil {
+			c.TLSConfig.SSLVerify = verify
+		}
+	}
+
+	return c
 }
 
 // NewClient returns a client to make api requests
-func NewClient(c *ClientConfig, httpClient httpClient) *Client {
+func NewClient(c *ClientConfig, httpClient httpClient) (*Client, error) {
 	if httpClient == nil {
-		httpClient = &http.Client{}
+		tlsConfig, err := setupTLSConfig(c)
+		if err != nil {
+			return nil, err
+		}
+		httpClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: tlsConfig,
+			},
+		}
 	}
+
+	// Determine the scheme and address without scheme based on the address passed in
+	ac, err := parseAddress(c.Addr)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Client{
 		port:    c.Port,
+		addr:    ac.address,
 		version: defaultAPIVersion,
-		scheme:  "http",
+		scheme:  ac.scheme,
 		http:    httpClient,
-	}
+	}, nil
 }
 
+// setupTLSConfig is used to generate a TLSClientConfig that's useful for talking to
+// Consul using TLS.
+func setupTLSConfig(c *ClientConfig) (*tls.Config, error) {
+	tlsClientConfig := &tls.Config{
+		// If verify is false, then we set skip verify to true
+		// InsecureSkipVerify will always be the opposite of SSLVerify
+		InsecureSkipVerify: !c.TLSConfig.SSLVerify,
+	}
+
+	if c.TLSConfig.ClientCert != "" && c.TLSConfig.ClientKey != "" {
+		tlsCert, err := tls.LoadX509KeyPair(c.TLSConfig.ClientCert, c.TLSConfig.ClientKey)
+		if err != nil {
+			return nil, err
+		}
+		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
+	} else if c.TLSConfig.ClientCert != "" || c.TLSConfig.ClientKey != "" {
+		return nil, fmt.Errorf("both client cert and client key must be provided")
+	}
+
+	if c.TLSConfig.CACert != "" || c.TLSConfig.CAPath != "" {
+		rootConfig := &rootcerts.Config{
+			CAFile: c.TLSConfig.CACert,
+			CAPath: c.TLSConfig.CAPath,
+		}
+		if err := rootcerts.ConfigureTLS(tlsClientConfig, rootConfig); err != nil {
+			return nil, err
+		}
+	}
+
+	return tlsClientConfig, nil
+}
+
+// Port returns the port being used by the client
 func (c *Client) Port() int {
 	return c.port
+}
+
+// FullAddress returns the client address including the scheme. eg. http://localhost:8558
+func (c *Client) FullAddress() string {
+	return fmt.Sprintf("%s://%s", c.scheme, c.addr)
+}
+
+// Scheme returns the scheme being used by the client
+func (c *Client) Scheme() string {
+	return fmt.Sprintf(c.scheme)
 }
 
 // WaitForAPI polls the /v1/status endpoint to check when the CTS API is
@@ -87,15 +228,29 @@ func (c *Client) WaitForAPI(timeout time.Duration) error {
 // path: relative path with no preceding '/' e.g. "status/tasks"
 // query: URL encoded query string with no preceding '?'. See QueryParam.Encode()
 func (c *Client) request(method, path, query, body string) (*http.Response, error) {
-	url := url.URL{
-		Scheme:   "http",
-		Host:     fmt.Sprintf("localhost:%d", c.port),
-		Path:     fmt.Sprintf("%s/%s", c.version, path),
-		RawQuery: query,
+	var serverURL url.URL
+
+	// If port is default, use the address variable instead
+	if c.port == config.DefaultPort {
+		serverURL = url.URL{
+			Scheme:   c.scheme,
+			Host:     c.addr,
+			Path:     fmt.Sprintf("%s/%s", c.version, path),
+			RawQuery: query,
+		}
+	} else {
+		// If port is set, assume using old arguments and append port to localhost
+		// assume http scheme
+		serverURL = url.URL{
+			Scheme:   c.scheme,
+			Host:     fmt.Sprintf("localhost:%d", c.port),
+			Path:     fmt.Sprintf("%s/%s", c.version, path),
+			RawQuery: query,
+		}
 	}
 
 	r := strings.NewReader(body)
-	req, err := http.NewRequest(method, url.String(), r)
+	req, err := http.NewRequest(method, serverURL.String(), r)
 	if err != nil {
 		return nil, err
 	}
@@ -243,4 +398,23 @@ func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (Upda
 	}
 
 	return plan, nil
+}
+
+func parseAddress(addr string) (addressComposite, error) {
+	ac := addressComposite{}
+	ac.scheme = HTTPScheme
+	parts := strings.SplitN(addr, "://", 2)
+	if len(parts) == 2 {
+		switch parts[0] {
+		case HTTPScheme:
+			ac.scheme = HTTPScheme
+		case HTTPSScheme:
+			ac.scheme = HTTPSScheme
+		default:
+			return addressComposite{}, fmt.Errorf("unknown protocol scheme: %s", parts[0])
+		}
+		ac.address = parts[1]
+	}
+
+	return ac, nil
 }

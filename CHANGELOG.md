@@ -1,3 +1,8 @@
+## UNRELEASED
+
+IMPROVEMENTS:
+* **(Enterprise Only)** Add default address for the Terraform Cloud driver to https://app.terraform.io.
+
 ## 0.4.1 (November 03, 2021)
 
 BUG FIXES:

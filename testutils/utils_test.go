@@ -3,6 +3,8 @@ package testutils
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -34,15 +36,90 @@ func TestFreePort(t *testing.T) {
 func TestMakeTempDir(t *testing.T) {
 	t.Run("happy-path", func(t *testing.T) {
 		tempDir := "test-temp"
-		delete := MakeTempDir(t, tempDir)
+		del := MakeTempDir(t, tempDir)
 
 		_, err := ioutil.ReadDir(tempDir)
 		require.NoError(t, err)
 
-		delete()
+		del()
 		_, err = ioutil.ReadDir(tempDir)
 		require.Error(t, err)
 	})
+}
+
+func TestFindFileMatches(t *testing.T) {
+	tempDir := "temp-src"
+	del := MakeTempDir(t, tempDir)
+
+	badFiles := []string{filepath.Join(tempDir, "file1.bad"), filepath.Join(tempDir, "file2.bad")}
+	goodFiles := []string{filepath.Join(tempDir, "file1.good"), filepath.Join(tempDir, "file2.good")}
+	for _, f := range badFiles {
+		_, err := os.Create(f)
+		require.NoError(t, err)
+	}
+
+	for _, f := range goodFiles {
+		_, err := os.Create(f)
+		require.NoError(t, err)
+	}
+
+	mf := FindFileMatches(t, tempDir, "*.good")
+
+	// Sort both slices to make sure the order doesn't affect the equal check
+	sort.Strings(goodFiles)
+	sort.Strings(mf)
+	require.Equal(t, mf, goodFiles)
+
+	del()
+}
+
+func TestCopyFiles(t *testing.T) {
+	tempDir := "test-temp"
+	tempSubDir := filepath.Join(tempDir, "test-sub")
+	delRoot := MakeTempDir(t, tempDir)
+	del := MakeTempDir(t, tempSubDir)
+	tempSrc := "temp-src"
+	delSrc := MakeTempDir(t, tempSrc)
+
+	files := []string{filepath.Join(tempSrc, "file1"), filepath.Join(tempSrc, "file2")}
+	for _, f := range files {
+		_, err := os.Create(f)
+		require.NoError(t, err)
+	}
+
+	CopyFiles(t, files, tempSubDir)
+
+	for _, f := range files {
+		name := filepath.Base(f)
+		_, err := os.Stat(filepath.Join(tempSubDir, name))
+		require.NoError(t, err)
+	}
+
+	del()
+	delRoot()
+	delSrc()
+}
+
+func TestCopyFile(t *testing.T) {
+	tempSrc := "test-src"
+	delSrc := MakeTempDir(t, tempSrc)
+
+	tempDir := "test-temp"
+	delTemp := MakeTempDir(t, tempDir)
+
+	fileName := "file1"
+	src := filepath.Join(tempSrc, fileName)
+	_, err := os.Create(src)
+	require.NoError(t, err)
+
+	dst := filepath.Join(tempDir, fileName)
+	CopyFile(t, src, dst)
+
+	_, err = os.Stat(dst)
+	require.NoError(t, err)
+
+	delSrc()
+	delTemp()
 }
 
 func TestSetEnvVar(t *testing.T) {

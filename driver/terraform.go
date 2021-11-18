@@ -256,7 +256,8 @@ type InspectPlan struct {
 
 // UpdateTask updates the task on the driver. Makes any calls to re-init
 // depending on the fields updated. If update task is requested with the inspect
-// run option, then returns the inspected plan
+// run option, then dry run the updates by returning the inspected plan for the
+// expected updates but do not update the task
 func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPlan, error) {
 	taskName := tf.task.Name()
 	switch patch.RunOption {
@@ -269,6 +270,19 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
+
+	// for inspect, dry-run the task with the planned change and then make sure
+	// to reset the task back to the way it was
+	if patch.RunOption == RunOptionInspect {
+		originalEnabled := tf.task.IsEnabled()
+		defer func() {
+			if originalEnabled {
+				tf.task.Enable()
+			} else {
+				tf.task.Disable()
+			}
+		}()
+	}
 
 	reinit := false
 
@@ -384,7 +398,7 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 	// initialize workspace
 	taskName := tf.task.Name()
 	if err := tf.init(ctx); err != nil {
-		tf.logger.Error("error initializing worksapce for task", taskNameLogKey, taskName)
+		tf.logger.Error("error initializing workspace for task", taskNameLogKey, taskName)
 		return err
 	}
 

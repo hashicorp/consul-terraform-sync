@@ -224,7 +224,12 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 		default:
 			fmt.Fprintf(&sb, "%s: %s\n", d.Severity, d.Summary)
 			if d.Range != nil && d.Snippet != nil {
-				fmt.Fprintf(&sb, "\non %s line %d, in %s\n", d.Range.Filename, d.Range.Start.Line, *d.Snippet.Context)
+				if d.Snippet.Context != nil {
+					fmt.Fprintf(&sb, "\non %s line %d, in %s\n",
+						d.Range.Filename, d.Range.Start.Line, *d.Snippet.Context)
+				} else {
+					fmt.Fprintf(&sb, "\non %s line %d\n", d.Range.Filename, d.Range.Start.Line)
+				}
 				fmt.Fprintf(&sb, "%d:%s\n\n", d.Snippet.StartLine, d.Snippet.Code)
 			}
 			sb.WriteString(d.Detail)

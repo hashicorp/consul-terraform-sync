@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
-
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )

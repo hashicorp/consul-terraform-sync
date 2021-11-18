@@ -9,7 +9,12 @@ project "consul-terraform-sync" {
   github {
     organization = "hashicorp"
     repository = "consul-terraform-sync"
-    release_branches = ["release/0.4.x"]
+    release_branches = [
+      "main",
+      "release/0.2.x",
+      "release/0.3.x",
+      "release/0.4.x"
+    ]
   }
 }
 

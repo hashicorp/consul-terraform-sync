@@ -114,6 +114,7 @@ func (h *taskStatusHandler) getTaskStatus(w http.ResponseWriter, r *http.Request
 				err := fmt.Errorf("task '%s' does not exist", taskName)
 				logger.Trace("error getting task", "error", err)
 				jsonErrorResponse(r.Context(), w, http.StatusNotFound, err)
+				return
 			}
 		}
 	}

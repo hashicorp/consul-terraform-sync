@@ -1,8 +1,12 @@
+//go:build e2e
+// +build e2e
+
 package e2e
 
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -45,6 +49,51 @@ consul {
 `, consul.HTTPSAddr, consul.Config.CertFile))
 }
 
+func (c hclConfig) appendTLSBlock(config tlsConfig) hclConfig {
+
+	// Build block based on tlsConfig
+	/* Example:
+	tls {
+	  enabled = true
+	  cert = "../testutils/certs/localhost_cert.pem"
+	  key = "../testutils/certs/localhost_key.pem"
+	}
+	*/
+	s := `
+tls {
+  enabled = true`
+
+	if config.clientCert != "" {
+		s = fmt.Sprintf(s+`
+  cert = "%s"`, config.clientCert)
+	}
+
+	if config.clientKey != "" {
+		s = fmt.Sprintf(s+`
+  key = "%s"`, config.clientKey)
+	}
+
+	if config.caCert != "" {
+		s = fmt.Sprintf(s+`
+  ca_cert = "%s"`, config.caCert)
+	}
+
+	if config.caPath != "" {
+		s = fmt.Sprintf(s+`
+  ca_path = "%s"`, config.caPath)
+	}
+
+	if config.verifyIncoming != nil {
+		s = fmt.Sprintf(s+`
+  verify_incoming = %s`, strconv.FormatBool(*config.verifyIncoming))
+	}
+
+	s = s + `
+}
+`
+	return c.appendString(s)
+}
+
 func (c hclConfig) appendTerraformBlock(opts ...string) hclConfig {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -64,16 +113,19 @@ driver "terraform" {
 `, cwd, optsConfig))
 }
 
-func (c hclConfig) appendDBTask() hclConfig {
-	return c.appendString(fmt.Sprintf(`
+func dbTask() string {
+	return fmt.Sprintf(`
 task {
 	name = "%s"
 	description = "basic read-write e2e task for api & db"
 	services = ["api", "db"]
 	providers = ["local"]
 	source = "./test_modules/local_instances_file"
+}`, dbTaskName)
 }
-`, dbTaskName))
+
+func (c hclConfig) appendDBTask() hclConfig {
+	return c.appendString(dbTask())
 }
 
 func (c hclConfig) appendWebTask() hclConfig {
@@ -86,6 +138,31 @@ task {
 	source = "./test_modules/local_instances_file"
 }
 `, webTaskName))
+}
+
+// appendModuleTask adds a task configuration with the given name and source, along with any additional
+// task configurations (e.g., condition, providers) provided with the opts parameter
+func (c hclConfig) appendModuleTask(name string, source string, opts ...string) hclConfig {
+	return c.appendString(moduleTaskConfig(name, source, opts...))
+}
+
+// moduleTaskConfig generates a task configuration string with the given name and source, along with any
+// additional task configurations (e.g., condition, providers) provided with the opts parameter
+func moduleTaskConfig(name string, source string, opts ...string) string {
+	var optsConfig string
+	if len(opts) > 0 {
+		optsConfig = "\n" + strings.Join(opts, "\n")
+	}
+
+	return fmt.Sprintf(`
+task {
+	name = "%s"
+	description = "e2e test"
+	services = ["api", "web"]
+	source = "%s"
+	%s
+}
+`, name, source, optsConfig)
 }
 
 func baseConfig(wd string) hclConfig {
@@ -162,10 +239,8 @@ task {
 }
 
 // disabledTaskConfig returns a config file with a task that is disabled
-func disabledTaskConfig(dir string) hclConfig {
-	return hclConfig(fmt.Sprintf(`
-working_dir = "%s"
-
+func disabledTaskConfig(dir string) string {
+	return fmt.Sprintf(`
 task {
 	name = "%s"
 	description = "task is configured as disabled"
@@ -174,12 +249,7 @@ task {
 	providers = ["local"]
 	source = "./test_modules/local_instances_file"
 }
-
-service {
-	name = "api"
-	description = "backend"
-}
-`, dir, disabledTaskName))
+`, disabledTaskName)
 }
 
 func panosBadCredConfig() hclConfig {

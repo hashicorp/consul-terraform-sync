@@ -46,6 +46,7 @@ type Config struct {
 	Services           *ServiceConfigs           `mapstructure:"service"`
 	TerraformProviders *TerraformProviderConfigs `mapstructure:"terraform_provider"`
 	BufferPeriod       *BufferPeriodConfig       `mapstructure:"buffer_period"`
+	TLS                *CTSTLSConfig             `mapstructure:"tls"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -85,6 +86,7 @@ func DefaultConfig() *Config {
 		Services:           DefaultServiceConfigs(),
 		TerraformProviders: DefaultTerraformProviderConfigs(),
 		BufferPeriod:       DefaultBufferPeriodConfig(),
+		TLS:                DefaultCTSTLSConfig(),
 	}
 }
 
@@ -107,6 +109,7 @@ func (c *Config) Copy() *Config {
 		Services:           c.Services.Copy(),
 		TerraformProviders: c.TerraformProviders.Copy(),
 		BufferPeriod:       c.BufferPeriod.Copy(),
+		TLS:                c.TLS.Copy(),
 	}
 }
 
@@ -170,6 +173,10 @@ func (c *Config) Merge(o *Config) *Config {
 
 	if o.BufferPeriod != nil {
 		r.BufferPeriod = r.BufferPeriod.Merge(o.BufferPeriod)
+	}
+
+	if o.TLS != nil {
+		r.TLS = r.TLS.Merge(o.TLS)
 	}
 
 	return r
@@ -244,6 +251,11 @@ func (c *Config) Finalize() {
 		c.TerraformProviders = DefaultTerraformProviderConfigs()
 	}
 	c.TerraformProviders.Finalize()
+
+	if c.TLS == nil {
+		c.TLS = DefaultCTSTLSConfig()
+	}
+	c.TLS.Finalize()
 }
 
 // Validate validates the values and nested values of the configuration struct
@@ -277,6 +289,10 @@ func (c *Config) Validate() error {
 	}
 
 	if err := c.validateDynamicConfigs(); err != nil {
+		return err
+	}
+
+	if err := c.TLS.Validate(); err != nil {
 		return err
 	}
 
@@ -332,7 +348,8 @@ func (c *Config) GoString() string {
 		"Tasks:%s, "+
 		"Services:%s, "+
 		"TerraformProviders:%s, "+
-		"BufferPeriod:%s"+
+		"BufferPeriod:%s,"+
+		"TLS:%s"+
 		"}",
 		StringVal(c.LogLevel),
 		IntVal(c.Port),
@@ -345,6 +362,7 @@ func (c *Config) GoString() string {
 		c.Services.GoString(),
 		c.TerraformProviders.GoString(),
 		c.BufferPeriod.GoString(),
+		c.TLS.GoString(),
 	)
 }
 

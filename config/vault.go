@@ -174,29 +174,7 @@ func (c *VaultConfig) Finalize() {
 	if c.TLS == nil {
 		c.TLS = DefaultTLSConfig()
 	}
-	if c.TLS.Enabled == nil {
-		c.TLS.Enabled = Bool(true)
-	}
-	if c.TLS.CACert == nil {
-		c.TLS.CACert = stringFromEnv([]string{api.EnvVaultCACert}, "")
-	}
-	if c.TLS.CAPath == nil {
-		c.TLS.CAPath = stringFromEnv([]string{api.EnvVaultCAPath}, "")
-	}
-	if c.TLS.Cert == nil {
-		c.TLS.Cert = stringFromEnv([]string{api.EnvVaultClientCert}, "")
-	}
-	if c.TLS.Key == nil {
-		c.TLS.Key = stringFromEnv([]string{api.EnvVaultClientKey}, "")
-	}
-	if c.TLS.ServerName == nil {
-		c.TLS.ServerName = stringFromEnv([]string{api.EnvVaultTLSServerName}, "")
-	}
-	if c.TLS.Verify == nil {
-		c.TLS.Verify = antiboolFromEnv([]string{
-			api.EnvVaultSkipVerify, api.EnvVaultInsecure}, true)
-	}
-	c.TLS.Finalize()
+	c.TLS.FinalizeVault()
 
 	// Order of precedence
 	// 1. `vault_agent_token_file` configuration value

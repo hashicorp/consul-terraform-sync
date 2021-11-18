@@ -25,6 +25,6 @@ If you're reporting what you think is a bug (i.e., something isn't right with an
 
 ## Licensing
 
-See the [LICENSE](https://github.com/hashicorp/consul-terraform-sync/blob/master/LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
+See the [LICENSE](https://github.com/hashicorp/consul-terraform-sync/blob/main/LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
 
 If you want to contribute to this project, we may ask you to sign a **[Contributor License Agreement (CLA)](https://www.hashicorp.com/cla)**.

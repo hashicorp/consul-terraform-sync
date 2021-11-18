@@ -84,7 +84,8 @@ func TestRequest(t *testing.T) {
 			}
 			hc.On("Do", mock.Anything).Return(mockResp, tc.httpError).Once()
 
-			c := NewClient(&ClientConfig{Port: 8558}, hc)
+			c, err := NewClient(&ClientConfig{Port: 8558}, hc)
+			require.NoError(t, err)
 			resp, err := c.request("GET", "v1/some/endpoint", "test=true", "body")
 			if tc.expectError {
 				assert.Error(t, err)
@@ -114,19 +115,28 @@ func TestStatus(t *testing.T) {
 
 	// setup drivers
 	drivers := driver.NewDrivers()
-	drivers.Add("task_a", createDriver(t, "task_a", true))
-	drivers.Add("task_b", createDriver(t, "task_b", true))
-	drivers.Add("task_c", createDriver(t, "task_c", true))
+	err := drivers.Add("task_a", createDriver(t, "task_a", true))
+	require.NoError(t, err)
+	err = drivers.Add("task_b", createDriver(t, "task_b", true))
+	require.NoError(t, err)
+	err = drivers.Add("task_c", createDriver(t, "task_c", true))
+	require.NoError(t, err)
 
 	// start up server
 	port := testutils.FreePort(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	api := NewAPI(store, drivers, port)
+	api, err := NewAPI(&APIConfig{
+		Store:   store,
+		Drivers: drivers,
+		Port:    port,
+	})
+	require.NoError(t, err)
 	go api.Serve(ctx)
 
-	c := NewClient(&ClientConfig{Port: port}, nil)
-	err := c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
+	c, err := NewClient(&ClientConfig{Port: port}, nil)
+	require.NoError(t, err)
+	err = c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
 	require.NoError(t, err)
 
 	t.Run("overall-status", func(t *testing.T) {
@@ -162,7 +172,7 @@ func TestStatus(t *testing.T) {
 				nil,
 				false,
 				map[string]TaskStatus{
-					"task_a": TaskStatus{
+					"task_a": {
 						TaskName:  "task_a",
 						Enabled:   true,
 						Status:    StatusSuccessful,
@@ -170,7 +180,7 @@ func TestStatus(t *testing.T) {
 						Services:  []string{},
 						EventsURL: "/v1/status/tasks/task_a?include=events",
 					},
-					"task_b": TaskStatus{
+					"task_b": {
 						TaskName:  "task_b",
 						Enabled:   true,
 						Status:    StatusCritical,
@@ -178,7 +188,7 @@ func TestStatus(t *testing.T) {
 						Services:  []string{},
 						EventsURL: "/v1/status/tasks/task_b?include=events",
 					},
-					"task_c": TaskStatus{
+					"task_c": {
 						TaskName:  "task_c",
 						Enabled:   true,
 						Status:    StatusCritical,
@@ -194,7 +204,7 @@ func TestStatus(t *testing.T) {
 				nil,
 				false,
 				map[string]TaskStatus{
-					"task_a": TaskStatus{
+					"task_a": {
 						TaskName:  "task_a",
 						Enabled:   true,
 						Status:    StatusSuccessful,
@@ -210,7 +220,7 @@ func TestStatus(t *testing.T) {
 				&QueryParam{IncludeEvents: true},
 				false,
 				map[string]TaskStatus{
-					"task_b": TaskStatus{
+					"task_b": {
 						TaskName:  "task_b",
 						Status:    StatusCritical,
 						Enabled:   true,
@@ -227,7 +237,7 @@ func TestStatus(t *testing.T) {
 				&QueryParam{Status: StatusCritical},
 				false,
 				map[string]TaskStatus{
-					"task_b": TaskStatus{
+					"task_b": {
 						TaskName:  "task_b",
 						Enabled:   true,
 						Status:    StatusCritical,
@@ -235,7 +245,7 @@ func TestStatus(t *testing.T) {
 						Services:  []string{},
 						EventsURL: "/v1/status/tasks/task_b?include=events",
 					},
-					"task_c": TaskStatus{
+					"task_c": {
 						TaskName:  "task_c",
 						Enabled:   true,
 						Status:    StatusCritical,
@@ -276,18 +286,23 @@ func Test_Task_Update(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	drivers := driver.NewDrivers()
-	api := NewAPI(event.NewStore(), drivers, port)
+	api, err := NewAPI(&APIConfig{
+		Drivers: drivers,
+		Port:    port,
+	})
+	require.NoError(t, err)
 	go api.Serve(ctx)
 
-	c := NewClient(&ClientConfig{Port: port}, nil)
-	err := c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
+	c, err := NewClient(&ClientConfig{Port: port}, nil)
+	require.NoError(t, err)
+	err = c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
 	require.NoError(t, err)
 
 	t.Run("disable-then-enable", func(t *testing.T) {
 		// setup temp dir
 		tempDir := "disable-enable"
-		delete := testutils.MakeTempDir(t, tempDir)
-		defer delete()
+		del := testutils.MakeTempDir(t, tempDir)
+		defer del()
 
 		task, err := driver.NewTask(driver.TaskConfig{Enabled: true, WorkingDir: tempDir})
 		require.NoError(t, err)
@@ -298,7 +313,8 @@ func Test_Task_Update(t *testing.T) {
 			ClientType: "test",
 		})
 		require.NoError(t, err)
-		drivers.Add("task_a", d)
+		err = drivers.Add("task_a", d)
+		require.NoError(t, err)
 
 		assert.True(t, d.Task().IsEnabled())
 		plan, err := c.Task().Update("task_a", UpdateTaskConfig{
@@ -324,7 +340,8 @@ func Test_Task_Update(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("UpdateTask", mock.Anything, mock.Anything).
 			Return(expectedPlan, nil).Once()
-		drivers.Add("task_b", d)
+		err = drivers.Add("task_b", d)
+		require.NoError(t, err)
 
 		actual, err := c.Task().Update("task_b", UpdateTaskConfig{
 			Enabled: config.Bool(false),
@@ -339,8 +356,9 @@ func TestWaitForAPI(t *testing.T) {
 	t.Parallel()
 
 	t.Run("timeout", func(t *testing.T) {
-		cts := NewClient(&ClientConfig{Port: 0}, nil)
-		err := cts.WaitForAPI(time.Second)
+		cts, err := NewClient(&ClientConfig{Port: 0}, nil)
+		require.NoError(t, err)
+		err = cts.WaitForAPI(time.Second)
 		assert.Error(t, err, "No CTS API server running, test is expected to timeout")
 	})
 
@@ -349,12 +367,15 @@ func TestWaitForAPI(t *testing.T) {
 		port := testutils.FreePort(t)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		drivers := driver.NewDrivers()
-		api := NewAPI(event.NewStore(), drivers, port)
+		api, err := NewAPI(&APIConfig{
+			Port: port,
+		})
+		require.NoError(t, err)
 		go api.Serve(ctx)
 
-		cts := NewClient(&ClientConfig{Port: port}, nil)
-		err := cts.WaitForAPI(3 * time.Second)
+		cts, err := NewClient(&ClientConfig{Port: port}, nil)
+		require.NoError(t, err)
+		err = cts.WaitForAPI(3 * time.Second)
 		assert.NoError(t, err, "CTS API server should be available")
 	})
 }

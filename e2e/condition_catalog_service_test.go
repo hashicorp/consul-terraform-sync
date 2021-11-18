@@ -1,21 +1,17 @@
+//go:build e2e
 // +build e2e
 
 package e2e
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
-	"github.com/hashicorp/consul-terraform-sync/event"
-	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,6 +29,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 		tempDirName string
 		resource    string
 		taskConf    string
+		include     bool
 	}{
 		{
 			"source_includes_var=true",
@@ -46,6 +43,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 		source_includes_var = true
 	}
 }`,
+			true,
 		},
 		{
 			"source_includes_var=false",
@@ -57,13 +55,14 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 	source = "./test_modules/local_instances_file"
 	condition "catalog-services" {}
 }`,
+			false,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			testCatalogServicesRegistration(t, tc.taskConf, "catalog_task",
-				tc.tempDirName, tc.resource)
+				tc.tempDirName, tc.resource, tc.include)
 		})
 	}
 }
@@ -109,12 +108,12 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(fmt.Sprintf("%s/ServicesTrigger", tc.name), func(t *testing.T) {
 			testCatalogServicesNoServicesTrigger(t, tc.taskConf, "catalog_task",
-				fmt.Sprintf("cs_condition_no_services_trigger_include_%t", tc.include))
+				"cs_condition_no_services_trigger_include_", tc.include)
 		})
 
 		t.Run(fmt.Sprintf("%s/TagsTrigger", tc.name), func(t *testing.T) {
 			testCatalogServicesNoTagsTrigger(t, tc.taskConf, "catalog_task",
-				fmt.Sprintf("cs_condition_no_tags_trigger_include_%t", tc.include))
+				"cs_condition_no_tags_trigger_include_", tc.include)
 		})
 	}
 }
@@ -130,8 +129,6 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_include")
-	delete := testutils.MakeTempDir(t, tempDir)
-
 	conditionTask := `task {
 	name = "catalog_task"
 	services = ["api"]
@@ -142,25 +139,15 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	}
 }
 `
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(conditionTask)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	api.StartCTS(t, configPath, api.CTSOnceModeFlag)
+	ctsSetup(t, srv, tempDir, conditionTask)
 
 	// confirm that only two files were generated, one for db and one for web
 	resourcesPath := filepath.Join(tempDir, "catalog_task", resourcesDir)
 	files := testutils.CheckDir(t, true, resourcesPath)
 	require.Equal(t, 2, len(files))
 
-	contents := testutils.CheckFile(t, true, resourcesPath, "db_tags.txt")
-	require.Equal(t, "tag3,tag4", string(contents))
-
-	contents = testutils.CheckFile(t, true, resourcesPath, "web_tags.txt")
-	require.Equal(t, "tag2", string(contents))
-
-	delete()
+	validateModuleFile(t, true, true, resourcesPath, "db_tags", "tag3,tag4")
+	validateModuleFile(t, true, true, resourcesPath, "web_tags", "tag2")
 }
 
 // TestCondition_CatalogServices_Regexp runs the CTS binary. It specifically
@@ -179,8 +166,6 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_regexp")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
 	taskName := "catalog_task"
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
@@ -192,16 +177,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 }
 `, taskName)
 
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(conditionTask)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, conditionTask)
 
 	// Test that regex filter is filtering service registration information and
 	// task triggers
@@ -217,8 +193,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	require.Equal(t, 1, eventCountBase)
 
 	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
-	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "catalog_services = {\n}")
+	validateVariable(t, true, workingDir, "catalog_services", "{\n}")
 
 	// 1. Register a filtered out service "db"
 	service := testutil.TestService{ID: "db-1", Name: "db"}
@@ -229,8 +204,9 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	require.Equal(t, eventCountBase, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "catalog_services = {\n}")
+	validateVariable(t, true, workingDir, "catalog_services", "{\n}")
+	resourcesPath := filepath.Join(workingDir, resourcesDir)
+	validateModuleFile(t, true, false, resourcesPath, "db_tags", "")
 
 	// 2. Register a matched service "api-web"
 	now := time.Now()
@@ -242,10 +218,9 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, `"api-web" = []`)
-
-	cleanup()
+	validateVariable(t, true, workingDir, "catalog_services", `"api-web" = []`)
+	validateModuleFile(t, true, true, resourcesPath, "api-web_tags", "")
+	validateModuleFile(t, true, false, resourcesPath, "db_tags", "")
 }
 
 func TestCondition_CatalogServices_MultipleTasks(t *testing.T) {
@@ -287,18 +262,7 @@ task {
 `, apiTaskName, apiWebTaskName, allTaskName)
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_multi")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(tasks)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI * 3)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, tasks)
 
 	// Test that the appropriate task is triggered given a particular service
 	// registration
@@ -319,9 +283,9 @@ task {
 	api.WaitForEvent(t, cts, apiWebTaskName, now, defaultWaitForEvent*2)
 	api.WaitForEvent(t, cts, apiTaskName, now, defaultWaitForEvent*2)
 
-	testutils.CheckFile(t, true, allResourcesPath, "api_tags.txt")
-	testutils.CheckFile(t, true, apiWebResourcesPath, "api_tags.txt")
-	testutils.CheckFile(t, true, apiResourcesPath, "api_tags.txt")
+	validateModuleFile(t, true, true, allResourcesPath, "api_tags", "")
+	validateModuleFile(t, true, true, apiWebResourcesPath, "api_tags", "")
+	validateModuleFile(t, true, true, apiResourcesPath, "api_tags", "")
 
 	// 2. Register web, only all_task and api_web_task create resource
 	now = time.Now()
@@ -330,9 +294,9 @@ task {
 	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent*2)
 	api.WaitForEvent(t, cts, apiWebTaskName, now, defaultWaitForEvent*2)
 
-	testutils.CheckFile(t, true, allResourcesPath, "web_tags.txt")
-	testutils.CheckFile(t, true, apiWebResourcesPath, "web_tags.txt")
-	testutils.CheckFile(t, false, apiResourcesPath, "web_tags.txt")
+	validateModuleFile(t, true, true, allResourcesPath, "web_tags", "")
+	validateModuleFile(t, true, true, apiWebResourcesPath, "web_tags", "")
+	validateModuleFile(t, true, false, apiResourcesPath, "web_tags", "")
 
 	// 3. Register db, only all_task create resource
 	now = time.Now()
@@ -341,32 +305,19 @@ task {
 	api.WaitForEvent(t, cts, allTaskName, now, defaultWaitForEvent)
 	time.Sleep(defaultWaitForNoEvent) // ensure api_web_task & api_task don't trigger
 
-	testutils.CheckFile(t, true, allResourcesPath, "db_tags.txt")
-	testutils.CheckFile(t, false, apiWebResourcesPath, "db_tags.txt")
-	testutils.CheckFile(t, false, apiResourcesPath, "db_tags.txt")
-
-	cleanup()
+	validateModuleFile(t, true, true, allResourcesPath, "db_tags", "")
+	validateModuleFile(t, true, false, apiWebResourcesPath, "db_tags", "")
+	validateModuleFile(t, true, false, apiResourcesPath, "db_tags", "")
 }
 
-func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirName, resource string) {
+func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirName, resource string, include bool) {
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
 	})
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(taskConf)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	cts := ctsSetup(t, srv, tempDir, taskConf)
 
 	// Test that task is triggered on service registration and deregistration
 	// 0. Confirm baseline: nothing is registered so no resource created yet
@@ -382,20 +333,17 @@ func testCatalogServicesRegistration(t *testing.T, taskConf, taskName, tempDirNa
 	service := testutil.TestService{ID: "api-1", Name: "api"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
-
-	testutils.CheckFile(t, true, resourcesPath, resource)
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
 
 	// 2. Deregister api, resource destroyed
 	now = time.Now()
 	testutils.DeregisterConsulService(t, srv, "api-1")
 	api.WaitForEvent(t, cts, taskName, now,
 		defaultWaitForRegistration+defaultWaitForEvent)
-	testutils.CheckFile(t, false, resourcesPath, resource)
-
-	cleanup()
+	validateModuleFile(t, include, false, resourcesPath, "api_tags", "")
 }
 
-func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, tempDirName string) {
+func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, tempDirName string, include bool) {
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
 	})
@@ -404,19 +352,8 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	service := testutil.TestService{ID: "api-1", Name: "api"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(taskConf)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	tempDir := fmt.Sprintf("%s%s%t", tempDirPrefix, tempDirName, include)
+	cts := ctsSetup(t, srv, tempDir, taskConf)
 
 	// Test that task is not triggered by service-instance specific changes and
 	// only by service registration changes.
@@ -432,8 +369,9 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	require.Equal(t, 1, eventCountBase)
 
 	workingDir := filepath.Join(tempDir, taskName)
-	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "api-1")
+	validateVariable(t, true, workingDir, "services", "api-1")
+	resourcesPath := filepath.Join(workingDir, resourcesDir)
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
 
 	// 1. Register second api service instance "api-2" (no trigger)
 	service = testutil.TestService{ID: "api-2", Name: "api"}
@@ -444,8 +382,8 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	require.Equal(t, eventCountBase, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.NotContains(t, content, "api-2")
+	validateVariable(t, false, workingDir, "services", "api-2")
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
 
 	// 2. Register db service (trigger + render template)
 	now := time.Now()
@@ -457,14 +395,13 @@ func testCatalogServicesNoServicesTrigger(t *testing.T, taskConf, taskName, temp
 	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "api-2")
-	assert.Contains(t, content, "db-1")
-
-	cleanup()
+	validateVariable(t, true, workingDir, "services", "api-2")
+	validateVariable(t, true, workingDir, "services", "db-1")
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "")
+	validateModuleFile(t, include, true, resourcesPath, "db_tags", "")
 }
 
-func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirName string) {
+func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirName string, include bool) {
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
 	})
@@ -473,19 +410,8 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	service := testutil.TestService{ID: "api-1", Name: "api", Tags: []string{"tag_a"}}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(taskConf)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	tempDir := fmt.Sprintf("%s%s%t", tempDirPrefix, tempDirName, include)
+	cts := ctsSetup(t, srv, tempDir, taskConf)
 
 	// Test that task is not triggered by service tag changes and only by
 	// service registration changes.
@@ -501,8 +427,10 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	require.Equal(t, 1, eventCountBase)
 
 	workingDir := filepath.Join(tempDir, taskName)
-	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "tag_a")
+	validateVariable(t, true, workingDir, "services", "tag_a")
+
+	resourcesPath := filepath.Join(tempDir, "catalog_task", resourcesDir)
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "tag_a")
 
 	// 1. Register another api service instance with new tags (no trigger)
 	service = testutil.TestService{ID: "api-2", Name: "api", Tags: []string{"tag_b"}}
@@ -513,8 +441,8 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	require.Equal(t, eventCountBase, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.NotContains(t, content, "tag_b")
+	validateVariable(t, false, workingDir, "services", "tag_b")
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "tag_a")
 
 	// 2. Register new db service (trigger + render template)
 	now := time.Now()
@@ -526,132 +454,8 @@ func testCatalogServicesNoTagsTrigger(t *testing.T, taskConf, taskName, tempDirN
 	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "tag_b")
-	assert.Contains(t, content, "tag_c")
-
-	cleanup()
-}
-
-// eventCount returns number of events that are stored for a given task by
-// querying the Task Status API. Note: events have a storage limit (currently 5)
-func eventCount(t *testing.T, taskName string, port int) int {
-	events := events(t, taskName, port)
-	return len(events)
-}
-
-// events returns the events that are stored for a given task by querying the
-// Task Status API. Note: events have a storage limit (currently 5)
-func events(t *testing.T, taskName string, port int) []event.Event {
-	u := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s?include=events",
-		port, "v1", taskName)
-	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
-	defer resp.Body.Close()
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	var taskStatuses map[string]api.TaskStatus
-	decoder := json.NewDecoder(resp.Body)
-	err := decoder.Decode(&taskStatuses)
-	require.NoError(t, err)
-
-	taskStatus, ok := taskStatuses[taskName]
-	require.True(t, ok, taskStatuses)
-	return taskStatus.Events
-}
-
-// TestCondition_Services_Regexp runs the CTS binary to test
-// a task configured with a regexp in the service condition.
-// This test confirms that when a service is registered that
-// doesn't match the task condition's regexp config, no task
-// is triggered.
-func TestCondition_Services_Regexp(t *testing.T) {
-	t.Parallel()
-
-	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
-		HTTPSRelPath: "../testutils",
-	})
-	defer srv.Stop()
-
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "services_condition_regexp")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
-	taskName := "services_condition_task"
-	conditionTask := fmt.Sprintf(`task {
-	name = "%s"
-	source = "./test_modules/local_instances_file"
-	condition "services" {
-		regexp = "api-"
-	}
-}
-`, taskName)
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(conditionTask)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
-
-	// Test that regex filter is filtering service registration information and
-	// task triggers
-	// 0. Confirm baseline: check current number of events and that that the
-	//    services variable contains no service information
-	// 1. Register db service instance. Confirm that the task was not triggered
-	//    (no new event) and its data is filtered out of services variable.
-	// 2. Register api-web service instance. Confirm that task was triggered
-	//    (one new event) and its data exists in the services variable.
-	// 3. Register a second node to the api-web service. Confirm that task was triggered
-	//    (one new event) and its data exists in the services variable.
-
-	// 0. Confirm only one event. Confirm empty var catalog_services
-	eventCountExpected := eventCount(t, taskName, cts.Port())
-	require.Equal(t, 1, eventCountExpected)
-
-	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
-	content := testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "services = {\n}")
-
-	// 1. Register a filtered out service "db"
-	service := testutil.TestService{ID: "db-1", Name: "db"}
-	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	time.Sleep(defaultWaitForNoEvent)
-
-	eventCountNow := eventCount(t, taskName, cts.Port())
-	require.Equal(t, eventCountExpected, eventCountNow,
-		"change in event count. task was unexpectedly triggered")
-
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, "services = {\n}")
-
-	// 2. Register a matched service "api-web"
-	now := time.Now()
-	service = testutil.TestService{ID: "api-web-1", Name: "api-web"}
-	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
-	eventCountNow = eventCount(t, taskName, cts.Port())
-	eventCountExpected++
-	require.Equal(t, eventCountExpected, eventCountNow,
-		"event count did not increment once. task was not triggered as expected")
-
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, `"api-web"`)
-	assert.Contains(t, content, `"api-web-1"`)
-
-	// 3. Add a second node to the service "api-web"
-	now = time.Now()
-	service = testutil.TestService{ID: "api-web-2", Name: "api-web"}
-	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
-	eventCountNow = eventCount(t, taskName, cts.Port())
-	eventCountExpected++
-	require.Equal(t, eventCountExpected, eventCountNow,
-		"event count did not increment once. task was not triggered as expected")
-	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
-	assert.Contains(t, content, `"api-web-2"`)
-
-	cleanup()
+	validateVariable(t, true, workingDir, "services", "tag_b")
+	validateVariable(t, true, workingDir, "services", "tag_c")
+	validateModuleFile(t, include, true, resourcesPath, "api_tags", "tag_a,tag_b")
+	validateModuleFile(t, include, true, resourcesPath, "db_tags", "tag_c")
 }

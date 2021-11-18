@@ -122,19 +122,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			defer srv.Stop()
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.tempDir)
-			cleanup := testutils.MakeTempDir(t, tempDir)
-
-			taskSchedule := 10 * time.Second
-
-			config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-				appendString(tc.conditionTask)
-			configPath := filepath.Join(tempDir, configFile)
-			config.write(t, configPath)
-
-			cts, stop := api.StartCTS(t, configPath)
-			defer stop(t)
-			err := cts.WaitForAPI(defaultWaitForAPI)
-			require.NoError(t, err)
+			cts := ctsSetup(t, srv, tempDir, tc.conditionTask)
 
 			// Test schedule condition overall behavior:
 			// 0. Confirm baseline: check current number of events for each task.
@@ -144,6 +132,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			//    scheduled time. Check resources are created.
 
 			port := cts.Port()
+			taskSchedule := 10 * time.Second
 			scheduledWait := taskSchedule + 5*time.Second // buffer for task to execute
 
 			// 0. Confirm one event for once-mode
@@ -180,8 +169,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 
 			// confirm service resources created
 			resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
-			testutils.CheckFile(t, true, resourcesPath, "api-1.txt")
-			testutils.CheckFile(t, true, resourcesPath, "web-1.txt")
+			validateServices(t, true, []string{"api-1", "web-1"}, resourcesPath)
 
 			// Check KV events
 			if tc.isConsulKV {
@@ -202,19 +190,15 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 				checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
 
 				// confirm key-value resources created, and that the values are as expected
-				val := testutils.CheckFile(t, true, resourcesPath, "key-path.txt")
-				assert.Equal(t, expectedKV, val)
+				validateModuleFile(t, true, true, resourcesPath, "key-path", expectedKV)
 
 				if tc.isRecurse {
-					val = testutils.CheckFile(t, true, resourcesPath, "key-path/recursive.txt")
-					assert.Equal(t, expectedRecurseKV, val)
+					validateModuleFile(t, true, true, resourcesPath, "key-path/recursive", expectedRecurseKV)
 				} else {
 					// if recurse is disabled, then the recursive key should not be present
-					testutils.CheckFile(t, false, resourcesPath, "key-path/recursive.txt")
+					validateModuleFile(t, true, false, resourcesPath, "key-path/recursive", "")
 				}
 			}
-
-			cleanup()
 		})
 	}
 }
@@ -231,8 +215,6 @@ func TestCondition_Schedule_Dynamic(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "schedule_dynamic")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-
 	schedTaskName := "scheduled_task"
 	taskSchedule := 10 * time.Second
 	conditionTask := fmt.Sprintf(`task {
@@ -244,16 +226,8 @@ func TestCondition_Schedule_Dynamic(t *testing.T) {
 	}
 }
 `, schedTaskName)
-
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendDBTask().appendString(conditionTask)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	cts, stop := api.StartCTS(t, configPath)
-	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
-	require.NoError(t, err)
+	tasks := fmt.Sprintf("%s\n\n%s", conditionTask, dbTask())
+	cts := ctsSetup(t, srv, tempDir, tasks)
 
 	// Configured tasks:
 	// Scheduled task: monitors api and web.
@@ -333,8 +307,6 @@ func TestCondition_Schedule_Dynamic(t *testing.T) {
 	// check scheduled task didn't trigger immediately and ran on schedule
 	api.WaitForEvent(t, cts, schedTaskName, registrationTime, scheduledWait)
 	checkScheduledRun(t, schedTaskName, registrationTime, taskSchedule, port)
-
-	cleanup()
 }
 
 // checkScheduledRun checks that a scheduled task's most recent task run

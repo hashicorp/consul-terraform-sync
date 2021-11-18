@@ -13,9 +13,9 @@ GOVERSION := 1.16
 PROJECT := $(shell go list -m)
 NAME := $(notdir $(PROJECT))
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
-GIT_DESCRIBE ?= $(shell git describe --tags --always)
+GIT_DESCRIBE ?=
 GIT_DIRTY ?= $(shell git diff --stat)
-VERSION := $(shell awk -F\" '/Version/ { print $$2; exit }' "${CURRENT_DIR}/version/version.go")
+VERSION := $(shell awk -F\" '/Version =/ { print $2; exit }' "${CURRENT_DIR}/version/version.go")
 
 # Tags specific for building
 GOTAGS ?=
@@ -84,6 +84,12 @@ clean:
 generate:
 	go generate ./...
 .PHONY: generate
+
+go-fmt-check:
+	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+
+terraform-fmt-check:
+	@sh -c "'$(CURDIR)/scripts/terraformfmtcheck.sh'"
 
 # temp noop command to get build pipeline working
 dev-tree:

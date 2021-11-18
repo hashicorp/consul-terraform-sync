@@ -3,14 +3,23 @@ version: 2.1
 orbs:
   slack: circleci/slack@4.4
 
-jobs:
-  unit_integration_tests:
-    environment:
-      GO111MODULE: "on"
-      GO_VERSION: "1.16"
-      CONSUL_VERSION: 1.8.0
+executors:
+  go:
     docker:
       - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
+    environment:
+      CONSUL_VERSION: "1.10.3"
+      GOMAXPROCS: 4
+      GO111MODULE: "on"
+      GOPROXY: https://proxy.golang.org/
+      GO_VERSION: 1.16
+      TERRAFORM_VERSION: "1.0.8"
+      VAULT_VERSION: "1.8.3"
+
+jobs:
+  unit_integration_tests:
+    executor:
+      name: go
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
@@ -33,12 +42,8 @@ jobs:
             - /go/pkg/mod
 
   vault_integration_tests:
-    environment:
-      GO111MODULE: "on"
-      GO_VERSION: "1.16"
-      VAULT_VERSION: "1.7.1"
-    docker:
-      - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
+    executor:
+      name: go
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
@@ -60,12 +65,8 @@ jobs:
             - /go/pkg/mod
             
   e2e_tests:
-    environment:
-      GO111MODULE: "on"
-      GO_VERSION: "1.16"
-      CONSUL_VERSION: 1.8.0
-    docker:
-      - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
+    executor:
+      name: go
     resource_class: medium+
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
@@ -89,11 +90,8 @@ jobs:
             - /go/pkg/mod
 
   consul_compatibility_tests:
-    environment:
-      GO111MODULE: "on"
-      GO_VERSION: "1.16"
-    docker:
-      - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
+    executor:
+      name: go
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
@@ -111,17 +109,13 @@ jobs:
             - /go/pkg/mod
 
   benchmarks:
+    executor:
+      name: go
     parameters:
       no_output_timeout:
         type: string
         description: the job times out after this duration with no output
         default: 30m
-    environment:
-      GO_VERSION: "1.16"
-      CONSUL_VERSION: "1.8.0"
-      TERRAFORM_VERSION: "0.14.10"
-    docker:
-      - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
@@ -151,6 +145,9 @@ jobs:
           no_output_timeout: << parameters.no_output_timeout >>
           command:
             make test-benchmarks | /usr/bin/tee /tmp/benchmarks.json
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
       - run:
           name: Output benchmark results
           command: |
@@ -165,10 +162,39 @@ jobs:
           path: /tmp/benchmark_results
           destination: benchmark_results
 
+  go-checks:
+    executor:
+      name: go
+    steps:
+      - checkout
+      - run: make go-fmt-check
+      - run:
+          name: verify go.mod and go.sum are correct
+          command: |
+            go mod tidy
+            git diff --quiet && exit 0
+            echo "please run 'go mod tidy' to ensure go.mod and go.sum are up to date"
+            exit 1
+
+  terraform-checks:
+    executor:
+      name: go
+    steps:
+      - checkout
+      - run:
+          name: Install Terraform
+          command: |
+            curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+            unzip terraform.zip
+            sudo cp terraform /usr/local/bin/
+      - run: make terraform-fmt-check
+
 workflows:
   version: 2
   build-test:
     jobs:
+      - go-checks
+      - terraform-checks
       - unit_integration_tests
       - e2e_tests
   weekly-benchmarks:
@@ -183,4 +209,4 @@ workflows:
           filters:
             branches:
               only:
-              - master
+              - main

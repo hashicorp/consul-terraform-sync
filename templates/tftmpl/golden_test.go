@@ -268,7 +268,7 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
 					CatalogServicesMonitor{
-						Regexp: ".*",
+						Regexp: "^web.*|^api.*",
 					},
 					true,
 				},
@@ -293,7 +293,7 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
 					CatalogServicesMonitor{
-						Regexp:     ".*",
+						Regexp:     "^web.*|^api.*",
 						Datacenter: "dc1",
 						NodeMeta:   map[string]string{"k": "v"},
 					},
