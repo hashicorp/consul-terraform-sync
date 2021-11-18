@@ -309,7 +309,7 @@ func (c *TaskConfig) Validate() error {
 
 	if c.TFVersion != nil && *c.TFVersion != "" {
 		return fmt.Errorf("unsupported configuration 'terraform_version' for "+
-			"task %q. This option is available for Consul-Terraform-Sync enterprise "+
+			"task %q. This option is available for Consul-Terraform-Sync Enterprise "+
 			"when using the Terraform Cloud driver, or configure the Terraform client "+
 			"version within the Terraform driver block", *c.Name)
 	}
