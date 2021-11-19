@@ -1,7 +1,18 @@
-## UNRELEASED
+## 0.4.2 (November 22, 2021)
+FEATURES:
+* Support TLS and mutual TLS for the CTS API and CLI. [[GH-466](https://github.com/hashicorp/consul-terraform-sync/issues/466)]
+* **(Enterprise Only)** Add Terraform Cloud workspace tagging support to add, require, and restrict tags with new `driver.terraform-cloud.workspaces` options.
 
 IMPROVEMENTS:
 * **(Enterprise Only)** Add default address for the Terraform Cloud driver to https://app.terraform.io.
+
+BUG FIXES:
+* Fix Services condition when configured with regex, Consul KV condition, and Catalog Services condition to use Consul API blocking queries for more efficient monitoring of changes on Consul. [[GH-460](https://github.com/hashicorp/consul-terraform-sync/pull/460), [GH-467](https://github.com/hashicorp/consul-terraform-sync/pull/467)]
+* Fix issue where choosing to cancel when using the Enable CLI still enabled the task. [[GH-451](https://github.com/hashicorp/consul-terraform-sync/issues/451)]
+* Fix issue where Update Task API unexpectedly updated the task when running with inspect mode. [[GH-465](https://github.com/hashicorp/consul-terraform-sync/issues/465)]
+* Fix panic when there is a Terraform validation warning related to provider blocks when CTS runs Terraform CLI v0.15+. [[GH-473](https://github.com/hashicorp/consul-terraform-sync/issues/473)]
+* **(Enterprise Only)** Fix issue where configured service block filter was not being used to filter monitored service instances when using the Terraform Cloud driver. [[GH-454](https://github.com/hashicorp/consul-terraform-sync/issues/454)]
+* **(Enterprise Only)** Fix issue where using the Terraform Cloud driver with a scheduled task configured with a consul-kv source input did not run at the scheduled time when only the monitored services had changed. [[GH-502](https://github.com/hashicorp/consul-terraform-sync/issues/502)]
 
 ## 0.4.1 (November 03, 2021)
 
