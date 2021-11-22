@@ -1,4 +1,7 @@
 ## 0.4.2 (November 22, 2021)
+KNOWN ISSUES:
+* Enabling a task can display an EOF error in terminal even though task is enabled. [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
+
 FEATURES:
 * Support TLS and mutual TLS for the CTS API and CLI. [[GH-466](https://github.com/hashicorp/consul-terraform-sync/issues/466)]
 * **(Enterprise Only)** Add Terraform Cloud workspace tagging support to add, require, and restrict tags with new `driver.terraform-cloud.workspaces` options.
