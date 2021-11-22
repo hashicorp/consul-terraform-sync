@@ -127,7 +127,11 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 			logger.Info("generating inspect plan if task becomes enabled",
 				"task_name", taskName)
 		} else {
-			logger.Info("enabling task", "task_name", taskName)
+			if patch.Enabled {
+				logger.Info("enabling task", "task_name", taskName)
+			} else {
+				logger.Info("disabling task", "task_name", taskName)
+			}
 		}
 	}
 
