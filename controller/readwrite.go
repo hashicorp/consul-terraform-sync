@@ -328,6 +328,8 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	// new data
 	if rendered {
 		rw.logger.Info("executing task", taskNameLogKey, taskName)
+		rw.drivers.SetActive(taskName)
+		defer rw.drivers.SetInactive(taskName)
 		defer storeEvent()
 
 		if retry {
