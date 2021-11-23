@@ -70,7 +70,7 @@ func TestTaskDelete_deleteTask(t *testing.T) {
 
 			store := event.NewStore()
 			store.Add(event.Event{TaskName: taskName})
-			handler := newTaskHandler(store, drivers, "v1")
+			handler := NewTaskLifeCycleHandler(store, drivers, "v1")
 
 			req, err := http.NewRequest(http.MethodDelete, tc.path, nil)
 			require.NoError(t, err)

@@ -9,7 +9,7 @@ import (
 
 // deleteTask deletes an existing task and its events. Does not delete
 // if the task is active.
-func (h *taskHandler) deleteTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskLifeCycleHandler) deleteTask(w http.ResponseWriter, r *http.Request) {
 	taskName, err := getTaskName(r.URL.Path, taskPath, h.version)
 	logger := logging.FromContext(r.Context()).Named(deleteTaskSubsystemName)
 	if err != nil {
