@@ -823,8 +823,25 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 	})
 	defer srv.Stop()
 
+	// Setup CTS with buffer period enabled
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "reenable_trigger")
-	cts := ctsSetup(t, srv, tempDir, dbTask())
+	cleanup := testutils.MakeTempDir(t, tempDir)
+	config := baseConfig(tempDir).appendConsulBlock(srv).
+		appendTerraformBlock().appendDBTask()
+	config = hclConfig(strings.ReplaceAll(string(config),
+		"\nbuffer_period {\n\tenabled = false\n}\n", ""))
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	cts, stop := api.StartCTS(t, configPath)
+	t.Cleanup(func() {
+		cleanup()
+		stop(t)
+	})
+
+	err := cts.WaitForAPI(defaultWaitForAPI)
+	require.NoError(t, err)
+
 	// Test that regex filter is filtering service registration information and
 	// task triggers
 	// 0. Setup: disable task, re-enable it
@@ -837,17 +854,15 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 	output, err := runSubcommand(t, "", subcmd...)
 	assert.NoError(t, err, output)
 
-	now := time.Now()
 	subcmd = []string{"task", "enable", fmt.Sprintf("-port=%d", cts.Port()), dbTaskName}
 	output, err = runSubcommand(t, "yes\n", subcmd...)
 	assert.NoError(t, err, output)
-	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
 
 	// 1. get current number of events
 	eventCountBase := eventCount(t, dbTaskName, cts.Port())
 
 	// 2. register api service. check triggers task
-	now = time.Now()
+	now := time.Now()
 	service := testutil.TestService{ID: "api-1", Name: "api"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
