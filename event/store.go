@@ -68,3 +68,12 @@ func (s *Store) Read(taskName string) map[string][]Event {
 	}
 	return ret
 }
+
+func (s *Store) Delete(taskName string) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if taskName != "" {
+		delete(s.events, taskName)
+	}
+}

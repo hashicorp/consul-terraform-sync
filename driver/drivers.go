@@ -110,3 +110,15 @@ func (d *Drivers) IsActive(name string) bool {
 	_, ok := d.active.Load(name)
 	return ok
 }
+
+func (d *Drivers) Delete(taskName string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if taskName == "" {
+		return errors.New("task name cannot be empty")
+	}
+
+	delete(d.drivers, taskName)
+	return nil
+}

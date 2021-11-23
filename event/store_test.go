@@ -142,3 +142,46 @@ func TestStore_Read(t *testing.T) {
 		})
 	}
 }
+
+func TestStore_Delete(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    string
+		values   []Event
+		expected map[string][]Event
+	}{
+		{
+			"delete - happy path",
+			"2",
+			[]Event{
+				Event{TaskName: "1"},
+				Event{TaskName: "2"},
+				Event{TaskName: "2"},
+			},
+			map[string][]Event{
+				"1": []Event{
+					Event{TaskName: "1"},
+				},
+			},
+		},
+		{
+			"delete task - no event",
+			"4",
+			[]Event{},
+			map[string][]Event{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			store := NewStore()
+			for _, event := range tc.values {
+				store.Add(event)
+			}
+			store.Delete(tc.input)
+
+			after := store.Read("")
+			assert.Equal(t, tc.expected, after)
+		})
+	}
+}

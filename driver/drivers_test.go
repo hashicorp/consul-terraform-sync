@@ -117,3 +117,44 @@ func TestDrivers_Map(t *testing.T) {
 		require.False(t, ok)
 	})
 }
+
+func TestDrivers_Delete(t *testing.T) {
+	cases := []struct {
+		name      string
+		taskName  string
+		expectErr bool
+	}{
+		{
+			"driver_exists",
+			"task_a",
+			false,
+		},
+		{
+			"driver_does_not_exist",
+			"non_existent_task",
+			false,
+		},
+		{
+			"empty_task_name",
+			"",
+			true,
+		},
+	}
+
+	drivers := NewDrivers()
+	err := drivers.Add("task_a", &Terraform{})
+	require.NoError(t, err)
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := drivers.Delete(tc.taskName)
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				_, ok := drivers.Get(tc.taskName)
+				assert.False(t, ok)
+			}
+		})
+	}
+}
