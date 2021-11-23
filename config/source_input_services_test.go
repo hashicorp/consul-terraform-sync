@@ -23,10 +23,16 @@ func TestServicesSourceInputConfig_Copy(t *testing.T) {
 			&ServicesSourceInputConfig{},
 		},
 		{
-			"fully_configured",
+			"happy_path",
 			&ServicesSourceInputConfig{
 				ServicesMonitorConfig{
-					Regexp: String("^web.*"),
+					Regexp:     String("^web.*"),
+					Datacenter: String("dc"),
+					Namespace:  String("namespace"),
+					Filter:     String("filter"),
+					CTSUserDefinedMeta: map[string]string{
+						"key": "value",
+					},
 				},
 			},
 		},
@@ -79,28 +85,34 @@ func TestServicesSourceInputConfig_Merge(t *testing.T) {
 			&ServicesSourceInputConfig{},
 		},
 		{
-			"regexp_overrides",
-			&ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("same")}},
-			&ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("different")}},
-			&ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("different")}},
-		},
-		{
-			"regexp_empty_one",
-			&ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("same")}},
-			&ServicesSourceInputConfig{},
-			&ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("same")}},
-		},
-		{
-			"regexp_empty_two",
-			&ServicesSourceInputConfig{},
-			&ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("same")}},
-			&ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("same")}},
-		},
-		{
-			"regexp_empty_same",
-			&ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("same")}},
-			&ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("same")}},
-			&ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("same")}},
+			"happy_path",
+			&ServicesSourceInputConfig{
+				ServicesMonitorConfig{
+					Regexp:             String("regexp"),
+					Datacenter:         String("datacenter_overriden"),
+					Namespace:          nil,
+					Filter:             nil,
+					CTSUserDefinedMeta: map[string]string{},
+				},
+			},
+			&ServicesSourceInputConfig{
+				ServicesMonitorConfig{
+					Regexp:             nil,
+					Datacenter:         String("datacenter"),
+					Namespace:          String("namespace"),
+					Filter:             nil,
+					CTSUserDefinedMeta: map[string]string{},
+				},
+			},
+			&ServicesSourceInputConfig{
+				ServicesMonitorConfig{
+					Regexp:             String("regexp"),
+					Datacenter:         String("datacenter"),
+					Namespace:          String("namespace"),
+					Filter:             nil,
+					CTSUserDefinedMeta: map[string]string{},
+				},
+			},
 		},
 	}
 
@@ -120,8 +132,6 @@ func TestServicesSourceInputConfig_Merge(t *testing.T) {
 func TestServicesSourceInputConfig_Finalize(t *testing.T) {
 	t.Parallel()
 
-	var ssi *ServicesSourceInputConfig
-
 	cases := []struct {
 		name string
 		s    []string
@@ -129,30 +139,24 @@ func TestServicesSourceInputConfig_Finalize(t *testing.T) {
 		r    *ServicesSourceInputConfig
 	}{
 		{
-			"empty",
+			"nil",
+			[]string{},
+			nil,
+			nil,
+		},
+		{
+			"happy_path",
 			[]string{},
 			&ServicesSourceInputConfig{},
 			&ServicesSourceInputConfig{
 				ServicesMonitorConfig{
-					Regexp: String(""),
+					Regexp:             String(""),
+					Datacenter:         String(""),
+					Namespace:          String(""),
+					Filter:             String(""),
+					CTSUserDefinedMeta: map[string]string{},
 				},
 			},
-		},
-		{
-			"services_ignored",
-			[]string{"api"},
-			&ServicesSourceInputConfig{},
-			&ServicesSourceInputConfig{
-				ServicesMonitorConfig{
-					Regexp: String(""),
-				},
-			},
-		},
-		{
-			"services_nil",
-			[]string{"api"},
-			ssi,
-			ssi,
 		},
 	}
 
@@ -173,7 +177,7 @@ func TestServicesSourceInputConfig_Validate(t *testing.T) {
 		c         *ServicesSourceInputConfig
 	}{
 		{
-			"happy_path",
+			"valid",
 			false,
 			&ServicesSourceInputConfig{
 				ServicesMonitorConfig{
@@ -182,12 +186,12 @@ func TestServicesSourceInputConfig_Validate(t *testing.T) {
 			},
 		},
 		{
-			"nil_happy_path",
+			"nil",
 			false,
 			nil,
 		},
 		{
-			"invalid_regexp",
+			"invalid",
 			true,
 			&ServicesSourceInputConfig{
 				ServicesMonitorConfig{
@@ -221,12 +225,22 @@ func TestGoString(t *testing.T) {
 			"configured services source_input",
 			&ServicesSourceInputConfig{
 				ServicesMonitorConfig{
-					Regexp: String("^api$"),
+					Regexp:     String("^api$"),
+					Datacenter: String("dc2"),
+					Namespace:  String("ns2"),
+					Filter:     String("some-filter"),
+					CTSUserDefinedMeta: map[string]string{
+						"key": "value",
+					},
 				},
 			},
 			"&ServicesSourceInputConfig{" +
 				"&ServicesMonitorConfig{" +
 				"Regexp:^api$, " +
+				"Datacenter:dc2, " +
+				"Namespace:ns2, " +
+				"Filter:some-filter, " +
+				"CTSUserDefinedMeta:map[key:value]" +
 				"}" +
 				"}",
 		},
