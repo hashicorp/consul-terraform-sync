@@ -1,0 +1,343 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: CTS API
+  description: API Documentation for Consul-Terraform-Sync, for more information see [Consul NIA API](https://www.consul.io/docs/nia/api)
+  contact:
+    name: api-tooling-core
+  license:
+    name: MPL-2.0 License
+    url: https://github.com/hashicorp/consul-terraform-sync/blob/main/LICENSE
+servers:
+  - url: '{protocol}://{host}:{port}'
+    description: The Consul-Terraform-Sync Server
+    variables:
+      protocol:
+        enum:
+          - 'http'
+          - 'https'
+        default: 'http'
+      host:
+        default: 'localhost'
+      port:
+        default: '8558'
+paths:
+  /v1/tasks:
+    post:
+      summary: Creates a new task
+      operationId: createTask
+      tags:
+        - tasks
+      description: |
+        Creates a new task
+      parameters:
+        - name: run
+          in: query
+          description: |
+            Different modes for running. Supports run now which runs the task immediately
+          required: false
+          schema:
+            type: string
+            enum: [now]
+      requestBody:
+        description: Task to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+      responses:
+        '201':
+          description: Task response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/tasks/{name}:
+    delete:
+      summary: Deletes a task by name
+      operationId: deleteTaskByName
+      description: Deletes a single task based on the name provided
+      tags:
+        - tasks
+      parameters:
+        - name: name
+          in: path
+          description: Name of task to delete
+          required: true
+          schema:
+            type: string
+            example: "taskA"
+      responses:
+        '204':
+          description: Task deleted
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/dryrun/task:
+    post:
+      summary: Triggers a dryrun for a provided task
+      operationId: executeTaskDryrun
+      tags:
+        - dryrun
+      description: |
+        Triggers a dryrun for a provided task
+      requestBody:
+        description: |
+          Task to run a dryrun for
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DryrunRequest'
+      responses:
+        '200':
+          description: Task response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DryrunResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    TaskRequest:
+      $ref: '#/components/schemas/Task'
+
+    TaskResponse:
+      type: object
+      properties:
+        task:
+          $ref: '#/components/schemas/Task'
+        request_id:
+          $ref: '#/components/schemas/RequestID'
+        run:
+          $ref: '#/components/schemas/Run'
+      required:
+        - request_id
+
+    DryrunRequest:
+      $ref: '#/components/schemas/TaskRequest'
+    DryrunResponse:
+      $ref: '#/components/schemas/TaskResponse'
+
+    ErrorResponse:
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+        request_id:
+          $ref: '#/components/schemas/RequestID'
+      required:
+        - error
+        - request_id
+
+    Task:
+      type: object
+      properties:
+        description:
+          type: string
+          example: "an example task"
+        enabled:
+          type: boolean
+          example: true
+          default: true
+        name:
+          type: string
+          example: "taskA"
+        providers:
+          type: array
+          items:
+            type: string
+          example: []
+        services:
+          type: array
+          items:
+            type: string
+            example: ["web", "api"]
+        source:
+          type: string
+          example: "org/example/module"
+        variables:
+          type: object
+          additionalProperties:
+            type: string
+        version:
+          type: string
+          example: "1.0.0"
+        working_dir:
+          type: string
+          example: "./sync-tasks/task-name"
+          default: "sync-tasks"
+        buffer_period:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              example: true
+            max:
+              type: string
+              example: "5s"
+            min:
+              type: string
+              example: "20s"
+        condition:
+          type: object
+          properties:
+            catalog-services:
+              $ref: '#/components/schemas/CatalogServicesCondition'
+            services:
+              $ref: '#/components/schemas/ServicesCondition'
+            consul-kv:
+              $ref: '#/components/schemas/ConsulKVCondition'
+            schedule:
+              $ref: '#/components/schemas/ScheduleCondition'
+        source_input:
+          type: object
+          properties:
+            services:
+              $ref: '#/components/schemas/ServicesSourceInput'
+            consul-kv:
+              $ref: '#/components/schemas/ConsulKVSourceInput'
+      required:
+        - name
+        - source
+      example:
+        condition:
+          catalog-services:
+            regexp: ".*"
+        description: ''
+        enabled: true
+        name: taskC
+        providers: [ ]
+        services:
+          - web
+          - api
+        source: org/example/module
+        variable_files: [ ]
+        version: 1.0.0
+
+    ServicesCondition:
+      type: object
+      properties:
+        regexp:
+          type: string
+          example: "web.*"
+    CatalogServicesCondition:
+      type: object
+      properties:
+        datacenter:
+          type: string
+          example: "dc1"
+        regexp:
+          type: string
+          example: "web.*"
+        namespace:
+          type: string
+          example: "default"
+        node_meta:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            key: value
+        source_includes_var:
+          type: boolean
+          default: false
+          example: false
+    ConsulKVCondition:
+      type: object
+      properties:
+        path:
+          type: string
+          example: "my-key"
+        recurse:
+          type: boolean
+          default: false
+          example: false
+        datacenter:
+          type: string
+          example: "dc1"
+        namespace:
+          type: string
+          example: "default"
+        source_includes_var:
+          type: boolean
+          default: false
+          example: false
+      required:
+          - path
+    ScheduleCondition:
+      type: object
+      properties:
+        cron:
+          type: string
+          example: "* * * * Mon"
+      required:
+        - cron
+
+    ServicesSourceInput:
+      type: object
+      properties:
+        regexp:
+          type: string
+          example: "web.*"
+    ConsulKVSourceInput:
+      type: object
+      properties:
+        path:
+          type: string
+          example: "my-key"
+        recurse:
+          type: boolean
+          default: false
+          example: false
+        datacenter:
+          type: string
+          example: "dc1"
+        namespace:
+          type: string
+          example: "default"
+      required:
+        - path
+
+    Run:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "successful"
+        changes_present:
+          type: boolean
+          example: true
+        plan:
+          type: string
+          example: "module.test-task.local_file.greeting_services: Refreshing state... [id=2d5049b47d16d9c4d15cc59950fdd3de24b79716]\nmodule.test-task.local_file.greeting: Refreshing state... [id=69342c5c39e5ae5f0077aecc32c0f81811fb8193]\n\nTerraform used the selected providers to generate the following execution\nplan. Resource actions are indicated with the following symbols:\n-/+ destroy and then create replacement\n\nTerraform will perform the following actions:\n\n  # module.test-task.local_file.greeting_services must be replaced\n-/+ resource \"local_file\" \"greeting_services\" {\n      ~ content              = <<-EOT # forces replacement\n          - Hello, api!\n            Hello, web!\n            Hello, web!\n        EOT\n      ~ id                   = \"2d5049b47d16d9c4d15cc59950fdd3de24b79716\" -> (known after apply)\n        # (3 unchanged attributes hidden)\n    }\n\nPlan: 1 to add, 0 to change, 1 to destroy.\n"
+
+    RequestID:
+      type: string
+      format: uuid
+      example: "bb63cd70-8f45-4f42-b27b-bc2a6f4931e6"
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "this is an error message"
+      required:
+        - message
