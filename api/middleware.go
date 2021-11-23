@@ -37,10 +37,24 @@ func withLogging(next http.Handler) http.Handler {
 			"host", r.Host)
 
 		r = r.WithContext(logging.WithContext(r.Context(), logger))
+		r = r.WithContext(requestIDWithContext(r.Context(), reqID))
 		next.ServeHTTP(w, r)
 
 		// Log info on exit
 		logger.Info("request complete",
 			"duration", fmt.Sprintf("%dus", time.Since(ts).Microseconds()))
+	})
+}
+
+func withCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, PATCH, POST, DELETE")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			next.ServeHTTP(w, r)
+		}
 	})
 }
