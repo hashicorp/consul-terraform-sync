@@ -424,9 +424,10 @@ func TestTaskConfig_Finalize(t *testing.T) {
 		{
 			"with_services_source_input",
 			&TaskConfig{
-				Name:        String("task"),
-				Condition:   &ScheduleConditionConfig{},
-				SourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{String("^api$")}},
+				Name:      String("task"),
+				Condition: &ScheduleConditionConfig{},
+				SourceInput: &ServicesSourceInputConfig{
+					ServicesMonitorConfig{Regexp: String("^api$")}},
 			},
 			&TaskConfig{
 				Description: String(""),
@@ -442,10 +443,17 @@ func TestTaskConfig_Finalize(t *testing.T) {
 					Min:     TimeDuration(0 * time.Second),
 					Max:     TimeDuration(0 * time.Second),
 				},
-				Enabled:     Bool(true),
-				Condition:   &ScheduleConditionConfig{String("")},
-				WorkingDir:  String("sync-tasks/task"),
-				SourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{String("^api$")}},
+				Enabled:    Bool(true),
+				Condition:  &ScheduleConditionConfig{String("")},
+				WorkingDir: String("sync-tasks/task"),
+				SourceInput: &ServicesSourceInputConfig{
+					ServicesMonitorConfig{
+						Regexp:             String("^api$"),
+						Datacenter:         String(""),
+						Namespace:          String(""),
+						Filter:             String(""),
+						CTSUserDefinedMeta: map[string]string{},
+					}},
 			},
 		},
 	}

@@ -73,11 +73,7 @@ task {
 		{
 			"no condition: defaults to services condition",
 			false,
-			&ServicesConditionConfig{
-				ServicesMonitorConfig{
-					Regexp: String(""),
-				},
-			},
+			DefaultConditionConfig(),
 			"config.hcl",
 			`
 task {
@@ -91,7 +87,13 @@ task {
 			false,
 			&ServicesConditionConfig{
 				ServicesMonitorConfig{
-					Regexp: String(".*"),
+					Regexp:     String(".*"),
+					Datacenter: String("dc"),
+					Namespace:  String("namespace"),
+					Filter:     String("filter"),
+					CTSUserDefinedMeta: map[string]string{
+						"key": "value",
+					},
 				},
 			},
 			"config.hcl",
@@ -101,17 +103,19 @@ task {
 	source = "..."
 	condition "services" {
 		regexp = ".*"
+		datacenter = "dc"
+		namespace = "namespace"
+		filter = "filter"
+		cts_user_defined_meta {
+			key = "value"
+		}
 	}
 }`,
 		},
 		{
 			"services: unconfigured",
 			false,
-			&ServicesConditionConfig{
-				ServicesMonitorConfig{
-					Regexp: String(""),
-				},
-			},
+			DefaultConditionConfig(),
 			"config.hcl",
 			`
 task {
