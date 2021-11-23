@@ -30,6 +30,11 @@ func (_m *Watcher) Buffer(_a0 hcat.Notifier) bool {
 	return r0
 }
 
+// BufferReset provides a mock function with given fields: _a0
+func (_m *Watcher) BufferReset(_a0 hcat.Notifier) {
+	_m.Called(_a0)
+}
+
 // Complete provides a mock function with given fields: _a0
 func (_m *Watcher) Complete(_a0 hcat.Notifier) bool {
 	ret := _m.Called(_a0)
