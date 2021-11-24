@@ -13,7 +13,7 @@ import (
 
 // HCLMap is the map of template functions for rendering HCL
 // to their respective implementations
-func HCLMap(meta ServicesMeta) template.FuncMap {
+func HCLMap(meta *ServicesMeta) template.FuncMap {
 	tmplFuncs := hcat.FuncMapConsulV1()
 	tmplFuncs["catalogServicesRegistration"] = catalogServicesRegistrationFunc
 	tmplFuncs["servicesRegex"] = servicesRegexFunc

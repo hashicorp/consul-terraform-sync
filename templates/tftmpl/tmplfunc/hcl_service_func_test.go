@@ -119,12 +119,10 @@ cts_user_defined_meta = {}`,
 }
 
 func TestHCLServiceFunc_ctsUserDefinedMeta(t *testing.T) {
-	meta := ServicesMeta{
-		"api": {
-			"key":        "value",
-			"foo_bar":    "baz",
-			"spaced key": "spaced value",
-		},
+	meta := map[string]string{
+		"key":        "value",
+		"foo_bar":    "baz",
+		"spaced key": "spaced value",
 	}
 	content := &dep.HealthService{
 		ID:      "api",
@@ -153,6 +151,30 @@ cts_user_defined_meta = {
   "spaced key" = "spaced value"
 }`
 
-	actual := hclServiceFunc(meta)(content)
-	assert.Equal(t, expected, actual)
+	cases := []struct {
+		name         string
+		servicesMeta *ServicesMeta
+	}{
+		{
+			"meta-map",
+			&ServicesMeta{
+				metaMap: map[string]map[string]string{
+					"api": meta,
+				},
+			},
+		},
+		{
+			"meta",
+			&ServicesMeta{
+				meta: meta,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := hclServiceFunc(tc.servicesMeta)(content)
+			assert.Equal(t, expected, actual)
+		})
+	}
 }
