@@ -305,21 +305,21 @@ func (q *QueryParam) Encode() string {
 	return val.Encode()
 }
 
-// Status can be used to query the status endpoints
-type Status struct {
-	c *Client
+// StatusClient can be used to query the status endpoints
+type StatusClient struct {
+	*Client
 }
 
-// Status returns a handle to the status endpoints
-func (c *Client) Status() *Status {
-	return &Status{c}
+// StatusClient returns a handle to the status endpoints
+func (c *Client) Status() *StatusClient {
+	return &StatusClient{c}
 }
 
 // Overall is used to query for overall status
-func (s *Status) Overall() (OverallStatus, error) {
+func (s *StatusClient) Overall() (OverallStatus, error) {
 	var overallStatus OverallStatus
 
-	resp, err := s.c.request(http.MethodGet, overallStatusPath, "", "")
+	resp, err := s.request(http.MethodGet, overallStatusPath, "", "")
 	if err != nil {
 		return overallStatus, err
 	}
@@ -337,7 +337,7 @@ func (s *Status) Overall() (OverallStatus, error) {
 //
 // name: task name or empty string for all tasks
 // q: nil if no query parameters
-func (s *Status) Task(name string, q *QueryParam) (map[string]TaskStatus, error) {
+func (s *StatusClient) Task(name string, q *QueryParam) (map[string]TaskStatus, error) {
 	var taskStatuses map[string]TaskStatus
 
 	path := taskStatusPath
@@ -349,7 +349,7 @@ func (s *Status) Task(name string, q *QueryParam) (map[string]TaskStatus, error)
 		q = &QueryParam{}
 	}
 
-	resp, err := s.c.request(http.MethodGet, path, q.Encode(), "")
+	resp, err := s.request(http.MethodGet, path, q.Encode(), "")
 	if err != nil {
 		return taskStatuses, err
 	}
@@ -363,18 +363,18 @@ func (s *Status) Task(name string, q *QueryParam) (map[string]TaskStatus, error)
 	return taskStatuses, nil
 }
 
-// Task can be used to query the task endpoints
-type Task struct {
-	c *Client
+// TaskClient can be used to query the task endpoints
+type TaskClient struct {
+	*Client
 }
 
 // Task returns a handle to the task endpoints
-func (c *Client) Task() *Task {
-	return &Task{c}
+func (c *Client) Task() *TaskClient {
+	return &TaskClient{c}
 }
 
 // Update is used to patch update task
-func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (UpdateTaskResponse, error) {
+func (t *TaskClient) Update(name string, config UpdateTaskConfig, q *QueryParam) (UpdateTaskResponse, error) {
 	b, err := json.Marshal(config)
 	if err != nil {
 		return UpdateTaskResponse{}, err
@@ -385,7 +385,7 @@ func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (Upda
 	}
 
 	path := fmt.Sprintf("%s/%s", taskPath, name)
-	resp, err := t.c.request(http.MethodPatch, path, q.Encode(), string(b))
+	resp, err := t.request(http.MethodPatch, path, q.Encode(), string(b))
 	if err != nil {
 		return UpdateTaskResponse{}, err
 	}

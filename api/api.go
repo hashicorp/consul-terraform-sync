@@ -10,6 +10,9 @@ import (
 	"sync"
 	"time"
 
+	middleware "github.com/deepmap/oapi-codegen/pkg/chi-middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -77,9 +80,7 @@ type APIConfig struct {
 
 // NewAPI create a new API object
 func NewAPI(conf *APIConfig) (*API, error) {
-	mux := http.NewServeMux()
 	logger := logging.Global().Named(logSystemName)
-
 	api := &API{
 		port:    conf.Port,
 		drivers: conf.Drivers,
@@ -100,19 +101,50 @@ func NewAPI(conf *APIConfig) (*API, error) {
 		api.tls = config.DefaultCTSTLSConfig()
 	}
 
-	// retrieve overall status
-	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, overallStatusPath),
-		withLogging(newOverallStatusHandler(api.store, api.drivers, defaultAPIVersion)))
-	// retrieve task status for a task-name
-	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskStatusPath),
-		withLogging(newTaskStatusHandler(api.store, api.drivers, defaultAPIVersion)))
-	// retrieve all task statuses
-	mux.Handle(fmt.Sprintf("/%s/%s", defaultAPIVersion, taskStatusPath),
-		withLogging(newTaskStatusHandler(api.store, api.drivers, defaultAPIVersion)))
+	r := chi.NewRouter()
 
-	// crud task
-	mux.Handle(fmt.Sprintf("/%s/%s/", defaultAPIVersion, taskPath),
-		withLogging(newTaskHandler(api.store, api.drivers, defaultAPIVersion)))
+	// add the middleware for all endpoints
+	r.Use(withLogging)
+	r.Use(withCORS)
+
+	// add the base path route then mount the endpoints
+	r.Route(fmt.Sprintf("/%s", defaultAPIVersion), func(r chi.Router) {
+		// Legacy Endpoints
+		// retrieve overall status
+		r.Mount(fmt.Sprintf("/%s", overallStatusPath),
+			newOverallStatusHandler(api.store, api.drivers, defaultAPIVersion))
+
+		// retrieve all task statuses
+		r.Mount(fmt.Sprintf("/%s", taskStatusPath),
+			newTaskStatusHandler(api.store, api.drivers, defaultAPIVersion))
+
+		// crud task
+		r.Mount(fmt.Sprintf("/%s", taskPath),
+			newTaskHandler(api.store, api.drivers, defaultAPIVersion))
+	})
+
+	r.Group(func(r chi.Router) {
+		swagger, err := oapigen.GetSwagger()
+		if err != nil {
+			logger.Error("Error loading swagger spec", "error", err)
+			panic("this should never error")
+		}
+
+		// Clear out the servers array in the swagger spec. It is recommended to do this so that it skips validating
+		// that server names match.
+		swagger.Servers = nil
+
+		// Use our validation middleware to check all requests against the
+		// OpenAPI schema.
+		r.Use(middleware.OapiRequestValidator(swagger))
+
+		// Generated Endpoints
+		server := Handlers{
+			TaskLifeCycleHandler: NewTaskLifeCycleHandler(),
+			DryrunHandler:        NewDryrunHandler(),
+		}
+		oapigen.HandlerFromMux(server, r)
+	})
 
 	t := &tls.Config{}
 	if config.BoolVal(api.tls.Enabled) && config.BoolVal(api.tls.VerifyIncoming) {
@@ -133,7 +165,7 @@ func NewAPI(conf *APIConfig) (*API, error) {
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,
-		Handler:      mux,
+		Handler:      r,
 		TLSConfig:    t,
 		ErrorLog: logger.StandardLogger(&hclog.StandardLoggerOptions{
 			InferLevels: false,

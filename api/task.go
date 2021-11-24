@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -18,6 +19,8 @@ import (
 
 const (
 	updateTaskSubsystemName = "updatetask"
+	createTaskSubsystemName = "createtask"
+	deleteTaskSubsystemName = "deletetask"
 	taskPath                = "tasks"
 )
 
@@ -174,6 +177,77 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	if err = jsonResponse(w, http.StatusOK, UpdateTaskResponse{&plan}); err != nil {
 		logger.Error("error, could not generate json response", "error", err)
 	}
+}
+
+type TaskLifeCycleHandler struct {
+	// TODO: replace this when implementing endpoint
+	//tasks map[string]oapigen.Task
+	//lock  sync.Mutex
+}
+
+func NewTaskLifeCycleHandler() *TaskLifeCycleHandler {
+	return &TaskLifeCycleHandler{
+		//tasks: make(map[string]oapigen.Task),
+	}
+}
+
+// CreateTask creates a task
+func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request, params oapigen.CreateTaskParams) {
+	// TODO: replace below when implementing endpoint
+	//logger := logging.FromContext(r.Context()).Named(createTaskSubsystemName)
+	//
+	//// Decode the new task and add it to our "database"
+	//var req oapigen.TaskRequest
+	//requestID := requestIDFromContext(r.Context())
+	//if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	//	sendError(w, r, http.StatusBadRequest, "invalid format for create task request")
+	//	return
+	//}
+	//
+	//logger.Trace("create task request", "create_task_request", req)
+	//
+	//// Verify query param
+	//if params.Run != nil {
+	//	if string(*params.Run) == "now" {
+	//		logger.Trace("create task and run now")
+	//	}
+	//}
+	//
+	//h.tasks[req.Name] = oapigen.Task(req)
+	//
+	//// Return the task response
+	//var resp oapigen.TaskResponse
+	//task := oapigen.Task(req)
+	//resp.Task = &task
+	//resp.RequestId = requestID
+	//
+	//w.Header().Set("Content-Type", "application/json")
+	//w.WriteHeader(http.StatusOK)
+	//err := json.NewEncoder(w).Encode(resp)
+	//if err != nil {
+	//	logger.Error("error encoding json", "error", err, "execute_dryrun_response", resp)
+	//}
+	//logger.Trace("task created", "create_task_response", resp)
+}
+
+// DeleteTaskByName Deletes a task by name
+func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.Request, name string) {
+	// TODO: replace below when implementing endpoint
+	//logger := logging.FromContext(r.Context()).Named(deleteTaskSubsystemName)
+	//h.lock.Lock()
+	//defer h.lock.Unlock()
+	//
+	//if _, ok := h.tasks[name]; ok {
+	//	delete(h.tasks, name)
+	//} else {
+	//	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	//	w.WriteHeader(http.StatusNotFound)
+	//	logger.Trace("task not found", "name", name)
+	//}
+	//
+	//w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	//w.WriteHeader(http.StatusNoContent)
+	//logger.Trace("task deleted")
 }
 
 func decodeBody(body []byte) (UpdateTaskConfig, error) {
