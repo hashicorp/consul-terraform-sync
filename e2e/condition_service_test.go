@@ -36,6 +36,9 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	condition "services" {
 		regexp = "api-"
 		filter = "Service.Tags not contains \"tag_a\""
+		cts_user_defined_meta {
+			my_meta_key = "my_meta_value"
+		}
 	}
 }
 `, taskName)
@@ -49,7 +52,8 @@ func TestCondition_Services_Regexp(t *testing.T) {
 	// 1. Register db service instance. Confirm that the task was not triggered
 	//    (no new event) and its data is filtered out of services variable.
 	// 2. Register api-web service instance. Confirm that task was triggered
-	//    (one new event) and its data exists in the services variable.
+	//    (one new event) and its data exists in the services variable and
+	//    confirm metadata in tfvars
 	// 3. Register a second node to the api-web service. Confirm that task was triggered
 	//    (one new event) and its data exists in the services variable.
 	// 4. Register a third node to the api-web service with tag_a. Confirm that
@@ -84,6 +88,7 @@ func TestCondition_Services_Regexp(t *testing.T) {
 		"event count did not increment once. task was not triggered as expected")
 	resourcesPath := filepath.Join(workingDir, resourcesDir)
 	validateServices(t, true, []string{"api-web-1"}, resourcesPath)
+	validateVariable(t, true, workingDir, "services", "my_meta_value")
 
 	// 3. Add a second node to the service "api-web"
 	now = time.Now()
