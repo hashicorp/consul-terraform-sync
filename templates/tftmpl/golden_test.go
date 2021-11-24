@@ -171,7 +171,10 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Condition: &ServicesCondition{
 					ServicesMonitor{
-						Regexp: ".*",
+						Regexp:     ".*",
+						Datacenter: "dc1",
+						Namespace:  "ns1",
+						Filter:     "some-filter",
 					},
 					true,
 				},
@@ -188,7 +191,10 @@ func TestNewFiles(t *testing.T) {
 				Task:      task,
 				SourceInput: &ServicesSourceInput{
 					ServicesMonitor{
-						Regexp: ".*",
+						Regexp:     ".*",
+						Datacenter: "dc1",
+						Namespace:  "ns1",
+						Filter:     "some-filter",
 					},
 				},
 			},
@@ -207,7 +213,10 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 				SourceInput: &ServicesSourceInput{
 					ServicesMonitor{
-						Regexp: ".*",
+						Regexp:     ".*",
+						Datacenter: "dc1",
+						Namespace:  "ns1",
+						Filter:     "some-filter",
 					},
 				},
 			},
@@ -232,7 +241,10 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 				SourceInput: &ServicesSourceInput{
 					ServicesMonitor{
-						Regexp: ".*",
+						Regexp:     ".*",
+						Datacenter: "dc1",
+						Namespace:  "ns1",
+						Filter:     "some-filter",
 					},
 				},
 			},
