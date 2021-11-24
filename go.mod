@@ -9,7 +9,10 @@ require (
 	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/aws/aws-sdk-go v1.37.19 // indirect
+	github.com/deepmap/oapi-codegen v1.9.0
 	github.com/fatih/color v1.10.0 // indirect
+	github.com/getkin/kin-openapi v0.81.0
+	github.com/go-chi/chi/v5 v5.0.6
 	github.com/go-test/deep v1.0.7 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/uuid v1.2.0 // indirect
@@ -51,11 +54,7 @@ require (
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/zclconf/go-cty v1.8.4
 	go.opencensus.io v0.22.6 // indirect
-	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a // indirect
 	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
 	golang.org/x/oauth2 v0.0.0-20210220000619-9bb904979d93 // indirect
-	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	google.golang.org/genproto v0.0.0-20210222212404-3e1e516060db // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
