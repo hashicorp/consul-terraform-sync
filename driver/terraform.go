@@ -517,16 +517,15 @@ func (tf *Terraform) initTaskTemplate() error {
 		Perms: filePerms,
 	})
 
-	metaMap := make(tmplfunc.ServicesMeta)
-	services := tf.task.Services()
-	for _, s := range services {
-		metaMap[s.Name] = s.UserDefinedMeta
+	servicesMeta, err := tf.getServicesMetaData()
+	if err != nil {
+		return err
 	}
 
 	tmpl := hcat.NewTemplate(hcat.TemplateInput{
 		Contents:     string(content),
 		Renderer:     renderer,
-		FuncMapMerge: tmplfunc.HCLMap(metaMap),
+		FuncMapMerge: tmplfunc.HCLMap(servicesMeta),
 	})
 
 	if tf.template != nil {
@@ -547,7 +546,7 @@ func (tf *Terraform) initTaskTemplate() error {
 		tf.watcher.Sweep(tf.template)
 	}
 
-	tf.setNotifier(tmpl, len(services))
+	tf.setNotifier(tmpl, len(tf.task.Services()))
 
 	if !tf.watcher.Watching(tf.template.ID()) {
 		err = tf.watcher.Register(tf.template)
@@ -613,6 +612,55 @@ func getTerraformHandlers(taskName string, providers TerraformProviderBlocks) (h
 	}
 	logger.Info(fmt.Sprintf("retrieved %d Terraform handlers for task", counter), taskNameLogKey, taskName)
 	return next, nil
+}
+
+// getServicesMetaData helps retrieve metadata which can come from a number of
+// configuration sources: service block, condition block, source_input block.
+// Currently, it is only possible for a task to have metadata defined in one of
+// the listed sources
+func (tf *Terraform) getServicesMetaData() (*tmplfunc.ServicesMeta, error) {
+	servicesMeta := &tmplfunc.ServicesMeta{}
+
+	// Introduced in 0.5. Metadata comes from condition "services"
+	servicesCond, ok := tf.task.Condition().(*config.ServicesConditionConfig)
+	if ok {
+		err := servicesMeta.SetMeta(servicesCond.CTSUserDefinedMeta)
+		if err != nil {
+			tf.logger.Error("unable to to set metadata from services condition",
+				taskNameLogKey, tf.task.Name(), "error", err)
+			return nil, err
+		}
+
+		return servicesMeta, nil
+	}
+
+	// Introduced in 0.5. Metadata comes from source_input "services"
+	servicesInput, ok := tf.task.SourceInput().(*config.ServicesSourceInputConfig)
+	if ok {
+		err := servicesMeta.SetMeta(servicesInput.CTSUserDefinedMeta)
+		if err != nil {
+			tf.logger.Error("unable to to set metadata from services source input",
+				taskNameLogKey, tf.task.Name(), "error", err)
+			return nil, err
+		}
+
+		return servicesMeta, nil
+	}
+
+	// Deprecated in 0.5. Metadata comes from service block
+	metaMap := make(map[string]map[string]string)
+	services := tf.task.Services()
+	for _, s := range services {
+		metaMap[s.Name] = s.UserDefinedMeta
+	}
+
+	if err := servicesMeta.SetMetaMap(metaMap); err != nil {
+		tf.logger.Error("unable to to set metadata from task service blocks",
+			taskNameLogKey, tf.task.Name(), "error", err)
+		return nil, err
+	}
+
+	return servicesMeta, nil
 }
 
 func envMap(environ []string) map[string]string {
