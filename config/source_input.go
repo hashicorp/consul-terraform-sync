@@ -22,7 +22,11 @@ type SourceInputConfig interface {
 func DefaultSourceInputConfig() SourceInputConfig {
 	return &ServicesSourceInputConfig{
 		ServicesMonitorConfig{
-			Regexp: String(""),
+			Regexp:             String(""),
+			Datacenter:         String(""),
+			Namespace:          String(""),
+			Filter:             String(""),
+			CTSUserDefinedMeta: map[string]string{},
 		},
 	}
 }

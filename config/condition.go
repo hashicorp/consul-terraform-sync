@@ -22,7 +22,11 @@ type ConditionConfig interface {
 func DefaultConditionConfig() ConditionConfig {
 	return &ServicesConditionConfig{
 		ServicesMonitorConfig{
-			Regexp: String(""),
+			Regexp:             String(""),
+			Datacenter:         String(""),
+			Namespace:          String(""),
+			Filter:             String(""),
+			CTSUserDefinedMeta: map[string]string{},
 		},
 	}
 }
