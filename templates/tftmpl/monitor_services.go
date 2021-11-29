@@ -46,7 +46,10 @@ type Monitor interface {
 
 // ServicesMonitor handles appending templating for the services run monitor
 type ServicesMonitor struct {
-	Regexp string
+	Regexp     string
+	Datacenter string
+	Namespace  string
+	Filter     string
 }
 
 // ServicesAppended returns true if the services are to be appended
@@ -89,8 +92,22 @@ func (m ServicesMonitor) hcatQuery() string {
 		opts = append(opts, fmt.Sprintf("regexp=%s", m.Regexp))
 	}
 
+	if m.Datacenter != "" {
+		opts = append(opts, fmt.Sprintf("dc=%s", m.Datacenter))
+	}
+
+	if m.Namespace != "" {
+		opts = append(opts, fmt.Sprintf("ns=%s", m.Namespace))
+	}
+
+	if m.Filter != "" {
+		filter := strings.ReplaceAll(m.Filter, `"`, `\"`)
+		filter = strings.Trim(filter, "\n")
+		opts = append(opts, filter)
+	}
+
 	if len(opts) > 0 {
-		return `"` + strings.Join(opts, `" "`) + `" ` // deliberate space at end
+		return `"` + strings.Join(opts, `" "`) + `"`
 	}
 	return ""
 }

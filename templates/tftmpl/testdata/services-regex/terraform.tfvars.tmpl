@@ -8,7 +8,7 @@
 # Description: user description for task named 'test'
 
 services = {
-{{- with $srv := servicesRegex "regexp=.*" "dc=dc1" "ns=ns1" "some-filter" }}
+{{- with $srv := servicesRegex "regexp=api" "dc=dc1" "Service.ID == \"api-2\""}}
   {{- range $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
 {{ HCLService $s | indent 4 }}

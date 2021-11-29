@@ -340,7 +340,10 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	case *config.ServicesConditionConfig:
 		condition = &tftmpl.ServicesCondition{
 			ServicesMonitor: tftmpl.ServicesMonitor{
-				Regexp: *v.Regexp,
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
 			},
 			// always set services variable
 			SourceIncludesVar: true,
@@ -373,7 +376,10 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	case *config.ServicesSourceInputConfig:
 		sourceInput = &tftmpl.ServicesSourceInput{
 			ServicesMonitor: tftmpl.ServicesMonitor{
-				Regexp: *v.Regexp,
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
 			},
 		}
 	case *config.ConsulKVSourceInputConfig:
