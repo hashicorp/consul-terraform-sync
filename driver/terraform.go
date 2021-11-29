@@ -271,10 +271,11 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
+	originalEnabled := tf.task.IsEnabled()
+
 	// for inspect, dry-run the task with the planned change and then make sure
 	// to reset the task back to the way it was
-	if patch.RunOption == RunOptionInspect {
-		originalEnabled := tf.task.IsEnabled()
+	if patch.RunOption == RunOptionInspect && originalEnabled != patch.Enabled {
 		defer func() {
 			if originalEnabled {
 				tf.task.Enable()
@@ -286,7 +287,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 
 	reinit := false
 
-	if tf.task.IsEnabled() != patch.Enabled {
+	if originalEnabled != patch.Enabled {
 		if patch.Enabled {
 			tf.task.Enable()
 			reinit = true
@@ -534,6 +535,10 @@ func (tf *Terraform) initTaskTemplate() error {
 			// during a task update), then the template content is the same.
 			// Template content must be unique.
 			// See: https://github.com/hashicorp/consul-terraform-sync/pull/167
+
+			// Reset the buffer period if applicable to avoid possible waiting after
+			// re-init to render latest content
+			tf.watcher.BufferReset(tf.template)
 			return nil
 		}
 
