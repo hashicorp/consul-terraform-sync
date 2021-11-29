@@ -615,9 +615,12 @@ func getTerraformHandlers(taskName string, providers TerraformProviderBlocks) (h
 }
 
 // getServicesMetaData helps retrieve metadata which can come from a number of
-// configuration sources: service block, condition block, source_input block.
-// Currently, it is only possible for a task to have metadata defined in one of
-// the listed sources
+// configuration sources: task.services' related service block, condition
+// "service" block, source_input "service" block.
+//
+// Currently it is only possible for a task to be configured with one of these
+// configuration sources, hence a task only has one metadata source. This is
+// validated at the configuration-level. This method relies on this assumption.
 func (tf *Terraform) getServicesMetaData() (*tmplfunc.ServicesMeta, error) {
 	servicesMeta := &tmplfunc.ServicesMeta{}
 
