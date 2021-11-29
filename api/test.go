@@ -126,7 +126,7 @@ func WaitForEvent(t *testing.T, client *Client, taskName string, start time.Time
 					polling <- struct{}{}
 					return
 				}
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(time.Second)
 			}
 		}
 	}()
@@ -136,7 +136,7 @@ func WaitForEvent(t *testing.T, client *Client, taskName string, start time.Time
 		return
 	case <-time.After(timeout):
 		close(stopPolling)
-		t.Logf("\nError: timed out after waiting for %v for new event for task %q\n",
+		t.Fatalf("\nError: timed out after waiting for %v for new event for task %q\n",
 			timeout, taskName)
 	}
 }
