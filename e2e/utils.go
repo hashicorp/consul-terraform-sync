@@ -4,9 +4,11 @@
 package e2e
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -127,6 +129,36 @@ func checkStateFileLocally(t *testing.T, stateFilePath string) {
 
 	stateFile := files[0]
 	require.Equal(t, "terraform.tfstate", stateFile.Name())
+}
+
+// runSubcommand runs a CTS subcommand and its arguments. If user input is
+// required for subcommand, pass it through 'input' parameter. Function returns
+// the stdout/err output and any error when executing the subcommand.
+// Note: if error returned, output will still contain any stdout/err information.
+func runSubcommand(t *testing.T, input string, subcmd ...string) (string, error) {
+	return runSubCommandWithEnvVars(t, input, []string{}, subcmd...)
+}
+
+func runSubCommandWithEnvVars(t *testing.T, input string, envVars []string, subcmd ...string) (string, error) {
+	cmd := exec.Command("consul-terraform-sync", subcmd...)
+	cmd.Env = append(cmd.Env, envVars...)
+
+	var b bytes.Buffer
+	cmd.Stdout = &b
+	cmd.Stderr = &b
+
+	stdin, err := cmd.StdinPipe()
+	require.NoError(t, err)
+
+	err = cmd.Start()
+	require.NoError(t, err)
+
+	_, err = stdin.Write([]byte(input))
+	require.NoError(t, err)
+	stdin.Close()
+
+	err = cmd.Wait()
+	return b.String(), err
 }
 
 // ctsSetup executes the following setup steps:
