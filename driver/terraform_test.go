@@ -818,12 +818,7 @@ func TestGetServicesMetaData(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tf := &Terraform{
-				task:   tc.task,
-				logger: logging.NewNullLogger(),
-			}
-
-			actual, err := tf.getServicesMetaData()
+			actual, err := getServicesMetaData(logging.NewNullLogger(), tc.task)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expFunc(), actual)
 		})
