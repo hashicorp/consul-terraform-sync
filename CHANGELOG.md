@@ -5,6 +5,10 @@ BREAKING CHANGES:
   * If the `workspace_prefix` option is in use by CTS v0.3.x or v0.4.x for the Terraform Cloud driver, append "-" to the prefix in the configuration file prior to updating to v0.5.0 to continue automating the same Terraform Cloud workspaces for your CTS tasks.
 * Stop monitoring and including non-passing service instances in `terraform.tfvars` by default. CTS should only monitor passing service instances unless configured otherwise. [[GH-430](https://github.com/hashicorp/consul-terraform-sync/issues/430)]
 
+BUG FIXES:
+* Fix CLI client enable task command timing out when buffer period is enabled [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
+* **(Enterprise Only)** Fix task not triggering after re-enabled when running with the TFC driver.
+
 ## 0.4.3 (January 14, 2022)
 SECURITY:
 * Upgrade Go to address [CVE-2021-44716](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44716) and [CVE-2021-44717](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44717)
