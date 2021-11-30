@@ -9,57 +9,46 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
-// deleteTask deletes an existing task and its events. Does not delete
+// DeleteTaskByName deletes an existing task and its events. Does not delete
 // if the task is active.
-func (h *TaskLifeCycleHandler) deleteTask(w http.ResponseWriter, r *http.Request) {
-	taskName, err := getTaskName(r.URL.Path, taskPath, h.version)
-	logger := logging.FromContext(r.Context()).Named(deleteTaskSubsystemName)
-	if err != nil {
-		logger.Trace("bad request", "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
-		return
-	}
-	logger.Trace("deleting task", "task_name", taskName)
+func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.Request, name string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	if taskName == "" {
-		err := fmt.Errorf("no task name was included in the api request. " +
-			"Deleting a task requires the task name: '/v1/tasks/:name'")
-		logger.Trace("bad request", "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
-		return
-	}
-	logger.Trace("deleting task", "task", taskName)
+	logger := logging.FromContext(r.Context()).Named(deleteTaskSubsystemName)
+	logger.Trace("deleting task", "task_name", name)
 
 	// Check if task exists
-	_, ok := h.drivers.Get(taskName)
+	_, ok := h.drivers.Get(name)
 	if !ok {
 		err := fmt.Errorf("a task with the name '%s' does not exist or has not "+
-			"been initialized yet", taskName)
-		logger.Trace("task not found", "task_name", taskName, "error", err)
+			"been initialized yet", name)
+		logger.Trace("task not found", "task_name", name, "error", err)
 		sendError(w, r, http.StatusNotFound, fmt.Sprint(err))
 		return
 	}
 
 	// Check if task is active
-	if h.drivers.IsActive(taskName) {
+	if h.drivers.IsActive(name) {
 		err := fmt.Errorf("task '%s' is currently running and cannot be deleted "+
-			"at this time", taskName)
-		logger.Trace("task active", "task_name", taskName, "error", err)
+			"at this time", name)
+		logger.Trace("task active", "task_name", name, "error", err)
 		sendError(w, r, http.StatusConflict, fmt.Sprint(err))
 		return
 	}
 
 	// Delete task driver and events
-	err = h.drivers.Delete(taskName)
+	err := h.drivers.Delete(name)
 	if err != nil {
-		logger.Trace("unable to delete task", "task_name", taskName, "error", err)
+		logger.Trace("unable to delete task", "task_name", name, "error", err)
 		sendError(w, r, http.StatusInternalServerError, fmt.Sprint(err))
 		return
 	}
-	h.store.Delete(taskName)
-	logger.Trace("task deleted", "task_name", taskName)
+	h.store.Delete(name)
+	logger.Trace("task deleted", "task_name", name)
 
-	var resp oapigen.TaskDeleteResponse
+	var resp oapigen.TaskResponse
 	requestID := requestIDFromContext(r.Context())
 	resp.RequestId = requestID
 

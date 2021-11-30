@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,46 +13,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTaskDelete_deleteTask(t *testing.T) {
+func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 	t.Parallel()
+	existingTask := "task_a"
 	cases := []struct {
 		name       string
-		path       string
+		taskName   string
 		active     bool
 		deleted    bool
 		statusCode int
 	}{
 		{
-			"happy path",
-			"/v1/tasks/task_a",
+			"happy_path",
+			existingTask,
 			false,
 			true,
 			http.StatusOK,
 		},
 		{
-			"bad path/taskname",
-			"/v1/tasks/task/a",
+			"task_not_found",
+			"task_b",
 			false,
-			false,
-			http.StatusBadRequest,
-		},
-		{
-			"no task specified",
-			"/v1/tasks",
-			false,
-			false,
-			http.StatusBadRequest,
-		},
-		{
-			"task not found",
-			"/v1/tasks/task_b",
-			false,
-			false,
+			true,
 			http.StatusNotFound,
 		},
 		{
 			"task_is_running",
-			"/v1/tasks/task_a",
+			existingTask,
 			true,
 			false,
 			http.StatusConflict,
@@ -60,39 +48,39 @@ func TestTaskDelete_deleteTask(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			taskName := "task_a"
 			drivers := driver.NewDrivers()
 			d := new(mocks.Driver)
-			drivers.Add(taskName, d)
+			drivers.Add(existingTask, d)
 			if tc.active {
-				drivers.SetActive(taskName)
+				drivers.SetActive(existingTask)
 			}
 
 			store := event.NewStore()
-			store.Add(event.Event{TaskName: taskName})
-			handler := NewTaskLifeCycleHandler(store, drivers, "v1")
+			store.Add(event.Event{TaskName: existingTask})
+			handler := NewTaskLifeCycleHandler(store, drivers)
 
-			req, err := http.NewRequest(http.MethodDelete, tc.path, nil)
+			path := fmt.Sprintf("/v1/tasks/%s", tc.taskName)
+			req, err := http.NewRequest(http.MethodDelete, path, nil)
 			require.NoError(t, err)
 			resp := httptest.NewRecorder()
 
-			handler.deleteTask(resp, req)
+			handler.DeleteTaskByName(resp, req, tc.taskName)
 			require.Equal(t, tc.statusCode, resp.Code)
 
-			_, ok := drivers.Get(taskName)
+			_, ok := drivers.Get(tc.taskName)
 			if tc.deleted {
-				assert.False(t, ok)
+				assert.False(t, ok, "task should have been deleted")
 			} else {
-				assert.True(t, ok)
+				assert.True(t, ok, "task should not have been deleted")
 			}
 
-			data := store.Read(taskName)
-			events, ok := data[taskName]
+			data := store.Read(tc.taskName)
+			events, ok := data[tc.taskName]
 
 			if tc.deleted {
-				require.False(t, ok)
+				require.False(t, ok, "task should have been deleted")
 			} else {
-				require.True(t, ok)
+				require.True(t, ok, "task should not have been deleted")
 				assert.Equal(t, 1, len(events))
 			}
 		})

@@ -238,14 +238,6 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	//logger.Trace("task created", "create_task_response", resp)
 }
 
-// DeleteTaskByName deletes a task with the given name as well as the events for the task
-func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.Request, name string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	h.deleteTask(w, r)
-}
-
 func decodeBody(body []byte) (UpdateTaskConfig, error) {
 	var raw map[string]interface{}
 
