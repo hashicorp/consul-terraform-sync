@@ -189,18 +189,13 @@ type TaskLifeCycleHandler struct {
 
 	store   *event.Store
 	drivers *driver.Drivers
-	version string
-	tasks   map[string]oapigen.Task
 }
 
-func NewTaskLifeCycleHandler(store *event.Store, drivers *driver.Drivers,
-	version string) *TaskLifeCycleHandler {
+func NewTaskLifeCycleHandler(store *event.Store, drivers *driver.Drivers) *TaskLifeCycleHandler {
 	return &TaskLifeCycleHandler{
 		mu:      &sync.RWMutex{},
 		store:   store,
 		drivers: drivers,
-		version: version,
-		tasks:   make(map[string]oapigen.Task),
 	}
 }
 

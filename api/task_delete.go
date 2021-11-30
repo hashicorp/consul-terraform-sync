@@ -1,9 +1,11 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
@@ -17,6 +19,7 @@ func (h *TaskLifeCycleHandler) deleteTask(w http.ResponseWriter, r *http.Request
 		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
+	logger.Trace("deleting task", "task_name", taskName)
 
 	if taskName == "" {
 		err := fmt.Errorf("no task name was included in the api request. " +
@@ -32,8 +35,8 @@ func (h *TaskLifeCycleHandler) deleteTask(w http.ResponseWriter, r *http.Request
 	if !ok {
 		err := fmt.Errorf("a task with the name '%s' does not exist or has not "+
 			"been initialized yet", taskName)
-		logger.Trace("task not found", "task", taskName, "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusNotFound, err)
+		logger.Trace("task not found", "task_name", taskName, "error", err)
+		sendError(w, r, http.StatusNotFound, fmt.Sprint(err))
 		return
 	}
 
@@ -41,20 +44,29 @@ func (h *TaskLifeCycleHandler) deleteTask(w http.ResponseWriter, r *http.Request
 	if h.drivers.IsActive(taskName) {
 		err := fmt.Errorf("task '%s' is currently running and cannot be deleted "+
 			"at this time", taskName)
-		logger.Trace("task active", "task", taskName, "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusConflict, err)
+		logger.Trace("task active", "task_name", taskName, "error", err)
+		sendError(w, r, http.StatusConflict, fmt.Sprint(err))
 		return
 	}
 
 	// Delete task driver and events
 	err = h.drivers.Delete(taskName)
 	if err != nil {
-		logger.Trace("unable to delete task", "task", taskName, "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusInternalServerError, err)
+		logger.Trace("unable to delete task", "task_name", taskName, "error", err)
+		sendError(w, r, http.StatusInternalServerError, fmt.Sprint(err))
 		return
 	}
 	h.store.Delete(taskName)
-	logger.Trace("task deleted", "task", taskName)
+	logger.Trace("task deleted", "task_name", taskName)
 
+	var resp oapigen.TaskDeleteResponse
+	requestID := requestIDFromContext(r.Context())
+	resp.RequestId = requestID
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		logger.Error("error encoding json response", "error", err, "response", resp)
+	}
 }
