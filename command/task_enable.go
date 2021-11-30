@@ -135,7 +135,7 @@ func (c *taskEnableCommand) Run(args []string) int {
 		return ExitCodeOK
 	}
 
-	if exitCode, approved := c.meta.requestUserApproval(taskName); !approved {
+	if exitCode, approved := c.meta.requestUserApprovalEnable(taskName); !approved {
 		return exitCode
 	}
 
