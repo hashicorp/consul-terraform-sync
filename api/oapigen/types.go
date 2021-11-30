@@ -8,6 +8,13 @@ import (
 	"fmt"
 )
 
+// BufferPeriod defines model for BufferPeriod.
+type BufferPeriod struct {
+	Enabled *bool   `json:"enabled,omitempty"`
+	Max     *string `json:"max,omitempty"`
+	Min     *string `json:"min,omitempty"`
+}
+
 // CatalogServicesCondition defines model for CatalogServicesCondition.
 type CatalogServicesCondition struct {
 	Datacenter        *string                            `json:"datacenter,omitempty"`
@@ -20,6 +27,14 @@ type CatalogServicesCondition struct {
 // CatalogServicesCondition_NodeMeta defines model for CatalogServicesCondition.NodeMeta.
 type CatalogServicesCondition_NodeMeta struct {
 	AdditionalProperties map[string]string `json:"-"`
+}
+
+// Condition defines model for Condition.
+type Condition struct {
+	CatalogServices *CatalogServicesCondition `json:"catalog_services,omitempty"`
+	ConsulKv        *ConsulKVCondition        `json:"consul_kv,omitempty"`
+	Schedule        *ScheduleCondition        `json:"schedule,omitempty"`
+	Services        *ServicesCondition        `json:"services,omitempty"`
 }
 
 // ConsulKVCondition defines model for ConsulKVCondition.
@@ -81,32 +96,26 @@ type ServicesSourceInput struct {
 	Regexp *string `json:"regexp,omitempty"`
 }
 
+// SourceInput defines model for SourceInput.
+type SourceInput struct {
+	ConsulKv *ConsulKVSourceInput `json:"consul_kv,omitempty"`
+	Services *ServicesSourceInput `json:"services,omitempty"`
+}
+
 // Task defines model for Task.
 type Task struct {
-	BufferPeriod *struct {
-		Enabled *bool   `json:"enabled,omitempty"`
-		Max     *string `json:"max,omitempty"`
-		Min     *string `json:"min,omitempty"`
-	} `json:"buffer_period,omitempty"`
-	Condition *struct {
-		CatalogServices *CatalogServicesCondition `json:"catalog-services,omitempty"`
-		ConsulKv        *ConsulKVCondition        `json:"consul-kv,omitempty"`
-		Schedule        *ScheduleCondition        `json:"schedule,omitempty"`
-		Services        *ServicesCondition        `json:"services,omitempty"`
-	} `json:"condition,omitempty"`
-	Description *string   `json:"description,omitempty"`
-	Enabled     *bool     `json:"enabled,omitempty"`
-	Name        string    `json:"name"`
-	Providers   *[]string `json:"providers,omitempty"`
-	Services    *[]string `json:"services,omitempty"`
-	Source      string    `json:"source"`
-	SourceInput *struct {
-		ConsulKv *ConsulKVSourceInput `json:"consul-kv,omitempty"`
-		Services *ServicesSourceInput `json:"services,omitempty"`
-	} `json:"source_input,omitempty"`
-	Variables  *Task_Variables `json:"variables,omitempty"`
-	Version    *string         `json:"version,omitempty"`
-	WorkingDir *string         `json:"working_dir,omitempty"`
+	BufferPeriod *BufferPeriod   `json:"buffer_period,omitempty"`
+	Condition    *Condition      `json:"condition,omitempty"`
+	Description  *string         `json:"description,omitempty"`
+	Enabled      *bool           `json:"enabled,omitempty"`
+	Name         string          `json:"name"`
+	Providers    *[]string       `json:"providers,omitempty"`
+	Services     *[]string       `json:"services,omitempty"`
+	Source       string          `json:"source"`
+	SourceInput  *SourceInput    `json:"source_input,omitempty"`
+	Variables    *Task_Variables `json:"variables,omitempty"`
+	Version      *string         `json:"version,omitempty"`
+	WorkingDir   *string         `json:"working_dir,omitempty"`
 }
 
 // Task_Variables defines model for Task.Variables.

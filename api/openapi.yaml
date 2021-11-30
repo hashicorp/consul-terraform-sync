@@ -184,35 +184,11 @@ components:
           example: "./sync-tasks/task-name"
           default: "sync-tasks"
         buffer_period:
-          type: object
-          properties:
-            enabled:
-              type: boolean
-              example: true
-            max:
-              type: string
-              example: "5s"
-            min:
-              type: string
-              example: "20s"
+          $ref: '#/components/schemas/BufferPeriod'
         condition:
-          type: object
-          properties:
-            catalog-services:
-              $ref: '#/components/schemas/CatalogServicesCondition'
-            services:
-              $ref: '#/components/schemas/ServicesCondition'
-            consul-kv:
-              $ref: '#/components/schemas/ConsulKVCondition'
-            schedule:
-              $ref: '#/components/schemas/ScheduleCondition'
+          $ref: '#/components/schemas/Condition'
         source_input:
-          type: object
-          properties:
-            services:
-              $ref: '#/components/schemas/ServicesSourceInput'
-            consul-kv:
-              $ref: '#/components/schemas/ConsulKVSourceInput'
+          $ref: '#/components/schemas/SourceInput'
       required:
         - name
         - source
@@ -230,6 +206,40 @@ components:
         source: org/example/module
         variable_files: [ ]
         version: 1.0.0
+
+    BufferPeriod:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: true
+        max:
+          type: string
+          example: "5s"
+        min:
+          type: string
+          example: "20s"
+
+    Condition:
+      type: object
+      properties:
+        catalog_services:
+          $ref: '#/components/schemas/CatalogServicesCondition'
+        services:
+          $ref: '#/components/schemas/ServicesCondition'
+        consul_kv:
+          $ref: '#/components/schemas/ConsulKVCondition'
+        schedule:
+          $ref: '#/components/schemas/ScheduleCondition'
+
+    SourceInput:
+      type: object
+      properties:
+        services:
+          $ref: '#/components/schemas/ServicesSourceInput'
+        consul_kv:
+          $ref: '#/components/schemas/ConsulKVSourceInput'
+
 
     ServicesCondition:
       type: object
@@ -280,7 +290,7 @@ components:
           default: false
           example: false
       required:
-          - path
+        - path
     ScheduleCondition:
       type: object
       properties:
