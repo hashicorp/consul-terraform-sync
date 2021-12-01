@@ -322,6 +322,109 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	testutils.CheckDir(t, false, resourcesPath)
 }
 
+// TestE2E_TaskEndpoints_Delete tests the delete task endpoint. This
+// runs a Consul server and the CTS binary in daemon mode.
+//	DELETE/v1/tasks/:task_name
+func TestE2E_TaskEndpoints_Delete(t *testing.T) {
+	t.Parallel()
+	// Test deleting a task
+	// 1. Start with a task
+	// 2. Delete the task
+	// 3. Check that the task and events no longer exist
+	// 4. Make a service change, check that no change is made
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "delete_task")
+	taskName := "deleted_task"
+	cts := ctsSetup(t, srv, tempDir,
+		moduleTaskConfig(taskName, "./test_modules/local_instances_file"))
+
+	// Delete task
+	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s",
+		cts.Port(), "v1", taskName)
+	resp := testutils.RequestHTTP(t, http.MethodDelete, u, "")
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Check that the task no longer exists
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s",
+		cts.Port(), "v1", taskName)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	// Make a change that would have triggered the task, expect no event
+	service := testutil.TestService{
+		ID:      "api",
+		Name:    "api",
+		Address: "5.6.7.8",
+		Port:    8080,
+	}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, false, []string{"api"}, resourcesPath)
+}
+
+// TestE2E_TaskEndpoints_Delete_Conflict tests that a running task cannot
+// be deleted. This runs a Consul server and the CTS binary in daemon mode.
+//	DELETE/v1/tasks/:task_name
+func TestE2E_TaskEndpoints_Delete_Conflict(t *testing.T) {
+	t.Parallel()
+	// Test deleting a task
+	// 1. Start with a task
+	// 2. Trigger the task
+	// 3. While task is still running, delete the task
+	// 4. Check that the task and events still exist
+	// 5. Delete the task after it is complete
+	// 6. Check that the task and events no longer exist
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "deleted_task_conflict")
+	taskName := "deleted_task_conflict"
+	cts := ctsSetup(t, srv, tempDir,
+		moduleTaskConfig(taskName, "./test_modules/delayed_module"))
+
+	// Trigger the task
+	now := time.Now()
+	service := testutil.TestService{
+		ID:      "api",
+		Name:    "api",
+		Address: "5.6.7.8",
+		Port:    8080,
+	}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+
+	// Attempt to delete the task while running, expect failure
+	time.Sleep(2 * time.Second) // task completion is delayed by 5s
+	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s",
+		cts.Port(), "v1", taskName)
+	resp := testutils.RequestHTTP(t, http.MethodDelete, u, "")
+	require.Equal(t, http.StatusConflict, resp.StatusCode)
+
+	// Check that the task still exists, wait for it to complete
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, true, []string{"api"}, resourcesPath)
+
+	// Delete task now that it is completed
+	resp = testutils.RequestHTTP(t, http.MethodDelete, u, "")
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Check that the task no longer exists
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s",
+		cts.Port(), "v1", taskName)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
 // checkEvents does some basic checks to loosely ensure returned events in
 // responses are as expected
 func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,

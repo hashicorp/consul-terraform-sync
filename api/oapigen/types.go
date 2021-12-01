@@ -123,6 +123,11 @@ type Task_Variables struct {
 	AdditionalProperties map[string]string `json:"-"`
 }
 
+// TaskDeleteResponse defines model for TaskDeleteResponse.
+type TaskDeleteResponse struct {
+	RequestId RequestID `json:"request_id"`
+}
+
 // TaskRequest defines model for TaskRequest.
 type TaskRequest Task
 

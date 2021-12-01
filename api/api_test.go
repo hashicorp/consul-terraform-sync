@@ -62,6 +62,13 @@ func TestServe(t *testing.T) {
 			`{"enabled": true}`,
 			http.StatusOK,
 		},
+		{
+			"delete task",
+			"tasks/task_b",
+			http.MethodDelete,
+			"",
+			http.StatusOK,
+		},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

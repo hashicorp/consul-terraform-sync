@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -184,14 +185,17 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 type TaskLifeCycleHandler struct {
-	// TODO: replace this when implementing endpoint
-	//tasks map[string]oapigen.Task
-	//lock  sync.Mutex
+	mu *sync.RWMutex
+
+	store   *event.Store
+	drivers *driver.Drivers
 }
 
-func NewTaskLifeCycleHandler() *TaskLifeCycleHandler {
+func NewTaskLifeCycleHandler(store *event.Store, drivers *driver.Drivers) *TaskLifeCycleHandler {
 	return &TaskLifeCycleHandler{
-		//tasks: make(map[string]oapigen.Task),
+		mu:      &sync.RWMutex{},
+		store:   store,
+		drivers: drivers,
 	}
 }
 
@@ -232,26 +236,6 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	//	logger.Error("error encoding json", "error", err, "execute_dryrun_response", resp)
 	//}
 	//logger.Trace("task created", "create_task_response", resp)
-}
-
-// DeleteTaskByName Deletes a task by name
-func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.Request, name string) {
-	// TODO: replace below when implementing endpoint
-	//logger := logging.FromContext(r.Context()).Named(deleteTaskSubsystemName)
-	//h.lock.Lock()
-	//defer h.lock.Unlock()
-	//
-	//if _, ok := h.tasks[name]; ok {
-	//	delete(h.tasks, name)
-	//} else {
-	//	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	//	w.WriteHeader(http.StatusNotFound)
-	//	logger.Trace("task not found", "name", name)
-	//}
-	//
-	//w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	//w.WriteHeader(http.StatusNoContent)
-	//logger.Trace("task deleted")
 }
 
 func decodeBody(body []byte) (UpdateTaskConfig, error) {

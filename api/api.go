@@ -140,7 +140,7 @@ func NewAPI(conf *APIConfig) (*API, error) {
 
 		// Generated Endpoints
 		server := Handlers{
-			TaskLifeCycleHandler: NewTaskLifeCycleHandler(),
+			TaskLifeCycleHandler: NewTaskLifeCycleHandler(api.store, api.drivers),
 			DryrunHandler:        NewDryrunHandler(),
 		}
 		oapigen.HandlerFromMux(server, r)
