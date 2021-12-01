@@ -217,6 +217,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 	for _, tc := range cases {
 		tb := &testutils.TestingTB{}
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
 			// Setup Consul server
 			log.SetOutput(ioutil.Discard)
@@ -329,7 +330,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 				re, err := r.Run(tmpl, w)
 				require.NoError(t, err)
 
-				if re.Complete {
+				if re.Complete && !re.NoChange {
 					// there may be a race with the consul services registering
 					// let's retry once.
 					contents := string(re.Contents)
