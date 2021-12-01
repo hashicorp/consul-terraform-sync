@@ -260,3 +260,97 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
 }
+
+// TestE2E_DeleteTaskCommand tests deleting a task with the CTS CLI
+func TestE2E_DeleteTaskCommand(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name           string
+		taskName       string
+		args           []string
+		input          string
+		outputContains []string
+		expectErr      bool
+		expectDeleted  bool
+	}{
+		{
+			name:     "happy_path",
+			taskName: dbTaskName,
+			input:    "yes\n",
+			outputContains: []string{
+				fmt.Sprintf("Do you want to delete '%s'?", dbTaskName),
+				fmt.Sprintf("Deleted task '%s'", dbTaskName)},
+			expectErr:     false,
+			expectDeleted: true,
+		},
+		{
+			name:     "user_does_not_approve_deletion",
+			taskName: dbTaskName,
+			input:    "no\n",
+			outputContains: []string{
+				fmt.Sprintf("Do you want to delete '%s'?", dbTaskName),
+				fmt.Sprintf("Cancelled deleting task '%s'", dbTaskName),
+			},
+			expectErr:     false,
+			expectDeleted: false,
+		},
+		{
+			name:     "task_does_not_exist",
+			taskName: "nonexistent_task",
+			input:    "yes\n",
+			outputContains: []string{
+				fmt.Sprintf("Error: unable to delete '%s'", "nonexistent_task"),
+				fmt.Sprintf("request returned 404 status code with error:"),
+			},
+			expectErr:     true,
+			expectDeleted: true, // never existed, same as deleted
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := newTestConsulServer(t)
+			defer srv.Stop()
+			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "delete_cmd")
+			cts := ctsSetup(t, srv, tempDir, dbTask())
+
+			// Delete command and user approval input if required
+			subcmd := []string{"task", "delete",
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+			}
+			subcmd = append(subcmd, tc.args...)
+			subcmd = append(subcmd, tc.taskName)
+			output, err := runSubcommand(t, tc.input, subcmd...)
+
+			// Verify result and output of command
+			if tc.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			for _, expect := range tc.outputContains {
+				assert.Contains(t, output, expect)
+			}
+
+			// Confirm whether the task is deleted or not
+			_, err = cts.Status().Task(tc.taskName, nil)
+			if tc.expectDeleted {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestE2E_DeleteTaskCommand_Help tests that the usage is outputted
+// for the task delete help command. Does not require a running
+// CTS binary.
+func TestE2E_DeleteTaskCommand_Help(t *testing.T) {
+	t.Parallel()
+	subcmd := []string{"task", "delete", "-help"}
+	output, err := runSubcommand(t, "", subcmd...)
+	assert.NoError(t, err)
+	assert.Contains(t, output,
+		"Usage: consul-terraform-sync task delete [options] <task name>")
+}
