@@ -144,10 +144,10 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	}
 
 	// Fetch all services via catalog services
-	hcatOpts := &hcat.QueryOptions{
+	hcatOpts := d.opts.Merge(&hcat.QueryOptions{
 		Datacenter: d.dc,
 		Namespace:  d.ns,
-	}
+	})
 	opts := hcatOpts.ToConsulOpts()
 	if len(d.nodeMeta) != 0 {
 		opts.NodeMeta = d.nodeMeta
