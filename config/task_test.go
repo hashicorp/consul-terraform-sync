@@ -483,7 +483,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"valid",
+			"valid: default cond: services configured",
 			&TaskConfig{
 				Name:      String("task"),
 				Services:  []string{"api"},
@@ -493,7 +493,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"valid: missing condition",
+			"valid: no cond: services configured",
 			&TaskConfig{
 				Name:     String("task"),
 				Services: []string{"api"},
@@ -502,7 +502,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"valid: missing services with catalog-services condition regexp",
+			"valid: cs-cond: cond.regexp configured & no services",
 			&TaskConfig{
 				Name:   String("task"),
 				Source: String("source"),
@@ -515,7 +515,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"valid: no services with services condition regexp",
+			"valid: services cond: cond.regexp configured & no services",
 			&TaskConfig{
 				Name:   String("task"),
 				Source: String("source"),
@@ -528,7 +528,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"valid: service with schedule condition",
+			"valid: sched cond: services configured",
 			&TaskConfig{
 				Name:      String("task"),
 				Source:    String("source"),
@@ -538,7 +538,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"valid: service with schedule condition and non empty source_input",
+			"valid: sched cond: service source_input configured & no services",
 			&TaskConfig{
 				Name:      String("task"),
 				Source:    String("source"),
@@ -549,12 +549,12 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"invalid: missing name",
+			"invalid: task name: missing",
 			&TaskConfig{Services: []string{"service"}, Source: String("source")},
 			false,
 		},
 		{
-			"invalid: invalid name",
+			"invalid: task name: invalid char",
 			&TaskConfig{
 				Name:     String("cannot contain spaces"),
 				Services: []string{"service"},
@@ -563,12 +563,12 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: no service with no condition",
+			"invalid: no services & no condition block",
 			&TaskConfig{Name: String("task"), Source: String("source")},
 			false,
 		},
 		{
-			"invalid: no service with services condition",
+			"invalid: services cond: empty regexp configured & no services",
 			&TaskConfig{
 				Name:   String("task"),
 				Source: String("source"),
@@ -581,7 +581,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: missing service with catalog-service condition and no regexp",
+			"invalid: cs cond: no cond.regexp & no services",
 			&TaskConfig{
 				Name:      String("task"),
 				Source:    String("source"),
@@ -590,7 +590,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: missing service with schedule condition",
+			"invalid: sched cond: no services & no source input",
 			&TaskConfig{
 				Name:      String("task"),
 				Source:    String("source"),
@@ -599,7 +599,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: invalid catalog-service condition (bad regexp)",
+			"invalid: cs cond: bad regexp",
 			&TaskConfig{
 				Name:      String("task"),
 				Source:    String("source"),
@@ -608,12 +608,12 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: missing source",
+			"invalid: task source: missing",
 			&TaskConfig{Name: String("task"), Services: []string{"service"}},
 			false,
 		},
 		{
-			"invalid: unsupported TF version per task",
+			"invalid: TF version: unsupported version",
 			&TaskConfig{
 				Name:      String("task"),
 				Services:  []string{"service"},
@@ -623,7 +623,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: duplicate provider",
+			"invalid: provider: duplicate",
 			&TaskConfig{
 				Name:      String("task"),
 				Services:  []string{"api"},
@@ -633,7 +633,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: duplicate provider with alias",
+			"invalid: provider: duplicate with alias",
 			&TaskConfig{
 				Name:      String("task"),
 				Services:  []string{"api"},
@@ -643,7 +643,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: invalid service condition (bad regexp)",
+			"invalid: services cond: bad regexp",
 			&TaskConfig{
 				Name:   String("task"),
 				Source: String("source"),
@@ -653,7 +653,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: services and service condition regexp both provided",
+			"invalid: services cond: cond.regexp configured & services configured",
 			&TaskConfig{
 				Name:     String("task"),
 				Source:   String("source"),
@@ -664,7 +664,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"missing services with consul-kv condition",
+			"invalid: kv cond: no services",
 			&TaskConfig{
 				Name:   String("task"),
 				Source: String("source"),
@@ -677,7 +677,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: schedule condition provided with no services and empty source_input",
+			"invalid: sched cond: no services & no source_input",
 			&TaskConfig{
 				Name:      String("task"),
 				Source:    String("source"),
@@ -686,7 +686,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: schedule condition provided with no services and nil source_input regex",
+			"invalid: sched cond: no services & nil source_input regex",
 			&TaskConfig{
 				Name:      String("task"),
 				Source:    String("source"),
@@ -700,7 +700,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: services provided along with services source_input",
+			"invalid: sched cond: services source_input configured & services configured",
 			&TaskConfig{
 				Name:      String("task"),
 				Source:    String("source"),
@@ -712,7 +712,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: configured source_input provided with non schedule condition",
+			"invalid: non-sched cond: source_input configured",
 			&TaskConfig{
 				Name:   String("task"),
 				Source: String("source"),
@@ -724,17 +724,18 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: source_input bad regex",
+			"invalid: sched cond: services source_input with bad regex",
 			&TaskConfig{
-				Name:        String("task"),
-				Source:      String("source"),
-				Condition:   &ServicesConditionConfig{ServicesMonitorConfig{Regexp: String(".*")}},
-				SourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("*")}},
+				Name:      String("task"),
+				Source:    String("source"),
+				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
+				SourceInput: &ServicesSourceInputConfig{
+					ServicesMonitorConfig{Regexp: String("*")}},
 			},
 			false,
 		},
 		{
-			"invalid: missing services with consul-kv source input",
+			"invalid: sched cond: kv source_input configured & no services",
 			&TaskConfig{
 				Name:      String("task"),
 				Source:    String("source"),
