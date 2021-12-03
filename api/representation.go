@@ -128,3 +128,88 @@ func (tr taskRequest) String() string {
 	data, _ := json.Marshal(tr)
 	return fmt.Sprintf("%s", data)
 }
+
+type taskResponse oapigen.TaskResponse
+
+func taskResponseFromConfigTaskConfig(tc *config.TaskConfig, requestID oapigen.RequestID) taskResponse {
+	task := oapigen.Task{
+		Description: tc.Description,
+		Name:        *tc.Name,
+		Source:      *tc.Source,
+		Version:     tc.Version,
+		Enabled:     tc.Enabled,
+		WorkingDir:  tc.WorkingDir,
+	}
+
+	if tc.Providers != nil {
+		task.Providers = &tc.Providers
+	}
+
+	if tc.Services != nil {
+		task.Services = &tc.Services
+	}
+
+	task.SourceInput = new(oapigen.SourceInput)
+	switch si := tc.SourceInput.(type) {
+	case *config.ServicesSourceInputConfig:
+		task.SourceInput.Services = &oapigen.ServicesSourceInput{
+			Regexp: si.Regexp,
+		}
+	case *config.ConsulKVSourceInputConfig:
+		task.SourceInput.ConsulKv = &oapigen.ConsulKVSourceInput{
+			Datacenter: si.Datacenter,
+			Recurse:    si.Recurse,
+			Path:       *si.Path,
+			Namespace:  si.Namespace,
+		}
+	}
+
+	task.Condition = new(oapigen.Condition)
+	switch cond := tc.Condition.(type) {
+	case *config.ServicesConditionConfig:
+		task.Condition.Services = &oapigen.ServicesCondition{
+			Regexp: cond.Regexp,
+		}
+	case *config.CatalogServicesConditionConfig:
+		task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
+			Regexp:            cond.Regexp,
+			SourceIncludesVar: cond.SourceIncludesVar,
+			Datacenter:        cond.Datacenter,
+			Namespace:         cond.Namespace,
+			NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
+				AdditionalProperties: cond.NodeMeta,
+			},
+		}
+	case *config.ConsulKVConditionConfig:
+		task.Condition.ConsulKv = &oapigen.ConsulKVCondition{
+			Datacenter:        cond.Datacenter,
+			Recurse:           cond.Recurse,
+			Path:              *cond.Path,
+			Namespace:         cond.Namespace,
+			SourceIncludesVar: cond.SourceIncludesVar,
+		}
+	case *config.ScheduleConditionConfig:
+		task.Condition.Schedule = &oapigen.ScheduleCondition{
+			Cron: *cond.Cron,
+		}
+	}
+
+	max := config.TimeDurationVal(tc.BufferPeriod.Max).String()
+	min := config.TimeDurationVal(tc.BufferPeriod.Min).String()
+	task.BufferPeriod = &oapigen.BufferPeriod{
+		Enabled: tc.BufferPeriod.Enabled,
+		Max:     &max,
+		Min:     &min,
+	}
+
+	tr := taskResponse{
+		RequestId: requestID,
+		Task:      &task,
+	}
+	return tr
+}
+
+func (tresp taskResponse) String() string {
+	data, _ := json.Marshal(tresp)
+	return fmt.Sprintf("%s", data)
+}
