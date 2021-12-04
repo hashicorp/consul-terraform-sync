@@ -483,6 +483,55 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
+			"invalid: task name: missing",
+			&TaskConfig{Services: []string{"service"}, Source: String("source")},
+			false,
+		},
+		{
+			"invalid: task name: invalid char",
+			&TaskConfig{
+				Name:     String("cannot contain spaces"),
+				Services: []string{"service"},
+				Source:   String("source"),
+			},
+			false,
+		},
+		{
+			"invalid: task source: missing",
+			&TaskConfig{Name: String("task"), Services: []string{"service"}},
+			false,
+		},
+		{
+			"invalid: TF version: unsupported version",
+			&TaskConfig{
+				Name:      String("task"),
+				Services:  []string{"service"},
+				Source:    String("source"),
+				TFVersion: String("0.15.0"),
+			},
+			false,
+		},
+		{
+			"invalid: provider: duplicate",
+			&TaskConfig{
+				Name:      String("task"),
+				Services:  []string{"api"},
+				Source:    String("source"),
+				Providers: []string{"providerA", "providerA"},
+			},
+			false,
+		},
+		{
+			"invalid: provider: duplicate with alias",
+			&TaskConfig{
+				Name:      String("task"),
+				Services:  []string{"api"},
+				Source:    String("source"),
+				Providers: []string{"providerA", "providerA.alias"},
+			},
+			false,
+		},
+		{
 			"valid: default cond: services configured",
 			&TaskConfig{
 				Name:      String("task"),
@@ -549,20 +598,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"invalid: task name: missing",
-			&TaskConfig{Services: []string{"service"}, Source: String("source")},
-			false,
-		},
-		{
-			"invalid: task name: invalid char",
-			&TaskConfig{
-				Name:     String("cannot contain spaces"),
-				Services: []string{"service"},
-				Source:   String("source"),
-			},
-			false,
-		},
-		{
 			"invalid: no services & no condition block",
 			&TaskConfig{Name: String("task"), Source: String("source")},
 			false,
@@ -604,41 +639,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Name:      String("task"),
 				Source:    String("source"),
 				Condition: &CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("*")}},
-			},
-			false,
-		},
-		{
-			"invalid: task source: missing",
-			&TaskConfig{Name: String("task"), Services: []string{"service"}},
-			false,
-		},
-		{
-			"invalid: TF version: unsupported version",
-			&TaskConfig{
-				Name:      String("task"),
-				Services:  []string{"service"},
-				Source:    String("source"),
-				TFVersion: String("0.15.0"),
-			},
-			false,
-		},
-		{
-			"invalid: provider: duplicate",
-			&TaskConfig{
-				Name:      String("task"),
-				Services:  []string{"api"},
-				Source:    String("source"),
-				Providers: []string{"providerA", "providerA"},
-			},
-			false,
-		},
-		{
-			"invalid: provider: duplicate with alias",
-			&TaskConfig{
-				Name:      String("task"),
-				Services:  []string{"api"},
-				Source:    String("source"),
-				Providers: []string{"providerA", "providerA.alias"},
 			},
 			false,
 		},
