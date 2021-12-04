@@ -678,15 +678,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: sched cond: no services & no source input",
-			&TaskConfig{
-				Name:      String("task"),
-				Source:    String("source"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-			},
-			false,
-		},
-		{
 			"invalid: sched cond: no services & nil source_input regex",
 			&TaskConfig{
 				Name:      String("task"),
