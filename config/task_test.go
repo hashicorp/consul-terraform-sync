@@ -577,27 +577,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"valid: sched cond: services configured",
-			&TaskConfig{
-				Name:      String("task"),
-				Source:    String("source"),
-				Services:  []string{"api"},
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-			},
-			true,
-		},
-		{
-			"valid: sched cond: service source_input configured & no services",
-			&TaskConfig{
-				Name:      String("task"),
-				Source:    String("source"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				SourceInput: &ServicesSourceInputConfig{
-					ServicesMonitorConfig{Regexp: String(".*")}},
-			},
-			true,
-		},
-		{
 			"invalid: no services & no condition block",
 			&TaskConfig{Name: String("task"), Source: String("source")},
 			false,
@@ -621,15 +600,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Name:      String("task"),
 				Source:    String("source"),
 				Condition: &CatalogServicesConditionConfig{},
-			},
-			false,
-		},
-		{
-			"invalid: sched cond: no services & no source input",
-			&TaskConfig{
-				Name:      String("task"),
-				Source:    String("source"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 			},
 			false,
 		},
@@ -676,8 +646,39 @@ func TestTaskConfig_Validate(t *testing.T) {
 			},
 			false,
 		},
+		// schedule condition test cases
+		{
+			"valid: sched cond: services configured",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Services:  []string{"api"},
+				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
+			},
+			true,
+		},
+		{
+			"valid: sched cond: service source_input configured & no services",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
+				SourceInput: &ServicesSourceInputConfig{
+					ServicesMonitorConfig{Regexp: String(".*")}},
+			},
+			true,
+		},
 		{
 			"invalid: sched cond: no services & no source_input",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
+			},
+			false,
+		},
+		{
+			"invalid: sched cond: no services & no source input",
 			&TaskConfig{
 				Name:      String("task"),
 				Source:    String("source"),
@@ -712,18 +713,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: non-sched cond: source_input configured",
-			&TaskConfig{
-				Name:   String("task"),
-				Source: String("source"),
-				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig{Regexp: String(".*")}},
-				SourceInput: &ServicesSourceInputConfig{
-					ServicesMonitorConfig{Regexp: String(".*")}},
-			},
-			false,
-		},
-		{
 			"invalid: sched cond: services source_input with bad regex",
 			&TaskConfig{
 				Name:      String("task"),
@@ -745,6 +734,19 @@ func TestTaskConfig_Validate(t *testing.T) {
 						Path: String("path"),
 					},
 				},
+			},
+			false,
+		},
+		// non-schedule condition test-cases
+		{
+			"invalid: non-sched cond: source_input configured",
+			&TaskConfig{
+				Name:   String("task"),
+				Source: String("source"),
+				Condition: &ServicesConditionConfig{
+					ServicesMonitorConfig{Regexp: String(".*")}},
+				SourceInput: &ServicesSourceInputConfig{
+					ServicesMonitorConfig{Regexp: String(".*")}},
 			},
 			false,
 		},
