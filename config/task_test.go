@@ -550,6 +550,16 @@ func TestTaskConfig_Validate(t *testing.T) {
 			},
 			true,
 		},
+		// catalog-services condition test cases
+		{
+			"invalid: cs cond: no cond.regexp & no services",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Condition: &CatalogServicesConditionConfig{},
+			},
+			false,
+		},
 		{
 			"valid: cs-cond: cond.regexp configured & no services",
 			&TaskConfig{
@@ -562,6 +572,15 @@ func TestTaskConfig_Validate(t *testing.T) {
 				},
 			},
 			true,
+		},
+		{
+			"invalid: cs cond: bad regexp",
+			&TaskConfig{
+				Name:      String("task"),
+				Source:    String("source"),
+				Condition: &CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("*")}},
+			},
+			false,
 		},
 		{
 			"valid: services cond: cond.regexp configured & no services",
@@ -591,24 +610,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 						Regexp: String(""),
 					},
 				},
-			},
-			false,
-		},
-		{
-			"invalid: cs cond: no cond.regexp & no services",
-			&TaskConfig{
-				Name:      String("task"),
-				Source:    String("source"),
-				Condition: &CatalogServicesConditionConfig{},
-			},
-			false,
-		},
-		{
-			"invalid: cs cond: bad regexp",
-			&TaskConfig{
-				Name:      String("task"),
-				Source:    String("source"),
-				Condition: &CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("*")}},
 			},
 			false,
 		},
