@@ -578,15 +578,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 			},
 			true,
 		},
-		{
-			"invalid: cs cond: bad regexp",
-			&TaskConfig{
-				Name:      String("task"),
-				Source:    String("source"),
-				Condition: &CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("*")}},
-			},
-			false,
-		},
 		// services condition test case
 		{
 			"valid: services cond: cond.regexp configured & no services",
@@ -611,16 +602,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 						Regexp: String(""),
 					},
 				},
-			},
-			false,
-		},
-		{
-			"invalid: services cond: bad regexp",
-			&TaskConfig{
-				Name:   String("task"),
-				Source: String("source"),
-				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig{Regexp: String("*")}},
 			},
 			false,
 		},
@@ -703,17 +684,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 				SourceInput: &ServicesSourceInputConfig{
 					ServicesMonitorConfig{Regexp: String(".*")}},
-			},
-			false,
-		},
-		{
-			"invalid: sched cond: services source_input with bad regex",
-			&TaskConfig{
-				Name:      String("task"),
-				Source:    String("source"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				SourceInput: &ServicesSourceInputConfig{
-					ServicesMonitorConfig{Regexp: String("*")}},
 			},
 			false,
 		},
