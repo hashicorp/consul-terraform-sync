@@ -550,6 +550,11 @@ func TestTaskConfig_Validate(t *testing.T) {
 			},
 			true,
 		},
+		{
+			"invalid: no cond: no services",
+			&TaskConfig{Name: String("task"), Source: String("source")},
+			false,
+		},
 		// catalog-services condition test cases
 		{
 			"invalid: cs cond: no cond.regexp & no services",
@@ -582,6 +587,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			},
 			false,
 		},
+		// services condition test case
 		{
 			"valid: services cond: cond.regexp configured & no services",
 			&TaskConfig{
@@ -594,11 +600,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 				},
 			},
 			true,
-		},
-		{
-			"invalid: no services & no condition block",
-			&TaskConfig{Name: String("task"), Source: String("source")},
-			false,
 		},
 		{
 			"invalid: services cond: empty regexp configured & no services",
@@ -634,6 +635,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			},
 			false,
 		},
+		// consul-kv condition test cases
 		{
 			"invalid: kv cond: no services",
 			&TaskConfig{
