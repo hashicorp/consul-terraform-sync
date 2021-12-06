@@ -532,16 +532,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"valid: default cond: services configured",
-			&TaskConfig{
-				Name:      String("task"),
-				Services:  []string{"api"},
-				Source:    String("source"),
-				Condition: DefaultConditionConfig(),
-			},
-			true,
-		},
-		{
 			"valid: no cond: services configured",
 			&TaskConfig{
 				Name:     String("task"),

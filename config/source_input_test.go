@@ -26,17 +26,7 @@ task {
 		cron = "* * * * * * *"
 	}
 }`
-	testSourceInputServicesUnconfiguredSuccess = `
-task {
-	name = "condition_task"
-	source = "..."
-	services = ["api"]
-	source_input "services" {
-	}
-	condition "schedule" {
-		cron = "* * * * * * *"
-	}
-}`
+
 	testSourceInputConsulKVSuccess = `
 task {
 	name = "condition_task"
@@ -106,11 +96,6 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 				},
 			},
 			config: testSourceInputServicesSuccess,
-		},
-		{
-			name:     "services un-configured",
-			expected: DefaultSourceInputConfig(),
-			config:   testSourceInputServicesUnconfiguredSuccess,
 		},
 		{
 			name: "consul-kv: happy path",

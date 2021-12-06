@@ -113,20 +113,6 @@ task {
 }`,
 		},
 		{
-			"services: unconfigured",
-			false,
-			DefaultConditionConfig(),
-			"config.hcl",
-			`
-task {
-	name = "condition_task"
-	source = "..."
-	services = ["api"]
-	condition "services" {
-	}
-}`,
-		},
-		{
 			"services: unsupported field",
 			true,
 			nil,
