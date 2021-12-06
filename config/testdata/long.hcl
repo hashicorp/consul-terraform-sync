@@ -93,7 +93,4 @@ task {
       "key2" = "value2"
     }
   }
-  source_input "services" {
-    regexp = ""
-  }
 }

@@ -112,11 +112,6 @@ var (
 						},
 					},
 				},
-				SourceInput: &ServicesSourceInputConfig{
-					ServicesMonitorConfig{
-						Regexp: String(""),
-					},
-				},
 			},
 		},
 		TerraformProviders: &TerraformProviderConfigs{{
@@ -324,7 +319,7 @@ func TestConfig_Finalize(t *testing.T) {
 	(*expected.Tasks)[0].BufferPeriod.Min = TimeDuration(20 * time.Second)
 	(*expected.Tasks)[0].BufferPeriod.Max = TimeDuration(60 * time.Second)
 	(*expected.Tasks)[0].WorkingDir = String("working/task")
-	(*expected.Tasks)[0].SourceInput = DefaultSourceInputConfig()
+	(*expected.Tasks)[0].SourceInput = EmptySourceInputConfig()
 	(*expected.Services)[0].ID = String("serviceA")
 	(*expected.Services)[0].Namespace = String("")
 	(*expected.Services)[0].Datacenter = String("")
@@ -342,6 +337,7 @@ func TestConfig_Finalize(t *testing.T) {
 
 func TestConfig_Validate(t *testing.T) {
 	valid := longConfig.Copy()
+	(*valid.Tasks)[0].SourceInput = EmptySourceInputConfig() // Finalize()
 
 	// 2 tasks using same provider w/ auto_commit enabled (should err)
 	autoCommit := valid.Copy()
@@ -359,14 +355,15 @@ func TestConfig_Validate(t *testing.T) {
 
 	// valid case with multiple tasks w/ different providers
 	validMultiTask := longConfig.Copy()
+	(*validMultiTask.Tasks)[0].SourceInput = EmptySourceInputConfig() // Finalize()
 	*validMultiTask.Tasks = append(*validMultiTask.Tasks, &TaskConfig{
 		Description: String("test task1"),
 		Name:        String("task1"),
 		Services:    []string{"serviceD"},
 		Providers:   []string{"Y"},
 		Source:      String("Z"),
-		Condition:   &ServicesConditionConfig{},
-		SourceInput: DefaultSourceInputConfig(),
+		Condition:   EmptyConditionConfig(),
+		SourceInput: EmptySourceInputConfig(),
 	})
 	*validMultiTask.TerraformProviders = append(*validMultiTask.TerraformProviders,
 		&TerraformProviderConfig{"Y": map[string]interface{}{}})
