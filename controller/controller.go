@@ -50,6 +50,7 @@ type baseController struct {
 	watcher   templates.Watcher
 	resolver  templates.Resolver
 	logger    logging.Logger
+	providers []driver.TerraformProviderBlock
 }
 
 func newBaseController(conf *config.Config) (*baseController, error) {
@@ -83,20 +84,18 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	ctrl.logger.Info("initializing driver")
 
 	// Load provider configuration and evaluate dynamic values
-	providerConfigs, err := ctrl.loadProviderConfigs(ctx)
+	var err error
+	ctrl.providers, err = ctrl.loadProviderConfigs(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Future: improve by combining tasks into workflows.
 	ctrl.logger.Info("initializing all tasks")
-	tasks, err := newDriverTasks(ctrl.conf, providerConfigs)
-	if err != nil {
-		return err
-	}
 	ctrl.drivers.Reset()
 
-	for _, task := range tasks {
+	// Create and initialize task drivers
+	for _, t := range *ctrl.conf.Tasks {
 		select {
 		case <-ctx.Done():
 			// Stop initializing remaining tasks if context has stopped.
@@ -104,27 +103,47 @@ func (ctrl *baseController) init(ctx context.Context) error {
 		default:
 		}
 
-		taskName := task.Name()
-		ctrl.logger.Info("initializing task", "task", taskName)
-		d, err := ctrl.newDriver(ctrl.conf, task, ctrl.watcher)
+		var err error
+		taskName := *t.Name
+		d, err := ctrl.createNewTaskDriver(*t)
 		if err != nil {
+			ctrl.logger.Error("error creating new task driver", taskNameLogKey, taskName)
 			return err
 		}
 
+		// Using the newly created driver, initialize the task
 		err = d.InitTask(ctx)
 		if err != nil {
 			ctrl.logger.Error("error initializing task", taskNameLogKey, taskName)
 			return err
 		}
+
 		err = ctrl.drivers.Add(taskName, d)
 		if err != nil {
-			ctrl.logger.Error("error adding task to driver", taskNameLogKey, taskName)
+			ctrl.logger.Error("error adding task driver to drivers list", taskNameLogKey, taskName)
 			return err
 		}
+		ctrl.logger.Trace("driver initialized", taskNameLogKey, taskName)
 	}
 
-	ctrl.logger.Info("driver initialized")
+	ctrl.logger.Info("drivers initialized")
 	return nil
+}
+
+func (ctrl *baseController) createNewTaskDriver(taskConfig config.TaskConfig) (driver.Driver, error) {
+	ctrl.logger.Trace("creating new task driver", "task_name", *taskConfig.Name)
+	task, err := newDriverTask(ctrl.conf, &taskConfig, ctrl.providers)
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := ctrl.newDriver(ctrl.conf, task, ctrl.watcher)
+	if err != nil {
+		return nil, err
+	}
+
+	ctrl.logger.Trace("driver created")
+	return d, nil
 }
 
 // loadProviderConfigs loads provider configs and evaluates provider blocks
@@ -206,68 +225,61 @@ func newTerraformDriver(conf *config.Config, task *driver.Task, w templates.Watc
 	})
 }
 
-// newDriverTasks converts user-defined task configurations to the task object
-// used by drivers.
-func newDriverTasks(conf *config.Config, providerConfigs driver.TerraformProviderBlocks) ([]*driver.Task, error) {
+func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig, providerConfigs driver.TerraformProviderBlocks) (*driver.Task, error) {
 	if conf == nil {
-		return []*driver.Task{}, nil
+		return nil, nil
 	}
 
-	tasks := make([]*driver.Task, len(*conf.Tasks))
-	for i, t := range *conf.Tasks {
-
-		meta := conf.Services.CTSUserDefinedMeta(t.Services)
-		services := make([]driver.Service, len(t.Services))
-		for si, service := range t.Services {
-			services[si] = getService(conf.Services, service, meta)
-		}
-
-		providers := make(driver.TerraformProviderBlocks, len(t.Providers))
-		providerInfo := make(map[string]interface{})
-		for pi, providerID := range t.Providers {
-			providers[pi] = getProvider(providerConfigs, providerID)
-
-			// This is Terraform specific to pass version and source info for
-			// providers from the required_provider block
-			name, _ := splitProviderID(providerID)
-			if tfConf := conf.Driver.Terraform; tfConf != nil {
-				if pInfo, ok := tfConf.RequiredProviders[name]; ok {
-					providerInfo[name] = pInfo
-				}
-			}
-		}
-
-		var bp *driver.BufferPeriod // nil if disabled
-		if *t.BufferPeriod.Enabled {
-			bp = &driver.BufferPeriod{
-				Min: *t.BufferPeriod.Min,
-				Max: *t.BufferPeriod.Max,
-			}
-		}
-
-		task, err := driver.NewTask(driver.TaskConfig{
-			Description:  *t.Description,
-			Name:         *t.Name,
-			Enabled:      *t.Enabled,
-			Env:          buildTaskEnv(conf, providers.Env()),
-			Providers:    providers,
-			ProviderInfo: providerInfo,
-			Services:     services,
-			Source:       *t.Source,
-			VarFiles:     t.VarFiles,
-			Version:      *t.Version,
-			BufferPeriod: bp,
-			Condition:    t.Condition,
-			SourceInput:  t.SourceInput,
-			WorkingDir:   *t.WorkingDir,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error initializing task %s: %s", *t.Name, err)
-		}
-		tasks[i] = task
+	meta := conf.Services.CTSUserDefinedMeta(taskConfig.Services)
+	services := make([]driver.Service, len(taskConfig.Services))
+	for si, service := range taskConfig.Services {
+		services[si] = getService(conf.Services, service, meta)
 	}
 
-	return tasks, nil
+	providers := make(driver.TerraformProviderBlocks, len(taskConfig.Providers))
+	providerInfo := make(map[string]interface{})
+	for pi, providerID := range taskConfig.Providers {
+		providers[pi] = getProvider(providerConfigs, providerID)
+
+		// This is Terraform specific to pass version and source info for
+		// providers from the required_provider block
+		name, _ := splitProviderID(providerID)
+		if tfConf := conf.Driver.Terraform; tfConf != nil {
+			if pInfo, ok := tfConf.RequiredProviders[name]; ok {
+				providerInfo[name] = pInfo
+			}
+		}
+	}
+
+	var bp *driver.BufferPeriod // nil if disabled
+	if *taskConfig.BufferPeriod.Enabled {
+		bp = &driver.BufferPeriod{
+			Min: *taskConfig.BufferPeriod.Min,
+			Max: *taskConfig.BufferPeriod.Max,
+		}
+	}
+
+	task, err := driver.NewTask(driver.TaskConfig{
+		Description:  *taskConfig.Description,
+		Name:         *taskConfig.Name,
+		Enabled:      *taskConfig.Enabled,
+		Env:          buildTaskEnv(conf, providers.Env()),
+		Providers:    providers,
+		ProviderInfo: providerInfo,
+		Services:     services,
+		Source:       *taskConfig.Source,
+		VarFiles:     taskConfig.VarFiles,
+		Version:      *taskConfig.Version,
+		BufferPeriod: bp,
+		Condition:    taskConfig.Condition,
+		SourceInput:  taskConfig.SourceInput,
+		WorkingDir:   *taskConfig.WorkingDir,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error initializing task %s: %s", *taskConfig.Name, err)
+	}
+
+	return task, nil
 }
 
 // getService is a helper to find and convert a user-defined service

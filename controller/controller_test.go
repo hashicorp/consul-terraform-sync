@@ -141,8 +141,8 @@ func TestBaseControllerInit(t *testing.T) {
 	}
 }
 
-func TestNewDriverTasks(t *testing.T) {
-	// newDriverTasks function reorganizes various user-defined configuration
+func TestNewDriverTask(t *testing.T) {
+	// newDriverTask function reorganizes various user-defined configuration
 	// blocks into a task object with all the information for the driver to
 	// execute on.
 	testCases := []struct {
@@ -347,11 +347,28 @@ func TestNewDriverTasks(t *testing.T) {
 				}
 			}
 
-			tasks, err := newDriverTasks(tc.conf, providerConfigs)
+			tasks, err := newTestDriverTasks(tc.conf, providerConfigs)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.tasks, tasks)
 		})
 	}
+}
+
+func newTestDriverTasks(conf *config.Config, providerConfigs driver.TerraformProviderBlocks) ([]*driver.Task, error) {
+	if conf == nil {
+		return []*driver.Task{}, nil
+	}
+
+	tasks := make([]*driver.Task, len(*conf.Tasks))
+	for i, t := range *conf.Tasks {
+		var err error
+		tasks[i], err = newDriverTask(conf, t, providerConfigs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return tasks, nil
 }
 
 func newTestTask(tb testing.TB, conf driver.TaskConfig) *driver.Task {
