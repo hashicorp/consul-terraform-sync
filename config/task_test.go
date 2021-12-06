@@ -369,9 +369,9 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				TFVersion:    String(""),
 				BufferPeriod: DefaultBufferPeriodConfig(),
 				Enabled:      Bool(true),
-				Condition:    DefaultConditionConfig(),
+				Condition:    EmptyConditionConfig(),
 				WorkingDir:   String("sync-tasks"),
-				SourceInput:  DefaultSourceInputConfig(),
+				SourceInput:  EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -390,9 +390,9 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				TFVersion:    String(""),
 				BufferPeriod: DefaultBufferPeriodConfig(),
 				Enabled:      Bool(true),
-				Condition:    DefaultConditionConfig(),
+				Condition:    EmptyConditionConfig(),
 				WorkingDir:   String("sync-tasks/task"),
-				SourceInput:  DefaultSourceInputConfig(),
+				SourceInput:  EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -418,7 +418,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Enabled:     Bool(true),
 				Condition:   &ScheduleConditionConfig{String("")},
 				WorkingDir:  String("sync-tasks/task"),
-				SourceInput: DefaultSourceInputConfig(),
+				SourceInput: EmptySourceInputConfig(),
 			},
 		},
 		{

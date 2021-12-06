@@ -71,9 +71,9 @@ task {
 }`,
 		},
 		{
-			"no condition: defaults to services condition",
+			"no condition",
 			false,
-			DefaultConditionConfig(),
+			EmptyConditionConfig(),
 			"config.hcl",
 			`
 task {

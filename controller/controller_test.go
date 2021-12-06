@@ -205,8 +205,8 @@ func TestNewDriverTask(t *testing.T) {
 				Services:    []driver.Service{},
 				Source:      "source",
 				VarFiles:    []string{},
-				Condition:   config.DefaultConditionConfig(),
-				SourceInput: config.DefaultSourceInputConfig(),
+				Condition:   config.EmptyConditionConfig(),
+				SourceInput: config.EmptySourceInputConfig(),
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
@@ -272,8 +272,8 @@ func TestNewDriverTask(t *testing.T) {
 				Services:    []driver.Service{},
 				Source:      "source",
 				VarFiles:    []string{},
-				Condition:   config.DefaultConditionConfig(),
-				SourceInput: config.DefaultSourceInputConfig(),
+				Condition:   config.EmptyConditionConfig(),
+				SourceInput: config.EmptySourceInputConfig(),
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
@@ -324,8 +324,8 @@ func TestNewDriverTask(t *testing.T) {
 				Services:     []driver.Service{},
 				Source:       "source",
 				VarFiles:     []string{},
-				Condition:    config.DefaultConditionConfig(),
-				SourceInput:  config.DefaultSourceInputConfig(),
+				Condition:    config.EmptyConditionConfig(),
+				SourceInput:  config.EmptySourceInputConfig(),
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,

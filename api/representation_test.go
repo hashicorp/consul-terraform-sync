@@ -69,9 +69,9 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 				TFVersion:    config.String(""),
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
 				Enabled:      config.Bool(true),
-				Condition:    config.DefaultConditionConfig(),
+				Condition:    config.EmptyConditionConfig(),
 				WorkingDir:   config.String("sync-tasks"),
-				SourceInput:  config.DefaultSourceInputConfig(),
+				SourceInput:  config.EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -97,9 +97,9 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 				TFVersion:    config.String(""),
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
 				Enabled:      config.Bool(true),
-				Condition:    config.DefaultConditionConfig(),
+				Condition:    config.EmptyConditionConfig(),
 				WorkingDir:   config.String("sync-tasks"),
-				SourceInput:  config.DefaultSourceInputConfig(),
+				SourceInput:  config.EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -145,7 +145,7 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 					},
 				},
 				WorkingDir:  config.String("sync-tasks/task"),
-				SourceInput: config.DefaultSourceInputConfig(),
+				SourceInput: config.EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -203,7 +203,7 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 					},
 				},
 				WorkingDir:  config.String("sync-tasks/task"),
-				SourceInput: config.DefaultSourceInputConfig(),
+				SourceInput: config.EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -254,7 +254,7 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 					SourceIncludesVar: config.Bool(true),
 				},
 				WorkingDir:  config.String("sync-tasks/task"),
-				SourceInput: config.DefaultSourceInputConfig(),
+				SourceInput: config.EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -291,7 +291,7 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 				Enabled:     config.Bool(true),
 				Condition:   &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
 				WorkingDir:  config.String("sync-tasks/task"),
-				SourceInput: config.DefaultSourceInputConfig(),
+				SourceInput: config.EmptySourceInputConfig(),
 			},
 		},
 		{
