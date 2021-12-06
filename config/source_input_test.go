@@ -86,20 +86,6 @@ task {
 	testFileName = "config.hcl"
 )
 
-func TestSourceInput_DefaultSourceInputConfig(t *testing.T) {
-	e := &ServicesSourceInputConfig{
-		ServicesMonitorConfig{
-			Regexp:             String(""),
-			Datacenter:         String(""),
-			Namespace:          String(""),
-			Filter:             String(""),
-			CTSUserDefinedMeta: map[string]string{},
-		},
-	}
-	a := DefaultSourceInputConfig()
-	require.Equal(t, e, a)
-}
-
 func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 	// Specifically test decoding source_input configs
 	cases := []struct {
