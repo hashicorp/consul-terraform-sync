@@ -67,7 +67,8 @@ func TestTask_ServeHTTP(t *testing.T) {
 	patchUpdateD := new(mocks.Driver)
 	patchUpdateD.On("UpdateTask", mock.Anything, mock.Anything).
 		Return(driver.InspectPlan{}, nil).Once()
-	drivers.Add("task_patch_update", patchUpdateD)
+	err := drivers.Add("task_patch_update", patchUpdateD)
+	require.NoError(t, err)
 
 	handler := newTaskHandler(event.NewStore(), drivers, "v1")
 
@@ -187,7 +188,8 @@ func TestTask_updateTask(t *testing.T) {
 			d.On("UpdateTask", mock.Anything, mock.Anything).
 				Return(tc.updateTaskRet, tc.updateTaskErr).Once()
 			d.On("Task").Return(&driver.Task{}).Once()
-			drivers.Add("task_a", d)
+			err := drivers.Add("task_a", d)
+			require.NoError(t, err)
 
 			store := event.NewStore()
 			handler := newTaskHandler(store, drivers, "v1")
@@ -221,13 +223,13 @@ func TestTask_updateTask(t *testing.T) {
 			}
 			require.True(t, ok)
 			assert.Len(t, events, 1, "expected one event")
-			event := events[0]
+			e := events[0]
 			if tc.updateTaskErr == nil {
-				assert.True(t, event.Success)
-				assert.Nil(t, event.EventError)
+				assert.True(t, e.Success)
+				assert.Nil(t, e.EventError)
 			} else {
-				assert.False(t, event.Success)
-				assert.NotNil(t, event.EventError)
+				assert.False(t, e.Success)
+				assert.NotNil(t, e.EventError)
 			}
 		})
 	}
@@ -365,7 +367,7 @@ func TestTask_RunOption(t *testing.T) {
 			req, err := http.NewRequest(http.MethodPatch, tc.path, nil)
 			require.NoError(t, err)
 
-			actual, err := runOption(req)
+			actual, err := parseRunOption(req)
 			if tc.expectError {
 				assert.Error(t, err)
 			} else {

@@ -58,7 +58,12 @@ func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 			store := event.NewStore()
 			err := store.Add(event.Event{TaskName: existingTask})
 			require.NoError(t, err)
-			handler := NewTaskLifeCycleHandler(store, drivers)
+
+			c := TaskLifeCycleHandlerConfig{
+				store:   store,
+				drivers: drivers,
+			}
+			handler := NewTaskLifeCycleHandler(c)
 
 			path := fmt.Sprintf("/v1/tasks/%s", tc.taskName)
 			req, err := http.NewRequest(http.MethodDelete, path, nil)
