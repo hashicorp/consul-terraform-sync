@@ -14,7 +14,13 @@ var _ MonitorConfig = (*ServicesMonitorConfig)(nil)
 // that occur to services. ServicesMonitorConfig shares similar fields as the
 // deprecated ServiceConfig
 type ServicesMonitorConfig struct {
+	// Regexp configures the services to monitor by matching on the service name
+	// Either Regexp or Names must be configured, not both.
 	Regexp *string `mapstructure:"regexp"`
+
+	// Names configures the services to monitor by listing the service name.
+	// Either Regexp or Names must be configured, not both.
+	Names []string `mapstructure:"services"`
 
 	// Datacenter is the datacenter the service is deployed in.
 	Datacenter *string `mapstricture:"datacenter"`
@@ -41,6 +47,7 @@ func (c *ServicesMonitorConfig) Copy() MonitorConfig {
 
 	var o ServicesMonitorConfig
 	o.Regexp = StringCopy(c.Regexp)
+	o.Names = append(o.Names, c.Names...)
 	o.Datacenter = StringCopy(c.Datacenter)
 	o.Namespace = StringCopy(c.Namespace)
 	o.Filter = StringCopy(c.Filter)
@@ -81,6 +88,9 @@ func (c *ServicesMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 	if o2.Regexp != nil {
 		r2.Regexp = StringCopy(o2.Regexp)
 	}
+
+	r2.Names = append(r2.Names, o2.Names...)
+
 	if o2.Datacenter != nil {
 		r2.Datacenter = StringCopy(o2.Datacenter)
 	}
@@ -110,6 +120,9 @@ func (c *ServicesMonitorConfig) Finalize([]string) {
 		return
 	}
 
+	if c.Names == nil {
+		c.Names = []string{}
+	}
 	if c.Datacenter == nil {
 		c.Datacenter = String("")
 	}
@@ -132,8 +145,19 @@ func (c *ServicesMonitorConfig) Validate() error {
 		return nil
 	}
 
-	// Next commit adding `names` field, will consume when regexp == nil
-	if c.Regexp != nil {
+	// Check that either regex or names is configured but not both
+	namesConfigured := c.Names != nil && len(c.Names) > 0
+	regexConfigured := c.Regexp != nil
+	if namesConfigured && regexConfigured {
+		return fmt.Errorf("regexp and names fields cannot both be " +
+			"unconfigured. If both are needed, consider including the list of " +
+			"names as part of the regex or creating separate tasks")
+	}
+	if !namesConfigured && !regexConfigured {
+		return fmt.Errorf("either the regexp or names field must be configured")
+	}
+
+	if regexConfigured {
 		if _, err := regexp.Compile(StringVal(c.Regexp)); err != nil {
 			return fmt.Errorf("unable to compile services regexp: %s", err)
 		}
@@ -152,12 +176,14 @@ func (c *ServicesMonitorConfig) GoString() string {
 
 	return fmt.Sprintf("&ServicesMonitorConfig{"+
 		"Regexp:%s, "+
+		"Names:%s, "+
 		"Datacenter:%s, "+
 		"Namespace:%s, "+
 		"Filter:%s, "+
 		"CTSUserDefinedMeta:%s"+
 		"}",
 		StringVal(c.Regexp),
+		c.Names,
 		StringVal(c.Datacenter),
 		StringVal(c.Namespace),
 		StringVal(c.Filter),

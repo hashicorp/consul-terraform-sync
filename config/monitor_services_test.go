@@ -23,9 +23,21 @@ func TestServicesMonitorConfig_Copy(t *testing.T) {
 			&ServicesMonitorConfig{},
 		},
 		{
-			"fully_configured",
+			"regexp_fully_configured",
 			&ServicesMonitorConfig{
 				Regexp:     String("^web.*"),
+				Datacenter: String("dc"),
+				Namespace:  String("namespace"),
+				Filter:     String("filter"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value",
+				},
+			},
+		},
+		{
+			"names_fully_configured",
+			&ServicesMonitorConfig{
+				Names:      []string{"web", "api"},
 				Datacenter: String("dc"),
 				Namespace:  String("namespace"),
 				Filter:     String("filter"),
@@ -105,6 +117,24 @@ func TestServicesMonitorConfig_Merge(t *testing.T) {
 			&ServicesMonitorConfig{Regexp: String("same")},
 			&ServicesMonitorConfig{Regexp: String("same")},
 			&ServicesMonitorConfig{Regexp: String("same")},
+		},
+		{
+			"names_merges",
+			&ServicesMonitorConfig{Names: []string{"a"}},
+			&ServicesMonitorConfig{Names: []string{"b"}},
+			&ServicesMonitorConfig{Names: []string{"a", "b"}},
+		},
+		{
+			"names_empty_one",
+			&ServicesMonitorConfig{Names: []string{"service"}},
+			&ServicesMonitorConfig{},
+			&ServicesMonitorConfig{Names: []string{"service"}},
+		},
+		{
+			"names_empty_two",
+			&ServicesMonitorConfig{},
+			&ServicesMonitorConfig{Names: []string{"service"}},
+			&ServicesMonitorConfig{Names: []string{"service"}},
 		},
 		{
 			"datacenter_overrides",
@@ -238,6 +268,7 @@ func TestServicesMonitorConfig_Finalize(t *testing.T) {
 			&ServicesMonitorConfig{},
 			&ServicesMonitorConfig{
 				Regexp:             nil,
+				Names:              []string{},
 				Datacenter:         String(""),
 				Namespace:          String(""),
 				Filter:             String(""),
@@ -245,7 +276,7 @@ func TestServicesMonitorConfig_Finalize(t *testing.T) {
 			},
 		},
 		{
-			"fully_configured",
+			"regexp_fully_configured",
 			[]string{},
 			&ServicesMonitorConfig{
 				Regexp:     String("^web.*"),
@@ -258,6 +289,7 @@ func TestServicesMonitorConfig_Finalize(t *testing.T) {
 			},
 			&ServicesMonitorConfig{
 				Regexp:     String("^web.*"),
+				Names:      []string{},
 				Datacenter: String("dc"),
 				Namespace:  String("namespace"),
 				Filter:     String("filter"),
@@ -266,13 +298,36 @@ func TestServicesMonitorConfig_Finalize(t *testing.T) {
 				},
 			},
 		},
-
+		{
+			"names_fully_configured",
+			[]string{},
+			&ServicesMonitorConfig{
+				Names:      []string{"api"},
+				Datacenter: String("dc"),
+				Namespace:  String("namespace"),
+				Filter:     String("filter"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value",
+				},
+			},
+			&ServicesMonitorConfig{
+				Names:      []string{"api"},
+				Regexp:     nil,
+				Datacenter: String("dc"),
+				Namespace:  String("namespace"),
+				Filter:     String("filter"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value",
+				},
+			},
+		},
 		{
 			"services_param_unused",
 			[]string{"api"},
 			&ServicesMonitorConfig{},
 			&ServicesMonitorConfig{
 				Regexp:             nil,
+				Names:              []string{},
 				Datacenter:         String(""),
 				Namespace:          String(""),
 				Filter:             String(""),
@@ -303,10 +358,17 @@ func TestServicesMonitorConfig_Validate(t *testing.T) {
 			nil,
 		},
 		{
-			"valid",
+			"valid_with_regexp",
 			false,
 			&ServicesMonitorConfig{
 				Regexp: String(".*"),
+			},
+		},
+		{
+			"valid_with_names",
+			false,
+			&ServicesMonitorConfig{
+				Names: []string{"api"},
 			},
 		},
 		{
@@ -322,6 +384,19 @@ func TestServicesMonitorConfig_Validate(t *testing.T) {
 			&ServicesMonitorConfig{
 				Regexp: String("*"),
 			},
+		},
+		{
+			"invalid_both_regexp_and_names_configured",
+			true,
+			&ServicesMonitorConfig{
+				Regexp: String(".*"),
+				Names:  []string{"api"},
+			},
+		},
+		{
+			"invalid_no_regexp_no_names_configured",
+			true,
+			&ServicesMonitorConfig{},
 		},
 	}
 
@@ -351,7 +426,7 @@ func TestServicesMonitorConfig_GoString(t *testing.T) {
 			"(*ServicesMonitorConfig)(nil)",
 		},
 		{
-			"fully_configured",
+			"regexp_fully_configured",
 			&ServicesMonitorConfig{
 				Regexp:     String("^api$"),
 				Datacenter: String("dc"),
@@ -361,7 +436,22 @@ func TestServicesMonitorConfig_GoString(t *testing.T) {
 					"key": "value",
 				},
 			},
-			"&ServicesMonitorConfig{Regexp:^api$, Datacenter:dc, " +
+			"&ServicesMonitorConfig{Regexp:^api$, Names:[], Datacenter:dc, " +
+				"Namespace:namespace, Filter:filter, " +
+				"CTSUserDefinedMeta:map[key:value]}",
+		},
+		{
+			"names_fully_configured",
+			&ServicesMonitorConfig{
+				Names:      []string{"api", "web"},
+				Datacenter: String("dc"),
+				Namespace:  String("namespace"),
+				Filter:     String("filter"),
+				CTSUserDefinedMeta: map[string]string{
+					"key": "value",
+				},
+			},
+			"&ServicesMonitorConfig{Regexp:, Names:[api web], Datacenter:dc, " +
 				"Namespace:namespace, Filter:filter, " +
 				"CTSUserDefinedMeta:map[key:value]}",
 		},
