@@ -47,7 +47,7 @@ var (
 // Terraform is a Sync driver that uses the Terraform CLI to interface with
 // low-level network infrastructure.
 type Terraform struct {
-	mu *sync.RWMutex
+	mu sync.RWMutex
 
 	task              *Task
 	backend           map[string]interface{}
@@ -132,7 +132,6 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 	}
 
 	return &Terraform{
-		mu:                &sync.RWMutex{},
 		task:              config.Task,
 		backend:           config.Backend,
 		requiredProviders: config.RequiredProviders,
@@ -560,12 +559,10 @@ func (tf *Terraform) initTaskTemplate() error {
 
 	tf.setNotifier(tmpl)
 
-	if !tf.watcher.Watching(tf.template.ID()) {
-		err = tf.watcher.Register(tf.template)
-		if err != nil && err != hcat.RegistryErr {
-			tf.logger.Error("unable to register template", taskNameLogKey, tf.task.Name(), "error", err)
-			return err
-		}
+	err = tf.watcher.Register(tf.template)
+	if err != nil && err != hcat.RegistryErr {
+		tf.logger.Error("unable to register template", taskNameLogKey, tf.task.Name(), "error", err)
+		return err
 	}
 
 	return nil

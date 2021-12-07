@@ -42,7 +42,6 @@ type Resolver interface {
 type Watcher interface {
 	Watch(context.Context, chan string) error
 	WaitCh(context.Context) <-chan error
-	Watching(string) bool
 	Buffer(hcat.Notifier) bool
 	BufferReset(hcat.Notifier)
 	Mark(notifier hcat.IDer)
