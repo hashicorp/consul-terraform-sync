@@ -449,6 +449,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				SourceInput: &ServicesSourceInputConfig{
 					ServicesMonitorConfig{
 						Regexp:             String("^api$"),
+						Names:              []string{},
 						Datacenter:         String(""),
 						Namespace:          String(""),
 						Filter:             String(""),

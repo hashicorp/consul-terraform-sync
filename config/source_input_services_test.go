@@ -151,6 +151,7 @@ func TestServicesSourceInputConfig_Finalize(t *testing.T) {
 			&ServicesSourceInputConfig{
 				ServicesMonitorConfig{
 					Regexp:             nil,
+					Names:              []string{},
 					Datacenter:         String(""),
 					Namespace:          String(""),
 					Filter:             String(""),
@@ -237,6 +238,7 @@ func TestGoString(t *testing.T) {
 			"&ServicesSourceInputConfig{" +
 				"&ServicesMonitorConfig{" +
 				"Regexp:^api$, " +
+				"Names:[], " +
 				"Datacenter:dc2, " +
 				"Namespace:ns2, " +
 				"Filter:some-filter, " +

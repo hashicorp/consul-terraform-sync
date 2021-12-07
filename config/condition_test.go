@@ -88,6 +88,7 @@ task {
 			&ServicesConditionConfig{
 				ServicesMonitorConfig{
 					Regexp:     String(".*"),
+					Names:      []string{},
 					Datacenter: String("dc"),
 					Namespace:  String("namespace"),
 					Filter:     String("filter"),
