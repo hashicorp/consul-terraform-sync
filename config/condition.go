@@ -19,7 +19,7 @@ type ConditionConfig interface {
 
 // EmptyConditionConfig sets an unconfigured condition with a non-null value
 func EmptyConditionConfig() ConditionConfig {
-	return &NoConditionConfig{}
+	return &NoMonitorConfig{}
 }
 
 // conditionToTypeFunc is a decode hook function to decode a ConditionConfig

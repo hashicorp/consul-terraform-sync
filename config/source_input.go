@@ -20,13 +20,13 @@ type SourceInputConfig interface {
 // EmptySourceInputConfig sets un-configured source inputs with a non-null
 // value
 func EmptySourceInputConfig() SourceInputConfig {
-	return &NoSourceInputConfig{}
+	return &NoMonitorConfig{}
 }
 
 // isSourceInputEmpty returns true if the provided SourceInputConfig `c` is
-// of type NoSourceInputConfig
+// of type NoMonitorConfig
 func isSourceInputEmpty(c SourceInputConfig) bool {
-	_, ok := c.(*NoSourceInputConfig)
+	_, ok := c.(*NoMonitorConfig)
 	return ok
 }
 
