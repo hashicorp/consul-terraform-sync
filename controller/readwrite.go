@@ -26,6 +26,8 @@ type ReadWrite struct {
 	store *event.Store
 	retry retry.Retry
 
+	watcherCh chan string
+
 	// taskNotify is only initialized if EnableTestMode() is used. It provides
 	// tests insight into which tasks were triggered and had completed
 	taskNotify chan string
@@ -70,9 +72,11 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	}
 
 	errCh := make(chan error)
-	tmplCh := make(chan string, rw.drivers.Len()*2)
+	if rw.watcherCh == nil {
+		rw.watcherCh = make(chan string, rw.drivers.Len()+2)
+	}
 	go func() {
-		err := rw.watcher.Watch(ctx, tmplCh)
+		err := rw.watcher.Watch(ctx, rw.watcherCh)
 		if err != nil {
 			rw.logger.Error("error watching template dependencies", "error", err)
 			errCh <- err
@@ -81,7 +85,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 	for i := int64(1); ; i++ {
 		select {
-		case tmplID := <-tmplCh:
+		case tmplID := <-rw.watcherCh:
 			taskName, ok := rw.drivers.GetTask(tmplID)
 			if !ok {
 				rw.logger.Debug("template was notified for update but the template ID does not match any task", "template_id", tmplID)

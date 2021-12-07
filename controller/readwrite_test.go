@@ -93,6 +93,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 				task = disabledTestTask(t, tc.taskName)
 			}
 			d.On("Task").Return(task)
+			d.On("TemplateIDs").Return(nil)
 			drivers.Add(tc.taskName, d)
 
 			controller := ReadWrite{
@@ -151,6 +152,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 		d := new(mocksD.Driver)
 		taskName := "scheduled_task"
 		d.On("Task").Return(scheduledTestTask(t, taskName))
+		d.On("TemplateIDs").Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(false, nil)
 		controller.drivers.Add(taskName, d)
 
@@ -175,11 +177,13 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 	t.Run("mult-checkapply-store", func(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, "task_a"))
+		d.On("TemplateIDs").Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(nil)
 
 		disabledD := new(mocksD.Driver)
 		disabledD.On("Task").Return(disabledTestTask(t, "task_b"))
+		disabledD.On("TemplateIDs").Return(nil)
 
 		controller := ReadWrite{
 			baseController: &baseController{
@@ -243,6 +247,7 @@ func TestOnce(t *testing.T) {
 					taskName := task.Name()
 					d := new(mocksD.Driver)
 					d.On("Task").Return(enabledTestTask(t, taskName)).Twice()
+					d.On("TemplateIDs").Return(nil)
 					d.On("RenderTemplate", mock.Anything).Return(false, nil).Once()
 					d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 					d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
@@ -295,6 +300,7 @@ func TestReadWrite_Once_error(t *testing.T) {
 			taskName := task.Name()
 			d := new(mocksD.Driver)
 			d.On("Task").Return(enabledTestTask(t, taskName))
+			d.On("TemplateIDs").Return(nil)
 			d.On("RenderTemplate", mock.Anything).Return(true, nil)
 			d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
 			if taskName == "task_03" {
@@ -340,6 +346,7 @@ func TestReadWrite_runDynamicTasks(t *testing.T) {
 
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, "task"))
+		d.On("TemplateIDs").Return(nil)
 		d.On("InitWork", mock.Anything).Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(nil)
@@ -365,6 +372,7 @@ func TestReadWrite_runDynamicTasks(t *testing.T) {
 
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, "task"))
+		d.On("TemplateIDs").Return(nil)
 		d.On("InitWork", mock.Anything).Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
@@ -391,6 +399,7 @@ func TestReadWrite_runDynamicTasks(t *testing.T) {
 		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
 		d.On("Task").Return(scheduledTestTask(t, taskName))
+		d.On("TemplateIDs").Return(nil)
 		// no other methods should be called (or mocked)
 		controller.drivers.Add(taskName, d)
 
@@ -477,7 +486,7 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 
 func TestReadWriteRun_context_cancel(t *testing.T) {
 	w := new(mocks.Watcher)
-	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil).
+	w.On("Watch", mock.Anything, mock.Anything).Return(nil).
 		On("Size").Return(5).
 		On("Stop").Return()
 
@@ -514,6 +523,7 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 	// Tests Run behaviors as expected with triggers after Once completes
 	d := new(mocksD.Driver)
 	d.On("Task").Return(enabledTestTask(t, "task_a")).
+		On("TemplateIDs").Return([]string{"tmpl_a"}).
 		On("RenderTemplate", mock.Anything).Return(true, nil).
 		On("ApplyTask", mock.Anything).Return(nil).
 		On("SetBufferPeriod")
@@ -523,20 +533,20 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
 		},
-		store: event.NewStore(),
+		watcherCh: make(chan string, 5),
+		store:     event.NewStore(),
 	}
 	ctrl.drivers.Add("task_a", d)
-
-	watcherCh := make(chan error, 5)
-	var watcherChRc <-chan error = watcherCh
-	w := new(mocks.Watcher)
-	w.On("Size").Return(5)
-	ctrl.watcher = w
 
 	completedTasksCh := ctrl.EnableTestMode()
 	errCh := make(chan error)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+
+	w := new(mocks.Watcher)
+	w.On("Size").Return(5)
+	w.On("Watch", ctx, ctrl.watcherCh).Return(nil)
+	ctrl.watcher = w
 
 	go func() {
 		err := ctrl.Once(ctx)
@@ -544,11 +554,6 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 			errCh <- err
 			return
 		}
-
-		// Once is expected to complete during first iteration with the
-		// mocked values, so we don't initialize Wait until after. Otherwise,
-		// the test would panic on missing mock method.
-		w.On("WaitCh", mock.Anything, mock.Anything).Return(watcherChRc)
 
 		err = ctrl.Run(ctx)
 		if err != nil {
@@ -558,7 +563,7 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 
 	// Emulate triggers to evaluate task completion
 	for i := 0; i < 5; i++ {
-		watcherCh <- nil
+		ctrl.watcherCh <- "tmpl_a"
 		select {
 		case taskName := <-completedTasksCh:
 			assert.Equal(t, "task_a", taskName)
