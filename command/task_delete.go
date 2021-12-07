@@ -35,7 +35,7 @@ func (c *taskDeleteCommand) Help() string {
 	helpText := fmt.Sprintf(`
 Usage: consul-terraform-sync task delete [options] <task name>
 
-  Task Delete is used to delete existing tasks. Will not delete a task
+  Task Delete is used to delete an existing task. Will not delete a task
   if the task is currently running.
 
 Options:
@@ -57,7 +57,7 @@ Example:
 
 // Synopsis is a short one-line synopsis of the command
 func (c *taskDeleteCommand) Synopsis() string {
-	return "Deletes existing tasks."
+	return "Deletes an existing task."
 }
 
 // Run runs the command
