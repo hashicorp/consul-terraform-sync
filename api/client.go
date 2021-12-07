@@ -400,6 +400,22 @@ func (t *TaskClient) Update(name string, config UpdateTaskConfig, q *QueryParam)
 	return plan, nil
 }
 
+// Delete is used to make a delete request
+func (t *TaskClient) Delete(name string, q *QueryParam) error {
+	if q == nil {
+		q = &QueryParam{}
+	}
+
+	path := fmt.Sprintf("%s/%s", taskPath, name)
+	resp, err := t.request(http.MethodDelete, path, q.Encode(), "")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 func parseAddress(addr string) (addressComposite, error) {
 	ac := addressComposite{}
 	ac.scheme = HTTPScheme

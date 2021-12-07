@@ -157,13 +157,9 @@ func (m *meta) client() (*api.Client, error) {
 }
 
 // requestUserApproval returns an exit code and boolean describing if the user
-// approved. If the user did not approve (false is returned), exit code is provided.
-func (m *meta) requestUserApproval(taskName string) (int, bool) {
-	m.UI.Info("Enabling the task will perform the actions described above.")
-	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
-	m.UI.Output(" - This action cannot be undone.")
-	m.UI.Output(" - Consul Terraform Sync cannot guarantee Terraform will perform")
-	m.UI.Output("   these exact actions if monitored services have changed.\n")
+// approved a given action. If the user did not approve (false is returned) or
+// if there is an error in processing the user input, an exit code is provided.
+func (m *meta) requestUserApproval(taskName, action string) (int, bool) {
 	m.UI.Output("Only 'yes' will be accepted to approve.\n")
 	v, err := m.UI.Ask("Enter a value:")
 	m.UI.Output("")
@@ -173,11 +169,31 @@ func (m *meta) requestUserApproval(taskName string) (int, bool) {
 		return ExitCodeError, false
 	}
 	if v != "yes" {
-		m.UI.Output(fmt.Sprintf("Cancelled enabling task '%s'", taskName))
+		m.UI.Output(fmt.Sprintf("Cancelled %s task '%s'", action, taskName))
 		return ExitCodeOK, false
 	}
-
 	return 0, true
+}
+
+// requestUserApprovalEnable prints a prompt for user approval of enabling a task
+// and waits for the user input. It returns an exit code and boolean describing
+// if the user approved.
+func (m *meta) requestUserApprovalEnable(taskName string) (int, bool) {
+	m.UI.Info("Enabling the task will perform the actions described above.")
+	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
+	m.UI.Output(" - This action cannot be undone.")
+	m.UI.Output(" - Consul Terraform Sync cannot guarantee Terraform will perform")
+	m.UI.Output("   these exact actions if monitored services have changed.\n")
+	return m.requestUserApproval(taskName, "enabling")
+}
+
+// requestUserApprovalDelete prints a prompt for user approval of deleting a task
+// and waits for the user input. It returns an exit code and boolean describing
+// if the user approved.
+func (m *meta) requestUserApprovalDelete(taskName string) (int, bool) {
+	m.UI.Info(fmt.Sprintf("Do you want to delete '%s'?", taskName))
+	m.UI.Output(" - This action cannot be undone.")
+	return m.requestUserApproval(taskName, "deleting")
 }
 
 // Returns true if the flags have been parsed
