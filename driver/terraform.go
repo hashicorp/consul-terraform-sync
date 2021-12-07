@@ -198,6 +198,16 @@ func (tf *Terraform) SetBufferPeriod() {
 	tf.watcher.SetBufferPeriod(bp.Min, bp.Max, tf.template.ID())
 }
 
+func (tf *Terraform) TemplateIDs() []string {
+	tf.mu.RLock()
+	defer tf.mu.RUnlock()
+
+	if tf.template == nil {
+		return nil
+	}
+	return []string{tf.template.ID()}
+}
+
 // RenderTemplate fetches data for the template. If the data is complete fetched,
 // renders the template. Rendering a template for the first time may take several
 // cycles to load all the dependencies asynchronously. Returns a boolean whether

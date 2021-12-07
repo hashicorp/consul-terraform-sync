@@ -15,6 +15,9 @@ type Driver interface {
 	// SetBufferPeriod sets the task's buffer period on the watcher
 	SetBufferPeriod()
 
+	// TemplateIDs returns the list of template IDs for the driver
+	TemplateIDs() []string
+
 	// RenderTemplate renders a template. Returns if template rendering
 	// completed or not
 	RenderTemplate(ctx context.Context) (bool, error)

@@ -40,6 +40,7 @@ type Resolver interface {
 // used by this project
 // https://github.com/hashicorp/hcat
 type Watcher interface {
+	Watch(context.Context, chan string) error
 	WaitCh(context.Context) <-chan error
 	Watching(string) bool
 	Buffer(hcat.Notifier) bool

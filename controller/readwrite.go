@@ -69,26 +69,33 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		}
 	}
 
+	errCh := make(chan error)
+	tmplCh := make(chan string, rw.drivers.Len()*2)
+	go func() {
+		err := rw.watcher.Watch(ctx, tmplCh)
+		if err != nil {
+			rw.logger.Error("error watching template dependencies", "error", err)
+			errCh <- err
+		}
+	}()
+
 	for i := int64(1); ; i++ {
-		// Blocking on Wait is first as we just ran in Once mode so we want
-		// to wait for updates before re-running. Doing it the other way is
-		// basically a noop as it checks if templates have been changed but
-		// the logs read weird. Revisit after async work is done.
 		select {
-		case err := <-rw.watcher.WaitCh(ctx):
-			if err != nil {
-				rw.logger.Error("error watching template dependencies", "error", err)
-				return err
+		case tmplID := <-tmplCh:
+			taskName, ok := rw.drivers.GetTask(tmplID)
+			if !ok {
+				rw.logger.Debug("template was notified for update but the template ID does not match any task", "template_id", tmplID)
+				continue
 			}
+
+			go rw.runTask(ctx, taskName) // errors are logged for now
+
+		case err := <-errCh:
+			return err
 
 		case <-ctx.Done():
 			rw.logger.Info("stopping controller")
 			return ctx.Err()
-		}
-
-		for err := range rw.runDynamicTasks(ctx) {
-			// aggregate collected errors and just log everything for now
-			rw.logger.Error("error running tasks", "error", err)
 		}
 
 		rw.logDepSize(50, i)
@@ -135,6 +142,46 @@ func (rw *ReadWrite) runDynamicTasks(ctx context.Context) chan error {
 	}()
 
 	return errCh
+}
+
+func (rw *ReadWrite) runTask(ctx context.Context, taskName string) error {
+	logger := rw.logger.With(taskNameLogKey, taskName)
+
+	d, ok := rw.drivers.Get(taskName)
+	if !ok {
+		return fmt.Errorf("driver for task %q does not exist to run", taskName)
+	}
+
+	if rw.drivers.IsActive(taskName) {
+		// The driver is currently active with the task, initiated by an ad-hoc run.
+		logger.Trace("task is active")
+		return nil
+	}
+
+	switch d.Task().Condition().(type) {
+	case *config.CatalogServicesConditionConfig:
+		// Catalog services condition has multiple API calls it depends on for
+		// updates. This adds an additional delay for hcat to process any new
+		// updates in the background that may be related to this task. 1 second is
+		// used to account for Consul cluster propagation of the change at scale.
+		// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
+		<-time.After(time.Second)
+	case *config.ScheduleConditionConfig:
+		// Schedule tasks are not dynamic and run in a different process
+		// In the future we may want to run a scheduled task ad-hoc
+		return nil
+	}
+
+	complete, err := rw.checkApply(ctx, d, true, false)
+	if err != nil {
+		logger.Error("error running task", "error", err)
+		return err
+	}
+
+	if rw.taskNotify != nil && complete {
+		rw.taskNotify <- taskName
+	}
+	return nil
 }
 
 // runScheduledTask starts up a go-routine for a given scheduled task/driver.
