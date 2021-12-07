@@ -150,7 +150,7 @@ func TestServicesSourceInputConfig_Finalize(t *testing.T) {
 			&ServicesSourceInputConfig{},
 			&ServicesSourceInputConfig{
 				ServicesMonitorConfig{
-					Regexp:             String(""),
+					Regexp:             nil,
 					Datacenter:         String(""),
 					Namespace:          String(""),
 					Filter:             String(""),

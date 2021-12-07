@@ -149,7 +149,7 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 			&ServicesConditionConfig{},
 			&ServicesConditionConfig{
 				ServicesMonitorConfig{
-					Regexp:             String(""),
+					Regexp:             nil,
 					Datacenter:         String(""),
 					Namespace:          String(""),
 					Filter:             String(""),

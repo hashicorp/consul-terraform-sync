@@ -102,15 +102,14 @@ func (c *ServicesMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 	return r2
 }
 
-// Finalize ensures there no nil pointers.
+// Finalize ensures there no nil pointers. with the _exception_ of Regexp. There
+// is a need to distinguish betweeen nil regex (unconfigured regex) and empty
+// string regex ("" regex pattern) at Validate()
 func (c *ServicesMonitorConfig) Finalize([]string) {
 	if c == nil { // config not required, return early
 		return
 	}
 
-	if c.Regexp == nil {
-		c.Regexp = String("")
-	}
 	if c.Datacenter == nil {
 		c.Datacenter = String("")
 	}
@@ -127,15 +126,19 @@ func (c *ServicesMonitorConfig) Finalize([]string) {
 
 // Validate validates the values and required options. This method is recommended
 // to run after Finalize() to ensure the configuration is safe to proceed.
+// Note, it handles the possibility of nil Regexp value even after Finalize().
 func (c *ServicesMonitorConfig) Validate() error {
 	if c == nil { // config not required, return early
 		return nil
 	}
 
-	if c.Regexp != nil && *c.Regexp != "" {
+	// Next commit adding `names` field, will consume when regexp == nil
+	if c.Regexp != nil {
 		if _, err := regexp.Compile(StringVal(c.Regexp)); err != nil {
 			return fmt.Errorf("unable to compile services regexp: %s", err)
 		}
+	} else {
+		c.Regexp = String("") // Finalize
 	}
 
 	return nil

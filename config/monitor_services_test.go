@@ -237,7 +237,7 @@ func TestServicesMonitorConfig_Finalize(t *testing.T) {
 			[]string{},
 			&ServicesMonitorConfig{},
 			&ServicesMonitorConfig{
-				Regexp:             String(""),
+				Regexp:             nil,
 				Datacenter:         String(""),
 				Namespace:          String(""),
 				Filter:             String(""),
@@ -272,7 +272,7 @@ func TestServicesMonitorConfig_Finalize(t *testing.T) {
 			[]string{"api"},
 			&ServicesMonitorConfig{},
 			&ServicesMonitorConfig{
-				Regexp:             String(""),
+				Regexp:             nil,
 				Datacenter:         String(""),
 				Namespace:          String(""),
 				Filter:             String(""),
@@ -307,6 +307,13 @@ func TestServicesMonitorConfig_Validate(t *testing.T) {
 			false,
 			&ServicesMonitorConfig{
 				Regexp: String(".*"),
+			},
+		},
+		{
+			"valid_regexp_empty_string",
+			false,
+			&ServicesMonitorConfig{
+				Regexp: String(""),
 			},
 		},
 		{
