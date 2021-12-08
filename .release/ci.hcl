@@ -10,7 +10,7 @@ project "consul-terraform-sync" {
     organization = "hashicorp"
     repository = "consul-terraform-sync"
     release_branches = [
-        enable-security-scan
+        "enable-security-scan"
     ]
   }
 }
