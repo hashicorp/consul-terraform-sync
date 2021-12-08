@@ -21,6 +21,8 @@ type ConsulKVMonitor struct {
 	Recurse    bool
 	Datacenter string
 	Namespace  string
+
+	SourceIncludesVar bool
 }
 
 // ServicesAppended always returns false for consul-kv as it doesn't
@@ -29,11 +31,8 @@ func (m ConsulKVMonitor) ServicesAppended() bool {
 	return false
 }
 
-// SourceIncludesVariable returns true if the source variables are to be included in the template.
-// For the case of a consul-kv monitor, this always returns true and must be overridden to
-// return based on other conditions.
 func (m ConsulKVMonitor) SourceIncludesVariable() bool {
-	return true
+	return m.SourceIncludesVar
 }
 
 func (m ConsulKVMonitor) appendModuleAttribute(body *hclwrite.Body) {
@@ -53,15 +52,29 @@ func (m ConsulKVMonitor) appendTemplate(w io.Writer) error {
 	logger := logging.Global().Named(logSystemName).Named(tftmplSubsystemName)
 	q := m.hcatQuery()
 
-	var baseTmpl string
-	if m.Recurse {
-		baseTmpl = fmt.Sprintf(consulKVRecurseBaseTmpl, q)
-	} else {
-		baseTmpl = fmt.Sprintf(consulKVBaseTmpl, q)
+	if m.SourceIncludesVar {
+		var baseTmpl string
+		if m.Recurse {
+			baseTmpl = fmt.Sprintf(consulKVRecurseBaseTmpl, q)
+		} else {
+			baseTmpl = fmt.Sprintf(consulKVBaseTmpl, q)
+		}
+
+		if _, err := fmt.Fprintf(w, consulKVIncludesVarTmpl, baseTmpl); err != nil {
+			logger.Error("unable to write consul-kv template to include variable", "error", err)
+			return err
+		}
+		return nil
 	}
-	_, err := fmt.Fprintf(w, consulKVIncludesVarTmpl, baseTmpl)
-	if err != nil {
-		logger.Error("unable to write consul-kv template to include variable", "error", err)
+
+	var emptyTmpl string
+	if m.Recurse {
+		emptyTmpl = fmt.Sprintf(consulKVRecurseConditionEmptyTmpl, q)
+	} else {
+		emptyTmpl = fmt.Sprintf(consulKVConditionEmptyTmpl, q)
+	}
+	if _, err := w.Write([]byte(emptyTmpl)); err != nil {
+		logger.Error("unable to write consul-kv empty template", "error", err)
 		return err
 	}
 	return nil
@@ -107,6 +120,20 @@ const consulKVRecurseBaseTmpl = `
 {{- with $kv := keys %s }}
   {{- range $k := $kv }}
   "{{ .Path }}" = "{{ .Value }}"
+  {{- end}}
+{{- end}}
+`
+
+const consulKVConditionEmptyTmpl = `
+{{- with $kv := keyExistsGet %s }}
+  {{- /* Empty template. Detects changes in Consul KV */ -}}
+{{- end}}
+`
+
+const consulKVRecurseConditionEmptyTmpl = `
+{{- with $kv := keys %s }}
+  {{- range $k, $v := $kv }}
+  {{- /* Empty template. Detects changes in Consul KV */ -}}
   {{- end}}
 {{- end}}
 `

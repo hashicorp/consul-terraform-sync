@@ -47,12 +47,13 @@ func TestConsulKVMonitor_appendTemplate(t *testing.T) {
 		exp  string
 	}{
 		{
-			"recurse false",
+			"recurse false & includes_var true",
 			&ConsulKVMonitor{
-				Path:       "path",
-				Recurse:    false,
-				Datacenter: "dc1",
-				Namespace:  "test-ns",
+				Path:              "path",
+				Recurse:           false,
+				Datacenter:        "dc1",
+				Namespace:         "test-ns",
+				SourceIncludesVar: true,
 			},
 			`
 consul_kv = {
@@ -65,12 +66,13 @@ consul_kv = {
 `,
 		},
 		{
-			"recurse true",
+			"recurse true & includes_var true",
 			&ConsulKVMonitor{
-				Path:       "path",
-				Recurse:    true,
-				Datacenter: "dc1",
-				Namespace:  "test-ns",
+				Path:              "path",
+				Recurse:           true,
+				Datacenter:        "dc1",
+				Namespace:         "test-ns",
+				SourceIncludesVar: true,
 			},
 			`
 consul_kv = {
@@ -80,6 +82,38 @@ consul_kv = {
   {{- end}}
 {{- end}}
 }
+`,
+		},
+		{
+			"recurse false & includes_var false",
+			&ConsulKVMonitor{
+				Path:              "path",
+				Recurse:           false,
+				Datacenter:        "dc1",
+				Namespace:         "test-ns",
+				SourceIncludesVar: false,
+			},
+			`
+{{- with $kv := keyExistsGet "path" "dc=dc1" "ns=test-ns" }}
+  {{- /* Empty template. Detects changes in Consul KV */ -}}
+{{- end}}
+`,
+		},
+		{
+			"recurse true includes var false",
+			&ConsulKVMonitor{
+				Path:              "path",
+				Recurse:           true,
+				Datacenter:        "dc1",
+				Namespace:         "test-ns",
+				SourceIncludesVar: false,
+			},
+			`
+{{- with $kv := keys "path" "dc=dc1" "ns=test-ns" }}
+  {{- range $k, $v := $kv }}
+  {{- /* Empty template. Detects changes in Consul KV */ -}}
+  {{- end}}
+{{- end}}
 `,
 		},
 	}
