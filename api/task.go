@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -99,7 +99,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	h.drivers.SetActive(taskName)
 	defer h.drivers.SetInactive(taskName)
 
-	runOp, err := runOption(r)
+	runOp, err := parseRunOption(r)
 	if err != nil {
 		logger.Trace("unsupported run option", "error", err)
 		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
@@ -184,58 +184,24 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type TaskLifeCycleHandlerConfig struct {
+	store               *event.Store
+	drivers             *driver.Drivers
+	bufferPeriod        *config.BufferPeriodConfig
+	workingDir          string
+	createNewTaskDriver func(taskConfig config.TaskConfig) (driver.Driver, error)
+}
+
 type TaskLifeCycleHandler struct {
 	mu *sync.RWMutex
-
-	store   *event.Store
-	drivers *driver.Drivers
+	TaskLifeCycleHandlerConfig
 }
 
-func NewTaskLifeCycleHandler(store *event.Store, drivers *driver.Drivers) *TaskLifeCycleHandler {
+func NewTaskLifeCycleHandler(c TaskLifeCycleHandlerConfig) *TaskLifeCycleHandler {
 	return &TaskLifeCycleHandler{
-		mu:      &sync.RWMutex{},
-		store:   store,
-		drivers: drivers,
+		mu:                         &sync.RWMutex{},
+		TaskLifeCycleHandlerConfig: c,
 	}
-}
-
-// CreateTask creates a task
-func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request, params oapigen.CreateTaskParams) {
-	// TODO: replace below when implementing endpoint
-	//logger := logging.FromContext(r.Context()).Named(createTaskSubsystemName)
-	//
-	//// Decode the new task and add it to our "database"
-	//var req oapigen.TaskRequest
-	//requestID := requestIDFromContext(r.Context())
-	//if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-	//	sendError(w, r, http.StatusBadRequest, "invalid format for create task request")
-	//	return
-	//}
-	//
-	//logger.Trace("create task request", "create_task_request", req)
-	//
-	//// Verify query param
-	//if params.Run != nil {
-	//	if string(*params.Run) == "now" {
-	//		logger.Trace("create task and run now")
-	//	}
-	//}
-	//
-	//h.tasks[req.Name] = oapigen.Task(req)
-	//
-	//// Return the task response
-	//var resp oapigen.TaskResponse
-	//task := oapigen.Task(req)
-	//resp.Task = &task
-	//resp.RequestId = requestID
-	//
-	//w.Header().Set("Content-Type", "application/json")
-	//w.WriteHeader(http.StatusOK)
-	//err := json.NewEncoder(w).Encode(resp)
-	//if err != nil {
-	//	logger.Error("error encoding json", "error", err, "execute_dryrun_response", resp)
-	//}
-	//logger.Trace("task created", "create_task_response", resp)
 }
 
 func decodeBody(body []byte) (UpdateTaskConfig, error) {
@@ -246,13 +212,13 @@ func decodeBody(body []byte) (UpdateTaskConfig, error) {
 		return UpdateTaskConfig{}, err
 	}
 
-	var config UpdateTaskConfig
+	var conf UpdateTaskConfig
 	var md mapstructure.Metadata
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		WeaklyTypedInput: true,
 		ErrorUnused:      false,
 		Metadata:         &md,
-		Result:           &config,
+		Result:           &conf,
 	})
 	if err != nil {
 		return UpdateTaskConfig{}, err
@@ -269,11 +235,58 @@ func decodeBody(body []byte) (UpdateTaskConfig, error) {
 		return UpdateTaskConfig{}, err
 	}
 
-	return config, nil
+	return conf, nil
 }
 
-// runOption returns a run option for updating the task
-func runOption(r *http.Request) (string, error) {
+func initNewTask(ctx context.Context, d driver.Driver, runOption string) error {
+	logger := logging.FromContext(ctx)
+	switch runOption {
+	case "", driver.RunOptionNow:
+		// valid options
+	default:
+		return fmt.Errorf("invalid run option '%s'. Please select a valid option", runOption)
+	}
+
+	err := d.InitTask(ctx)
+	taskName := d.Task().Name()
+	if err != nil {
+		logger.Error("error initializing task", "error", err, "task_name", taskName)
+		return err
+	}
+
+	// Render the template. Rendering a template for the first time may take several
+	// cycles to load all the dependencies asynchronously, so loop through here until render returns
+	// true
+	for {
+		ok, err := d.RenderTemplate(ctx)
+		if err != nil {
+			logger.Error("error adding task to driver", "task_name", taskName)
+			return fmt.Errorf("error updating task '%s'. Unable to "+
+				"render template for task: %s", taskName, err)
+		}
+		if ok {
+			// Once template rendering is finished, break
+			break
+		}
+	}
+
+	// TODO: Set the buffer period
+	// d.SetBufferPeriod()
+
+	var storedErr error
+	if runOption == driver.RunOptionNow {
+		logger.Trace("run now option", "task_name", taskName)
+		err := d.ApplyTask(ctx)
+		if err != nil {
+			return storedErr
+		}
+	}
+
+	return nil
+}
+
+// parseRunOption returns a run option for updating the task
+func parseRunOption(r *http.Request) (string, error) {
 	// `?run=<option>` parameter
 	const runKey = "run"
 

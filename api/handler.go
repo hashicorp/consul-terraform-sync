@@ -35,6 +35,7 @@ func sendError(w http.ResponseWriter, r *http.Request, code int, message string)
 		RequestId: requestIDFromContext(r.Context()),
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	err := json.NewEncoder(w).Encode(taskErr)
 	if err != nil {

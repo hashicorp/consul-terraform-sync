@@ -161,6 +161,7 @@ func RequestHTTP(t testing.TB, method, url, body string) *http.Response {
 	req, err := http.NewRequest(method, url, r)
 	require.NoError(t, err)
 
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	return resp
