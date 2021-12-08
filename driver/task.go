@@ -80,6 +80,7 @@ type TaskConfig struct {
 	Services     []Service
 	Source       string
 	VarFiles     []string
+	Variables    map[string]string
 	Version      string
 	BufferPeriod *BufferPeriod
 	Condition    config.ConditionConfig
