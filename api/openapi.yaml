@@ -185,9 +185,7 @@ components:
           type: string
           example: "org/example/module"
         variables:
-          type: object
-          additionalProperties:
-            type: string
+          $ref: '#/components/schemas/VariableMap'
         version:
           type: string
           example: "1.0.0"
@@ -252,6 +250,10 @@ components:
         consul_kv:
           $ref: '#/components/schemas/ConsulKVSourceInput'
 
+    VariableMap:
+      type: object
+      additionalProperties:
+        type: string
 
     ServicesCondition:
       type: object
