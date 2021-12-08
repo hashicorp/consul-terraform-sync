@@ -4,16 +4,13 @@ project "consul-terraform-sync" {
   team = "consul api tooling"
   slack {
     # feed-consul-api-gh
-    notification_channel = "C026W707YHJ"
+    notification_channel = "C01A3A54G0L" 
   }
   github {
     organization = "hashicorp"
     repository = "consul-terraform-sync"
     release_branches = [
-      "main",
-      "release/0.2.x",
-      "release/0.3.x",
-      "release/0.4.x"
+        enable-security-scan
     ]
   }
 }
@@ -41,8 +38,36 @@ event "upload-dev" {
   }
 }
 
-event "notarize-darwin-amd64" {
+event "security-scan-binaries" {
   depends = ["upload-dev"]
+  action "security-scan-binaries" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "security-scan-binaries"
+    config = "security-scan.hcl"
+  }
+
+  notification {
+    on = "fail"
+  }
+}
+
+event "security-scan-containers" {
+  depends = ["security-scan-binaries"]
+  action "security-scan-containers" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "security-scan-containers"
+    config = "security-scan.hcl"
+  }
+
+  notification {
+    on = "fail"
+  }
+}
+
+event "notarize-darwin-amd64" {
+  depends = ["security-scan-containers"]
   action "notarize-darwin-amd64" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
