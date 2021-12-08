@@ -13,10 +13,15 @@ import (
 // this allows for the task request to be extended
 type taskRequest oapigen.TaskRequest
 
+type taskRequestConfig struct {
+	config.TaskConfig
+	variables map[string]string
+}
+
 // ToConfigTaskConfig converts a taskRequest object to a Config TaskConfig object. It takes as arguments a buffer period,
 // and a working directory which are required to finalize the task config.
-func (tr taskRequest) ToConfigTaskConfig(bp *config.BufferPeriodConfig, wd string) (*config.TaskConfig, error) {
-	tc := &config.TaskConfig{
+func (tr taskRequest) ToConfigTaskConfig(bp *config.BufferPeriodConfig, wd string) (taskRequestConfig, error) {
+	tc := config.TaskConfig{
 		Description: tr.Description,
 		Name:        &tr.Name,
 		Source:      &tr.Source,
@@ -94,7 +99,7 @@ func (tr taskRequest) ToConfigTaskConfig(bp *config.BufferPeriodConfig, wd strin
 		if tr.BufferPeriod.Max != nil {
 			max, err = time.ParseDuration(*tr.BufferPeriod.Max)
 			if err != nil {
-				return nil, err
+				return taskRequestConfig{}, err
 			}
 		}
 
@@ -102,7 +107,7 @@ func (tr taskRequest) ToConfigTaskConfig(bp *config.BufferPeriodConfig, wd strin
 		if tr.BufferPeriod.Min != nil {
 			min, err = time.ParseDuration(*tr.BufferPeriod.Min)
 			if err != nil {
-				return nil, err
+				return taskRequestConfig{}, err
 			}
 		}
 
@@ -116,10 +121,19 @@ func (tr taskRequest) ToConfigTaskConfig(bp *config.BufferPeriodConfig, wd strin
 	tc.Finalize(bp, wd)
 	err := tc.Validate()
 	if err != nil {
-		return nil, err
+		return taskRequestConfig{}, err
 	}
 
-	return tc, nil
+	var variables map[string]string
+	if tr.Variables != nil {
+		variables = tr.Variables.AdditionalProperties
+	}
+
+	trc := taskRequestConfig{
+		TaskConfig: tc,
+		variables:  variables,
+	}
+	return trc, nil
 }
 
 // String writes out the task request in an easily readable way
@@ -131,26 +145,32 @@ func (tr taskRequest) String() string {
 
 type taskResponse oapigen.TaskResponse
 
-func taskResponseFromConfigTaskConfig(tc *config.TaskConfig, requestID oapigen.RequestID) taskResponse {
+func taskResponseFromTaskRequestConfig(trc taskRequestConfig, requestID oapigen.RequestID) taskResponse {
 	task := oapigen.Task{
-		Description: tc.Description,
-		Name:        *tc.Name,
-		Source:      *tc.Source,
-		Version:     tc.Version,
-		Enabled:     tc.Enabled,
-		WorkingDir:  tc.WorkingDir,
+		Description: trc.Description,
+		Name:        *trc.Name,
+		Source:      *trc.Source,
+		Version:     trc.Version,
+		Enabled:     trc.Enabled,
+		WorkingDir:  trc.WorkingDir,
 	}
 
-	if tc.Providers != nil {
-		task.Providers = &tc.Providers
+	if trc.variables != nil {
+		task.Variables = &oapigen.VariableMap{
+			AdditionalProperties: trc.variables,
+		}
 	}
 
-	if tc.Services != nil {
-		task.Services = &tc.Services
+	if trc.Providers != nil {
+		task.Providers = &trc.Providers
+	}
+
+	if trc.Services != nil {
+		task.Services = &trc.Services
 	}
 
 	task.SourceInput = new(oapigen.SourceInput)
-	switch si := tc.SourceInput.(type) {
+	switch si := trc.SourceInput.(type) {
 	case *config.ServicesSourceInputConfig:
 		task.SourceInput.Services = &oapigen.ServicesSourceInput{
 			Regexp: si.Regexp,
@@ -165,7 +185,7 @@ func taskResponseFromConfigTaskConfig(tc *config.TaskConfig, requestID oapigen.R
 	}
 
 	task.Condition = new(oapigen.Condition)
-	switch cond := tc.Condition.(type) {
+	switch cond := trc.Condition.(type) {
 	case *config.ServicesConditionConfig:
 		task.Condition.Services = &oapigen.ServicesCondition{
 			Regexp: cond.Regexp,
@@ -194,10 +214,10 @@ func taskResponseFromConfigTaskConfig(tc *config.TaskConfig, requestID oapigen.R
 		}
 	}
 
-	max := config.TimeDurationVal(tc.BufferPeriod.Max).String()
-	min := config.TimeDurationVal(tc.BufferPeriod.Min).String()
+	max := config.TimeDurationVal(trc.BufferPeriod.Max).String()
+	min := config.TimeDurationVal(trc.BufferPeriod.Min).String()
 	task.BufferPeriod = &oapigen.BufferPeriod{
-		Enabled: tc.BufferPeriod.Enabled,
+		Enabled: trc.BufferPeriod.Enabled,
 		Max:     &max,
 		Min:     &min,
 	}
