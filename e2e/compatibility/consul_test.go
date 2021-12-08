@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 // $ go test -run TestCompatibility_Consul ./e2e/compatibility -tags=e2e -v
@@ -30,7 +31,8 @@ const (
 
 	nullTaskName = "null_task"
 
-	defaultWaitForAPI = 30 * time.Second
+	defaultWaitForAPI   = 30 * time.Second
+	defaultWaitForEvent = 8 * time.Second
 )
 
 func TestCompatibility_Consul(t *testing.T) {
@@ -161,22 +163,30 @@ func testServiceInstanceCompatibility(t *testing.T, tempDir string, port int) {
 	testutils.CheckDir(t, false, webResourcesPath)
 
 	// 1. register db service instances
+	beforeRegister := time.Now()
 	registerService(t, &capi.AgentServiceRegistration{ID: "db1", Name: "db"}, port)
+	api.WaitForEvent(t, cts, "db_task", beforeRegister, defaultWaitForEvent)
 	testutils.CheckFile(t, true, dbResourcesPath, "db1.txt")
+	beforeRegister = time.Now()
 	registerService(t, &capi.AgentServiceRegistration{ID: "db2", Name: "db"}, port)
+	api.WaitForEvent(t, cts, "db_task", beforeRegister, defaultWaitForEvent)
 	testutils.CheckFile(t, true, dbResourcesPath, "db2.txt")
 	files := testutils.CheckDir(t, true, dbResourcesPath)
 	require.Equal(t, 2, len(files))
 	testutils.CheckDir(t, false, webResourcesPath)
 
 	// 2. register a web service instance
+	beforeRegister = time.Now()
 	registerService(t, &capi.AgentServiceRegistration{ID: "web1", Name: "web"}, port)
+	api.WaitForEvent(t, cts, "web_task", beforeRegister, defaultWaitForEvent)
 	testutils.CheckFile(t, true, webResourcesPath, "web1.txt")
 	testutils.CheckFile(t, true, dbResourcesPath, "db1.txt")
 	testutils.CheckFile(t, true, dbResourcesPath, "db2.txt")
 
 	//3. deregister one db service instance
+	beforeDeregister := time.Now()
 	deregisterService(t, "db1", port)
+	api.WaitForEvent(t, cts, "db_task", beforeDeregister, defaultWaitForEvent)
 	testutils.CheckFile(t, false, dbResourcesPath, "db1.txt")
 	testutils.CheckFile(t, true, dbResourcesPath, "db2.txt")
 	testutils.CheckFile(t, true, webResourcesPath, "web1.txt")
