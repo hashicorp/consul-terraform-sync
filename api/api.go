@@ -78,7 +78,7 @@ type APIConfig struct {
 	TLS                 *config.CTSTLSConfig
 	BufferPeriod        *config.BufferPeriodConfig
 	WorkingDir          string
-	CreateNewTaskDriver func(taskConfig config.TaskConfig) (driver.Driver, error)
+	CreateNewTaskDriver func(taskConfig config.TaskConfig, variables map[string]string) (driver.Driver, error)
 }
 
 // NewAPI create a new API object

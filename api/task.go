@@ -189,7 +189,7 @@ type TaskLifeCycleHandlerConfig struct {
 	drivers             *driver.Drivers
 	bufferPeriod        *config.BufferPeriodConfig
 	workingDir          string
-	createNewTaskDriver func(taskConfig config.TaskConfig) (driver.Driver, error)
+	createNewTaskDriver func(taskConfig config.TaskConfig, variables map[string]string) (driver.Driver, error)
 }
 
 type TaskLifeCycleHandler struct {
