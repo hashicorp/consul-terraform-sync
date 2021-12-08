@@ -80,6 +80,7 @@ type TaskConfig struct {
 	Services     []Service
 	Source       string
 	VarFiles     []string
+	Variables    map[string]string
 	Version      string
 	BufferPeriod *BufferPeriod
 	Condition    config.ConditionConfig
@@ -89,6 +90,8 @@ type TaskConfig struct {
 
 func NewTask(conf TaskConfig) (*Task, error) {
 	loadedVars := make(hcltmpl.Variables)
+
+	// read in variables file
 	for _, vf := range conf.VarFiles {
 		tfvars, err := tftmpl.LoadModuleVariables(vf)
 		if err != nil {
@@ -99,6 +102,7 @@ func NewTask(conf TaskConfig) (*Task, error) {
 			loadedVars[k] = v
 		}
 	}
+
 	return &Task{
 		description:  conf.Description,
 		name:         conf.Name,
