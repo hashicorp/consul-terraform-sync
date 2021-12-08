@@ -17,43 +17,17 @@ type SourceInputConfig interface {
 	MonitorConfig
 }
 
-// DefaultSourceInputConfig returns the default source_input which is an un-configured
-// 'services' type source_input.
-func DefaultSourceInputConfig() SourceInputConfig {
-	return &ServicesSourceInputConfig{
-		ServicesMonitorConfig{
-			Regexp:             String(""),
-			Datacenter:         String(""),
-			Namespace:          String(""),
-			Filter:             String(""),
-			CTSUserDefinedMeta: map[string]string{},
-		},
-	}
+// EmptySourceInputConfig sets un-configured source inputs with a non-null
+// value
+func EmptySourceInputConfig() SourceInputConfig {
+	return &NoMonitorConfig{}
 }
 
-// isSourceInputEmpty returns true if the provided SourceInputConfig `c` is equal
-// to an empty SourceInputConfig
+// isSourceInputEmpty returns true if the provided SourceInputConfig `c` is
+// of type NoMonitorConfig
 func isSourceInputEmpty(c SourceInputConfig) bool {
-	logger := logging.Global().Named(logSystemName)
-	sv, ok := c.(*ServicesSourceInputConfig)
-	if !ok {
-		return false
-	}
-
-	// Nil means serviceSourceInput was not set to empty default
-	if sv.Regexp == nil {
-		return false
-	}
-
-	dsv, ok := DefaultSourceInputConfig().(*ServicesSourceInputConfig)
-	if !ok {
-		// This should never happen and would indicate programmer error
-		logger.Error("default config is not of the expected type",
-			"actual_type", fmt.Sprintf("%T", DefaultSourceInputConfig()), "expected_type", "ServicesSourceInputConfig")
-		panic("default config is not of the expected type")
-	}
-
-	return *sv.Regexp == *dsv.Regexp
+	_, ok := c.(*NoMonitorConfig)
+	return ok
 }
 
 // sourceInputToTypeFunc is a decode hook function to decode a SourceInputConfig

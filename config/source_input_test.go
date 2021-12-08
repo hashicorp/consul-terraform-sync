@@ -26,17 +26,7 @@ task {
 		cron = "* * * * * * *"
 	}
 }`
-	testSourceInputServicesUnconfiguredSuccess = `
-task {
-	name = "condition_task"
-	source = "..."
-	services = ["api"]
-	source_input "services" {
-	}
-	condition "schedule" {
-		cron = "* * * * * * *"
-	}
-}`
+
 	testSourceInputConsulKVSuccess = `
 task {
 	name = "condition_task"
@@ -86,20 +76,6 @@ task {
 	testFileName = "config.hcl"
 )
 
-func TestSourceInput_DefaultSourceInputConfig(t *testing.T) {
-	e := &ServicesSourceInputConfig{
-		ServicesMonitorConfig{
-			Regexp:             String(""),
-			Datacenter:         String(""),
-			Namespace:          String(""),
-			Filter:             String(""),
-			CTSUserDefinedMeta: map[string]string{},
-		},
-	}
-	a := DefaultSourceInputConfig()
-	require.Equal(t, e, a)
-}
-
 func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 	// Specifically test decoding source_input configs
 	cases := []struct {
@@ -120,11 +96,6 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 				},
 			},
 			config: testSourceInputServicesSuccess,
-		},
-		{
-			name:     "services un-configured",
-			expected: DefaultSourceInputConfig(),
-			config:   testSourceInputServicesUnconfiguredSuccess,
 		},
 		{
 			name: "consul-kv: happy path",

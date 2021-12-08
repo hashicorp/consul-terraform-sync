@@ -260,12 +260,12 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	}
 
 	if isConditionNil(c.Condition) {
-		c.Condition = DefaultConditionConfig()
+		c.Condition = EmptyConditionConfig()
 	}
 	c.Condition.Finalize(c.Services)
 
 	if isSourceInputNil(c.SourceInput) {
-		c.SourceInput = DefaultSourceInputConfig()
+		c.SourceInput = EmptySourceInputConfig()
 	}
 	c.SourceInput.Finalize(c.Services)
 

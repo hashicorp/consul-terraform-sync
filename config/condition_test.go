@@ -71,9 +71,9 @@ task {
 }`,
 		},
 		{
-			"no condition: defaults to services condition",
+			"no condition",
 			false,
-			DefaultConditionConfig(),
+			EmptyConditionConfig(),
 			"config.hcl",
 			`
 task {
@@ -109,20 +109,6 @@ task {
 		cts_user_defined_meta {
 			key = "value"
 		}
-	}
-}`,
-		},
-		{
-			"services: unconfigured",
-			false,
-			DefaultConditionConfig(),
-			"config.hcl",
-			`
-task {
-	name = "condition_task"
-	source = "..."
-	services = ["api"]
-	condition "services" {
 	}
 }`,
 		},
