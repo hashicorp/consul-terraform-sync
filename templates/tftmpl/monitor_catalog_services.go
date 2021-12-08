@@ -20,6 +20,8 @@ type CatalogServicesMonitor struct {
 	Datacenter string
 	Namespace  string
 	NodeMeta   map[string]string
+
+	SourceIncludesVar bool
 }
 
 // ServicesAppended returns true if the services are to be appended, and false otherwise
@@ -27,11 +29,8 @@ func (m CatalogServicesMonitor) ServicesAppended() bool {
 	return false
 }
 
-// SourceIncludesVariable returns true if the source variables are to be included in the template.
-// For the case of a catalog-service monitor, this always returns true and must be overridden to
-// return based on other conditions.
 func (m CatalogServicesMonitor) SourceIncludesVariable() bool {
-	return true
+	return m.SourceIncludesVar
 }
 
 func (m CatalogServicesMonitor) appendModuleAttribute(body *hclwrite.Body) {
@@ -44,11 +43,17 @@ func (m CatalogServicesMonitor) appendModuleAttribute(body *hclwrite.Body) {
 func (m CatalogServicesMonitor) appendTemplate(w io.Writer) error {
 	q := m.hcatQuery()
 
-	// For now leaving the condition related code in the monitor.
-	//If/When a source_input "catalog-services" is created for this, then this may need to be refactored.
-	_, err := fmt.Fprintf(w, catalogServicesIncludesVarTmpl, q)
-	if err != nil {
-		err = fmt.Errorf("unable to write catalog-service template to include variable, error: %v", err)
+	if m.SourceIncludesVar {
+		_, err := fmt.Fprintf(w, catalogServicesIncludesVarTmpl, q)
+		if err != nil {
+			err = fmt.Errorf("unable to write catalog-service template to include variable, error: %v", err)
+			return err
+		}
+		return nil
+	}
+
+	if _, err := fmt.Fprintf(w, catalogServicesEmptyTmpl, q); err != nil {
+		err = fmt.Errorf("unable to write catalog-service empty template, error %v", err)
 		return err
 	}
 	return nil
@@ -92,6 +97,13 @@ const catalogServicesBaseTmpl = `
 {{- with $catalogServices := catalogServicesRegistration %s}}
   {{- range $cs := $catalogServices }}
   "{{ $cs.Name }}" = {{ HCLServiceTags $cs.Tags }}
+{{- end}}{{- end}}
+`
+
+const catalogServicesEmptyTmpl = `
+{{- with $catalogServices := catalogServicesRegistration %s}}
+  {{- range $cs := $catalogServices }}
+    {{- /* Empty template. Detects changes in catalog-services */ -}}
 {{- end}}{{- end}}
 `
 
