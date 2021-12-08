@@ -153,7 +153,7 @@ func TestE2E_CommandTLS(t *testing.T) {
 		{
 			name:           "task enable",
 			subcmd:         []string{"task", "enable"},
-			outputContains: "Your infrastructure matches the configuration.",
+			outputContains: "enable complete!",
 		},
 	}
 
@@ -256,7 +256,7 @@ func TestE2E_CommandTLS_CAPath(t *testing.T) {
 		{
 			name:           "task enable",
 			subcmd:         []string{"task", "enable"},
-			outputContains: "Your infrastructure matches the configuration.",
+			outputContains: "enable complete!",
 		},
 	}
 
@@ -442,7 +442,7 @@ func TestE2E_CommandMTLS(t *testing.T) {
 		{
 			name:           "task enable",
 			subcmd:         []string{"task", "enable"},
-			outputContains: "Your infrastructure matches the configuration.",
+			outputContains: "enable complete!",
 		},
 	}
 
@@ -546,7 +546,7 @@ func TestE2E_CommandMTLS_CAPath(t *testing.T) {
 		{
 			name:           "task enable",
 			subcmd:         []string{"task", "enable"},
-			outputContains: "Your infrastructure matches the configuration.",
+			outputContains: "enable complete!",
 		},
 	}
 
