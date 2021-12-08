@@ -107,7 +107,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	resp := taskResponseFromConfigTaskConfig(tc, requestID)
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
 		logger.Error("error encoding json", "error", err, "create_task_response", resp)

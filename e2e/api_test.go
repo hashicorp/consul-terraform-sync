@@ -486,7 +486,7 @@ func TestE2E_TaskEndpoints_Create(t *testing.T) {
 	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode, "response body %s", string(bodyBytes))
+	require.Equal(t, http.StatusCreated, resp.StatusCode, "response body %s", string(bodyBytes))
 
 	// Check that the task has been created, and that a single event was stored
 	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
@@ -561,7 +561,7 @@ func TestE2E_TaskEndpoints_Create_Run_Now(t *testing.T) {
 	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode, "response body %s", string(bodyBytes))
+	require.Equal(t, http.StatusCreated, resp.StatusCode, "response body %s", string(bodyBytes))
 
 	// Check that the task has been created
 	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
