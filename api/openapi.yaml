@@ -88,10 +88,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /v1/dryrun/task:
+  /v1/dryrun_tasks:
     post:
       summary: Triggers a dryrun for a provided task
-      operationId: executeTaskDryrun
+      operationId: createDryRunTask
       tags:
         - dryrun
       description: |
@@ -103,14 +103,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DryrunRequest'
+              $ref: '#/components/schemas/DryRunTaskRequest'
       responses:
         '200':
           description: Task response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DryrunResponse'
+                $ref: '#/components/schemas/DryRunTaskResponse'
         default:
           description: Unexpected error
           content:
@@ -135,9 +135,9 @@ components:
       required:
         - request_id
 
-    DryrunRequest:
+    DryRunTaskRequest:
       $ref: '#/components/schemas/TaskRequest'
-    DryrunResponse:
+    DryRunTaskResponse:
       $ref: '#/components/schemas/TaskResponse'
 
     TaskDeleteResponse:
