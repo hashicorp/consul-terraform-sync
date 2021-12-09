@@ -63,7 +63,6 @@ func TestInitRootModule(t *testing.T) {
 			Source:      "namespace/consul-terraform-sync/consul//modules/test",
 			Version:     "0.0.0",
 		},
-		Condition: &ServicesCondition{},
 		Variables: hcltmpl.Variables{
 			"one":       cty.NumberIntVal(1),
 			"bool_true": cty.BoolVal(true),

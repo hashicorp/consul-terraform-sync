@@ -174,20 +174,19 @@ func TestAppendRootModuleBlocks(t *testing.T) {
 	testCases := []struct {
 		name     string
 		task     Task
-		cond     Condition
-		si       SourceInput
+		monitors []Monitor
 		varNames []string
 		expected string
 	}{
 		{
-			name: "module without conditions or variables",
+			name: "module without monitored or variables",
 			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond:     nil,
+			monitors: []Monitor{},
 			varNames: nil,
 			expected: `# user description for task named 'test'
 module "test" {
@@ -197,18 +196,18 @@ module "test" {
 }
 `},
 		{
-			name: "module with catalog service conditions",
+			name: "module monitoring catalog-service",
 			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond: &CatalogServicesCondition{
-				CatalogServicesMonitor: CatalogServicesMonitor{
-					Regexp: ".*",
+			monitors: []Monitor{
+				&CatalogServicesMonitor{
+					Regexp:            ".*",
+					SourceIncludesVar: true,
 				},
-				SourceIncludesVar: true,
 			},
 			varNames: nil,
 			expected: `# user description for task named 'test'
@@ -227,7 +226,7 @@ module "test" {
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond:     nil,
+			monitors: []Monitor{},
 			varNames: []string{"test1", "test2"},
 			expected: `# user description for task named 'test'
 module "test" {
@@ -247,11 +246,11 @@ module "test" {
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond: &CatalogServicesCondition{
-				CatalogServicesMonitor: CatalogServicesMonitor{
-					Regexp: ".*",
+			monitors: []Monitor{
+				&CatalogServicesMonitor{
+					Regexp:            ".*",
+					SourceIncludesVar: true,
 				},
-				SourceIncludesVar: true,
 			},
 			varNames: nil,
 			expected: `# user description for task named 'test'
@@ -268,7 +267,7 @@ module "test" {
 		t.Run(tc.name, func(t *testing.T) {
 			hclFile := hclwrite.NewEmptyFile()
 			body := hclFile.Body()
-			appendRootModuleBlock(body, tc.task, tc.varNames, tc.cond, tc.si)
+			appendRootModuleBlock(body, tc.task, tc.varNames, tc.monitors...)
 
 			content := hclFile.Bytes()
 			content = hclwrite.Format(content)
