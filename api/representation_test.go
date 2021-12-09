@@ -44,11 +44,11 @@ func TestTaskRequest_String(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
+func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 	cases := []struct {
 		name               string
 		request            *taskRequest
-		taskConfigExpected *config.TaskConfig
+		taskConfigExpected taskRequestConfig
 	}{
 		{
 			name: "minimum_required_only",
@@ -58,20 +58,22 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 				Services:   &[]string{"api", "web"},
 				WorkingDir: config.String("sync-tasks"),
 			},
-			taskConfigExpected: &config.TaskConfig{
-				Description:  config.String(""),
-				Name:         config.String("test-name"),
-				Providers:    []string{},
-				Services:     []string{"api", "web"},
-				Source:       config.String("test-source"),
-				VarFiles:     []string{},
-				Version:      config.String(""),
-				TFVersion:    config.String(""),
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				Enabled:      config.Bool(true),
-				Condition:    config.EmptyConditionConfig(),
-				WorkingDir:   config.String("sync-tasks"),
-				SourceInput:  config.EmptySourceInputConfig(),
+			taskConfigExpected: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String(""),
+					Name:         config.String("test-name"),
+					Providers:    []string{},
+					Services:     []string{"api", "web"},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					Version:      config.String(""),
+					TFVersion:    config.String(""),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition:    config.EmptyConditionConfig(),
+					WorkingDir:   config.String("sync-tasks"),
+					SourceInput:  config.EmptySourceInputConfig(),
+				},
 			},
 		},
 		{
@@ -86,20 +88,22 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 				Enabled:     config.Bool(true),
 				WorkingDir:  config.String("sync-tasks"),
 			},
-			taskConfigExpected: &config.TaskConfig{
-				Description:  config.String("test-description"),
-				Name:         config.String("test-name"),
-				Providers:    []string{"test-provider-1", "test-provider-2"},
-				Services:     []string{"api", "web"},
-				Source:       config.String("test-source"),
-				VarFiles:     []string{},
-				Version:      config.String("test-version"),
-				TFVersion:    config.String(""),
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				Enabled:      config.Bool(true),
-				Condition:    config.EmptyConditionConfig(),
-				WorkingDir:   config.String("sync-tasks"),
-				SourceInput:  config.EmptySourceInputConfig(),
+			taskConfigExpected: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String("test-description"),
+					Name:         config.String("test-name"),
+					Providers:    []string{"test-provider-1", "test-provider-2"},
+					Services:     []string{"api", "web"},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					Version:      config.String("test-version"),
+					TFVersion:    config.String(""),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition:    config.EmptyConditionConfig(),
+					WorkingDir:   config.String("sync-tasks"),
+					SourceInput:  config.EmptySourceInputConfig(),
+				},
 			},
 		},
 		{
@@ -120,32 +124,34 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 				},
 				WorkingDir: config.String("sync-tasks/task"),
 			},
-			taskConfigExpected: &config.TaskConfig{
-				Description: config.String(""),
-				Name:        config.String("task"),
-				Providers:   []string{},
-				Services:    []string{},
-				Source:      config.String("test-source"),
-				VarFiles:    []string{},
-				Version:     config.String(""),
-				TFVersion:   config.String(""),
-				BufferPeriod: &config.BufferPeriodConfig{
-					Enabled: config.Bool(false),
-					Min:     config.TimeDuration(0 * time.Second),
-					Max:     config.TimeDuration(0 * time.Second),
-				},
-				Enabled: config.Bool(true),
-				Condition: &config.ServicesConditionConfig{
-					config.ServicesMonitorConfig{
-						Regexp:             config.String("^web.*"),
-						Datacenter:         config.String(""),
-						Namespace:          config.String(""),
-						Filter:             config.String(""),
-						CTSUserDefinedMeta: map[string]string{},
+			taskConfigExpected: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description: config.String(""),
+					Name:        config.String("task"),
+					Providers:   []string{},
+					Services:    []string{},
+					Source:      config.String("test-source"),
+					VarFiles:    []string{},
+					Version:     config.String(""),
+					TFVersion:   config.String(""),
+					BufferPeriod: &config.BufferPeriodConfig{
+						Enabled: config.Bool(false),
+						Min:     config.TimeDuration(0 * time.Second),
+						Max:     config.TimeDuration(0 * time.Second),
 					},
+					Enabled: config.Bool(true),
+					Condition: &config.ServicesConditionConfig{
+						config.ServicesMonitorConfig{
+							Regexp:             config.String("^web.*"),
+							Datacenter:         config.String(""),
+							Namespace:          config.String(""),
+							Filter:             config.String(""),
+							CTSUserDefinedMeta: map[string]string{},
+						},
+					},
+					WorkingDir:  config.String("sync-tasks/task"),
+					SourceInput: config.EmptySourceInputConfig(),
 				},
-				WorkingDir:  config.String("sync-tasks/task"),
-				SourceInput: config.EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -175,35 +181,37 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 				},
 				WorkingDir: config.String("sync-tasks/task"),
 			},
-			taskConfigExpected: &config.TaskConfig{
-				Description: config.String(""),
-				Name:        config.String("task"),
-				Providers:   []string{},
-				Services:    []string{},
-				Source:      config.String("test-source"),
-				VarFiles:    []string{},
-				Version:     config.String(""),
-				TFVersion:   config.String(""),
-				BufferPeriod: &config.BufferPeriodConfig{
-					Enabled: config.Bool(false),
-					Min:     config.TimeDuration(0 * time.Second),
-					Max:     config.TimeDuration(0 * time.Second),
-				},
-				Enabled: config.Bool(true),
-				Condition: &config.CatalogServicesConditionConfig{
-					config.CatalogServicesMonitorConfig{
-						Regexp:            config.String(".*"),
-						SourceIncludesVar: config.Bool(true),
-						Datacenter:        config.String("dc2"),
-						Namespace:         config.String("ns2"),
-						NodeMeta: map[string]string{
-							"key1": "value1",
-							"key2": "value2",
+			taskConfigExpected: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description: config.String(""),
+					Name:        config.String("task"),
+					Providers:   []string{},
+					Services:    []string{},
+					Source:      config.String("test-source"),
+					VarFiles:    []string{},
+					Version:     config.String(""),
+					TFVersion:   config.String(""),
+					BufferPeriod: &config.BufferPeriodConfig{
+						Enabled: config.Bool(false),
+						Min:     config.TimeDuration(0 * time.Second),
+						Max:     config.TimeDuration(0 * time.Second),
+					},
+					Enabled: config.Bool(true),
+					Condition: &config.CatalogServicesConditionConfig{
+						config.CatalogServicesMonitorConfig{
+							Regexp:            config.String(".*"),
+							SourceIncludesVar: config.Bool(true),
+							Datacenter:        config.String("dc2"),
+							Namespace:         config.String("ns2"),
+							NodeMeta: map[string]string{
+								"key1": "value1",
+								"key2": "value2",
+							},
 						},
 					},
+					WorkingDir:  config.String("sync-tasks/task"),
+					SourceInput: config.EmptySourceInputConfig(),
 				},
-				WorkingDir:  config.String("sync-tasks/task"),
-				SourceInput: config.EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -229,32 +237,34 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 				},
 				WorkingDir: config.String("sync-tasks/task"),
 			},
-			taskConfigExpected: &config.TaskConfig{
-				Description: config.String(""),
-				Name:        config.String("task"),
-				Providers:   []string{},
-				Services:    []string{"api", "web"},
-				Source:      config.String("test-source"),
-				VarFiles:    []string{},
-				Version:     config.String(""),
-				TFVersion:   config.String(""),
-				BufferPeriod: &config.BufferPeriodConfig{
-					Enabled: config.Bool(false),
-					Min:     config.TimeDuration(0 * time.Second),
-					Max:     config.TimeDuration(0 * time.Second),
-				},
-				Enabled: config.Bool(true),
-				Condition: &config.ConsulKVConditionConfig{
-					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
-						Path:       config.String("key-path"),
-						Recurse:    config.Bool(true),
-						Datacenter: config.String("dc2"),
-						Namespace:  config.String("ns2"),
+			taskConfigExpected: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description: config.String(""),
+					Name:        config.String("task"),
+					Providers:   []string{},
+					Services:    []string{"api", "web"},
+					Source:      config.String("test-source"),
+					VarFiles:    []string{},
+					Version:     config.String(""),
+					TFVersion:   config.String(""),
+					BufferPeriod: &config.BufferPeriodConfig{
+						Enabled: config.Bool(false),
+						Min:     config.TimeDuration(0 * time.Second),
+						Max:     config.TimeDuration(0 * time.Second),
 					},
-					SourceIncludesVar: config.Bool(true),
+					Enabled: config.Bool(true),
+					Condition: &config.ConsulKVConditionConfig{
+						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+							Path:       config.String("key-path"),
+							Recurse:    config.Bool(true),
+							Datacenter: config.String("dc2"),
+							Namespace:  config.String("ns2"),
+						},
+						SourceIncludesVar: config.Bool(true),
+					},
+					WorkingDir:  config.String("sync-tasks/task"),
+					SourceInput: config.EmptySourceInputConfig(),
 				},
-				WorkingDir:  config.String("sync-tasks/task"),
-				SourceInput: config.EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -274,24 +284,26 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 				},
 				WorkingDir: config.String("sync-tasks/task"),
 			},
-			taskConfigExpected: &config.TaskConfig{
-				Description: config.String(""),
-				Name:        config.String("task"),
-				Providers:   []string{},
-				Services:    []string{"api", "web"},
-				Source:      config.String("test-source"),
-				VarFiles:    []string{},
-				Version:     config.String(""),
-				TFVersion:   config.String(""),
-				BufferPeriod: &config.BufferPeriodConfig{
-					Enabled: config.Bool(false),
-					Min:     config.TimeDuration(0 * time.Second),
-					Max:     config.TimeDuration(0 * time.Second),
+			taskConfigExpected: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description: config.String(""),
+					Name:        config.String("task"),
+					Providers:   []string{},
+					Services:    []string{"api", "web"},
+					Source:      config.String("test-source"),
+					VarFiles:    []string{},
+					Version:     config.String(""),
+					TFVersion:   config.String(""),
+					BufferPeriod: &config.BufferPeriodConfig{
+						Enabled: config.Bool(false),
+						Min:     config.TimeDuration(0 * time.Second),
+						Max:     config.TimeDuration(0 * time.Second),
+					},
+					Enabled:     config.Bool(true),
+					Condition:   &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
+					WorkingDir:  config.String("sync-tasks/task"),
+					SourceInput: config.EmptySourceInputConfig(),
 				},
-				Enabled:     config.Bool(true),
-				Condition:   &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				WorkingDir:  config.String("sync-tasks/task"),
-				SourceInput: config.EmptySourceInputConfig(),
 			},
 		},
 		{
@@ -314,31 +326,33 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 						Regexp: config.String("^api$"),
 					}},
 			},
-			taskConfigExpected: &config.TaskConfig{
-				Description: config.String(""),
-				Name:        config.String("task"),
-				Services:    []string{},
-				Providers:   []string{},
-				Source:      config.String("test-source"),
-				VarFiles:    []string{},
-				Version:     config.String(""),
-				TFVersion:   config.String(""),
-				BufferPeriod: &config.BufferPeriodConfig{
-					Enabled: config.Bool(false),
-					Min:     config.TimeDuration(0 * time.Second),
-					Max:     config.TimeDuration(0 * time.Second),
+			taskConfigExpected: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description: config.String(""),
+					Name:        config.String("task"),
+					Services:    []string{},
+					Providers:   []string{},
+					Source:      config.String("test-source"),
+					VarFiles:    []string{},
+					Version:     config.String(""),
+					TFVersion:   config.String(""),
+					BufferPeriod: &config.BufferPeriodConfig{
+						Enabled: config.Bool(false),
+						Min:     config.TimeDuration(0 * time.Second),
+						Max:     config.TimeDuration(0 * time.Second),
+					},
+					Enabled:    config.Bool(true),
+					Condition:  &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
+					WorkingDir: config.String("sync-tasks/task"),
+					SourceInput: &config.ServicesSourceInputConfig{
+						config.ServicesMonitorConfig{
+							Regexp:             config.String("^api$"),
+							Datacenter:         config.String(""),
+							Namespace:          config.String(""),
+							Filter:             config.String(""),
+							CTSUserDefinedMeta: map[string]string{},
+						}},
 				},
-				Enabled:    config.Bool(true),
-				Condition:  &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				WorkingDir: config.String("sync-tasks/task"),
-				SourceInput: &config.ServicesSourceInputConfig{
-					config.ServicesMonitorConfig{
-						Regexp:             config.String("^api$"),
-						Datacenter:         config.String(""),
-						Namespace:          config.String(""),
-						Filter:             config.String(""),
-						CTSUserDefinedMeta: map[string]string{},
-					}},
 			},
 		},
 		{
@@ -365,29 +379,31 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 						Namespace:  config.String(""),
 					}},
 			},
-			taskConfigExpected: &config.TaskConfig{
-				Description: config.String(""),
-				Name:        config.String("task"),
-				Services:    []string{"api", "web"},
-				Providers:   []string{},
-				Source:      config.String("test-source"),
-				VarFiles:    []string{},
-				Version:     config.String(""),
-				TFVersion:   config.String(""),
-				BufferPeriod: &config.BufferPeriodConfig{
-					Enabled: config.Bool(false),
-					Min:     config.TimeDuration(0 * time.Second),
-					Max:     config.TimeDuration(0 * time.Second),
-				},
-				Enabled:    config.Bool(true),
-				Condition:  &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				WorkingDir: config.String("sync-tasks/task"),
-				SourceInput: &config.ConsulKVSourceInputConfig{
-					config.ConsulKVMonitorConfig{
-						Path:       config.String("fake-path"),
-						Recurse:    config.Bool(false),
-						Datacenter: config.String(""),
-						Namespace:  config.String(""),
+			taskConfigExpected: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description: config.String(""),
+					Name:        config.String("task"),
+					Services:    []string{"api", "web"},
+					Providers:   []string{},
+					Source:      config.String("test-source"),
+					VarFiles:    []string{},
+					Version:     config.String(""),
+					TFVersion:   config.String(""),
+					BufferPeriod: &config.BufferPeriodConfig{
+						Enabled: config.Bool(false),
+						Min:     config.TimeDuration(0 * time.Second),
+						Max:     config.TimeDuration(0 * time.Second),
+					},
+					Enabled:    config.Bool(true),
+					Condition:  &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
+					WorkingDir: config.String("sync-tasks/task"),
+					SourceInput: &config.ConsulKVSourceInputConfig{
+						config.ConsulKVMonitorConfig{
+							Path:       config.String("fake-path"),
+							Recurse:    config.Bool(false),
+							Datacenter: config.String(""),
+							Namespace:  config.String(""),
+						},
 					},
 				},
 			},
@@ -396,7 +412,7 @@ func TestTaskRequest_ToConfigTaskConfig(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := tc.request.ToConfigTaskConfig(config.DefaultBufferPeriodConfig(), "task-sync")
+			actual, err := tc.request.ToTaskRequestConfig(config.DefaultBufferPeriodConfig(), "task-sync")
 			require.NoError(t, err)
 			assert.Equal(t, actual, tc.taskConfigExpected)
 		})
@@ -422,7 +438,7 @@ func TestTaskRequest_ToConfigTaskConfig_Error(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.request.ToConfigTaskConfig(config.DefaultBufferPeriodConfig(), "task-sync")
+			_, err := tc.request.ToTaskRequestConfig(config.DefaultBufferPeriodConfig(), "task-sync")
 			fmt.Println(err)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tc.contains)
@@ -478,25 +494,27 @@ func TestTaskResponse_String(t *testing.T) {
 
 func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 	cases := []struct {
-		name             string
-		taskConfig       *config.TaskConfig
-		expectedResponse taskResponse
+		name              string
+		taskRequestConfig taskRequestConfig
+		expectedResponse  taskResponse
 	}{
 		{
 			name: "minimum_required_only",
-			taskConfig: &config.TaskConfig{
-				Description:  config.String(""),
-				Name:         config.String("test-name"),
-				Providers:    []string{},
-				Services:     []string{"api", "web"},
-				Source:       config.String("test-source"),
-				VarFiles:     []string{},
-				Version:      config.String(""),
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				Enabled:      config.Bool(true),
-				Condition:    config.EmptyConditionConfig(),
-				WorkingDir:   config.String("sync-tasks"),
-				SourceInput:  config.EmptySourceInputConfig(),
+			taskRequestConfig: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String(""),
+					Name:         config.String("test-name"),
+					Providers:    []string{},
+					Services:     []string{"api", "web"},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					Version:      config.String(""),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition:    config.EmptyConditionConfig(),
+					WorkingDir:   config.String("sync-tasks"),
+					SourceInput:  config.EmptySourceInputConfig(),
+				},
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
@@ -521,20 +539,22 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 		},
 		{
 			name: "basic_fields_filled",
-			taskConfig: &config.TaskConfig{
-				Description:  config.String("test-description"),
-				Name:         config.String("test-name"),
-				Providers:    []string{"test-provider-1", "test-provider-2"},
-				Services:     []string{"api", "web"},
-				Source:       config.String("test-source"),
-				VarFiles:     []string{},
-				TFVersion:    config.String(""),
-				Version:      config.String("test-version"),
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				Enabled:      config.Bool(true),
-				Condition:    config.EmptyConditionConfig(),
-				WorkingDir:   config.String("sync-tasks"),
-				SourceInput:  config.EmptySourceInputConfig(),
+			taskRequestConfig: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String("test-description"),
+					Name:         config.String("test-name"),
+					Providers:    []string{"test-provider-1", "test-provider-2"},
+					Services:     []string{"api", "web"},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					TFVersion:    config.String(""),
+					Version:      config.String("test-version"),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition:    config.EmptyConditionConfig(),
+					WorkingDir:   config.String("sync-tasks"),
+					SourceInput:  config.EmptySourceInputConfig(),
+				},
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
@@ -559,28 +579,30 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_services_condition",
-			taskConfig: &config.TaskConfig{
-				Description:  config.String(""),
-				Name:         config.String("task"),
-				Providers:    []string{},
-				Services:     []string{},
-				Source:       config.String("test-source"),
-				VarFiles:     []string{},
-				Version:      config.String(""),
-				TFVersion:    config.String(""),
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				Enabled:      config.Bool(true),
-				Condition: &config.ServicesConditionConfig{
-					config.ServicesMonitorConfig{
-						Regexp:             config.String("^web.*"),
-						Datacenter:         config.String(""),
-						Namespace:          config.String(""),
-						Filter:             config.String(""),
-						CTSUserDefinedMeta: map[string]string{},
+			taskRequestConfig: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String(""),
+					Name:         config.String("task"),
+					Providers:    []string{},
+					Services:     []string{},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					Version:      config.String(""),
+					TFVersion:    config.String(""),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition: &config.ServicesConditionConfig{
+						config.ServicesMonitorConfig{
+							Regexp:             config.String("^web.*"),
+							Datacenter:         config.String(""),
+							Namespace:          config.String(""),
+							Filter:             config.String(""),
+							CTSUserDefinedMeta: map[string]string{},
+						},
 					},
+					WorkingDir:  config.String("sync-tasks"),
+					SourceInput: config.EmptySourceInputConfig(),
 				},
-				WorkingDir:  config.String("sync-tasks"),
-				SourceInput: config.EmptySourceInputConfig(),
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
@@ -609,31 +631,33 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_catalog_services_condition",
-			taskConfig: &config.TaskConfig{
-				Description:  config.String(""),
-				Name:         config.String("task"),
-				Providers:    []string{},
-				Services:     []string{},
-				Source:       config.String("test-source"),
-				VarFiles:     []string{},
-				Version:      config.String(""),
-				TFVersion:    config.String(""),
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				Enabled:      config.Bool(true),
-				Condition: &config.CatalogServicesConditionConfig{
-					config.CatalogServicesMonitorConfig{
-						Regexp:            config.String(".*"),
-						SourceIncludesVar: config.Bool(true),
-						Datacenter:        config.String("dc2"),
-						Namespace:         config.String("ns2"),
-						NodeMeta: map[string]string{
-							"key1": "value1",
-							"key2": "value2",
+			taskRequestConfig: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String(""),
+					Name:         config.String("task"),
+					Providers:    []string{},
+					Services:     []string{},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					Version:      config.String(""),
+					TFVersion:    config.String(""),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition: &config.CatalogServicesConditionConfig{
+						config.CatalogServicesMonitorConfig{
+							Regexp:            config.String(".*"),
+							SourceIncludesVar: config.Bool(true),
+							Datacenter:        config.String("dc2"),
+							Namespace:         config.String("ns2"),
+							NodeMeta: map[string]string{
+								"key1": "value1",
+								"key2": "value2",
+							},
 						},
 					},
+					WorkingDir:  config.String("sync-tasks"),
+					SourceInput: config.EmptySourceInputConfig(),
 				},
-				WorkingDir:  config.String("sync-tasks"),
-				SourceInput: config.EmptySourceInputConfig(),
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
@@ -671,28 +695,30 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_consul_kv_condition",
-			taskConfig: &config.TaskConfig{
-				Description:  config.String(""),
-				Name:         config.String("task"),
-				Providers:    []string{},
-				Services:     []string{"api", "web"},
-				Source:       config.String("test-source"),
-				VarFiles:     []string{},
-				Version:      config.String(""),
-				TFVersion:    config.String(""),
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				Enabled:      config.Bool(true),
-				Condition: &config.ConsulKVConditionConfig{
-					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
-						Path:       config.String("key-path"),
-						Recurse:    config.Bool(true),
-						Datacenter: config.String("dc2"),
-						Namespace:  config.String("ns2"),
+			taskRequestConfig: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String(""),
+					Name:         config.String("task"),
+					Providers:    []string{},
+					Services:     []string{"api", "web"},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					Version:      config.String(""),
+					TFVersion:    config.String(""),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition: &config.ConsulKVConditionConfig{
+						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+							Path:       config.String("key-path"),
+							Recurse:    config.Bool(true),
+							Datacenter: config.String("dc2"),
+							Namespace:  config.String("ns2"),
+						},
+						SourceIncludesVar: config.Bool(true),
 					},
-					SourceIncludesVar: config.Bool(true),
+					WorkingDir:  config.String("sync-tasks"),
+					SourceInput: config.EmptySourceInputConfig(),
 				},
-				WorkingDir:  config.String("sync-tasks"),
-				SourceInput: config.EmptySourceInputConfig(),
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
@@ -725,20 +751,22 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_schedule_condition",
-			taskConfig: &config.TaskConfig{
-				Description:  config.String(""),
-				Name:         config.String("task"),
-				Providers:    []string{},
-				Services:     []string{"api", "web"},
-				Source:       config.String("test-source"),
-				VarFiles:     []string{},
-				Version:      config.String(""),
-				TFVersion:    config.String(""),
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				Enabled:      config.Bool(true),
-				Condition:    &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				WorkingDir:   config.String("sync-tasks"),
-				SourceInput:  config.EmptySourceInputConfig(),
+			taskRequestConfig: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String(""),
+					Name:         config.String("task"),
+					Providers:    []string{},
+					Services:     []string{"api", "web"},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					Version:      config.String(""),
+					TFVersion:    config.String(""),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition:    &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
+					WorkingDir:   config.String("sync-tasks"),
+					SourceInput:  config.EmptySourceInputConfig(),
+				},
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
@@ -765,27 +793,30 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_services_source_input",
-			taskConfig: &config.TaskConfig{
-				Description:  config.String(""),
-				Name:         config.String("task"),
-				Services:     []string{},
-				Providers:    []string{},
-				Source:       config.String("test-source"),
-				VarFiles:     []string{},
-				Version:      config.String(""),
-				TFVersion:    config.String(""),
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				Enabled:      config.Bool(true),
-				Condition:    &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				WorkingDir:   config.String("sync-tasks"),
-				SourceInput: &config.ServicesSourceInputConfig{
-					config.ServicesMonitorConfig{
-						Regexp:             config.String("^api$"),
-						Datacenter:         config.String(""),
-						Namespace:          config.String(""),
-						Filter:             config.String(""),
-						CTSUserDefinedMeta: map[string]string{},
-					}},
+			taskRequestConfig: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String(""),
+					Name:         config.String("task"),
+					Services:     []string{},
+					Providers:    []string{},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					Version:      config.String(""),
+					TFVersion:    config.String(""),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition:    &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
+					WorkingDir:   config.String("sync-tasks"),
+					SourceInput: &config.ServicesSourceInputConfig{
+						config.ServicesMonitorConfig{
+							Regexp:             config.String("^api$"),
+							Datacenter:         config.String(""),
+							Namespace:          config.String(""),
+							Filter:             config.String(""),
+							CTSUserDefinedMeta: map[string]string{},
+						},
+					},
+				},
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
@@ -816,25 +847,27 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_consul_kv_source_input",
-			taskConfig: &config.TaskConfig{
-				Description:  config.String(""),
-				Name:         config.String("task"),
-				Services:     []string{"api", "web"},
-				Providers:    []string{},
-				Source:       config.String("test-source"),
-				VarFiles:     []string{},
-				Version:      config.String(""),
-				TFVersion:    config.String(""),
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				Enabled:      config.Bool(true),
-				Condition:    &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				WorkingDir:   config.String("sync-tasks"),
-				SourceInput: &config.ConsulKVSourceInputConfig{
-					config.ConsulKVMonitorConfig{
-						Path:       config.String("fake-path"),
-						Recurse:    config.Bool(false),
-						Datacenter: config.String(""),
-						Namespace:  config.String(""),
+			taskRequestConfig: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String(""),
+					Name:         config.String("task"),
+					Services:     []string{"api", "web"},
+					Providers:    []string{},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					Version:      config.String(""),
+					TFVersion:    config.String(""),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition:    &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
+					WorkingDir:   config.String("sync-tasks"),
+					SourceInput: &config.ConsulKVSourceInputConfig{
+						config.ConsulKVMonitorConfig{
+							Path:       config.String("fake-path"),
+							Recurse:    config.Bool(false),
+							Datacenter: config.String(""),
+							Namespace:  config.String(""),
+						},
 					},
 				},
 			},
@@ -872,7 +905,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := taskResponseFromConfigTaskConfig(tc.taskConfig, "e9926514-79b8-a8fc-8761-9b6aaccf1e15")
+			actual := taskResponseFromTaskRequestConfig(tc.taskRequestConfig, "e9926514-79b8-a8fc-8761-9b6aaccf1e15")
 			assert.Equal(t, actual, tc.expectedResponse)
 		})
 	}

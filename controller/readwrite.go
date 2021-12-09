@@ -247,7 +247,7 @@ func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
 		TLS:                 rw.conf.TLS,
 		BufferPeriod:        rw.conf.BufferPeriod,
 		WorkingDir:          *rw.conf.WorkingDir,
-		CreateNewTaskDriver: rw.createNewTaskDriver},
+		CreateNewTaskDriver: rw.createNewTaskDriverWithVars},
 	)
 	if err != nil {
 		return err

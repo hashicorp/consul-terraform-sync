@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
-	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
@@ -38,7 +37,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	}
 
 	// Convert task request to config task config
-	tc, err := req.ToConfigTaskConfig(h.bufferPeriod, h.workingDir)
+	trc, err := req.ToTaskRequestConfig(h.bufferPeriod, h.workingDir)
 	if err != nil {
 		err = fmt.Errorf("error converting create task request to task config, %s", err)
 		logger.Error("error creating task", "error", err)
@@ -47,8 +46,8 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	}
 
 	// Create new driver
-	var d driver.Driver
-	d, err = h.createNewTaskDriver(*tc)
+	d, err := h.createNewTaskDriver(trc.TaskConfig, trc.variables)
+
 	if err != nil {
 		err = fmt.Errorf("error creating new task driver, %v", err)
 		logger.Error("error creating task", "error", err)
@@ -104,7 +103,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	}
 
 	// Return the task response
-	resp := taskResponseFromConfigTaskConfig(tc, requestID)
+	resp := taskResponseFromTaskRequestConfig(trc, requestID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

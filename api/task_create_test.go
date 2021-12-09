@@ -32,6 +32,21 @@ const (
     ],
     "source": "./example-module"
 }`
+	testCreateTaskRequestVariables = `{
+    "description": "Writes the service name, id, and IP address to a file",
+    "enabled": true,
+    "name": "api-task",
+    "providers": [
+        "local"
+    ],
+    "services": [
+        "api"
+    ],
+    "variables":{
+        "filename": "test.txt"
+    },
+    "source": "./example-module"
+}`
 	testTaskName         = "api-task"
 	testWorkingDirectory = "sync-task"
 )
@@ -43,6 +58,7 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 		taskName   string
 		request    string
 		run        string
+		variables  map[string]string
 		statusCode int
 	}{
 		{
@@ -56,6 +72,13 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 			name:       "happy_path_run_now",
 			taskName:   testTaskName,
 			request:    testCreateTaskRequest,
+			run:        driver.RunOptionNow,
+			statusCode: http.StatusCreated,
+		},
+		{
+			name:       "happy_path_with_variables",
+			taskName:   testTaskName,
+			request:    testCreateTaskRequestVariables,
 			run:        driver.RunOptionNow,
 			statusCode: http.StatusCreated,
 		},
@@ -219,10 +242,10 @@ func generateExpectedResponse(t *testing.T, req string) taskResponse {
 	err := json.Unmarshal([]byte(req), &treq)
 	require.NoError(t, err)
 
-	tc, err := treq.ToConfigTaskConfig(config.DefaultBufferPeriodConfig(), testWorkingDirectory)
+	trc, err := treq.ToTaskRequestConfig(config.DefaultBufferPeriodConfig(), testWorkingDirectory)
 	require.NoError(t, err)
 
-	tresp := taskResponseFromConfigTaskConfig(tc, "")
+	tresp := taskResponseFromTaskRequestConfig(trc, "")
 	require.NoError(t, err)
 
 	return tresp
@@ -242,7 +265,7 @@ func generateErrorResponse(requestID, message string) oapigen.ErrorResponse {
 func generateTaskLifecycleHandlerTestDependencies() (TaskLifeCycleHandlerConfig, *mocks.Driver) {
 	// Create dependencies
 	d := new(mocks.Driver)
-	createNewTaskDriver := func(taskConfig config.TaskConfig) (driver.Driver, error) {
+	createNewTaskDriver := func(taskConfig config.TaskConfig, variables map[string]string) (driver.Driver, error) {
 		return d, nil
 	}
 

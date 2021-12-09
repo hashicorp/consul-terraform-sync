@@ -104,23 +104,18 @@ type SourceInput struct {
 
 // Task defines model for Task.
 type Task struct {
-	BufferPeriod *BufferPeriod   `json:"buffer_period,omitempty"`
-	Condition    *Condition      `json:"condition,omitempty"`
-	Description  *string         `json:"description,omitempty"`
-	Enabled      *bool           `json:"enabled,omitempty"`
-	Name         string          `json:"name"`
-	Providers    *[]string       `json:"providers,omitempty"`
-	Services     *[]string       `json:"services,omitempty"`
-	Source       string          `json:"source"`
-	SourceInput  *SourceInput    `json:"source_input,omitempty"`
-	Variables    *Task_Variables `json:"variables,omitempty"`
-	Version      *string         `json:"version,omitempty"`
-	WorkingDir   *string         `json:"working_dir,omitempty"`
-}
-
-// Task_Variables defines model for Task.Variables.
-type Task_Variables struct {
-	AdditionalProperties map[string]string `json:"-"`
+	BufferPeriod *BufferPeriod `json:"buffer_period,omitempty"`
+	Condition    *Condition    `json:"condition,omitempty"`
+	Description  *string       `json:"description,omitempty"`
+	Enabled      *bool         `json:"enabled,omitempty"`
+	Name         string        `json:"name"`
+	Providers    *[]string     `json:"providers,omitempty"`
+	Services     *[]string     `json:"services,omitempty"`
+	Source       string        `json:"source"`
+	SourceInput  *SourceInput  `json:"source_input,omitempty"`
+	Variables    *VariableMap  `json:"variables,omitempty"`
+	Version      *string       `json:"version,omitempty"`
+	WorkingDir   *string       `json:"working_dir,omitempty"`
 }
 
 // TaskDeleteResponse defines model for TaskDeleteResponse.
@@ -136,6 +131,11 @@ type TaskResponse struct {
 	RequestId RequestID `json:"request_id"`
 	Run       *Run      `json:"run,omitempty"`
 	Task      *Task     `json:"task,omitempty"`
+}
+
+// VariableMap defines model for VariableMap.
+type VariableMap struct {
+	AdditionalProperties map[string]string `json:"-"`
 }
 
 // ExecuteTaskDryrunJSONBody defines parameters for ExecuteTaskDryrun.
@@ -212,25 +212,25 @@ func (a CatalogServicesCondition_NodeMeta) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
-// Getter for additional properties for Task_Variables. Returns the specified
+// Getter for additional properties for VariableMap. Returns the specified
 // element and whether it was found
-func (a Task_Variables) Get(fieldName string) (value string, found bool) {
+func (a VariableMap) Get(fieldName string) (value string, found bool) {
 	if a.AdditionalProperties != nil {
 		value, found = a.AdditionalProperties[fieldName]
 	}
 	return
 }
 
-// Setter for additional properties for Task_Variables
-func (a *Task_Variables) Set(fieldName string, value string) {
+// Setter for additional properties for VariableMap
+func (a *VariableMap) Set(fieldName string, value string) {
 	if a.AdditionalProperties == nil {
 		a.AdditionalProperties = make(map[string]string)
 	}
 	a.AdditionalProperties[fieldName] = value
 }
 
-// Override default JSON handling for Task_Variables to handle AdditionalProperties
-func (a *Task_Variables) UnmarshalJSON(b []byte) error {
+// Override default JSON handling for VariableMap to handle AdditionalProperties
+func (a *VariableMap) UnmarshalJSON(b []byte) error {
 	object := make(map[string]json.RawMessage)
 	err := json.Unmarshal(b, &object)
 	if err != nil {
@@ -251,8 +251,8 @@ func (a *Task_Variables) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Override default JSON handling for Task_Variables to handle AdditionalProperties
-func (a Task_Variables) MarshalJSON() ([]byte, error) {
+// Override default JSON handling for VariableMap to handle AdditionalProperties
+func (a VariableMap) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 

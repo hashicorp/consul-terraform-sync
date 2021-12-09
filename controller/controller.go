@@ -131,8 +131,12 @@ func (ctrl *baseController) init(ctx context.Context) error {
 }
 
 func (ctrl *baseController) createNewTaskDriver(taskConfig config.TaskConfig) (driver.Driver, error) {
+	return ctrl.createNewTaskDriverWithVars(taskConfig, nil)
+}
+
+func (ctrl *baseController) createNewTaskDriverWithVars(taskConfig config.TaskConfig, variables map[string]string) (driver.Driver, error) {
 	ctrl.logger.Trace("creating new task driver", "task_name", *taskConfig.Name)
-	task, err := newDriverTask(ctrl.conf, &taskConfig, ctrl.providers)
+	task, err := newDriverTask(ctrl.conf, &taskConfig, variables, ctrl.providers)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +229,8 @@ func newTerraformDriver(conf *config.Config, task *driver.Task, w templates.Watc
 	})
 }
 
-func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig, providerConfigs driver.TerraformProviderBlocks) (*driver.Task, error) {
+func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
+	variables map[string]string, providerConfigs driver.TerraformProviderBlocks) (*driver.Task, error) {
 	if conf == nil {
 		return nil, nil
 	}
@@ -270,6 +275,7 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig, providerC
 		Source:       *taskConfig.Source,
 		VarFiles:     taskConfig.VarFiles,
 		Version:      *taskConfig.Version,
+		Variables:    variables,
 		BufferPeriod: bp,
 		Condition:    taskConfig.Condition,
 		SourceInput:  taskConfig.SourceInput,
