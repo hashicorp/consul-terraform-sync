@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
@@ -50,6 +51,8 @@ type ServicesMonitor struct {
 	Datacenter string
 	Namespace  string
 	Filter     string
+
+	SourceIncludesVar bool
 }
 
 // ServicesAppended returns true if the services are to be appended
@@ -65,10 +68,17 @@ func (m ServicesMonitor) appendTemplate(w io.Writer) error {
 		return nil
 	}
 	q := m.hcatQuery()
-	var err error
-	_, err = fmt.Fprintf(w, servicesRegexIncludesVarTmpl, q)
 
-	if err != nil {
+	if m.SourceIncludesVar {
+		if _, err := fmt.Fprintf(w, servicesRegexIncludesVarTmpl, q); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if _, err := fmt.Fprintf(w, servicesRegexBaseTmpl, q); err != nil {
+		logging.Global().Named(logSystemName).Named(tftmplSubsystemName).Error(
+			"unable to write service condition empty template", "error", err)
 		return err
 	}
 	return nil
@@ -82,7 +92,7 @@ func (m ServicesMonitor) appendVariable(io.Writer) error {
 // For the case of a service monitor, this always returns true and must be overridden to
 // return based on other conditions.
 func (m ServicesMonitor) SourceIncludesVariable() bool {
-	return true
+	return m.SourceIncludesVar
 }
 
 func (m ServicesMonitor) hcatQuery() string {
@@ -114,9 +124,9 @@ func (m ServicesMonitor) hcatQuery() string {
 
 var servicesRegexIncludesVarTmpl = fmt.Sprintf(`
 services = {%s}
-`, servicesRegexTmpl)
+`, servicesRegexBaseTmpl)
 
-const servicesRegexTmpl = `
+const servicesRegexBaseTmpl = `
 {{- with $srv := servicesRegex %s }}
   {{- range $s := $srv}}
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {

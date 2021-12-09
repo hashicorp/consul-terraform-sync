@@ -15,12 +15,13 @@ func TestServicesMonitor_appendTemplate(t *testing.T) {
 		exp  string
 	}{
 		{
-			"happy path",
+			"fully configured & includes_var true",
 			&ServicesMonitor{
-				Regexp:     ".*",
-				Datacenter: "dc1",
-				Namespace:  "ns1",
-				Filter:     "filter",
+				Regexp:            ".*",
+				Datacenter:        "dc1",
+				Namespace:         "ns1",
+				Filter:            "filter",
+				SourceIncludesVar: true,
 			},
 			`
 services = {
@@ -33,6 +34,32 @@ services = {
 {{- end}}
 }
 `,
+		},
+		{
+			"fully configured & includes_var false",
+			&ServicesMonitor{
+				Regexp:            ".*",
+				Datacenter:        "dc1",
+				Namespace:         "ns1",
+				Filter:            "filter",
+				SourceIncludesVar: false,
+			},
+			`
+{{- with $srv := servicesRegex "regexp=.*" "dc=dc1" "ns=ns1" "filter" }}
+  {{- range $s := $srv}}
+  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
+{{ HCLService $s | indent 4 }}
+  },
+  {{- end}}
+{{- end}}
+`,
+		},
+		{
+			"unconfigured & includes_var false",
+			&ServicesMonitor{
+				SourceIncludesVar: false,
+			},
+			"",
 		},
 	}
 
