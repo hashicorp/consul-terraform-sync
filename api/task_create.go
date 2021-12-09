@@ -37,7 +37,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	}
 
 	// Convert task request to config task config
-	trc, err := req.ToConfigTaskConfig(h.bufferPeriod, h.workingDir)
+	trc, err := req.ToTaskRequestConfig(h.bufferPeriod, h.workingDir)
 	if err != nil {
 		err = fmt.Errorf("error converting create task request to task config, %s", err)
 		logger.Error("error creating task", "error", err)

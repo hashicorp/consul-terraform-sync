@@ -242,7 +242,7 @@ func generateExpectedResponse(t *testing.T, req string) taskResponse {
 	err := json.Unmarshal([]byte(req), &treq)
 	require.NoError(t, err)
 
-	trc, err := treq.ToConfigTaskConfig(config.DefaultBufferPeriodConfig(), testWorkingDirectory)
+	trc, err := treq.ToTaskRequestConfig(config.DefaultBufferPeriodConfig(), testWorkingDirectory)
 	require.NoError(t, err)
 
 	tresp := taskResponseFromTaskRequestConfig(trc, "")

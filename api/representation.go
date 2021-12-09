@@ -18,9 +18,9 @@ type taskRequestConfig struct {
 	variables map[string]string
 }
 
-// ToConfigTaskConfig converts a taskRequest object to a Config TaskConfig object. It takes as arguments a buffer period,
+// ToTaskRequestConfig converts a taskRequest object to a Config TaskConfig object. It takes as arguments a buffer period,
 // and a working directory which are required to finalize the task config.
-func (tr taskRequest) ToConfigTaskConfig(bp *config.BufferPeriodConfig, wd string) (taskRequestConfig, error) {
+func (tr taskRequest) ToTaskRequestConfig(bp *config.BufferPeriodConfig, wd string) (taskRequestConfig, error) {
 	tc := config.TaskConfig{
 		Description: tr.Description,
 		Name:        &tr.Name,

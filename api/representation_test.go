@@ -412,7 +412,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := tc.request.ToConfigTaskConfig(config.DefaultBufferPeriodConfig(), "task-sync")
+			actual, err := tc.request.ToTaskRequestConfig(config.DefaultBufferPeriodConfig(), "task-sync")
 			require.NoError(t, err)
 			assert.Equal(t, actual, tc.taskConfigExpected)
 		})
@@ -438,7 +438,7 @@ func TestTaskRequest_ToConfigTaskConfig_Error(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.request.ToConfigTaskConfig(config.DefaultBufferPeriodConfig(), "task-sync")
+			_, err := tc.request.ToTaskRequestConfig(config.DefaultBufferPeriodConfig(), "task-sync")
 			fmt.Println(err)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tc.contains)
