@@ -8,29 +8,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConsulKVSourceInput_hcatQuery(t *testing.T) {
+func TestConsulKVMonitor_hcatQuery(t *testing.T) {
 	testcase := []struct {
 		name string
-		c    *ConsulKVSourceInput
+		c    *ConsulKVMonitor
 		exp  string
 	}{
 		{
 			"path only",
-			&ConsulKVSourceInput{
-				ConsulKVMonitor{
-					Path: "key-path",
-				},
+			&ConsulKVMonitor{
+				Path: "key-path",
 			},
 			"\"key-path\"",
 		},
 		{
 			"all_parameters",
-			&ConsulKVSourceInput{
-				ConsulKVMonitor{
-					Path:       "key-path",
-					Datacenter: "dc2",
-					Namespace:  "test-ns",
-				},
+			&ConsulKVMonitor{
+				Path:       "key-path",
+				Datacenter: "dc2",
+				Namespace:  "test-ns",
 			},
 			"\"key-path\" \"dc=dc2\" \"ns=test-ns\"",
 		},
@@ -44,21 +40,19 @@ func TestConsulKVSourceInput_hcatQuery(t *testing.T) {
 	}
 }
 
-func TestConsulKVSourceInput_appendTemplate(t *testing.T) {
+func TestConsulKVMonitor_appendTemplate(t *testing.T) {
 	testcases := []struct {
 		name string
-		c    *ConsulKVSourceInput
+		c    *ConsulKVMonitor
 		exp  string
 	}{
 		{
 			"recurse false",
-			&ConsulKVSourceInput{
-				ConsulKVMonitor: ConsulKVMonitor{
-					Path:       "path",
-					Recurse:    false,
-					Datacenter: "dc1",
-					Namespace:  "test-ns",
-				},
+			&ConsulKVMonitor{
+				Path:       "path",
+				Recurse:    false,
+				Datacenter: "dc1",
+				Namespace:  "test-ns",
 			},
 			`
 consul_kv = {
@@ -72,13 +66,11 @@ consul_kv = {
 		},
 		{
 			"recurse true",
-			&ConsulKVSourceInput{
-				ConsulKVMonitor: ConsulKVMonitor{
-					Path:       "path",
-					Recurse:    true,
-					Datacenter: "dc1",
-					Namespace:  "test-ns",
-				},
+			&ConsulKVMonitor{
+				Path:       "path",
+				Recurse:    true,
+				Datacenter: "dc1",
+				Namespace:  "test-ns",
 			},
 			`
 consul_kv = {
