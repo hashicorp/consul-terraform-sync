@@ -142,8 +142,7 @@ type RootModuleInputData struct {
 	Services         []Service
 	Task             Task
 	Variables        hcltmpl.Variables
-	Condition        Condition
-	SourceInput      SourceInput
+	Monitors         []Monitor
 
 	Path      string
 	FilePerms os.FileMode
@@ -248,7 +247,7 @@ func newMainTF(w io.Writer, filename string, input *RootModuleInputData) error {
 	rootBody.AppendNewline()
 	appendRootProviderBlocks(rootBody, input.Providers)
 	rootBody.AppendNewline()
-	appendRootModuleBlock(rootBody, input.Task, input.Variables.Keys(), input.Condition, input.SourceInput)
+	appendRootModuleBlock(rootBody, input.Task, input.Variables.Keys(), input.Monitors...)
 
 	// Format the file before writing
 	content := hclFile.Bytes()

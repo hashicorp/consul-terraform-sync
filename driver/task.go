@@ -326,81 +326,76 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 		}
 	}
 
-	var condition tftmpl.Condition
+	var monitoredTmpls []tftmpl.Monitor
+	var condition tftmpl.Monitor
 	switch v := t.condition.(type) {
 	case *config.CatalogServicesConditionConfig:
-		condition = &tftmpl.CatalogServicesCondition{
-			CatalogServicesMonitor: tftmpl.CatalogServicesMonitor{
-				Regexp:     *v.Regexp,
-				Datacenter: *v.Datacenter,
-				Namespace:  *v.Namespace,
-				NodeMeta:   v.NodeMeta,
-			},
+		condition = &tftmpl.CatalogServicesMonitor{
+			Regexp:            *v.Regexp,
+			Datacenter:        *v.Datacenter,
+			Namespace:         *v.Namespace,
+			NodeMeta:          v.NodeMeta,
 			SourceIncludesVar: *v.SourceIncludesVar,
 		}
 	case *config.ServicesConditionConfig:
-		condition = &tftmpl.ServicesCondition{
-			ServicesMonitor: tftmpl.ServicesMonitor{
-				Regexp:     *v.Regexp,
-				Datacenter: *v.Datacenter,
-				Namespace:  *v.Namespace,
-				Filter:     *v.Filter,
-			},
+		condition = &tftmpl.ServicesMonitor{
+			Regexp:     *v.Regexp,
+			Datacenter: *v.Datacenter,
+			Namespace:  *v.Namespace,
+			Filter:     *v.Filter,
 			// always set services variable
 			SourceIncludesVar: true,
 		}
 	case *config.ConsulKVConditionConfig:
-		condition = &tftmpl.ConsulKVCondition{
-			ConsulKVMonitor: tftmpl.ConsulKVMonitor{
-				Path:       *v.Path,
-				Datacenter: *v.Datacenter,
-				Recurse:    *v.Recurse,
-				Namespace:  *v.Namespace,
-			},
+		condition = &tftmpl.ConsulKVMonitor{
+			Path:              *v.Path,
+			Datacenter:        *v.Datacenter,
+			Recurse:           *v.Recurse,
+			Namespace:         *v.Namespace,
 			SourceIncludesVar: *v.SourceIncludesVar,
 		}
-	case *config.ScheduleConditionConfig:
-		condition = &tftmpl.ServicesCondition{
+	default:
+		// no-op: condition block currently not required since services.list
+		// can be used alternatively
+	}
+
+	if condition != nil {
+		monitoredTmpls = append(monitoredTmpls, condition)
+		t.logger.Trace("condition block template configured", "monitor_type",
+			fmt.Sprintf("%T", condition))
+	}
+
+	var sourceInput tftmpl.Monitor
+	switch v := t.sourceInput.(type) {
+	case *config.ServicesSourceInputConfig:
+		sourceInput = &tftmpl.ServicesMonitor{
+			Regexp:     *v.Regexp,
+			Datacenter: *v.Datacenter,
+			Namespace:  *v.Namespace,
+			Filter:     *v.Filter,
+			// always include for source_input config
+			SourceIncludesVar: true,
+		}
+	case *config.ConsulKVSourceInputConfig:
+		sourceInput = &tftmpl.ConsulKVMonitor{
+			Path:       *v.Path,
+			Datacenter: *v.Datacenter,
+			Recurse:    *v.Recurse,
+			Namespace:  *v.Namespace,
+			// always include for source_input config
 			SourceIncludesVar: true,
 		}
 	default:
-		// expected only for test scenarios
-		t.logger.Warn("task condition config unset. defaulting to services condition",
-			"task_name", t.name)
-		condition = &tftmpl.ServicesCondition{}
+		// no-op: source_input block config not required
 	}
-	t.logger.Trace("condition configured", "source_input_type", fmt.Sprintf("%T", condition))
-	input.Condition = condition
 
-	var sourceInput tftmpl.SourceInput
-	switch v := t.sourceInput.(type) {
-	case *config.ServicesSourceInputConfig:
-		sourceInput = &tftmpl.ServicesSourceInput{
-			ServicesMonitor: tftmpl.ServicesMonitor{
-				Regexp:     *v.Regexp,
-				Datacenter: *v.Datacenter,
-				Namespace:  *v.Namespace,
-				Filter:     *v.Filter,
-			},
-		}
-	case *config.ConsulKVSourceInputConfig:
-		sourceInput = &tftmpl.ConsulKVSourceInput{
-			ConsulKVMonitor: tftmpl.ConsulKVMonitor{
-				Path:       *v.Path,
-				Datacenter: *v.Datacenter,
-				Recurse:    *v.Recurse,
-				Namespace:  *v.Namespace,
-			},
-		}
-	default:
-		// expected only for test scenarios
-		t.logger.Warn("task source_input config unset. defaulting to services source_input",
-			"task_name", t.name)
-		sourceInput = &tftmpl.ServicesSourceInput{}
+	if sourceInput != nil {
+		monitoredTmpls = append(monitoredTmpls, sourceInput)
+		t.logger.Trace("source_input block template configured", "monitor_type",
+			fmt.Sprintf("%T", sourceInput))
 	}
-	t.logger.Trace("source_input configured", "source_input_type", fmt.Sprintf("%T", sourceInput))
 
-	input.SourceInput = sourceInput
+	input.Monitors = monitoredTmpls
 
 	input.Providers = t.providers.ProviderBlocks()
 	input.ProviderInfo = make(map[string]interface{})

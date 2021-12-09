@@ -16,39 +16,34 @@ func newTFVarsTmpl(w io.Writer, filename string, input *RootModuleInputData) err
 		return err
 	}
 
-	// First append the SourceInput templating
-	areServicesAppended := false
-	if input.SourceInput != nil {
-		if err := input.SourceInput.appendTemplate(w); err != nil {
+	// append templating for monitored objects
+	servicesAppended := false
+	for _, monitor := range input.Monitors {
+		if err := monitor.appendTemplate(w); err != nil {
 			return err
 		}
-		areServicesAppended = input.SourceInput.ServicesAppended()
-	}
-
-	// Next append the condition templating
-	// SourceInput services take precedence over Condition services, so only append Condition services if services
-	// weren't appended by SourceInput
-	if input.Condition != nil {
-		if input.Condition.ServicesAppended() {
-			if !areServicesAppended {
-				if err := input.Condition.appendTemplate(w); err != nil {
-					return err
-				}
-				areServicesAppended = input.Condition.ServicesAppended()
-			}
-			// Else do nothing if services are already appended
-		} else {
-			if err := input.Condition.appendTemplate(w); err != nil {
-				return err
-			}
+		if monitor.ServicesAppended() {
+			servicesAppended = true
 		}
 	}
 
-	// Finally, append raw services if no services have been added yet
+	// TODO: remove this in pr to convert services list into a type of monitor
+	// separately handle appending templating for services list
 	hclFile := hclwrite.NewEmptyFile()
-	if !areServicesAppended {
-		body := hclFile.Body()
+	body := hclFile.Body()
+	if len(input.Services) > 0 {
 		appendRawServiceTemplateValues(body, input.Services)
+		servicesAppended = true
+	}
+
+	// services var is required (see newVariablesTF). in variables.tf, services
+	// var is always appended. ensure that corresponding var value is appended
+	// to terraform.tfvars
+	if !servicesAppended {
+		// append empty services var value
+		body.AppendNewline()
+		body.SetAttributeRaw("services", hclwrite.Tokens{
+			{Type: hclsyntax.TokenOBrace, Bytes: []byte("{\n}")}})
 	}
 
 	_, err := hclFile.WriteTo(w)

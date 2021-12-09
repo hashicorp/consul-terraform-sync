@@ -57,26 +57,24 @@ func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) er
 		return err
 	}
 
+	// service variable is required to append
 	if _, err = w.Write(VariableServices); err != nil {
 		return err
 	}
 
-	if input.Condition != nil && input.Condition.SourceIncludesVariable() {
-		if err = input.Condition.appendVariable(w); err != nil {
-			return err
-		}
-	}
+	// append a variable for each monitored object
+	// note: assumes monitored objects all have a unique type. otherwise would
+	// need to check to avoid appending duplicate variables
+	for _, monitor := range input.Monitors {
+		if monitor.SourceIncludesVariable() {
+			if monitor.ServicesAppended() {
+				// services variable is already appended earlier. skip
+				continue
+			}
 
-	if input.SourceInput != nil {
-		if input.SourceInput.SourceIncludesVariable() {
-			if err = input.SourceInput.appendVariable(w); err != nil {
+			if err = monitor.appendVariable(w); err != nil {
 				return err
 			}
-		} else {
-			// SourceIncludesVariable should always be true for a non-nil source input
-			// if we got here, it means that a source_input's SourceIncludesVariable() function
-			// was not setup correctly
-			panic("SourceIncludesVariable is false for a non-nil source input")
 		}
 	}
 
