@@ -503,11 +503,6 @@ func (c *TaskConfig) validateCondition() error {
 				"configured")
 		}
 		switch cond := c.Condition.(type) {
-		case *ServicesConditionConfig:
-			if cond.Regexp == nil || *cond.Regexp == "" {
-				return fmt.Errorf("at least one service is required in task.services " +
-					"or task.condition.regexp must be configured")
-			}
 		case *CatalogServicesConditionConfig:
 			if cond.Regexp == nil {
 				return fmt.Errorf("catalog-services condition requires either" +
@@ -524,18 +519,17 @@ func (c *TaskConfig) validateCondition() error {
 			}
 		}
 	} else {
-		switch cond := c.Condition.(type) {
+		switch c.Condition.(type) {
 		case *ServicesConditionConfig:
-			if cond.Regexp != nil && *cond.Regexp != "" {
-				err := fmt.Errorf("task.services is not allowed if task.condition.regexp " +
-					"is configured for a services condition")
-				logging.Global().Named(logSystemName).Named(taskSubsystemName).
-					Error("list of services and service condition regex both "+
-						"provided. If both are needed, consider including the "+
-						"list in the regex or creating separate tasks",
-						"task_name", StringVal(c.Name), "error", err)
-				return err
-			}
+			err := fmt.Errorf("a task cannot be configured with both " +
+				"`services` field and `source_input` block. only one can be " +
+				"configured per task")
+			logging.Global().Named(logSystemName).Named(taskSubsystemName).
+				Error("list of services and service condition block both "+
+					"provided. If both are needed, consider combining the "+
+					"list into the condition block or creating separate tasks",
+					"task_name", StringVal(c.Name), "error", err)
+			return err
 		}
 	}
 
@@ -543,35 +537,28 @@ func (c *TaskConfig) validateCondition() error {
 }
 
 func (c *TaskConfig) validateSourceInput() error {
-	// For now only schedule condition allows for source_input, so a condition of type ScheduleConditionConfig
-	// is the only supported type
+	// For now only schedule condition allows for source_input, so a condition
+	// of type ScheduleConditionConfig is the only supported type
 	switch c.Condition.(type) {
 	case *ScheduleConditionConfig:
 		if len(c.Services) == 0 {
-			switch si := c.SourceInput.(type) {
-			case *ServicesSourceInputConfig:
-				// source_input "services" follows the same rules as condition "services"
-				if si.Regexp == nil || *si.Regexp == "" {
-					return fmt.Errorf("at least one service is required in task.services " +
-						"or task.source_input.regexp must be configured")
-				}
+			switch c.SourceInput.(type) {
 			case *ConsulKVSourceInputConfig:
 				return fmt.Errorf("consul-kv source_input requires at least one service to " +
 					"be configured in task.services")
 			}
 		} else {
-			switch si := c.SourceInput.(type) {
+			switch c.SourceInput.(type) {
 			case *ServicesSourceInputConfig:
-				if si.Regexp != nil && *si.Regexp != "" {
-					err := fmt.Errorf("task.services is not allowed if task.source_input.regexp " +
-						"is configured for a services source_input")
-					logging.Global().Named(logSystemName).Named(taskSubsystemName).
-						Error("list of services and service condition regex both "+
-							"provided. If both are needed, consider including the "+
-							"list in the regex or creating separate tasks",
-							"task_name", StringVal(c.Name), "error", err)
-					return err
-				}
+				err := fmt.Errorf("a task cannot be configured with both " +
+					"`services` field and `condition` block. only one can be " +
+					"configured per task")
+				logging.Global().Named(logSystemName).Named(taskSubsystemName).
+					Error("list of services and service condition block both "+
+						"provided. If both are needed, consider combining the "+
+						"list into the condition block or creating separate tasks",
+						"task_name", StringVal(c.Name), "error", err)
+				return err
 			}
 		}
 	default:

@@ -141,8 +141,9 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					},
 					Enabled: config.Bool(true),
 					Condition: &config.ServicesConditionConfig{
-						config.ServicesMonitorConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
 							Regexp:             config.String("^web.*"),
+							Names:              []string{},
 							Datacenter:         config.String(""),
 							Namespace:          config.String(""),
 							Filter:             config.String(""),
@@ -345,13 +346,15 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Condition:  &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
 					WorkingDir: config.String("sync-tasks/task"),
 					SourceInput: &config.ServicesSourceInputConfig{
-						config.ServicesMonitorConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
 							Regexp:             config.String("^api$"),
+							Names:              []string{},
 							Datacenter:         config.String(""),
 							Namespace:          config.String(""),
 							Filter:             config.String(""),
 							CTSUserDefinedMeta: map[string]string{},
-						}},
+						},
+					},
 				},
 			},
 		},

@@ -449,6 +449,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				SourceInput: &ServicesSourceInputConfig{
 					ServicesMonitorConfig{
 						Regexp:             String("^api$"),
+						Names:              []string{},
 						Datacenter:         String(""),
 						Namespace:          String(""),
 						Filter:             String(""),
@@ -570,7 +571,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 		},
 		// services condition test case
 		{
-			"valid: services cond: cond.regexp configured & no services",
+			"valid: services cond: no services",
 			&TaskConfig{
 				Name:   String("task"),
 				Source: String("source"),
@@ -583,26 +584,16 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"invalid: services cond: empty regexp configured & no services",
-			&TaskConfig{
-				Name:   String("task"),
-				Source: String("source"),
-				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig{
-						Regexp: String(""),
-					},
-				},
-			},
-			false,
-		},
-		{
-			"invalid: services cond: cond.regexp configured & services configured",
+			"invalid: services cond: services configured",
 			&TaskConfig{
 				Name:     String("task"),
 				Source:   String("source"),
 				Services: []string{"api"},
 				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig{Regexp: String("^service.*")}},
+					ServicesMonitorConfig{
+						Regexp: String(""),
+					},
+				},
 			},
 			false,
 		},
@@ -652,20 +643,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: sched cond: no services & nil source_input regex",
-			&TaskConfig{
-				Name:      String("task"),
-				Source:    String("source"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				SourceInput: &ServicesSourceInputConfig{
-					ServicesMonitorConfig{
-						Regexp: nil,
-					},
-				},
-			},
-			false,
-		},
-		{
 			"invalid: sched cond: services source_input configured & services configured",
 			&TaskConfig{
 				Name:      String("task"),
@@ -673,7 +650,8 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Services:  []string{"api"},
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 				SourceInput: &ServicesSourceInputConfig{
-					ServicesMonitorConfig{Regexp: String(".*")}},
+					ServicesMonitorConfig{Names: []string{"api"}},
+				},
 			},
 			false,
 		},

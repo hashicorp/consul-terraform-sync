@@ -89,6 +89,7 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 			expected: &ServicesSourceInputConfig{
 				ServicesMonitorConfig{
 					Regexp:             String(".*"),
+					Names:              []string{},
 					Datacenter:         String("dc2"),
 					Namespace:          String("ns2"),
 					Filter:             String("some-filter"),

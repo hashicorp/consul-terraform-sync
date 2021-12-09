@@ -149,7 +149,8 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 			&ServicesConditionConfig{},
 			&ServicesConditionConfig{
 				ServicesMonitorConfig{
-					Regexp:             String(""),
+					Regexp:             nil,
+					Names:              []string{},
 					Datacenter:         String(""),
 					Namespace:          String(""),
 					Filter:             String(""),
@@ -238,8 +239,8 @@ func TestServicesCondition_GoString(t *testing.T) {
 					},
 				},
 			},
-			"&ServicesConditionConfig{&ServicesMonitorConfig{Regexp:^api$, Datacenter:dc, " +
-				"Namespace:namespace, Filter:filter, " +
+			"&ServicesConditionConfig{&ServicesMonitorConfig{Regexp:^api$, Names:[], " +
+				"Datacenter:dc, Namespace:namespace, Filter:filter, " +
 				"CTSUserDefinedMeta:map[key:value]}}",
 		},
 	}
