@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -82,7 +83,7 @@ func (h *DryRunTasksHandler) CreateDryRunTask(w http.ResponseWriter, r *http.Req
 	}
 
 	// Inspect task
-	err = d.InspectTask(r.Context())
+	plan, err := d.InspectTask(r.Context())
 	if err != nil {
 		err = fmt.Errorf("error inspecting task: %s", err)
 		logger.Error("error creating dry run task", "error", err)
@@ -90,11 +91,12 @@ func (h *DryRunTasksHandler) CreateDryRunTask(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// set run in response
-	resp := taskResponseFromTaskRequestConfig(taskConf, requestID)
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	resp := taskResponseFromTaskRequestConfig(taskConf, requestID)
+	resp.Run = &oapigen.Run{
+		Plan: &plan.Plan,
+	}
 	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
 		logger.Error("error encoding json", "error", err, "dryrun_task_response", resp)
