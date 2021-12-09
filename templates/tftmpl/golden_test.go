@@ -69,7 +69,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "main.tf (catalog-services condition - source_includes_var)",
 			Func:   newMainTF,
-			Golden: "testdata/catalog-services-condition/main_include.tf",
+			Golden: "testdata/catalog-services/main_include.tf",
 			Input: RootModuleInputData{
 				Backend: map[string]interface{}{},
 				Condition: &CatalogServicesCondition{
@@ -103,7 +103,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "variables.tf (catalog-services condition - source_includes_var)",
 			Func:   newVariablesTF,
-			Golden: "testdata/catalog-services-condition/variables_include.tf",
+			Golden: "testdata/catalog-services/variables_include.tf",
 			Input: RootModuleInputData{
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
 				Condition: &CatalogServicesCondition{
@@ -251,7 +251,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "terraform.tfvars.tmpl (catalog-services condition)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/catalog-services-condition/terraform.tfvars.tmpl",
+			Golden: "testdata/catalog-services/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
 					CatalogServicesMonitor{
@@ -276,7 +276,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "terraform.tfvars.tmpl (catalog-services condition - source_includes_var)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/catalog-services-condition/terraform_include.tfvars.tmpl",
+			Golden: "testdata/catalog-services/terraform_include.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
 					CatalogServicesMonitor{
@@ -301,7 +301,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "terraform.tfvars.tmpl (catalog-services condition - filtering)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/catalog-services-condition/terraform_filter.tfvars.tmpl",
+			Golden: "testdata/catalog-services/terraform_filter.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
 					CatalogServicesMonitor{
@@ -328,7 +328,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "terraform.tfvars.tmpl (catalog-services condition - no services)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/catalog-services-condition/terraform_no_services.tfvars.tmpl",
+			Golden: "testdata/catalog-services/terraform_no_services.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Condition: &CatalogServicesCondition{
 					CatalogServicesMonitor{
