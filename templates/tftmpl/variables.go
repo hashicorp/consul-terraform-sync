@@ -62,7 +62,8 @@ func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) er
 		return err
 	}
 
-	// append a variable for each monitored object
+	// append a variable for each monitored object unless monitored object is
+	// a services variable. services variable already appended above.
 	// note: assumes monitored objects all have a unique type. otherwise would
 	// need to check to avoid appending duplicate variables
 	for _, monitor := range input.Monitors {
@@ -72,6 +73,7 @@ func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) er
 				continue
 			}
 
+			// append variable for non-service objects
 			if err = monitor.appendVariable(w); err != nil {
 				return err
 			}
