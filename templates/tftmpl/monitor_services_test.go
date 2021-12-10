@@ -8,15 +8,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestServicesMonitor_appendTemplate(t *testing.T) {
+func TestServicesTemplate_appendTemplate(t *testing.T) {
 	testcases := []struct {
 		name string
-		c    *ServicesMonitor
+		c    *ServicesTemplate
 		exp  string
 	}{
 		{
 			"fully configured & includes_var true",
-			&ServicesMonitor{
+			&ServicesTemplate{
 				Regexp:            ".*",
 				Datacenter:        "dc1",
 				Namespace:         "ns1",
@@ -37,7 +37,7 @@ services = {
 		},
 		{
 			"fully configured & includes_var false",
-			&ServicesMonitor{
+			&ServicesTemplate{
 				Regexp:            ".*",
 				Datacenter:        "dc1",
 				Namespace:         "ns1",
@@ -56,7 +56,7 @@ services = {
 		},
 		{
 			"unconfigured & includes_var false",
-			&ServicesMonitor{
+			&ServicesTemplate{
 				SourceIncludesVar: false,
 			},
 			"",
@@ -73,22 +73,22 @@ services = {
 	}
 }
 
-func TestServicesMonitor_hcatQuery(t *testing.T) {
+func TestServicesTemplate_hcatQuery(t *testing.T) {
 	testcase := []struct {
 		name string
-		c    *ServicesMonitor
+		c    *ServicesTemplate
 		exp  string
 	}{
 		{
 			"regexp only",
-			&ServicesMonitor{
+			&ServicesTemplate{
 				Regexp: ".*",
 			},
 			`"regexp=.*"`,
 		},
 		{
 			"all_parameters",
-			&ServicesMonitor{
+			&ServicesTemplate{
 				Regexp:     ".*",
 				Datacenter: "datacenter",
 				Namespace:  "namespace",

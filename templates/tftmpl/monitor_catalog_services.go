@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	_ Monitor = (*CatalogServicesMonitor)(nil)
+	_ Template = (*CatalogServicesTemplate)(nil)
 )
 
-// CatalogServicesMonitor handles appending templating for the catalog-service
-// run monitor
-type CatalogServicesMonitor struct {
+// CatalogServicesTemplate handles the template for the catalog_services
+// variable for the template function: `{{ catalogServicesRegistration }}`
+type CatalogServicesTemplate struct {
 	Regexp     string
 	Datacenter string
 	Namespace  string
@@ -24,27 +24,27 @@ type CatalogServicesMonitor struct {
 	SourceIncludesVar bool
 }
 
-// isServicesVar returns false because the tmplfunc returns a catalog_services
+// isServicesVar returns false because the template returns a catalog_services
 // variable, not a services variable
-func (m CatalogServicesMonitor) isServicesVar() bool {
+func (t CatalogServicesTemplate) isServicesVar() bool {
 	return false
 }
 
-func (m CatalogServicesMonitor) SourceIncludesVariable() bool {
-	return m.SourceIncludesVar
+func (t CatalogServicesTemplate) SourceIncludesVariable() bool {
+	return t.SourceIncludesVar
 }
 
-func (m CatalogServicesMonitor) appendModuleAttribute(body *hclwrite.Body) {
+func (m CatalogServicesTemplate) appendModuleAttribute(body *hclwrite.Body) {
 	body.SetAttributeTraversal("catalog_services", hcl.Traversal{
 		hcl.TraverseRoot{Name: "var"},
 		hcl.TraverseAttr{Name: "catalog_services"},
 	})
 }
 
-func (m CatalogServicesMonitor) appendTemplate(w io.Writer) error {
-	q := m.hcatQuery()
+func (t CatalogServicesTemplate) appendTemplate(w io.Writer) error {
+	q := t.hcatQuery()
 
-	if m.SourceIncludesVar {
+	if t.SourceIncludesVar {
 		_, err := fmt.Fprintf(w, catalogServicesIncludesVarTmpl, q)
 		if err != nil {
 			err = fmt.Errorf("unable to write catalog-service template to include variable, error: %v", err)
@@ -60,27 +60,27 @@ func (m CatalogServicesMonitor) appendTemplate(w io.Writer) error {
 	return nil
 }
 
-func (m CatalogServicesMonitor) appendVariable(w io.Writer) error {
+func (t CatalogServicesTemplate) appendVariable(w io.Writer) error {
 	_, err := w.Write(variableCatalogServices)
 	return err
 }
 
-func (m CatalogServicesMonitor) hcatQuery() string {
+func (t CatalogServicesTemplate) hcatQuery() string {
 	var opts []string
 
-	if m.Regexp != "" {
-		opts = append(opts, fmt.Sprintf("regexp=%s", m.Regexp))
+	if t.Regexp != "" {
+		opts = append(opts, fmt.Sprintf("regexp=%s", t.Regexp))
 	}
 
-	if m.Datacenter != "" {
-		opts = append(opts, fmt.Sprintf("dc=%s", m.Datacenter))
+	if t.Datacenter != "" {
+		opts = append(opts, fmt.Sprintf("dc=%s", t.Datacenter))
 	}
 
-	if m.Namespace != "" {
-		opts = append(opts, fmt.Sprintf("ns=%s", m.Namespace))
+	if t.Namespace != "" {
+		opts = append(opts, fmt.Sprintf("ns=%s", t.Namespace))
 	}
 
-	for k, v := range m.NodeMeta {
+	for k, v := range t.NodeMeta {
 		opts = append(opts, fmt.Sprintf("node-meta=%s:%s", k, v))
 	}
 

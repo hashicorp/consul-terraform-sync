@@ -67,13 +67,13 @@ func TestNewFiles(t *testing.T) {
 				},
 			},
 		}, {
-			Name:   "main.tf (catalog-services monitor - include)",
+			Name:   "main.tf (catalog-services - include)",
 			Func:   newMainTF,
 			Golden: "testdata/catalog-services/main_include.tf",
 			Input: RootModuleInputData{
 				Backend: map[string]interface{}{},
-				Monitors: []Monitor{
-					&CatalogServicesMonitor{
+				Templates: []Template{
+					&CatalogServicesTemplate{
 						Regexp:            ".*",
 						SourceIncludesVar: true,
 					},
@@ -106,8 +106,8 @@ func TestNewFiles(t *testing.T) {
 			Golden: "testdata/catalog-services/variables_include.tf",
 			Input: RootModuleInputData{
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
-				Monitors: []Monitor{
-					&CatalogServicesMonitor{
+				Templates: []Template{
+					&CatalogServicesTemplate{
 						Regexp:            ".*",
 						SourceIncludesVar: true,
 					},
@@ -119,8 +119,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newVariablesTF,
 			Golden: "testdata/consul-kv/variables.tf",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&ConsulKVMonitor{
+				Templates: []Template{
+					&ConsulKVTemplate{
 						Path:              "key-path",
 						Datacenter:        "dc1",
 						SourceIncludesVar: true,
@@ -134,8 +134,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newVariablesTF,
 			Golden: "testdata/consul-kv/variables.tf",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&ConsulKVMonitor{
+				Templates: []Template{
+					&ConsulKVTemplate{
 						Path:              "key-path",
 						Datacenter:        "dc1",
 						SourceIncludesVar: true,
@@ -170,8 +170,8 @@ func TestNewFiles(t *testing.T) {
 			Golden: "testdata/terraform_services_source_input.tmpl",
 			Input: RootModuleInputData{
 				Task: task,
-				Monitors: []Monitor{
-					&ServicesMonitor{
+				Templates: []Template{
+					&ServicesTemplate{
 						Regexp:            ".*",
 						Datacenter:        "dc1",
 						Namespace:         "ns1",
@@ -186,8 +186,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/catalog-services/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&CatalogServicesMonitor{
+				Templates: []Template{
+					&CatalogServicesTemplate{
 						Regexp:            ".*",
 						SourceIncludesVar: false,
 					},
@@ -211,8 +211,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/catalog-services/terraform_include.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&CatalogServicesMonitor{
+				Templates: []Template{
+					&CatalogServicesTemplate{
 						Regexp:            "^web.*|^api.*",
 						SourceIncludesVar: true,
 					},
@@ -236,8 +236,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/catalog-services/terraform_filter.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&CatalogServicesMonitor{
+				Templates: []Template{
+					&CatalogServicesTemplate{
 						Regexp:            "^web.*|^api.*",
 						Datacenter:        "dc1",
 						NodeMeta:          map[string]string{"k": "v"},
@@ -263,8 +263,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/catalog-services/terraform_no_services.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&CatalogServicesMonitor{
+				Templates: []Template{
+					&CatalogServicesTemplate{
 						Regexp:            ".*",
 						SourceIncludesVar: false,
 					},
@@ -276,8 +276,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&ConsulKVMonitor{
+				Templates: []Template{
+					&ConsulKVTemplate{
 						Path:              "key-path",
 						Datacenter:        "dc1",
 						SourceIncludesVar: false,
@@ -302,8 +302,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_namespace.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&ConsulKVMonitor{
+				Templates: []Template{
+					&ConsulKVTemplate{
 						Path:              "key-path",
 						Datacenter:        "dc1",
 						Namespace:         "test-ns",
@@ -329,8 +329,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_includes_vars.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&ConsulKVMonitor{
+				Templates: []Template{
+					&ConsulKVTemplate{
 						Path:              "key-path",
 						Datacenter:        "dc1",
 						SourceIncludesVar: true,
@@ -355,8 +355,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_recurse_true.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&ConsulKVMonitor{
+				Templates: []Template{
+					&ConsulKVTemplate{
 						Path:              "key-path",
 						Datacenter:        "dc1",
 						Recurse:           true,
@@ -382,8 +382,8 @@ func TestNewFiles(t *testing.T) {
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_recurse_true_include_false.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Monitors: []Monitor{
-					&ConsulKVMonitor{
+				Templates: []Template{
+					&ConsulKVTemplate{
 						Path:              "key-path",
 						Datacenter:        "dc1",
 						Recurse:           true,

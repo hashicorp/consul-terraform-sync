@@ -16,18 +16,18 @@ func newTFVarsTmpl(w io.Writer, filename string, input *RootModuleInputData) err
 		return err
 	}
 
-	// append templating for monitored objects
+	// append templates for Template structs
 	servicesAppended := false
-	for _, monitor := range input.Monitors {
-		if err := monitor.appendTemplate(w); err != nil {
+	for _, template := range input.Templates {
+		if err := template.appendTemplate(w); err != nil {
 			return err
 		}
-		if monitor.isServicesVar() {
+		if template.isServicesVar() {
 			servicesAppended = true
 		}
 	}
 
-	// TODO: remove this in pr to convert services list into a type of monitor
+	// TODO: remove this in pr to convert services list into a type of template
 	// separately handle appending templating for services list
 	hclFile := hclwrite.NewEmptyFile()
 	body := hclFile.Body()

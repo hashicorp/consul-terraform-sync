@@ -11,12 +11,12 @@ import (
 )
 
 var (
-	_ Monitor = (*ConsulKVMonitor)(nil)
+	_ Template = (*ConsulKVTemplate)(nil)
 )
 
-// ConsulKVMonitor handles appending templating for the consul-kv
-// run monitor
-type ConsulKVMonitor struct {
+// ServicesTemplate handles the template for the consul_kv variable for the
+// template functions: `{{ key }}` and `{{ keyExistsGet }}`
+type ConsulKVTemplate struct {
 	Path       string
 	Recurse    bool
 	Datacenter string
@@ -25,17 +25,17 @@ type ConsulKVMonitor struct {
 	SourceIncludesVar bool
 }
 
-// isServicesVar returns false because the tmplfunc returns a consul_kv
+// isServicesVar returns false because the template returns a consul_kv
 // variable, not a services variable
-func (m ConsulKVMonitor) isServicesVar() bool {
+func (t ConsulKVTemplate) isServicesVar() bool {
 	return false
 }
 
-func (m ConsulKVMonitor) SourceIncludesVariable() bool {
-	return m.SourceIncludesVar
+func (t ConsulKVTemplate) SourceIncludesVariable() bool {
+	return t.SourceIncludesVar
 }
 
-func (m ConsulKVMonitor) appendModuleAttribute(body *hclwrite.Body) {
+func (t ConsulKVTemplate) appendModuleAttribute(body *hclwrite.Body) {
 	body.SetAttributeTraversal("consul_kv", hcl.Traversal{
 		hcl.TraverseRoot{Name: "var"},
 		hcl.TraverseAttr{Name: "consul_kv"},
@@ -48,13 +48,13 @@ func (m ConsulKVMonitor) appendModuleAttribute(body *hclwrite.Body) {
 // to true, include the template as part of the variable consul_kv.
 // If recurse is set to true, then use the 'keys' template, otherwise
 // use the 'keyExists'/'key' template.
-func (m ConsulKVMonitor) appendTemplate(w io.Writer) error {
+func (t ConsulKVTemplate) appendTemplate(w io.Writer) error {
 	logger := logging.Global().Named(logSystemName).Named(tftmplSubsystemName)
-	q := m.hcatQuery()
+	q := t.hcatQuery()
 
-	if m.SourceIncludesVar {
+	if t.SourceIncludesVar {
 		var baseTmpl string
-		if m.Recurse {
+		if t.Recurse {
 			baseTmpl = fmt.Sprintf(consulKVRecurseBaseTmpl, q)
 		} else {
 			baseTmpl = fmt.Sprintf(consulKVBaseTmpl, q)
@@ -68,7 +68,7 @@ func (m ConsulKVMonitor) appendTemplate(w io.Writer) error {
 	}
 
 	var emptyTmpl string
-	if m.Recurse {
+	if t.Recurse {
 		emptyTmpl = fmt.Sprintf(consulKVRecurseConditionEmptyTmpl, q)
 	} else {
 		emptyTmpl = fmt.Sprintf(consulKVConditionEmptyTmpl, q)
@@ -80,22 +80,22 @@ func (m ConsulKVMonitor) appendTemplate(w io.Writer) error {
 	return nil
 }
 
-func (m ConsulKVMonitor) appendVariable(w io.Writer) error {
+func (t ConsulKVTemplate) appendVariable(w io.Writer) error {
 	_, err := w.Write(variableConsulKV)
 	return err
 }
 
-func (m ConsulKVMonitor) hcatQuery() string {
+func (t ConsulKVTemplate) hcatQuery() string {
 	var opts []string
 
-	opts = append(opts, m.Path)
+	opts = append(opts, t.Path)
 
-	if m.Datacenter != "" {
-		opts = append(opts, fmt.Sprintf("dc=%s", m.Datacenter))
+	if t.Datacenter != "" {
+		opts = append(opts, fmt.Sprintf("dc=%s", t.Datacenter))
 	}
 
-	if m.Namespace != "" {
-		opts = append(opts, fmt.Sprintf("ns=%s", m.Namespace))
+	if t.Namespace != "" {
+		opts = append(opts, fmt.Sprintf("ns=%s", t.Namespace))
 	}
 
 	if len(opts) > 0 {

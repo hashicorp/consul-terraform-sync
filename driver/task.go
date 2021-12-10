@@ -326,11 +326,11 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 		}
 	}
 
-	var monitoredTmpls []tftmpl.Monitor
-	var condition tftmpl.Monitor
+	var templates []tftmpl.Template
+	var condition tftmpl.Template
 	switch v := t.condition.(type) {
 	case *config.CatalogServicesConditionConfig:
-		condition = &tftmpl.CatalogServicesMonitor{
+		condition = &tftmpl.CatalogServicesTemplate{
 			Regexp:            *v.Regexp,
 			Datacenter:        *v.Datacenter,
 			Namespace:         *v.Namespace,
@@ -338,7 +338,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			SourceIncludesVar: *v.SourceIncludesVar,
 		}
 	case *config.ServicesConditionConfig:
-		condition = &tftmpl.ServicesMonitor{
+		condition = &tftmpl.ServicesTemplate{
 			Regexp:     *v.Regexp,
 			Datacenter: *v.Datacenter,
 			Namespace:  *v.Namespace,
@@ -347,7 +347,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			SourceIncludesVar: true,
 		}
 	case *config.ConsulKVConditionConfig:
-		condition = &tftmpl.ConsulKVMonitor{
+		condition = &tftmpl.ConsulKVTemplate{
 			Path:              *v.Path,
 			Datacenter:        *v.Datacenter,
 			Recurse:           *v.Recurse,
@@ -360,15 +360,15 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	}
 
 	if condition != nil {
-		monitoredTmpls = append(monitoredTmpls, condition)
-		t.logger.Trace("condition block template configured", "monitor_type",
+		templates = append(templates, condition)
+		t.logger.Trace("condition block template configured", "template_type",
 			fmt.Sprintf("%T", condition))
 	}
 
-	var sourceInput tftmpl.Monitor
+	var sourceInput tftmpl.Template
 	switch v := t.sourceInput.(type) {
 	case *config.ServicesSourceInputConfig:
-		sourceInput = &tftmpl.ServicesMonitor{
+		sourceInput = &tftmpl.ServicesTemplate{
 			Regexp:     *v.Regexp,
 			Datacenter: *v.Datacenter,
 			Namespace:  *v.Namespace,
@@ -377,7 +377,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			SourceIncludesVar: true,
 		}
 	case *config.ConsulKVSourceInputConfig:
-		sourceInput = &tftmpl.ConsulKVMonitor{
+		sourceInput = &tftmpl.ConsulKVTemplate{
 			Path:       *v.Path,
 			Datacenter: *v.Datacenter,
 			Recurse:    *v.Recurse,
@@ -390,12 +390,12 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	}
 
 	if sourceInput != nil {
-		monitoredTmpls = append(monitoredTmpls, sourceInput)
-		t.logger.Trace("source_input block template configured", "monitor_type",
+		templates = append(templates, sourceInput)
+		t.logger.Trace("source_input block template configured", "template_type",
 			fmt.Sprintf("%T", sourceInput))
 	}
 
-	input.Monitors = monitoredTmpls
+	input.Templates = templates
 
 	input.Providers = t.providers.ProviderBlocks()
 	input.ProviderInfo = make(map[string]interface{})

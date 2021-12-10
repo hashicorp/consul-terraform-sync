@@ -62,19 +62,19 @@ func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) er
 		return err
 	}
 
-	// append a variable for each monitored object unless monitored object is
+	// append a variable for each template unless template's variable is
 	// a services variable. services variable already appended above.
-	// note: assumes monitored objects all have a unique type. otherwise would
+	// note: assumes templates' variables are unique type. otherwise would
 	// need to check to avoid appending duplicate variables
-	for _, monitor := range input.Monitors {
-		if monitor.SourceIncludesVariable() {
-			if monitor.isServicesVar() {
+	for _, template := range input.Templates {
+		if template.SourceIncludesVariable() {
+			if template.isServicesVar() {
 				// services variable is already appended earlier. skip
 				continue
 			}
 
 			// append variable for non-service objects
-			if err = monitor.appendVariable(w); err != nil {
+			if err = template.appendVariable(w); err != nil {
 				return err
 			}
 		}
