@@ -76,9 +76,7 @@ type RequestID string
 
 // Run defines model for Run.
 type Run struct {
-	ChangesPresent *bool   `json:"changes_present,omitempty"`
-	Plan           *string `json:"plan,omitempty"`
-	Status         *string `json:"status,omitempty"`
+	Plan *string `json:"plan,omitempty"`
 }
 
 // ScheduleCondition defines model for ScheduleCondition.
