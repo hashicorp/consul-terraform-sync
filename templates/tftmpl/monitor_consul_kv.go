@@ -25,9 +25,9 @@ type ConsulKVMonitor struct {
 	SourceIncludesVar bool
 }
 
-// ServicesAppended always returns false for consul-kv as it doesn't
-// deal with services
-func (m ConsulKVMonitor) ServicesAppended() bool {
+// isServicesVar returns false because the tmplfunc returns a consul_kv
+// variable, not a services variable
+func (m ConsulKVMonitor) isServicesVar() bool {
 	return false
 }
 

@@ -21,9 +21,9 @@ const (
 // Monitor handles appending a run monitor's relevant templating for Terraform
 // generated files
 type Monitor interface {
-	// ServicesAppended returns if the services variable has been appended
-	// to the template content.
-	ServicesAppended() bool
+	// isServicesVar returns whether or not the template function returns a
+	// variable of type services
+	isServicesVar() bool
 
 	// SourceIncludesVariable returns if the module source expects to
 	// include the monitor variable.
@@ -55,10 +55,9 @@ type ServicesMonitor struct {
 	SourceIncludesVar bool
 }
 
-// ServicesAppended returns true if the services are to be appended
-// and false otherwise
-func (m ServicesMonitor) ServicesAppended() bool {
-	return m.Regexp != ""
+// isServicesVar returns true because the tmplfunc returns a services variable
+func (m ServicesMonitor) isServicesVar() bool {
+	return true
 }
 
 func (m ServicesMonitor) appendModuleAttribute(*hclwrite.Body) {}

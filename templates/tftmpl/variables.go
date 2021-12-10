@@ -67,7 +67,7 @@ func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) er
 	// need to check to avoid appending duplicate variables
 	for _, monitor := range input.Monitors {
 		if monitor.SourceIncludesVariable() {
-			if monitor.ServicesAppended() {
+			if monitor.isServicesVar() {
 				// services variable is already appended earlier. skip
 				continue
 			}

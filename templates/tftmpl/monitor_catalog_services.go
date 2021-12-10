@@ -24,8 +24,9 @@ type CatalogServicesMonitor struct {
 	SourceIncludesVar bool
 }
 
-// ServicesAppended returns true if the services are to be appended, and false otherwise
-func (m CatalogServicesMonitor) ServicesAppended() bool {
+// isServicesVar returns false because the tmplfunc returns a catalog_services
+// variable, not a services variable
+func (m CatalogServicesMonitor) isServicesVar() bool {
 	return false
 }
 
