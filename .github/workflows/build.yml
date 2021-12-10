@@ -4,12 +4,10 @@ on:
   push:
     # Sequence of patterns matched against refs/heads
     branches:   
-      # push to enable-security-scan for testing
-      - enable-security-scan 
-      # # Push events on main branch
-      # - main
-      # # Push events to branches matching refs/heads/release/**
-      # - 'release/**'
+      # Push events on main branch
+      - main
+      # Push events to branches matching refs/heads/release/**
+      - 'release/**'
 
 env:
   PKG_NAME: "consul-terraform-sync"
