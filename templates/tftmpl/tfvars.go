@@ -74,6 +74,26 @@ func newProvidersTFVars(w io.Writer, filename string, input *RootModuleInputData
 	return err
 }
 
+// newVariablesTFVars writes input variables for configured variables.
+func newVariablesTFVars(w io.Writer, filename string, input *RootModuleInputData) error {
+	err := writePreamble(w, input.Task, filename)
+	if err != nil {
+		return err
+	}
+
+	hclFile := hclwrite.NewEmptyFile()
+	body := hclFile.Body()
+	body.AppendNewline()
+
+	for k, v := range input.Variables {
+		body.SetAttributeValue(k, v)
+	}
+	body.AppendNewline()
+
+	_, err = hclFile.WriteTo(w)
+	return err
+}
+
 // appendRawServiceTemplateValues appends raw lines representing blocks that
 // assign value to the services variable `VariableServices` with `hcat` template
 // syntax for dynamic rendering of Consul dependency values.

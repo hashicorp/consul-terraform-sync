@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcl/v2"
@@ -55,6 +56,18 @@ func ParseModuleVariables(content []byte, filename string) (hcltmpl.Variables, e
 	}
 
 	return variables, nil
+}
+
+// ParseModuleVariablesFromMap parses map[string]string content representing Terraform input variables
+// for a module. It encodes the content into cty.Value types. Invalid HCL
+// syntax and unsupported Terraform variable types result in an error.
+func ParseModuleVariablesFromMap(content map[string]string) (hcltmpl.Variables, error) {
+	var sb strings.Builder
+	for key, variable := range content {
+		sb.WriteString(fmt.Sprintf("%s = %s\n", key, variable))
+	}
+
+	return ParseModuleVariables([]byte(sb.String()), "")
 }
 
 // NewModuleVariablesTF writes content used for variables.module.tf of a

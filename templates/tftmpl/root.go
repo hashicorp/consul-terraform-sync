@@ -41,11 +41,15 @@ const (
 	// variable is written to.
 	TFVarsFilename = "terraform.tfvars"
 
+	// VarsTFVarsFileName is the file name for a tfvars file which is generated and contains
+	// variables provided as part of the task configuration
+	VarsTFVarsFileName = "variables.auto.tfvars"
+
 	// TFVarsTmplFilename is the template file for TFVarsFilename. This is used
 	// by hcat for monitoring service changes from Consul.
 	TFVarsTmplFilename = "terraform.tfvars.tmpl"
 
-	// ProviderTFVarsFilename is the file name for input variables for
+	// ProvidersTFVarsFilename is the file name for input variables for
 	// configured Terraform providers. Generated provider input variables are
 	// written in a separate file from terraform.tfvars because it may contain
 	// sensitive or secret values.
@@ -181,6 +185,9 @@ func InitRootModule(input *RootModuleInputData) error {
 	input.init()
 
 	fileFuncs := make(map[string]tfFileFunc)
+	if len(input.Variables) != 0 {
+		fileFuncs[VarsTFVarsFileName] = newVariablesTFVars
+	}
 	for k, v := range rootFileFuncs {
 		fileFuncs[k] = v
 	}
