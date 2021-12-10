@@ -3,6 +3,7 @@ package driver
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -60,7 +61,7 @@ type Task struct {
 	providerInfo map[string]interface{}  // driver.required_provider config info
 	services     []Service
 	source       string
-	varFiles     []string
+	varFile      string
 	variables    hcltmpl.Variables // loaded variables from varFiles
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
@@ -100,6 +101,21 @@ func NewTask(conf TaskConfig) (*Task, error) {
 			loadedVars[k] = v
 		}
 	}
+
+	tfvars, err := tftmpl.ParseModuleVariablesFromMap(conf.Variables)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range tfvars {
+		loadedVars[k] = v
+	}
+
+	// If variables are loaded, set the variables output file
+	var varFilesOut string
+	if len(loadedVars) != 0 {
+		varFilesOut = filepath.Join(conf.WorkingDir, tftmpl.VarsTFVarsFileName)
+	}
+
 	return &Task{
 		description:  conf.Description,
 		name:         conf.Name,
@@ -109,7 +125,7 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		providerInfo: conf.ProviderInfo,
 		services:     conf.Services,
 		source:       conf.Source,
-		varFiles:     conf.VarFiles,
+		varFile:      varFilesOut,
 		variables:    loadedVars,
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
@@ -249,16 +265,19 @@ func (t *Task) Source() string {
 	return t.source
 }
 
-// VariableFiles returns a copy of the list of configured variable files
-// for the task's module.
+// VariableFiles returns a copy of the configured variable file
+// for the task's module as a list.
 func (t *Task) VariableFiles() []string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	varFiles := make([]string, len(t.varFiles))
-	for i, vf := range t.varFiles {
-		varFiles[i] = vf
+	// In the future may be worth refactoring for Terraform CLI to only expect a
+	// single varFile, for now this is useful
+	var varFiles []string
+	if len(t.varFile) != 0 {
+		varFiles = []string{t.varFile}
 	}
+
 	return varFiles
 }
 
