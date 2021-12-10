@@ -176,7 +176,7 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 	}
 }
 
-func TestTaskLifeCycleHandler_CreateTask_InternalError(t *testing.T) {
+func TestTaskLifeCycleHandler_CreateTask_InitError(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name       string
@@ -191,16 +191,16 @@ func TestTaskLifeCycleHandler_CreateTask_InternalError(t *testing.T) {
 			name:       "task already exists",
 			taskName:   testTaskName,
 			request:    testCreateTaskRequest,
-			message:    "error initializing new task, mock error",
-			statusCode: http.StatusInternalServerError,
+			message:    "error initializing new task: mock error",
+			statusCode: http.StatusBadRequest,
 		},
 		{
 			name:       "invalid run param",
 			taskName:   testTaskName,
 			request:    testCreateTaskRequest,
 			run:        "invalid",
-			message:    "error initializing new task, invalid run option 'invalid'. Please select a valid option",
-			statusCode: http.StatusInternalServerError,
+			message:    "error initializing new task: invalid run option 'invalid'. Please select a valid option",
+			statusCode: http.StatusBadRequest,
 		},
 	}
 

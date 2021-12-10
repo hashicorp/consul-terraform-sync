@@ -51,34 +51,35 @@ func (h *DryRunTasksHandler) CreateDryRunTask(w http.ResponseWriter, r *http.Req
 	// Check if task exists
 	if _, ok := h.drivers.Get(req.Name); ok {
 		logger.Trace("task already exists", "task_name", req.Name)
-		sendError(w, r, http.StatusBadRequest, fmt.Sprintf("task with name %s already exists", req.Name))
+		sendError(w, r, http.StatusBadRequest,
+			fmt.Sprintf("task with name %s already exists", req.Name))
 		return
 	}
 
 	// Convert task request to task configuration
 	taskConf, err := req.ToTaskRequestConfig(config.DefaultBufferPeriodConfig(), h.workingDir)
 	if err != nil {
-		err = fmt.Errorf("error converting dry run task request to task config, %s", err)
+		err = fmt.Errorf("error with task configuration: %s", err)
 		logger.Error("error creating dry run task", "error", err)
-		sendError(w, r, http.StatusInternalServerError, err.Error())
+		sendError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Create a temporary driver that will be discarded at the end of request
 	d, err := h.createNewTaskDriver(taskConf.TaskConfig, taskConf.variables)
 	if err != nil {
-		err = fmt.Errorf("error creating new task driver: %v", err)
+		err = fmt.Errorf("error creating task driver: %v", err)
 		logger.Error("error creating dry run task", "error", err)
-		sendError(w, r, http.StatusInternalServerError, err.Error())
+		sendError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Initialize the new task
 	err = initNewTask(r.Context(), d, "")
 	if err != nil {
-		err = fmt.Errorf("error initializing new task: %s", err)
-		logger.Error("error creating task", "error", err)
-		sendError(w, r, http.StatusInternalServerError, err.Error())
+		err = fmt.Errorf("error initializing task: %s", err)
+		logger.Error("error creating dry run task", "error", err)
+		sendError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -87,7 +88,7 @@ func (h *DryRunTasksHandler) CreateDryRunTask(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		err = fmt.Errorf("error inspecting task: %s", err)
 		logger.Error("error creating dry run task", "error", err)
-		sendError(w, r, http.StatusInternalServerError, err.Error())
+		sendError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
