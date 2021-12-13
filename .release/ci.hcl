@@ -4,7 +4,7 @@ project "consul-terraform-sync" {
   team = "consul api tooling"
   slack {
     # feed-consul-api-gh
-    notification_channel = "C026W707YHJ" 
+    notification_channel = "C026W707YHJ"
   }
   github {
     organization = "hashicorp"
