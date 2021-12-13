@@ -67,16 +67,16 @@ func TestNewFiles(t *testing.T) {
 				},
 			},
 		}, {
-			Name:   "main.tf (catalog-services condition - source_includes_var)",
+			Name:   "main.tf (catalog-services - include)",
 			Func:   newMainTF,
-			Golden: "testdata/catalog-services-condition/main_include.tf",
+			Golden: "testdata/catalog-services/main_include.tf",
 			Input: RootModuleInputData{
 				Backend: map[string]interface{}{},
-				Condition: &CatalogServicesCondition{
-					CatalogServicesMonitor{
-						Regexp: ".*",
+				Templates: []Template{
+					&CatalogServicesTemplate{
+						Regexp:            ".*",
+						SourceIncludesVar: true,
 					},
-					true,
 				},
 				Task: task,
 			},
@@ -101,16 +101,16 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "variables.tf (catalog-services condition - source_includes_var)",
+			Name:   "variables.tf (catalog-services - include)",
 			Func:   newVariablesTF,
-			Golden: "testdata/catalog-services-condition/variables_include.tf",
+			Golden: "testdata/catalog-services/variables_include.tf",
 			Input: RootModuleInputData{
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
-				Condition: &CatalogServicesCondition{
-					CatalogServicesMonitor{
-						Regexp: ".*",
+				Templates: []Template{
+					&CatalogServicesTemplate{
+						Regexp:            ".*",
+						SourceIncludesVar: true,
 					},
-					true,
 				},
 				Task: task,
 			},
@@ -119,36 +119,36 @@ func TestNewFiles(t *testing.T) {
 			Func:   newVariablesTF,
 			Golden: "testdata/consul-kv/variables.tf",
 			Input: RootModuleInputData{
-				Condition: &ConsulKVCondition{
-					ConsulKVMonitor{
-						Path:       "key-path",
-						Datacenter: "dc1",
+				Templates: []Template{
+					&ConsulKVTemplate{
+						Path:              "key-path",
+						Datacenter:        "dc1",
+						SourceIncludesVar: true,
 					},
-					true,
 				},
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
 				Task:             task,
 			},
 		}, {
-			Name:   "variables.tf (source_input consul-kv)",
+			Name:   "variables.tf (consul-kv - include)",
 			Func:   newVariablesTF,
 			Golden: "testdata/consul-kv/variables.tf",
 			Input: RootModuleInputData{
-				SourceInput: &ConsulKVSourceInput{
-					ConsulKVMonitor{
-						Path:       "key-path",
-						Datacenter: "dc1",
+				Templates: []Template{
+					&ConsulKVTemplate{
+						Path:              "key-path",
+						Datacenter:        "dc1",
+						SourceIncludesVar: true,
 					},
 				},
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
 				Task:             task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (services condition)",
+			Name:   "terraform.tfvars.tmpl (services list)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Condition: &ServicesCondition{},
 				Services: []Service{
 					{
 						Name:        "web",
@@ -165,99 +165,32 @@ func TestNewFiles(t *testing.T) {
 			},
 		},
 		{
-			Name:   "terraform.tfvars.tmpl (services condition SourceIncludesVar true, empty SourceInput)",
+			Name:   "terraform.tfvars.tmpl (services - includes)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/terraform_services_source_input.tmpl",
 			Input: RootModuleInputData{
-				Condition: &ServicesCondition{
-					ServicesMonitor{
-						Regexp:     ".*",
-						Datacenter: "dc1",
-						Namespace:  "ns1",
-						Filter:     "some-filter",
-					},
-					true,
-				},
-				Task:        task,
-				SourceInput: &ServicesSourceInput{},
-			},
-		},
-		{
-			Name:   "terraform.tfvars.tmpl (services source_input with empty services condition)",
-			Func:   newTFVarsTmpl,
-			Golden: "testdata/terraform_services_source_input.tmpl",
-			Input: RootModuleInputData{
-				Condition: &ServicesCondition{},
-				Task:      task,
-				SourceInput: &ServicesSourceInput{
-					ServicesMonitor{
-						Regexp:     ".*",
-						Datacenter: "dc1",
-						Namespace:  "ns1",
-						Filter:     "some-filter",
-					},
-				},
-			},
-		},
-		{
-			Name:   "terraform.tfvars.tmpl (services source_input with services condition SourceIncludesVar true)",
-			Func:   newTFVarsTmpl,
-			Golden: "testdata/terraform_services_source_input.tmpl",
-			Input: RootModuleInputData{
-				Condition: &ServicesCondition{
-					ServicesMonitor{
-						Regexp: "^api.*",
-					},
-					true,
-				},
 				Task: task,
-				SourceInput: &ServicesSourceInput{
-					ServicesMonitor{
-						Regexp:     ".*",
-						Datacenter: "dc1",
-						Namespace:  "ns1",
-						Filter:     "some-filter",
+				Templates: []Template{
+					&ServicesTemplate{
+						Regexp:            ".*",
+						Datacenter:        "dc1",
+						Namespace:         "ns1",
+						Filter:            "some-filter",
+						SourceIncludesVar: true,
 					},
 				},
 			},
 		},
 		{
-			Name:   "terraform.tfvars.tmpl (services source_input with services list)",
+			Name:   "terraform.tfvars.tmpl (catalog-services - includes false)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/terraform_services_source_input.tmpl",
+			Golden: "testdata/catalog-services/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Condition: &ServicesCondition{},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
+				Templates: []Template{
+					&CatalogServicesTemplate{
+						Regexp:            ".*",
+						SourceIncludesVar: false,
 					},
-				},
-				Task: task,
-				SourceInput: &ServicesSourceInput{
-					ServicesMonitor{
-						Regexp:     ".*",
-						Datacenter: "dc1",
-						Namespace:  "ns1",
-						Filter:     "some-filter",
-					},
-				},
-			},
-		}, {
-			Name:   "terraform.tfvars.tmpl (catalog-services condition)",
-			Func:   newTFVarsTmpl,
-			Golden: "testdata/catalog-services-condition/terraform.tfvars.tmpl",
-			Input: RootModuleInputData{
-				Condition: &CatalogServicesCondition{
-					CatalogServicesMonitor{
-						Regexp: ".*",
-					},
-					false,
 				},
 				Services: []Service{
 					{
@@ -274,15 +207,15 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (catalog-services condition - source_includes_var)",
+			Name:   "terraform.tfvars.tmpl (catalog-services - includes)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/catalog-services-condition/terraform_include.tfvars.tmpl",
+			Golden: "testdata/catalog-services/terraform_include.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Condition: &CatalogServicesCondition{
-					CatalogServicesMonitor{
-						Regexp: "^web.*|^api.*",
+				Templates: []Template{
+					&CatalogServicesTemplate{
+						Regexp:            "^web.*|^api.*",
+						SourceIncludesVar: true,
 					},
-					true,
 				},
 				Services: []Service{
 					{
@@ -299,17 +232,17 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (catalog-services condition - filtering)",
+			Name:   "terraform.tfvars.tmpl (catalog-services w filtering - includes)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/catalog-services-condition/terraform_filter.tfvars.tmpl",
+			Golden: "testdata/catalog-services/terraform_filter.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Condition: &CatalogServicesCondition{
-					CatalogServicesMonitor{
-						Regexp:     "^web.*|^api.*",
-						Datacenter: "dc1",
-						NodeMeta:   map[string]string{"k": "v"},
+				Templates: []Template{
+					&CatalogServicesTemplate{
+						Regexp:            "^web.*|^api.*",
+						Datacenter:        "dc1",
+						NodeMeta:          map[string]string{"k": "v"},
+						SourceIncludesVar: true,
 					},
-					true,
 				},
 				Services: []Service{
 					{
@@ -326,29 +259,29 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (catalog-services condition - no services)",
+			Name:   "terraform.tfvars.tmpl (catalog-services & no services)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/catalog-services-condition/terraform_no_services.tfvars.tmpl",
+			Golden: "testdata/catalog-services/terraform_no_services.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Condition: &CatalogServicesCondition{
-					CatalogServicesMonitor{
-						Regexp: ".*",
+				Templates: []Template{
+					&CatalogServicesTemplate{
+						Regexp:            ".*",
+						SourceIncludesVar: false,
 					},
-					false,
 				},
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv condition no namespace)",
+			Name:   "terraform.tfvars.tmpl (consul-kv w no namespace - includes false)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Condition: &ConsulKVCondition{
-					ConsulKVMonitor{
-						Path:       "key-path",
-						Datacenter: "dc1",
+				Templates: []Template{
+					&ConsulKVTemplate{
+						Path:              "key-path",
+						Datacenter:        "dc1",
+						SourceIncludesVar: false,
 					},
-					false,
 				},
 				Services: []Service{
 					{
@@ -365,17 +298,17 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv condition)",
+			Name:   "terraform.tfvars.tmpl (consul-kv - includes false)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_namespace.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Condition: &ConsulKVCondition{
-					ConsulKVMonitor{
-						Path:       "key-path",
-						Datacenter: "dc1",
-						Namespace:  "test-ns",
+				Templates: []Template{
+					&ConsulKVTemplate{
+						Path:              "key-path",
+						Datacenter:        "dc1",
+						Namespace:         "test-ns",
+						SourceIncludesVar: false,
 					},
-					false,
 				},
 				Services: []Service{
 					{
@@ -392,16 +325,16 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv condition includes vars)",
+			Name:   "terraform.tfvars.tmpl (consul-kv - includes)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_includes_vars.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Condition: &ConsulKVCondition{
-					ConsulKVMonitor{
-						Path:       "key-path",
-						Datacenter: "dc1",
+				Templates: []Template{
+					&ConsulKVTemplate{
+						Path:              "key-path",
+						Datacenter:        "dc1",
+						SourceIncludesVar: true,
 					},
-					true,
 				},
 				Services: []Service{
 					{
@@ -418,17 +351,17 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv condition includes vars recurse true)",
+			Name:   "terraform.tfvars.tmpl (consul-kv w recurse - includes)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_recurse_true.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Condition: &ConsulKVCondition{
-					ConsulKVMonitor{
-						Path:       "key-path",
-						Datacenter: "dc1",
-						Recurse:    true,
+				Templates: []Template{
+					&ConsulKVTemplate{
+						Path:              "key-path",
+						Datacenter:        "dc1",
+						Recurse:           true,
+						SourceIncludesVar: true,
 					},
-					true,
 				},
 				Services: []Service{
 					{
@@ -445,67 +378,16 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv condition includes vars false recurse true)",
+			Name:   "terraform.tfvars.tmpl (consul-kv w recurse - includes false)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_recurse_true_include_false.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Condition: &ConsulKVCondition{
-					ConsulKVMonitor{
-						Path:       "key-path",
-						Datacenter: "dc1",
-						Recurse:    true,
-					},
-					false,
-				},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
-					},
-				},
-				Task: task,
-			},
-		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv source_input)",
-			Func:   newTFVarsTmpl,
-			Golden: "testdata/consul-kv/terraform_includes_vars.tfvars.tmpl",
-			Input: RootModuleInputData{
-				SourceInput: &ConsulKVSourceInput{
-					ConsulKVMonitor{
-						Path:       "key-path",
-						Datacenter: "dc1",
-					},
-				},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
-					},
-				},
-				Task: task,
-			},
-		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv source_input recurse true)",
-			Func:   newTFVarsTmpl,
-			Golden: "testdata/consul-kv/terraform_recurse_true.tfvars.tmpl",
-			Input: RootModuleInputData{
-				SourceInput: &ConsulKVSourceInput{
-					ConsulKVMonitor{
-						Path:       "key-path",
-						Datacenter: "dc1",
-						Recurse:    true,
+				Templates: []Template{
+					&ConsulKVTemplate{
+						Path:              "key-path",
+						Datacenter:        "dc1",
+						Recurse:           true,
+						SourceIncludesVar: false,
 					},
 				},
 				Services: []Service{

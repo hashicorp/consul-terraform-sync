@@ -172,23 +172,22 @@ func TestAppendRootProviderBlocks(t *testing.T) {
 
 func TestAppendRootModuleBlocks(t *testing.T) {
 	testCases := []struct {
-		name     string
-		task     Task
-		cond     Condition
-		si       SourceInput
-		varNames []string
-		expected string
+		name      string
+		task      Task
+		templates []Template
+		varNames  []string
+		expected  string
 	}{
 		{
-			name: "module without conditions or variables",
+			name: "module without templates or variables",
 			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond:     nil,
-			varNames: nil,
+			templates: []Template{},
+			varNames:  nil,
 			expected: `# user description for task named 'test'
 module "test" {
   source   = "namespace/example/test-module"
@@ -197,18 +196,18 @@ module "test" {
 }
 `},
 		{
-			name: "module with catalog service conditions",
+			name: "module with catalog-service template",
 			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond: &CatalogServicesCondition{
-				CatalogServicesMonitor: CatalogServicesMonitor{
-					Regexp: ".*",
+			templates: []Template{
+				&CatalogServicesTemplate{
+					Regexp:            ".*",
+					SourceIncludesVar: true,
 				},
-				SourceIncludesVar: true,
 			},
 			varNames: nil,
 			expected: `# user description for task named 'test'
@@ -227,8 +226,8 @@ module "test" {
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond:     nil,
-			varNames: []string{"test1", "test2"},
+			templates: []Template{},
+			varNames:  []string{"test1", "test2"},
 			expected: `# user description for task named 'test'
 module "test" {
   source   = "namespace/example/test-module"
@@ -247,11 +246,11 @@ module "test" {
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond: &CatalogServicesCondition{
-				CatalogServicesMonitor: CatalogServicesMonitor{
-					Regexp: ".*",
+			templates: []Template{
+				&CatalogServicesTemplate{
+					Regexp:            ".*",
+					SourceIncludesVar: true,
 				},
-				SourceIncludesVar: true,
 			},
 			varNames: nil,
 			expected: `# user description for task named 'test'
@@ -268,7 +267,7 @@ module "test" {
 		t.Run(tc.name, func(t *testing.T) {
 			hclFile := hclwrite.NewEmptyFile()
 			body := hclFile.Body()
-			appendRootModuleBlock(body, tc.task, tc.varNames, tc.cond, tc.si)
+			appendRootModuleBlock(body, tc.task, tc.varNames, tc.templates...)
 
 			content := hclFile.Bytes()
 			content = hclwrite.Format(content)

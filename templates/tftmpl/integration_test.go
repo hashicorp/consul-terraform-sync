@@ -63,7 +63,6 @@ func TestInitRootModule(t *testing.T) {
 			Source:      "namespace/consul-terraform-sync/consul//modules/test",
 			Version:     "0.0.0",
 		},
-		Condition: &ServicesCondition{},
 		Variables: hcltmpl.Variables{
 			"one":       cty.NumberIntVal(1),
 			"bool_true": cty.BoolVal(true),
@@ -160,7 +159,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		{
 			"happy path (catalog-services condition - default values)",
 			"testdata/terraform.tfvars",
-			"testdata/catalog-services-condition/terraform.tfvars.tmpl",
+			"testdata/catalog-services/terraform.tfvars.tmpl",
 			true,
 			true,
 			false,
@@ -170,8 +169,8 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		},
 		{
 			"happy path (catalog-services condition - source_includes_var)",
-			"testdata/catalog-services-condition/terraform_include.tfvars",
-			"testdata/catalog-services-condition/terraform_include.tfvars.tmpl",
+			"testdata/catalog-services/terraform_include.tfvars",
+			"testdata/catalog-services/terraform_include.tfvars.tmpl",
 			true,
 			true,
 			false,
@@ -181,8 +180,8 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		},
 		{
 			"happy path (catalog-services condition - with filtering)",
-			"testdata/catalog-services-condition/terraform_filter.tfvars",
-			"testdata/catalog-services-condition/terraform_filter.tfvars.tmpl",
+			"testdata/catalog-services/terraform_filter.tfvars",
+			"testdata/catalog-services/terraform_filter.tfvars.tmpl",
 			false,
 			false,
 			true,

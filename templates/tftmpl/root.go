@@ -142,8 +142,7 @@ type RootModuleInputData struct {
 	Services         []Service
 	Task             Task
 	Variables        hcltmpl.Variables
-	Condition        Condition
-	SourceInput      SourceInput
+	Templates        []Template
 
 	Path      string
 	FilePerms os.FileMode
@@ -248,7 +247,7 @@ func newMainTF(w io.Writer, filename string, input *RootModuleInputData) error {
 	rootBody.AppendNewline()
 	appendRootProviderBlocks(rootBody, input.Providers)
 	rootBody.AppendNewline()
-	appendRootModuleBlock(rootBody, input.Task, input.Variables.Keys(), input.Condition, input.SourceInput)
+	appendRootModuleBlock(rootBody, input.Task, input.Variables.Keys(), input.Templates...)
 
 	// Format the file before writing
 	content := hclFile.Bytes()
@@ -345,7 +344,7 @@ func appendRootProviderBlocks(body *hclwrite.Body, providers []hcltmpl.NamedBloc
 }
 
 // appendRootModuleBlock appends a Terraform module block for the task
-func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string, monitors ...Monitor) {
+func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string, templates ...Template) {
 
 	// Add user description for task above the module block
 	if task.Description != "" {
@@ -366,9 +365,9 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string, mo
 		hcl.TraverseAttr{Name: "services"},
 	})
 
-	for _, m := range monitors {
-		if m != nil && m.SourceIncludesVariable() {
-			m.appendModuleAttribute(moduleBody)
+	for _, t := range templates {
+		if t != nil && t.SourceIncludesVariable() {
+			t.appendModuleAttribute(moduleBody)
 		}
 	}
 
