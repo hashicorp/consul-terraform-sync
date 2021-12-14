@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -18,14 +17,11 @@ import (
 
 func NewTestTerraformCLI(config *TerraformCLIConfig, tfMock *mocks.TerraformExec) *TerraformCLI {
 	if tfMock == nil {
-		tfvars := tfexec.VarFile("terraform.tfvars")
-		ptfvars := tfexec.VarFile("providers.tfvars")
-
 		m := new(mocks.TerraformExec)
 		m.On("SetEnv", mock.Anything).Return(nil)
 		m.On("Init", mock.Anything).Return(nil)
-		m.On("Apply", mock.Anything, tfvars, ptfvars).Return(nil)
-		m.On("Plan", mock.Anything, tfvars, ptfvars).Return(true, nil)
+		m.On("Apply", mock.Anything).Return(nil)
+		m.On("Plan", mock.Anything).Return(true, nil)
 		m.On("WorkspaceNew", mock.Anything, mock.Anything).Return(nil)
 		tfMock = m
 	}
@@ -82,16 +78,6 @@ func TestNewTerraformCLI(t *testing.T) {
 				Workspace:  "my-workspace",
 			},
 		},
-		{
-			"variable files",
-			false,
-			&TerraformCLIConfig{
-				ExecPath:   "path/to/tf",
-				WorkingDir: "./",
-				Workspace:  "my-workspace",
-				VarFiles:   []string{"variables.tf", "/path/to/variables.tf"},
-			},
-		},
 	}
 
 	for _, tc := range cases {
@@ -105,10 +91,6 @@ func TestNewTerraformCLI(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.NotNil(t, actual)
-
-			for _, vf := range actual.varFiles {
-				assert.True(t, filepath.IsAbs(vf), "Expected absolute path for variable files")
-			}
 		})
 	}
 }

@@ -60,7 +60,6 @@ type Task struct {
 	providerInfo map[string]interface{}  // driver.required_provider config info
 	services     []Service
 	source       string
-	varFiles     []string
 	variables    hcltmpl.Variables // loaded variables from varFiles
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
@@ -89,6 +88,7 @@ type TaskConfig struct {
 }
 
 func NewTask(conf TaskConfig) (*Task, error) {
+	// Load all variables from passed in variable files
 	loadedVars := make(hcltmpl.Variables)
 	for _, vf := range conf.VarFiles {
 		tfvars, err := tftmpl.LoadModuleVariables(vf)
@@ -100,6 +100,16 @@ func NewTask(conf TaskConfig) (*Task, error) {
 			loadedVars[k] = v
 		}
 	}
+
+	// Load all variables from passed in variables map
+	tfvars, err := tftmpl.ParseModuleVariablesFromMap(conf.Variables)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range tfvars {
+		loadedVars[k] = v
+	}
+
 	return &Task{
 		description:  conf.Description,
 		name:         conf.Name,
@@ -109,7 +119,6 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		providerInfo: conf.ProviderInfo,
 		services:     conf.Services,
 		source:       conf.Source,
-		varFiles:     conf.VarFiles,
 		variables:    loadedVars,
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
@@ -247,19 +256,6 @@ func (t *Task) Source() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.source
-}
-
-// VariableFiles returns a copy of the list of configured variable files
-// for the task's module.
-func (t *Task) VariableFiles() []string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	varFiles := make([]string, len(t.varFiles))
-	for i, vf := range t.varFiles {
-		varFiles[i] = vf
-	}
-	return varFiles
 }
 
 // Variables returns a copy of the loaded input variables for a module
@@ -416,7 +412,6 @@ type clientConfig struct {
 	taskName   string
 	persistLog bool
 	path       string
-	varFiles   []string
 	workingDir string
 }
 
@@ -447,7 +442,6 @@ func newClient(conf *clientConfig) (client.Client, error) {
 			ExecPath:   conf.path,
 			WorkingDir: conf.workingDir,
 			Workspace:  taskName,
-			VarFiles:   conf.varFiles,
 		})
 	}
 

@@ -102,7 +102,6 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		persistLog: config.PersistLog,
 		path:       config.Path,
 		workingDir: wd,
-		varFiles:   task.VariableFiles(),
 	})
 	if err != nil {
 		logger.Error("init client type error", "client_type", config.ClientType, "error", err)
