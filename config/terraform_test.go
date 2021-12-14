@@ -25,9 +25,8 @@ func TestTerraformConfig_Copy(t *testing.T) {
 		}, {
 			"same_enabled",
 			&TerraformConfig{
-				Log:        Bool(true),
-				Path:       String("path"),
-				WorkingDir: String("working"),
+				Log:  Bool(true),
+				Path: String("path"),
 				Backend: map[string]interface{}{"consul": map[string]interface{}{
 					"path": "consul-terraform-sync/terraform",
 				}},
@@ -172,30 +171,6 @@ func TestTerraformConfig_Merge(t *testing.T) {
 			&TerraformConfig{Path: String("path")},
 			&TerraformConfig{Path: String("path")},
 			&TerraformConfig{Path: String("path")},
-		},
-		{
-			"working_dir_overrides",
-			&TerraformConfig{WorkingDir: String("working")},
-			&TerraformConfig{WorkingDir: String("")},
-			&TerraformConfig{WorkingDir: String("")},
-		},
-		{
-			"working_dir_empty_one",
-			&TerraformConfig{WorkingDir: String("working")},
-			&TerraformConfig{},
-			&TerraformConfig{WorkingDir: String("working")},
-		},
-		{
-			"working_dir_empty_two",
-			&TerraformConfig{},
-			&TerraformConfig{WorkingDir: String("working")},
-			&TerraformConfig{WorkingDir: String("working")},
-		},
-		{
-			"working_dir_same",
-			&TerraformConfig{WorkingDir: String("working")},
-			&TerraformConfig{WorkingDir: String("working")},
-			&TerraformConfig{WorkingDir: String("working")},
 		},
 		{
 			"backend_overrides",
@@ -421,7 +396,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:               Bool(false),
 				PersistLog:        Bool(false),
 				Path:              String(wd),
-				WorkingDir:        nil,
 				Backend:           map[string]interface{}{},
 				RequiredProviders: map[string]interface{}{},
 			},
@@ -435,7 +409,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
-				WorkingDir: nil,
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"address": *consul.Address,
@@ -461,7 +434,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
-				WorkingDir: nil,
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"address":   *consul.Address,
@@ -488,7 +460,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(wd),
-				WorkingDir: nil,
 				Backend: map[string]interface{}{
 					"consul": map[string]interface{}{
 						"address": "127.0.0.1:8080",
@@ -506,7 +477,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:        Bool(false),
 				PersistLog: Bool(false),
 				Path:       String(""),
-				WorkingDir: nil,
 			},
 			nil,
 			&TerraformConfig{
@@ -514,7 +484,6 @@ func TestTerraformConfig_Finalize(t *testing.T) {
 				Log:               Bool(false),
 				PersistLog:        Bool(false),
 				Path:              String(wd),
-				WorkingDir:        nil,
 				Backend:           map[string]interface{}{},
 				RequiredProviders: map[string]interface{}{},
 			},
