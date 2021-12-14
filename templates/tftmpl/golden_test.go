@@ -450,6 +450,37 @@ func TestNewFiles(t *testing.T) {
 				},
 				Task: task,
 			},
+		}, {
+			Name:   "variables_detailed.auto.tfvars",
+			Func:   newVariablesTFVars,
+			Golden: "testdata/variables.auto.tfvars",
+			Input: RootModuleInputData{
+				Variables: hcltmpl.Variables{
+					"num": cty.NumberIntVal(10),
+					"b":   cty.BoolVal(true),
+					"key": cty.StringVal("some_key"),
+					"obj": cty.ObjectVal(map[string]cty.Value{
+						"argStr": cty.StringVal("value"),
+						"argNum": cty.NumberFloatVal(-0.52),
+						"argList": cty.ListVal([]cty.Value{
+							cty.StringVal("a"),
+							cty.StringVal("b"),
+							cty.StringVal("c"),
+						}),
+						"argMap": cty.MapValEmpty(cty.Bool),
+					}),
+					"l": cty.ListVal([]cty.Value{
+						cty.NumberIntVal(4),
+						cty.NumberIntVal(0),
+					}),
+					"tup": cty.TupleVal([]cty.Value{
+						cty.StringVal("abc"),
+						cty.NumberIntVal(123),
+						cty.BoolVal(false),
+					}),
+				},
+				Task: task,
+			},
 		},
 	}
 
@@ -458,6 +489,7 @@ func TestNewFiles(t *testing.T) {
 			input := tc.Input
 			input.init()
 			b := new(bytes.Buffer)
+
 			err := tc.Func(b, tc.Name, &input)
 			require.NoError(t, err)
 			checkGoldenFile(t, tc.Golden, b.String())

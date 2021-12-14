@@ -3,6 +3,7 @@ package tftmpl
 import (
 	"fmt"
 	"io"
+	"sort"
 
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -85,9 +86,18 @@ func newVariablesTFVars(w io.Writer, filename string, input *RootModuleInputData
 	body := hclFile.Body()
 	body.AppendNewline()
 
-	for k, v := range input.Variables {
-		body.SetAttributeValue(k, v)
+	// Order the keys so that we are always guaranteed to generate the same file given
+	// the same variables
+	keys := make([]string, 0, len(input.Variables))
+	for k := range input.Variables {
+		keys = append(keys, k)
 	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		body.SetAttributeValue(k, input.Variables[k])
+	}
+
 	body.AppendNewline()
 
 	_, err = hclFile.WriteTo(w)
