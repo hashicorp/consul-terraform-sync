@@ -55,7 +55,7 @@ const (
 	// configured Terraform providers. Generated provider input variables are
 	// written in a separate file from terraform.tfvars because it may contain
 	// sensitive or secret values.
-	ProvidersTFVarsFilename = "providers.tfvars"
+	ProvidersTFVarsFilename = "providers.auto.tfvars"
 )
 
 var (
