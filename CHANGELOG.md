@@ -1,8 +1,8 @@
 ## UNRELEASED
 
 BREAKING CHANGES:
-* **(Enterprise Only)** Remove unexpected `-` character added between `workspace_prefix` and the task name. [[GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442)]
-  * If the `workspace_prefix` option is in use by CTS v0.3.x or v0.4.x for the Terraform Cloud driver, append "-" to the prefix in the configuration file prior to updating to v0.5.0 to continue automating the same Terraform Cloud workspaces for your CTS tasks.
+* **(Enterprise Only)** Deprecate `workspace_prefix` for the Terraform Cloud driver that adds unexpected `-` character added between the prefix and task name. Use the new `workspaces.prefix` option instead. [[GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442)]
+  * If the `workspace_prefix` option is in use by CTS v0.3.x or v0.4.x for the Terraform Cloud driver, visit [GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442) for upgrade guidelines.
 * Stop monitoring and including non-passing service instances in `terraform.tfvars` by default. CTS should only monitor passing service instances unless configured otherwise. [[GH-430](https://github.com/hashicorp/consul-terraform-sync/issues/430)]
 * Removed `driver.terraform.working_dir` configuration option that was deprecated in v0.3.0. Use top-level `working_dir` to configure parent directory for all tasks or `task.working_dir` to configure per task. [[GH-548](https://github.com/hashicorp/consul-terraform-sync/pull/548)]
 
