@@ -42,7 +42,9 @@ const (
 	TFVarsFilename = "terraform.tfvars"
 
 	// VarsTFVarsFileName is the file name for a tfvars file which is generated and contains
-	// variables provided as part of the task configuration
+	// variables provided as part of the task configuration. Using the *auto.tfvars naming convention
+	// allows for Terraform to use this file automatically as long as the generated file in Terraform's
+	// working directory
 	VarsTFVarsFileName = "variables.auto.tfvars"
 
 	// TFVarsTmplFilename is the template file for TFVarsFilename. This is used

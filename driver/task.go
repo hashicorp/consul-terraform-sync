@@ -3,7 +3,6 @@ package driver
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -61,7 +60,6 @@ type Task struct {
 	providerInfo map[string]interface{}  // driver.required_provider config info
 	services     []Service
 	source       string
-	varFile      string
 	variables    hcltmpl.Variables // loaded variables from varFiles
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
@@ -90,6 +88,7 @@ type TaskConfig struct {
 }
 
 func NewTask(conf TaskConfig) (*Task, error) {
+	// Load all variables from passed in variable files
 	loadedVars := make(hcltmpl.Variables)
 	for _, vf := range conf.VarFiles {
 		tfvars, err := tftmpl.LoadModuleVariables(vf)
@@ -102,18 +101,13 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		}
 	}
 
+	// Load all variables from passed in variables map
 	tfvars, err := tftmpl.ParseModuleVariablesFromMap(conf.Variables)
 	if err != nil {
 		return nil, err
 	}
 	for k, v := range tfvars {
 		loadedVars[k] = v
-	}
-
-	// If variables are loaded, set the variables output file
-	var varFilesOut string
-	if len(loadedVars) != 0 {
-		varFilesOut = filepath.Join(conf.WorkingDir, tftmpl.VarsTFVarsFileName)
 	}
 
 	return &Task{
@@ -125,7 +119,6 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		providerInfo: conf.ProviderInfo,
 		services:     conf.Services,
 		source:       conf.Source,
-		varFile:      varFilesOut,
 		variables:    loadedVars,
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
@@ -263,22 +256,6 @@ func (t *Task) Source() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.source
-}
-
-// VariableFiles returns a copy of the configured variable file
-// for the task's module as a list.
-func (t *Task) VariableFiles() []string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	// In the future may be worth refactoring for Terraform CLI to only expect a
-	// single varFile, for now this is useful
-	var varFiles []string
-	if len(t.varFile) != 0 {
-		varFiles = []string{t.varFile}
-	}
-
-	return varFiles
 }
 
 // Variables returns a copy of the loaded input variables for a module
@@ -435,7 +412,6 @@ type clientConfig struct {
 	taskName   string
 	persistLog bool
 	path       string
-	varFiles   []string
 	workingDir string
 }
 
@@ -466,7 +442,6 @@ func newClient(conf *clientConfig) (client.Client, error) {
 			ExecPath:   conf.path,
 			WorkingDir: conf.workingDir,
 			Workspace:  taskName,
-			VarFiles:   conf.varFiles,
 		})
 	}
 

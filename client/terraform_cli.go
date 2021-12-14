@@ -32,7 +32,6 @@ type TerraformCLI struct {
 	tf         terraformExec
 	workingDir string
 	workspace  string
-	varFiles   []string
 	logger     logging.Logger
 }
 
@@ -43,7 +42,7 @@ type TerraformCLIConfig struct {
 	ExecPath   string
 	WorkingDir string
 	Workspace  string
-	VarFiles   []string
+	VarFile    string
 }
 
 // NewTerraformCLI creates a terraform-exec client and configures and
@@ -86,19 +85,20 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	}
 
 	// Expand any relative paths for variable files to absolute paths
-	varFiles := make([]string, 0, len(config.VarFiles))
-	for _, vf := range config.VarFiles {
-		if !filepath.IsAbs(vf) {
+
+	var varFile string
+	if len(varFile) != 0 {
+		if !filepath.IsAbs(config.VarFile) {
 			wd, err := os.Getwd()
 			if err != nil {
 				logger.Error("unable to retrieve current " + "" +
 					"working directory to determine path to variable files")
 				return nil, err
 			}
-			vfAbs := filepath.Join(wd, vf)
-			varFiles = append(varFiles, vfAbs)
+			vfAbs := filepath.Join(wd, config.VarFile)
+			varFile = vfAbs
 		} else {
-			varFiles = append(varFiles, filepath.Clean(vf))
+			varFile = filepath.Clean(config.VarFile)
 		}
 	}
 
@@ -106,7 +106,6 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 		tf:         tf,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
-		varFiles:   varFiles,
 		logger:     logger,
 	}
 	logger.Trace("created Terraform CLI client", "client", client.GoString())
@@ -182,9 +181,6 @@ func (t *TerraformCLI) Apply(ctx context.Context) error {
 		tfexec.VarFile(tftmpl.TFVarsFilename),
 		tfexec.VarFile(tftmpl.ProvidersTFVarsFilename),
 	}
-	for _, vf := range t.varFiles {
-		opts = append(opts, tfexec.VarFile(vf))
-	}
 
 	return t.tf.Apply(ctx, opts...)
 }
@@ -195,9 +191,6 @@ func (t *TerraformCLI) Plan(ctx context.Context) (bool, error) {
 	opts := []tfexec.PlanOption{
 		tfexec.VarFile(tftmpl.TFVarsFilename),
 		tfexec.VarFile(tftmpl.ProvidersTFVarsFilename),
-	}
-	for _, vf := range t.varFiles {
-		opts = append(opts, tfexec.VarFile(vf))
 	}
 
 	return t.tf.Plan(ctx, opts...)
@@ -257,10 +250,8 @@ func (t *TerraformCLI) GoString() string {
 	return fmt.Sprintf("&TerraformCLI{"+
 		"WorkingDir:%s, "+
 		"WorkSpace:%s, "+
-		"VarFiles:%s"+
 		"}",
 		t.workingDir,
 		t.workspace,
-		t.varFiles,
 	)
 }
