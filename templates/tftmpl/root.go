@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/internal/hcl2shim"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -113,32 +112,6 @@ type Service struct {
 
 type tfFileFunc func(io.Writer, string, *RootModuleInputData) error
 
-// hcatQuery prepares formatted parameters that satisfies hcat
-// query syntax to make Consul requests to /v1/health/service/:service
-func (s Service) hcatQuery() string {
-	var opts []string
-
-	if s.Datacenter != "" {
-		opts = append(opts, fmt.Sprintf("dc=%s", s.Datacenter))
-	}
-
-	if s.Namespace != "" {
-		opts = append(opts, fmt.Sprintf("ns=%s", s.Namespace))
-	}
-
-	if s.Filter != "" {
-		filter := strings.ReplaceAll(s.Filter, `"`, `\"`)
-		filter = strings.Trim(filter, "\n")
-		opts = append(opts, filter)
-	}
-
-	query := fmt.Sprintf("%q", s.Name)
-	if len(opts) > 0 {
-		query = query + ` "` + strings.Join(opts, `" "`) + `"`
-	}
-	return query
-}
-
 // RootModuleInputData is the input data used to generate the root module
 type RootModuleInputData struct {
 	TerraformVersion *goVersion.Version
@@ -172,10 +145,6 @@ func (d *RootModuleInputData) init() {
 
 	sort.Slice(d.Providers, func(i, j int) bool {
 		return d.Providers[i].Name < d.Providers[j].Name
-	})
-
-	sort.Slice(d.Services, func(i, j int) bool {
-		return d.Services[i].Name < d.Services[j].Name
 	})
 }
 
