@@ -334,7 +334,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			SourceIncludesVar: *v.SourceIncludesVar,
 		}
 	case *config.ServicesConditionConfig:
-		condition = &tftmpl.ServicesTemplate{
+		condition = &tftmpl.ServicesRegexTemplate{
 			Regexp:     *v.Regexp,
 			Datacenter: *v.Datacenter,
 			Namespace:  *v.Namespace,
@@ -364,7 +364,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	var sourceInput tftmpl.Template
 	switch v := t.sourceInput.(type) {
 	case *config.ServicesSourceInputConfig:
-		sourceInput = &tftmpl.ServicesTemplate{
+		sourceInput = &tftmpl.ServicesRegexTemplate{
 			Regexp:     *v.Regexp,
 			Datacenter: *v.Datacenter,
 			Namespace:  *v.Namespace,
