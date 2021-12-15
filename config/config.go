@@ -220,18 +220,12 @@ func (c *Config) Finalize() {
 	}
 	c.Driver.Finalize()
 
-	// Finalize working dir after driver until deprecated driver.working_dir
-	// is removed.
+	// global working directory and buffer period must be finalized before
+	// resolving task configs
 	if c.WorkingDir == nil {
-		if c.Driver.Terraform != nil && c.Driver.Terraform.WorkingDir != nil {
-			c.WorkingDir = StringCopy(c.Driver.Terraform.WorkingDir)
-		} else {
-			c.WorkingDir = String(DefaultWorkingDir)
-		}
+		c.WorkingDir = String(DefaultWorkingDir)
 	}
 
-	// global buffer period must be finalized before finalizing task in order
-	// to resolve task's buffer period
 	if c.BufferPeriod == nil {
 		c.BufferPeriod = DefaultBufferPeriodConfig()
 	}

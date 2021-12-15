@@ -24,7 +24,6 @@ type TerraformConfig struct {
 	Log               *bool                  `mapstructure:"log"`
 	PersistLog        *bool                  `mapstructure:"persist_log"`
 	Path              *string                `mapstructure:"path"`
-	WorkingDir        *string                `mapstructure:"working_dir"`
 	Backend           map[string]interface{} `mapstructure:"backend"`
 	RequiredProviders map[string]interface{} `mapstructure:"required_providers"`
 }
@@ -114,10 +113,6 @@ func (c *TerraformConfig) Copy() *TerraformConfig {
 		o.Path = StringCopy(c.Path)
 	}
 
-	if c.WorkingDir != nil {
-		o.WorkingDir = StringCopy(c.WorkingDir)
-	}
-
 	if c.Backend != nil {
 		o.Backend = make(map[string]interface{})
 		for k, v := range c.Backend {
@@ -167,10 +162,6 @@ func (c *TerraformConfig) Merge(o *TerraformConfig) *TerraformConfig {
 
 	if o.Path != nil {
 		r.Path = StringCopy(o.Path)
-	}
-
-	if o.WorkingDir != nil {
-		r.WorkingDir = StringCopy(o.WorkingDir)
 	}
 
 	if o.Backend != nil {
@@ -225,17 +216,6 @@ func (c *TerraformConfig) Finalize(consul *ConsulConfig) {
 
 	if c.Path == nil || *c.Path == "" {
 		c.Path = String(wd)
-	}
-
-	if c.WorkingDir != nil {
-		// intentionally left as nil for the top-level config to override
-		// log a warning message if the configuration is not configured to the
-		// default location.
-		logger.Warn("The 'driver.working_dir' configuration " +
-			"option was marked for deprecation in v0.3.0 and will be removed in " +
-			"v0.5.0 of Consul-Terraform-Sync. Please update your configuration " +
-			"to use 'working_dir' or configure the working directory individually " +
-			"for each task with the 'task.working_dir' option.")
 	}
 
 	if c.Backend == nil {
@@ -316,7 +296,6 @@ func (c *TerraformConfig) GoString() string {
 		"Log:%v, "+
 		"PersistLog:%v, "+
 		"Path:%s, "+
-		"WorkingDir:%s, "+
 		"Backend:%+v, "+
 		"RequiredProviders:%+v"+
 		"}",
@@ -324,7 +303,6 @@ func (c *TerraformConfig) GoString() string {
 		BoolVal(c.Log),
 		BoolVal(c.PersistLog),
 		StringVal(c.Path),
-		StringVal(c.WorkingDir),
 		c.Backend,
 		c.RequiredProviders,
 	)

@@ -578,9 +578,8 @@ func singleTaskConfig() *config.Config {
 		},
 		Driver: &config.DriverConfig{
 			Terraform: &config.TerraformConfig{
-				Log:        config.Bool(true),
-				Path:       config.String("path"),
-				WorkingDir: config.String("working"),
+				Log:  config.Bool(true),
+				Path: config.String("path"),
 			},
 		},
 		Tasks: &config.TaskConfigs{
