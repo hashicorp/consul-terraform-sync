@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	_ Template = (*ServicesTemplate)(nil)
+	_ Template = (*ServicesRegexTemplate)(nil)
 )
 
-// ServicesTemplate handles the template for the services variable for the
+// ServicesRegexTemplate handles the template for the services variable for the
 // template function: `{{ servicesRegex }}`
-type ServicesTemplate struct {
+type ServicesRegexTemplate struct {
 	Regexp     string
 	Datacenter string
 	Namespace  string
@@ -25,13 +25,13 @@ type ServicesTemplate struct {
 }
 
 // isServicesVar returns true because the template is for the services variable
-func (t ServicesTemplate) isServicesVar() bool {
+func (t ServicesRegexTemplate) isServicesVar() bool {
 	return true
 }
 
-func (t ServicesTemplate) appendModuleAttribute(*hclwrite.Body) {}
+func (t ServicesRegexTemplate) appendModuleAttribute(*hclwrite.Body) {}
 
-func (t ServicesTemplate) appendTemplate(w io.Writer) error {
+func (t ServicesRegexTemplate) appendTemplate(w io.Writer) error {
 	if t.Regexp == "" {
 		return nil
 	}
@@ -52,18 +52,18 @@ func (t ServicesTemplate) appendTemplate(w io.Writer) error {
 	return nil
 }
 
-func (t ServicesTemplate) appendVariable(io.Writer) error {
+func (t ServicesRegexTemplate) appendVariable(io.Writer) error {
 	return nil
 }
 
 // SourceIncludesVariable returns true if the source variables are to be included in the template.
 // For the case of a service monitor, this always returns true and must be overridden to
 // return based on other conditions.
-func (t ServicesTemplate) SourceIncludesVariable() bool {
+func (t ServicesRegexTemplate) SourceIncludesVariable() bool {
 	return t.SourceIncludesVar
 }
 
-func (t ServicesTemplate) hcatQuery() string {
+func (t ServicesRegexTemplate) hcatQuery() string {
 	var opts []string
 
 	if t.Regexp != "" {
