@@ -219,18 +219,18 @@ func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
 
 // InspectTask inspects for any differences pertaining to the task between
 // the state of Consul and network infrastructure using the Terraform plan command
-func (tf *Terraform) InspectTask(ctx context.Context) error {
+func (tf *Terraform) InspectTask(ctx context.Context) (InspectPlan, error) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
 	if !tf.task.IsEnabled() {
 		tf.logger.Trace(
 			"task disabled. skip inspecting", taskNameLogKey, tf.task.Name())
-		return nil
+		return InspectPlan{}, nil
 	}
 
-	_, err := tf.inspectTask(ctx, false)
-	return err
+	plan, err := tf.inspectTask(ctx, true)
+	return plan, err
 }
 
 // ApplyTask applies the task changes.

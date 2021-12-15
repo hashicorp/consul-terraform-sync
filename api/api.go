@@ -152,7 +152,11 @@ func NewAPI(conf *APIConfig) (*API, error) {
 
 		server := Handlers{
 			TaskLifeCycleHandler: NewTaskLifeCycleHandler(c),
-			DryrunHandler:        NewDryrunHandler(),
+			DryRunTasksHandler: NewDryRunTasksHandler(DryRunTasksHandlerConfig{
+				drivers:             api.drivers,
+				workingDir:          conf.WorkingDir,
+				createNewTaskDriver: conf.CreateNewTaskDriver,
+			}),
 		}
 		oapigen.HandlerFromMux(server, r)
 	})

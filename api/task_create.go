@@ -39,7 +39,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	// Convert task request to config task config
 	trc, err := req.ToTaskRequestConfig(h.bufferPeriod, h.workingDir)
 	if err != nil {
-		err = fmt.Errorf("error converting create task request to task config, %s", err)
+		err = fmt.Errorf("error with task configuration: %s", err)
 		logger.Error("error creating task", "error", err)
 		sendError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -49,9 +49,9 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	d, err := h.createNewTaskDriver(trc.TaskConfig, trc.variables)
 
 	if err != nil {
-		err = fmt.Errorf("error creating new task driver, %v", err)
+		err = fmt.Errorf("error creating new task driver: %v", err)
 		logger.Error("error creating task", "error", err)
-		sendError(w, r, http.StatusInternalServerError, err.Error())
+		sendError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -69,7 +69,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 		Source:    task.Source(),
 	})
 	if err != nil {
-		err = fmt.Errorf("error creating new event, %s", err)
+		err = fmt.Errorf("error creating new event: %s", err)
 		logger.Error("error creating task", "error", err)
 		sendError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -87,16 +87,16 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	// Initialize the new task
 	storedErr = initNewTask(r.Context(), d, run)
 	if storedErr != nil {
-		err = fmt.Errorf("error initializing new task, %s", storedErr)
+		err = fmt.Errorf("error initializing new task: %s", storedErr)
 		logger.Error("error creating task", "error", err)
-		sendError(w, r, http.StatusInternalServerError, err.Error())
+		sendError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Add the task driver to the driver list
 	err = h.drivers.Add(req.Name, d)
 	if err != nil {
-		err = fmt.Errorf("error initializing new task, %s", err)
+		err = fmt.Errorf("error initializing new task: %s", err)
 		logger.Error("error creating task", "error", err)
 		sendError(w, r, http.StatusInternalServerError, err.Error())
 		return

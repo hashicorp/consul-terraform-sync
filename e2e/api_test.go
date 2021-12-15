@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ const (
 	   "services": [
 	       "%s"
 	   ],
-	   "source": "./test_modules/local_instances_file"
+	   "source": "mkam/instance-files/local"
 	}`
 )
 
@@ -625,6 +626,84 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+// TestE2E_TaskEndpoints_DryRunTaskCreate tests the dry run task API
+// inspects the given task and discards it at the end of the run by:
+//
+// 1. Creating a dry run task
+// 2. Verifying that the task and Terraform plan output is returned
+// 3. Checking that there are no events for the task
+// 4. Checking that no resources were created
+// 5. Making a change that would trigger the task if it had been created
+// 6. Verifying again that no events or resources are created
+func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
+	t.Parallel()
+	// Start Consul and CTS
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_dry_run_task")
+	initialTaskName := "initial-task"
+	cts := ctsSetup(t, srv, tempDir,
+		moduleTaskConfig(initialTaskName, "mkam/hello/cts"))
+
+	// Create a dry run task
+	u := fmt.Sprintf("http://localhost:%d/v1/dryrun_tasks", cts.Port())
+	taskName := "dryrun_task"
+	serviceName := "api"
+	req := &oapigen.DryRunTaskRequest{
+		Name:     taskName,
+		Services: &[]string{serviceName},
+		Source:   "mkam/hello/cts",
+	}
+	resp := testutils.RequestJSON(t, http.MethodPost, u, req)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Parse response body
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	var r oapigen.TaskResponse
+	err = json.Unmarshal(bodyBytes, &r)
+	require.NoError(t, err)
+	assert.NotEmpty(t, r.RequestId, "expected request ID in response")
+
+	// Verify run in response
+	assert.NotNil(t, r.Run)
+	assert.Contains(t, *r.Run.Plan, fmt.Sprintf("Hello, %s!", serviceName))
+	assert.Contains(t, *r.Run.Plan, "Plan: 2 to add, 0 to change, 0 to destroy.")
+
+	// Verify task in response
+	assert.NotNil(t, r.Task)
+	assert.Equal(t, req.Name, r.Task.Name, "name not expected value")
+	assert.Equal(t, req.Source, r.Task.Source, "source not expected value")
+	assert.ElementsMatch(t, *req.Services, *r.Task.Services, "services not expected value")
+
+	// Check that the task was not created
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	// Verify that the resources were not actually created
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, false, []string{serviceName}, resourcesPath)
+
+	// Make a change that would trigger the task if it had been created
+	service := testutil.TestService{
+		ID:      serviceName + "-2",
+		Name:    serviceName,
+		Address: "5.6.7.9",
+		Port:    8080,
+	}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
+
+	// Verify that there still is no task
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	validateServices(t, false, []string{serviceName}, resourcesPath)
 }
 
 // checkEvents does some basic checks to loosely ensure returned events in

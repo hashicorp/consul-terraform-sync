@@ -54,11 +54,11 @@ type ConsulKVSourceInput struct {
 	Recurse    *bool   `json:"recurse,omitempty"`
 }
 
-// DryrunRequest defines model for DryrunRequest.
-type DryrunRequest TaskRequest
+// DryRunTaskRequest defines model for DryRunTaskRequest.
+type DryRunTaskRequest TaskRequest
 
-// DryrunResponse defines model for DryrunResponse.
-type DryrunResponse TaskResponse
+// DryRunTaskResponse defines model for DryRunTaskResponse.
+type DryRunTaskResponse TaskResponse
 
 // Error defines model for Error.
 type Error struct {
@@ -76,9 +76,7 @@ type RequestID string
 
 // Run defines model for Run.
 type Run struct {
-	ChangesPresent *bool   `json:"changes_present,omitempty"`
-	Plan           *string `json:"plan,omitempty"`
-	Status         *string `json:"status,omitempty"`
+	Plan *string `json:"plan,omitempty"`
 }
 
 // ScheduleCondition defines model for ScheduleCondition.
@@ -138,8 +136,8 @@ type VariableMap struct {
 	AdditionalProperties map[string]string `json:"-"`
 }
 
-// ExecuteTaskDryrunJSONBody defines parameters for ExecuteTaskDryrun.
-type ExecuteTaskDryrunJSONBody DryrunRequest
+// CreateDryRunTaskJSONBody defines parameters for CreateDryRunTask.
+type CreateDryRunTaskJSONBody DryRunTaskRequest
 
 // CreateTaskJSONBody defines parameters for CreateTask.
 type CreateTaskJSONBody TaskRequest
@@ -153,8 +151,8 @@ type CreateTaskParams struct {
 // CreateTaskParamsRun defines parameters for CreateTask.
 type CreateTaskParamsRun string
 
-// ExecuteTaskDryrunJSONRequestBody defines body for ExecuteTaskDryrun for application/json ContentType.
-type ExecuteTaskDryrunJSONRequestBody ExecuteTaskDryrunJSONBody
+// CreateDryRunTaskJSONRequestBody defines body for CreateDryRunTask for application/json ContentType.
+type CreateDryRunTaskJSONRequestBody CreateDryRunTaskJSONBody
 
 // CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
 type CreateTaskJSONRequestBody CreateTaskJSONBody

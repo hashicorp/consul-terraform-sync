@@ -686,8 +686,9 @@ func TestDisabledTask(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, actual)
 
-		err = tf.InspectTask(ctx)
+		plan, err := tf.InspectTask(ctx)
 		assert.NoError(t, err)
+		assert.Equal(t, InspectPlan{}, plan)
 
 		err = tf.ApplyTask(ctx)
 		assert.NoError(t, err)

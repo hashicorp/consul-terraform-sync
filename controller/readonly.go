@@ -104,7 +104,7 @@ func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, 
 		ctrl.logger.Trace("template for task rendered", taskNameLogKey, taskName)
 
 		ctrl.logger.Info("inspecting task", taskNameLogKey, taskName)
-		if err := d.InspectTask(ctx); err != nil {
+		if _, err := d.InspectTask(ctx); err != nil {
 			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
 		}
 

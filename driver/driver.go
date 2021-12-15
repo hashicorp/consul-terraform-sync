@@ -21,7 +21,7 @@ type Driver interface {
 
 	// InspectTask inspects for any differences pertaining to the task between
 	// the state of Consul and network infrastructure
-	InspectTask(ctx context.Context) error
+	InspectTask(ctx context.Context) (InspectPlan, error)
 
 	// ApplyTask applies change for the task managed by the driver
 	ApplyTask(ctx context.Context) error
