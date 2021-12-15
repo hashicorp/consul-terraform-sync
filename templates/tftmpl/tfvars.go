@@ -23,7 +23,7 @@ func newTFVarsTmpl(w io.Writer, filename string, input *RootModuleInputData) err
 		if err := template.appendTemplate(w); err != nil {
 			return err
 		}
-		if template.isServicesVar() {
+		if template.IsServicesVar() {
 			servicesAppended = true
 		}
 	}

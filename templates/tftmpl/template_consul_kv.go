@@ -25,9 +25,9 @@ type ConsulKVTemplate struct {
 	SourceIncludesVar bool
 }
 
-// isServicesVar returns false because the template returns a consul_kv
+// IsServicesVar returns false because the template returns a consul_kv
 // variable, not a services variable
-func (t ConsulKVTemplate) isServicesVar() bool {
+func (t ConsulKVTemplate) IsServicesVar() bool {
 	return false
 }
 

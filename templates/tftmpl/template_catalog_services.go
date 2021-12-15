@@ -24,9 +24,9 @@ type CatalogServicesTemplate struct {
 	SourceIncludesVar bool
 }
 
-// isServicesVar returns false because the template returns a catalog_services
+// IsServicesVar returns false because the template returns a catalog_services
 // variable, not a services variable
-func (t CatalogServicesTemplate) isServicesVar() bool {
+func (t CatalogServicesTemplate) IsServicesVar() bool {
 	return false
 }
 
