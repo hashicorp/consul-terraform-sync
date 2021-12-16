@@ -334,13 +334,24 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			SourceIncludesVar: *v.SourceIncludesVar,
 		}
 	case *config.ServicesConditionConfig:
-		condition = &tftmpl.ServicesRegexTemplate{
-			Regexp:     *v.Regexp,
-			Datacenter: *v.Datacenter,
-			Namespace:  *v.Namespace,
-			Filter:     *v.Filter,
-			// always set services variable
-			SourceIncludesVar: true,
+		if len(v.Names) > 0 {
+			condition = &tftmpl.ServicesTemplate{
+				Names:      v.Names,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// SourceIncludesVar=false not yet supported
+				SourceIncludesVar: true,
+			}
+		} else {
+			condition = &tftmpl.ServicesRegexTemplate{
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// SourceIncludesVar=false not yet supported
+				SourceIncludesVar: true,
+			}
 		}
 	case *config.ConsulKVConditionConfig:
 		condition = &tftmpl.ConsulKVTemplate{
@@ -364,13 +375,24 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	var sourceInput tftmpl.Template
 	switch v := t.sourceInput.(type) {
 	case *config.ServicesSourceInputConfig:
-		sourceInput = &tftmpl.ServicesRegexTemplate{
-			Regexp:     *v.Regexp,
-			Datacenter: *v.Datacenter,
-			Namespace:  *v.Namespace,
-			Filter:     *v.Filter,
-			// always include for source_input config
-			SourceIncludesVar: true,
+		if len(v.Names) > 0 {
+			sourceInput = &tftmpl.ServicesTemplate{
+				Names:      v.Names,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// always include for source_input config
+				SourceIncludesVar: true,
+			}
+		} else {
+			sourceInput = &tftmpl.ServicesRegexTemplate{
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// always include for source_input config
+				SourceIncludesVar: true,
+			}
 		}
 	case *config.ConsulKVSourceInputConfig:
 		sourceInput = &tftmpl.ConsulKVTemplate{

@@ -144,7 +144,24 @@ func TestNewFiles(t *testing.T) {
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
 				Task:             task,
 			},
-		}, {
+		},
+		{
+			Name:   "terraform.tfvars.tmpl (services)",
+			Func:   newTFVarsTmpl,
+			Golden: "testdata/services/terraform.tfvars.tmpl",
+			Input: RootModuleInputData{
+				Templates: []Template{
+					&ServicesTemplate{
+						Names:      []string{"web", "api"},
+						Namespace:  "ns1",
+						Datacenter: "dc1",
+						Filter:     "\"tag\" in Service.Tags",
+					},
+				},
+				Task: task,
+			},
+		},
+		{
 			Name:   "terraform.tfvars.tmpl (services list)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/terraform.tfvars.tmpl",

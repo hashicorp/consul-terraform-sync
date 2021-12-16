@@ -5,8 +5,11 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
+	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -119,6 +122,118 @@ func TestTask_ServiceNames(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := tc.task.ServiceNames()
 			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestTask_configureRootModuleInput(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name              string
+		task              Task
+		expectedTemplates []tftmpl.Template
+	}{
+		{
+			name: "templates: services cond regex",
+			task: Task{
+				condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Regexp:     config.String("^web.*"),
+						Datacenter: config.String("dc1"),
+						Namespace:  config.String("ns1"),
+						Filter:     config.String("filter"),
+					},
+				},
+			},
+			expectedTemplates: []tftmpl.Template{
+				&tftmpl.ServicesRegexTemplate{
+					Regexp:            "^web.*",
+					Datacenter:        "dc1",
+					Namespace:         "ns1",
+					Filter:            "filter",
+					SourceIncludesVar: true,
+				},
+			},
+		},
+		{
+			name: "templates: services cond names",
+			task: Task{
+				condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Names:      []string{"api"},
+						Datacenter: config.String("dc1"),
+						Namespace:  config.String("ns1"),
+						Filter:     config.String("filter"),
+					},
+				},
+			},
+			expectedTemplates: []tftmpl.Template{
+				&tftmpl.ServicesTemplate{
+					Names:             []string{"api"},
+					Datacenter:        "dc1",
+					Namespace:         "ns1",
+					Filter:            "filter",
+					SourceIncludesVar: true,
+				},
+			},
+		},
+		{
+			name: "templates: services source_input regex",
+			task: Task{
+				sourceInput: &config.ServicesSourceInputConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Regexp:     config.String("^web.*"),
+						Datacenter: config.String("dc1"),
+						Namespace:  config.String("ns1"),
+						Filter:     config.String("filter"),
+					},
+				},
+			},
+			expectedTemplates: []tftmpl.Template{
+				&tftmpl.ServicesRegexTemplate{
+					Regexp:            "^web.*",
+					Datacenter:        "dc1",
+					Namespace:         "ns1",
+					Filter:            "filter",
+					SourceIncludesVar: true,
+				},
+			},
+		},
+		{
+			name: "templates: services source_input names",
+			task: Task{
+				sourceInput: &config.ServicesSourceInputConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Names:      []string{"api"},
+						Datacenter: config.String("dc1"),
+						Namespace:  config.String("ns1"),
+						Filter:     config.String("filter"),
+					},
+				},
+			},
+			expectedTemplates: []tftmpl.Template{
+				&tftmpl.ServicesTemplate{
+					Names:             []string{"api"},
+					Datacenter:        "dc1",
+					Namespace:         "ns1",
+					Filter:            "filter",
+					SourceIncludesVar: true,
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.task.logger = logging.NewNullLogger()
+
+			input := &tftmpl.RootModuleInputData{}
+			tc.task.configureRootModuleInput(input)
+
+			if len(tc.expectedTemplates) > 0 {
+				assert.Equal(t, tc.expectedTemplates, input.Templates)
+			}
 		})
 	}
 }
