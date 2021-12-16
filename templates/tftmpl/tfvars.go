@@ -1,7 +1,6 @@
 package tftmpl
 
 import (
-	"fmt"
 	"io"
 	"sort"
 
@@ -28,14 +27,8 @@ func newTFVarsTmpl(w io.Writer, filename string, input *RootModuleInputData) err
 		}
 	}
 
-	// TODO: remove this in pr to convert services list into a type of template
-	// separately handle appending templating for services list
 	hclFile := hclwrite.NewEmptyFile()
 	body := hclFile.Body()
-	if len(input.Services) > 0 {
-		appendRawServiceTemplateValues(body, input.Services)
-		servicesAppended = true
-	}
 
 	// services var is required (see newVariablesTF). in variables.tf, services
 	// var is always appended. ensure that corresponding var value is appended

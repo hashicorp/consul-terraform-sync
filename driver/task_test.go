@@ -135,6 +135,36 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 		expectedTemplates []tftmpl.Template
 	}{
 		{
+			name: "templates: services list",
+			task: Task{
+				services: []Service{
+					{
+						Name: "api",
+					},
+					{
+						Name:       "web",
+						Datacenter: "dc1",
+						Namespace:  "ns1",
+						Filter:     "filter",
+					},
+				},
+			},
+			expectedTemplates: []tftmpl.Template{
+				&tftmpl.ServicesTemplate{
+					Names: []string{"api", "web"},
+					Services: map[string]tftmpl.Service{
+						"api": {},
+						"web": {
+							Datacenter: "dc1",
+							Namespace:  "ns1",
+							Filter:     "filter",
+						},
+					},
+					SourceIncludesVar: true,
+				},
+			},
+		},
+		{
 			name: "templates: services cond regex",
 			task: Task{
 				condition: &config.ServicesConditionConfig{

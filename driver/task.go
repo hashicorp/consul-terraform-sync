@@ -310,19 +310,33 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 		Version:     t.version,
 	}
 
-	input.Services = make([]tftmpl.Service, len(t.services))
-	for i, s := range t.services {
-		input.Services[i] = tftmpl.Service{
-			Datacenter:         s.Datacenter,
-			Description:        s.Description,
-			Name:               s.Name,
-			Namespace:          s.Namespace,
-			Filter:             s.Filter,
-			CTSUserDefinedMeta: s.UserDefinedMeta,
+	var templates []tftmpl.Template
+
+	// create a ServicesTemplate for task.services list
+	if len(t.services) > 0 {
+		// gather services query parameters
+		services := make(map[string]tftmpl.Service, len(t.services))
+		for _, s := range t.services {
+			services[s.Name] = tftmpl.Service{
+				Datacenter: s.Datacenter,
+				Namespace:  s.Namespace,
+				Filter:     s.Filter,
+			}
 		}
+
+		// configure ServicesTemplate
+		template := &tftmpl.ServicesTemplate{
+			Names:    t.ServiceNames(),
+			Services: services,
+			// services list does not support SourceIncludesVar=false
+			SourceIncludesVar: true,
+		}
+		templates = append(templates, template)
+
+		t.logger.Trace("services list template configured", "template_type",
+			fmt.Sprintf("%T", template))
 	}
 
-	var templates []tftmpl.Template
 	var condition tftmpl.Template
 	switch v := t.condition.(type) {
 	case *config.CatalogServicesConditionConfig:

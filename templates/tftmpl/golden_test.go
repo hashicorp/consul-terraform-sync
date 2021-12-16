@@ -162,20 +162,20 @@ func TestNewFiles(t *testing.T) {
 			},
 		},
 		{
-			Name:   "terraform.tfvars.tmpl (services list)",
+			Name:   "terraform.tfvars.tmpl (services deprecated)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
+				Templates: []Template{
+					&ServicesTemplate{
+						Names: []string{"web", "api"},
+						Services: map[string]Service{
+							"web": {},
+							"api": {
+								Datacenter: "dc1",
+								Filter:     "\"tag\" in Service.Tags",
+							},
+						},
 					},
 				},
 				Task: task,
@@ -208,17 +208,15 @@ func TestNewFiles(t *testing.T) {
 						Regexp:            ".*",
 						SourceIncludesVar: false,
 					},
-				},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
+					&ServicesTemplate{
+						Names: []string{"web", "api"},
+						Services: map[string]Service{
+							"web": {},
+							"api": {
+								Datacenter: "dc1",
+								Filter:     "\"tag\" in Service.Tags",
+							},
+						},
 					},
 				},
 				Task: task,
@@ -233,17 +231,15 @@ func TestNewFiles(t *testing.T) {
 						Regexp:            "^web.*|^api.*",
 						SourceIncludesVar: true,
 					},
-				},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
+					&ServicesTemplate{
+						Names: []string{"web", "api"},
+						Services: map[string]Service{
+							"web": {},
+							"api": {
+								Datacenter: "dc1",
+								Filter:     "\"tag\" in Service.Tags",
+							},
+						},
 					},
 				},
 				Task: task,
@@ -260,17 +256,15 @@ func TestNewFiles(t *testing.T) {
 						NodeMeta:          map[string]string{"k": "v"},
 						SourceIncludesVar: true,
 					},
-				},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
+					&ServicesTemplate{
+						Names: []string{"web", "api"},
+						Services: map[string]Service{
+							"web": {},
+							"api": {
+								Datacenter: "dc1",
+								Filter:     "\"tag\" in Service.Tags",
+							},
+						},
 					},
 				},
 				Task: task,
@@ -299,17 +293,15 @@ func TestNewFiles(t *testing.T) {
 						Datacenter:        "dc1",
 						SourceIncludesVar: false,
 					},
-				},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
+					&ServicesTemplate{
+						Names: []string{"web", "api"},
+						Services: map[string]Service{
+							"web": {},
+							"api": {
+								Datacenter: "dc1",
+								Filter:     "\"tag\" in Service.Tags",
+							},
+						},
 					},
 				},
 				Task: task,
@@ -326,17 +318,15 @@ func TestNewFiles(t *testing.T) {
 						Namespace:         "test-ns",
 						SourceIncludesVar: false,
 					},
-				},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
+					&ServicesTemplate{
+						Names: []string{"web", "api"},
+						Services: map[string]Service{
+							"web": {},
+							"api": {
+								Datacenter: "dc1",
+								Filter:     "\"tag\" in Service.Tags",
+							},
+						},
 					},
 				},
 				Task: task,
@@ -352,17 +342,15 @@ func TestNewFiles(t *testing.T) {
 						Datacenter:        "dc1",
 						SourceIncludesVar: true,
 					},
-				},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
+					&ServicesTemplate{
+						Names: []string{"web", "api"},
+						Services: map[string]Service{
+							"web": {},
+							"api": {
+								Datacenter: "dc1",
+								Filter:     "\"tag\" in Service.Tags",
+							},
+						},
 					},
 				},
 				Task: task,
@@ -379,17 +367,15 @@ func TestNewFiles(t *testing.T) {
 						Recurse:           true,
 						SourceIncludesVar: true,
 					},
-				},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
+					&ServicesTemplate{
+						Names: []string{"web", "api"},
+						Services: map[string]Service{
+							"web": {},
+							"api": {
+								Datacenter: "dc1",
+								Filter:     "\"tag\" in Service.Tags",
+							},
+						},
 					},
 				},
 				Task: task,
@@ -406,17 +392,15 @@ func TestNewFiles(t *testing.T) {
 						Recurse:           true,
 						SourceIncludesVar: false,
 					},
-				},
-				Services: []Service{
-					{
-						Name:        "web",
-						Description: "web service",
-					}, {
-						Name:        "api",
-						Namespace:   "",
-						Datacenter:  "dc1",
-						Description: "api service for web",
-						Filter:      "\"tag\" in Service.Tags",
+					&ServicesTemplate{
+						Names: []string{"web", "api"},
+						Services: map[string]Service{
+							"web": {},
+							"api": {
+								Datacenter: "dc1",
+								Filter:     "\"tag\" in Service.Tags",
+							},
+						},
 					},
 				},
 				Task: task,
