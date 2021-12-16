@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	middleware "github.com/deepmap/oapi-codegen/pkg/chi-middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -127,19 +126,10 @@ func NewAPI(conf *APIConfig) (*API, error) {
 	})
 
 	r.Group(func(r chi.Router) {
-		swagger, err := oapigen.GetSwagger()
-		if err != nil {
-			logger.Error("Error loading swagger spec", "error", err)
-			panic("this should never error")
-		}
-
-		// Clear out the servers array in the swagger spec. It is recommended to do this so that it skips validating
-		// that server names match.
-		swagger.Servers = nil
-
 		// Use our validation middleware to check all requests against the
 		// OpenAPI schema.
-		r.Use(middleware.OapiRequestValidator(swagger))
+		r.Use(withPlaintextErrorToJson)
+		r.Use(withSwaggerValidate)
 
 		// Generated Endpoints
 		c := TaskLifeCycleHandlerConfig{
