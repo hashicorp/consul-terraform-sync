@@ -345,6 +345,10 @@ components:
         plan:
           type: string
           example: "module.test-task.local_file.greeting_services: Refreshing state... [id=2d5049b47d16d9c4d15cc59950fdd3de24b79716]\nmodule.test-task.local_file.greeting: Refreshing state... [id=69342c5c39e5ae5f0077aecc32c0f81811fb8193]\n\nTerraform used the selected providers to generate the following execution\nplan. Resource actions are indicated with the following symbols:\n-/+ destroy and then create replacement\n\nTerraform will perform the following actions:\n\n  # module.test-task.local_file.greeting_services must be replaced\n-/+ resource \"local_file\" \"greeting_services\" {\n      ~ content              = <<-EOT # forces replacement\n          - Hello, api!\n            Hello, web!\n            Hello, web!\n        EOT\n      ~ id                   = \"2d5049b47d16d9c4d15cc59950fdd3de24b79716\" -> (known after apply)\n        # (3 unchanged attributes hidden)\n    }\n\nPlan: 1 to add, 0 to change, 1 to destroy.\n"
+        tfc_run_url:
+          type: string
+          description: Enterprise only. URL of Terraform Cloud run that corresponds to the task run.
+          example: https://app.terraform.io/app/my-org/workspaces/my-ws/runs/run-abcDeFgHijk12345
 
     RequestID:
       type: string

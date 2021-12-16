@@ -77,6 +77,9 @@ type RequestID string
 // Run defines model for Run.
 type Run struct {
 	Plan *string `json:"plan,omitempty"`
+
+	// Enterprise only. URL of Terraform Cloud run that corresponds to the task run.
+	TfcRunUrl *string `json:"tfc_run_url,omitempty"`
 }
 
 // ScheduleCondition defines model for ScheduleCondition.
