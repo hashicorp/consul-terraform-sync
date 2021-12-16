@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"strings"
@@ -75,7 +76,7 @@ func (c *taskDeleteCommand) Run(args []string) int {
 
 	taskName := args[0]
 
-	client, err := c.meta.client()
+	client, err := c.meta.taskLifecycleClient()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to create client for '%s'", taskName))
 		msg := wordwrap.WrapString(err.Error(), uint(78))
@@ -89,7 +90,10 @@ func (c *taskDeleteCommand) Run(args []string) int {
 	}
 
 	c.UI.Info(fmt.Sprintf("Deleting task '%s'...\n", taskName))
-	err = client.Task().Delete(taskName, nil)
+	resp, err := client.DeleteTaskByName(context.Background(), taskName)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to delete '%s'", taskName))
 		err = processEOFError(client.Scheme(), err)

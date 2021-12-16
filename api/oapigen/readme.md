@@ -17,8 +17,13 @@ This code is generated using the following command: `oapi-codegen  -package oapi
 ### api/oapigen/types.go
 Contains the API types which including requests, responses and all other API representations. 
 This code is generated using the following command: `
-api-codegen  -package oapigen -generate chi-server,spec -o oapigen/server.go openapi.yaml`
+api-codegen  -package oapigen -generate types -o oapigen/types.go openapi.yaml`
+
+### api/oapigen/client.go
+Contains client boilerplate.
+This code is generated using the following command: `
+api-codegen  -package oapigen -generate client -o oapigen/client.go openapi.yaml`
 
 ## Code Generation
-To simplify code generation, the generation is set up using `go:generation` comments in api/handler.go. 
+To simplify code generation, the generation is set up using `go:generation` comments in `api/handler.go` and `api/task_lifecycle_client.go`. 
 To run code generation for CTS, including the API code generation, run: `go generate ./...` from the root of CTS
