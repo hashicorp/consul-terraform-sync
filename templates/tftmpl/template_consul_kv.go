@@ -14,7 +14,7 @@ var (
 	_ Template = (*ConsulKVTemplate)(nil)
 )
 
-// ServicesTemplate handles the template for the consul_kv variable for the
+// ConsulKVTemplate handles the template for the consul_kv variable for the
 // template functions: `{{ key }}` and `{{ keyExistsGet }}`
 type ConsulKVTemplate struct {
 	Path       string
@@ -69,9 +69,9 @@ func (t ConsulKVTemplate) appendTemplate(w io.Writer) error {
 
 	var emptyTmpl string
 	if t.Recurse {
-		emptyTmpl = fmt.Sprintf(consulKVRecurseConditionEmptyTmpl, q)
+		emptyTmpl = fmt.Sprintf(consulKVRecurseEmptyTmpl, q)
 	} else {
-		emptyTmpl = fmt.Sprintf(consulKVConditionEmptyTmpl, q)
+		emptyTmpl = fmt.Sprintf(consulKVEmptyTmpl, q)
 	}
 	if _, err := w.Write([]byte(emptyTmpl)); err != nil {
 		logger.Error("unable to write consul-kv empty template", "error", err)
@@ -124,13 +124,13 @@ const consulKVRecurseBaseTmpl = `
 {{- end}}
 `
 
-const consulKVConditionEmptyTmpl = `
+const consulKVEmptyTmpl = `
 {{- with $kv := keyExistsGet %s }}
   {{- /* Empty template. Detects changes in Consul KV */ -}}
 {{- end}}
 `
 
-const consulKVRecurseConditionEmptyTmpl = `
+const consulKVRecurseEmptyTmpl = `
 {{- with $kv := keys %s }}
   {{- range $k, $v := $kv }}
   {{- /* Empty template. Detects changes in Consul KV */ -}}
