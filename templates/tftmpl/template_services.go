@@ -35,6 +35,14 @@ type ServicesTemplate struct {
 	Services map[string]Service
 }
 
+// Service contains additional Consul service filtering information for services
+// configured in ServicesTemplate
+type Service struct {
+	Datacenter string
+	Namespace  string
+	Filter     string
+}
+
 // IsServicesVar returns true because the template is for the services variable
 func (t ServicesTemplate) IsServicesVar() bool {
 	return true

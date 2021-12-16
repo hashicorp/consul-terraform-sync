@@ -96,20 +96,6 @@ type Task struct {
 	Version     string
 }
 
-type Service struct {
-	// Consul service information
-	Datacenter  string
-	Description string
-	Name        string
-	Namespace   string
-	Filter      string
-
-	// CTSUserDefinedMeta is user defined metadata that is configured by
-	// operators for CTS to append to Consul service information to be used for
-	// network infrastructure automation.
-	CTSUserDefinedMeta map[string]string
-}
-
 type tfFileFunc func(io.Writer, string, *RootModuleInputData) error
 
 // RootModuleInputData is the input data used to generate the root module
@@ -118,7 +104,6 @@ type RootModuleInputData struct {
 	Backend          map[string]interface{}
 	Providers        []hcltmpl.NamedBlock
 	ProviderInfo     map[string]interface{}
-	Services         []Service
 	Task             Task
 	Variables        hcltmpl.Variables
 	Templates        []Template
