@@ -156,6 +156,15 @@ func (m *meta) client() (*api.Client, error) {
 	return c, nil
 }
 
+func (m *meta) taskLifecycleClient() (*api.TaskLifecycleClient, error) {
+	c, err := api.NewTaskLifecycleClient(m.clientConfig(), nil)
+
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 // requestUserApproval returns an exit code and boolean describing if the user
 // approved a given action. If the user did not approve (false is returned) or
 // if there is an error in processing the user input, an exit code is provided.
