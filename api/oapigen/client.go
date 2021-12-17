@@ -90,10 +90,10 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// ExecuteTaskDryrun request with any body
-	ExecuteTaskDryrunWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// CreateDryRunTask request with any body
+	CreateDryRunTaskWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	ExecuteTaskDryrun(ctx context.Context, body ExecuteTaskDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateDryRunTask(ctx context.Context, body CreateDryRunTaskJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateTask request with any body
 	CreateTaskWithBody(ctx context.Context, params *CreateTaskParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -104,8 +104,8 @@ type ClientInterface interface {
 	DeleteTaskByName(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) ExecuteTaskDryrunWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewExecuteTaskDryrunRequestWithBody(c.Server, contentType, body)
+func (c *Client) CreateDryRunTaskWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateDryRunTaskRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +116,8 @@ func (c *Client) ExecuteTaskDryrunWithBody(ctx context.Context, contentType stri
 	return c.Client.Do(req)
 }
 
-func (c *Client) ExecuteTaskDryrun(ctx context.Context, body ExecuteTaskDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewExecuteTaskDryrunRequest(c.Server, body)
+func (c *Client) CreateDryRunTask(ctx context.Context, body CreateDryRunTaskJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateDryRunTaskRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -164,19 +164,19 @@ func (c *Client) DeleteTaskByName(ctx context.Context, name string, reqEditors .
 	return c.Client.Do(req)
 }
 
-// NewExecuteTaskDryrunRequest calls the generic ExecuteTaskDryrun builder with application/json body
-func NewExecuteTaskDryrunRequest(server string, body ExecuteTaskDryrunJSONRequestBody) (*http.Request, error) {
+// NewCreateDryRunTaskRequest calls the generic CreateDryRunTask builder with application/json body
+func NewCreateDryRunTaskRequest(server string, body CreateDryRunTaskJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewExecuteTaskDryrunRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateDryRunTaskRequestWithBody(server, "application/json", bodyReader)
 }
 
-// NewExecuteTaskDryrunRequestWithBody generates requests for ExecuteTaskDryrun with any type of body
-func NewExecuteTaskDryrunRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+// NewCreateDryRunTaskRequestWithBody generates requests for CreateDryRunTask with any type of body
+func NewCreateDryRunTaskRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -184,7 +184,7 @@ func NewExecuteTaskDryrunRequestWithBody(server string, contentType string, body
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/dryrun/task")
+	operationPath := fmt.Sprintf("/v1/dryrun_tasks")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -341,10 +341,10 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// ExecuteTaskDryrun request with any body
-	ExecuteTaskDryrunWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ExecuteTaskDryrunResponse, error)
+	// CreateDryRunTask request with any body
+	CreateDryRunTaskWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDryRunTaskResponse, error)
 
-	ExecuteTaskDryrunWithResponse(ctx context.Context, body ExecuteTaskDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*ExecuteTaskDryrunResponse, error)
+	CreateDryRunTaskWithResponse(ctx context.Context, body CreateDryRunTaskJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateDryRunTaskResponse, error)
 
 	// CreateTask request with any body
 	CreateTaskWithBodyWithResponse(ctx context.Context, params *CreateTaskParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTaskResponse, error)
@@ -355,15 +355,15 @@ type ClientWithResponsesInterface interface {
 	DeleteTaskByNameWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteTaskByNameResponse, error)
 }
 
-type ExecuteTaskDryrunResponse struct {
+type CreateDryRunTaskResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *DryrunResponse
+	JSON200      *DryRunTaskResponse
 	JSONDefault  *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r ExecuteTaskDryrunResponse) Status() string {
+func (r CreateDryRunTaskResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -371,7 +371,7 @@ func (r ExecuteTaskDryrunResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r ExecuteTaskDryrunResponse) StatusCode() int {
+func (r CreateDryRunTaskResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -424,21 +424,21 @@ func (r DeleteTaskByNameResponse) StatusCode() int {
 	return 0
 }
 
-// ExecuteTaskDryrunWithBodyWithResponse request with arbitrary body returning *ExecuteTaskDryrunResponse
-func (c *ClientWithResponses) ExecuteTaskDryrunWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ExecuteTaskDryrunResponse, error) {
-	rsp, err := c.ExecuteTaskDryrunWithBody(ctx, contentType, body, reqEditors...)
+// CreateDryRunTaskWithBodyWithResponse request with arbitrary body returning *CreateDryRunTaskResponse
+func (c *ClientWithResponses) CreateDryRunTaskWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDryRunTaskResponse, error) {
+	rsp, err := c.CreateDryRunTaskWithBody(ctx, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseExecuteTaskDryrunResponse(rsp)
+	return ParseCreateDryRunTaskResponse(rsp)
 }
 
-func (c *ClientWithResponses) ExecuteTaskDryrunWithResponse(ctx context.Context, body ExecuteTaskDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*ExecuteTaskDryrunResponse, error) {
-	rsp, err := c.ExecuteTaskDryrun(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateDryRunTaskWithResponse(ctx context.Context, body CreateDryRunTaskJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateDryRunTaskResponse, error) {
+	rsp, err := c.CreateDryRunTask(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseExecuteTaskDryrunResponse(rsp)
+	return ParseCreateDryRunTaskResponse(rsp)
 }
 
 // CreateTaskWithBodyWithResponse request with arbitrary body returning *CreateTaskResponse
@@ -467,22 +467,22 @@ func (c *ClientWithResponses) DeleteTaskByNameWithResponse(ctx context.Context, 
 	return ParseDeleteTaskByNameResponse(rsp)
 }
 
-// ParseExecuteTaskDryrunResponse parses an HTTP response from a ExecuteTaskDryrunWithResponse call
-func ParseExecuteTaskDryrunResponse(rsp *http.Response) (*ExecuteTaskDryrunResponse, error) {
+// ParseCreateDryRunTaskResponse parses an HTTP response from a CreateDryRunTaskWithResponse call
+func ParseCreateDryRunTaskResponse(rsp *http.Response) (*CreateDryRunTaskResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &ExecuteTaskDryrunResponse{
+	response := &CreateDryRunTaskResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest DryrunResponse
+		var dest DryRunTaskResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
