@@ -30,7 +30,7 @@ func withLogging(next http.Handler) http.Handler {
 		}
 
 		// UUID was successfully created, so add it now
-		logger = logger.With("reqID", reqID)
+		logger = logger.With("request_id", reqID)
 		ts := time.Now()
 
 		// Log info before calling the next handler
