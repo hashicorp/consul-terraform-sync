@@ -10,7 +10,8 @@ FEATURES:
 * Support for deleting an existing task through the API and CLI. [[GH-522](https://github.com/hashicorp/consul-terraform-sync/issues/522)]
 
 IMPROVEMENTS:
-* Support configuring a task's `condition "services"` and `source_input "services"` block with new fields: `datacenter`, `namespace`, `filter`, and `cts_user_defined_meta`. [[GH-357](https://github.com/hashicorp/consul-terraform-sync/issues/357)]
+* Support configuring a task's `condition "services"` and `source_input "services"` blocks with query parameters: `datacenter`, `namespace`, `filter`, and `cts_user_defined_meta`. [[GH-357](https://github.com/hashicorp/consul-terraform-sync/issues/357)]
+* Support new `names` field for configuring a task's `condition "services"` and `source_input "services"` blocks as an optional alternative to `regexp` to list monitored services by name. [[GH-561](https://github.com/hashicorp/consul-terraform-sync/issues/561)]
 
 BUG FIXES:
 * Fix CLI client enable task command timing out when buffer period is enabled [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
