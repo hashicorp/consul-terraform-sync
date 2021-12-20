@@ -77,6 +77,7 @@ func (t ServicesTemplate) concatServiceTemplates() (string, error) {
 	isDeprecated := t.Services != nil
 
 	if isCurrent && isDeprecated {
+		// Configuration validation should prevent this.
 		err := fmt.Errorf("services template query information is configured " +
 			"in two ways. use only one")
 		logging.Global().Named(logSystemName).Named(tftmplSubsystemName).Error(

@@ -312,7 +312,9 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 
 	var templates []tftmpl.Template
 
-	// create a ServicesTemplate for task.services list
+	// Create a ServicesTemplate for task.services list. task.services is
+	// deprecated in 0.5 and is replaced by condition / source_input "services"
+	// which is handled further below.
 	if len(t.services) > 0 {
 		// gather services query parameters
 		services := make(map[string]tftmpl.Service, len(t.services))

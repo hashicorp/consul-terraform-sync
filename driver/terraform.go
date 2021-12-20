@@ -559,12 +559,14 @@ func (tf *Terraform) initTaskTemplate() error {
 }
 
 func (tf *Terraform) setNotifier(tmpl templates.Template) {
+	// Get the service count. Only one of task.services, condition "services",
+	// and source_input "services" can be configured per task
 	serviceCount := len(tf.task.Services())
 	if cond, ok := tf.task.Condition().(*config.ServicesConditionConfig); ok {
-		serviceCount += len(cond.Names)
+		serviceCount = len(cond.Names)
 	}
 	if si, ok := tf.task.SourceInput().(*config.ServicesSourceInputConfig); ok {
-		serviceCount += len(si.Names)
+		serviceCount = len(si.Names)
 	}
 
 	switch tf.task.Condition().(type) {
