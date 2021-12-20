@@ -616,9 +616,14 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 	resp := testutils.RequestHTTP(t, http.MethodPost, u, badRequest)
 	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
-	assert.Contains(t, string(bodyBytes), `request body has an error: doesn't match the schema: `+
-		`Error at "/source": Field must be set to string or not be present`)
 	require.NoError(t, err)
+
+	var errorResponse oapigen.ErrorResponse
+	err = json.Unmarshal(bodyBytes, &errorResponse)
+	require.NoError(t, err)
+
+	assert.Contains(t, errorResponse.Error.Message, `request body has an error: doesn't match the schema: `+
+		`Error at "/source": Field must be set to string or not be present`)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	// Check that the task has not been created
