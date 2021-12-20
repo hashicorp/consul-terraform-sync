@@ -14,9 +14,9 @@ const (
 // Template handles templates for different template functions to monitor
 // different types of variables
 type Template interface {
-	// isServicesVar returns whether or not the template function returns a
+	// IsServicesVar returns whether or not the template function returns a
 	// variable of type services
-	isServicesVar() bool
+	IsServicesVar() bool
 
 	// SourceIncludesVariable returns if the module source expects to
 	// include the monitored variable.

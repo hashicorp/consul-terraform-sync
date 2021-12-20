@@ -68,7 +68,7 @@ func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) er
 	// need to check to avoid appending duplicate variables
 	for _, template := range input.Templates {
 		if template.SourceIncludesVariable() {
-			if template.isServicesVar() {
+			if template.IsServicesVar() {
 				// services variable is already appended earlier. skip
 				continue
 			}

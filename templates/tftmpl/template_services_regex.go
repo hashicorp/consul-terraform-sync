@@ -24,8 +24,8 @@ type ServicesRegexTemplate struct {
 	SourceIncludesVar bool
 }
 
-// isServicesVar returns true because the template is for the services variable
-func (t ServicesRegexTemplate) isServicesVar() bool {
+// IsServicesVar returns true because the template is for the services variable
+func (t ServicesRegexTemplate) IsServicesVar() bool {
 	return true
 }
 

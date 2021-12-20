@@ -20,7 +20,7 @@ type ServicesMonitorConfig struct {
 
 	// Names configures the services to monitor by listing the service name.
 	// Either Regexp or Names must be configured, not both.
-	Names []string `mapstructure:"services"`
+	Names []string `mapstructure:"names"`
 
 	// Datacenter is the datacenter the service is deployed in.
 	Datacenter *string `mapstricture:"datacenter"`
