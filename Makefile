@@ -79,8 +79,9 @@ clean:
 	rm -f ./e2e/terraform
 .PHONY: clean
 
-# generate generates code for mockery annotations
-# requires installing https://github.com/vektra/mockery
+# generate generates code for mockery annotations and open-api
+# requires installing https://github.com/vektra/mockery &
+# https://github.com/deepmap/oapi-codegen
 generate:
 	go generate ./...
 .PHONY: generate
