@@ -33,7 +33,7 @@ const (
 	   "services": [
 	       "%s"
 	   ],
-	   "source": "mkam/instance-files/local"
+	   "module": "mkam/instance-files/local"
 	}`
 )
 
@@ -610,7 +610,7 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 	   "services": [
 	       "api"
 	   ],
-	   "source": true
+	   "module": true
 	}`, taskName)
 
 	resp := testutils.RequestHTTP(t, http.MethodPost, u, badRequest)

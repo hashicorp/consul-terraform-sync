@@ -23,7 +23,7 @@ const (
     "services": [
         "api"
     ],
-    "source": "./example-module",
+    "module": "./example-module",
     "variable_files": [],
     "buffer_period": {
         "enabled": true,

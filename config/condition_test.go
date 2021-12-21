@@ -243,7 +243,7 @@ task {
 		  "description": "automate services for X to do Y",
 		  "services": ["serviceA", "serviceB", "serviceC"],
 		  "providers": ["X"],
-		  "source": "Y",
+		  "module": "Y",
 		  "condition": {
 			"catalog-services": {
 			  "regexp": ".*",
