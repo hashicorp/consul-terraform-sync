@@ -150,6 +150,8 @@ type CreateTaskJSONBody TaskRequest
 // CreateTaskParams defines parameters for CreateTask.
 type CreateTaskParams struct {
 	// Different modes for running. Supports run now which runs the task immediately
+	// and run inspect which creates a dry run task that is inspected and discarded
+	// at the end of the inspection.
 	Run *CreateTaskParamsRun `json:"run,omitempty"`
 }
 

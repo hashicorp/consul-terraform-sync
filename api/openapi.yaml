@@ -35,10 +35,12 @@ paths:
           in: query
           description: |
             Different modes for running. Supports run now which runs the task immediately
+            and run inspect which creates a dry run task that is inspected and discarded
+            at the end of the inspection.
           required: false
           schema:
             type: string
-            enum: [now]
+            enum: [now, inspect]
       requestBody:
         description: Task to create
         required: true
