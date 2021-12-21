@@ -86,7 +86,7 @@ func TestServe(t *testing.T) {
 	d.On("Task").Return(task)
 	drivers.Add("task_b", d)
 
-	api, err := NewAPI(&APIConfig{
+	api, err := NewAPI(APIConfig{
 		Drivers: drivers,
 		Port:    port,
 	})
@@ -111,7 +111,7 @@ func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	port := testutils.FreePort(t)
-	api, err := NewAPI(&APIConfig{Port: port})
+	api, err := NewAPI(APIConfig{Port: port})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -204,7 +204,7 @@ func TestServeWithTLS(t *testing.T) {
 				Cert:    config.String(tc.serverCert),
 				Key:     config.String(tc.serverKey),
 			}
-			api, err := NewAPI(&APIConfig{
+			api, err := NewAPI(APIConfig{
 				Drivers: drivers,
 				Port:    port,
 				TLS:     tlsConfig,
@@ -298,7 +298,7 @@ func TestServeWithMutualTLS(t *testing.T) {
 		VerifyIncoming: config.Bool(true),
 		CACert:         config.String(caCert),
 	}
-	api, err := NewAPI(&APIConfig{
+	api, err := NewAPI(APIConfig{
 		Port: port,
 		TLS:  tlsConfig,
 	})
@@ -422,7 +422,7 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 		VerifyIncoming: config.Bool(true),
 		CAPath:         config.String(tmpDir),
 	}
-	api, err := NewAPI(&APIConfig{
+	api, err := NewAPI(APIConfig{
 		Port: port,
 		TLS:  tlsConfig,
 	})
