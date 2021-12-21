@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
@@ -13,14 +12,9 @@ import (
 // this allows for the task request to be extended
 type taskRequest oapigen.TaskRequest
 
-type taskRequestConfig struct {
-	config.TaskConfig
-	variables map[string]string
-}
-
 // ToTaskRequestConfig converts a taskRequest object to a Config TaskConfig object. It takes as arguments a buffer period,
 // and a working directory which are required to finalize the task config.
-func (tr taskRequest) ToTaskRequestConfig(bp *config.BufferPeriodConfig, wd string) (taskRequestConfig, error) {
+func (tr taskRequest) ToTaskRequestConfig() (config.TaskConfig, error) {
 	tc := config.TaskConfig{
 		Description: tr.Description,
 		Name:        &tr.Name,
@@ -107,7 +101,7 @@ func (tr taskRequest) ToTaskRequestConfig(bp *config.BufferPeriodConfig, wd stri
 		if tr.BufferPeriod.Max != nil {
 			max, err = time.ParseDuration(*tr.BufferPeriod.Max)
 			if err != nil {
-				return taskRequestConfig{}, err
+				return config.TaskConfig{}, err
 			}
 		}
 
@@ -115,7 +109,7 @@ func (tr taskRequest) ToTaskRequestConfig(bp *config.BufferPeriodConfig, wd stri
 		if tr.BufferPeriod.Min != nil {
 			min, err = time.ParseDuration(*tr.BufferPeriod.Min)
 			if err != nil {
-				return taskRequestConfig{}, err
+				return config.TaskConfig{}, err
 			}
 		}
 
@@ -126,130 +120,20 @@ func (tr taskRequest) ToTaskRequestConfig(bp *config.BufferPeriodConfig, wd stri
 		}
 	}
 
-	tc.Finalize(bp, wd)
-	err := tc.Validate()
-	if err != nil {
-		return taskRequestConfig{}, err
-	}
-
-	var variables map[string]string
 	if tr.Variables != nil {
-		variables = tr.Variables.AdditionalProperties
+		if tc.Variables == nil {
+			tc.Variables = make(map[string]string)
+		}
+		for k, v := range tr.Variables.AdditionalProperties {
+			tc.Variables[k] = v
+		}
 	}
-
-	trc := taskRequestConfig{
-		TaskConfig: tc,
-		variables:  variables,
-	}
-	return trc, nil
+	return tc, nil
 }
 
 // String writes out the task request in an easily readable way
 // useful for logging
 func (tr taskRequest) String() string {
 	data, _ := json.Marshal(tr)
-	return fmt.Sprintf("%s", data)
-}
-
-type taskResponse oapigen.TaskResponse
-
-func taskResponseFromTaskRequestConfig(trc taskRequestConfig, requestID oapigen.RequestID) taskResponse {
-	task := oapigen.Task{
-		Description: trc.Description,
-		Name:        *trc.Name,
-		Module:      *trc.Module,
-		Version:     trc.Version,
-		Enabled:     trc.Enabled,
-		WorkingDir:  trc.WorkingDir,
-	}
-
-	if trc.variables != nil {
-		task.Variables = &oapigen.VariableMap{
-			AdditionalProperties: trc.variables,
-		}
-	}
-
-	if trc.Providers != nil {
-		task.Providers = &trc.Providers
-	}
-
-	if trc.Services != nil {
-		task.Services = &trc.Services
-	}
-
-	task.SourceInput = new(oapigen.SourceInput)
-	switch si := trc.SourceInput.(type) {
-	case *config.ServicesSourceInputConfig:
-		if len(si.Names) > 0 {
-			task.SourceInput.Services = &oapigen.ServicesSourceInput{
-				Names: &si.Names,
-			}
-		} else {
-			task.SourceInput.Services = &oapigen.ServicesSourceInput{
-				Regexp: si.Regexp,
-			}
-		}
-	case *config.ConsulKVSourceInputConfig:
-		task.SourceInput.ConsulKv = &oapigen.ConsulKVSourceInput{
-			Datacenter: si.Datacenter,
-			Recurse:    si.Recurse,
-			Path:       *si.Path,
-			Namespace:  si.Namespace,
-		}
-	}
-
-	task.Condition = new(oapigen.Condition)
-	switch cond := trc.Condition.(type) {
-	case *config.ServicesConditionConfig:
-		if len(cond.Names) > 0 {
-			task.Condition.Services = &oapigen.ServicesCondition{
-				Names: &cond.Names,
-			}
-		} else {
-			task.Condition.Services = &oapigen.ServicesCondition{
-				Regexp: cond.Regexp,
-			}
-		}
-	case *config.CatalogServicesConditionConfig:
-		task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
-			Regexp:            config.StringVal(cond.Regexp),
-			SourceIncludesVar: cond.SourceIncludesVar,
-			Datacenter:        cond.Datacenter,
-			Namespace:         cond.Namespace,
-			NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
-				AdditionalProperties: cond.NodeMeta,
-			},
-		}
-	case *config.ConsulKVConditionConfig:
-		task.Condition.ConsulKv = &oapigen.ConsulKVCondition{
-			Datacenter:        cond.Datacenter,
-			Recurse:           cond.Recurse,
-			Path:              *cond.Path,
-			Namespace:         cond.Namespace,
-			SourceIncludesVar: cond.SourceIncludesVar,
-		}
-	case *config.ScheduleConditionConfig:
-		task.Condition.Schedule = &oapigen.ScheduleCondition{
-			Cron: *cond.Cron,
-		}
-	}
-
-	max := config.TimeDurationVal(trc.BufferPeriod.Max).String()
-	min := config.TimeDurationVal(trc.BufferPeriod.Min).String()
-	task.BufferPeriod = &oapigen.BufferPeriod{
-		Enabled: trc.BufferPeriod.Enabled,
-		Max:     &max,
-		Min:     &min,
-	}
-
-	tr := taskResponse{
-		RequestId: requestID,
-		Task:      &task,
-	}
-	return tr
-}
-
-func (tresp taskResponse) String() string {
-	data, _ := json.Marshal(tresp)
-	return fmt.Sprintf("%s", data)
+	return string(data)
 }
