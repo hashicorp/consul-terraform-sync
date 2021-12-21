@@ -334,6 +334,101 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	return rendered, nil
 }
 
+func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfig) (driver.Driver, error) {
+	taskConfig.Finalize(rw.conf.BufferPeriod, *rw.conf.WorkingDir)
+	if err := taskConfig.Validate(); err != nil {
+		rw.logger.Trace("invalid config to create task", "error", err)
+		return nil, err
+	}
+
+	taskName := *taskConfig.Name
+	logger := rw.logger.With(taskNameLogKey, taskName)
+
+	// Check if task exists, if it does, do not create again
+	if _, ok := rw.drivers.Get(taskName); ok {
+		logger.Trace("task already exists")
+		return nil, fmt.Errorf("task with name %s already exists", taskName)
+	}
+
+	d, err := rw.createNewTaskDriver(taskConfig)
+	if err != nil {
+		logger.Error("error creating new task driver", "error", err)
+		return nil, fmt.Errorf("error creating new task driver: %v", err)
+	}
+
+	// Create a new event for tracking infrastructure change required actions
+	task := d.Task()
+	ev, err := event.NewEvent(task.Name(), &event.Config{
+		Providers: task.ProviderNames(),
+		Services:  task.ServiceNames(),
+		Source:    task.Source(),
+	})
+	if err != nil {
+		logger.Error("error creating task event", "error", err)
+		return nil, err
+	}
+
+	var storedErr error
+	defer func() {
+		ev.End(storedErr)
+		logger.Trace("adding event", "event", ev.GoString())
+		if err := rw.store.Add(*ev); err != nil {
+			// only log error since creating a task occurred successfully by now
+			logger.Error("error storing event", "event", ev.GoString(), "error", err)
+		}
+	}()
+	ev.Start()
+
+	// Initialize the new task
+	storedErr = d.InitTask(ctx)
+	if storedErr != nil {
+		return nil, fmt.Errorf("error initializing new task, %s", storedErr)
+	}
+
+	// TODO: Set the buffer period
+	// d.SetBufferPeriod()
+
+	// Add the task driver to the driver list
+	storedErr = rw.drivers.Add(taskName, d)
+	if storedErr != nil {
+		logger.Error("error creating task", "error", storedErr)
+		return nil, storedErr
+	}
+	return d, nil
+}
+
+func (rw *ReadWrite) runTaskOnce(ctx context.Context, d driver.Driver) error {
+	task := d.Task()
+	taskName := task.Name()
+	logger := rw.logger.With(taskNameLogKey, taskName)
+	if !task.IsEnabled() {
+		logger.Trace("skipping disabled task")
+		return nil
+	}
+
+	// Render the template. Rendering a template for the first time may take several
+	// cycles to load all the dependencies asynchronously, so loop through here until render returns
+	// true
+	var err error
+	var complete bool
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		complete, err = rw.checkApply(ctx, d, false, true)
+		if err != nil {
+			logger.Error("error adding task to driver")
+			return fmt.Errorf("error updating task '%s'. Unable to "+
+				"render template for task: %s", taskName, err)
+		}
+		if complete {
+			return nil
+		}
+	}
+}
+
 // EnableTestMode is a helper for testing which tasks were triggered and
 // executed. Callers of this method must consume from TaskNotify channel to
 // prevent the buffered channel from filling and causing a dead lock.
