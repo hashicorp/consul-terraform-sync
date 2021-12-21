@@ -32,9 +32,6 @@ func (t ServicesRegexTemplate) IsServicesVar() bool {
 func (t ServicesRegexTemplate) appendModuleAttribute(*hclwrite.Body) {}
 
 func (t ServicesRegexTemplate) appendTemplate(w io.Writer) error {
-	if t.Regexp == "" {
-		return nil
-	}
 	q := t.hcatQuery()
 
 	if t.SourceIncludesVar {
@@ -66,9 +63,8 @@ func (t ServicesRegexTemplate) SourceIncludesVariable() bool {
 func (t ServicesRegexTemplate) hcatQuery() string {
 	var opts []string
 
-	if t.Regexp != "" {
-		opts = append(opts, fmt.Sprintf("regexp=%s", t.Regexp))
-	}
+	// Support regexp == "" (same as a wildcard)
+	opts = append(opts, fmt.Sprintf("regexp=%s", t.Regexp))
 
 	if t.Datacenter != "" {
 		opts = append(opts, fmt.Sprintf("dc=%s", t.Datacenter))

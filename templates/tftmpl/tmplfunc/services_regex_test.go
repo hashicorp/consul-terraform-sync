@@ -32,6 +32,14 @@ func TestNewServicesRegexQuery(t *testing.T) {
 			true,
 		},
 		{
+			"regexp empty string",
+			[]string{"regexp="},
+			&servicesRegexQuery{
+				regexp: regexp.MustCompile(""),
+			},
+			false,
+		},
+		{
 			"regexp",
 			[]string{"regexp=.*"},
 			&servicesRegexQuery{

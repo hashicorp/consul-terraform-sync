@@ -55,11 +55,20 @@ services = {
 `,
 		},
 		{
-			"unconfigured & includes_var false",
+			"regexp empty string",
 			&ServicesRegexTemplate{
+				Regexp:            "",
 				SourceIncludesVar: false,
 			},
-			"",
+			`
+{{- with $srv := servicesRegex "regexp=" }}
+  {{- range $s := $srv}}
+  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
+{{ HCLService $s | indent 4 }}
+  },
+  {{- end}}
+{{- end}}
+`,
 		},
 	}
 
@@ -85,6 +94,13 @@ func TestServicesRegexTemplate_hcatQuery(t *testing.T) {
 				Regexp: ".*",
 			},
 			`"regexp=.*"`,
+		},
+		{
+			"valid regexp empty string",
+			&ServicesRegexTemplate{
+				Regexp: "",
+			},
+			`"regexp="`,
 		},
 		{
 			"all_parameters",
