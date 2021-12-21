@@ -260,9 +260,8 @@ func initNewTask(ctx context.Context, d driver.Driver, runOption string) error {
 	for {
 		ok, err := d.RenderTemplate(ctx)
 		if err != nil {
-			logger.Error("error adding task to driver", "task_name", taskName)
-			return fmt.Errorf("error updating task '%s'. Unable to "+
-				"render template for task: %s", taskName, err)
+			logger.Error("error rendering task template", "task_name", taskName)
+			return fmt.Errorf("error rendering template for task '%s': %s", taskName, err)
 		}
 		if ok {
 			// Once template rendering is finished, break

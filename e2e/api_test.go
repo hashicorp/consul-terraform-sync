@@ -653,10 +653,10 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 		moduleTaskConfig(initialTaskName, "mkam/hello/cts"))
 
 	// Create a dry run task
-	u := fmt.Sprintf("http://localhost:%d/v1/dryrun_tasks", cts.Port())
+	u := fmt.Sprintf("http://localhost:%d/v1/tasks?run=inspect", cts.Port())
 	taskName := "dryrun_task"
 	serviceName := "api"
-	req := &oapigen.DryRunTaskRequest{
+	req := &oapigen.TaskRequest{
 		Name:     taskName,
 		Services: &[]string{serviceName},
 		Source:   "mkam/hello/cts",

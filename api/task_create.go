@@ -126,7 +126,7 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 	// Initialize the dry run task
 	err := initNewTask(r.Context(), d, "")
 	if err != nil {
-		err = fmt.Errorf("error initializing task: %s", err)
+		err = fmt.Errorf("error initializing new task: %s", err)
 		logger.Error("error creating task", "error", err)
 		sendError(w, r, http.StatusBadRequest, err.Error())
 		return

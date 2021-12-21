@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -123,61 +122,54 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 	}
 }
 
-func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
+func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 	t.Parallel()
-	cases := []struct {
-		name       string
-		taskName   string
-		request    string
-		statusCode int
-		message    string
-	}{
-		{
-			name:       "task already exists",
-			taskName:   testTaskName,
-			request:    testCreateTaskRequest,
-			message:    fmt.Sprintf("task with name %s already exists", testTaskName),
-			statusCode: http.StatusBadRequest,
-		},
-		{
-			name:       "empty request",
-			taskName:   testTaskName,
-			request:    "",
-			message:    "error decoding the request: EOF",
-			statusCode: http.StatusBadRequest,
-		},
+	c, d := generateTaskLifecycleHandlerTestDependencies()
+	// Expected driver mock calls and returns
+	taskName := "inspected_task"
+	request := fmt.Sprintf(`{
+		"name": "%s",
+		"services": ["api"],
+		"source": "mkam/hello/cts"
+	}`, taskName)
+	conf := driver.TaskConfig{
+		Name: taskName,
 	}
+	task, err := driver.NewTask(conf)
+	require.NoError(t, err)
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			c, d := generateTaskLifecycleHandlerTestDependencies()
+	d.On("Task").Return(task)
+	d.On("InitTask", mock.Anything).Return(nil)
+	d.On("RenderTemplate", mock.Anything).Return(true, nil)
+	d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, nil)
 
-			err := c.drivers.Add(tc.taskName, d)
-			require.NoError(t, err)
+	resp := runTestCreateTask(t, c, "inspect", http.StatusOK, request)
 
-			resp := runTestCreateTask(t, c, "", tc.statusCode, tc.request)
-
-			// Task should be added to the drivers list
-			_, ok := c.drivers.Get(tc.taskName)
-			require.True(t, ok)
-
-			// No events should be registered
-			checkTestEventCount(t, tc.taskName, c.store, 0)
-
-			// Check response
-			decoder := json.NewDecoder(resp.Body)
-			var actual oapigen.ErrorResponse
-			err = decoder.Decode(&actual)
-			require.NoError(t, err)
-
-			expected := generateErrorResponse("", tc.message)
-			assert.Equal(t, expected, actual)
-		})
+	// Check response, expect task and run
+	decoder := json.NewDecoder(resp.Body)
+	var actual taskResponse
+	err = decoder.Decode(&actual)
+	require.NoError(t, err)
+	expected := generateExpectedResponse(t, request)
+	plan := ""
+	expected.Run = &oapigen.Run{
+		Plan: &plan,
 	}
+	assert.Equal(t, expected, actual)
+	d.AssertExpectations(t)
+
+	// Check task not added to driver, no events registered
+	_, ok := c.drivers.Get(taskName)
+	require.False(t, ok)
+	checkTestEventCount(t, taskName, c.store, 0)
+
+	// Run the inspect a second time with same task, expect return 200 OK
+	runTestCreateTask(t, c, "inspect", http.StatusOK, request)
 }
 
-func TestTaskLifeCycleHandler_CreateTask_InitError(t *testing.T) {
+func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 	t.Parallel()
+	existingTask := "existing_task"
 	cases := []struct {
 		name       string
 		taskName   string
@@ -185,13 +177,23 @@ func TestTaskLifeCycleHandler_CreateTask_InitError(t *testing.T) {
 		statusCode int
 		run        string
 		message    string
-		response   taskResponse
 	}{
 		{
-			name:       "task already exists",
+			name:     "task already exists",
+			taskName: existingTask,
+			request: fmt.Sprintf(`{
+				"name": "%s",
+				"services": ["api"],
+				"source": "./example-module"
+		}`, existingTask),
+			message:    fmt.Sprintf("task with name %s already exists", existingTask),
+			statusCode: http.StatusBadRequest,
+		},
+		{
+			name:       "empty request",
 			taskName:   testTaskName,
-			request:    testCreateTaskRequest,
-			message:    "error initializing new task: mock error",
+			request:    "",
+			message:    "error decoding the request: EOF",
 			statusCode: http.StatusBadRequest,
 		},
 		{
@@ -208,22 +210,102 @@ func TestTaskLifeCycleHandler_CreateTask_InitError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			c, d := generateTaskLifecycleHandlerTestDependencies()
 
-			d.On("InitTask", mock.Anything).Return(errors.New("mock error"))
+			err := c.drivers.Add(existingTask, d)
+			require.NoError(t, err)
+
+			resp := runTestCreateTask(t, c, tc.run, tc.statusCode, tc.request)
+
+			// Task should not be in driver's list
+			if tc.taskName != existingTask {
+				_, ok := c.drivers.Get(tc.taskName)
+				require.False(t, ok)
+			}
+
+			// No events should be registered
+			checkTestEventCount(t, tc.taskName, c.store, 0)
+
+			// Check response
+			decoder := json.NewDecoder(resp.Body)
+			var actual oapigen.ErrorResponse
+			err = decoder.Decode(&actual)
+			require.NoError(t, err)
+
+			expected := generateErrorResponse("", tc.message)
+			assert.Equal(t, expected, actual)
+		})
+	}
+}
+
+func TestTaskLifeCycleHandler_CreateTask_DriverError(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name              string
+		run               string
+		message           string
+		initTaskErr       error
+		renderTemplateErr error
+		inspectTaskErr    error
+		events            int
+	}{
+		{
+			name:        "init failed",
+			message:     "error initializing new task: tf-init error",
+			initTaskErr: fmt.Errorf("tf-init error"),
+			events:      1,
+		},
+		{
+			name:        "init with inspect run",
+			run:         "inspect",
+			message:     "error initializing new task: tf-init error",
+			initTaskErr: fmt.Errorf("tf-init error"),
+			events:      0,
+		},
+		{
+			name: "render template",
+			message: "error initializing new task: error rendering template " +
+				"for task 'api-task': render tmpl error", renderTemplateErr: fmt.Errorf("render tmpl error"),
+			events: 1,
+		},
+		{
+			name: "render template with inspect run",
+			run:  "inspect",
+			message: "error initializing new task: error rendering template " +
+				"for task 'api-task': render tmpl error",
+			renderTemplateErr: fmt.Errorf("render tmpl error"),
+			events:            0,
+		},
+		{
+			name:           "inspect task",
+			run:            "inspect",
+			message:        "error inspecting task: tf-plan error",
+			inspectTaskErr: fmt.Errorf("tf-plan error"),
+			events:         0,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c, d := generateTaskLifecycleHandlerTestDependencies()
+
+			taskName := testTaskName
+			d.On("InitTask", mock.Anything).Return(tc.initTaskErr)
+			d.On("RenderTemplate", mock.Anything).Return(true, tc.renderTemplateErr)
+			d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, tc.inspectTaskErr)
 			conf := driver.TaskConfig{
-				Name: tc.taskName,
+				Name: taskName,
 			}
 			task, err := driver.NewTask(conf)
 			require.NoError(t, err)
 			d.On("Task").Return(task)
 
-			resp := runTestCreateTask(t, c, tc.run, tc.statusCode, tc.request)
+			resp := runTestCreateTask(t, c, tc.run, http.StatusBadRequest, testCreateTaskRequest)
 
 			// Task should not be added to the list
-			_, ok := c.drivers.Get(tc.taskName)
-			require.False(t, ok)
+			_, ok := c.drivers.Get(taskName)
+			assert.False(t, ok)
 
-			// Only one event should be registered
-			checkTestEventCount(t, tc.taskName, c.store, 1)
+			// Check expected number of events
+			checkTestEventCount(t, taskName, c.store, tc.events)
 
 			// Check response
 			decoder := json.NewDecoder(resp.Body)
