@@ -261,6 +261,11 @@ components:
         regexp:
           type: string
           example: "web.*"
+        names:
+          type: array
+          items:
+            type: string
+            example: ["web", "api"]
     CatalogServicesCondition:
       type: object
       properties:
@@ -320,6 +325,11 @@ components:
         regexp:
           type: string
           example: "web.*"
+        names:
+          type: array
+          items:
+            type: string
+            example: ["web", "api"]
     ConsulKVSourceInput:
       type: object
       properties:

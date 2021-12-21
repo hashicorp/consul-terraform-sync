@@ -89,12 +89,14 @@ type ScheduleCondition struct {
 
 // ServicesCondition defines model for ServicesCondition.
 type ServicesCondition struct {
-	Regexp *string `json:"regexp,omitempty"`
+	Names  *[]string `json:"names,omitempty"`
+	Regexp *string   `json:"regexp,omitempty"`
 }
 
 // ServicesSourceInput defines model for ServicesSourceInput.
 type ServicesSourceInput struct {
-	Regexp *string `json:"regexp,omitempty"`
+	Names  *[]string `json:"names,omitempty"`
+	Regexp *string   `json:"regexp,omitempty"`
 }
 
 // SourceInput defines model for SourceInput.
