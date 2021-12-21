@@ -50,6 +50,10 @@ type TaskConfig struct {
 	// of the files. Duplicate variables are overwritten with the later value.
 	VarFiles []string `mapstructure:"variable_files"`
 
+	// TODO: Not supported by config file yet
+	// TODO: Add validation
+	Variables map[string]string
+
 	// Version is the version of source the task will use. For the Terraform
 	// driver, this is the module version. The latest version will be used as
 	// the default if omitted.
