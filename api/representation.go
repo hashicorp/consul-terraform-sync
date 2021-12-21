@@ -41,11 +41,15 @@ func (tr taskRequest) ToTaskRequestConfig(bp *config.BufferPeriodConfig, wd stri
 	// Convert source input
 	if tr.SourceInput != nil {
 		if tr.SourceInput.Services != nil {
-			tc.SourceInput = &config.ServicesSourceInputConfig{
+			si := &config.ServicesSourceInputConfig{
 				ServicesMonitorConfig: config.ServicesMonitorConfig{
 					Regexp: tr.SourceInput.Services.Regexp,
 				},
 			}
+			if tr.SourceInput.Services.Names != nil {
+				si.Names = *tr.SourceInput.Services.Names
+			}
+			tc.SourceInput = si
 		} else if tr.SourceInput.ConsulKv != nil {
 			tc.SourceInput = &config.ConsulKVSourceInputConfig{
 				ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
@@ -61,11 +65,15 @@ func (tr taskRequest) ToTaskRequestConfig(bp *config.BufferPeriodConfig, wd stri
 	// Convert condition
 	if tr.Condition != nil {
 		if tr.Condition.Services != nil {
-			tc.Condition = &config.ServicesConditionConfig{
+			cond := &config.ServicesConditionConfig{
 				ServicesMonitorConfig: config.ServicesMonitorConfig{
 					Regexp: tr.Condition.Services.Regexp,
 				},
 			}
+			if tr.Condition.Services.Names != nil {
+				cond.Names = *tr.Condition.Services.Names
+			}
+			tc.Condition = cond
 		} else if tr.Condition.ConsulKv != nil {
 			tc.Condition = &config.ConsulKVConditionConfig{
 				ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
@@ -172,8 +180,14 @@ func taskResponseFromTaskRequestConfig(trc taskRequestConfig, requestID oapigen.
 	task.SourceInput = new(oapigen.SourceInput)
 	switch si := trc.SourceInput.(type) {
 	case *config.ServicesSourceInputConfig:
-		task.SourceInput.Services = &oapigen.ServicesSourceInput{
-			Regexp: si.Regexp,
+		if len(si.Names) > 0 {
+			task.SourceInput.Services = &oapigen.ServicesSourceInput{
+				Names: &si.Names,
+			}
+		} else {
+			task.SourceInput.Services = &oapigen.ServicesSourceInput{
+				Regexp: si.Regexp,
+			}
 		}
 	case *config.ConsulKVSourceInputConfig:
 		task.SourceInput.ConsulKv = &oapigen.ConsulKVSourceInput{
@@ -187,8 +201,14 @@ func taskResponseFromTaskRequestConfig(trc taskRequestConfig, requestID oapigen.
 	task.Condition = new(oapigen.Condition)
 	switch cond := trc.Condition.(type) {
 	case *config.ServicesConditionConfig:
-		task.Condition.Services = &oapigen.ServicesCondition{
-			Regexp: cond.Regexp,
+		if len(cond.Names) > 0 {
+			task.Condition.Services = &oapigen.ServicesCondition{
+				Names: &cond.Names,
+			}
+		} else {
+			task.Condition.Services = &oapigen.ServicesCondition{
+				Regexp: cond.Regexp,
+			}
 		}
 	case *config.CatalogServicesConditionConfig:
 		task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
