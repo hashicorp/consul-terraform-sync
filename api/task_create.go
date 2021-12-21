@@ -25,7 +25,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	requestID := requestIDFromContext(ctx) // TODO: log with request ID
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("bad request", "error", err, "create_task_request", r.Body)
-		sendError(w, r, http.StatusBadRequest, fmt.Sprintf("error decoding the request: %v", err))
+		sendError(w, r, http.StatusBadRequest, fmt.Errorf("error decoding the request: %v", err))
 		return
 	}
 	logger = logger.With("task_name", req.Name)
@@ -34,7 +34,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	// Check if task exists, if it does, do not create again
 	if _, err := h.ctrl.Task(ctx, req.Name); err != nil {
 		logger.Trace("task already exists")
-		sendError(w, r, http.StatusBadRequest, fmt.Sprintf("task with name %s already exists", req.Name))
+		sendError(w, r, http.StatusBadRequest, err)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		err = fmt.Errorf("error with task configuration: %s", err)
 		logger.Error("error creating task", "error", err)
-		sendError(w, r, http.StatusInternalServerError, err.Error())
+		sendError(w, r, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -54,7 +54,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 		err = h.ctrl.TaskCreate(ctx, trc)
 	}
 	if err != nil {
-		sendError(w, r, http.StatusInternalServerError, err.Error())
+		sendError(w, r, http.StatusInternalServerError, err)
 		return
 	}
 
