@@ -4,6 +4,12 @@
 [oapi-codegen](https://github.com/deepmap/oapi-codegen) is a library which contains a set of utilties for generating 
 Go boilerplate code based on an [OpenAPI 3.0.0](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.0.md) specification.
 
+## Code Generation
+To simplify code generation, the generation is set up using `go:generation` comments in `api/handler.go` and `api/task_lifecycle_client.go`.
+
+To run code generation for CTS, including the API code generation:
+1. Install open-api: `go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen`
+1. Generate files: `make generate`
 
 ## Files
 ### api/openapi.yaml
@@ -23,7 +29,3 @@ api-codegen  -package oapigen -generate types -o oapigen/types.go openapi.yaml`
 Contains client boilerplate.
 This code is generated using the following command: `
 api-codegen  -package oapigen -generate client -o oapigen/client.go openapi.yaml`
-
-## Code Generation
-To simplify code generation, the generation is set up using `go:generation` comments in `api/handler.go` and `api/task_lifecycle_client.go`. 
-To run code generation for CTS, including the API code generation, run: `go generate ./...` from the root of CTS

@@ -107,7 +107,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_services_condition",
+			name: "with_services_condition_regexp",
 			request: &taskRequest{
 				Name:   "task",
 				Source: "test-source",
@@ -144,6 +144,55 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 						ServicesMonitorConfig: config.ServicesMonitorConfig{
 							Regexp:             config.String("^web.*"),
 							Names:              []string{},
+							Datacenter:         config.String(""),
+							Namespace:          config.String(""),
+							Filter:             config.String(""),
+							CTSUserDefinedMeta: map[string]string{},
+						},
+					},
+					WorkingDir:  config.String("sync-tasks/task"),
+					SourceInput: config.EmptySourceInputConfig(),
+				},
+			},
+		},
+		{
+			name: "with_services_condition_names",
+			request: &taskRequest{
+				Name:   "task",
+				Source: "test-source",
+				BufferPeriod: &oapigen.BufferPeriod{
+					Enabled: config.Bool(false),
+					Max:     config.String("0s"),
+					Min:     config.String("0s"),
+				},
+				Enabled: config.Bool(true),
+				Condition: &oapigen.Condition{
+					Services: &oapigen.ServicesCondition{
+						Names: &[]string{"api", "web"},
+					},
+				},
+				WorkingDir: config.String("sync-tasks/task"),
+			},
+			taskConfigExpected: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description: config.String(""),
+					Name:        config.String("task"),
+					Providers:   []string{},
+					Services:    []string{},
+					Source:      config.String("test-source"),
+					VarFiles:    []string{},
+					Version:     config.String(""),
+					TFVersion:   config.String(""),
+					BufferPeriod: &config.BufferPeriodConfig{
+						Enabled: config.Bool(false),
+						Min:     config.TimeDuration(0 * time.Second),
+						Max:     config.TimeDuration(0 * time.Second),
+					},
+					Enabled: config.Bool(true),
+					Condition: &config.ServicesConditionConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp:             config.String(""),
+							Names:              []string{"api", "web"},
 							Datacenter:         config.String(""),
 							Namespace:          config.String(""),
 							Filter:             config.String(""),
@@ -422,7 +471,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 	}
 }
 
-func TestTaskRequest_ToConfigTaskConfig_Error(t *testing.T) {
+func TestTaskRequest_ToRequestTaskConfig_Error(t *testing.T) {
 	cases := []struct {
 		name     string
 		request  *taskRequest
@@ -581,7 +630,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_services_condition",
+			name: "with_services_condition_regexp",
 			taskRequestConfig: taskRequestConfig{
 				TaskConfig: config.TaskConfig{
 					Description:  config.String(""),
@@ -623,6 +672,58 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Condition: &oapigen.Condition{
 						Services: &oapigen.ServicesCondition{
 							Regexp: config.String("^web.*"),
+						},
+					},
+					SourceInput: &oapigen.SourceInput{},
+					WorkingDir:  config.String("sync-tasks"),
+					Services:    &[]string{},
+					Providers:   &[]string{},
+				},
+			},
+		},
+		{
+			name: "with_services_condition_names",
+			taskRequestConfig: taskRequestConfig{
+				TaskConfig: config.TaskConfig{
+					Description:  config.String(""),
+					Name:         config.String("task"),
+					Providers:    []string{},
+					Services:     []string{},
+					Source:       config.String("test-source"),
+					VarFiles:     []string{},
+					Version:      config.String(""),
+					TFVersion:    config.String(""),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Enabled:      config.Bool(true),
+					Condition: &config.ServicesConditionConfig{
+						config.ServicesMonitorConfig{
+							Names:              []string{"api", "web"},
+							Datacenter:         config.String(""),
+							Namespace:          config.String(""),
+							Filter:             config.String(""),
+							CTSUserDefinedMeta: map[string]string{},
+						},
+					},
+					WorkingDir:  config.String("sync-tasks"),
+					SourceInput: config.EmptySourceInputConfig(),
+				},
+			},
+			expectedResponse: taskResponse{
+				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
+				Task: &oapigen.Task{
+					Name:        "task",
+					Source:      "test-source",
+					Version:     config.String(""),
+					Description: config.String(""),
+					BufferPeriod: &oapigen.BufferPeriod{
+						Enabled: config.Bool(true),
+						Max:     config.String("20s"),
+						Min:     config.String("5s"),
+					},
+					Enabled: config.Bool(true),
+					Condition: &oapigen.Condition{
+						Services: &oapigen.ServicesCondition{
+							Names: &[]string{"api", "web"},
 						},
 					},
 					SourceInput: &oapigen.SourceInput{},
