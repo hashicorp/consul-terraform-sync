@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -79,11 +78,6 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
-}
-
-// ServeAPI runs the API server for the controller
-func (ctrl *ReadOnly) ServeAPI(ctx context.Context) error {
-	return errors.New("server API is not supported for ReadOnly controller")
 }
 
 func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, error) {

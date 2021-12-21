@@ -31,9 +31,6 @@ type Controller interface {
 	// Run runs the controller by monitoring Consul and triggering the driver as needed
 	Run(ctx context.Context) error
 
-	// ServeAPI runs the API server for the controller
-	ServeAPI(context.Context) error
-
 	// Stop stops underlying clients and connections
 	Stop()
 }

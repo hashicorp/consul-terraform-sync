@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -236,23 +235,6 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
-}
-
-// ServeAPI runs the API server for the controller
-func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
-	a, err := api.NewAPI(&api.APIConfig{
-		Store:               rw.store,
-		Drivers:             rw.drivers,
-		Port:                config.IntVal(rw.conf.Port),
-		TLS:                 rw.conf.TLS,
-		BufferPeriod:        rw.conf.BufferPeriod,
-		WorkingDir:          *rw.conf.WorkingDir,
-		CreateNewTaskDriver: rw.createNewTaskDriverWithVars},
-	)
-	if err != nil {
-		return err
-	}
-	return a.Serve(ctx)
 }
 
 // checkApply runs a task by attempting to render the template and applying the
