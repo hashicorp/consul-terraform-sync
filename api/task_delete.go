@@ -25,7 +25,7 @@ func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.R
 	_, err := h.ctrl.Task(ctx, name)
 	if err != nil {
 		logger.Trace("task not found", "error", err)
-		sendError(w, r, http.StatusNotFound, fmt.Sprint(err))
+		sendError(w, r, http.StatusNotFound, err)
 		return
 	}
 
@@ -39,9 +39,9 @@ func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.R
 			err := fmt.Errorf("task '%s' is currently running and cannot be deleted "+
 				"at this time", name)
 			logger.Trace("task active", "error", err)
-			sendError(w, r, http.StatusConflict, fmt.Sprint(err))
+			sendError(w, r, http.StatusConflict, err)
 		default:
-			sendError(w, r, http.StatusNotFound, fmt.Sprint(err))
+			sendError(w, r, http.StatusInternalServerError, err)
 		}
 		return
 	}
