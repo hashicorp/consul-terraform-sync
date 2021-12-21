@@ -157,12 +157,23 @@ func (c *ServicesMonitorConfig) Validate() error {
 		return fmt.Errorf("either the regexp or names field must be configured")
 	}
 
+	// Validate regex
 	if regexConfigured {
 		if _, err := regexp.Compile(StringVal(c.Regexp)); err != nil {
 			return fmt.Errorf("unable to compile services regexp: %s", err)
 		}
 	} else {
 		c.Regexp = String("") // Finalize
+	}
+
+	// Check that names does not contain empty strings
+	if namesConfigured {
+		for _, name := range c.Names {
+			if name == "" {
+				return fmt.Errorf("names field includes empty string(s). " +
+					"services names cannot be empty")
+			}
+		}
 	}
 
 	return nil

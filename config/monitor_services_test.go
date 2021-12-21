@@ -386,6 +386,13 @@ func TestServicesMonitorConfig_Validate(t *testing.T) {
 			},
 		},
 		{
+			"invalid_empty_string_names",
+			true,
+			&ServicesMonitorConfig{
+				Names: []string{"api", ""},
+			},
+		},
+		{
 			"invalid_both_regexp_and_names_configured",
 			true,
 			&ServicesMonitorConfig{
