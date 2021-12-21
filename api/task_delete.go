@@ -2,8 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -29,18 +29,13 @@ func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// TODO: check if task is active
-
 	err = h.ctrl.TaskDelete(ctx, name)
 	if err != nil {
 		// TODO error types
-		switch err.Error() {
-		case "active":
-			err := fmt.Errorf("task '%s' is currently running and cannot be deleted "+
-				"at this time", name)
+		if strings.Contains(err.Error(), "running and cannot be deleted") {
 			logger.Trace("task active", "error", err)
 			sendError(w, r, http.StatusConflict, err)
-		default:
+		} else {
 			sendError(w, r, http.StatusInternalServerError, err)
 		}
 		return

@@ -6,6 +6,8 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 )
 
+//go:generate mockery --name=Server --filename=server.go --output=../mocks/server
+
 // Server represents the Controller methods used for the API server
 type Server interface {
 	Config() config.Config
