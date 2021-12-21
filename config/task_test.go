@@ -29,7 +29,7 @@ func TestTaskConfig_Copy(t *testing.T) {
 				Name:        String("name"),
 				Providers:   []string{"provider"},
 				Services:    []string{"service"},
-				Source:      String("source"),
+				Module:      String("path"),
 				Version:     String("0.0.0"),
 				Enabled:     Bool(true),
 				Condition: &CatalogServicesConditionConfig{
@@ -173,27 +173,51 @@ func TestTaskConfig_Merge(t *testing.T) {
 		},
 		{
 			"source_overrides",
-			&TaskConfig{Source: String("source")},
-			&TaskConfig{Source: String("")},
-			&TaskConfig{Source: String("")},
+			&TaskConfig{DeprecatedSource: String("path")},
+			&TaskConfig{DeprecatedSource: String("")},
+			&TaskConfig{DeprecatedSource: String("")},
 		},
 		{
 			"source_empty_one",
-			&TaskConfig{Source: String("source")},
+			&TaskConfig{DeprecatedSource: String("path")},
 			&TaskConfig{},
-			&TaskConfig{Source: String("source")},
+			&TaskConfig{DeprecatedSource: String("path")},
 		},
 		{
 			"source_empty_two",
 			&TaskConfig{},
-			&TaskConfig{Source: String("source")},
-			&TaskConfig{Source: String("source")},
+			&TaskConfig{DeprecatedSource: String("path")},
+			&TaskConfig{DeprecatedSource: String("path")},
 		},
 		{
 			"source_same",
-			&TaskConfig{Source: String("source")},
-			&TaskConfig{Source: String("source")},
-			&TaskConfig{Source: String("source")},
+			&TaskConfig{DeprecatedSource: String("path")},
+			&TaskConfig{DeprecatedSource: String("path")},
+			&TaskConfig{DeprecatedSource: String("path")},
+		},
+		{
+			"module_overrides",
+			&TaskConfig{Module: String("module")},
+			&TaskConfig{Module: String("")},
+			&TaskConfig{Module: String("")},
+		},
+		{
+			"module_empty_one",
+			&TaskConfig{Module: String("module")},
+			&TaskConfig{},
+			&TaskConfig{Module: String("module")},
+		},
+		{
+			"module_empty_two",
+			&TaskConfig{},
+			&TaskConfig{Module: String("module")},
+			&TaskConfig{Module: String("module")},
+		},
+		{
+			"module_same",
+			&TaskConfig{Module: String("module")},
+			&TaskConfig{Module: String("module")},
+			&TaskConfig{Module: String("module")},
 		},
 		{
 			"version_overrides",
@@ -363,7 +387,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Name:         String(""),
 				Providers:    []string{},
 				Services:     []string{},
-				Source:       String(""),
+				Module:       String(""),
 				VarFiles:     []string{},
 				Version:      String(""),
 				TFVersion:    String(""),
@@ -384,7 +408,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Name:         String("task"),
 				Providers:    []string{},
 				Services:     []string{},
-				Source:       String(""),
+				Module:       String(""),
 				VarFiles:     []string{},
 				Version:      String(""),
 				TFVersion:    String(""),
@@ -406,7 +430,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Name:        String("task"),
 				Providers:   []string{},
 				Services:    []string{},
-				Source:      String(""),
+				Module:      String(""),
 				VarFiles:    []string{},
 				Version:     String(""),
 				TFVersion:   String(""),
@@ -434,7 +458,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Name:        String("task"),
 				Providers:   []string{},
 				Services:    []string{},
-				Source:      String(""),
+				Module:      String(""),
 				VarFiles:    []string{},
 				Version:     String(""),
 				TFVersion:   String(""),
@@ -467,6 +491,49 @@ func TestTaskConfig_Finalize(t *testing.T) {
 	}
 }
 
+func TestTaskConfig_Finalize_DeprecatedSource(t *testing.T) {
+	cases := []struct {
+		name     string
+		i        *TaskConfig
+		expected string
+	}{
+		{
+			"module_configured",
+			&TaskConfig{
+				Module: String("module/path"),
+			},
+			"module/path",
+		},
+		{
+			"source_configured",
+			&TaskConfig{
+				DeprecatedSource: String("source/path"),
+			},
+			"source/path",
+		},
+		{
+			"module_and_source_configured",
+			&TaskConfig{
+				Module:           String("module/path"),
+				DeprecatedSource: String("source/path"),
+			},
+			"module/path",
+		},
+		{
+			"none_configured",
+			&TaskConfig{},
+			"",
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+			assert.Equal(t, tc.expected, *tc.i.Module)
+		})
+	}
+}
+
 func TestTaskConfig_Validate(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -485,7 +552,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 		},
 		{
 			"invalid: task name: missing",
-			&TaskConfig{Services: []string{"service"}, Source: String("source")},
+			&TaskConfig{Services: []string{"service"}, Module: String("path")},
 			false,
 		},
 		{
@@ -493,12 +560,12 @@ func TestTaskConfig_Validate(t *testing.T) {
 			&TaskConfig{
 				Name:     String("cannot contain spaces"),
 				Services: []string{"service"},
-				Source:   String("source"),
+				Module:   String("path"),
 			},
 			false,
 		},
 		{
-			"invalid: task source: missing",
+			"invalid: task module: missing",
 			&TaskConfig{Name: String("task"), Services: []string{"service"}},
 			false,
 		},
@@ -507,7 +574,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			&TaskConfig{
 				Name:      String("task"),
 				Services:  []string{"service"},
-				Source:    String("source"),
+				Module:    String("path"),
 				TFVersion: String("0.15.0"),
 			},
 			false,
@@ -517,7 +584,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			&TaskConfig{
 				Name:      String("task"),
 				Services:  []string{"api"},
-				Source:    String("source"),
+				Module:    String("path"),
 				Providers: []string{"providerA", "providerA"},
 			},
 			false,
@@ -527,7 +594,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			&TaskConfig{
 				Name:      String("task"),
 				Services:  []string{"api"},
-				Source:    String("source"),
+				Module:    String("path"),
 				Providers: []string{"providerA", "providerA.alias"},
 			},
 			false,
@@ -537,13 +604,13 @@ func TestTaskConfig_Validate(t *testing.T) {
 			&TaskConfig{
 				Name:     String("task"),
 				Services: []string{"api"},
-				Source:   String("source"),
+				Module:   String("path"),
 			},
 			true,
 		},
 		{
 			"invalid: no cond: no services",
-			&TaskConfig{Name: String("task"), Source: String("source")},
+			&TaskConfig{Name: String("task"), Module: String("path")},
 			false,
 		},
 		// catalog-services condition test cases
@@ -551,7 +618,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"invalid: cs cond: no cond.regexp & no services",
 			&TaskConfig{
 				Name:      String("task"),
-				Source:    String("source"),
+				Module:    String("path"),
 				Condition: &CatalogServicesConditionConfig{},
 			},
 			false,
@@ -560,7 +627,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"valid: cs-cond: cond.regexp configured & no services",
 			&TaskConfig{
 				Name:   String("task"),
-				Source: String("source"),
+				Module: String("path"),
 				Condition: &CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig{
 						Regexp: String(".*"),
@@ -574,7 +641,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"valid: services cond: no services",
 			&TaskConfig{
 				Name:   String("task"),
-				Source: String("source"),
+				Module: String("path"),
 				Condition: &ServicesConditionConfig{
 					ServicesMonitorConfig{
 						Regexp: String(".*"),
@@ -587,7 +654,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"invalid: services cond: services configured",
 			&TaskConfig{
 				Name:     String("task"),
-				Source:   String("source"),
+				Module:   String("path"),
 				Services: []string{"api"},
 				Condition: &ServicesConditionConfig{
 					ServicesMonitorConfig{
@@ -602,7 +669,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"invalid: kv cond: no services",
 			&TaskConfig{
 				Name:   String("task"),
-				Source: String("source"),
+				Module: String("path"),
 				Condition: &ConsulKVConditionConfig{
 					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
 						Path: String("path"),
@@ -616,7 +683,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"valid: sched cond: services configured",
 			&TaskConfig{
 				Name:      String("task"),
-				Source:    String("source"),
+				Module:    String("path"),
 				Services:  []string{"api"},
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 			},
@@ -626,7 +693,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"valid: sched cond: service source_input configured & no services",
 			&TaskConfig{
 				Name:      String("task"),
-				Source:    String("source"),
+				Module:    String("path"),
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 				SourceInput: &ServicesSourceInputConfig{
 					ServicesMonitorConfig{Regexp: String(".*")}},
@@ -637,7 +704,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"invalid: sched cond: no services & no source_input",
 			&TaskConfig{
 				Name:      String("task"),
-				Source:    String("source"),
+				Module:    String("path"),
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 			},
 			false,
@@ -646,7 +713,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"invalid: sched cond: services source_input configured & services configured",
 			&TaskConfig{
 				Name:      String("task"),
-				Source:    String("source"),
+				Module:    String("path"),
 				Services:  []string{"api"},
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 				SourceInput: &ServicesSourceInputConfig{
@@ -659,7 +726,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"invalid: sched cond: kv source_input configured & no services",
 			&TaskConfig{
 				Name:      String("task"),
-				Source:    String("source"),
+				Module:    String("path"),
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 				SourceInput: &ConsulKVSourceInputConfig{
 					ConsulKVMonitorConfig{
@@ -674,7 +741,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			"invalid: non-sched cond: source_input configured",
 			&TaskConfig{
 				Name:   String("task"),
-				Source: String("source"),
+				Module: String("path"),
 				Condition: &ServicesConditionConfig{
 					ServicesMonitorConfig{Regexp: String(".*")}},
 				SourceInput: &ServicesSourceInputConfig{
@@ -712,7 +779,7 @@ func TestTasksConfig_Validate(t *testing.T) {
 				{
 					Name:      String("task"),
 					Services:  []string{"serviceA", "serviceB"},
-					Source:    String("source"),
+					Module:    String("path"),
 					Providers: []string{"providerA", "providerB"},
 				},
 			},
@@ -723,13 +790,13 @@ func TestTasksConfig_Validate(t *testing.T) {
 				{
 					Name:      String("task"),
 					Services:  []string{"serviceA", "serviceB"},
-					Source:    String("source"),
+					Module:    String("path"),
 					Providers: []string{"providerA", "providerB"},
 				},
 				{
 					Name:      String("task2"),
 					Services:  []string{"serviceC"},
-					Source:    String("sourceC"),
+					Module:    String("sourceC"),
 					Providers: []string{"providerC"},
 				},
 			},
@@ -740,12 +807,12 @@ func TestTasksConfig_Validate(t *testing.T) {
 				{
 					Name:      String("task"),
 					Services:  []string{"serviceA", "serviceB"},
-					Source:    String("source"),
+					Module:    String("path"),
 					Providers: []string{"providerA", "providerB"},
 				}, {
 					Name:      String("task"),
 					Services:  []string{"serviceA"},
-					Source:    String("source2"),
+					Module:    String("source2"),
 					Providers: []string{"providerA"},
 				},
 			},
@@ -756,7 +823,7 @@ func TestTasksConfig_Validate(t *testing.T) {
 				{
 					Name:      String("task"),
 					Services:  []string{"serviceA", "serviceB"},
-					Source:    String("source"),
+					Module:    String("path"),
 					Providers: []string{"providerA", "providerB"},
 				}, {
 					Name: String("invalid"),
@@ -778,7 +845,7 @@ func TestTasksConfig_Validate(t *testing.T) {
 				{
 					Name:      String("task"),
 					Services:  []string{"serviceA", "serviceB"},
-					Source:    String("source"),
+					Module:    String("path"),
 					TFVersion: String("0.15.0"),
 				},
 			},
@@ -815,7 +882,7 @@ func TestTaskConfig_FinalizeValidate(t *testing.T) {
 			"invalid: no services with catalog-service condition missing regexp",
 			&TaskConfig{
 				Name:      String("task_a"),
-				Source:    String("source"),
+				Module:    String("path"),
 				Condition: &CatalogServicesConditionConfig{},
 			},
 			false,
@@ -824,7 +891,7 @@ func TestTaskConfig_FinalizeValidate(t *testing.T) {
 			"valid: services with catalog-service condition missing regexp",
 			&TaskConfig{
 				Name:      String("task_a"),
-				Source:    String("source"),
+				Module:    String("path"),
 				Services:  []string{"serviceA"},
 				Condition: &CatalogServicesConditionConfig{},
 			},
@@ -834,7 +901,7 @@ func TestTaskConfig_FinalizeValidate(t *testing.T) {
 			"valid: no services with catalog-service condition's regexp is empty string",
 			&TaskConfig{
 				Name:      String("task_a"),
-				Source:    String("source"),
+				Module:    String("path"),
 				Services:  []string{"serviceA"},
 				Condition: &CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("")}},
 			},
@@ -844,7 +911,7 @@ func TestTaskConfig_FinalizeValidate(t *testing.T) {
 			"valid: no source_input included with schedule condition",
 			&TaskConfig{
 				Name:      String("task_a"),
-				Source:    String("source"),
+				Module:    String("path"),
 				Services:  []string{"serviceA"},
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 			},
