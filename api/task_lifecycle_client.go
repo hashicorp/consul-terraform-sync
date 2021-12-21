@@ -106,7 +106,8 @@ func (d *TaskLifecycleHTTPClient) Do(req *http.Request) (*http.Response, error) 
 	// defer resp.Body.Close() not called for happy path, only called for
 	// unhappy path. caller of this method will close if returned err == nil.
 
-	if resp.StatusCode != http.StatusOK {
+	if checkStatusCodeCategory(ClientErrorResponseCategory, resp.StatusCode) ||
+		checkStatusCodeCategory(ServerErrorResponseCategory, resp.StatusCode) {
 		defer resp.Body.Close()
 
 		var errResp ErrorResponse

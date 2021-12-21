@@ -9,6 +9,11 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 )
 
+const (
+	ClientErrorResponseCategory = 4 // category for http status codes from 400-499
+	ServerErrorResponseCategory = 5 // category for http status codes from 500-599
+)
+
 // checkStatusCodeCategory checks if a given status code matches
 // a particular category. It does this by taking the first digit
 // of a category (i.e. 4 for 400, 401, etc.) and checking if the first
@@ -52,7 +57,7 @@ func (r *plaintextErrorToJsonResponseWriter) WriteHeader(code int) {
 // Write checks if the status code is a 4xx and if it is plaintext. If it is plaintext,
 // it converts the error into the correct JSON error response
 func (r *plaintextErrorToJsonResponseWriter) Write(p []byte) (int, error) {
-	if checkStatusCodeCategory(4, r.statusCode) {
+	if checkStatusCodeCategory(ClientErrorResponseCategory, r.statusCode) {
 		var errResp oapigen.ErrorResponse
 		if err := json.Unmarshal(p, &errResp); err != nil {
 			msg := strings.TrimSpace(string(p))
