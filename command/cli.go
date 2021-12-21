@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -36,6 +37,8 @@ const (
 
 	logSystemName = "cli"
 )
+
+var _ api.Server = (*controller.ReadWrite)(nil)
 
 // CLI is the main entry point.
 type CLI struct {
@@ -263,14 +266,20 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 			if isInspect {
 				return
 			}
-			if err = ctrl.ServeAPI(ctx); err != nil {
-				if err == context.Canceled {
-					exitCh <- struct{}{}
-					return
-				}
+			s, err := api.NewAPI(api.APIConfig{
+				Controller: ctrl.(api.Server),
+				Port:       config.IntVal(conf.Port),
+			})
+			if err != nil {
 				errCh <- err
 				return
 			}
+			err = s.Serve(ctx)
+			if err != nil && err != context.Canceled {
+				errCh <- err
+				return
+			}
+			exitCh <- struct{}{}
 		}()
 
 		if err := ctrl.Run(ctx); err != nil {
