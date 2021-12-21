@@ -295,7 +295,7 @@ func TestE2EValidateError(t *testing.T) {
 	taskName := "cts_error_task"
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
-	source = "./test_modules/incompatible_w_cts"
+	module = "./test_modules/incompatible_w_cts"
 	services = ["api", "db"]
 	condition "catalog-services" {
 		source_includes_var = true

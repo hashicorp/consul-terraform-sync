@@ -551,7 +551,7 @@ task {
 	description = "null task for api & db"
 	services = ["api", "db"]
 	providers = ["null"]
-	source = "../test_modules/null_resource"
+	module = "../test_modules/null_resource"
 }
 `, nullTaskName)
 }
@@ -564,7 +564,7 @@ task {
 	description = "basic task"
 	services = ["%s", "%s"]
 	providers = ["local"]
-	source = "../test_modules/local_instances_file"
+	module = "../test_modules/local_instances_file"
 }
 `, taskName, service1, service2)
 }

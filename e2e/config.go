@@ -120,7 +120,7 @@ task {
 	description = "basic read-write e2e task for api & db"
 	services = ["api", "db"]
 	providers = ["local"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 }`, dbTaskName)
 }
 
@@ -135,7 +135,7 @@ task {
 	description = "basic read-write e2e task api & web"
 	services = ["api", "web"]
 	providers = ["local"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 }
 `, webTaskName))
 }
@@ -159,7 +159,7 @@ task {
 	name = "%s"
 	description = "e2e test"
 	services = ["api", "web"]
-	source = "%s"
+	module = "%s"
 	%s
 }
 `, name, source, optsConfig)
@@ -216,7 +216,7 @@ task {
 	description = "basic e2e task with fake handler. expected to error"
 	services = ["api"]
 	providers = ["fake-sync.failure"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 }
 
 task {
@@ -224,7 +224,7 @@ task {
 	description = "basic e2e task with fake handler. expected to not error"
 	services = ["api"]
 	providers = ["fake-sync.success"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 }
 
 task {
@@ -233,7 +233,7 @@ task {
 	enabled = false
 	services = ["api"]
 	providers = ["fake-sync.success"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 }
 `, dir, fakeFailureTaskName, fakeSuccessTaskName, disabledTaskName))
 }
@@ -247,7 +247,7 @@ task {
 	enabled = false
 	services = ["api", "web"]
 	providers = ["local"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 }
 `, disabledTaskName)
 }
@@ -262,7 +262,7 @@ terraform_provider "panos" {
 task {
 	name = "panos-bad-cred-e2e-test"
 	description = "panos handler should error and stop sync after once"
-	source = "findkim/ngfw/panos"
+	module = "findkim/ngfw/panos"
 	version = "0.0.1-beta5"
 	providers = ["panos"]
 	services = ["web"]
