@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
@@ -22,23 +21,25 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 
 	// Decode the task request
 	var req taskRequest
-	requestID := requestIDFromContext(r.Context())
+	ctx := r.Context()
+	requestID := requestIDFromContext(ctx) // TODO: log with request ID
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("bad request", "error", err, "create_task_request", r.Body)
 		sendError(w, r, http.StatusBadRequest, fmt.Sprintf("error decoding the request: %v", err))
 		return
 	}
+	logger = logger.With("task_name", req.Name)
 	logger.Trace("create task request", "create_task_request", req)
 
 	// Check if task exists, if it does, do not create again
-	if _, ok := h.drivers.Get(req.Name); ok {
-		logger.Trace("task already exists", "task_name", req.Name)
+	if _, err := h.ctrl.Task(ctx, req.Name); err != nil {
+		logger.Trace("task already exists")
 		sendError(w, r, http.StatusBadRequest, fmt.Sprintf("task with name %s already exists", req.Name))
 		return
 	}
 
 	// Convert task request to config task config
-	trc, err := req.ToTaskRequestConfig(h.bufferPeriod, h.workingDir)
+	trc, err := req.ToTaskRequestConfig()
 	if err != nil {
 		err = fmt.Errorf("error with task configuration: %s", err)
 		logger.Error("error creating task", "error", err)
@@ -46,82 +47,23 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Create new driver
-	d, err := h.createNewTaskDriver(trc.TaskConfig, trc.variables)
+	if params.Run != nil && *params.Run == driver.RunOptionNow {
+		logger.Trace("run now option")
+		err = h.ctrl.TaskCreateAndRun(ctx, trc)
+	} else {
+		err = h.ctrl.TaskCreate(ctx, trc)
+	}
 	if err != nil {
-		err = fmt.Errorf("error creating new task driver: %v", err)
-		logger.Error("error creating task", "error", err)
-		sendError(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Initialize the new task
-	err = initNewTask(r.Context(), d)
-	if err != nil {
-		err = fmt.Errorf("error initializing new task: %s", err)
-		logger.Error("error creating task", "error", err)
-		sendError(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Create a dry run task if run parameter is set to inspect
-	var run string
-	if params.Run != nil {
-		run = string(*params.Run)
-	}
-	if run == driver.RunOptionInspect {
-		logger.Trace("run inspect option", "task_name", d.Task().Name())
-		h.inspectTask(w, r, d, trc)
-		return
-	}
-
-	// Apply task if run option is now
-	if run == driver.RunOptionNow {
-		task := d.Task()
-		taskName := task.Name()
-		logger.Trace("run now option", "task_name", taskName)
-
-		// Create new event for task run
-		ev, err := event.NewEvent(taskName, &event.Config{
-			Providers: task.ProviderNames(),
-			Services:  task.ServiceNames(),
-			Source:    task.Source(),
-		})
-		if err != nil {
-			err = fmt.Errorf("error creating new event: %s", err)
-			logger.Error("error creating task", "error", err)
-			sendError(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		ev.Start()
-		// Apply task
-		err = d.ApplyTask(r.Context())
-		if err != nil {
-			err = fmt.Errorf("error applying new task: %s", err)
-			logger.Error("error applying task", "error", err)
-			sendError(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		// Store event if apply was successful and task will be created
-		ev.End(err)
-		logger.Trace("adding event", "event", ev.GoString())
-		if err := h.store.Add(*ev); err != nil {
-			// only log error since creating a task occurred successfully by now
-			logger.Error("error storing event", "event", ev.GoString(), "error", err)
-		}
-	}
-
-	// Add the task driver to the driver list
-	err = h.drivers.Add(req.Name, d)
-	if err != nil {
-		err = fmt.Errorf("error initializing new task: %s", err)
-		logger.Error("error creating task", "error", err)
 		sendError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Return the task response
-	resp := taskResponseFromTaskRequestConfig(trc, requestID)
+	task := oapigen.Task(req)
+	resp := oapigen.TaskResponse{
+		RequestId: requestID,
+		Task:      &task,
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
