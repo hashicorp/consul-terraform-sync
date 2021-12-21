@@ -166,7 +166,7 @@ func TestNewDriverTask(t *testing.T) {
 					{
 						Name:      config.String("name"),
 						Providers: []string{"providerA", "providerB"},
-						Source:    config.String("source"),
+						Module:    config.String("path"),
 					},
 				},
 				Driver: &config.DriverConfig{
@@ -203,7 +203,7 @@ func TestNewDriverTask(t *testing.T) {
 					},
 				},
 				Services:    []driver.Service{},
-				Source:      "source",
+				Source:      "path",
 				VarFiles:    []string{},
 				Condition:   config.EmptyConditionConfig(),
 				SourceInput: config.EmptySourceInputConfig(),
@@ -222,7 +222,7 @@ func TestNewDriverTask(t *testing.T) {
 					{
 						Name:      config.String("name"),
 						Providers: []string{"providerA.alias1", "providerB"},
-						Source:    config.String("source"),
+						Module:    config.String("path"),
 					},
 				},
 				Driver: &config.DriverConfig{
@@ -270,7 +270,7 @@ func TestNewDriverTask(t *testing.T) {
 					},
 				},
 				Services:    []driver.Service{},
-				Source:      "source",
+				Source:      "path",
 				VarFiles:    []string{},
 				Condition:   config.EmptyConditionConfig(),
 				SourceInput: config.EmptySourceInputConfig(),
@@ -293,7 +293,7 @@ func TestNewDriverTask(t *testing.T) {
 					{
 						Name:      config.String("name"),
 						Providers: []string{"providerA"},
-						Source:    config.String("source"),
+						Module:    config.String("path"),
 					},
 				},
 				TerraformProviders: &config.TerraformProviderConfigs{
@@ -322,7 +322,7 @@ func TestNewDriverTask(t *testing.T) {
 					})),
 				ProviderInfo: map[string]interface{}{},
 				Services:     []driver.Service{},
-				Source:       "source",
+				Source:       "path",
 				VarFiles:     []string{},
 				Condition:    config.EmptyConditionConfig(),
 				SourceInput:  config.EmptySourceInputConfig(),

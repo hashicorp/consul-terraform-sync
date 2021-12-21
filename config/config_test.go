@@ -99,7 +99,7 @@ var (
 				Name:        String("task"),
 				Services:    []string{"serviceA", "serviceB", "serviceC"},
 				Providers:   []string{"X"},
-				Source:      String("Y"),
+				Module:      String("Y"),
 				Condition: &CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig{
 						Regexp:            String(".*"),
@@ -361,7 +361,7 @@ func TestConfig_Validate(t *testing.T) {
 		Name:        String("task1"),
 		Services:    []string{"serviceD"},
 		Providers:   []string{"Y"},
-		Source:      String("Z"),
+		Module:      String("Z"),
 		Condition:   EmptyConditionConfig(),
 		SourceInput: EmptySourceInputConfig(),
 	})
@@ -573,7 +573,7 @@ func TestConfig_BufferPeriod(t *testing.T) {
 					{
 						Name:         String("test_task"),
 						Services:     []string{"api"},
-						Source:       String("/source"),
+						Module:       String("/path"),
 						BufferPeriod: tc.taskBp,
 					},
 				},
