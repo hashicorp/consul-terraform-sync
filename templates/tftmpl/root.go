@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/internal/hcl2shim"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -97,47 +96,7 @@ type Task struct {
 	Version     string
 }
 
-type Service struct {
-	// Consul service information
-	Datacenter  string
-	Description string
-	Name        string
-	Namespace   string
-	Filter      string
-
-	// CTSUserDefinedMeta is user defined metadata that is configured by
-	// operators for CTS to append to Consul service information to be used for
-	// network infrastructure automation.
-	CTSUserDefinedMeta map[string]string
-}
-
 type tfFileFunc func(io.Writer, string, *RootModuleInputData) error
-
-// hcatQuery prepares formatted parameters that satisfies hcat
-// query syntax to make Consul requests to /v1/health/service/:service
-func (s Service) hcatQuery() string {
-	var opts []string
-
-	if s.Datacenter != "" {
-		opts = append(opts, fmt.Sprintf("dc=%s", s.Datacenter))
-	}
-
-	if s.Namespace != "" {
-		opts = append(opts, fmt.Sprintf("ns=%s", s.Namespace))
-	}
-
-	if s.Filter != "" {
-		filter := strings.ReplaceAll(s.Filter, `"`, `\"`)
-		filter = strings.Trim(filter, "\n")
-		opts = append(opts, filter)
-	}
-
-	query := fmt.Sprintf("%q", s.Name)
-	if len(opts) > 0 {
-		query = query + ` "` + strings.Join(opts, `" "`) + `"`
-	}
-	return query
-}
 
 // RootModuleInputData is the input data used to generate the root module
 type RootModuleInputData struct {
@@ -145,7 +104,6 @@ type RootModuleInputData struct {
 	Backend          map[string]interface{}
 	Providers        []hcltmpl.NamedBlock
 	ProviderInfo     map[string]interface{}
-	Services         []Service
 	Task             Task
 	Variables        hcltmpl.Variables
 	Templates        []Template
@@ -172,10 +130,6 @@ func (d *RootModuleInputData) init() {
 
 	sort.Slice(d.Providers, func(i, j int) bool {
 		return d.Providers[i].Name < d.Providers[j].Name
-	})
-
-	sort.Slice(d.Services, func(i, j int) bool {
-		return d.Services[i].Name < d.Services[j].Name
 	})
 }
 

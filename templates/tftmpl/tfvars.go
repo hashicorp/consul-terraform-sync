@@ -1,7 +1,6 @@
 package tftmpl
 
 import (
-	"fmt"
 	"io"
 	"sort"
 
@@ -28,14 +27,8 @@ func newTFVarsTmpl(w io.Writer, filename string, input *RootModuleInputData) err
 		}
 	}
 
-	// TODO: remove this in pr to convert services list into a type of template
-	// separately handle appending templating for services list
 	hclFile := hclwrite.NewEmptyFile()
 	body := hclFile.Body()
-	if len(input.Services) > 0 {
-		appendRawServiceTemplateValues(body, input.Services)
-		servicesAppended = true
-	}
 
 	// services var is required (see newVariablesTF). in variables.tf, services
 	// var is always appended. ensure that corresponding var value is appended
@@ -103,46 +96,3 @@ func newVariablesTFVars(w io.Writer, filename string, input *RootModuleInputData
 	_, err = hclFile.WriteTo(w)
 	return err
 }
-
-// appendRawServiceTemplateValues appends raw lines representing blocks that
-// assign value to the services variable `VariableServices` with `hcat` template
-// syntax for dynamic rendering of Consul dependency values.
-//
-// services = {
-//   <service>: {
-//	   {{ <template syntax> }}
-//   },
-// }
-func appendRawServiceTemplateValues(body *hclwrite.Body, services []Service) {
-	tokens := make([]*hclwrite.Token, 0, len(services)+2)
-	tokens = append(tokens, &hclwrite.Token{
-		Type:  hclsyntax.TokenOBrace,
-		Bytes: []byte("{"),
-	})
-
-	for _, s := range services {
-		rawService := fmt.Sprintf(serviceBaseTmpl, s.hcatQuery())
-		token := hclwrite.Token{
-			Type:  hclsyntax.TokenNil,
-			Bytes: []byte(rawService),
-		}
-		tokens = append(tokens, &token)
-	}
-
-	tokens = append(tokens, &hclwrite.Token{
-		Bytes: []byte("\n}"),
-	})
-	body.AppendNewline()
-	body.SetAttributeRaw("services", tokens)
-}
-
-// serviceBaseTmpl is the raw template following hcat syntax for addresses of
-// Consul services.
-const serviceBaseTmpl = `
-{{- with $srv := service %s }}
-  {{- range $s := $srv}}
-  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
-{{ HCLService $s | indent 4 }}
-  },
-  {{- end}}
-{{- end}}`

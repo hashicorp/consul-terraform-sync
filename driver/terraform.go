@@ -545,7 +545,7 @@ func (tf *Terraform) initTaskTemplate() error {
 		tf.watcher.Sweep(tf.template)
 	}
 
-	tf.setNotifier(tmpl, len(tf.task.Services()))
+	tf.setNotifier(tmpl)
 
 	if !tf.watcher.Watching(tf.template.ID()) {
 		err = tf.watcher.Register(tf.template)
@@ -558,7 +558,17 @@ func (tf *Terraform) initTaskTemplate() error {
 	return nil
 }
 
-func (tf *Terraform) setNotifier(tmpl templates.Template, serviceCount int) {
+func (tf *Terraform) setNotifier(tmpl templates.Template) {
+	// Get the service count. Only one of task.services, condition "services",
+	// and source_input "services" can be configured per task
+	serviceCount := len(tf.task.Services())
+	if cond, ok := tf.task.Condition().(*config.ServicesConditionConfig); ok {
+		serviceCount = len(cond.Names)
+	}
+	if si, ok := tf.task.SourceInput().(*config.ServicesSourceInputConfig); ok {
+		serviceCount = len(si.Names)
+	}
+
 	switch tf.task.Condition().(type) {
 	case *config.CatalogServicesConditionConfig:
 		tf.template = notifier.NewCatalogServicesRegistration(tmpl, serviceCount)

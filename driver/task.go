@@ -310,19 +310,35 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 		Version:     t.version,
 	}
 
-	input.Services = make([]tftmpl.Service, len(t.services))
-	for i, s := range t.services {
-		input.Services[i] = tftmpl.Service{
-			Datacenter:         s.Datacenter,
-			Description:        s.Description,
-			Name:               s.Name,
-			Namespace:          s.Namespace,
-			Filter:             s.Filter,
-			CTSUserDefinedMeta: s.UserDefinedMeta,
+	var templates []tftmpl.Template
+
+	// Create a ServicesTemplate for task.services list. task.services is
+	// deprecated in 0.5 and is replaced by condition / source_input "services"
+	// which is handled further below.
+	if len(t.services) > 0 {
+		// gather services query parameters
+		services := make(map[string]tftmpl.Service, len(t.services))
+		for _, s := range t.services {
+			services[s.Name] = tftmpl.Service{
+				Datacenter: s.Datacenter,
+				Namespace:  s.Namespace,
+				Filter:     s.Filter,
+			}
 		}
+
+		// configure ServicesTemplate
+		template := &tftmpl.ServicesTemplate{
+			Names:    t.ServiceNames(),
+			Services: services,
+			// services list does not support SourceIncludesVar=false
+			SourceIncludesVar: true,
+		}
+		templates = append(templates, template)
+
+		t.logger.Trace("services list template configured", "template_type",
+			fmt.Sprintf("%T", template))
 	}
 
-	var templates []tftmpl.Template
 	var condition tftmpl.Template
 	switch v := t.condition.(type) {
 	case *config.CatalogServicesConditionConfig:
@@ -334,13 +350,24 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			SourceIncludesVar: *v.SourceIncludesVar,
 		}
 	case *config.ServicesConditionConfig:
-		condition = &tftmpl.ServicesRegexTemplate{
-			Regexp:     *v.Regexp,
-			Datacenter: *v.Datacenter,
-			Namespace:  *v.Namespace,
-			Filter:     *v.Filter,
-			// always set services variable
-			SourceIncludesVar: true,
+		if len(v.Names) > 0 {
+			condition = &tftmpl.ServicesTemplate{
+				Names:      v.Names,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// SourceIncludesVar=false not yet supported
+				SourceIncludesVar: true,
+			}
+		} else {
+			condition = &tftmpl.ServicesRegexTemplate{
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// SourceIncludesVar=false not yet supported
+				SourceIncludesVar: true,
+			}
 		}
 	case *config.ConsulKVConditionConfig:
 		condition = &tftmpl.ConsulKVTemplate{
@@ -364,13 +391,24 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	var sourceInput tftmpl.Template
 	switch v := t.sourceInput.(type) {
 	case *config.ServicesSourceInputConfig:
-		sourceInput = &tftmpl.ServicesRegexTemplate{
-			Regexp:     *v.Regexp,
-			Datacenter: *v.Datacenter,
-			Namespace:  *v.Namespace,
-			Filter:     *v.Filter,
-			// always include for source_input config
-			SourceIncludesVar: true,
+		if len(v.Names) > 0 {
+			sourceInput = &tftmpl.ServicesTemplate{
+				Names:      v.Names,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// always include for source_input config
+				SourceIncludesVar: true,
+			}
+		} else {
+			sourceInput = &tftmpl.ServicesRegexTemplate{
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// always include for source_input config
+				SourceIncludesVar: true,
+			}
 		}
 	case *config.ConsulKVSourceInputConfig:
 		sourceInput = &tftmpl.ConsulKVTemplate{
