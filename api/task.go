@@ -184,23 +184,14 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type TaskLifeCycleHandlerConfig struct {
-	store               *event.Store
-	drivers             *driver.Drivers
-	bufferPeriod        *config.BufferPeriodConfig
-	workingDir          string
-	createNewTaskDriver func(taskConfig config.TaskConfig, variables map[string]string) (driver.Driver, error)
-}
-
 type TaskLifeCycleHandler struct {
-	mu *sync.RWMutex
-	TaskLifeCycleHandlerConfig
+	mu   sync.RWMutex
+	ctrl Server
 }
 
-func NewTaskLifeCycleHandler(c TaskLifeCycleHandlerConfig) *TaskLifeCycleHandler {
+func NewTaskLifeCycleHandler(ctrl Server) *TaskLifeCycleHandler {
 	return &TaskLifeCycleHandler{
-		mu:                         &sync.RWMutex{},
-		TaskLifeCycleHandlerConfig: c,
+		ctrl: ctrl,
 	}
 }
 
