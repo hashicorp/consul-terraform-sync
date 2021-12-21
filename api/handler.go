@@ -19,7 +19,6 @@ const (
 // the handler to adhere to the generated server interface
 type Handlers struct {
 	*TaskLifeCycleHandler
-	*DryRunTasksHandler
 }
 
 //go:generate oapi-codegen  -package oapigen -generate types -o oapigen/types.go openapi.yaml
