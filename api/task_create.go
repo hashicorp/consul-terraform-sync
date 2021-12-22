@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
+	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
@@ -47,7 +48,6 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 
 	// Create new driver
 	d, err := h.createNewTaskDriver(trc.TaskConfig, trc.variables)
-
 	if err != nil {
 		err = fmt.Errorf("error creating new task driver: %v", err)
 		logger.Error("error creating task", "error", err)
@@ -55,13 +55,18 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Create a dry run task if run parameter is set to inspect
 	var run string
-	var storedErr error
 	if params.Run != nil {
 		run = string(*params.Run)
 	}
+	if run == driver.RunOptionInspect {
+		h.createDryRunTask(w, r, d, trc)
+		return
+	}
 
 	// Create a new event for tracking infrastructure change required actions
+	var storedErr error
 	task := d.Task()
 	ev, err := event.NewEvent(task.Name(), &event.Config{
 		Providers: task.ProviderNames(),
@@ -112,4 +117,40 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 		logger.Error("error encoding json", "error", err, "create_task_response", resp)
 	}
 	logger.Trace("task created", "create_task_response", resp)
+}
+
+func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.Request,
+	d driver.Driver, taskConf taskRequestConfig) {
+	logger := logging.FromContext(r.Context()).Named(createTaskSubsystemName)
+
+	// Initialize the dry run task
+	err := initNewTask(r.Context(), d, "")
+	if err != nil {
+		err = fmt.Errorf("error initializing new task: %s", err)
+		logger.Error("error creating task", "error", err)
+		sendError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Inspect task
+	plan, err := d.InspectTask(r.Context())
+	if err != nil {
+		err = fmt.Errorf("error inspecting task: %s", err)
+		logger.Error("error creating task", "error", err)
+		sendError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	requestID := requestIDFromContext(r.Context())
+	resp := taskResponseFromTaskRequestConfig(taskConf, requestID)
+	resp.Run = &oapigen.Run{
+		Plan: &plan.Plan,
+	}
+	err = json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		logger.Error("error encoding json", "error", err, "create_task_response", resp)
+	}
+	logger.Trace("task inspection complete", "create_task_response", resp)
 }

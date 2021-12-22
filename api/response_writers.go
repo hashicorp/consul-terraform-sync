@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 )
@@ -54,9 +55,10 @@ func (r *plaintextErrorToJsonResponseWriter) Write(p []byte) (int, error) {
 	if checkStatusCodeCategory(4, r.statusCode) {
 		var errResp oapigen.ErrorResponse
 		if err := json.Unmarshal(p, &errResp); err != nil {
+			msg := strings.TrimSpace(string(p))
 			errResp = oapigen.ErrorResponse{
 				Error: oapigen.Error{
-					Message: string(p),
+					Message: msg,
 				},
 				RequestId: r.requestID,
 			}

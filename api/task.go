@@ -240,12 +240,6 @@ func decodeBody(body []byte) (UpdateTaskConfig, error) {
 
 func initNewTask(ctx context.Context, d driver.Driver, runOption string) error {
 	logger := logging.FromContext(ctx)
-	switch runOption {
-	case "", driver.RunOptionNow:
-		// valid options
-	default:
-		return fmt.Errorf("invalid run option '%s'. Please select a valid option", runOption)
-	}
 
 	err := d.InitTask(ctx)
 	taskName := d.Task().Name()
@@ -260,9 +254,8 @@ func initNewTask(ctx context.Context, d driver.Driver, runOption string) error {
 	for {
 		ok, err := d.RenderTemplate(ctx)
 		if err != nil {
-			logger.Error("error adding task to driver", "task_name", taskName)
-			return fmt.Errorf("error updating task '%s'. Unable to "+
-				"render template for task: %s", taskName, err)
+			logger.Error("error rendering task template", "task_name", taskName)
+			return fmt.Errorf("error rendering template for task '%s': %s", taskName, err)
 		}
 		if ok {
 			// Once template rendering is finished, break

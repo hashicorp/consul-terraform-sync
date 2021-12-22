@@ -35,10 +35,12 @@ paths:
           in: query
           description: |
             Different modes for running. Supports run now which runs the task immediately
+            and run inspect which creates a dry run task that is inspected and discarded
+            at the end of the inspection.
           required: false
           schema:
             type: string
-            enum: [now]
+            enum: [now, inspect]
       requestBody:
         description: Task to create
         required: true
@@ -88,36 +90,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /v1/dryrun_tasks:
-    post:
-      summary: Triggers a dryrun for a provided task
-      operationId: createDryRunTask
-      tags:
-        - dryrun
-      description: |
-        Triggers a dryrun for a provided task
-      requestBody:
-        description: |
-          Task to run a dryrun for
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DryRunTaskRequest'
-      responses:
-        '200':
-          description: Task response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DryRunTaskResponse'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
 components:
   schemas:
     TaskRequest:
@@ -134,11 +106,6 @@ components:
           $ref: '#/components/schemas/Run'
       required:
         - request_id
-
-    DryRunTaskRequest:
-      $ref: '#/components/schemas/TaskRequest'
-    DryRunTaskResponse:
-      $ref: '#/components/schemas/TaskResponse'
 
     TaskDeleteResponse:
       type: object
