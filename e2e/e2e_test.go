@@ -298,6 +298,7 @@ func TestE2EValidateError(t *testing.T) {
 	module = "./test_modules/incompatible_w_cts"
 	services = ["api", "db"]
 	condition "catalog-services" {
+		regexp = "^api$|^db$"
 		source_includes_var = true
 	}
 }
