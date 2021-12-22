@@ -66,34 +66,10 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Create a new event for tracking infrastructure change required actions
-	var storedErr error
-	task := d.Task()
-	ev, err := event.NewEvent(task.Name(), &event.Config{
-		Providers: task.ProviderNames(),
-		Services:  task.ServiceNames(),
-		Source:    task.Source(),
-	})
-	if err != nil {
-		err = fmt.Errorf("error creating new event: %s", err)
-		logger.Error("error creating task", "error", err)
-		sendError(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	defer func() {
-		ev.End(storedErr)
-		logger.Trace("adding event", "event", ev.GoString())
-		if err := h.store.Add(*ev); err != nil {
-			// only log error since creating a task occurred successfully by now
-			logger.Error("error storing event", "event", ev.GoString(), "error", err)
-		}
-	}()
-	ev.Start()
-
 	// Initialize the new task
-	storedErr = initNewTask(r.Context(), d)
-	if storedErr != nil {
-		err = fmt.Errorf("error initializing new task: %s", storedErr)
+	err = initNewTask(r.Context(), d)
+	if err != nil {
+		err = fmt.Errorf("error initializing new task: %s", err)
 		logger.Error("error creating task", "error", err)
 		sendError(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -101,13 +77,37 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 
 	// Apply task if run option is now
 	if run == driver.RunOptionNow {
-		logger.Trace("run now option", "task_name", d.Task().Name())
+		task := d.Task()
+		taskName := task.Name()
+		logger.Trace("run now option", "task_name", taskName)
+
+		// Create new event for task run
+		ev, err := event.NewEvent(taskName, &event.Config{
+			Providers: task.ProviderNames(),
+			Services:  task.ServiceNames(),
+			Source:    task.Source(),
+		})
+		if err != nil {
+			err = fmt.Errorf("error creating new event: %s", err)
+			logger.Error("error creating task", "error", err)
+			sendError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		ev.Start()
+		// Apply task
 		err = d.ApplyTask(r.Context())
 		if err != nil {
 			err = fmt.Errorf("error applying new task: %s", err)
 			logger.Error("error applying task", "error", err)
 			sendError(w, r, http.StatusBadRequest, err.Error())
 			return
+		}
+		// Store event if apply was successful and task will be created
+		ev.End(err)
+		logger.Trace("adding event", "event", ev.GoString())
+		if err := h.store.Add(*ev); err != nil {
+			// only log error since creating a task occurred successfully by now
+			logger.Error("error storing event", "event", ev.GoString(), "error", err)
 		}
 	}
 
@@ -148,7 +148,7 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 	// Inspect task
 	plan, err := d.InspectTask(r.Context())
 	if err != nil {
-		err = fmt.Errorf("error inspecting task: %s", err)
+		err = fmt.Errorf("error inspecting new task: %s", err)
 		logger.Error("error creating task", "error", err, "task_name", d.Task().Name())
 		sendError(w, r, http.StatusBadRequest, err.Error())
 		return
