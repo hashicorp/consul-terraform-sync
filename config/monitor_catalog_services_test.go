@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCatalogServicesConditionConfig_Copy(t *testing.T) {
+func TestCatalogServicesMonitorConfig_Copy(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -51,7 +51,7 @@ func TestCatalogServicesConditionConfig_Copy(t *testing.T) {
 	}
 }
 
-func TestCatalogServicesConditionConfig_Merge(t *testing.T) {
+func TestCatalogServicesMonitorConfig_Merge(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -219,7 +219,7 @@ func TestCatalogServicesConditionConfig_Merge(t *testing.T) {
 	}
 }
 
-func TestCatalogServicesConditionConfig_Finalize(t *testing.T) {
+func TestCatalogServicesMonitorConfig_Finalize(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -227,6 +227,11 @@ func TestCatalogServicesConditionConfig_Finalize(t *testing.T) {
 		i    *CatalogServicesConditionConfig
 		r    *CatalogServicesConditionConfig
 	}{
+		{
+			"nil",
+			nil,
+			nil,
+		},
 		{
 			"empty",
 			&CatalogServicesConditionConfig{},
@@ -250,7 +255,7 @@ func TestCatalogServicesConditionConfig_Finalize(t *testing.T) {
 	}
 }
 
-func TestCatalogServicesConditionConfig_Validate(t *testing.T) {
+func TestCatalogServicesMonitorConfig_Validate(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -259,20 +264,9 @@ func TestCatalogServicesConditionConfig_Validate(t *testing.T) {
 		c         *CatalogServicesConditionConfig
 	}{
 		{
-			"happy_path",
+			"nil",
 			false,
-			&CatalogServicesConditionConfig{
-				CatalogServicesMonitorConfig{
-					Regexp:            String(".*"),
-					SourceIncludesVar: Bool(true),
-					Datacenter:        String("dc2"),
-					Namespace:         String("ns2"),
-					NodeMeta: map[string]string{
-						"key1": "value1",
-						"key2": "value2",
-					},
-				},
-			},
+			nil,
 		},
 		{
 			"nil_regexp",
@@ -285,6 +279,15 @@ func TestCatalogServicesConditionConfig_Validate(t *testing.T) {
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
 					Regexp: String("*"),
+				},
+			},
+		},
+		{
+			"valid_empty_regexp",
+			false,
+			&CatalogServicesConditionConfig{
+				CatalogServicesMonitorConfig{
+					Regexp: String(""),
 				},
 			},
 		},

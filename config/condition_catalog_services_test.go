@@ -18,11 +18,7 @@ func TestCatalogServicesConditionConfig_Copy(t *testing.T) {
 			nil,
 		},
 		{
-			"empty",
-			&CatalogServicesConditionConfig{},
-		},
-		{
-			"fully_configured",
+			"happy_path",
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
 					Regexp:            String(".*"),
@@ -79,130 +75,41 @@ func TestCatalogServicesConditionConfig_Merge(t *testing.T) {
 			nil,
 		},
 		{
-			"empty",
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{},
-		},
-		{
-			"regexp_overrides",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("different")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("different")}},
-		},
-		{
-			"regexp_empty_one",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("same")}},
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("same")}},
-		},
-		{
-			"regexp_empty_two",
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("same")}},
-		},
-		{
-			"regexp_empty_same",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("same")}},
-		},
-		{
-			"source_includes_var_overrides",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(false)}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(false)}},
-		},
-		{
-			"source_includes_var_empty_one",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-		},
-		{
-			"source_includes_var_empty_two",
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-		},
-		{
-			"source_includes_var_empty_same",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-		},
-		{
-			"datacenter_overrides",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Datacenter: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Datacenter: String("different")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Datacenter: String("different")}},
-		},
-		{
-			"datacenter_empty_one",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Datacenter: String("same")}},
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Datacenter: String("same")}},
-		},
-		{
-			"datacenter_empty_two",
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Datacenter: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Datacenter: String("same")}},
-		},
-		{
-			"datacenter_empty_same",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Datacenter: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Datacenter: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Datacenter: String("same")}},
-		},
-		{
-			"namespace_overrides",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Namespace: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Namespace: String("different")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Namespace: String("different")}},
-		},
-		{
-			"namespace_empty_one",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Namespace: String("same")}},
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Namespace: String("same")}},
-		},
-		{
-			"namespace_empty_two",
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Namespace: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Namespace: String("same")}},
-		},
-		{
-			"namespace_empty_same",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Namespace: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Namespace: String("same")}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Namespace: String("same")}},
-		},
-		{
-			"node_meta_overrides",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{NodeMeta: map[string]string{"key": "value"}}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{NodeMeta: map[string]string{"key": "new-value"}}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{NodeMeta: map[string]string{"key": "new-value"}}},
-		},
-		{
-			"node_meta_empty_one",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{NodeMeta: map[string]string{"key": "value"}}},
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{NodeMeta: map[string]string{"key": "value"}}},
-		},
-		{
-			"node_meta_empty_two",
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{NodeMeta: map[string]string{"key": "value"}}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{NodeMeta: map[string]string{"key": "value"}}},
-		},
-		{
-			"node_meta_same",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{NodeMeta: map[string]string{"key": "value"}}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{NodeMeta: map[string]string{"key": "value"}}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{NodeMeta: map[string]string{"key": "value"}}},
+			"happy_path",
+			&CatalogServicesConditionConfig{
+				CatalogServicesMonitorConfig{
+					Regexp:            String("regexp"),
+					Datacenter:        String("datacenter_overriden"),
+					Namespace:         nil,
+					SourceIncludesVar: Bool(true),
+					NodeMeta: map[string]string{
+						"foo1": "bar1",
+					},
+				},
+			},
+			&CatalogServicesConditionConfig{
+				CatalogServicesMonitorConfig{
+					Regexp:            nil,
+					Datacenter:        String("datacenter"),
+					Namespace:         String("namespace"),
+					SourceIncludesVar: Bool(false),
+					NodeMeta: map[string]string{
+						"foo2": "bar2",
+					},
+				},
+			},
+			&CatalogServicesConditionConfig{
+				CatalogServicesMonitorConfig{
+					Regexp:            String("regexp"),
+					Datacenter:        String("datacenter"),
+					Namespace:         String("namespace"),
+					SourceIncludesVar: Bool(false),
+					NodeMeta: map[string]string{
+						"foo1": "bar1",
+						"foo2": "bar2",
+					},
+				},
+			},
 		},
 	}
 
@@ -228,7 +135,12 @@ func TestCatalogServicesConditionConfig_Finalize(t *testing.T) {
 		r    *CatalogServicesConditionConfig
 	}{
 		{
-			"empty",
+			"nil",
+			nil,
+			nil,
+		},
+		{
+			"happy_path",
 			&CatalogServicesConditionConfig{},
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
@@ -259,7 +171,12 @@ func TestCatalogServicesConditionConfig_Validate(t *testing.T) {
 		c         *CatalogServicesConditionConfig
 	}{
 		{
-			"happy_path",
+			"nil",
+			false,
+			nil,
+		},
+		{
+			"valid",
 			false,
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
@@ -275,17 +192,10 @@ func TestCatalogServicesConditionConfig_Validate(t *testing.T) {
 			},
 		},
 		{
-			"nil_regexp",
-			true,
-			&CatalogServicesConditionConfig{},
-		},
-		{
-			"invalid_regexp",
+			"invalid",
 			true,
 			&CatalogServicesConditionConfig{
-				CatalogServicesMonitorConfig{
-					Regexp: String("*"),
-				},
+				CatalogServicesMonitorConfig{},
 			},
 		},
 	}
