@@ -238,7 +238,7 @@ func decodeBody(body []byte) (UpdateTaskConfig, error) {
 	return conf, nil
 }
 
-func initNewTask(ctx context.Context, d driver.Driver, runOption string) error {
+func initNewTask(ctx context.Context, d driver.Driver) error {
 	logger := logging.FromContext(ctx)
 
 	err := d.InitTask(ctx)
@@ -265,15 +265,6 @@ func initNewTask(ctx context.Context, d driver.Driver, runOption string) error {
 
 	// TODO: Set the buffer period
 	// d.SetBufferPeriod()
-
-	var storedErr error
-	if runOption == driver.RunOptionNow {
-		logger.Trace("run now option", "task_name", taskName)
-		err := d.ApplyTask(ctx)
-		if err != nil {
-			return storedErr
-		}
-	}
 
 	return nil
 }
