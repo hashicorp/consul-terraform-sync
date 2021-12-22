@@ -24,7 +24,7 @@ func (c *NoMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *NoMonitorConfig) Finalize(services []string) {
+func (c *NoMonitorConfig) Finalize() {
 }
 
 // Validate validates the values and required options. This method is recommended

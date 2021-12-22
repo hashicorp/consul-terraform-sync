@@ -62,11 +62,11 @@ func (c *CatalogServicesConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 // Finalize ensures there no nil pointers with the _exception_ of Regexp. There
 // is a need to distinguish betweeen nil regex (unconfigured regex) and empty
 // string regex ("" regex pattern) at Validate()
-func (c *CatalogServicesConditionConfig) Finalize(services []string) {
+func (c *CatalogServicesConditionConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}
-	c.CatalogServicesMonitorConfig.Finalize(services)
+	c.CatalogServicesMonitorConfig.Finalize()
 }
 
 // Validate validates the values and required options. This method is recommended

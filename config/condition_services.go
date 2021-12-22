@@ -60,11 +60,11 @@ func (c *ServicesConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *ServicesConditionConfig) Finalize(services []string) {
+func (c *ServicesConditionConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}
-	c.ServicesMonitorConfig.Finalize(services)
+	c.ServicesMonitorConfig.Finalize()
 }
 
 // Validate validates the values and required options. This method is recommended

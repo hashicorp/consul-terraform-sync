@@ -224,13 +224,11 @@ func TestCatalogServicesConditionConfig_Finalize(t *testing.T) {
 
 	cases := []struct {
 		name string
-		s    []string
 		i    *CatalogServicesConditionConfig
 		r    *CatalogServicesConditionConfig
 	}{
 		{
 			"empty",
-			[]string{},
 			&CatalogServicesConditionConfig{},
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
@@ -242,25 +240,11 @@ func TestCatalogServicesConditionConfig_Finalize(t *testing.T) {
 				},
 			},
 		},
-		{
-			"pass_in_services",
-			[]string{"api"},
-			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{
-				CatalogServicesMonitorConfig{
-					Regexp:            String("^api$"),
-					SourceIncludesVar: Bool(false),
-					Datacenter:        String(""),
-					Namespace:         String(""),
-					NodeMeta:          map[string]string{},
-				},
-			},
-		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.Finalize(tc.s)
+			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}

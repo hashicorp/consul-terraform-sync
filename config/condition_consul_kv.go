@@ -68,7 +68,7 @@ func (c *ConsulKVConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *ConsulKVConditionConfig) Finalize(consulkv []string) {
+func (c *ConsulKVConditionConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}
@@ -77,7 +77,7 @@ func (c *ConsulKVConditionConfig) Finalize(consulkv []string) {
 		c.SourceIncludesVar = Bool(false)
 	}
 
-	c.ConsulKVMonitorConfig.Finalize(consulkv)
+	c.ConsulKVMonitorConfig.Finalize()
 }
 
 // Validate validates the values and required options. This method is recommended

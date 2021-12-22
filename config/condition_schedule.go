@@ -58,7 +58,7 @@ func (c *ScheduleConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *ScheduleConditionConfig) Finalize([]string) {
+func (c *ScheduleConditionConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}

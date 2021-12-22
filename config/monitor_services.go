@@ -115,7 +115,7 @@ func (c *ServicesMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 // Finalize ensures there no nil pointers. with the _exception_ of Regexp. There
 // is a need to distinguish betweeen nil regex (unconfigured regex) and empty
 // string regex ("" regex pattern) at Validate()
-func (c *ServicesMonitorConfig) Finalize([]string) {
+func (c *ServicesMonitorConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}

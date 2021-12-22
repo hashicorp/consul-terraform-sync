@@ -134,19 +134,16 @@ func TestServicesSourceInputConfig_Finalize(t *testing.T) {
 
 	cases := []struct {
 		name string
-		s    []string
 		i    *ServicesSourceInputConfig
 		r    *ServicesSourceInputConfig
 	}{
 		{
 			"nil",
-			[]string{},
 			nil,
 			nil,
 		},
 		{
 			"happy_path",
-			[]string{},
 			&ServicesSourceInputConfig{},
 			&ServicesSourceInputConfig{
 				ServicesMonitorConfig{
@@ -163,7 +160,7 @@ func TestServicesSourceInputConfig_Finalize(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.Finalize(tc.s)
+			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}

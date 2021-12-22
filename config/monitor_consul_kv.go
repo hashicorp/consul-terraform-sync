@@ -75,7 +75,7 @@ func (c *ConsulKVMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *ConsulKVMonitorConfig) Finalize([]string) {
+func (c *ConsulKVMonitorConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}

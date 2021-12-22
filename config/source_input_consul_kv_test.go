@@ -198,26 +198,11 @@ func TestConsulKVSourceInputConfig_Finalize(t *testing.T) {
 
 	cases := []struct {
 		name string
-		s    []string
 		i    *ConsulKVSourceInputConfig
 		r    *ConsulKVSourceInputConfig
 	}{
 		{
 			"empty",
-			[]string{},
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{
-				ConsulKVMonitorConfig{
-					Path:       String(""),
-					Recurse:    Bool(false),
-					Datacenter: String(""),
-					Namespace:  String(""),
-				},
-			},
-		},
-		{
-			"services_ignored",
-			[]string{"api"},
 			&ConsulKVSourceInputConfig{},
 			&ConsulKVSourceInputConfig{
 				ConsulKVMonitorConfig{
@@ -232,7 +217,7 @@ func TestConsulKVSourceInputConfig_Finalize(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.Finalize(tc.s)
+			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}
