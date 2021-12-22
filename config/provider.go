@@ -100,16 +100,13 @@ func (c *TerraformProviderConfigs) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct. Provider configuration
+// String defines the printable version of this struct. Provider configuration
 // is completely redacted since providers will have varying arguments containing
 // secrets
-func (c *TerraformProviderConfigs) GoString() string {
-	if c == nil {
-		return "(*TerraformProviderConfigs)(nil)"
-	}
+func (c TerraformProviderConfigs) String() string {
 
-	s := make([]string, len(*c))
-	for i, provider := range *c {
+	s := make([]string, len(c))
+	for i, provider := range c {
 		for name := range *provider {
 			s[i] = fmt.Sprintf("&map[%s:%s]", name, redactMessage)
 		}

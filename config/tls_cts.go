@@ -14,12 +14,12 @@ const (
 // CTSTLSConfig is the configuration for TLS and mutual TLS
 // on the CTS API.
 type CTSTLSConfig struct {
-	Enabled        *bool   `mapstructure:"enabled"`
-	Cert           *string `mapstructure:"cert"`
-	Key            *string `mapstructure:"key"`
-	VerifyIncoming *bool   `mapstructure:"verify_incoming"`
-	CACert         *string `mapstructure:"ca_cert"`
-	CAPath         *string `mapstructure:"ca_path"`
+	Enabled        *bool   `mapstructure:"enabled" json:"enabled"`
+	Cert           *string `mapstructure:"cert" json:"cert"`
+	Key            *string `mapstructure:"key" json:"key"`
+	VerifyIncoming *bool   `mapstructure:"verify_incoming" json:"verify_incoming"`
+	CACert         *string `mapstructure:"ca_cert" json:"ca_cert"`
+	CAPath         *string `mapstructure:"ca_path" json:"ca_path"`
 }
 
 // DefaultCTSTLSConfig returns a configuration that is populated with the
@@ -116,13 +116,10 @@ func (c *CTSTLSConfig) Finalize() {
 	}
 }
 
-// GoString defines the printable version of this struct.
-func (c *CTSTLSConfig) GoString() string {
-	if c == nil {
-		return "(*CTSTLSConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c CTSTLSConfig) String() string {
 
-	return fmt.Sprintf("&CTSTLSConfig{"+
+	return fmt.Sprintf("{"+
 		"CACert:%s, "+
 		"CAPath:%s, "+
 		"Cert:%s, "+

@@ -14,11 +14,11 @@ var _ ConditionConfig = (*CatalogServicesConditionConfig)(nil)
 // of type 'catalog-services'. A catalog-services monitor is triggered by changes
 // that occur to services in the catalog-services api.
 type CatalogServicesMonitorConfig struct {
-	Regexp            *string           `mapstructure:"regexp"`
-	SourceIncludesVar *bool             `mapstructure:"source_includes_var"`
-	Datacenter        *string           `mapstructure:"datacenter"`
-	Namespace         *string           `mapstructure:"namespace"`
-	NodeMeta          map[string]string `mapstructure:"node_meta"`
+	Regexp            *string           `mapstructure:"regexp" json:"regexp"`
+	SourceIncludesVar *bool             `mapstructure:"source_includes_var" json:"source_includes_var"`
+	Datacenter        *string           `mapstructure:"datacenter" json:"datacenter"`
+	Namespace         *string           `mapstructure:"namespace" json:"namespace"`
+	NodeMeta          map[string]string `mapstructure:"node_meta" json:"node_meta"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -151,13 +151,10 @@ func (c *CatalogServicesMonitorConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *CatalogServicesMonitorConfig) GoString() string {
-	if c == nil {
-		return "(*CatalogServicesMonitorConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c CatalogServicesMonitorConfig) String() string {
 
-	return fmt.Sprintf("&CatalogServicesMonitorConfig{"+
+	return fmt.Sprintf("{"+
 		"Regexp:%s, "+
 		"SourceIncludesVar:%v, "+
 		"Datacenter:%v, "+

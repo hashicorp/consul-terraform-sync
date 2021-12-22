@@ -11,7 +11,7 @@ var _ ConditionConfig = (*ConsulKVConditionConfig)(nil)
 // that occur to consul key-values.
 type ConsulKVConditionConfig struct {
 	ConsulKVMonitorConfig `mapstructure:",squash"`
-	SourceIncludesVar     *bool `mapstructure:"source_includes_var"`
+	SourceIncludesVar     *bool `mapstructure:"source_includes_var" json:"source_includes_var"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -90,17 +90,14 @@ func (c *ConsulKVConditionConfig) Validate() error {
 	return c.ConsulKVMonitorConfig.Validate()
 }
 
-// GoString defines the printable version of this struct.
-func (c *ConsulKVConditionConfig) GoString() string {
-	if c == nil {
-		return "(*ConsulKVConditionConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c ConsulKVConditionConfig) String() string {
 
-	return fmt.Sprintf("&ConsulKVConditionConfig{"+
+	return fmt.Sprintf("{"+
 		"SourceIncludesVar:%v, "+
 		"%s"+
 		"}",
 		BoolVal(c.SourceIncludesVar),
-		c.ConsulKVMonitorConfig.GoString(),
+		c.ConsulKVMonitorConfig.String(),
 	)
 }

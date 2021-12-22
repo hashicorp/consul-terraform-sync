@@ -12,7 +12,7 @@ var _ MonitorConfig = (*ServicesMonitorConfig)(nil)
 // ServicesMonitorConfig configures a configuration block adhering to the monitor interface
 // of type 'services'. A services monitor watches for changes that occur to services.
 type ServicesMonitorConfig struct {
-	Regexp *string `mapstructure:"regexp"`
+	Regexp *string `mapstructure:"regexp" json:"regexp"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -85,13 +85,10 @@ func (c *ServicesMonitorConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *ServicesMonitorConfig) GoString() string {
-	if c == nil {
-		return "(*ServicesMonitorConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c ServicesMonitorConfig) String() string {
 
-	return fmt.Sprintf("&ServicesMonitorConfig{"+
+	return fmt.Sprintf("{"+
 		"Regexp:%s, "+
 		"}",
 		StringVal(c.Regexp),

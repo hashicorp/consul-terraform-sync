@@ -18,9 +18,9 @@ var (
 
 // SyslogConfig is the configuration for syslog.
 type SyslogConfig struct {
-	Enabled  *bool   `mapstructure:"enabled"`
-	Facility *string `mapstructure:"facility"`
-	Name     *string `mapstructure:"name"`
+	Enabled  *bool   `mapstructure:"enabled" json:"enabled"`
+	Facility *string `mapstructure:"facility" json:"facility"`
+	Name     *string `mapstructure:"name" json:"name"`
 }
 
 // DefaultSyslogConfig returns the default configuration struct.
@@ -91,13 +91,10 @@ func (c *SyslogConfig) Finalize() {
 	}
 }
 
-// GoString defines the printable version of this struct.
-func (c *SyslogConfig) GoString() string {
-	if c == nil {
-		return "(*SyslogConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c SyslogConfig) String() string {
 
-	return fmt.Sprintf("&SyslogConfig{"+
+	return fmt.Sprintf("{"+
 		"Enabled:%t, "+
 		"Facility:%s, "+
 		"Name:%s"+

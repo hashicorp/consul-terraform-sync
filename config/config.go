@@ -33,20 +33,20 @@ const (
 
 // Config is used to configure Sync
 type Config struct {
-	LogLevel   *string `mapstructure:"log_level"`
-	ClientType *string `mapstructure:"client_type"`
-	Port       *int    `mapstructure:"port"`
-	WorkingDir *string `mapstructure:"working_dir"`
+	LogLevel   *string `mapstructure:"log_level" json:"log_level"`
+	ClientType *string `mapstructure:"client_type" json:"client_type"`
+	Port       *int    `mapstructure:"port" json:"port"`
+	WorkingDir *string `mapstructure:"working_dir" json:"working_dir"`
 
-	Syslog             *SyslogConfig             `mapstructure:"syslog"`
-	Consul             *ConsulConfig             `mapstructure:"consul"`
-	Vault              *VaultConfig              `mapstructure:"vault"`
-	Driver             *DriverConfig             `mapstructure:"driver"`
-	Tasks              *TaskConfigs              `mapstructure:"task"`
-	Services           *ServiceConfigs           `mapstructure:"service"`
-	TerraformProviders *TerraformProviderConfigs `mapstructure:"terraform_provider"`
-	BufferPeriod       *BufferPeriodConfig       `mapstructure:"buffer_period"`
-	TLS                *CTSTLSConfig             `mapstructure:"tls"`
+	Syslog             *SyslogConfig             `mapstructure:"syslog" json:"syslog"`
+	Consul             *ConsulConfig             `mapstructure:"consul" json:"consul"`
+	Vault              *VaultConfig              `mapstructure:"vault" json:"vault"`
+	Driver             *DriverConfig             `mapstructure:"driver" json:"driver"`
+	Tasks              *TaskConfigs              `mapstructure:"task" json:"task"`
+	Services           *ServiceConfigs           `mapstructure:"service" json:"service"`
+	TerraformProviders *TerraformProviderConfigs `mapstructure:"terraform_provider" json:"terraform_provider"`
+	BufferPeriod       *BufferPeriodConfig       `mapstructure:"buffer_period" json:"buffer_period"`
+	TLS                *CTSTLSConfig             `mapstructure:"tls" json:"tls"`
 }
 
 // BuildConfig builds a new Config object from the default configuration and
@@ -331,13 +331,10 @@ func (c *Config) validateTaskProvider() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *Config) GoString() string {
-	if c == nil {
-		return "(*Config)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c Config) String() string {
 
-	return fmt.Sprintf("&Config{"+
+	return fmt.Sprintf("{"+
 		"LogLevel:%s, "+
 		"Port:%d, "+
 		"WorkingDir:%s, "+
@@ -354,15 +351,15 @@ func (c *Config) GoString() string {
 		StringVal(c.LogLevel),
 		IntVal(c.Port),
 		StringVal(c.WorkingDir),
-		c.Syslog.GoString(),
-		c.Consul.GoString(),
-		c.Vault.GoString(),
-		c.Driver.GoString(),
-		c.Tasks.GoString(),
-		c.Services.GoString(),
-		c.TerraformProviders.GoString(),
-		c.BufferPeriod.GoString(),
-		c.TLS.GoString(),
+		c.Syslog.String(),
+		c.Consul.String(),
+		c.Vault.String(),
+		c.Driver.String(),
+		c.Tasks.String(),
+		c.Services.String(),
+		c.TerraformProviders.String(),
+		c.BufferPeriod.String(),
+		c.TLS.String(),
 	)
 }
 
@@ -380,7 +377,7 @@ func (c *Config) validateDynamicConfigs() error {
 	// Dynamic configuration is only supported for terraform_provider blocks.
 	// Provider blocks are redacted, so using the stringified version of the
 	// config to check for templates used elsewhere.
-	if hcltmpl.ContainsDynamicTemplate(c.GoString()) {
+	if hcltmpl.ContainsDynamicTemplate(c.String()) {
 		return fmt.Errorf("dynamic configuration using template syntax is only supported " +
 			"for terraform_provider blocks")
 	}

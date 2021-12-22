@@ -18,64 +18,64 @@ const (
 // specified multiple times to configure multiple tasks.
 type TaskConfig struct {
 	// Description is a human readable text to describe the task.
-	Description *string `mapstructure:"description"`
+	Description *string `mapstructure:"description" json:"description"`
 
 	// Name is the unique name of the task.
-	Name *string `mapstructure:"name"`
+	Name *string `mapstructure:"name" json:"name"`
 
 	// Providers is the list of provider names the task is dependent on. This is
 	// used to map provider configuration to the task.
-	Providers []string `mapstructure:"providers"`
+	Providers []string `mapstructure:"providers" json:"providers"`
 
 	// Services is the list of service IDs or logical service names the task
 	// executes on. Sync monitors the Consul Catalog for changes to these
 	// services and triggers the task to run. Any service value not explicitly
 	// defined by a `service` block with a matching ID is assumed to be a logical
 	// service name in the default namespace.
-	Services []string `mapstructure:"services"`
+	Services []string `mapstructure:"services" json:"services"`
 
 	// Source is the location the driver uses to fetch dependencies. The source
 	// format is dependent on the driver. For the Terraform driver, the source
 	// is the module path (local or remote).
-	Source *string `mapstructure:"source"`
+	Source *string `mapstructure:"source" json:"source"`
 
 	// SourceInput defines the Consul objects (e.g. services, kv) whose values are
 	// provided as the task source’s input variables
-	SourceInput SourceInputConfig `mapstructure:"source_input"`
+	SourceInput SourceInputConfig `mapstructure:"source_input" json:"source_input"`
 
 	// VarFiles is a list of paths to files containing variables for the
 	// task. For the Terraform driver, these are files ending in `.tfvars` and
 	// are used as Terraform input variables passed as arguments to the Terraform
 	// module. Variables are loaded in the same order as they appear in the order
 	// of the files. Duplicate variables are overwritten with the later value.
-	VarFiles []string `mapstructure:"variable_files"`
+	VarFiles []string `mapstructure:"variable_files" json:"variable_files"`
 
 	// Version is the version of source the task will use. For the Terraform
 	// driver, this is the module version. The latest version will be used as
 	// the default if omitted.
-	Version *string `mapstructure:"version"`
+	Version *string `mapstructure:"version" json:"version"`
 
 	// The Terraform client version to use for the task when configured with CTS
 	// enterprise and the Terraform Cloud driver. This option is not supported
 	// when using CTS OSS or the Terraform driver.
-	TFVersion *string `mapstructure:"terraform_version"`
+	TFVersion *string `mapstructure:"terraform_version" json:"terraform_version"`
 
 	// BufferPeriod configures per-task buffer timers.
-	BufferPeriod *BufferPeriodConfig `mapstructure:"buffer_period"`
+	BufferPeriod *BufferPeriodConfig `mapstructure:"buffer_period" json:"buffer_period"`
 
 	// Enabled determines if the task is enabled or not. Enabled by default.
 	// If not enabled, this task will not make any changes to resources.
-	Enabled *bool `mapstructure:"enabled"`
+	Enabled *bool `mapstructure:"enabled" json:"enabled"`
 
 	// Condition optionally configures a single run condition under which the
 	// task will start executing
-	Condition ConditionConfig `mapstructure:"condition"`
+	Condition ConditionConfig `mapstructure:"condition" json:"condition"`
 
 	// The local working directory for CTS to manage Terraform configuration
 	// files and artifacts that are generated for the task. The default option
 	// will create a child directory with the task name in the global working
 	// directory.
-	WorkingDir *string `mapstructure:"working_dir"`
+	WorkingDir *string `mapstructure:"working_dir" json:"working_dir"`
 }
 
 // TaskConfigs is a collection of TaskConfig
@@ -242,7 +242,7 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 			logging.Global().Named(logSystemName).Named(taskSubsystemName).Warn(
 				"disabling buffer_period for schedule condition. overriding "+
 					"buffer_period configured for this task",
-				"task_name", StringVal(c.Name), "buffer_period", c.BufferPeriod.GoString())
+				"task_name", StringVal(c.Name), "buffer_period", c.BufferPeriod.String())
 		}
 		bp = &BufferPeriodConfig{
 			Enabled: Bool(false),
@@ -343,14 +343,11 @@ func (c *TaskConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
+// String defines the printable version of this struct.
 // Sensitive information is redacted.
-func (c *TaskConfig) GoString() string {
-	if c == nil {
-		return "(*TaskConfig)(nil)"
-	}
+func (c TaskConfig) String() string {
 
-	return fmt.Sprintf("&TaskConfig{"+
+	return fmt.Sprintf("{"+
 		"Name:%s, "+
 		"Description:%s, "+
 		"Providers:%s, "+
@@ -372,10 +369,10 @@ func (c *TaskConfig) GoString() string {
 		c.VarFiles,
 		StringVal(c.Version),
 		StringVal(c.TFVersion),
-		c.BufferPeriod.GoString(),
+		c.BufferPeriod.String(),
 		BoolVal(c.Enabled),
-		c.Condition.GoString(),
-		c.SourceInput.GoString(),
+		c.Condition.String(),
+		c.SourceInput.String(),
 	)
 }
 
@@ -464,15 +461,15 @@ func (c *TaskConfigs) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *TaskConfigs) GoString() string {
+// String defines the printable version of this struct.
+func (c TaskConfigs) String() string {
 	if c == nil {
 		return "(*TaskConfigs)(nil)"
 	}
 
-	s := make([]string, len(*c))
-	for i, t := range *c {
-		s[i] = t.GoString()
+	s := make([]string, len(c))
+	for i, t := range c {
+		s[i] = t.String()
 	}
 
 	return "{" + strings.Join(s, ", ") + "}"

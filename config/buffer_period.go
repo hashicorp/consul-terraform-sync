@@ -14,12 +14,12 @@ var (
 // before executing.
 type BufferPeriodConfig struct {
 	// Enabled determines if this buffer period is enabled.
-	Enabled *bool `mapstructure:"enabled"`
+	Enabled *bool `mapstructure:"enabled" json:"enabled"`
 
 	// Min and Max are the minimum and maximum time, respectively, to wait for
 	// data changes before rendering a new template to disk.
-	Min *time.Duration `mapstructure:"min"`
-	Max *time.Duration `mapstructure:"max"`
+	Min *time.Duration `mapstructure:"min" json:"min"`
+	Max *time.Duration `mapstructure:"max" json:"max"`
 }
 
 // DefaultBufferPeriodConfig is the global default configuration for all tasks.
@@ -140,13 +140,10 @@ func (c *BufferPeriodConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *BufferPeriodConfig) GoString() string {
-	if c == nil {
-		return "(*BufferPeriodConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c BufferPeriodConfig) String() string {
 
-	return fmt.Sprintf("&BufferPeriodConfig{"+
+	return fmt.Sprintf("{"+
 		"Enabled:%v, "+
 		"Min:%s, "+
 		"Max:%s"+

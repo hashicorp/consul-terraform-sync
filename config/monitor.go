@@ -11,7 +11,7 @@ type MonitorConfig interface {
 	Merge(MonitorConfig) MonitorConfig
 	Finalize([]string)
 	Validate() error
-	GoString() string
+	String() string
 }
 
 // isMonitorNil can be used to check if a MonitorConfig interface is nil by

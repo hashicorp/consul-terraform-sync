@@ -10,29 +10,29 @@ import (
 // services.
 type ServiceConfig struct {
 	// Datacenter is the datacenter the service is deployed in.
-	Datacenter *string `mapstricture:"datacenter"`
+	Datacenter *string `mapstricture:"datacenter" json:"datacenter"`
 
 	// Description is the human readable text to describe the service.
-	Description *string `mapstructure:"description"`
+	Description *string `mapstructure:"description" json:"description"`
 
 	// ID identifies the service for Sync. This is used to explicitly
 	// identify the service config for a task to use.
-	ID *string `mapstructure:"id"`
+	ID *string `mapstructure:"id" json:"id"`
 
 	// Name is the Consul logical name of the service (required).
-	Name *string `mapstructure:"name"`
+	Name *string `mapstructure:"name" json:"name"`
 
 	// Namespace is the namespace of the service (Consul Enterprise only). If not
 	// provided, the namespace will be inferred from the Sync ACL token, or
 	// default to the `default` namespace.
-	Namespace *string `mapstructure:"namespace"`
+	Namespace *string `mapstructure:"namespace" json:"namespace"`
 
 	// Filter is used to filter nodes based on a Consul compatible filter expression.
-	Filter *string `mapstructure:"filter"`
+	Filter *string `mapstructure:"filter" json:"filter"`
 
 	// CTSUserDefinedMeta is metadata added to a service automated by CTS for
 	// network infrastructure automation.
-	CTSUserDefinedMeta map[string]string `mapstructure:"cts_user_defined_meta"`
+	CTSUserDefinedMeta map[string]string `mapstructure:"cts_user_defined_meta" json:"cts_user_defined_meta"`
 }
 
 // ServiceConfigs is a collection of ServiceConfig
@@ -168,14 +168,11 @@ func (c *ServiceConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
+// String defines the printable version of this struct.
 // Sensitive information is redacted.
-func (c *ServiceConfig) GoString() string {
-	if c == nil {
-		return "(*ServiceConfig)(nil)"
-	}
+func (c ServiceConfig) String() string {
 
-	return fmt.Sprintf("&ServiceConfig{"+
+	return fmt.Sprintf("{"+
 		"Name:%s, "+
 		"Namespace:%s, "+
 		"Datacenter:%s, "+
@@ -315,15 +312,15 @@ func (c *ServiceConfigs) CTSUserDefinedMeta(serviceList []string) ServicesMeta {
 	return m
 }
 
-// GoString defines the printable version of this struct.
-func (c *ServiceConfigs) GoString() string {
+// String defines the printable version of this struct.
+func (c ServiceConfigs) String() string {
 	if c == nil {
 		return "(*ServiceConfigs)(nil)"
 	}
 
-	s := make([]string, len(*c))
-	for i, t := range *c {
-		s[i] = t.GoString()
+	s := make([]string, len(c))
+	for i, t := range c {
+		s[i] = t.String()
 	}
 
 	return "{" + strings.Join(s, ", ") + "}"

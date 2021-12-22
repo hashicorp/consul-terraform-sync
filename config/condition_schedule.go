@@ -88,13 +88,10 @@ func (c *ScheduleConditionConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *ScheduleConditionConfig) GoString() string {
-	if c == nil {
-		return "(*ScheduleConditionConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c ScheduleConditionConfig) String() string {
 
-	return fmt.Sprintf("&ScheduleConditionConfig{"+
+	return fmt.Sprintf("{"+
 		"Cron:%s, "+
 		"}",
 		StringVal(c.Cron),
