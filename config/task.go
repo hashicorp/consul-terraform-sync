@@ -108,6 +108,13 @@ func (c *TaskConfig) Copy() *TaskConfig {
 
 	o.VarFiles = append(o.VarFiles, c.VarFiles...)
 
+	if c.Variables != nil {
+		o.Variables = make(map[string]string)
+		for k, v := range c.Variables {
+			o.Variables[k] = v
+		}
+	}
+
 	o.Version = StringCopy(c.Version)
 
 	o.TFVersion = StringCopy(c.TFVersion)
@@ -173,6 +180,10 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 	}
 
 	r.VarFiles = append(r.VarFiles, o.VarFiles...)
+
+	for k, v := range o.Variables {
+		r.Variables[k] = v
+	}
 
 	if o.Version != nil {
 		r.Version = StringCopy(o.Version)
@@ -245,6 +256,10 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 
 	if c.VarFiles == nil {
 		c.VarFiles = []string{}
+	}
+
+	if c.Variables == nil {
+		c.Variables = make(map[string]string)
 	}
 
 	if c.Version == nil {
@@ -342,6 +357,8 @@ func (c *TaskConfig) Validate() error {
 		}
 		pNames[name] = true
 	}
+
+	// TODO validate c.Variables
 
 	if err := c.BufferPeriod.Validate(); err != nil {
 		return err

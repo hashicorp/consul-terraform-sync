@@ -318,6 +318,7 @@ func TestConfig_Finalize(t *testing.T) {
 	(*expected.Tasks)[0].BufferPeriod.Enabled = Bool(true)
 	(*expected.Tasks)[0].BufferPeriod.Min = TimeDuration(20 * time.Second)
 	(*expected.Tasks)[0].BufferPeriod.Max = TimeDuration(60 * time.Second)
+	(*expected.Tasks)[0].Variables = map[string]string{}
 	(*expected.Tasks)[0].WorkingDir = String("working/task")
 	(*expected.Tasks)[0].SourceInput = EmptySourceInputConfig()
 	(*expected.Services)[0].ID = String("serviceA")

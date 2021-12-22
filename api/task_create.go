@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
@@ -32,9 +33,9 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	logger.Trace("create task request", "create_task_request", req)
 
 	// Check if task exists, if it does, do not create again
-	if _, err := h.ctrl.Task(ctx, req.Name); err != nil {
+	if _, err := h.ctrl.Task(ctx, req.Name); err == nil {
 		logger.Trace("task already exists")
-		sendError(w, r, http.StatusBadRequest, err)
+		sendError(w, r, http.StatusBadRequest, fmt.Errorf("task with name %s already exists", req.Name))
 		return
 	}
 
@@ -43,15 +44,16 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		err = fmt.Errorf("error with task configuration: %s", err)
 		logger.Error("error creating task", "error", err)
-		sendError(w, r, http.StatusInternalServerError, err)
+		sendError(w, r, http.StatusBadRequest, err)
 		return
 	}
 
+	var tc config.TaskConfig
 	if params.Run != nil && *params.Run == driver.RunOptionNow {
 		logger.Trace("run now option")
-		err = h.ctrl.TaskCreateAndRun(ctx, trc)
+		tc, err = h.ctrl.TaskCreateAndRun(ctx, trc)
 	} else {
-		err = h.ctrl.TaskCreate(ctx, trc)
+		tc, err = h.ctrl.TaskCreate(ctx, trc)
 	}
 	if err != nil {
 		sendError(w, r, http.StatusInternalServerError, err)
@@ -59,11 +61,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	}
 
 	// Return the task response
-	task := oapigen.Task(req)
-	resp := oapigen.TaskResponse{
-		RequestId: requestID,
-		Task:      &task,
-	}
+	resp := taskResponseFromTaskConfig(tc, requestID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

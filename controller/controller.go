@@ -253,6 +253,7 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		}
 	}
 
+	// TODO: Resolve task working_dir and buffer period using global configs as default
 	var bp *driver.BufferPeriod // nil if disabled
 	if *taskConfig.BufferPeriod.Enabled {
 		bp = &driver.BufferPeriod{

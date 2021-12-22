@@ -51,36 +51,47 @@ const (
 
 func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 	t.Parallel()
+
+	taskConf := config.TaskConfig{
+		Name:        config.String(testTaskName),
+		Enabled:     config.Bool(true),
+		Description: config.String("Writes the service name, id, and IP address to a file"),
+		Source:      config.String("./example-module"),
+		Services:    []string{"api"},
+		Providers:   []string{"local"},
+	}
+	taskConfVars := *taskConf.Copy()
+	taskConfVars.Variables = map[string]string{"filename": "test.txt"}
 	cases := []struct {
 		name       string
 		taskName   string
 		request    string
 		run        string
-		variables  map[string]string
+		mockReturn config.TaskConfig
 		statusCode int
 		events     int
 	}{
 		{
 			name:       "happy_path",
-			taskName:   testTaskName,
 			request:    testCreateTaskRequest,
 			run:        "",
+			mockReturn: taskConf,
 			statusCode: http.StatusCreated,
 			events:     0,
 		},
 		{
 			name:       "happy_path_run_now",
-			taskName:   testTaskName,
 			request:    testCreateTaskRequest,
 			run:        driver.RunOptionNow,
+			mockReturn: taskConf,
 			statusCode: http.StatusCreated,
 			events:     1,
 		},
 		{
 			name:       "happy_path_with_variables",
-			taskName:   testTaskName,
 			request:    testCreateTaskRequestVariables,
 			run:        driver.RunOptionNow,
+			mockReturn: taskConfVars,
 			statusCode: http.StatusCreated,
 			events:     1,
 		},
@@ -89,15 +100,12 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := new(mocks.Server)
-			ctrl.On("Task", mock.Anything, tc.taskName).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
-				On("TaskCreate", mock.Anything, mock.Anything).Return(nil).
-				On("TaskCreateAndRun", mock.Anything, mock.Anything).Return(nil)
+			ctrl.On("Task", mock.Anything, mock.Anything).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
+				On("TaskCreate", mock.Anything, mock.Anything).Return(tc.mockReturn, nil).
+				On("TaskCreateAndRun", mock.Anything, mock.Anything).Return(tc.mockReturn, nil)
 			handler := NewTaskLifeCycleHandler(ctrl)
 
 			resp := runTestCreateTask(t, handler, tc.run, tc.statusCode, tc.request)
-
-			// A single event should be registered
-			// checkTestEventCount(t, tc.taskName, c.store, 1)
 
 			// Check response
 			decoder := json.NewDecoder(resp.Body)
@@ -215,59 +223,24 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 
 func TestTaskLifeCycleHandler_CreateTask_InternalError(t *testing.T) {
 	t.Parallel()
-	cases := []struct {
-		name       string
-		taskName   string
-		request    string
-		statusCode int
-		run        string
-		message    string
-		response   oapigen.TaskResponse
-	}{
-		{
-			name:       "task already exists",
-			taskName:   testTaskName,
-			request:    testCreateTaskRequest,
-			message:    "error initializing new task, mock error",
-			statusCode: http.StatusInternalServerError,
-		},
-		{
-			name:       "invalid run param",
-			taskName:   testTaskName,
-			request:    testCreateTaskRequest,
-			run:        "invalid",
-			message:    "error initializing new task, invalid run option 'invalid'. Please select a valid option",
-			statusCode: http.StatusInternalServerError,
-		},
-	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := new(mocks.Server)
-			ctrl.On("Task", mock.Anything, tc.taskName).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
-				On("TaskCreate", mock.Anything, mock.Anything).Return(nil).
-				On("TaskCreateAndRun", mock.Anything, mock.Anything).Return(nil)
-			handler := NewTaskLifeCycleHandler(ctrl)
+	errMsg := "error initializing new task, mock error"
 
-			resp := runTestCreateTask(t, handler, tc.run, tc.statusCode, tc.request)
+	ctrl := new(mocks.Server)
+	ctrl.On("Task", mock.Anything, testTaskName).Return(config.TaskConfig{}, fmt.Errorf("DNE"))
+	ctrl.On("TaskCreate", mock.Anything, mock.Anything).Return(config.TaskConfig{}, fmt.Errorf(errMsg))
+	handler := NewTaskLifeCycleHandler(ctrl)
 
-			// Task should not be added to the list
-			// _, ok := c.drivers.Get(tc.taskName)
-			// require.False(t, ok)
+	resp := runTestCreateTask(t, handler, "", http.StatusInternalServerError, testCreateTaskRequest)
 
-			// Only one event should be registered
-			// checkTestEventCount(t, tc.taskName, c.store, 1)
+	// Check response
+	decoder := json.NewDecoder(resp.Body)
+	var actual oapigen.ErrorResponse
+	err := decoder.Decode(&actual)
+	require.NoError(t, err)
 
-			// Check response
-			decoder := json.NewDecoder(resp.Body)
-			var actual oapigen.ErrorResponse
-			err := decoder.Decode(&actual)
-			require.NoError(t, err)
-
-			expected := generateErrorResponse("", tc.message)
-			assert.Equal(t, expected, actual)
-		})
-	}
+	expected := generateErrorResponse("", errMsg)
+	assert.Equal(t, expected, actual)
 }
 
 func generateExpectedResponse(t *testing.T, req string) oapigen.TaskResponse {
