@@ -196,14 +196,6 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 			message:    "error decoding the request: EOF",
 			statusCode: http.StatusBadRequest,
 		},
-		{
-			name:       "invalid run param",
-			taskName:   testTaskName,
-			request:    testCreateTaskRequest,
-			run:        "invalid",
-			message:    "error initializing new task: invalid run option 'invalid'. Please select a valid option",
-			statusCode: http.StatusBadRequest,
-		},
 	}
 
 	for _, tc := range cases {

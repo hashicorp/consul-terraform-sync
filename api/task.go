@@ -240,12 +240,6 @@ func decodeBody(body []byte) (UpdateTaskConfig, error) {
 
 func initNewTask(ctx context.Context, d driver.Driver, runOption string) error {
 	logger := logging.FromContext(ctx)
-	switch runOption {
-	case "", driver.RunOptionNow:
-		// valid options
-	default:
-		return fmt.Errorf("invalid run option '%s'. Please select a valid option", runOption)
-	}
 
 	err := d.InitTask(ctx)
 	taskName := d.Task().Name()
