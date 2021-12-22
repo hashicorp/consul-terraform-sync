@@ -489,15 +489,25 @@ func TestE2E_TaskEndpoints_Create(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, resp.StatusCode, "response body %s", string(bodyBytes))
 
-	// Check that the task has been created, and that a single event was stored
+	// Check that the task has been created
 	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
 	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
-
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	e := events(t, taskName, cts.Port())
-	require.Equal(t, len(e), 1)
+	// Check that the status of the task is unknown because task has not run
+	var taskStatuses map[string]api.TaskStatus
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&taskStatuses)
+	require.NoError(t, err)
+	task, ok := taskStatuses[taskName]
+	require.True(t, ok)
+	assert.True(t, task.Enabled)
+	assert.Equal(t, "unknown", task.Status)
+
+	// Check no events stored
+	e := eventCount(t, taskName, cts.Port())
+	require.Equal(t, e, 0)
 
 	// Verify that the task did not run
 	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
@@ -513,8 +523,8 @@ func TestE2E_TaskEndpoints_Create(t *testing.T) {
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
 
-	e = events(t, taskName, cts.Port())
-	require.Equal(t, len(e), 2)
+	e = eventCount(t, taskName, cts.Port())
+	require.Equal(t, e, 1)
 
 	resourcesPath = filepath.Join(tempDir, taskName, resourcesDir)
 	validateServices(t, true, []string{service.ID}, resourcesPath)

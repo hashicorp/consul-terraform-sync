@@ -55,6 +55,15 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Initialize the new task
+	err = initNewTask(r.Context(), d)
+	if err != nil {
+		err = fmt.Errorf("error initializing new task: %s", err)
+		logger.Error("error creating task", "error", err)
+		sendError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// Create a dry run task if run parameter is set to inspect
 	var run string
 	if params.Run != nil {
@@ -62,16 +71,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	}
 	if run == driver.RunOptionInspect {
 		logger.Trace("run inspect option", "task_name", d.Task().Name())
-		h.createDryRunTask(w, r, d, trc)
-		return
-	}
-
-	// Initialize the new task
-	err = initNewTask(r.Context(), d)
-	if err != nil {
-		err = fmt.Errorf("error initializing new task: %s", err)
-		logger.Error("error creating task", "error", err)
-		sendError(w, r, http.StatusBadRequest, err.Error())
+		h.inspectTask(w, r, d, trc)
 		return
 	}
 
@@ -132,18 +132,9 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	logger.Trace("task created", "create_task_response", resp)
 }
 
-func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.Request,
+func (h *TaskLifeCycleHandler) inspectTask(w http.ResponseWriter, r *http.Request,
 	d driver.Driver, taskConf taskRequestConfig) {
 	logger := logging.FromContext(r.Context()).Named(createTaskSubsystemName)
-
-	// Initialize the dry run task
-	err := initNewTask(r.Context(), d)
-	if err != nil {
-		err = fmt.Errorf("error initializing new task: %s", err)
-		logger.Error("error creating task", "error", err)
-		sendError(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
 
 	// Inspect task
 	plan, err := d.InspectTask(r.Context())
