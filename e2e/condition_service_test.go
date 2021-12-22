@@ -33,7 +33,7 @@ func TestCondition_Services(t *testing.T) {
 			"services_condition_regexp",
 			`task {
 				name = "%s"
-				source = "./test_modules/local_instances_file"
+				module = "./test_modules/local_instances_file"
 				condition "services" {
 					regexp = "api-"
 					filter = "Service.Tags not contains \"tag_a\""
@@ -48,7 +48,7 @@ func TestCondition_Services(t *testing.T) {
 			"services_condition_names",
 			`task {
 				name = "%s"
-				source = "./test_modules/local_instances_file"
+				module = "./test_modules/local_instances_file"
 				condition "services" {
 					names  = ["api-web"]
 					filter = "Service.Tags not contains \"tag_a\""

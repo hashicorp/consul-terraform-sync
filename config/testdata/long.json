@@ -91,7 +91,7 @@
       "providers": [
         "X"
       ],
-      "source": "Y",
+      "module": "Y",
       "condition": {
         "catalog-services": {
           "regexp": ".*",

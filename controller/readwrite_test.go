@@ -588,7 +588,7 @@ func singleTaskConfig() *config.Config {
 				Name:        config.String("task"),
 				Services:    []string{"serviceA", "serviceB", "serviceC"},
 				Providers:   []string{"X", handler.TerraformProviderFake},
-				Source:      config.String("Y"),
+				Module:      config.String("Y"),
 				Version:     config.String("v1"),
 			},
 		},
@@ -622,7 +622,7 @@ func multipleTaskConfig(numTasks int) *config.Config {
 		tasks[i] = &config.TaskConfig{
 			Name:     config.String(fmt.Sprintf("task_%02d", i)),
 			Services: []string{fmt.Sprintf("service_%02d", i)},
-			Source:   config.String("Y"),
+			Module:   config.String("Y"),
 		}
 	}
 	c := &config.Config{Tasks: &tasks}

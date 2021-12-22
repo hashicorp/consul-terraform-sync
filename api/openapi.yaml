@@ -148,7 +148,7 @@ components:
           items:
             type: string
             example: ["web", "api"]
-        source:
+        module:
           type: string
           example: "org/example/module"
         variables:
@@ -168,7 +168,7 @@ components:
           $ref: '#/components/schemas/SourceInput'
       required:
         - name
-        - source
+        - module
       example:
         condition:
           catalog-services:
@@ -180,7 +180,7 @@ components:
         services:
           - web
           - api
-        source: org/example/module
+        module: org/example/module
         variable_files: [ ]
         version: 1.0.0
 

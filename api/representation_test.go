@@ -23,7 +23,7 @@ const (
     "services": [
         "api"
     ],
-    "source": "./example-module",
+    "module": "./example-module",
     "variable_files": [],
     "buffer_period": {
         "enabled": true,
@@ -40,7 +40,10 @@ func TestTaskRequest_String(t *testing.T) {
 	require.NoError(t, err)
 
 	actual := fmt.Sprintf("%s", req)
-	expected := `{"buffer_period":{"enabled":true,"max":"0s","min":"0s"},"description":"Writes the service name, id, and IP address to a file","enabled":true,"name":"new-example-task","providers":["local"],"services":["api"],"source":"./example-module"}`
+	expected := `{"buffer_period":{"enabled":true,"max":"0s","min":"0s"},` +
+		`"description":"Writes the service name, id, and IP address to a file",` +
+		`"enabled":true,"module":"./example-module","name":"new-example-task",` +
+		`"providers":["local"],"services":["api"]}`
 	require.Equal(t, expected, actual)
 }
 
@@ -54,7 +57,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "minimum_required_only",
 			request: &taskRequest{
 				Name:       "test-name",
-				Source:     "test-source",
+				Module:     "path",
 				Services:   &[]string{"api", "web"},
 				WorkingDir: config.String("sync-tasks"),
 			},
@@ -64,7 +67,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Name:         config.String("test-name"),
 					Providers:    []string{},
 					Services:     []string{"api", "web"},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					Version:      config.String(""),
 					TFVersion:    config.String(""),
@@ -83,7 +86,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Name:        "test-name",
 				Services:    &[]string{"api", "web"},
 				Providers:   &[]string{"test-provider-1", "test-provider-2"},
-				Source:      "test-source",
+				Module:      "path",
 				Version:     config.String("test-version"),
 				Enabled:     config.Bool(true),
 				WorkingDir:  config.String("sync-tasks"),
@@ -94,7 +97,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Name:         config.String("test-name"),
 					Providers:    []string{"test-provider-1", "test-provider-2"},
 					Services:     []string{"api", "web"},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					Version:      config.String("test-version"),
 					TFVersion:    config.String(""),
@@ -110,7 +113,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "with_services_condition_regexp",
 			request: &taskRequest{
 				Name:   "task",
-				Source: "test-source",
+				Module: "path",
 				BufferPeriod: &oapigen.BufferPeriod{
 					Enabled: config.Bool(false),
 					Max:     config.String("0s"),
@@ -130,7 +133,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Name:        config.String("task"),
 					Providers:   []string{},
 					Services:    []string{},
-					Source:      config.String("test-source"),
+					Module:      config.String("path"),
 					VarFiles:    []string{},
 					Version:     config.String(""),
 					TFVersion:   config.String(""),
@@ -159,7 +162,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "with_services_condition_names",
 			request: &taskRequest{
 				Name:   "task",
-				Source: "test-source",
+				Module: "path",
 				BufferPeriod: &oapigen.BufferPeriod{
 					Enabled: config.Bool(false),
 					Max:     config.String("0s"),
@@ -179,7 +182,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Name:        config.String("task"),
 					Providers:   []string{},
 					Services:    []string{},
-					Source:      config.String("test-source"),
+					Module:      config.String("path"),
 					VarFiles:    []string{},
 					Version:     config.String(""),
 					TFVersion:   config.String(""),
@@ -208,7 +211,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "with_catalog_services_condition",
 			request: &taskRequest{
 				Name:   "task",
-				Source: "test-source",
+				Module: "path",
 				BufferPeriod: &oapigen.BufferPeriod{
 					Enabled: config.Bool(false),
 					Max:     config.String("0s"),
@@ -237,7 +240,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Name:        config.String("task"),
 					Providers:   []string{},
 					Services:    []string{},
-					Source:      config.String("test-source"),
+					Module:      config.String("path"),
 					VarFiles:    []string{},
 					Version:     config.String(""),
 					TFVersion:   config.String(""),
@@ -268,7 +271,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "with_consul_kv_condition",
 			request: &taskRequest{
 				Name:     "task",
-				Source:   "test-source",
+				Module:   "path",
 				Services: &[]string{"api", "web"},
 				BufferPeriod: &oapigen.BufferPeriod{
 					Enabled: config.Bool(false),
@@ -293,7 +296,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Name:        config.String("task"),
 					Providers:   []string{},
 					Services:    []string{"api", "web"},
-					Source:      config.String("test-source"),
+					Module:      config.String("path"),
 					VarFiles:    []string{},
 					Version:     config.String(""),
 					TFVersion:   config.String(""),
@@ -321,7 +324,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "with_schedule_condition",
 			request: &taskRequest{
 				Name:     "task",
-				Source:   "test-source",
+				Module:   "path",
 				Services: &[]string{"api", "web"},
 				BufferPeriod: &oapigen.BufferPeriod{
 					Enabled: config.Bool(false),
@@ -340,7 +343,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Name:        config.String("task"),
 					Providers:   []string{},
 					Services:    []string{"api", "web"},
-					Source:      config.String("test-source"),
+					Module:      config.String("path"),
 					VarFiles:    []string{},
 					Version:     config.String(""),
 					TFVersion:   config.String(""),
@@ -360,7 +363,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "with_services_source_input",
 			request: &taskRequest{
 				Name:   "task",
-				Source: "test-source",
+				Module: "path",
 				BufferPeriod: &oapigen.BufferPeriod{
 					Enabled: config.Bool(false),
 					Max:     config.String("0s"),
@@ -382,7 +385,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Name:        config.String("task"),
 					Services:    []string{},
 					Providers:   []string{},
-					Source:      config.String("test-source"),
+					Module:      config.String("path"),
 					VarFiles:    []string{},
 					Version:     config.String(""),
 					TFVersion:   config.String(""),
@@ -411,7 +414,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "with_consul_kv_source_input",
 			request: &taskRequest{
 				Name:     "task",
-				Source:   "test-source",
+				Module:   "path",
 				Services: &[]string{"api", "web"},
 				BufferPeriod: &oapigen.BufferPeriod{
 					Enabled: config.Bool(false),
@@ -437,7 +440,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Name:        config.String("task"),
 					Services:    []string{"api", "web"},
 					Providers:   []string{},
-					Source:      config.String("test-source"),
+					Module:      config.String("path"),
 					VarFiles:    []string{},
 					Version:     config.String(""),
 					TFVersion:   config.String(""),
@@ -484,7 +487,7 @@ func TestTaskRequest_ToRequestTaskConfig_Error(t *testing.T) {
 				Services:   &[]string{"api", "web"},
 				WorkingDir: config.String("sync-tasks"),
 			},
-			contains: "source for the task is required",
+			contains: "module for the task is required",
 		},
 	}
 
@@ -503,7 +506,7 @@ func TestTaskResponse_String(t *testing.T) {
 		RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 		Task: &oapigen.Task{
 			Name:    "task",
-			Source:  "test-source",
+			Module:  "path",
 			Version: config.String(""),
 			BufferPeriod: &oapigen.BufferPeriod{
 				Enabled: config.Bool(false),
@@ -539,7 +542,7 @@ func TestTaskResponse_String(t *testing.T) {
 		`"task":{"buffer_period":{"enabled":false,"max":"0s","min":"0s"},` +
 		`"condition":{"catalog_services":{"datacenter":"dc2","namespace":"ns2",` +
 		`"node_meta":{"key1":"value1","key2":"value2"},"regexp":".*",` +
-		`"source_includes_var":true}},"enabled":true,"name":"task","source":"test-source",` +
+		`"source_includes_var":true}},"enabled":true,"module":"path","name":"task",` +
 		`"source_input":{"services":{"regexp":""}},"version":"","working_dir":"sync-tasks/task"}}`
 	require.Equal(t, expected, actual)
 }
@@ -558,7 +561,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Name:         config.String("test-name"),
 					Providers:    []string{},
 					Services:     []string{"api", "web"},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					Version:      config.String(""),
 					BufferPeriod: config.DefaultBufferPeriodConfig(),
@@ -572,7 +575,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:        "test-name",
-					Source:      "test-source",
+					Module:      "path",
 					Version:     config.String(""),
 					Description: config.String(""),
 					BufferPeriod: &oapigen.BufferPeriod{
@@ -597,7 +600,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Name:         config.String("test-name"),
 					Providers:    []string{"test-provider-1", "test-provider-2"},
 					Services:     []string{"api", "web"},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					TFVersion:    config.String(""),
 					Version:      config.String("test-version"),
@@ -612,7 +615,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:        "test-name",
-					Source:      "test-source",
+					Module:      "path",
 					Version:     config.String("test-version"),
 					Description: config.String("test-description"),
 					BufferPeriod: &oapigen.BufferPeriod{
@@ -637,7 +640,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Name:         config.String("task"),
 					Providers:    []string{},
 					Services:     []string{},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					Version:      config.String(""),
 					TFVersion:    config.String(""),
@@ -660,7 +663,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:        "task",
-					Source:      "test-source",
+					Module:      "path",
 					Version:     config.String(""),
 					Description: config.String(""),
 					BufferPeriod: &oapigen.BufferPeriod{
@@ -689,7 +692,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Name:         config.String("task"),
 					Providers:    []string{},
 					Services:     []string{},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					Version:      config.String(""),
 					TFVersion:    config.String(""),
@@ -712,7 +715,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:        "task",
-					Source:      "test-source",
+					Module:      "path",
 					Version:     config.String(""),
 					Description: config.String(""),
 					BufferPeriod: &oapigen.BufferPeriod{
@@ -741,7 +744,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Name:         config.String("task"),
 					Providers:    []string{},
 					Services:     []string{},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					Version:      config.String(""),
 					TFVersion:    config.String(""),
@@ -767,7 +770,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:        "task",
-					Source:      "test-source",
+					Module:      "path",
 					Version:     config.String(""),
 					Description: config.String(""),
 					BufferPeriod: &oapigen.BufferPeriod{
@@ -805,7 +808,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Name:         config.String("task"),
 					Providers:    []string{},
 					Services:     []string{"api", "web"},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					Version:      config.String(""),
 					TFVersion:    config.String(""),
@@ -828,7 +831,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:        "task",
-					Source:      "test-source",
+					Module:      "path",
 					Version:     config.String(""),
 					Description: config.String(""),
 					BufferPeriod: &oapigen.BufferPeriod{
@@ -861,7 +864,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Name:         config.String("task"),
 					Providers:    []string{},
 					Services:     []string{"api", "web"},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					Version:      config.String(""),
 					TFVersion:    config.String(""),
@@ -876,7 +879,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:        "task",
-					Source:      "test-source",
+					Module:      "path",
 					Version:     config.String(""),
 					Description: config.String(""),
 					BufferPeriod: &oapigen.BufferPeriod{
@@ -903,7 +906,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Name:         config.String("task"),
 					Services:     []string{},
 					Providers:    []string{},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					Version:      config.String(""),
 					TFVersion:    config.String(""),
@@ -926,7 +929,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:        "task",
-					Source:      "test-source",
+					Module:      "path",
 					Version:     config.String(""),
 					Description: config.String(""),
 					BufferPeriod: &oapigen.BufferPeriod{
@@ -957,7 +960,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Name:         config.String("task"),
 					Services:     []string{"api", "web"},
 					Providers:    []string{},
-					Source:       config.String("test-source"),
+					Module:       config.String("path"),
 					VarFiles:     []string{},
 					Version:      config.String(""),
 					TFVersion:    config.String(""),
@@ -979,7 +982,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:        "task",
-					Source:      "test-source",
+					Module:      "path",
 					Version:     config.String(""),
 					Description: config.String(""),
 					BufferPeriod: &oapigen.BufferPeriod{

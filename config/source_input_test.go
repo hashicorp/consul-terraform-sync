@@ -12,7 +12,7 @@ const (
 	testSourceInputServicesSuccess = `
 task {
 	name = "source_input_task"
-	source = "..."
+	module = "..."
 	source_input "services" {
 		regexp = ".*"
 		datacenter = "dc2"
@@ -30,7 +30,7 @@ task {
 	testSourceInputConsulKVSuccess = `
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "schedule" {
 		cron = "* * * * * * *"
@@ -47,7 +47,7 @@ task {
 	testSourceInputServicesUnsupportedFieldError = `
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	source_input "services" {
 		nonexistent_field = true
@@ -59,7 +59,7 @@ task {
 	testSourceInputConsulKVUnsupportedFieldError = `
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "schedule" {
 		cron = "* * * * * * *"

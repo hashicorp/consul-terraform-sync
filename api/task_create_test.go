@@ -29,7 +29,7 @@ const (
     "services": [
         "api"
     ],
-    "source": "./example-module"
+    "module": "./example-module"
 }`
 	testCreateTaskRequestVariables = `{
     "description": "Writes the service name, id, and IP address to a file",
@@ -44,7 +44,7 @@ const (
     "variables":{
         "filename": "test.txt"
     },
-    "source": "./example-module"
+    "module": "./example-module"
 }`
 	testTaskName         = "api-task"
 	testWorkingDirectory = "sync-task"
@@ -130,7 +130,7 @@ func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 	request := fmt.Sprintf(`{
 		"name": "%s",
 		"services": ["api"],
-		"source": "mkam/hello/cts"
+		"module": "mkam/hello/cts"
 	}`, taskName)
 	conf := driver.TaskConfig{
 		Name: taskName,
@@ -184,7 +184,7 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 			request: fmt.Sprintf(`{
 				"name": "%s",
 				"services": ["api"],
-				"source": "./example-module"
+				"module": "./example-module"
 		}`, existingTask),
 			message:    fmt.Sprintf("task with name %s already exists", existingTask),
 			statusCode: http.StatusBadRequest,

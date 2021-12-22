@@ -157,7 +157,7 @@ terraform_provider "local" {}
 
 task {
   name = "test-services-task"
-  source = "../test_modules/null_resource"
+  module = "../test_modules/null_resource"
   providers = ["local"]
   services = %s
 }

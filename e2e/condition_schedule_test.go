@@ -30,7 +30,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	conditionWithServices := fmt.Sprintf(`task {
 	name = "%s"
 	services = ["api", "web"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 	condition "schedule" {
 		cron = "*/10 * * * * * *"
 	}
@@ -38,7 +38,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 `, taskName)
 	conditionWithSourceInput := fmt.Sprintf(`task {
 	name = "%s"
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 	condition "schedule" {
 		cron = "*/10 * * * * * *"
 	}
@@ -50,7 +50,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	sourceInputConsulKV := fmt.Sprintf(`task {
 	name = "%s"
 	services = ["api", "web"]
-	source = "./test_modules/consul_kv_file"
+	module = "./test_modules/consul_kv_file"
 	condition "schedule" {
       cron = "*/10 * * * * * *"
 	}
@@ -62,7 +62,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 `, taskName)
 	sourceInputConsulKVRecurse := fmt.Sprintf(`task {
 	name = "%s"
-	source = "./test_modules/consul_kv_file"
+	module = "./test_modules/consul_kv_file"
     services = ["api", "web"]
 	condition "schedule" {
       cron = "*/10 * * * * * *"
@@ -220,7 +220,7 @@ func TestCondition_Schedule_Dynamic(t *testing.T) {
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
 	services = ["api", "web"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 	condition "schedule" {
 		cron = "*/10 * * * * * *"
 	}

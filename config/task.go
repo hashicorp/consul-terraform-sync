@@ -34,10 +34,10 @@ type TaskConfig struct {
 	// service name in the default namespace.
 	Services []string `mapstructure:"services"`
 
-	// Source is the location the driver uses to fetch dependencies. The source
-	// format is dependent on the driver. For the Terraform driver, the source
-	// is the module path (local or remote).
-	Source *string `mapstructure:"source"`
+	// Module is the path to fetch the Terraform Module (local or remote).
+	// Previously named Source - Deprecated in 0.5
+	Module           *string `mapstructure:"module"`
+	DeprecatedSource *string `mapstructure:"source"`
 
 	// SourceInput defines the Consul objects (e.g. services, kv) whose values are
 	// provided as the task source’s input variables
@@ -95,7 +95,8 @@ func (c *TaskConfig) Copy() *TaskConfig {
 
 	o.Services = append(o.Services, c.Services...)
 
-	o.Source = StringCopy(c.Source)
+	o.Module = StringCopy(c.Module)
+	o.DeprecatedSource = StringCopy(c.DeprecatedSource)
 
 	if !isSourceInputNil(c.SourceInput) {
 		o.SourceInput = c.SourceInput.Copy()
@@ -152,8 +153,11 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 
 	r.Services = append(r.Services, o.Services...)
 
-	if o.Source != nil {
-		r.Source = StringCopy(o.Source)
+	if o.Module != nil {
+		r.Module = StringCopy(o.Module)
+	}
+	if o.DeprecatedSource != nil {
+		r.DeprecatedSource = StringCopy(o.DeprecatedSource)
 	}
 
 	if !isSourceInputNil(o.SourceInput) {
@@ -202,6 +206,7 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if c == nil {
 		return
 	}
+	logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
 
 	if c.Description == nil {
 		c.Description = String("")
@@ -219,8 +224,19 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 		c.Services = []string{}
 	}
 
-	if c.Source == nil {
-		c.Source = String("")
+	if c.Module == nil {
+		c.Module = String("")
+	}
+	if c.DeprecatedSource != nil && *c.DeprecatedSource != "" {
+		logger.Warn("Task's 'source' field was marked for deprecation in v0.5.0. " +
+			"Please update your configuration to use the 'module' field instead")
+		if *c.Module != "" {
+			logger.Warn("Task's 'source' and 'module' field were both "+
+				"configured. Defaulting to 'module' value", "module", c.Module)
+		} else {
+			// Merge Source with Module and use Module onwards
+			c.Module = c.DeprecatedSource
+		}
 	}
 
 	if c.VarFiles == nil {
@@ -239,9 +255,8 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if _, ok := c.Condition.(*ScheduleConditionConfig); ok {
 		// disable buffer_period for schedule condition
 		if c.BufferPeriod != nil {
-			logging.Global().Named(logSystemName).Named(taskSubsystemName).Warn(
-				"disabling buffer_period for schedule condition. overriding "+
-					"buffer_period configured for this task",
+			logger.Warn("disabling buffer_period for schedule condition. "+
+				"overriding buffer_period configured for this task",
 				"task_name", StringVal(c.Name), "buffer_period", c.BufferPeriod.GoString())
 		}
 		bp = &BufferPeriodConfig{
@@ -298,8 +313,8 @@ func (c *TaskConfig) Validate() error {
 		return err
 	}
 
-	if c.Source == nil || len(*c.Source) == 0 {
-		return fmt.Errorf("source for the task is required")
+	if c.Module == nil || len(*c.Module) == 0 {
+		return fmt.Errorf("module for the task is required")
 	}
 
 	err = c.validateSourceInput()
@@ -355,7 +370,7 @@ func (c *TaskConfig) GoString() string {
 		"Description:%s, "+
 		"Providers:%s, "+
 		"Services:%s, "+
-		"Source:%s, "+
+		"Module:%s, "+
 		"VarFiles:%s, "+
 		"Version:%s, "+
 		"TFVersion: %s, "+
@@ -368,7 +383,7 @@ func (c *TaskConfig) GoString() string {
 		StringVal(c.Description),
 		c.Providers,
 		c.Services,
-		StringVal(c.Source),
+		StringVal(c.Module),
 		c.VarFiles,
 		StringVal(c.Version),
 		StringVal(c.TFVersion),

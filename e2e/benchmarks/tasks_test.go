@@ -119,7 +119,7 @@ func generateConf(tb testing.TB, bConf benchmarkConfig) *config.Config {
 	for i := 0; i < bConf.numTasks; i++ {
 		taskConfigs[i] = &config.TaskConfig{
 			Name:     config.String(benchmarkTaskName(tb, i)),
-			Source:   config.String("../test_modules/local_file"),
+			Module:   config.String("../test_modules/local_file"),
 			Services: serviceNames,
 		}
 	}

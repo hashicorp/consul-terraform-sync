@@ -34,7 +34,7 @@ func TestCondition_DecodeConfig(t *testing.T) {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "catalog-services" {
 		regexp = ".*"
@@ -64,7 +64,7 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "catalog-services" {
 	}
@@ -78,7 +78,7 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 }`,
 		},
@@ -101,7 +101,7 @@ task {
 			`
 task {
 	name = "services_condition_task"
-	source = "..."
+	module = "..."
 	condition "services" {
 		regexp = ".*"
 		datacenter = "dc"
@@ -121,7 +121,7 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "services" {
 		nonexistent_field = true
@@ -138,7 +138,7 @@ task {
 			`
 task {
 	name = "schedule_condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "schedule" {
 		cron = "* * * * * * *"
@@ -153,7 +153,7 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "catalog-services" {
 		nonexistent_field = true
@@ -168,7 +168,7 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "catalog-services" {
 	}
@@ -194,7 +194,7 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "consul-kv" {
 		path = "key-path"
@@ -214,7 +214,7 @@ task {
 task {
 	name = "condition_task"
 	services = ["api"]
-	source = "..."
+	module = "..."
 	condition "nonexistent-condition" {
 	}
 }`,
@@ -243,7 +243,7 @@ task {
 		  "description": "automate services for X to do Y",
 		  "services": ["serviceA", "serviceB", "serviceC"],
 		  "providers": ["X"],
-		  "source": "Y",
+		  "module": "Y",
 		  "condition": {
 			"catalog-services": {
 			  "regexp": ".*",
