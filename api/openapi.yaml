@@ -255,6 +255,8 @@ components:
           type: boolean
           default: false
           example: false
+      required:
+        - regexp
     ConsulKVCondition:
       type: object
       properties:
