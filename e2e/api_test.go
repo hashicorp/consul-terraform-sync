@@ -623,7 +623,7 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Contains(t, errorResponse.Error.Message, `request body has an error: doesn't match the schema: `+
-		`Error at "/source": Field must be set to string or not be present`)
+		`Error at "/module": Field must be set to string or not be present`)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	// Check that the task has not been created
@@ -659,7 +659,7 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 	req := &oapigen.TaskRequest{
 		Name:     taskName,
 		Services: &[]string{serviceName},
-		Source:   "mkam/hello/cts",
+		Module:   "mkam/hello/cts",
 	}
 	resp := testutils.RequestJSON(t, http.MethodPost, u, req)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -681,7 +681,7 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 	// Verify task in response
 	assert.NotNil(t, r.Task)
 	assert.Equal(t, req.Name, r.Task.Name, "name not expected value")
-	assert.Equal(t, req.Source, r.Task.Source, "source not expected value")
+	assert.Equal(t, req.Module, r.Task.Module, "module not expected value")
 	assert.ElementsMatch(t, *req.Services, *r.Task.Services, "services not expected value")
 
 	// Check that the task was not created

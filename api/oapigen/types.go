@@ -105,10 +105,10 @@ type Task struct {
 	Condition    *Condition    `json:"condition,omitempty"`
 	Description  *string       `json:"description,omitempty"`
 	Enabled      *bool         `json:"enabled,omitempty"`
+	Module       string        `json:"module"`
 	Name         string        `json:"name"`
 	Providers    *[]string     `json:"providers,omitempty"`
 	Services     *[]string     `json:"services,omitempty"`
-	Source       string        `json:"source"`
 	SourceInput  *SourceInput  `json:"source_input,omitempty"`
 	Variables    *VariableMap  `json:"variables,omitempty"`
 	Version      *string       `json:"version,omitempty"`

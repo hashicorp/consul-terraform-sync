@@ -24,7 +24,7 @@ func (tr taskRequest) ToTaskRequestConfig(bp *config.BufferPeriodConfig, wd stri
 	tc := config.TaskConfig{
 		Description: tr.Description,
 		Name:        &tr.Name,
-		Module:      &tr.Source,
+		Module:      &tr.Module,
 		Version:     tr.Version,
 		Enabled:     tr.Enabled,
 		WorkingDir:  tr.WorkingDir,
@@ -157,7 +157,7 @@ func taskResponseFromTaskRequestConfig(trc taskRequestConfig, requestID oapigen.
 	task := oapigen.Task{
 		Description: trc.Description,
 		Name:        *trc.Name,
-		Source:      *trc.Module,
+		Module:      *trc.Module,
 		Version:     trc.Version,
 		Enabled:     trc.Enabled,
 		WorkingDir:  trc.WorkingDir,
