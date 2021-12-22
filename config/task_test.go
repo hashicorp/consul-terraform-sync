@@ -365,6 +365,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Services:     []string{},
 				Source:       String(""),
 				VarFiles:     []string{},
+				Variables:    map[string]string{},
 				Version:      String(""),
 				TFVersion:    String(""),
 				BufferPeriod: DefaultBufferPeriodConfig(),
@@ -386,6 +387,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Services:     []string{},
 				Source:       String(""),
 				VarFiles:     []string{},
+				Variables:    map[string]string{},
 				Version:      String(""),
 				TFVersion:    String(""),
 				BufferPeriod: DefaultBufferPeriodConfig(),
@@ -408,6 +410,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Services:    []string{},
 				Source:      String(""),
 				VarFiles:    []string{},
+				Variables:   map[string]string{},
 				Version:     String(""),
 				TFVersion:   String(""),
 				BufferPeriod: &BufferPeriodConfig{
@@ -436,6 +439,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Services:    []string{},
 				Source:      String(""),
 				VarFiles:    []string{},
+				Variables:   map[string]string{},
 				Version:     String(""),
 				TFVersion:   String(""),
 				BufferPeriod: &BufferPeriodConfig{

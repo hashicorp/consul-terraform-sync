@@ -20,11 +20,13 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	serverMocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/go-rootcerts"
 )
 
 func TestServe(t *testing.T) {
+	// TODO refactor tests after drivers are replaced with Server
 	t.Parallel()
 
 	cases := []struct {
@@ -62,13 +64,6 @@ func TestServe(t *testing.T) {
 			`{"enabled": true}`,
 			http.StatusOK,
 		},
-		{
-			"delete task",
-			"tasks/task_b",
-			http.MethodDelete,
-			"",
-			http.StatusOK,
-		},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -97,6 +92,54 @@ func TestServe(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			u := fmt.Sprintf("http://localhost:%d/%s/%s",
+				port, defaultAPIVersion, tc.path)
+
+			resp := testutils.RequestHTTP(t, tc.method, u, tc.body)
+			defer resp.Body.Close()
+			assert.Equal(t, tc.statusCode, resp.StatusCode)
+		})
+	}
+}
+
+func TestServe_refactored(t *testing.T) {
+	t.Parallel()
+
+	port := testutils.FreePort(t)
+	cases := []struct {
+		name       string
+		path       string
+		method     string
+		body       string
+		mock       func(*serverMocks.Server)
+		statusCode int
+	}{
+		{
+			"delete task",
+			"tasks/task_b",
+			http.MethodDelete,
+			"",
+			func(ctrl *serverMocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, nil)
+				ctrl.On("TaskDelete", mock.Anything, "task_b").Return(nil)
+			},
+			http.StatusOK,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			ctrl := new(serverMocks.Server)
+			tc.mock(ctrl)
+			api, err := NewAPI(APIConfig{
+				Controller: ctrl,
+				Port:       port,
+			})
+			require.NoError(t, err)
+			go api.Serve(ctx)
+
 			u := fmt.Sprintf("http://localhost:%d/%s/%s",
 				port, defaultAPIVersion, tc.path)
 
