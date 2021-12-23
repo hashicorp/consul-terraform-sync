@@ -253,7 +253,7 @@ components:
             key: value
         source_includes_var:
           type: boolean
-          default: false
+          default: true
           example: false
       required:
         - regexp
@@ -275,7 +275,7 @@ components:
           example: "default"
         source_includes_var:
           type: boolean
-          default: false
+          default: true
           example: false
       required:
         - path
