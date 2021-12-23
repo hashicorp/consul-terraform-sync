@@ -234,7 +234,7 @@ func TestConsulKVConditionConfig_Finalize(t *testing.T) {
 					Datacenter: String(""),
 					Namespace:  String(""),
 				},
-				SourceIncludesVar: Bool(false),
+				SourceIncludesVar: Bool(true),
 			},
 		},
 	}

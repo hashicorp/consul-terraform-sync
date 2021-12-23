@@ -238,7 +238,7 @@ func TestCatalogServicesMonitorConfig_Finalize(t *testing.T) {
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
 					Regexp:            nil,
-					SourceIncludesVar: Bool(false),
+					SourceIncludesVar: Bool(true),
 					Datacenter:        String(""),
 					Namespace:         String(""),
 					NodeMeta:          map[string]string{},
