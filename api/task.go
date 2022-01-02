@@ -1,12 +1,14 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
@@ -18,6 +20,8 @@ import (
 
 const (
 	updateTaskSubsystemName = "updatetask"
+	createTaskSubsystemName = "createtask"
+	deleteTaskSubsystemName = "deletetask"
 	taskPath                = "tasks"
 )
 
@@ -95,7 +99,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	h.drivers.SetActive(taskName)
 	defer h.drivers.SetInactive(taskName)
 
-	runOp, err := runOption(r)
+	runOp, err := parseRunOption(r)
 	if err != nil {
 		logger.Trace("unsupported run option", "error", err)
 		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
@@ -127,7 +131,11 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 			logger.Info("generating inspect plan if task becomes enabled",
 				"task_name", taskName)
 		} else {
-			logger.Info("enabling task", "task_name", taskName)
+			if patch.Enabled {
+				logger.Info("enabling task", "task_name", taskName)
+			} else {
+				logger.Info("disabling task", "task_name", taskName)
+			}
 		}
 	}
 
@@ -176,6 +184,26 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type TaskLifeCycleHandlerConfig struct {
+	store               *event.Store
+	drivers             *driver.Drivers
+	bufferPeriod        *config.BufferPeriodConfig
+	workingDir          string
+	createNewTaskDriver func(taskConfig config.TaskConfig, variables map[string]string) (driver.Driver, error)
+}
+
+type TaskLifeCycleHandler struct {
+	mu *sync.RWMutex
+	TaskLifeCycleHandlerConfig
+}
+
+func NewTaskLifeCycleHandler(c TaskLifeCycleHandlerConfig) *TaskLifeCycleHandler {
+	return &TaskLifeCycleHandler{
+		mu:                         &sync.RWMutex{},
+		TaskLifeCycleHandlerConfig: c,
+	}
+}
+
 func decodeBody(body []byte) (UpdateTaskConfig, error) {
 	var raw map[string]interface{}
 
@@ -184,13 +212,13 @@ func decodeBody(body []byte) (UpdateTaskConfig, error) {
 		return UpdateTaskConfig{}, err
 	}
 
-	var config UpdateTaskConfig
+	var conf UpdateTaskConfig
 	var md mapstructure.Metadata
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		WeaklyTypedInput: true,
 		ErrorUnused:      false,
 		Metadata:         &md,
-		Result:           &config,
+		Result:           &conf,
 	})
 	if err != nil {
 		return UpdateTaskConfig{}, err
@@ -207,11 +235,51 @@ func decodeBody(body []byte) (UpdateTaskConfig, error) {
 		return UpdateTaskConfig{}, err
 	}
 
-	return config, nil
+	return conf, nil
 }
 
-// runOption returns a run option for updating the task
-func runOption(r *http.Request) (string, error) {
+func initNewTask(ctx context.Context, d driver.Driver, runOption string) error {
+	logger := logging.FromContext(ctx)
+
+	err := d.InitTask(ctx)
+	taskName := d.Task().Name()
+	if err != nil {
+		logger.Error("error initializing task", "error", err, "task_name", taskName)
+		return err
+	}
+
+	// Render the template. Rendering a template for the first time may take several
+	// cycles to load all the dependencies asynchronously, so loop through here until render returns
+	// true
+	for {
+		ok, err := d.RenderTemplate(ctx)
+		if err != nil {
+			logger.Error("error rendering task template", "task_name", taskName)
+			return fmt.Errorf("error rendering template for task '%s': %s", taskName, err)
+		}
+		if ok {
+			// Once template rendering is finished, break
+			break
+		}
+	}
+
+	// TODO: Set the buffer period
+	// d.SetBufferPeriod()
+
+	var storedErr error
+	if runOption == driver.RunOptionNow {
+		logger.Trace("run now option", "task_name", taskName)
+		err := d.ApplyTask(ctx)
+		if err != nil {
+			return storedErr
+		}
+	}
+
+	return nil
+}
+
+// parseRunOption returns a run option for updating the task
+func parseRunOption(r *http.Request) (string, error) {
 	// `?run=<option>` parameter
 	const runKey = "run"
 

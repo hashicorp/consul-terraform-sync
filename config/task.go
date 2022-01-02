@@ -34,10 +34,10 @@ type TaskConfig struct {
 	// service name in the default namespace.
 	Services []string `mapstructure:"services" json:"services"`
 
-	// Source is the location the driver uses to fetch dependencies. The source
-	// format is dependent on the driver. For the Terraform driver, the source
-	// is the module path (local or remote).
-	Source *string `mapstructure:"source" json:"source"`
+	// Module is the path to fetch the Terraform Module (local or remote).
+	// Previously named Source - Deprecated in 0.5
+	Module           *string `mapstructure:"module" json:"module"`
+	DeprecatedSource *string `mapstructure:"source" json:"source"`
 
 	// SourceInput defines the Consul objects (e.g. services, kv) whose values are
 	// provided as the task source’s input variables
@@ -95,7 +95,8 @@ func (c *TaskConfig) Copy() *TaskConfig {
 
 	o.Services = append(o.Services, c.Services...)
 
-	o.Source = StringCopy(c.Source)
+	o.Module = StringCopy(c.Module)
+	o.DeprecatedSource = StringCopy(c.DeprecatedSource)
 
 	if !isSourceInputNil(c.SourceInput) {
 		o.SourceInput = c.SourceInput.Copy()
@@ -152,8 +153,11 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 
 	r.Services = append(r.Services, o.Services...)
 
-	if o.Source != nil {
-		r.Source = StringCopy(o.Source)
+	if o.Module != nil {
+		r.Module = StringCopy(o.Module)
+	}
+	if o.DeprecatedSource != nil {
+		r.DeprecatedSource = StringCopy(o.DeprecatedSource)
 	}
 
 	if !isSourceInputNil(o.SourceInput) {
@@ -202,6 +206,7 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if c == nil {
 		return
 	}
+	logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
 
 	if c.Description == nil {
 		c.Description = String("")
@@ -219,8 +224,19 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 		c.Services = []string{}
 	}
 
-	if c.Source == nil {
-		c.Source = String("")
+	if c.Module == nil {
+		c.Module = String("")
+	}
+	if c.DeprecatedSource != nil && *c.DeprecatedSource != "" {
+		logger.Warn("Task's 'source' field was marked for deprecation in v0.5.0. " +
+			"Please update your configuration to use the 'module' field instead")
+		if *c.Module != "" {
+			logger.Warn("Task's 'source' and 'module' field were both "+
+				"configured. Defaulting to 'module' value", "module", c.Module)
+		} else {
+			// Merge Source with Module and use Module onwards
+			c.Module = c.DeprecatedSource
+		}
 	}
 
 	if c.VarFiles == nil {
@@ -239,9 +255,8 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if _, ok := c.Condition.(*ScheduleConditionConfig); ok {
 		// disable buffer_period for schedule condition
 		if c.BufferPeriod != nil {
-			logging.Global().Named(logSystemName).Named(taskSubsystemName).Warn(
-				"disabling buffer_period for schedule condition. overriding "+
-					"buffer_period configured for this task",
+			logger.Warn("disabling buffer_period for schedule condition. "+
+				"overriding buffer_period configured for this task",
 				"task_name", StringVal(c.Name), "buffer_period", c.BufferPeriod.String())
 		}
 		bp = &BufferPeriodConfig{
@@ -260,12 +275,12 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	}
 
 	if isConditionNil(c.Condition) {
-		c.Condition = DefaultConditionConfig()
+		c.Condition = EmptyConditionConfig()
 	}
 	c.Condition.Finalize(c.Services)
 
 	if isSourceInputNil(c.SourceInput) {
-		c.SourceInput = DefaultSourceInputConfig()
+		c.SourceInput = EmptySourceInputConfig()
 	}
 	c.SourceInput.Finalize(c.Services)
 
@@ -298,8 +313,8 @@ func (c *TaskConfig) Validate() error {
 		return err
 	}
 
-	if c.Source == nil || len(*c.Source) == 0 {
-		return fmt.Errorf("source for the task is required")
+	if c.Module == nil || len(*c.Module) == 0 {
+		return fmt.Errorf("module for the task is required")
 	}
 
 	err = c.validateSourceInput()
@@ -309,7 +324,7 @@ func (c *TaskConfig) Validate() error {
 
 	if c.TFVersion != nil && *c.TFVersion != "" {
 		return fmt.Errorf("unsupported configuration 'terraform_version' for "+
-			"task %q. This option is available for Consul-Terraform-Sync enterprise "+
+			"task %q. This option is available for Consul-Terraform-Sync Enterprise "+
 			"when using the Terraform Cloud driver, or configure the Terraform client "+
 			"version within the Terraform driver block", *c.Name)
 	}
@@ -352,7 +367,7 @@ func (c TaskConfig) String() string {
 		"Description:%s, "+
 		"Providers:%s, "+
 		"Services:%s, "+
-		"Source:%s, "+
+		"Module:%s, "+
 		"VarFiles:%s, "+
 		"Version:%s, "+
 		"TFVersion: %s, "+
@@ -365,7 +380,7 @@ func (c TaskConfig) String() string {
 		StringVal(c.Description),
 		c.Providers,
 		c.Services,
-		StringVal(c.Source),
+		StringVal(c.Module),
 		c.VarFiles,
 		StringVal(c.Version),
 		StringVal(c.TFVersion),
@@ -500,11 +515,6 @@ func (c *TaskConfig) validateCondition() error {
 				"configured")
 		}
 		switch cond := c.Condition.(type) {
-		case *ServicesConditionConfig:
-			if cond.Regexp == nil || *cond.Regexp == "" {
-				return fmt.Errorf("at least one service is required in task.services " +
-					"or task.condition.regexp must be configured")
-			}
 		case *CatalogServicesConditionConfig:
 			if cond.Regexp == nil {
 				return fmt.Errorf("catalog-services condition requires either" +
@@ -521,18 +531,17 @@ func (c *TaskConfig) validateCondition() error {
 			}
 		}
 	} else {
-		switch cond := c.Condition.(type) {
+		switch c.Condition.(type) {
 		case *ServicesConditionConfig:
-			if cond.Regexp != nil && *cond.Regexp != "" {
-				err := fmt.Errorf("task.services is not allowed if task.condition.regexp " +
-					"is configured for a services condition")
-				logging.Global().Named(logSystemName).Named(taskSubsystemName).
-					Error("list of services and service condition regex both "+
-						"provided. If both are needed, consider including the "+
-						"list in the regex or creating separate tasks",
-						"task_name", StringVal(c.Name), "error", err)
-				return err
-			}
+			err := fmt.Errorf("a task cannot be configured with both " +
+				"`services` field and `source_input` block. only one can be " +
+				"configured per task")
+			logging.Global().Named(logSystemName).Named(taskSubsystemName).
+				Error("list of services and service condition block both "+
+					"provided. If both are needed, consider combining the "+
+					"list into the condition block or creating separate tasks",
+					"task_name", StringVal(c.Name), "error", err)
+			return err
 		}
 	}
 
@@ -540,35 +549,28 @@ func (c *TaskConfig) validateCondition() error {
 }
 
 func (c *TaskConfig) validateSourceInput() error {
-	// For now only schedule condition allows for source_input, so a condition of type ScheduleConditionConfig
-	// is the only supported type
+	// For now only schedule condition allows for source_input, so a condition
+	// of type ScheduleConditionConfig is the only supported type
 	switch c.Condition.(type) {
 	case *ScheduleConditionConfig:
 		if len(c.Services) == 0 {
-			switch si := c.SourceInput.(type) {
-			case *ServicesSourceInputConfig:
-				// source_input "services" follows the same rules as condition "services"
-				if si.Regexp == nil || *si.Regexp == "" {
-					return fmt.Errorf("at least one service is required in task.services " +
-						"or task.source_input.regexp must be configured")
-				}
+			switch c.SourceInput.(type) {
 			case *ConsulKVSourceInputConfig:
 				return fmt.Errorf("consul-kv source_input requires at least one service to " +
 					"be configured in task.services")
 			}
 		} else {
-			switch si := c.SourceInput.(type) {
+			switch c.SourceInput.(type) {
 			case *ServicesSourceInputConfig:
-				if si.Regexp != nil && *si.Regexp != "" {
-					err := fmt.Errorf("task.services is not allowed if task.source_input.regexp " +
-						"is configured for a services source_input")
-					logging.Global().Named(logSystemName).Named(taskSubsystemName).
-						Error("list of services and service condition regex both "+
-							"provided. If both are needed, consider including the "+
-							"list in the regex or creating separate tasks",
-							"task_name", StringVal(c.Name), "error", err)
-					return err
-				}
+				err := fmt.Errorf("a task cannot be configured with both " +
+					"`services` field and `condition` block. only one can be " +
+					"configured per task")
+				logging.Global().Named(logSystemName).Named(taskSubsystemName).
+					Error("list of services and service condition block both "+
+						"provided. If both are needed, consider combining the "+
+						"list into the condition block or creating separate tasks",
+						"task_name", StringVal(c.Name), "error", err)
+				return err
 			}
 		}
 	default:

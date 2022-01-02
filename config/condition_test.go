@@ -34,7 +34,7 @@ func TestCondition_DecodeConfig(t *testing.T) {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "catalog-services" {
 		regexp = ".*"
@@ -64,25 +64,21 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "catalog-services" {
 	}
 }`,
 		},
 		{
-			"no condition: defaults to services condition",
+			"no condition",
 			false,
-			&ServicesConditionConfig{
-				ServicesMonitorConfig{
-					Regexp: String(""),
-				},
-			},
+			EmptyConditionConfig(),
 			"config.hcl",
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 }`,
 		},
@@ -91,34 +87,29 @@ task {
 			false,
 			&ServicesConditionConfig{
 				ServicesMonitorConfig{
-					Regexp: String(".*"),
+					Regexp:     String(".*"),
+					Names:      []string{},
+					Datacenter: String("dc"),
+					Namespace:  String("namespace"),
+					Filter:     String("filter"),
+					CTSUserDefinedMeta: map[string]string{
+						"key": "value",
+					},
 				},
 			},
 			"config.hcl",
 			`
 task {
 	name = "services_condition_task"
-	source = "..."
+	module = "..."
 	condition "services" {
 		regexp = ".*"
-	}
-}`,
-		},
-		{
-			"services: unconfigured",
-			false,
-			&ServicesConditionConfig{
-				ServicesMonitorConfig{
-					Regexp: String(""),
-				},
-			},
-			"config.hcl",
-			`
-task {
-	name = "condition_task"
-	source = "..."
-	services = ["api"]
-	condition "services" {
+		datacenter = "dc"
+		namespace = "namespace"
+		filter = "filter"
+		cts_user_defined_meta {
+			key = "value"
+		}
 	}
 }`,
 		},
@@ -130,7 +121,7 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "services" {
 		nonexistent_field = true
@@ -147,7 +138,7 @@ task {
 			`
 task {
 	name = "schedule_condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "schedule" {
 		cron = "* * * * * * *"
@@ -162,7 +153,7 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "catalog-services" {
 		nonexistent_field = true
@@ -177,7 +168,7 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "catalog-services" {
 	}
@@ -203,7 +194,7 @@ task {
 			`
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "consul-kv" {
 		path = "key-path"
@@ -223,7 +214,7 @@ task {
 task {
 	name = "condition_task"
 	services = ["api"]
-	source = "..."
+	module = "..."
 	condition "nonexistent-condition" {
 	}
 }`,
@@ -252,7 +243,7 @@ task {
 		  "description": "automate services for X to do Y",
 		  "services": ["serviceA", "serviceB", "serviceC"],
 		  "providers": ["X"],
-		  "source": "Y",
+		  "module": "Y",
 		  "condition": {
 			"catalog-services": {
 			  "regexp": ".*",

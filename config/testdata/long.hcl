@@ -82,7 +82,7 @@ task {
   description = "automate services for X to do Y"
   services = ["serviceA", "serviceB", "serviceC"]
   providers = ["X"]
-  source = "Y"
+  module = "Y"
   condition "catalog-services" {
     regexp = ".*"
     source_includes_var = true
@@ -92,8 +92,5 @@ task {
       "key1" = "value1"
       "key2" = "value2"
     }
-  }
-  source_input "services" {
-    regexp = ""
   }
 }

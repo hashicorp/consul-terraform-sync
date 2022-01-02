@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/internal/hcl2shim"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -41,15 +40,21 @@ const (
 	// variable is written to.
 	TFVarsFilename = "terraform.tfvars"
 
+	// VarsTFVarsFileName is the file name for a tfvars file which is generated and contains
+	// variables provided as part of the task configuration. Using the *auto.tfvars naming convention
+	// allows for Terraform to use this file automatically as long as the generated file in Terraform's
+	// working directory
+	VarsTFVarsFileName = "variables.auto.tfvars"
+
 	// TFVarsTmplFilename is the template file for TFVarsFilename. This is used
 	// by hcat for monitoring service changes from Consul.
 	TFVarsTmplFilename = "terraform.tfvars.tmpl"
 
-	// ProviderTFVarsFilename is the file name for input variables for
+	// ProvidersTFVarsFilename is the file name for input variables for
 	// configured Terraform providers. Generated provider input variables are
 	// written in a separate file from terraform.tfvars because it may contain
 	// sensitive or secret values.
-	ProvidersTFVarsFilename = "providers.tfvars"
+	ProvidersTFVarsFilename = "providers.auto.tfvars"
 )
 
 var (
@@ -91,47 +96,7 @@ type Task struct {
 	Version     string
 }
 
-type Service struct {
-	// Consul service information
-	Datacenter  string
-	Description string
-	Name        string
-	Namespace   string
-	Filter      string
-
-	// CTSUserDefinedMeta is user defined metadata that is configured by
-	// operators for CTS to append to Consul service information to be used for
-	// network infrastructure automation.
-	CTSUserDefinedMeta map[string]string
-}
-
 type tfFileFunc func(io.Writer, string, *RootModuleInputData) error
-
-// hcatQuery prepares formatted parameters that satisfies hcat
-// query syntax to make Consul requests to /v1/health/service/:service
-func (s Service) hcatQuery() string {
-	var opts []string
-
-	if s.Datacenter != "" {
-		opts = append(opts, fmt.Sprintf("dc=%s", s.Datacenter))
-	}
-
-	if s.Namespace != "" {
-		opts = append(opts, fmt.Sprintf("ns=%s", s.Namespace))
-	}
-
-	if s.Filter != "" {
-		filter := strings.ReplaceAll(s.Filter, `"`, `\"`)
-		filter = strings.Trim(filter, "\n")
-		opts = append(opts, filter)
-	}
-
-	query := fmt.Sprintf("%q", s.Name)
-	if len(opts) > 0 {
-		query = query + ` "` + strings.Join(opts, `" "`) + `"`
-	}
-	return query
-}
 
 // RootModuleInputData is the input data used to generate the root module
 type RootModuleInputData struct {
@@ -139,11 +104,9 @@ type RootModuleInputData struct {
 	Backend          map[string]interface{}
 	Providers        []hcltmpl.NamedBlock
 	ProviderInfo     map[string]interface{}
-	Services         []Service
 	Task             Task
 	Variables        hcltmpl.Variables
-	Condition        Condition
-	SourceInput      SourceInput
+	Templates        []Template
 
 	Path      string
 	FilePerms os.FileMode
@@ -168,10 +131,6 @@ func (d *RootModuleInputData) init() {
 	sort.Slice(d.Providers, func(i, j int) bool {
 		return d.Providers[i].Name < d.Providers[j].Name
 	})
-
-	sort.Slice(d.Services, func(i, j int) bool {
-		return d.Services[i].Name < d.Services[j].Name
-	})
 }
 
 // InitRootModule generates the root module and writes the following files to
@@ -182,6 +141,9 @@ func InitRootModule(input *RootModuleInputData) error {
 	input.init()
 
 	fileFuncs := make(map[string]tfFileFunc)
+	if len(input.Variables) != 0 {
+		fileFuncs[VarsTFVarsFileName] = newVariablesTFVars
+	}
 	for k, v := range rootFileFuncs {
 		fileFuncs[k] = v
 	}
@@ -248,7 +210,7 @@ func newMainTF(w io.Writer, filename string, input *RootModuleInputData) error {
 	rootBody.AppendNewline()
 	appendRootProviderBlocks(rootBody, input.Providers)
 	rootBody.AppendNewline()
-	appendRootModuleBlock(rootBody, input.Task, input.Variables.Keys(), input.Condition, input.SourceInput)
+	appendRootModuleBlock(rootBody, input.Task, input.Variables.Keys(), input.Templates...)
 
 	// Format the file before writing
 	content := hclFile.Bytes()
@@ -345,7 +307,7 @@ func appendRootProviderBlocks(body *hclwrite.Body, providers []hcltmpl.NamedBloc
 }
 
 // appendRootModuleBlock appends a Terraform module block for the task
-func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string, monitors ...Monitor) {
+func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string, templates ...Template) {
 
 	// Add user description for task above the module block
 	if task.Description != "" {
@@ -366,9 +328,9 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string, mo
 		hcl.TraverseAttr{Name: "services"},
 	})
 
-	for _, m := range monitors {
-		if m != nil && m.SourceIncludesVariable() {
-			m.appendModuleAttribute(moduleBody)
+	for _, t := range templates {
+		if t != nil && t.SourceIncludesVariable() {
+			t.appendModuleAttribute(moduleBody)
 		}
 	}
 

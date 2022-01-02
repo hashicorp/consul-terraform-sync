@@ -72,7 +72,10 @@ func (c *ServicesSourceInputConfig) Validate() error {
 	if c == nil { // config not required, return early
 		return nil
 	}
-	return c.ServicesMonitorConfig.Validate()
+	if err := c.ServicesMonitorConfig.Validate(); err != nil {
+		return fmt.Errorf("error validating `source_input \"services\"`: %s", err)
+	}
+	return nil
 }
 
 // String defines the printable version of this struct.

@@ -8,11 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/tmplfunc"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
@@ -684,8 +686,9 @@ func TestDisabledTask(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, actual)
 
-		err = tf.InspectTask(ctx)
+		plan, err := tf.InspectTask(ctx)
 		assert.NoError(t, err)
+		assert.Equal(t, InspectPlan{}, plan)
 
 		err = tf.ApplyTask(ctx)
 		assert.NoError(t, err)
@@ -751,6 +754,74 @@ func TestInitTask(t *testing.T) {
 			} else {
 				assert.Error(t, err)
 			}
+		})
+	}
+}
+
+func TestGetServicesMetaData(t *testing.T) {
+	meta := map[string]string{
+		"my_key": "my_value",
+	}
+
+	cases := []struct {
+		name    string
+		task    *Task
+		expFunc func() *tmplfunc.ServicesMeta
+	}{
+		{
+			"meta-data configured in condition",
+			&Task{
+				condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						CTSUserDefinedMeta: meta,
+					},
+				},
+			},
+			func() *tmplfunc.ServicesMeta {
+				sm := &tmplfunc.ServicesMeta{}
+				sm.SetMeta(meta)
+				return sm
+			},
+		},
+		{
+			"meta-data configured in source_input",
+			&Task{
+				sourceInput: &config.ServicesSourceInputConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						CTSUserDefinedMeta: meta,
+					},
+				},
+			},
+			func() *tmplfunc.ServicesMeta {
+				sm := &tmplfunc.ServicesMeta{}
+				sm.SetMeta(meta)
+				return sm
+			},
+		},
+		{
+			"meta-data configured in service block",
+			&Task{
+				services: []Service{
+					{
+						Name:            "api",
+						UserDefinedMeta: meta,
+					},
+				},
+			},
+			func() *tmplfunc.ServicesMeta {
+				sm := &tmplfunc.ServicesMeta{}
+				metaMap := map[string]map[string]string{"api": meta}
+				sm.SetMetaMap(metaMap)
+				return sm
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := getServicesMetaData(logging.NewNullLogger(), tc.task)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expFunc(), actual)
 		})
 	}
 }

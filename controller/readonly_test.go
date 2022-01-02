@@ -66,7 +66,8 @@ func TestReadOnlyRun(t *testing.T) {
 			d.On("Task").Return(enabledTestTask(t, "task"))
 			d.On("RenderTemplate", mock.Anything).
 				Return(true, tc.renderTmplErr)
-			d.On("InspectTask", mock.Anything).Return(tc.inspectTaskErr)
+			d.On("InspectTask", mock.Anything).
+				Return(driver.InspectPlan{}, tc.inspectTaskErr)
 			err := ctrl.drivers.Add("task", d)
 			require.NoError(t, err)
 

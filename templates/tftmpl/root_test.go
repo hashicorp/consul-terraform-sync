@@ -172,23 +172,22 @@ func TestAppendRootProviderBlocks(t *testing.T) {
 
 func TestAppendRootModuleBlocks(t *testing.T) {
 	testCases := []struct {
-		name     string
-		task     Task
-		cond     Condition
-		si       SourceInput
-		varNames []string
-		expected string
+		name      string
+		task      Task
+		templates []Template
+		varNames  []string
+		expected  string
 	}{
 		{
-			name: "module without conditions or variables",
+			name: "module without templates or variables",
 			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond:     nil,
-			varNames: nil,
+			templates: []Template{},
+			varNames:  nil,
 			expected: `# user description for task named 'test'
 module "test" {
   source   = "namespace/example/test-module"
@@ -197,18 +196,18 @@ module "test" {
 }
 `},
 		{
-			name: "module with catalog service conditions",
+			name: "module with catalog-service template",
 			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond: &CatalogServicesCondition{
-				CatalogServicesMonitor: CatalogServicesMonitor{
-					Regexp: ".*",
+			templates: []Template{
+				&CatalogServicesTemplate{
+					Regexp:            ".*",
+					SourceIncludesVar: true,
 				},
-				SourceIncludesVar: true,
 			},
 			varNames: nil,
 			expected: `# user description for task named 'test'
@@ -227,8 +226,8 @@ module "test" {
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond:     nil,
-			varNames: []string{"test1", "test2"},
+			templates: []Template{},
+			varNames:  []string{"test1", "test2"},
 			expected: `# user description for task named 'test'
 module "test" {
   source   = "namespace/example/test-module"
@@ -247,11 +246,11 @@ module "test" {
 				Source:      "namespace/example/test-module",
 				Version:     "1.0.0",
 			},
-			cond: &CatalogServicesCondition{
-				CatalogServicesMonitor: CatalogServicesMonitor{
-					Regexp: ".*",
+			templates: []Template{
+				&CatalogServicesTemplate{
+					Regexp:            ".*",
+					SourceIncludesVar: true,
 				},
-				SourceIncludesVar: true,
 			},
 			varNames: nil,
 			expected: `# user description for task named 'test'
@@ -268,63 +267,11 @@ module "test" {
 		t.Run(tc.name, func(t *testing.T) {
 			hclFile := hclwrite.NewEmptyFile()
 			body := hclFile.Body()
-			appendRootModuleBlock(body, tc.task, tc.varNames, tc.cond, tc.si)
+			appendRootModuleBlock(body, tc.task, tc.varNames, tc.templates...)
 
 			content := hclFile.Bytes()
 			content = hclwrite.Format(content)
 			assert.Equal(t, tc.expected, string(content))
 		})
-	}
-}
-
-func TestService_hcatQuery(t *testing.T) {
-	testCases := []struct {
-		name     string
-		service  Service
-		expected string
-	}{
-		{
-			"empty",
-			Service{},
-			`""`,
-		}, {
-			"base",
-			Service{Name: "app"},
-			`"app"`,
-		}, {
-			"datacenter",
-			Service{
-				Name:       "app",
-				Datacenter: "dc1",
-			},
-			`"app" "dc=dc1"`,
-		}, {
-			"namespace",
-			Service{
-				Name:      "app",
-				Namespace: "namespace",
-			},
-			`"app" "ns=namespace"`,
-		}, {
-			"filter",
-			Service{
-				Name:   "filtered-app",
-				Filter: `"test" in Service.Tags or Service.Tags is empty`,
-			},
-			`"filtered-app" "\"test\" in Service.Tags or Service.Tags is empty"`,
-		}, {
-			"all",
-			Service{
-				Name:       "app",
-				Datacenter: "dc1",
-				Namespace:  "namespace",
-				Filter:     `Service.Meta["meta-key"] contains "test"`,
-			},
-			`"app" "dc=dc1" "ns=namespace" "Service.Meta[\"meta-key\"] contains \"test\""`,
-		},
-	}
-	for _, tc := range testCases {
-		actual := tc.service.hcatQuery()
-		assert.Equal(t, tc.expected, actual)
 	}
 }

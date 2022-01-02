@@ -7,6 +7,7 @@ package e2e
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,10 +15,26 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	createTestTaskTemplate = `{
+	   "description": "Writes the service name, id, and IP address to a file",
+	   "enabled": true,
+	   "name": "%s",
+	   "providers": [
+	       "local"
+	   ],
+	   "services": [
+	       "%s"
+	   ],
+	   "module": "mkam/instance-files/local"
+	}`
 )
 
 // TestE2E_StatusEndpoints tests all of the CTS status endpoints and query
@@ -320,6 +337,378 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	// Confirm that resources are not recreated for disabled task
 	testutils.CheckDir(t, false, resourcesPath)
+}
+
+// TestE2E_TaskEndpoints_Delete tests the delete task endpoint. This
+// runs a Consul server and the CTS binary in daemon mode.
+//	DELETE/v1/tasks/:task_name
+func TestE2E_TaskEndpoints_Delete(t *testing.T) {
+	t.Parallel()
+	// Test deleting a task
+	// 1. Start with a task
+	// 2. Delete the task
+	// 3. Check that the task and events no longer exist
+	// 4. Make a service change, check that no change is made
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "delete_task")
+	taskName := "deleted_task"
+	cts := ctsSetup(t, srv, tempDir,
+		moduleTaskConfig(taskName, "./test_modules/local_instances_file"))
+
+	// Delete task
+	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", taskName)
+	resp := testutils.RequestHTTP(t, http.MethodDelete, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Check that the task no longer exists
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s",
+		cts.Port(), "v1", taskName)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	// Make a change that would have triggered the task, expect no event
+	service := testutil.TestService{
+		ID:      "api",
+		Name:    "api",
+		Address: "5.6.7.8",
+		Port:    8080,
+	}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, false, []string{"api"}, resourcesPath)
+}
+
+// TestE2E_TaskEndpoints_Delete_Conflict tests that a running task cannot
+// be deleted. This runs a Consul server and the CTS binary in daemon mode.
+//	DELETE/v1/tasks/:task_name
+func TestE2E_TaskEndpoints_Delete_Conflict(t *testing.T) {
+	t.Parallel()
+	// Test deleting a task
+	// 1. Start with a task
+	// 2. Trigger the task
+	// 3. While task is still running, delete the task
+	// 4. Check that the task and events still exist
+	// 5. Delete the task after it is complete
+	// 6. Check that the task and events no longer exist
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "deleted_task_conflict")
+	taskName := "deleted_task_conflict"
+	cts := ctsSetup(t, srv, tempDir,
+		moduleTaskConfig(taskName, "./test_modules/delayed_module"))
+
+	// Trigger the task
+	now := time.Now()
+	service := testutil.TestService{
+		ID:      "api",
+		Name:    "api",
+		Address: "5.6.7.8",
+		Port:    8080,
+	}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+
+	// Attempt to delete the task while running, expect failure
+	time.Sleep(2 * time.Second) // task completion is delayed by 5s
+	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", taskName)
+	resp := testutils.RequestHTTP(t, http.MethodDelete, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusConflict, resp.StatusCode)
+
+	// Check that the task still exists, wait for it to complete
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, true, []string{"api"}, resourcesPath)
+
+	// Delete task now that it is completed
+	resp = testutils.RequestHTTP(t, http.MethodDelete, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Check that the task no longer exists
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+// TestE2E_TaskEndpoints_Create tests the create task endpoint. This
+// runs a Consul server and the CTS binary in daemon mode.
+//	POST /v1/tasks
+func TestE2E_TaskEndpoints_Create(t *testing.T) {
+	t.Parallel()
+	// Test creating a task
+	// 1. Start with a task
+	// 2. Create infrastructure change that would trigger new task
+	// 3. Create a new task
+	// 4. Check that the new task exists
+	// 5. Check that the task did not run
+	// 6. Make a service change to a service tracked by the new task, verify an event exists
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_task")
+	initialTaskName := "initial-task"
+	cts := ctsSetup(t, srv, tempDir,
+		moduleTaskConfig(initialTaskName, "./test_modules/local_instances_file"))
+
+	// Make a change that would trigger the new task, if it existed
+	taskName := "created-task"
+	serviceName := "testService"
+	service := testutil.TestService{
+		ID:      serviceName,
+		Name:    serviceName,
+		Address: "5.6.7.8",
+		Port:    8080,
+	}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+
+	// Create task
+	u := fmt.Sprintf("http://localhost:%d/v1/tasks", cts.Port())
+
+	createTaskRequest := fmt.Sprintf(createTestTaskTemplate, taskName, serviceName)
+
+	resp := testutils.RequestHTTP(t, http.MethodPost, u, createTaskRequest)
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode, "response body %s", string(bodyBytes))
+
+	// Check that the task has been created, and that a single event was stored
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	e := events(t, taskName, cts.Port())
+	require.Equal(t, len(e), 1)
+
+	// Verify that the task did not run
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, false, []string{service.ID}, resourcesPath)
+
+	// Make a change that triggers the new task, verify that it runs
+	service = testutil.TestService{
+		ID:      serviceName + "-2",
+		Name:    serviceName,
+		Address: "5.6.7.9",
+		Port:    8080,
+	}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
+
+	e = events(t, taskName, cts.Port())
+	require.Equal(t, len(e), 2)
+
+	resourcesPath = filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, true, []string{service.ID}, resourcesPath)
+}
+
+// TestE2E_TaskEndpoints_Create_Run_Now tests the create task endpoint with run now.
+// This runs a Consul server and the CTS binary in daemon mode.
+// POST /v1/tasks
+func TestE2E_TaskEndpoints_Create_Run_Now(t *testing.T) {
+	t.Parallel()
+	// Test creating a task
+	// 1. Start with a task
+	// 2. Create infrastructure change that would trigger new task
+	// 3. Create a new task with run=now
+	// 4. Check that the new task exists
+	// 5. Check that new task ran based on (2) infrastructure change
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_task_run_now")
+	initialTaskName := "initial-task"
+	cts := ctsSetup(t, srv, tempDir,
+		moduleTaskConfig(initialTaskName, "./test_modules/local_instances_file"))
+
+	// Make a change that would trigger the new task, if it existed
+	taskName := "created-task"
+	serviceName := "testService"
+	service := testutil.TestService{
+		ID:      serviceName,
+		Name:    serviceName,
+		Address: "5.6.7.8",
+		Port:    8080,
+	}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+
+	// Create task
+	u := fmt.Sprintf("http://localhost:%d/v1/tasks", cts.Port())
+	u = fmt.Sprintf("%s?run=now", u)
+
+	createTaskRequest := fmt.Sprintf(createTestTaskTemplate, taskName, serviceName)
+
+	resp := testutils.RequestHTTP(t, http.MethodPost, u, createTaskRequest)
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode, "response body %s", string(bodyBytes))
+
+	// Check that the task has been created
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Verify that the task did run and only a single event was stored
+	e := events(t, taskName, cts.Port())
+	require.Equal(t, len(e), 1)
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, true, []string{service.ID}, resourcesPath)
+}
+
+// TestE2E_TaskEndpoints_InvalidSchema tests the create task endpoint with an invalid schema, no task
+// should be created. This runs a Consul server and the CTS binary in daemon mode.
+//	POST /v1/tasks
+func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
+	t.Parallel()
+	// Test deleting a task
+	// 1. Start with a task
+	// 2. Attempt to create a new task with an invalid schema
+	// 3. Check that the new task does not exist
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_task_invalid_schema")
+	initialTaskName := "initial-task"
+	cts := ctsSetup(t, srv, tempDir,
+		moduleTaskConfig(initialTaskName, "./test_modules/local_instances_file"))
+
+	// Create a task with invalid source field (boolean instead of string)
+	u := fmt.Sprintf("http://localhost:%d/v1/tasks", cts.Port())
+
+	taskName := "created-task"
+	badRequest := fmt.Sprintf(`{
+	   "description": "Writes the service name, id, and IP address to a file",
+	   "enabled": true,
+	   "name": "%s",
+	   "providers": [
+	       "local"
+	   ],
+	   "services": [
+	       "api"
+	   ],
+	   "module": true
+	}`, taskName)
+
+	resp := testutils.RequestHTTP(t, http.MethodPost, u, badRequest)
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	var errorResponse oapigen.ErrorResponse
+	err = json.Unmarshal(bodyBytes, &errorResponse)
+	require.NoError(t, err)
+
+	assert.Contains(t, errorResponse.Error.Message, `request body has an error: doesn't match the schema: `+
+		`Error at "/module": Field must be set to string or not be present`)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	// Check that the task has not been created
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+// TestE2E_TaskEndpoints_DryRunTaskCreate tests the dry run task API
+// inspects the given task and discards it at the end of the run by:
+//
+// 1. Creating a dry run task
+// 2. Verifying that the task and Terraform plan output is returned
+// 3. Checking that there are no events for the task
+// 4. Checking that no resources were created
+// 5. Making a change that would trigger the task if it had been created
+// 6. Verifying again that no events or resources are created
+func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
+	t.Parallel()
+	// Start Consul and CTS
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_dry_run_task")
+	initialTaskName := "initial-task"
+	cts := ctsSetup(t, srv, tempDir,
+		moduleTaskConfig(initialTaskName, "mkam/hello/cts"))
+
+	// Create a dry run task
+	u := fmt.Sprintf("http://localhost:%d/v1/tasks?run=inspect", cts.Port())
+	taskName := "dryrun_task"
+	serviceName := "api"
+	req := &oapigen.TaskRequest{
+		Name:     taskName,
+		Services: &[]string{serviceName},
+		Module:   "mkam/hello/cts",
+	}
+	resp := testutils.RequestJSON(t, http.MethodPost, u, req)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Parse response body
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	var r oapigen.TaskResponse
+	err = json.Unmarshal(bodyBytes, &r)
+	require.NoError(t, err)
+	assert.NotEmpty(t, r.RequestId, "expected request ID in response")
+
+	// Verify run in response
+	assert.NotNil(t, r.Run)
+	assert.Contains(t, *r.Run.Plan, fmt.Sprintf("Hello, %s!", serviceName))
+	assert.Contains(t, *r.Run.Plan, "Plan: 2 to add, 0 to change, 0 to destroy.")
+
+	// Verify task in response
+	assert.NotNil(t, r.Task)
+	assert.Equal(t, req.Name, r.Task.Name, "name not expected value")
+	assert.Equal(t, req.Module, r.Task.Module, "module not expected value")
+	assert.ElementsMatch(t, *req.Services, *r.Task.Services, "services not expected value")
+
+	// Check that the task was not created
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	// Verify that the resources were not actually created
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, false, []string{serviceName}, resourcesPath)
+
+	// Make a change that would trigger the task if it had been created
+	service := testutil.TestService{
+		ID:      serviceName + "-2",
+		Name:    serviceName,
+		Address: "5.6.7.9",
+		Port:    8080,
+	}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	time.Sleep(defaultWaitForNoEvent)
+
+	// Verify that there still is no task
+	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	validateServices(t, false, []string{serviceName}, resourcesPath)
 }
 
 // checkEvents does some basic checks to loosely ensure returned events in

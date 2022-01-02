@@ -4,8 +4,11 @@
 package testutils
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -48,6 +51,66 @@ func MakeTempDir(t testing.TB, tempDir string) func() error {
 	return func() error {
 		return os.RemoveAll(tempDir)
 	}
+}
+
+// FindFileMatches walks a root directory and returns a list of all files that match
+// a particular pattern string.
+// eg. If you want to find all files that end with .txt, pattern=*.txt
+func FindFileMatches(t testing.TB, rootDir, pattern string) []string {
+	var matches []string
+	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+		require.NoError(t, err)
+		if info.IsDir() {
+			return nil
+		}
+		if matched, err := filepath.Match(pattern, filepath.Base(path)); err != nil {
+			require.NoError(t, err)
+		} else if matched {
+			matches = append(matches, path)
+		}
+		return nil
+	})
+	require.NoError(t, err)
+	return matches
+}
+
+// CopyFiles copies a list of files to a destination (dst) directory
+func CopyFiles(t testing.TB, srcFiles []string, dst string) {
+	for _, src := range srcFiles {
+		file := filepath.Base(src)
+		dst := filepath.Join(dst, file)
+		CopyFile(t, src, dst)
+	}
+}
+
+// CopyFile copies a file from src to dst.
+func CopyFile(t testing.TB, src, dst string) {
+	sourceFI, err := os.Stat(src)
+	require.NoError(t, err)
+	if !sourceFI.Mode().IsRegular() {
+		// cannot copy non-regular files (e.g., directories,
+		// symlinks, devices, etc.)
+		err = fmt.Errorf("non-regular source file %s (%q)", sourceFI.Name(), sourceFI.Mode().String())
+		require.NoError(t, err)
+	}
+
+	destFI, err := os.Stat(dst)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			require.NoError(t, err)
+		}
+	} else {
+		if !(destFI.Mode().IsRegular()) {
+			err = fmt.Errorf("non-regular destination file %s (%q)", destFI.Name(), destFI.Mode().String())
+			require.NoError(t, err)
+		}
+		if os.SameFile(sourceFI, destFI) {
+			return
+		}
+	}
+
+	err = copyFileContents(src, dst)
+	require.NoError(t, err)
 }
 
 // CheckDir checks whether or not a directory exists. If it exists, returns the
@@ -100,6 +163,25 @@ func RequestHTTP(t testing.TB, method, url, body string) *http.Response {
 	req, err := http.NewRequest(method, url, r)
 	require.NoError(t, err)
 
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	return resp
+}
+
+// RequestJSON encodes the body to JSON and makes an HTTP request. The caller is
+// responsible for closing the response.
+func RequestJSON(t testing.TB, method, url string, body interface{}) *http.Response {
+	// Encode request body
+	var r bytes.Buffer
+	enc := json.NewEncoder(&r)
+	err := enc.Encode(body)
+	require.NoError(t, err)
+
+	// Make request
+	req, err := http.NewRequest(method, url, &r)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	return resp
@@ -158,4 +240,28 @@ func (t *TestingTB) Cleanup(f func()) {
 			prev()
 		}
 	}
+}
+
+// copyFileContents copies the contents of the file named src to the file named
+// by dst. The file will be created if it does not already exist. If the
+// destination file exists, all it's contents will be replaced by the contents
+// of the source file.
+func copyFileContents(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err = io.Copy(out, in); err != nil {
+		return err
+	}
+	err = out.Sync()
+	return err
 }

@@ -4,9 +4,11 @@
 package e2e
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -43,20 +45,34 @@ const (
 	defaultWaitForNoEvent = 6 * time.Second
 
 	// default TLS
-	defaultCTSClientCert = "../testutils/certs/localhost_cert.pem"
-	defaultCTSClientKey  = "../testutils/certs/localhost_key.pem"
+	defaultCTSClientCert = "../testutils/certs/localhost_leaf_cert.pem"
+	defaultCTSClientKey  = "../testutils/certs/localhost_leaf_key.pem"
 	defaultCTSCACert     = "../testutils/certs/localhost_cert.pem"
+	defaultCertDir       = "certs"
+
+	alternateCACert = "../testutils/certs/localhost_cert3.pem"
+	alternateCert   = "../testutils/certs/localhost_cert3.pem"
+	alternateKey    = "../testutils/certs/localhost_key3.pem"
 )
 
 type tlsConfig struct {
 	clientCert     string
 	clientKey      string
 	caCert         string
+	caPath         string
 	verifyIncoming *bool
 }
 
 func defaultTLSConfig() tlsConfig {
 	return tlsConfig{
+		clientCert: defaultCTSClientCert,
+		clientKey:  defaultCTSClientKey,
+	}
+}
+
+func tlsConfigWithCAPath(tempDir string) tlsConfig {
+	return tlsConfig{
+		caPath:     filepath.Join(tempDir, defaultCertDir),
 		clientCert: defaultCTSClientCert,
 		clientKey:  defaultCTSClientKey,
 	}
@@ -68,6 +84,16 @@ func defaultMTLSConfig() tlsConfig {
 		clientCert:     defaultCTSClientCert,
 		clientKey:      defaultCTSClientKey,
 		caCert:         defaultCTSCACert,
+		verifyIncoming: &verifyIncoming,
+	}
+}
+
+func mtlsConfigWithCAPath(tempDir string) tlsConfig {
+	verifyIncoming := true
+	return tlsConfig{
+		clientCert:     defaultCTSClientCert,
+		clientKey:      defaultCTSClientKey,
+		caPath:         filepath.Join(tempDir, defaultCertDir),
 		verifyIncoming: &verifyIncoming,
 	}
 }
@@ -105,6 +131,36 @@ func checkStateFileLocally(t *testing.T, stateFilePath string) {
 	require.Equal(t, "terraform.tfstate", stateFile.Name())
 }
 
+// runSubcommand runs a CTS subcommand and its arguments. If user input is
+// required for subcommand, pass it through 'input' parameter. Function returns
+// the stdout/err output and any error when executing the subcommand.
+// Note: if error returned, output will still contain any stdout/err information.
+func runSubcommand(t *testing.T, input string, subcmd ...string) (string, error) {
+	return runSubCommandWithEnvVars(t, input, []string{}, subcmd...)
+}
+
+func runSubCommandWithEnvVars(t *testing.T, input string, envVars []string, subcmd ...string) (string, error) {
+	cmd := exec.Command("consul-terraform-sync", subcmd...)
+	cmd.Env = append(cmd.Env, envVars...)
+
+	var b bytes.Buffer
+	cmd.Stdout = &b
+	cmd.Stderr = &b
+
+	stdin, err := cmd.StdinPipe()
+	require.NoError(t, err)
+
+	err = cmd.Start()
+	require.NoError(t, err)
+
+	_, err = stdin.Write([]byte(input))
+	require.NoError(t, err)
+	stdin.Close()
+
+	err = cmd.Wait()
+	return b.String(), err
+}
+
 // ctsSetup executes the following setup steps:
 // 1. Creates a temporary working directory,
 // 2. Creates a CTS configuration file with the provided task
@@ -134,6 +190,26 @@ func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig
 
 func ctsSetupTLS(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig string, tlsConfig tlsConfig) *api.Client {
 	cleanup := testutils.MakeTempDir(t, tempDir)
+
+	// Setup CA path directory if provided
+	var cleanupCAPath func() error
+	if len(tlsConfig.caPath) != 0 {
+		// Create CA Path directory
+		cleanupCAPath = testutils.MakeTempDir(t, tlsConfig.caPath)
+
+		// Get all test certs and move them to the CA path directory
+		certs := []string{
+			defaultCTSCACert,
+			defaultCTSClientCert,
+			alternateCACert,
+		}
+		testutils.CopyFiles(t, certs, tlsConfig.caPath)
+		t.Cleanup(func() {
+			cleanupCAPath()
+		})
+	}
+
+	// add cleanup of tempDir after CAPath directory since CAPath directory will be inside temp directory
 	t.Cleanup(func() {
 		cleanup()
 	})
@@ -145,6 +221,7 @@ func ctsSetupTLS(t *testing.T, srv *testutil.TestServer, tempDir string, taskCon
 
 	cts, stop := api.StartCTSSecure(t, configPath, api.TLSConfig{
 		CACert:     tlsConfig.caCert,
+		CAPath:     tlsConfig.caPath,
 		ClientCert: tlsConfig.clientCert,
 		ClientKey:  tlsConfig.clientKey,
 		SSLVerify:  false,

@@ -38,7 +38,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 			`task {
 	name = "catalog_task"
 	services = ["api"]
-	source = "./test_modules/local_tags_file"
+	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		source_includes_var = true
 	}
@@ -52,7 +52,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 			`task {
 	name = "catalog_task"
 	services = ["api"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 	condition "catalog-services" {}
 }`,
 			false,
@@ -87,7 +87,7 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 			`task {
 	name = "catalog_task"
 	services = ["api", "db"]
-	source = "./test_modules/local_tags_file"
+	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		source_includes_var = true
 	}
@@ -99,7 +99,7 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 			`task {
 	name = "catalog_task"
 	services = ["api", "db"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 	condition "catalog-services" {}
 }`,
 		},
@@ -132,7 +132,7 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	conditionTask := `task {
 	name = "catalog_task"
 	services = ["api"]
-	source = "./test_modules/local_tags_file"
+	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "db|web"
 		source_includes_var = true
@@ -169,7 +169,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	taskName := "catalog_task"
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
-	source = "./test_modules/local_tags_file"
+	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "api-"
 		source_includes_var = true
@@ -237,7 +237,7 @@ func TestCondition_CatalogServices_MultipleTasks(t *testing.T) {
 	tasks := fmt.Sprintf(`
 task {
 	name = "%s"
-	source = "./test_modules/local_tags_file"
+	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "api"
 		source_includes_var = true
@@ -245,7 +245,7 @@ task {
 }
 task {
 	name = "%s"
-	source = "./test_modules/local_tags_file"
+	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "^api$|^web$"
 		source_includes_var = true
@@ -253,7 +253,7 @@ task {
 }
 task {
 	name = "%s"
-	source = "./test_modules/local_tags_file"
+	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = ".*"
 		source_includes_var = true

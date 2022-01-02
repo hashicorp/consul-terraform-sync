@@ -102,7 +102,6 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		persistLog: config.PersistLog,
 		path:       config.Path,
 		workingDir: wd,
-		varFiles:   task.VariableFiles(),
 	})
 	if err != nil {
 		logger.Error("init client type error", "client_type", config.ClientType, "error", err)
@@ -220,18 +219,18 @@ func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
 
 // InspectTask inspects for any differences pertaining to the task between
 // the state of Consul and network infrastructure using the Terraform plan command
-func (tf *Terraform) InspectTask(ctx context.Context) error {
+func (tf *Terraform) InspectTask(ctx context.Context) (InspectPlan, error) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
 	if !tf.task.IsEnabled() {
 		tf.logger.Trace(
 			"task disabled. skip inspecting", taskNameLogKey, tf.task.Name())
-		return nil
+		return InspectPlan{}, nil
 	}
 
-	_, err := tf.inspectTask(ctx, false)
-	return err
+	plan, err := tf.inspectTask(ctx, true)
+	return plan, err
 }
 
 // ApplyTask applies the task changes.
@@ -271,10 +270,11 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
+	originalEnabled := tf.task.IsEnabled()
+
 	// for inspect, dry-run the task with the planned change and then make sure
 	// to reset the task back to the way it was
-	if patch.RunOption == RunOptionInspect {
-		originalEnabled := tf.task.IsEnabled()
+	if patch.RunOption == RunOptionInspect && originalEnabled != patch.Enabled {
 		defer func() {
 			if originalEnabled {
 				tf.task.Enable()
@@ -286,7 +286,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 
 	reinit := false
 
-	if tf.task.IsEnabled() != patch.Enabled {
+	if originalEnabled != patch.Enabled {
 		if patch.Enabled {
 			tf.task.Enable()
 			reinit = true
@@ -516,16 +516,15 @@ func (tf *Terraform) initTaskTemplate() error {
 		Perms: filePerms,
 	})
 
-	metaMap := make(tmplfunc.ServicesMeta)
-	services := tf.task.Services()
-	for _, s := range services {
-		metaMap[s.Name] = s.UserDefinedMeta
+	servicesMeta, err := getServicesMetaData(tf.logger, tf.task)
+	if err != nil {
+		return err
 	}
 
 	tmpl := hcat.NewTemplate(hcat.TemplateInput{
 		Contents:     string(content),
 		Renderer:     renderer,
-		FuncMapMerge: tmplfunc.HCLMap(metaMap),
+		FuncMapMerge: tmplfunc.HCLMap(servicesMeta),
 	})
 
 	if tf.template != nil {
@@ -534,6 +533,10 @@ func (tf *Terraform) initTaskTemplate() error {
 			// during a task update), then the template content is the same.
 			// Template content must be unique.
 			// See: https://github.com/hashicorp/consul-terraform-sync/pull/167
+
+			// Reset the buffer period if applicable to avoid possible waiting after
+			// re-init to render latest content
+			tf.watcher.BufferReset(tf.template)
 			return nil
 		}
 
@@ -542,7 +545,7 @@ func (tf *Terraform) initTaskTemplate() error {
 		tf.watcher.Sweep(tf.template)
 	}
 
-	tf.setNotifier(tmpl, len(services))
+	tf.setNotifier(tmpl)
 
 	if !tf.watcher.Watching(tf.template.ID()) {
 		err = tf.watcher.Register(tf.template)
@@ -555,7 +558,17 @@ func (tf *Terraform) initTaskTemplate() error {
 	return nil
 }
 
-func (tf *Terraform) setNotifier(tmpl templates.Template, serviceCount int) {
+func (tf *Terraform) setNotifier(tmpl templates.Template) {
+	// Get the service count. Only one of task.services, condition "services",
+	// and source_input "services" can be configured per task
+	serviceCount := len(tf.task.Services())
+	if cond, ok := tf.task.Condition().(*config.ServicesConditionConfig); ok {
+		serviceCount = len(cond.Names)
+	}
+	if si, ok := tf.task.SourceInput().(*config.ServicesSourceInputConfig); ok {
+		serviceCount = len(si.Names)
+	}
+
 	switch tf.task.Condition().(type) {
 	case *config.CatalogServicesConditionConfig:
 		tf.template = notifier.NewCatalogServicesRegistration(tmpl, serviceCount)
@@ -608,6 +621,58 @@ func getTerraformHandlers(taskName string, providers TerraformProviderBlocks) (h
 	}
 	logger.Info(fmt.Sprintf("retrieved %d Terraform handlers for task", counter), taskNameLogKey, taskName)
 	return next, nil
+}
+
+// getServicesMetaData helps retrieve metadata which can come from a number of
+// configuration sources: task.services' related service block, condition
+// "service" block, source_input "service" block.
+//
+// Currently it is only possible for a task to be configured with one of these
+// configuration sources, hence a task only has one metadata source. This is
+// validated at the configuration-level. This method relies on this assumption.
+func getServicesMetaData(logger logging.Logger, task *Task) (*tmplfunc.ServicesMeta, error) {
+	servicesMeta := &tmplfunc.ServicesMeta{}
+
+	// Introduced in 0.5. Metadata comes from condition "services"
+	servicesCond, ok := task.Condition().(*config.ServicesConditionConfig)
+	if ok {
+		err := servicesMeta.SetMeta(servicesCond.CTSUserDefinedMeta)
+		if err != nil {
+			logger.Error("unable to to set metadata from services condition",
+				taskNameLogKey, task.Name(), "error", err)
+			return nil, err
+		}
+
+		return servicesMeta, nil
+	}
+
+	// Introduced in 0.5. Metadata comes from source_input "services"
+	servicesInput, ok := task.SourceInput().(*config.ServicesSourceInputConfig)
+	if ok {
+		err := servicesMeta.SetMeta(servicesInput.CTSUserDefinedMeta)
+		if err != nil {
+			logger.Error("unable to to set metadata from services source input",
+				taskNameLogKey, task.Name(), "error", err)
+			return nil, err
+		}
+
+		return servicesMeta, nil
+	}
+
+	// Deprecated in 0.5. Metadata comes from service block
+	metaMap := make(map[string]map[string]string)
+	services := task.Services()
+	for _, s := range services {
+		metaMap[s.Name] = s.UserDefinedMeta
+	}
+
+	if err := servicesMeta.SetMetaMap(metaMap); err != nil {
+		logger.Error("unable to to set metadata from task service blocks",
+			taskNameLogKey, task.Name(), "error", err)
+		return nil, err
+	}
+
+	return servicesMeta, nil
 }
 
 func envMap(environ []string) map[string]string {

@@ -38,7 +38,7 @@ task {
 	description = "basic read-write e2e task api only"
 	services = ["api"]
 	providers = ["local"]
-	source = "./test_modules/local_instances_file"
+	module = "./test_modules/local_instances_file"
 }
 `, tempDir, apiTaskName)
 	configPath := filepath.Join(tempDir, configFile)

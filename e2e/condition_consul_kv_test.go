@@ -35,7 +35,7 @@ func newKVTaskConfig(taskName string, opts kvTaskOpts) string {
 	conditionTask := fmt.Sprintf(`task {
 		name = "%s"
 		services = ["web", "api"]
-		source = "%s"
+		module = "%s"
 		condition "consul-kv" {
 			path = "%s"
 			source_includes_var = %t
@@ -387,7 +387,7 @@ func TestConditionConsul_namespace_oss(t *testing.T) {
 			task: `
 task {
   name = "catalog-services"
-  source = "./test_modules/null_resource"
+  module = "./test_modules/null_resource"
   condition "catalog-services" {
     regexp = ".*"
     namespace = "dne"
@@ -398,7 +398,7 @@ task {
 			task: `
 task {
   name = "consul-kv"
-  source = "./test_modules/null_resource"
+  module = "./test_modules/null_resource"
   services = ["foobar"]
   condition "consul-kv" {
     path = "foo"

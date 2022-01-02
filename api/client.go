@@ -18,8 +18,8 @@ import (
 //go:generate mockery --name=httpClient  --structname=HttpClient --output=../mocks/api
 
 const (
-	httpScheme  = "http"
-	httpsScheme = "https"
+	HTTPScheme  = "http"
+	HTTPSScheme = "https"
 
 	DefaultAddress   = "http://localhost:8558"
 	DefaultSSLVerify = true
@@ -172,12 +172,19 @@ func setupTLSConfig(c *ClientConfig) (*tls.Config, error) {
 	return tlsClientConfig, nil
 }
 
+// Port returns the port being used by the client
 func (c *Client) Port() int {
 	return c.port
 }
 
+// FullAddress returns the client address including the scheme. eg. http://localhost:8558
 func (c *Client) FullAddress() string {
 	return fmt.Sprintf("%s://%s", c.scheme, c.addr)
+}
+
+// Scheme returns the scheme being used by the client
+func (c *Client) Scheme() string {
+	return fmt.Sprintf(c.scheme)
 }
 
 // WaitForAPI polls the /v1/status endpoint to check when the CTS API is
@@ -298,21 +305,21 @@ func (q *QueryParam) Encode() string {
 	return val.Encode()
 }
 
-// Status can be used to query the status endpoints
-type Status struct {
-	c *Client
+// StatusClient can be used to query the status endpoints
+type StatusClient struct {
+	*Client
 }
 
-// Status returns a handle to the status endpoints
-func (c *Client) Status() *Status {
-	return &Status{c}
+// StatusClient returns a handle to the status endpoints
+func (c *Client) Status() *StatusClient {
+	return &StatusClient{c}
 }
 
 // Overall is used to query for overall status
-func (s *Status) Overall() (OverallStatus, error) {
+func (s *StatusClient) Overall() (OverallStatus, error) {
 	var overallStatus OverallStatus
 
-	resp, err := s.c.request(http.MethodGet, overallStatusPath, "", "")
+	resp, err := s.request(http.MethodGet, overallStatusPath, "", "")
 	if err != nil {
 		return overallStatus, err
 	}
@@ -330,7 +337,7 @@ func (s *Status) Overall() (OverallStatus, error) {
 //
 // name: task name or empty string for all tasks
 // q: nil if no query parameters
-func (s *Status) Task(name string, q *QueryParam) (map[string]TaskStatus, error) {
+func (s *StatusClient) Task(name string, q *QueryParam) (map[string]TaskStatus, error) {
 	var taskStatuses map[string]TaskStatus
 
 	path := taskStatusPath
@@ -342,7 +349,7 @@ func (s *Status) Task(name string, q *QueryParam) (map[string]TaskStatus, error)
 		q = &QueryParam{}
 	}
 
-	resp, err := s.c.request(http.MethodGet, path, q.Encode(), "")
+	resp, err := s.request(http.MethodGet, path, q.Encode(), "")
 	if err != nil {
 		return taskStatuses, err
 	}
@@ -356,18 +363,18 @@ func (s *Status) Task(name string, q *QueryParam) (map[string]TaskStatus, error)
 	return taskStatuses, nil
 }
 
-// Task can be used to query the task endpoints
-type Task struct {
-	c *Client
+// TaskClient can be used to query the task endpoints
+type TaskClient struct {
+	*Client
 }
 
 // Task returns a handle to the task endpoints
-func (c *Client) Task() *Task {
-	return &Task{c}
+func (c *Client) Task() *TaskClient {
+	return &TaskClient{c}
 }
 
 // Update is used to patch update task
-func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (UpdateTaskResponse, error) {
+func (t *TaskClient) Update(name string, config UpdateTaskConfig, q *QueryParam) (UpdateTaskResponse, error) {
 	b, err := json.Marshal(config)
 	if err != nil {
 		return UpdateTaskResponse{}, err
@@ -378,7 +385,7 @@ func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (Upda
 	}
 
 	path := fmt.Sprintf("%s/%s", taskPath, name)
-	resp, err := t.c.request(http.MethodPatch, path, q.Encode(), string(b))
+	resp, err := t.request(http.MethodPatch, path, q.Encode(), string(b))
 	if err != nil {
 		return UpdateTaskResponse{}, err
 	}
@@ -395,14 +402,14 @@ func (t *Task) Update(name string, config UpdateTaskConfig, q *QueryParam) (Upda
 
 func parseAddress(addr string) (addressComposite, error) {
 	ac := addressComposite{}
-	ac.scheme = httpScheme
+	ac.scheme = HTTPScheme
 	parts := strings.SplitN(addr, "://", 2)
 	if len(parts) == 2 {
 		switch parts[0] {
-		case httpScheme:
-			ac.scheme = httpScheme
-		case httpsScheme:
-			ac.scheme = httpsScheme
+		case HTTPScheme:
+			ac.scheme = HTTPScheme
+		case HTTPSScheme:
+			ac.scheme = HTTPSScheme
 		default:
 			return addressComposite{}, fmt.Errorf("unknown protocol scheme: %s", parts[0])
 		}

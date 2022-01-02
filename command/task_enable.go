@@ -105,6 +105,8 @@ func (c *taskEnableCommand) Run(args []string) int {
 	}, &api.QueryParam{Run: driver.RunOptionInspect})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to generate plan for '%s'", taskName))
+		err = processEOFError(client.Scheme(), err)
+
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 
@@ -133,7 +135,7 @@ func (c *taskEnableCommand) Run(args []string) int {
 		return ExitCodeOK
 	}
 
-	if exitCode, approved := c.meta.requestUserApproval(taskName); !approved {
+	if exitCode, approved := c.meta.requestUserApprovalEnable(taskName); !approved {
 		return exitCode
 	}
 

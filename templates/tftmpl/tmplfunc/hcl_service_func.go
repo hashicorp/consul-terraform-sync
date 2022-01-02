@@ -11,17 +11,16 @@ import (
 // hclServiceFunc is a wrapper of the template function to marshal Consul
 // service information into HCL. The function accepts a map representing
 // metadata for services in scope of a task.
-func hclServiceFunc(meta ServicesMeta) func(sDep *dep.HealthService) string {
+func hclServiceFunc(meta *ServicesMeta) func(sDep *dep.HealthService) string {
 	return func(sDep *dep.HealthService) string {
 		if sDep == nil {
 			return ""
 		}
 
-		// Find metdata based Consul service name scoped to a task to append to
-		// that service within var.services
+		// Find any user-defined metadata for this service and append to variable
 		var serviceMeta map[string]string
 		if meta != nil {
-			serviceMeta = meta[sDep.Name]
+			serviceMeta = meta.Get(sDep.Name)
 		}
 
 		// Convert the hcat type to an HCL marshal-able object

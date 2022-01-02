@@ -22,11 +22,14 @@ func Commands() map[string]cli.CommandFactory {
 	}
 
 	all := map[string]cli.CommandFactory{
-		"task disable": func() (cli.Command, error) {
+		cmdTaskDisableName: func() (cli.Command, error) {
 			return newTaskDisableCommand(m), nil
 		},
-		"task enable": func() (cli.Command, error) {
+		cmdTaskEnableName: func() (cli.Command, error) {
 			return newTaskEnableCommand(m), nil
+		},
+		cmdTaskDeleteName: func() (cli.Command, error) {
+			return newTaskDeleteCommand(m), nil
 		},
 	}
 

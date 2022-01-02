@@ -141,8 +141,8 @@ func TestBaseControllerInit(t *testing.T) {
 	}
 }
 
-func TestNewDriverTasks(t *testing.T) {
-	// newDriverTasks function reorganizes various user-defined configuration
+func TestNewDriverTask(t *testing.T) {
+	// newDriverTask function reorganizes various user-defined configuration
 	// blocks into a task object with all the information for the driver to
 	// execute on.
 	testCases := []struct {
@@ -166,7 +166,7 @@ func TestNewDriverTasks(t *testing.T) {
 					{
 						Name:      config.String("name"),
 						Providers: []string{"providerA", "providerB"},
-						Source:    config.String("source"),
+						Module:    config.String("path"),
 					},
 				},
 				Driver: &config.DriverConfig{
@@ -202,19 +202,11 @@ func TestNewDriverTasks(t *testing.T) {
 						"source": "source/providerA",
 					},
 				},
-				Services: []driver.Service{},
-				Source:   "source",
-				VarFiles: []string{},
-				Condition: &config.ServicesConditionConfig{
-					config.ServicesMonitorConfig{
-						Regexp: config.String(""),
-					},
-				},
-				SourceInput: &config.ServicesSourceInputConfig{
-					config.ServicesMonitorConfig{
-						Regexp: config.String(""),
-					},
-				},
+				Services:    []driver.Service{},
+				Source:      "path",
+				VarFiles:    []string{},
+				Condition:   config.EmptyConditionConfig(),
+				SourceInput: config.EmptySourceInputConfig(),
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
@@ -230,7 +222,7 @@ func TestNewDriverTasks(t *testing.T) {
 					{
 						Name:      config.String("name"),
 						Providers: []string{"providerA.alias1", "providerB"},
-						Source:    config.String("source"),
+						Module:    config.String("path"),
 					},
 				},
 				Driver: &config.DriverConfig{
@@ -277,19 +269,11 @@ func TestNewDriverTasks(t *testing.T) {
 						"source": "source/providerA",
 					},
 				},
-				Services: []driver.Service{},
-				Source:   "source",
-				VarFiles: []string{},
-				Condition: &config.ServicesConditionConfig{
-					config.ServicesMonitorConfig{
-						Regexp: config.String(""),
-					},
-				},
-				SourceInput: &config.ServicesSourceInputConfig{
-					config.ServicesMonitorConfig{
-						Regexp: config.String(""),
-					},
-				},
+				Services:    []driver.Service{},
+				Source:      "path",
+				VarFiles:    []string{},
+				Condition:   config.EmptyConditionConfig(),
+				SourceInput: config.EmptySourceInputConfig(),
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
@@ -309,7 +293,7 @@ func TestNewDriverTasks(t *testing.T) {
 					{
 						Name:      config.String("name"),
 						Providers: []string{"providerA"},
-						Source:    config.String("source"),
+						Module:    config.String("path"),
 					},
 				},
 				TerraformProviders: &config.TerraformProviderConfigs{
@@ -338,18 +322,10 @@ func TestNewDriverTasks(t *testing.T) {
 					})),
 				ProviderInfo: map[string]interface{}{},
 				Services:     []driver.Service{},
-				Source:       "source",
+				Source:       "path",
 				VarFiles:     []string{},
-				Condition: &config.ServicesConditionConfig{
-					config.ServicesMonitorConfig{
-						Regexp: config.String(""),
-					},
-				},
-				SourceInput: &config.ServicesSourceInputConfig{
-					config.ServicesMonitorConfig{
-						Regexp: config.String(""),
-					},
-				},
+				Condition:    config.EmptyConditionConfig(),
+				SourceInput:  config.EmptySourceInputConfig(),
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
@@ -371,11 +347,28 @@ func TestNewDriverTasks(t *testing.T) {
 				}
 			}
 
-			tasks, err := newDriverTasks(tc.conf, providerConfigs)
+			tasks, err := newTestDriverTasks(tc.conf, providerConfigs)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.tasks, tasks)
 		})
 	}
+}
+
+func newTestDriverTasks(conf *config.Config, providerConfigs driver.TerraformProviderBlocks) ([]*driver.Task, error) {
+	if conf == nil {
+		return []*driver.Task{}, nil
+	}
+
+	tasks := make([]*driver.Task, len(*conf.Tasks))
+	for i, t := range *conf.Tasks {
+		var err error
+		tasks[i], err = newDriverTask(conf, t, nil, providerConfigs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return tasks, nil
 }
 
 func newTestTask(tb testing.TB, conf driver.TaskConfig) *driver.Task {

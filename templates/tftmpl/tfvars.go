@@ -1,8 +1,8 @@
 package tftmpl
 
 import (
-	"fmt"
 	"io"
+	"sort"
 
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -16,39 +16,28 @@ func newTFVarsTmpl(w io.Writer, filename string, input *RootModuleInputData) err
 		return err
 	}
 
-	// First append the SourceInput templating
-	areServicesAppended := false
-	if input.SourceInput != nil {
-		if err := input.SourceInput.appendTemplate(w); err != nil {
+	// append templates for Template structs
+	servicesAppended := false
+	for _, template := range input.Templates {
+		if err := template.appendTemplate(w); err != nil {
 			return err
 		}
-		areServicesAppended = input.SourceInput.ServicesAppended()
-	}
-
-	// Next append the condition templating
-	// SourceInput services take precedence over Condition services, so only append Condition services if services
-	// weren't appended by SourceInput
-	if input.Condition != nil {
-		if input.Condition.ServicesAppended() {
-			if !areServicesAppended {
-				if err := input.Condition.appendTemplate(w); err != nil {
-					return err
-				}
-				areServicesAppended = input.Condition.ServicesAppended()
-			}
-			// Else do nothing if services are already appended
-		} else {
-			if err := input.Condition.appendTemplate(w); err != nil {
-				return err
-			}
+		if template.IsServicesVar() {
+			servicesAppended = true
 		}
 	}
 
-	// Finally, append raw services if no services have been added yet
 	hclFile := hclwrite.NewEmptyFile()
-	if !areServicesAppended {
-		body := hclFile.Body()
-		appendRawServiceTemplateValues(body, input.Services)
+	body := hclFile.Body()
+
+	// services var is required (see newVariablesTF). in variables.tf, services
+	// var is always appended. ensure that corresponding var value is appended
+	// to terraform.tfvars
+	if !servicesAppended {
+		// append empty services var value
+		body.AppendNewline()
+		body.SetAttributeRaw("services", hclwrite.Tokens{
+			{Type: hclsyntax.TokenOBrace, Bytes: []byte("{\n}")}})
 	}
 
 	_, err := hclFile.WriteTo(w)
@@ -79,45 +68,31 @@ func newProvidersTFVars(w io.Writer, filename string, input *RootModuleInputData
 	return err
 }
 
-// appendRawServiceTemplateValues appends raw lines representing blocks that
-// assign value to the services variable `VariableServices` with `hcat` template
-// syntax for dynamic rendering of Consul dependency values.
-//
-// services = {
-//   <service>: {
-//	   {{ <template syntax> }}
-//   },
-// }
-func appendRawServiceTemplateValues(body *hclwrite.Body, services []Service) {
-	tokens := make([]*hclwrite.Token, 0, len(services)+2)
-	tokens = append(tokens, &hclwrite.Token{
-		Type:  hclsyntax.TokenOBrace,
-		Bytes: []byte("{"),
-	})
-
-	for _, s := range services {
-		rawService := fmt.Sprintf(serviceBaseTmpl, s.hcatQuery())
-		token := hclwrite.Token{
-			Type:  hclsyntax.TokenNil,
-			Bytes: []byte(rawService),
-		}
-		tokens = append(tokens, &token)
+// newVariablesTFVars writes input variables for configured variables.
+func newVariablesTFVars(w io.Writer, filename string, input *RootModuleInputData) error {
+	err := writePreamble(w, input.Task, filename)
+	if err != nil {
+		return err
 	}
 
-	tokens = append(tokens, &hclwrite.Token{
-		Bytes: []byte("\n}"),
-	})
+	hclFile := hclwrite.NewEmptyFile()
+	body := hclFile.Body()
 	body.AppendNewline()
-	body.SetAttributeRaw("services", tokens)
-}
 
-// serviceBaseTmpl is the raw template following hcat syntax for addresses of
-// Consul services.
-const serviceBaseTmpl = `
-{{- with $srv := service %s }}
-  {{- range $s := $srv}}
-  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
-{{ HCLService $s | indent 4 }}
-  },
-  {{- end}}
-{{- end}}`
+	// Order the keys so that we are always guaranteed to generate the same file given
+	// the same variables
+	keys := make([]string, 0, len(input.Variables))
+	for k := range input.Variables {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		body.SetAttributeValue(k, input.Variables[k])
+	}
+
+	body.AppendNewline()
+
+	_, err = hclFile.WriteTo(w)
+	return err
+}

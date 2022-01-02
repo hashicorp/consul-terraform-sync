@@ -12,29 +12,25 @@ const (
 	testSourceInputServicesSuccess = `
 task {
 	name = "source_input_task"
-	source = "..."
+	module = "..."
 	source_input "services" {
 		regexp = ".*"
+		datacenter = "dc2"
+		namespace = "ns2"
+		filter = "some-filter"
+		cts_user_defined_meta {
+			key = "value"
+		}
 	}
 	condition "schedule" {
 		cron = "* * * * * * *"
 	}
 }`
-	testSourceInputServicesUnconfiguredSuccess = `
-task {
-	name = "condition_task"
-	source = "..."
-	services = ["api"]
-	source_input "services" {
-	}
-	condition "schedule" {
-		cron = "* * * * * * *"
-	}
-}`
+
 	testSourceInputConsulKVSuccess = `
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "schedule" {
 		cron = "* * * * * * *"
@@ -51,7 +47,7 @@ task {
 	testSourceInputServicesUnsupportedFieldError = `
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	source_input "services" {
 		nonexistent_field = true
@@ -63,7 +59,7 @@ task {
 	testSourceInputConsulKVUnsupportedFieldError = `
 task {
 	name = "condition_task"
-	source = "..."
+	module = "..."
 	services = ["api"]
 	condition "schedule" {
 		cron = "* * * * * * *"
@@ -80,16 +76,6 @@ task {
 	testFileName = "config.hcl"
 )
 
-func TestSourceInput_DefaultSourceInputConfig(t *testing.T) {
-	e := &ServicesSourceInputConfig{
-		ServicesMonitorConfig{
-			Regexp: String(""),
-		},
-	}
-	a := DefaultSourceInputConfig()
-	require.Equal(t, e, a)
-}
-
 func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 	// Specifically test decoding source_input configs
 	cases := []struct {
@@ -102,19 +88,15 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 			name: "services happy path",
 			expected: &ServicesSourceInputConfig{
 				ServicesMonitorConfig{
-					Regexp: String(".*"),
+					Regexp:             String(".*"),
+					Names:              []string{},
+					Datacenter:         String("dc2"),
+					Namespace:          String("ns2"),
+					Filter:             String("some-filter"),
+					CTSUserDefinedMeta: map[string]string{"key": "value"},
 				},
 			},
 			config: testSourceInputServicesSuccess,
-		},
-		{
-			name: "services un-configured",
-			expected: &ServicesSourceInputConfig{
-				ServicesMonitorConfig{
-					Regexp: String(""),
-				},
-			},
-			config: testSourceInputServicesUnconfiguredSuccess,
 		},
 		{
 			name: "consul-kv: happy path",

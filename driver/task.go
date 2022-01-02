@@ -60,7 +60,6 @@ type Task struct {
 	providerInfo map[string]interface{}  // driver.required_provider config info
 	services     []Service
 	source       string
-	varFiles     []string
 	variables    hcltmpl.Variables // loaded variables from varFiles
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
@@ -80,6 +79,7 @@ type TaskConfig struct {
 	Services     []Service
 	Source       string
 	VarFiles     []string
+	Variables    map[string]string
 	Version      string
 	BufferPeriod *BufferPeriod
 	Condition    config.ConditionConfig
@@ -88,6 +88,7 @@ type TaskConfig struct {
 }
 
 func NewTask(conf TaskConfig) (*Task, error) {
+	// Load all variables from passed in variable files
 	loadedVars := make(hcltmpl.Variables)
 	for _, vf := range conf.VarFiles {
 		tfvars, err := tftmpl.LoadModuleVariables(vf)
@@ -99,6 +100,16 @@ func NewTask(conf TaskConfig) (*Task, error) {
 			loadedVars[k] = v
 		}
 	}
+
+	// Load all variables from passed in variables map
+	tfvars, err := tftmpl.ParseModuleVariablesFromMap(conf.Variables)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range tfvars {
+		loadedVars[k] = v
+	}
+
 	return &Task{
 		description:  conf.Description,
 		name:         conf.Name,
@@ -108,7 +119,6 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		providerInfo: conf.ProviderInfo,
 		services:     conf.Services,
 		source:       conf.Source,
-		varFiles:     conf.VarFiles,
 		variables:    loadedVars,
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
@@ -248,19 +258,6 @@ func (t *Task) Source() string {
 	return t.source
 }
 
-// VariableFiles returns a copy of the list of configured variable files
-// for the task's module.
-func (t *Task) VariableFiles() []string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	varFiles := make([]string, len(t.varFiles))
-	for i, vf := range t.varFiles {
-		varFiles[i] = vf
-	}
-	return varFiles
-}
-
 // Variables returns a copy of the loaded input variables for a module
 // from configured variable files.
 func (t *Task) Variables() hcltmpl.Variables {
@@ -313,87 +310,126 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 		Version:     t.version,
 	}
 
-	input.Services = make([]tftmpl.Service, len(t.services))
-	for i, s := range t.services {
-		input.Services[i] = tftmpl.Service{
-			Datacenter:         s.Datacenter,
-			Description:        s.Description,
-			Name:               s.Name,
-			Namespace:          s.Namespace,
-			Filter:             s.Filter,
-			CTSUserDefinedMeta: s.UserDefinedMeta,
+	var templates []tftmpl.Template
+
+	// Create a ServicesTemplate for task.services list. task.services is
+	// deprecated in 0.5 and is replaced by condition / source_input "services"
+	// which is handled further below.
+	if len(t.services) > 0 {
+		// gather services query parameters
+		services := make(map[string]tftmpl.Service, len(t.services))
+		for _, s := range t.services {
+			services[s.Name] = tftmpl.Service{
+				Datacenter: s.Datacenter,
+				Namespace:  s.Namespace,
+				Filter:     s.Filter,
+			}
 		}
+
+		// configure ServicesTemplate
+		template := &tftmpl.ServicesTemplate{
+			Names:    t.ServiceNames(),
+			Services: services,
+			// services list does not support SourceIncludesVar=false
+			SourceIncludesVar: true,
+		}
+		templates = append(templates, template)
+
+		t.logger.Trace("services list template configured", "template_type",
+			fmt.Sprintf("%T", template))
 	}
 
-	var condition tftmpl.Condition
+	var condition tftmpl.Template
 	switch v := t.condition.(type) {
 	case *config.CatalogServicesConditionConfig:
-		condition = &tftmpl.CatalogServicesCondition{
-			CatalogServicesMonitor: tftmpl.CatalogServicesMonitor{
-				Regexp:     *v.Regexp,
-				Datacenter: *v.Datacenter,
-				Namespace:  *v.Namespace,
-				NodeMeta:   v.NodeMeta,
-			},
+		condition = &tftmpl.CatalogServicesTemplate{
+			Regexp:            *v.Regexp,
+			Datacenter:        *v.Datacenter,
+			Namespace:         *v.Namespace,
+			NodeMeta:          v.NodeMeta,
 			SourceIncludesVar: *v.SourceIncludesVar,
 		}
 	case *config.ServicesConditionConfig:
-		condition = &tftmpl.ServicesCondition{
-			ServicesMonitor: tftmpl.ServicesMonitor{
-				Regexp: *v.Regexp,
-			},
-			// always set services variable
-			SourceIncludesVar: true,
+		if len(v.Names) > 0 {
+			condition = &tftmpl.ServicesTemplate{
+				Names:      v.Names,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// SourceIncludesVar=false not yet supported
+				SourceIncludesVar: true,
+			}
+		} else {
+			condition = &tftmpl.ServicesRegexTemplate{
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// SourceIncludesVar=false not yet supported
+				SourceIncludesVar: true,
+			}
 		}
 	case *config.ConsulKVConditionConfig:
-		condition = &tftmpl.ConsulKVCondition{
-			ConsulKVMonitor: tftmpl.ConsulKVMonitor{
-				Path:       *v.Path,
-				Datacenter: *v.Datacenter,
-				Recurse:    *v.Recurse,
-				Namespace:  *v.Namespace,
-			},
+		condition = &tftmpl.ConsulKVTemplate{
+			Path:              *v.Path,
+			Datacenter:        *v.Datacenter,
+			Recurse:           *v.Recurse,
+			Namespace:         *v.Namespace,
 			SourceIncludesVar: *v.SourceIncludesVar,
 		}
-	case *config.ScheduleConditionConfig:
-		condition = &tftmpl.ServicesCondition{
+	default:
+		// no-op: condition block currently not required since services.list
+		// can be used alternatively
+	}
+
+	if condition != nil {
+		templates = append(templates, condition)
+		t.logger.Trace("condition block template configured", "template_type",
+			fmt.Sprintf("%T", condition))
+	}
+
+	var sourceInput tftmpl.Template
+	switch v := t.sourceInput.(type) {
+	case *config.ServicesSourceInputConfig:
+		if len(v.Names) > 0 {
+			sourceInput = &tftmpl.ServicesTemplate{
+				Names:      v.Names,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// always include for source_input config
+				SourceIncludesVar: true,
+			}
+		} else {
+			sourceInput = &tftmpl.ServicesRegexTemplate{
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				// always include for source_input config
+				SourceIncludesVar: true,
+			}
+		}
+	case *config.ConsulKVSourceInputConfig:
+		sourceInput = &tftmpl.ConsulKVTemplate{
+			Path:       *v.Path,
+			Datacenter: *v.Datacenter,
+			Recurse:    *v.Recurse,
+			Namespace:  *v.Namespace,
+			// always include for source_input config
 			SourceIncludesVar: true,
 		}
 	default:
-		// expected only for test scenarios
-		t.logger.Warn("task condition config unset. defaulting to services condition",
-			"task_name", t.name)
-		condition = &tftmpl.ServicesCondition{}
+		// no-op: source_input block config not required
 	}
-	t.logger.Trace("condition configured", "source_input_type", fmt.Sprintf("%T", condition))
-	input.Condition = condition
 
-	var sourceInput tftmpl.SourceInput
-	switch v := t.sourceInput.(type) {
-	case *config.ServicesSourceInputConfig:
-		sourceInput = &tftmpl.ServicesSourceInput{
-			ServicesMonitor: tftmpl.ServicesMonitor{
-				Regexp: *v.Regexp,
-			},
-		}
-	case *config.ConsulKVSourceInputConfig:
-		sourceInput = &tftmpl.ConsulKVSourceInput{
-			ConsulKVMonitor: tftmpl.ConsulKVMonitor{
-				Path:       *v.Path,
-				Datacenter: *v.Datacenter,
-				Recurse:    *v.Recurse,
-				Namespace:  *v.Namespace,
-			},
-		}
-	default:
-		// expected only for test scenarios
-		t.logger.Warn("task source_input config unset. defaulting to services source_input",
-			"task_name", t.name)
-		sourceInput = &tftmpl.ServicesSourceInput{}
+	if sourceInput != nil {
+		templates = append(templates, sourceInput)
+		t.logger.Trace("source_input block template configured", "template_type",
+			fmt.Sprintf("%T", sourceInput))
 	}
-	t.logger.Trace("source_input configured", "source_input_type", fmt.Sprintf("%T", sourceInput))
 
-	input.SourceInput = sourceInput
+	input.Templates = templates
 
 	input.Providers = t.providers.ProviderBlocks()
 	input.ProviderInfo = make(map[string]interface{})
@@ -414,7 +450,6 @@ type clientConfig struct {
 	taskName   string
 	persistLog bool
 	path       string
-	varFiles   []string
 	workingDir string
 }
 
@@ -445,7 +480,6 @@ func newClient(conf *clientConfig) (client.Client, error) {
 			ExecPath:   conf.path,
 			WorkingDir: conf.workingDir,
 			Workspace:  taskName,
-			VarFiles:   conf.varFiles,
 		})
 	}
 

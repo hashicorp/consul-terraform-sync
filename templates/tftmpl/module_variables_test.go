@@ -51,3 +51,53 @@ tup = ["abc", 123, true]`),
 		})
 	}
 }
+
+func TestParseVariablesFromMap(t *testing.T) {
+	testCases := []struct {
+		name    string
+		content map[string]string
+		err     bool
+	}{
+		{
+			name: "valid types",
+			content: map[string]string{
+				"b":   "true",
+				"key": `"some_key"`,
+				"num": "10",
+				"l":   "[1,2,3]",
+				"tup": `["abc", 123, true]`,
+				"obj": `{
+  argStr = "value"
+  argNum = 10
+  argList = ["l", "i", "s", "t"]
+  argMap = {}
+}`,
+			},
+			err: false,
+		}, {
+			"unsupported type",
+			map[string]string{
+				"b": "true + 1",
+			},
+			true,
+		}, {
+			"invalid syntax",
+			map[string]string{
+				"key": `"missing closing quote`,
+			},
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			vars, err := ParseModuleVariablesFromMap(tc.content)
+			if tc.err {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Len(t, vars, 6)
+		})
+	}
+}

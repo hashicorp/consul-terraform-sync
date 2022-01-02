@@ -17,14 +17,9 @@ type ConditionConfig interface {
 	MonitorConfig
 }
 
-// DefaultConditionConfig returns the default conditions which is an unconfigured
-// 'services' type condition.
-func DefaultConditionConfig() ConditionConfig {
-	return &ServicesConditionConfig{
-		ServicesMonitorConfig{
-			Regexp: String(""),
-		},
-	}
+// EmptyConditionConfig sets an unconfigured condition with a non-null value
+func EmptyConditionConfig() ConditionConfig {
+	return &NoMonitorConfig{}
 }
 
 // conditionToTypeFunc is a decode hook function to decode a ConditionConfig

@@ -57,26 +57,26 @@ func newVariablesTF(w io.Writer, filename string, input *RootModuleInputData) er
 		return err
 	}
 
+	// service variable is required to append
 	if _, err = w.Write(VariableServices); err != nil {
 		return err
 	}
 
-	if input.Condition != nil && input.Condition.SourceIncludesVariable() {
-		if err = input.Condition.appendVariable(w); err != nil {
-			return err
-		}
-	}
+	// append a variable for each template unless template's variable is
+	// a services variable. services variable already appended above.
+	// note: assumes templates' variables are unique type. otherwise would
+	// need to check to avoid appending duplicate variables
+	for _, template := range input.Templates {
+		if template.SourceIncludesVariable() {
+			if template.IsServicesVar() {
+				// services variable is already appended earlier. skip
+				continue
+			}
 
-	if input.SourceInput != nil {
-		if input.SourceInput.SourceIncludesVariable() {
-			if err = input.SourceInput.appendVariable(w); err != nil {
+			// append variable for non-service objects
+			if err = template.appendVariable(w); err != nil {
 				return err
 			}
-		} else {
-			// SourceIncludesVariable should always be true for a non-nil source input
-			// if we got here, it means that a source_input's SourceIncludesVariable() function
-			// was not setup correctly
-			panic("SourceIncludesVariable is false for a non-nil source input")
 		}
 	}
 

@@ -241,10 +241,13 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 // ServeAPI runs the API server for the controller
 func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
 	a, err := api.NewAPI(&api.APIConfig{
-		Store:   rw.store,
-		Drivers: rw.drivers,
-		Port:    config.IntVal(rw.conf.Port),
-		TLS:     rw.conf.TLS},
+		Store:               rw.store,
+		Drivers:             rw.drivers,
+		Port:                config.IntVal(rw.conf.Port),
+		TLS:                 rw.conf.TLS,
+		BufferPeriod:        rw.conf.BufferPeriod,
+		WorkingDir:          *rw.conf.WorkingDir,
+		CreateNewTaskDriver: rw.createNewTaskDriverWithVars},
 	)
 	if err != nil {
 		return err
@@ -262,7 +265,7 @@ func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
 //     were dependency changes)
 //
 // Note on #2: no event is stored when a dynamic task renders but does not apply.
-// This can occur becauser driver.RenderTemplate() may need to be called multiple
+// This can occur because driver.RenderTemplate() may need to be called multiple
 // times before a template is ready to be applied.
 func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, once bool) (bool, error) {
 	task := d.Task()
@@ -328,6 +331,8 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	// new data
 	if rendered {
 		rw.logger.Info("executing task", taskNameLogKey, taskName)
+		rw.drivers.SetActive(taskName)
+		defer rw.drivers.SetInactive(taskName)
 		defer storeEvent()
 
 		if retry {
