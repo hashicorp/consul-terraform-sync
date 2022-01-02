@@ -313,7 +313,7 @@ func TestConsulKVSourceInputConfig_GoString(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := tc.ckv.GoString()
+			actual := tc.ckv.String()
 			require.Equal(t, actual, tc.expected)
 		})
 	}
