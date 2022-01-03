@@ -32,7 +32,7 @@ type ReadWrite struct {
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
-func NewReadWrite(conf *config.Config) (Controller, error) {
+func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 	baseCtrl, err := newBaseController(conf)
 	if err != nil {
 		return nil, err

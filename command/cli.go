@@ -15,6 +15,8 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
+	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/version"
 	mcli "github.com/mitchellh/cli"
@@ -266,7 +268,21 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 			if isInspect {
 				return
 			}
+			// TODO: remove this once store and drivers are removed from status & task handlers
+			var store *event.Store
+			var drivers *driver.Drivers
+			switch c := ctrl.(type) {
+			case *controller.ReadWrite:
+				store = c.Store()
+				drivers = c.Drivers()
+			default:
+				store = event.NewStore()
+				drivers = driver.NewDrivers()
+			}
+
 			s, err := api.NewAPI(api.APIConfig{
+				Store:      store,
+				Drivers:    drivers,
 				Controller: ctrl.(api.Server),
 				Port:       config.IntVal(conf.Port),
 			})

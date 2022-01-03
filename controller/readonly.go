@@ -22,7 +22,7 @@ type ReadOnly struct {
 }
 
 // NewReadOnly configures and initializes a new ReadOnly controller
-func NewReadOnly(conf *config.Config) (Controller, error) {
+func NewReadOnly(conf *config.Config) (*ReadOnly, error) {
 	// Run the driver with logging to output the Terraform plan to stdout
 	if tfConfig := conf.Driver.Terraform; tfConfig != nil && !MuteReadOnlyController {
 		tfConfig.Log = config.Bool(true)

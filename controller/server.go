@@ -6,11 +6,23 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/event"
 )
 
 func (rw *ReadWrite) Config() config.Config {
 	return *rw.baseController.conf
 }
+
+// TODO: remove getter functions when status and task API handlers are refactored
+func (rw *ReadWrite) Drivers() *driver.Drivers {
+	return rw.drivers
+}
+
+func (rw *ReadWrite) Store() *event.Store {
+	return rw.store
+}
+
+// End TODO
 
 func (rw *ReadWrite) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
 	// TODO handle ctx while waiting for driver lock if it is currently active
