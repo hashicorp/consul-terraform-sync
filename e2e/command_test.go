@@ -116,6 +116,13 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			expectEnabled:  true,
 		},
 		{
+			name:           "auto approve",
+			args:           []string{"-auto-approve", disabledTaskName},
+			input:          "",
+			outputContains: "enable complete!",
+			expectEnabled:  true,
+		},
+		{
 			name:           "user does not approve plan",
 			args:           []string{disabledTaskName},
 			input:          "no\n",
@@ -279,6 +286,16 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 			input:    "yes\n",
 			outputContains: []string{
 				fmt.Sprintf("Do you want to delete '%s'?", dbTaskName),
+				fmt.Sprintf("Deleted task '%s'", dbTaskName)},
+			expectErr:     false,
+			expectDeleted: true,
+		},
+		{
+			name:     "auto_approve",
+			taskName: dbTaskName,
+			input:    "",
+			args: []string{"-auto-approve"},
+			outputContains: []string{
 				fmt.Sprintf("Deleted task '%s'", dbTaskName)},
 			expectErr:     false,
 			expectDeleted: true,
