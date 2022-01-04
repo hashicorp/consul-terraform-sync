@@ -50,6 +50,11 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 
 	var tc config.TaskConfig
 	if params.Run != nil && *params.Run == driver.RunOptionNow {
+		// TODO rebase to add inspect handling
+		// if *params.Run == driver.RunOptionInspect {
+		// 	logger.Trace("run inspect option")
+		// 	_, _, err = h.ctrl.TaskInspect(ctx, trc)
+		// }
 		logger.Trace("run now option")
 		tc, err = h.ctrl.TaskCreateAndRun(ctx, trc)
 	} else {
