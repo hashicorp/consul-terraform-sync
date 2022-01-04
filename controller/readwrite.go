@@ -334,6 +334,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	return rendered, nil
 }
 
+// createTask creates and initializes a singular task from configuration
 func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfig) (driver.Driver, error) {
 	taskConfig.Finalize(rw.conf.BufferPeriod, *rw.conf.WorkingDir)
 	if err := taskConfig.Validate(); err != nil {
@@ -380,6 +381,9 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 	}
 }
 
+// Run task will set the driver to active, apply it, and store a run event.
+// This method will run the task as-is with current values of templates that
+// have already been resolved and rendered. This does not handle any templating.
 func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 	task := d.Task()
 	taskName := task.Name()
