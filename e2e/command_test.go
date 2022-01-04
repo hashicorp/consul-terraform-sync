@@ -116,17 +116,17 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			expectEnabled:  true,
 		},
 		{
+			name:           "auto approve",
+			args:           []string{"-auto-approve", disabledTaskName},
+			input:          "",
+			outputContains: "enable complete!",
+			expectEnabled:  true,
+		},
+		{
 			name:           "user does not approve plan",
 			args:           []string{disabledTaskName},
 			input:          "no\n",
 			outputContains: "Cancelled enabling task",
-			expectEnabled:  false,
-		},
-		{
-			name:           "help flag",
-			args:           []string{"-help"},
-			input:          "",
-			outputContains: "Usage: consul-terraform-sync task enable [options] <task name>",
 			expectEnabled:  false,
 		},
 	}
@@ -180,11 +180,6 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 			"happy path",
 			[]string{fmt.Sprintf("-port=%d", cts.Port()), dbTaskName},
 			"disable complete!",
-		},
-		{
-			"help flag",
-			[]string{"-help"},
-			"consul-terraform-sync task disable [options] <task name>",
 		},
 	}
 
@@ -284,6 +279,16 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 			expectDeleted: true,
 		},
 		{
+			name:     "auto_approve",
+			taskName: dbTaskName,
+			input:    "",
+			args:     []string{"-auto-approve"},
+			outputContains: []string{
+				fmt.Sprintf("Deleted task '%s'", dbTaskName)},
+			expectErr:     false,
+			expectDeleted: true,
+		},
+		{
 			name:     "user_does_not_approve_deletion",
 			taskName: dbTaskName,
 			input:    "no\n",
@@ -300,7 +305,7 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 			input:    "yes\n",
 			outputContains: []string{
 				fmt.Sprintf("Error: unable to delete '%s'", "nonexistent_task"),
-				fmt.Sprintf("request returned 404 status code with error:"),
+				"request returned 404 status code with error:",
 			},
 			expectErr:     true,
 			expectDeleted: true, // never existed, same as deleted
@@ -344,13 +349,44 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 }
 
 // TestE2E_DeleteTaskCommand_Help tests that the usage is outputted
-// for the task delete help command. Does not require a running
-// CTS binary.
-func TestE2E_DeleteTaskCommand_Help(t *testing.T) {
+// for the task help commands. Does not require a running CTS binary.
+func TestE2E_TaskCommand_Help(t *testing.T) {
 	t.Parallel()
-	subcmd := []string{"task", "delete", "-help"}
-	output, err := runSubcommand(t, "", subcmd...)
-	assert.NoError(t, err)
-	assert.Contains(t, output,
-		"Usage: consul-terraform-sync task delete [options] <task name>")
+	cases := []struct {
+		command        string
+		outputContains []string
+	}{
+		{
+			command: "enable",
+			outputContains: []string{
+				"Usage: consul-terraform-sync task enable [options] <task name>",
+				"auto-approve false",
+			},
+		},
+		{
+			command: "disable",
+			outputContains: []string{
+				"Usage: consul-terraform-sync task disable [options] <task name>",
+			},
+		},
+		{
+			command: "delete",
+			outputContains: []string{
+				"Usage: consul-terraform-sync task delete [options] <task name>",
+				"auto-approve false",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.command, func(t *testing.T) {
+			subcmd := []string{"task", tc.command, "-help"}
+			output, err := runSubcommand(t, "", subcmd...)
+			assert.NoError(t, err)
+
+			for _, expect := range tc.outputContains {
+				assert.Contains(t, output, expect)
+			}
+		})
+	}
 }

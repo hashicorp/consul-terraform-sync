@@ -14,15 +14,17 @@ const cmdTaskDeleteName = "task delete"
 // TaskDeleteCommand handles the `task delete` command
 type taskDeleteCommand struct {
 	meta
-
-	flags *flag.FlagSet
+	autoApprove *bool
+	flags       *flag.FlagSet
 }
 
 func newTaskDeleteCommand(m meta) *taskDeleteCommand {
 	flags := m.defaultFlagSet(cmdTaskDeleteName)
+	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of deleting a task")
 	return &taskDeleteCommand{
-		meta:  m,
-		flags: flags,
+		meta:        m,
+		autoApprove: a,
+		flags:       flags,
 	}
 }
 
@@ -33,6 +35,7 @@ func (c taskDeleteCommand) Name() string {
 
 // Help returns the command's usage, list of flags, and examples
 func (c *taskDeleteCommand) Help() string {
+	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
 Usage: consul-terraform-sync task delete [options] <task name>
 
@@ -85,8 +88,10 @@ func (c *taskDeleteCommand) Run(args []string) int {
 		return ExitCodeError
 	}
 
-	if exitCode, approved := c.meta.requestUserApprovalDelete(taskName); !approved {
-		return exitCode
+	if !*c.autoApprove {
+		if exitCode, approved := c.meta.requestUserApprovalDelete(taskName); !approved {
+			return exitCode
+		}
 	}
 
 	c.UI.Info(fmt.Sprintf("Deleting task '%s'...\n", taskName))

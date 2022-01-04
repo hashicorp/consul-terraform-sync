@@ -16,14 +16,17 @@ const cmdTaskEnableName = "task enable"
 // taskEnableCommand handles the `task enable` command
 type taskEnableCommand struct {
 	meta
-	flags *flag.FlagSet
+	autoApprove *bool
+	flags       *flag.FlagSet
 }
 
 func newTaskEnableCommand(m meta) *taskEnableCommand {
 	flags := m.defaultFlagSet(cmdTaskEnableName)
+	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of inspect plan")
 	return &taskEnableCommand{
-		meta:  m,
-		flags: flags,
+		meta:        m,
+		autoApprove: a,
+		flags:       flags,
 	}
 }
 
@@ -34,6 +37,7 @@ func (c *taskEnableCommand) Name() string {
 
 // Help returns the command's usage, list of flags, and examples
 func (c *taskEnableCommand) Help() string {
+	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
 Usage: consul-terraform-sync task enable [options] <task name>
 
@@ -135,8 +139,10 @@ func (c *taskEnableCommand) Run(args []string) int {
 		return ExitCodeOK
 	}
 
-	if exitCode, approved := c.meta.requestUserApprovalEnable(taskName); !approved {
-		return exitCode
+	if !*c.autoApprove {
+		if exitCode, approved := c.meta.requestUserApprovalEnable(taskName); !approved {
+			return exitCode
+		}
 	}
 
 	c.UI.Info(fmt.Sprintf("Enabling and running '%s'...\n", taskName))

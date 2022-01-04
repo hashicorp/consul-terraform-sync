@@ -34,6 +34,7 @@ func (c taskDisableCommand) Name() string {
 
 // Help returns the command's usage, list of flags, and examples
 func (c *taskDisableCommand) Help() string {
+	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
 Usage: consul-terraform-sync task disable [options] <task name>
 

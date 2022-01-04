@@ -45,6 +45,8 @@ const (
 	FlagClientCert = "client-cert"
 	FlagClientKey  = "client-key"
 	FlagSSLVerify  = "ssl-verify"
+
+	FlagAutoApprove = "auto-approve"
 )
 
 func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
@@ -72,6 +74,11 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 		"This can also be specified using the %s environment variable.", api.EnvTLSSSLVerify))
 
 	m.flags.SetOutput(ioutil.Discard)
+
+	return m.flags
+}
+
+func (m *meta) setHelpOptions() {
 	m.flags.VisitAll(func(f *flag.Flag) {
 		option := fmt.Sprintf("  %s %s\n    %s\n", f.Name, f.Value, f.Usage)
 		m.helpOptions = append(m.helpOptions, option)
@@ -79,8 +86,6 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 	if len(m.helpOptions) == 0 {
 		m.helpOptions = append(m.helpOptions, "No options are currently available")
 	}
-
-	return m.flags
 }
 
 func (m *meta) setFlagsUsage(flags *flag.FlagSet, args []string, help string) {
