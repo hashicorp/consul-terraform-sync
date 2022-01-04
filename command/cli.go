@@ -285,6 +285,7 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 				Drivers:    drivers,
 				Controller: ctrl.(api.Server),
 				Port:       config.IntVal(conf.Port),
+				TLS:        conf.TLS,
 			})
 			if err != nil {
 				errCh <- err
