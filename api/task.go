@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -227,53 +226,6 @@ func decodeBody(body []byte) (UpdateTaskConfig, error) {
 	}
 
 	return conf, nil
-}
-
-func initNewTask(ctx context.Context, d driver.Driver, runOption string) error {
-	logger := logging.FromContext(ctx)
-	switch runOption {
-	case "", driver.RunOptionNow:
-		// valid options
-	default:
-		return fmt.Errorf("invalid run option '%s'. Please select a valid option", runOption)
-	}
-
-	err := d.InitTask(ctx)
-	taskName := d.Task().Name()
-	if err != nil {
-		logger.Error("error initializing task", "error", err, "task_name", taskName)
-		return err
-	}
-
-	// Render the template. Rendering a template for the first time may take several
-	// cycles to load all the dependencies asynchronously, so loop through here until render returns
-	// true
-	for {
-		ok, err := d.RenderTemplate(ctx)
-		if err != nil {
-			logger.Error("error adding task to driver", "task_name", taskName)
-			return fmt.Errorf("error updating task '%s'. Unable to "+
-				"render template for task: %s", taskName, err)
-		}
-		if ok {
-			// Once template rendering is finished, break
-			break
-		}
-	}
-
-	// TODO: Set the buffer period
-	// d.SetBufferPeriod()
-
-	var storedErr error
-	if runOption == driver.RunOptionNow {
-		logger.Trace("run now option", "task_name", taskName)
-		err := d.ApplyTask(ctx)
-		if err != nil {
-			return storedErr
-		}
-	}
-
-	return nil
 }
 
 // parseRunOption returns a run option for updating the task
