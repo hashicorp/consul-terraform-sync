@@ -216,7 +216,7 @@ func (c *Client) WaitForAPI(timeout time.Duration) error {
 		return nil
 	case <-time.After(timeout):
 		close(stopPolling)
-		return fmt.Errorf("client timed out waiting for CTS API to start: %v", timeout)
+		return fmt.Errorf("client timed out waiting for CTS API to start at %s: %v", c.addr, timeout)
 	}
 }
 
