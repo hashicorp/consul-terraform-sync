@@ -59,6 +59,7 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 		run        string
 		variables  map[string]string
 		statusCode int
+		events     int
 	}{
 		{
 			name:       "happy_path",
@@ -66,6 +67,7 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 			request:    testCreateTaskRequest,
 			run:        "",
 			statusCode: http.StatusCreated,
+			events:     0,
 		},
 		{
 			name:       "happy_path_run_now",
@@ -73,6 +75,7 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 			request:    testCreateTaskRequest,
 			run:        driver.RunOptionNow,
 			statusCode: http.StatusCreated,
+			events:     1,
 		},
 		{
 			name:       "happy_path_with_variables",
@@ -80,6 +83,7 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 			request:    testCreateTaskRequestVariables,
 			run:        driver.RunOptionNow,
 			statusCode: http.StatusCreated,
+			events:     1,
 		},
 	}
 
@@ -108,7 +112,7 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 			require.True(t, ok)
 
 			// A single event should be registered
-			checkTestEventCount(t, tc.taskName, c.store, 1)
+			checkTestEventCount(t, tc.taskName, c.store, tc.events)
 
 			// Check response
 			decoder := json.NewDecoder(resp.Body)
@@ -237,41 +241,29 @@ func TestTaskLifeCycleHandler_CreateTask_DriverError(t *testing.T) {
 		initTaskErr       error
 		renderTemplateErr error
 		inspectTaskErr    error
-		events            int
+		applyTaskErr      error
 	}{
 		{
 			name:        "init failed",
 			message:     "error initializing new task: tf-init error",
 			initTaskErr: fmt.Errorf("tf-init error"),
-			events:      1,
-		},
-		{
-			name:        "init with inspect run",
-			run:         "inspect",
-			message:     "error initializing new task: tf-init error",
-			initTaskErr: fmt.Errorf("tf-init error"),
-			events:      0,
 		},
 		{
 			name: "render template",
 			message: "error initializing new task: error rendering template " +
 				"for task 'api-task': render tmpl error", renderTemplateErr: fmt.Errorf("render tmpl error"),
-			events: 1,
-		},
-		{
-			name: "render template with inspect run",
-			run:  "inspect",
-			message: "error initializing new task: error rendering template " +
-				"for task 'api-task': render tmpl error",
-			renderTemplateErr: fmt.Errorf("render tmpl error"),
-			events:            0,
 		},
 		{
 			name:           "inspect task",
 			run:            "inspect",
-			message:        "error inspecting task: tf-plan error",
+			message:        "error inspecting new task: tf-plan error",
 			inspectTaskErr: fmt.Errorf("tf-plan error"),
-			events:         0,
+		},
+		{
+			name:         "apply task",
+			run:          "now",
+			message:      "error applying new task: tf-apply error",
+			applyTaskErr: fmt.Errorf("tf-apply error"),
 		},
 	}
 
@@ -283,6 +275,7 @@ func TestTaskLifeCycleHandler_CreateTask_DriverError(t *testing.T) {
 			d.On("InitTask", mock.Anything).Return(tc.initTaskErr)
 			d.On("RenderTemplate", mock.Anything).Return(true, tc.renderTemplateErr)
 			d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, tc.inspectTaskErr)
+			d.On("ApplyTask", mock.Anything).Return(tc.applyTaskErr)
 			conf := driver.TaskConfig{
 				Name: taskName,
 			}
@@ -297,7 +290,7 @@ func TestTaskLifeCycleHandler_CreateTask_DriverError(t *testing.T) {
 			assert.False(t, ok)
 
 			// Check expected number of events
-			checkTestEventCount(t, taskName, c.store, tc.events)
+			checkTestEventCount(t, taskName, c.store, 0)
 
 			// Check response
 			decoder := json.NewDecoder(resp.Body)
