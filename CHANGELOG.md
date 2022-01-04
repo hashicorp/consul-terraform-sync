@@ -5,6 +5,7 @@ BREAKING CHANGES:
   * If the `workspace_prefix` option is in use by CTS v0.3.x or v0.4.x for the Terraform Cloud driver, visit [GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442) for upgrade guidelines.
 * Stop monitoring and including non-passing service instances in `terraform.tfvars` by default. CTS should only monitor passing service instances unless configured otherwise. [[GH-430](https://github.com/hashicorp/consul-terraform-sync/issues/430)]
 * Removed `driver.terraform.working_dir` configuration option that was deprecated in v0.3.0. Use top-level `working_dir` to configure parent directory for all tasks or `task.working_dir` to configure per task. [[GH-548](https://github.com/hashicorp/consul-terraform-sync/pull/548)]
+* Require that `condition "catalog-services"` block's `regexp` field be configured instead of relying on previous default behavior. [[GH-574](https://github.com/hashicorp/consul-terraform-sync/pull/574)]
 
 FEATURES:
 * Support for deleting an existing task through the API and CLI. [[GH-522](https://github.com/hashicorp/consul-terraform-sync/issues/522)]
