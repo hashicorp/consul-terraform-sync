@@ -374,23 +374,10 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 			return nil, fmt.Errorf("error rendering template for task '%s': %s", taskName, err)
 		}
 		if ok {
-			// Once template rendering is finished, break
-			break
+			// Once template rendering is finished, return
+			return d, nil
 		}
 	}
-
-	// TODO: Set the buffer period
-	// d.SetBufferPeriod()
-
-	// Add the task driver to the driver list
-	err = rw.drivers.Add(taskName, d)
-	if err != nil {
-		// TODO: attempt hcat dependency cleanup on error if task was not created successfully
-		logger.Error("error creating task", "error", err)
-		return nil, err
-	}
-
-	return d, nil
 }
 
 func (rw *ReadWrite) runTaskOnce(ctx context.Context, d driver.Driver) error {

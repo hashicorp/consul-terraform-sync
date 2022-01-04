@@ -39,6 +39,15 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 	if err != nil {
 		return config.TaskConfig{}, err
 	}
+
+	// TODO: Set the buffer period
+	// d.SetBufferPeriod()
+
+	// Add the task driver to the driver list only after successful create
+	err = rw.drivers.Add(*taskConfig.Name, d)
+	if err != nil {
+		return config.TaskConfig{}, err
+	}
 	return configFromDriverTask(d.Task()), nil
 }
 
@@ -49,6 +58,15 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 	}
 
 	if err := rw.runTaskOnce(ctx, d); err != nil {
+		return config.TaskConfig{}, err
+	}
+
+	// TODO: Set the buffer period
+	// d.SetBufferPeriod()
+
+	// Add the task driver to the driver list only after successful create and run
+	err = rw.drivers.Add(*taskConfig.Name, d)
+	if err != nil {
 		return config.TaskConfig{}, err
 	}
 	return configFromDriverTask(d.Task()), nil
