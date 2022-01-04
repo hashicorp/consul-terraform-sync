@@ -6,6 +6,7 @@ BREAKING CHANGES:
 * Stop monitoring and including non-passing service instances in `terraform.tfvars` by default. CTS should only monitor passing service instances unless configured otherwise. [[GH-430](https://github.com/hashicorp/consul-terraform-sync/issues/430)]
 * Removed `driver.terraform.working_dir` configuration option that was deprecated in v0.3.0. Use top-level `working_dir` to configure parent directory for all tasks or `task.working_dir` to configure per task. [[GH-548](https://github.com/hashicorp/consul-terraform-sync/pull/548)]
 * Require that `condition "catalog-services"` block's `regexp` field be configured instead of relying on previous default behavior. [[GH-574](https://github.com/hashicorp/consul-terraform-sync/pull/574)]
+* Change default value of `source_includes_var` field from false to true for all types of `condition` blocks. [[GH-578](https://github.com/hashicorp/consul-terraform-sync/pull/578)]
 
 FEATURES:
 * Support for deleting an existing task through the API and CLI. [[GH-522](https://github.com/hashicorp/consul-terraform-sync/issues/522)]
