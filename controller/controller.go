@@ -128,12 +128,9 @@ func (ctrl *baseController) init(ctx context.Context) error {
 }
 
 func (ctrl *baseController) createNewTaskDriver(taskConfig config.TaskConfig) (driver.Driver, error) {
-	return ctrl.createNewTaskDriverWithVars(taskConfig, nil)
-}
-
-func (ctrl *baseController) createNewTaskDriverWithVars(taskConfig config.TaskConfig, variables map[string]string) (driver.Driver, error) {
-	ctrl.logger.Trace("creating new task driver", "task_name", *taskConfig.Name)
-	task, err := newDriverTask(ctrl.conf, &taskConfig, variables, ctrl.providers)
+	logger := ctrl.logger.With("task_name", *taskConfig.Name)
+	logger.Trace("creating new task driver")
+	task, err := newDriverTask(ctrl.conf, &taskConfig, ctrl.providers)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +140,7 @@ func (ctrl *baseController) createNewTaskDriverWithVars(taskConfig config.TaskCo
 		return nil, err
 	}
 
-	ctrl.logger.Trace("driver created")
+	logger.Trace("driver created")
 	return d, nil
 }
 
@@ -227,7 +224,7 @@ func newTerraformDriver(conf *config.Config, task *driver.Task, w templates.Watc
 }
 
 func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
-	variables map[string]string, providerConfigs driver.TerraformProviderBlocks) (*driver.Task, error) {
+	providerConfigs driver.TerraformProviderBlocks) (*driver.Task, error) {
 	if conf == nil {
 		return nil, nil
 	}
@@ -253,7 +250,6 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		}
 	}
 
-	// TODO: Resolve task working_dir and buffer period using global configs as default
 	var bp *driver.BufferPeriod // nil if disabled
 	if *taskConfig.BufferPeriod.Enabled {
 		bp = &driver.BufferPeriod{
@@ -273,7 +269,7 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		Source:       *taskConfig.Source,
 		VarFiles:     taskConfig.VarFiles,
 		Version:      *taskConfig.Version,
-		Variables:    variables,
+		Variables:    taskConfig.Variables,
 		BufferPeriod: bp,
 		Condition:    taskConfig.Condition,
 		SourceInput:  taskConfig.SourceInput,
