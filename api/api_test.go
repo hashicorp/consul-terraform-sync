@@ -5,10 +5,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -106,6 +108,8 @@ func TestServe_refactored(t *testing.T) {
 	t.Parallel()
 
 	port := testutils.FreePort(t)
+	// remove request_id from response to simplify testing
+	re := regexp.MustCompile(`"request_id":"(\w|-)+",?`)
 	cases := []struct {
 		name       string
 		path       string
@@ -113,8 +117,32 @@ func TestServe_refactored(t *testing.T) {
 		body       string
 		mock       func(*serverMocks.Server)
 		statusCode int
+		respBody   string
 	}{
 		{
+			"create task",
+			"tasks",
+			http.MethodPost,
+			`{
+	"name": "task_b",
+	"source": "module",
+	"services": ["api"],
+	"enabled": true
+}`,
+			func(ctrl *serverMocks.Server) {
+				taskConf := config.TaskConfig{
+					Name:     config.String("task_b"),
+					Enabled:  config.Bool(true),
+					Source:   config.String("module"),
+					Services: []string{"api"},
+				}
+				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
+				ctrl.On("TaskCreate", mock.Anything, taskConf).Return(taskConf, nil)
+			},
+			http.StatusCreated,
+			`{"task":{"enabled":true,"name":"task_b","services":["api"],"source":"module"}}
+`,
+		}, {
 			"delete task",
 			"tasks/task_b",
 			http.MethodDelete,
@@ -124,6 +152,7 @@ func TestServe_refactored(t *testing.T) {
 				ctrl.On("TaskDelete", mock.Anything, "task_b").Return(nil)
 			},
 			http.StatusOK,
+			"{}\n",
 		},
 	}
 	for _, tc := range cases {
@@ -146,6 +175,11 @@ func TestServe_refactored(t *testing.T) {
 			resp := testutils.RequestHTTP(t, tc.method, u, tc.body)
 			defer resp.Body.Close()
 			assert.Equal(t, tc.statusCode, resp.StatusCode)
+
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			actual := re.ReplaceAll(respBody, nil)
+			assert.Equal(t, tc.respBody, string(actual))
 		})
 	}
 }

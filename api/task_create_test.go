@@ -202,13 +202,6 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 
 			resp := runTestCreateTask(t, handler, "", tc.statusCode, tc.request)
 
-			// Task should be added to the drivers list
-			// _, ok := c.drivers.Get(tc.taskName)
-			// require.True(t, ok)
-
-			// No events should be registered
-			// checkTestEventCount(t, tc.taskName, c.store, 0)
-
 			// Check response
 			decoder := json.NewDecoder(resp.Body)
 			var actual oapigen.ErrorResponse

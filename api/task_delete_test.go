@@ -19,8 +19,6 @@ func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 	cases := []struct {
 		name       string
 		mock       func(*mocks.Server)
-		active     bool
-		deleted    bool
 		statusCode int
 	}{
 		{
@@ -29,8 +27,6 @@ func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskDelete", mock.Anything, taskName).Return(nil)
 			},
-			false,
-			true,
 			http.StatusOK,
 		},
 		{
@@ -38,8 +34,6 @@ func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 			func(ctrl *mocks.Server) {
 				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, fmt.Errorf("DNE"))
 			},
-			false,
-			true,
 			http.StatusNotFound,
 		},
 		{
@@ -49,8 +43,6 @@ func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskDelete", mock.Anything, taskName).Return(err)
 			},
-			true,
-			false,
 			http.StatusConflict,
 		},
 	}

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -227,37 +226,6 @@ func decodeBody(body []byte) (UpdateTaskConfig, error) {
 	}
 
 	return conf, nil
-}
-
-func initNewTask(ctx context.Context, d driver.Driver) error {
-	logger := logging.FromContext(ctx)
-
-	err := d.InitTask(ctx)
-	taskName := d.Task().Name()
-	if err != nil {
-		logger.Error("error initializing task", "error", err, "task_name", taskName)
-		return err
-	}
-
-	// Render the template. Rendering a template for the first time may take several
-	// cycles to load all the dependencies asynchronously, so loop through here until render returns
-	// true
-	for {
-		ok, err := d.RenderTemplate(ctx)
-		if err != nil {
-			logger.Error("error rendering task template", "task_name", taskName)
-			return fmt.Errorf("error rendering template for task '%s': %s", taskName, err)
-		}
-		if ok {
-			// Once template rendering is finished, break
-			break
-		}
-	}
-
-	// TODO: Set the buffer period
-	// d.SetBufferPeriod()
-
-	return nil
 }
 
 // parseRunOption returns a run option for updating the task
