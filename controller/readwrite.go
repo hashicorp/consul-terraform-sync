@@ -380,7 +380,7 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 	}
 }
 
-func (rw *ReadWrite) runTaskOnce(ctx context.Context, d driver.Driver) error {
+func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 	task := d.Task()
 	taskName := task.Name()
 	logger := rw.logger.With(taskNameLogKey, taskName)
@@ -388,28 +388,37 @@ func (rw *ReadWrite) runTaskOnce(ctx context.Context, d driver.Driver) error {
 		logger.Trace("skipping disabled task")
 		return nil
 	}
+	rw.drivers.SetActive(taskName)
+	defer rw.drivers.SetInactive(taskName)
 
-	// Render the template. Rendering a template for the first time may take several
-	// cycles to load all the dependencies asynchronously, so loop through here until render returns
-	// true
-	var err error
-	var complete bool
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-		complete, err = rw.checkApply(ctx, d, false, true)
-		if err != nil {
-			logger.Error("error adding task to driver")
-			return fmt.Errorf("error updating task '%s'. Unable to "+
-				"render template for task: %s", taskName, err)
-		}
-		if complete {
-			return nil
-		}
+	// Create new event for task run
+	ev, err := event.NewEvent(taskName, &event.Config{
+		Providers: task.ProviderNames(),
+		Services:  task.ServiceNames(),
+		Source:    task.Source(),
+	})
+	if err != nil {
+		logger.Error("error initializing run task event", "error", err)
+		return err
 	}
+	ev.Start()
+
+	// Apply task
+	err = d.ApplyTask(ctx)
+	if err != nil {
+		logger.Error("error applying task", "error", err)
+		return err
+	}
+
+	// Store event if apply was successful and task will be created
+	ev.End(err)
+	logger.Trace("adding event", "event", ev.GoString())
+	if err := rw.store.Add(*ev); err != nil {
+		// only log error since creating a task occurred successfully by now
+		logger.Error("error storing event", "event", ev.GoString(), "error", err)
+	}
+
+	return err
 }
 
 // EnableTestMode is a helper for testing which tasks were triggered and

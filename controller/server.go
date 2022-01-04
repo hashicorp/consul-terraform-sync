@@ -57,7 +57,7 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 		return config.TaskConfig{}, err
 	}
 
-	if err := rw.runTaskOnce(ctx, d); err != nil {
+	if err := rw.runTask(ctx, d); err != nil {
 		return config.TaskConfig{}, err
 	}
 
