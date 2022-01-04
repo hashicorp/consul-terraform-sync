@@ -9,7 +9,7 @@ import (
 type MonitorConfig interface {
 	Copy() MonitorConfig
 	Merge(MonitorConfig) MonitorConfig
-	Finalize([]string)
+	Finalize()
 	Validate() error
 	GoString() string
 }

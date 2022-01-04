@@ -87,7 +87,7 @@ func (tr taskRequest) ToTaskRequestConfig(bp *config.BufferPeriodConfig, wd stri
 		} else if tr.Condition.CatalogServices != nil {
 			tc.Condition = &config.CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
-					Regexp:            tr.Condition.CatalogServices.Regexp,
+					Regexp:            config.String(tr.Condition.CatalogServices.Regexp),
 					SourceIncludesVar: tr.Condition.CatalogServices.SourceIncludesVar,
 					Datacenter:        tr.Condition.CatalogServices.Datacenter,
 					Namespace:         tr.Condition.CatalogServices.Namespace,
@@ -212,7 +212,7 @@ func taskResponseFromTaskRequestConfig(trc taskRequestConfig, requestID oapigen.
 		}
 	case *config.CatalogServicesConditionConfig:
 		task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
-			Regexp:            cond.Regexp,
+			Regexp:            config.StringVal(cond.Regexp),
 			SourceIncludesVar: cond.SourceIncludesVar,
 			Datacenter:        cond.Datacenter,
 			Namespace:         cond.Namespace,

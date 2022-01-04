@@ -40,6 +40,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 	services = ["api"]
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
+		regexp = "^api$"
 		source_includes_var = true
 	}
 }`,
@@ -53,7 +54,9 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 	name = "catalog_task"
 	services = ["api"]
 	module = "./test_modules/local_instances_file"
-	condition "catalog-services" {}
+	condition "catalog-services" {
+		regexp = "^api$"
+	}
 }`,
 			false,
 		},
@@ -89,6 +92,7 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 	services = ["api", "db"]
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
+		regexp = "^api$|^db$"
 		source_includes_var = true
 	}
 }`,
@@ -100,7 +104,9 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 	name = "catalog_task"
 	services = ["api", "db"]
 	module = "./test_modules/local_instances_file"
-	condition "catalog-services" {}
+	condition "catalog-services" {
+		regexp = "^api$|^db$"
+	}
 }`,
 		},
 	}

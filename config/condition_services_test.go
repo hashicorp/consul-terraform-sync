@@ -133,19 +133,16 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 
 	cases := []struct {
 		name string
-		s    []string
 		i    *ServicesConditionConfig
 		r    *ServicesConditionConfig
 	}{
 		{
 			"nil",
-			[]string{},
 			nil,
 			nil,
 		},
 		{
 			"happy_path",
-			[]string{},
 			&ServicesConditionConfig{},
 			&ServicesConditionConfig{
 				ServicesMonitorConfig{
@@ -162,7 +159,7 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.Finalize(tc.s)
+			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}

@@ -59,11 +59,11 @@ func (c *ConsulKVSourceInputConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there are no nil pointers.
-func (c *ConsulKVSourceInputConfig) Finalize(services []string) {
+func (c *ConsulKVSourceInputConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}
-	c.ConsulKVMonitorConfig.Finalize(services)
+	c.ConsulKVMonitorConfig.Finalize()
 }
 
 // Validate validates the values and required options. This method is recommended

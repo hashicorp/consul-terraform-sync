@@ -220,7 +220,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Enabled: config.Bool(true),
 				Condition: &oapigen.Condition{
 					CatalogServices: &oapigen.CatalogServicesCondition{
-						Regexp:            config.String(".*"),
+						Regexp:            ".*",
 						SourceIncludesVar: config.Bool(true),
 						Datacenter:        config.String("dc2"),
 						Namespace:         config.String("ns2"),
@@ -516,7 +516,7 @@ func TestTaskResponse_String(t *testing.T) {
 			Enabled: config.Bool(true),
 			Condition: &oapigen.Condition{
 				CatalogServices: &oapigen.CatalogServicesCondition{
-					Regexp:            config.String(".*"),
+					Regexp:            ".*",
 					SourceIncludesVar: config.Bool(true),
 					Datacenter:        config.String("dc2"),
 					Namespace:         config.String("ns2"),
@@ -781,7 +781,7 @@ func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
 					Enabled: config.Bool(true),
 					Condition: &oapigen.Condition{
 						CatalogServices: &oapigen.CatalogServicesCondition{
-							Regexp:            config.String(".*"),
+							Regexp:            ".*",
 							SourceIncludesVar: config.Bool(true),
 							Datacenter:        config.String("dc2"),
 							Namespace:         config.String("ns2"),

@@ -20,7 +20,7 @@ type CatalogServicesCondition struct {
 	Datacenter        *string                            `json:"datacenter,omitempty"`
 	Namespace         *string                            `json:"namespace,omitempty"`
 	NodeMeta          *CatalogServicesCondition_NodeMeta `json:"node_meta,omitempty"`
-	Regexp            *string                            `json:"regexp,omitempty"`
+	Regexp            string                             `json:"regexp"`
 	SourceIncludesVar *bool                              `json:"source_includes_var,omitempty"`
 }
 

@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"regexp"
-	"strings"
 )
 
 const catalogServicesType = "catalog-services"
@@ -97,22 +96,11 @@ func (c *CatalogServicesMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there no nil pointers with the _exception_ of Regexp. There
-// is a need to distinguish betweeen nil regex (unconfigured regex) and empty
+// is a need to distinguish between nil regex (unconfigured regex) and empty
 // string regex ("" regex pattern) at Validate()
-func (c *CatalogServicesMonitorConfig) Finalize(services []string) {
+func (c *CatalogServicesMonitorConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
-	}
-
-	if c.Regexp == nil && len(services) > 0 {
-		// default behavior: exact match on any of the services configured for
-		// the task. cannot default to "" since it is possible regex config.
-		// ex: ["api", "web", "db"] => "^api$|^web$|^db$"
-		regex := make([]string, len(services))
-		for ix, s := range services {
-			regex[ix] = fmt.Sprintf("^%s$", s) // exact match on service's name
-		}
-		c.Regexp = String(strings.Join(regex, "|"))
 	}
 
 	if c.SourceIncludesVar == nil {
@@ -141,12 +129,11 @@ func (c *CatalogServicesMonitorConfig) Validate() error {
 	}
 
 	if c.Regexp == nil {
-		return fmt.Errorf("task.services and catalog-services regexp cannot " +
-			"both be unset")
+		return fmt.Errorf("catalog-services 'regexp' field must be set")
 	}
 
 	if _, err := regexp.Compile(StringVal(c.Regexp)); err != nil {
-		return fmt.Errorf("unable to compile catalog-services regexp: %s", err)
+		return fmt.Errorf("unable to compile catalog-services 'regexp': %s", err)
 	}
 	return nil
 }

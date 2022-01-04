@@ -221,27 +221,11 @@ func TestConsulKVConditionConfig_Finalize(t *testing.T) {
 
 	cases := []struct {
 		name string
-		s    []string
 		i    *ConsulKVConditionConfig
 		r    *ConsulKVConditionConfig
 	}{
 		{
 			"empty",
-			[]string{},
-			&ConsulKVConditionConfig{},
-			&ConsulKVConditionConfig{
-				ConsulKVMonitorConfig: ConsulKVMonitorConfig{
-					Path:       String(""),
-					Recurse:    Bool(false),
-					Datacenter: String(""),
-					Namespace:  String(""),
-				},
-				SourceIncludesVar: Bool(false),
-			},
-		},
-		{
-			"services_ignored",
-			[]string{"api"},
 			&ConsulKVConditionConfig{},
 			&ConsulKVConditionConfig{
 				ConsulKVMonitorConfig: ConsulKVMonitorConfig{
@@ -257,7 +241,7 @@ func TestConsulKVConditionConfig_Finalize(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.Finalize(tc.s)
+			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}

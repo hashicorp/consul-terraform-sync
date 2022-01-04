@@ -888,16 +888,6 @@ func TestTaskConfig_FinalizeValidate(t *testing.T) {
 			false,
 		},
 		{
-			"valid: services with catalog-service condition missing regexp",
-			&TaskConfig{
-				Name:      String("task_a"),
-				Module:    String("path"),
-				Services:  []string{"serviceA"},
-				Condition: &CatalogServicesConditionConfig{},
-			},
-			true,
-		},
-		{
 			"valid: no services with catalog-service condition's regexp is empty string",
 			&TaskConfig{
 				Name:      String("task_a"),

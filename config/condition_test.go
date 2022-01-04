@@ -49,28 +49,6 @@ task {
 }`,
 		},
 		{
-			"catalog-services: unconfigured",
-			false,
-			&CatalogServicesConditionConfig{
-				CatalogServicesMonitorConfig{
-					Regexp:            String("^api$"),
-					SourceIncludesVar: Bool(false),
-					Datacenter:        String(""),
-					Namespace:         String(""),
-					NodeMeta:          map[string]string{},
-				},
-			},
-			"config.hcl",
-			`
-task {
-	name = "condition_task"
-	module = "..."
-	services = ["api"]
-	condition "catalog-services" {
-	}
-}`,
-		},
-		{
 			"no condition",
 			false,
 			EmptyConditionConfig(),

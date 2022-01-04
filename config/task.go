@@ -277,12 +277,12 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if isConditionNil(c.Condition) {
 		c.Condition = EmptyConditionConfig()
 	}
-	c.Condition.Finalize(c.Services)
+	c.Condition.Finalize()
 
 	if isSourceInputNil(c.SourceInput) {
 		c.SourceInput = EmptySourceInputConfig()
 	}
-	c.SourceInput.Finalize(c.Services)
+	c.SourceInput.Finalize()
 
 	if c.WorkingDir == nil {
 		c.WorkingDir = String(filepath.Join(wd, *c.Name))
