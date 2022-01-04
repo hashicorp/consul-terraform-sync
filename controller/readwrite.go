@@ -356,44 +356,40 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 		return nil, fmt.Errorf("error creating new task driver: %v", err)
 	}
 
-	// Create a new event for tracking infrastructure change required actions
-	task := d.Task()
-	ev, err := event.NewEvent(task.Name(), &event.Config{
-		Providers: task.ProviderNames(),
-		Services:  task.ServiceNames(),
-		Source:    task.Source(),
-	})
+	// Initialize the new task
+	err = d.InitTask(ctx)
 	if err != nil {
-		logger.Error("error creating task event", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("error initializing new task, %s", err)
 	}
 
-	var storedErr error
-	defer func() {
-		ev.End(storedErr)
-		logger.Trace("adding event", "event", ev.GoString())
-		if err := rw.store.Add(*ev); err != nil {
-			// only log error since creating a task occurred successfully by now
-			logger.Error("error storing event", "event", ev.GoString(), "error", err)
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
 		}
-	}()
-	ev.Start()
-
-	// Initialize the new task
-	storedErr = d.InitTask(ctx)
-	if storedErr != nil {
-		return nil, fmt.Errorf("error initializing new task, %s", storedErr)
+		ok, err := d.RenderTemplate(ctx)
+		if err != nil {
+			logger.Error("error rendering task template")
+			return nil, fmt.Errorf("error rendering template for task '%s': %s", taskName, err)
+		}
+		if ok {
+			// Once template rendering is finished, break
+			break
+		}
 	}
 
 	// TODO: Set the buffer period
 	// d.SetBufferPeriod()
 
 	// Add the task driver to the driver list
-	storedErr = rw.drivers.Add(taskName, d)
-	if storedErr != nil {
-		logger.Error("error creating task", "error", storedErr)
-		return nil, storedErr
+	err = rw.drivers.Add(taskName, d)
+	if err != nil {
+		// TODO: attempt hcat dependency cleanup on error if task was not created successfully
+		logger.Error("error creating task", "error", err)
+		return nil, err
 	}
+
 	return d, nil
 }
 
