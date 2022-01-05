@@ -56,9 +56,9 @@ func (t ServicesTemplate) appendTemplate(w io.Writer) error {
 		return err
 	}
 
-	// note: ServicesTemplate currently only supports source_includes_var = true
-	// Wrap all templates in variable declaration `services = {}`
-	tmpl = fmt.Sprintf(servicesIncludesVarTmpl, tmpl)
+	if t.SourceIncludesVar {
+		tmpl = fmt.Sprintf(servicesIncludesVarTmpl, tmpl)
+	}
 
 	if _, err := fmt.Fprint(w, tmpl); err != nil {
 		logging.Global().Named(logSystemName).Named(tftmplSubsystemName).Error(
@@ -98,9 +98,11 @@ func (t ServicesTemplate) concatServiceTemplates() (string, error) {
 			query = t.hcatQuery(n, s.Datacenter, s.Namespace, s.Filter)
 		}
 
-		// note: ServicesTemplate currently only supports source_includes_var = true
-		// Only need to use base template (no empty template)
-		tmpl += fmt.Sprintf(serviceBaseTmpl, query)
+		if t.SourceIncludesVar {
+			tmpl += fmt.Sprintf(serviceBaseTmpl, query)
+		} else {
+			tmpl += fmt.Sprintf(serviceEmptyTmpl, query)
+		}
 	}
 
 	// special newline handling due to template concatenation
@@ -142,8 +144,8 @@ func (t ServicesTemplate) hcatQuery(name, dc, ns, filter string) string {
 	return ""
 }
 
-// servicesIncludesVarTmpl expects a concatenation of serviceBaseTmpl for each
-// monitored service at '%s'
+// servicesIncludesVarTmpl expects a concatenation of serviceBaseTmpl or
+// serviceEmptyTmpl for each monitored service at '%s'
 const servicesIncludesVarTmpl = `
 services = {%s}
 `
@@ -158,5 +160,16 @@ const serviceBaseTmpl = `
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
 {{ HCLService $s | indent 4 }}
   },
+  {{- end}}
+{{- end}}`
+
+// serviceEmptyTmpl is a template for a single monitored service. Multiple
+// service requires concatenating multiple empty templates. There is no newline
+// at the end of this template (unlike other templates) to prevent a gap in the
+// templates
+const serviceEmptyTmpl = `
+{{- with $srv := service %s }}
+  {{- range $s := $srv}}
+  {{- /* Empty template. Detects changes in Services */ -}}
   {{- end}}
 {{- end}}`
