@@ -16,7 +16,7 @@ task {
   name = "my-task"
   description = "automate services for website X"
   source = "namespace/example/module"
-  version = "1.0.0"
+  version = "1.1.0"
   providers = ["myprovider"]
   services = ["web", "api"]
   variable_files = ["example.module.tfvars", "/path/to/example.module.tfvars"]
