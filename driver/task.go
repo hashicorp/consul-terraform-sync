@@ -352,21 +352,19 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	case *config.ServicesConditionConfig:
 		if len(v.Names) > 0 {
 			condition = &tftmpl.ServicesTemplate{
-				Names:      v.Names,
-				Datacenter: *v.Datacenter,
-				Namespace:  *v.Namespace,
-				Filter:     *v.Filter,
-				// SourceIncludesVar=false not yet supported
-				SourceIncludesVar: true,
+				Names:             v.Names,
+				Datacenter:        *v.Datacenter,
+				Namespace:         *v.Namespace,
+				Filter:            *v.Filter,
+				SourceIncludesVar: *v.SourceIncludesVar,
 			}
 		} else {
 			condition = &tftmpl.ServicesRegexTemplate{
-				Regexp:     *v.Regexp,
-				Datacenter: *v.Datacenter,
-				Namespace:  *v.Namespace,
-				Filter:     *v.Filter,
-				// SourceIncludesVar=false not yet supported
-				SourceIncludesVar: true,
+				Regexp:            *v.Regexp,
+				Datacenter:        *v.Datacenter,
+				Namespace:         *v.Namespace,
+				Filter:            *v.Filter,
+				SourceIncludesVar: *v.SourceIncludesVar,
 			}
 		}
 	case *config.ConsulKVConditionConfig:
