@@ -184,8 +184,10 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		switch cond := tc.Condition.(type) {
 		case *config.ServicesConditionConfig:
 			task.Condition.Services = &oapigen.ServicesCondition{
-				Names:  &cond.Names,
 				Regexp: cond.Regexp,
+			}
+			if cond.Names != nil {
+				task.Condition.Services.Names = &cond.Names
 			}
 		case *config.CatalogServicesConditionConfig:
 			task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
