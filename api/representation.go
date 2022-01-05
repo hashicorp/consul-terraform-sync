@@ -12,9 +12,8 @@ import (
 // this allows for the task request to be extended
 type taskRequest oapigen.TaskRequest
 
-// ToTaskRequestConfig converts a taskRequest object to a Config TaskConfig object. It takes as arguments a buffer period,
-// and a working directory which are required to finalize the task config.
-func (tr taskRequest) ToTaskRequestConfig() (config.TaskConfig, error) {
+// ToTaskConfig converts a taskRequest object to a Config TaskConfig object.
+func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	tc := config.TaskConfig{
 		Description: tr.Description,
 		Name:        &tr.Name,
@@ -59,13 +58,11 @@ func (tr taskRequest) ToTaskRequestConfig() (config.TaskConfig, error) {
 	// Convert condition
 	if tr.Condition != nil {
 		if tr.Condition.Services != nil {
-			cond := &config.ServicesConditionConfig{
-				ServicesMonitorConfig: config.ServicesMonitorConfig{
-					Regexp: tr.Condition.Services.Regexp,
-				},
-			}
-			if tr.Condition.Services.Names != nil {
+			cond := &config.ServicesConditionConfig{}
+			if tr.Condition.Services.Names != nil && len(*tr.Condition.Services.Names) > 0 {
 				cond.Names = *tr.Condition.Services.Names
+			} else {
+				cond.Regexp = tr.Condition.Services.Regexp
 			}
 			tc.Condition = cond
 		} else if tr.Condition.ConsulKv != nil {
@@ -166,8 +163,14 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		task.SourceInput = new(oapigen.SourceInput)
 		switch si := tc.SourceInput.(type) {
 		case *config.ServicesSourceInputConfig:
-			task.SourceInput.Services = &oapigen.ServicesSourceInput{
-				Regexp: si.Regexp,
+			if len(si.Names) > 0 {
+				task.SourceInput.Services = &oapigen.ServicesSourceInput{
+					Names: &si.Names,
+				}
+			} else {
+				task.SourceInput.Services = &oapigen.ServicesSourceInput{
+					Regexp: si.Regexp,
+				}
 			}
 		case *config.ConsulKVSourceInputConfig:
 			task.SourceInput.ConsulKv = &oapigen.ConsulKVSourceInput{
@@ -183,11 +186,14 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		task.Condition = new(oapigen.Condition)
 		switch cond := tc.Condition.(type) {
 		case *config.ServicesConditionConfig:
-			task.Condition.Services = &oapigen.ServicesCondition{
-				Regexp: cond.Regexp,
-			}
-			if cond.Names != nil {
-				task.Condition.Services.Names = &cond.Names
+			if len(cond.Names) > 0 {
+				task.Condition.Services = &oapigen.ServicesCondition{
+					Names: &cond.Names,
+				}
+			} else {
+				task.Condition.Services = &oapigen.ServicesCondition{
+					Regexp: cond.Regexp,
+				}
 			}
 		case *config.CatalogServicesConditionConfig:
 			task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{

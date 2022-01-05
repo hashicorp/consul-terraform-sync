@@ -97,9 +97,9 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := new(mocks.Server)
-			ctrl.On("Task", mock.Anything, mock.Anything).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
-				On("TaskCreate", mock.Anything, mock.Anything).Return(tc.mockReturn, nil).
-				On("TaskCreateAndRun", mock.Anything, mock.Anything).Return(tc.mockReturn, nil)
+			ctrl.On("Task", mock.Anything, testTaskName).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
+				On("TaskCreate", mock.Anything, tc.mockReturn).Return(tc.mockReturn, nil).
+				On("TaskCreateAndRun", mock.Anything, tc.mockReturn).Return(tc.mockReturn, nil)
 			handler := NewTaskLifeCycleHandler(ctrl)
 
 			resp := runTestCreateTask(t, handler, tc.run, tc.statusCode, tc.request)
