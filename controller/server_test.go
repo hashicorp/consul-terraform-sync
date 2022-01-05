@@ -20,7 +20,7 @@ import (
 var validTaskConf = config.TaskConfig{
 	Enabled: config.Bool(true),
 	Name:    config.String("task"),
-	Source:  config.String("source"),
+	Module:  config.String("module"),
 	Condition: &config.CatalogServicesConditionConfig{
 		config.CatalogServicesMonitorConfig{Regexp: config.String("regex")},
 	},
@@ -47,7 +47,7 @@ func TestServer_TaskCreate(t *testing.T) {
 		driverTask, err := driver.NewTask(driver.TaskConfig{
 			Enabled:   true,
 			Name:      *taskConf.Name,
-			Source:    *taskConf.Source,
+			Source:    *taskConf.Module,
 			Condition: taskConf.Condition,
 			BufferPeriod: &driver.BufferPeriod{
 				Min: *ctrl.conf.BufferPeriod.Min,

@@ -125,7 +125,7 @@ func TestServe_refactored(t *testing.T) {
 			http.MethodPost,
 			`{
 	"name": "task_b",
-	"source": "module",
+	"module": "module",
 	"services": ["api"],
 	"enabled": true
 }`,
@@ -133,14 +133,14 @@ func TestServe_refactored(t *testing.T) {
 				taskConf := config.TaskConfig{
 					Name:     config.String("task_b"),
 					Enabled:  config.Bool(true),
-					Source:   config.String("module"),
+					Module:   config.String("module"),
 					Services: []string{"api"},
 				}
 				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
 				ctrl.On("TaskCreate", mock.Anything, taskConf).Return(taskConf, nil)
 			},
 			http.StatusCreated,
-			`{"task":{"enabled":true,"name":"task_b","services":["api"],"source":"module"}}
+			`{"task":{"enabled":true,"module":"module","name":"task_b","services":["api"]}}
 `,
 		}, {
 			"delete task",

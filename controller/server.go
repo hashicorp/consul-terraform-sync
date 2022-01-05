@@ -94,6 +94,16 @@ func (rw *ReadWrite) TaskDelete(ctx context.Context, name string) error {
 	return nil
 }
 
+func (rw *ReadWrite) TaskInspect(ctx context.Context, taskConfig config.TaskConfig) (bool, string, error) {
+	d, err := rw.createTask(ctx, taskConfig)
+	if err != nil {
+		return false, "", err
+	}
+
+	plan, err := d.InspectTask(ctx)
+	return plan.ChangesPresent, plan.Plan, err
+}
+
 func configFromDriverTask(t *driver.Task) config.TaskConfig {
 	vars := make(map[string]string)
 	for k, v := range t.Variables() {
@@ -122,7 +132,7 @@ func configFromDriverTask(t *driver.Task) config.TaskConfig {
 		Enabled:      config.Bool(t.IsEnabled()),
 		Providers:    t.ProviderNames(),
 		Services:     t.ServiceNames(),
-		Source:       config.String(t.Source()),
+		Module:       config.String(t.Source()),
 		Variables:    vars, // TODO: omit or safe to return?
 		Version:      config.String(t.Version()),
 		BufferPeriod: &bpConf,

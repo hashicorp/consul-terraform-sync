@@ -495,7 +495,6 @@ func TestE2E_TaskEndpoints_Create(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-<<<<<<< HEAD
 	// Check that the status of the task is unknown because task has not run
 	var taskStatuses map[string]api.TaskStatus
 	decoder := json.NewDecoder(resp.Body)
@@ -508,10 +507,8 @@ func TestE2E_TaskEndpoints_Create(t *testing.T) {
 
 	// Check no events stored
 	e := eventCount(t, taskName, cts.Port())
-	require.Equal(t, e, 0)
+	require.Equal(t, 0, e)
 
-=======
->>>>>>> 6b084d7 (Only store events on task runs and add back template register on create)
 	// Verify that the task did not run
 	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
 	validateServices(t, false, []string{service.ID}, resourcesPath)
@@ -526,8 +523,8 @@ func TestE2E_TaskEndpoints_Create(t *testing.T) {
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
 
-	e := events(t, taskName, cts.Port())
-	require.Equal(t, 1, len(e), "event is only tracked when the task runs")
+	e = eventCount(t, taskName, cts.Port())
+	require.Equal(t, 1, e, "event is only tracked when the task runs")
 
 	resourcesPath = filepath.Join(tempDir, taskName, resourcesDir)
 	validateServices(t, true, []string{service.ID}, resourcesPath)

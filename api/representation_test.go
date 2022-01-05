@@ -64,7 +64,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			taskConfigExpected: config.TaskConfig{
 				Name:       config.String("test-name"),
 				Services:   []string{"api", "web"},
-				Module:     config.String("test-source"),
+				Module:     config.String("path"),
 				WorkingDir: config.String("sync-tasks"),
 			},
 		},
@@ -90,7 +90,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Name:        config.String("test-name"),
 				Providers:   []string{"test-provider-1", "test-provider-2"},
 				Services:    []string{"api", "web"},
-				Module:      config.String("test-source"),
+				Module:      config.String("path"),
 				Version:     config.String("test-version"),
 				BufferPeriod: &config.BufferPeriodConfig{
 					Enabled: config.Bool(true),
@@ -104,13 +104,8 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "with_services_condition_regexp",
 			request: &taskRequest{
-				Name:   "task",
-				Module: "path",
-				BufferPeriod: &oapigen.BufferPeriod{
-					Enabled: config.Bool(false),
-					Max:     config.String("0s"),
-					Min:     config.String("0s"),
-				},
+				Name:    "task",
+				Module:  "path",
 				Enabled: config.Bool(true),
 				Condition: &oapigen.Condition{
 					Services: &oapigen.ServicesCondition{
@@ -119,13 +114,8 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				},
 			},
 			taskConfigExpected: config.TaskConfig{
-				Name:   config.String("task"),
-				Module: config.String("test-source"),
-				BufferPeriod: &config.BufferPeriodConfig{
-					Enabled: config.Bool(false),
-					Max:     config.TimeDuration(0),
-					Min:     config.TimeDuration(0),
-				},
+				Name:    config.String("task"),
+				Module:  config.String("path"),
 				Enabled: config.Bool(true),
 				Condition: &config.ServicesConditionConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
@@ -137,55 +127,31 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "with_services_condition_names",
 			request: &taskRequest{
-				Name:   "task",
-				Module: "path",
-				BufferPeriod: &oapigen.BufferPeriod{
-					Enabled: config.Bool(false),
-					Max:     config.String("0s"),
-					Min:     config.String("0s"),
-				},
+				Name:    "task",
+				Module:  "path",
 				Enabled: config.Bool(true),
 				Condition: &oapigen.Condition{
 					Services: &oapigen.ServicesCondition{
 						Names: &[]string{"api", "web"},
 					},
 				},
-				WorkingDir: config.String("sync-tasks/task"),
 			},
 			taskConfigExpected: config.TaskConfig{
-				Description: config.String(""),
-				Name:        config.String("task"),
-				Providers:   []string{},
-				Services:    []string{},
-				Module:      config.String("path"),
-				VarFiles:    []string{},
-				Version:     config.String(""),
-				TFVersion:   config.String(""),
-				BufferPeriod: &config.BufferPeriodConfig{
-					Enabled: config.Bool(false),
-					Min:     config.TimeDuration(0 * time.Second),
-					Max:     config.TimeDuration(0 * time.Second),
-				},
+				Name:    config.String("task"),
+				Module:  config.String("path"),
 				Enabled: config.Bool(true),
 				Condition: &config.ServicesConditionConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
-						Regexp:             config.String(""),
-						Names:              []string{"api", "web"},
-						Datacenter:         config.String(""),
-						Namespace:          config.String(""),
-						Filter:             config.String(""),
-						CTSUserDefinedMeta: map[string]string{},
+						Names: []string{"api", "web"},
 					},
 				},
-				WorkingDir:  config.String("sync-tasks/task"),
-				SourceInput: config.EmptySourceInputConfig(),
 			},
 		},
 		{
 			name: "with_catalog_services_condition",
 			request: &taskRequest{
 				Name:   "task",
-				Module: "test-source",
+				Module: "path",
 				Condition: &oapigen.Condition{
 					CatalogServices: &oapigen.CatalogServicesCondition{
 						Regexp:            ".*",
@@ -203,7 +169,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			},
 			taskConfigExpected: config.TaskConfig{
 				Name:   config.String("task"),
-				Module: config.String("test-source"),
+				Module: config.String("path"),
 				Condition: &config.CatalogServicesConditionConfig{
 					config.CatalogServicesMonitorConfig{
 						Regexp:            config.String(".*"),
@@ -237,7 +203,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			taskConfigExpected: config.TaskConfig{
 				Name:     config.String("task"),
 				Services: []string{"api", "web"},
-				Module:   config.String("test-source"),
+				Module:   config.String("path"),
 				Condition: &config.ConsulKVConditionConfig{
 					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 						Path:       config.String("key-path"),
@@ -262,7 +228,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			taskConfigExpected: config.TaskConfig{
 				Name:      config.String("task"),
 				Services:  []string{"api", "web"},
-				Module:    config.String("test-source"),
+				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
 			},
 		},
@@ -270,7 +236,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "with_services_source_input",
 			request: &taskRequest{
 				Name:   "task",
-				Module: "test-source",
+				Module: "path",
 				Condition: &oapigen.Condition{
 					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
 				},
@@ -281,7 +247,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			},
 			taskConfigExpected: config.TaskConfig{
 				Name:      config.String("task"),
-				Module:    config.String("test-source"),
+				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
 				SourceInput: &config.ServicesSourceInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
@@ -310,7 +276,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			taskConfigExpected: config.TaskConfig{
 				Name:      config.String("task"),
 				Services:  []string{"api", "web"},
-				Module:    config.String("test-source"),
+				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
 				SourceInput: &config.ConsulKVSourceInputConfig{
 					config.ConsulKVMonitorConfig{

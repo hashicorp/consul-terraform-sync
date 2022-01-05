@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -25,9 +24,9 @@ const (
     "providers": [
         "local"
     ],
-    "services": [
-        "api"
-    ],
+    "condition": {
+			"services": {"names": ["api"]}
+		},
     "module": "./example-module"
 }`
 	testCreateTaskRequestVariables = `{
@@ -37,9 +36,9 @@ const (
     "providers": [
         "local"
     ],
-    "services": [
-        "api"
-    ],
+    "condition": {
+			"services": {"names": ["api"]}
+		},
     "variables":{
         "filename": "test.txt"
     },
@@ -56,9 +55,11 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 		Name:        config.String(testTaskName),
 		Enabled:     config.Bool(true),
 		Description: config.String("Writes the service name, id, and IP address to a file"),
-		Source:      config.String("./example-module"),
-		Services:    []string{"api"},
-		Providers:   []string{"local"},
+		Module:      config.String("./example-module"),
+		Condition: &config.ServicesConditionConfig{
+			ServicesMonitorConfig: config.ServicesMonitorConfig{Names: []string{"api"}},
+		},
+		Providers: []string{"local"},
 	}
 	taskConfVars := *taskConf.Copy()
 	taskConfVars.Variables = map[string]string{"filename": "test.txt"}
@@ -69,7 +70,6 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 		run        string
 		mockReturn config.TaskConfig
 		statusCode int
-		events     int
 	}{
 		{
 			name:       "happy_path",
@@ -77,23 +77,20 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 			run:        "",
 			mockReturn: taskConf,
 			statusCode: http.StatusCreated,
-			events:     0,
 		},
 		{
 			name:       "happy_path_run_now",
 			request:    testCreateTaskRequest,
-			run:        driver.RunOptionNow,
+			run:        "now",
 			mockReturn: taskConf,
 			statusCode: http.StatusCreated,
-			events:     1,
 		},
 		{
 			name:       "happy_path_with_variables",
 			request:    testCreateTaskRequestVariables,
-			run:        driver.RunOptionNow,
+			run:        "now",
 			mockReturn: taskConfVars,
 			statusCode: http.StatusCreated,
-			events:     1,
 		},
 	}
 
@@ -120,47 +117,44 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 
 func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 	t.Parallel()
-	c, d := generateTaskLifecycleHandlerTestDependencies()
-	// Expected driver mock calls and returns
+
+	// Expected ctrl mock calls and returns
 	taskName := "inspected_task"
 	request := fmt.Sprintf(`{
 		"name": "%s",
-		"services": ["api"],
+		"enabled": true,
+		"condition": {"services": {"names": ["api"]}},
 		"module": "mkam/hello/cts"
 	}`, taskName)
-	conf := driver.TaskConfig{
-		Name: taskName,
+	taskConf := config.TaskConfig{
+		Name:    config.String(taskName),
+		Enabled: config.Bool(true),
+		Module:  config.String("mkam/hello/cts"),
+		Condition: &config.ServicesConditionConfig{
+			ServicesMonitorConfig: config.ServicesMonitorConfig{Names: []string{"api"}},
+		},
 	}
-	task, err := driver.NewTask(conf)
-	require.NoError(t, err)
 
-	d.On("Task").Return(task)
-	d.On("InitTask", mock.Anything).Return(nil)
-	d.On("RenderTemplate", mock.Anything).Return(true, nil)
-	d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, nil)
+	ctrl := new(mocks.Server)
+	ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
+		On("TaskInspect", mock.Anything, taskConf).Return(true, "foobar-plan", nil)
+	handler := NewTaskLifeCycleHandler(ctrl)
 
-	resp := runTestCreateTask(t, c, "inspect", http.StatusOK, request)
+	resp := runTestCreateTask(t, handler, "inspect", http.StatusOK, request)
 
 	// Check response, expect task and run
 	decoder := json.NewDecoder(resp.Body)
 	var actual taskResponse
-	err = decoder.Decode(&actual)
-	require.NoError(t, err)
+	require.NoError(t, decoder.Decode(&actual))
 	expected := generateExpectedResponse(t, request)
-	plan := ""
 	expected.Run = &oapigen.Run{
-		Plan: &plan,
+		Plan: config.String("foobar-plan"),
 	}
-	assert.Equal(t, expected, actual)
-	d.AssertExpectations(t)
-
-	// Check task not added to driver, no events registered
-	_, ok := c.drivers.Get(taskName)
-	require.False(t, ok)
-	checkTestEventCount(t, taskName, c.store, 0)
+	assert.Equal(t, expected, oapigen.TaskResponse(actual))
+	ctrl.AssertExpectations(t)
 
 	// Run the inspect a second time with same task, expect return 200 OK
-	runTestCreateTask(t, c, "inspect", http.StatusOK, request)
+	runTestCreateTask(t, handler, "inspect", http.StatusOK, request)
 }
 
 func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {

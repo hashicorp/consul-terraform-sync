@@ -142,7 +142,7 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 	task := oapigen.Task{
 		Description: tc.Description,
 		Name:        *tc.Name,
-		Source:      *tc.Source,
+		Module:      *tc.Module,
 		Version:     tc.Version,
 		Enabled:     tc.Enabled,
 		WorkingDir:  tc.WorkingDir,
@@ -184,11 +184,12 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		switch cond := tc.Condition.(type) {
 		case *config.ServicesConditionConfig:
 			task.Condition.Services = &oapigen.ServicesCondition{
+				Names:  &cond.Names,
 				Regexp: cond.Regexp,
 			}
 		case *config.CatalogServicesConditionConfig:
 			task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
-				Regexp:            cond.Regexp,
+				Regexp:            *cond.Regexp,
 				SourceIncludesVar: cond.SourceIncludesVar,
 				Datacenter:        cond.Datacenter,
 				Namespace:         cond.Namespace,
