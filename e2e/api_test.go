@@ -507,7 +507,7 @@ func TestE2E_TaskEndpoints_Create(t *testing.T) {
 
 	// Check no events stored
 	e := eventCount(t, taskName, cts.Port())
-	require.Equal(t, e, 0)
+	require.Equal(t, 0, e)
 
 	// Verify that the task did not run
 	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
@@ -524,7 +524,7 @@ func TestE2E_TaskEndpoints_Create(t *testing.T) {
 	api.WaitForEvent(t, cts, taskName, time.Now(), defaultWaitForEvent)
 
 	e = eventCount(t, taskName, cts.Port())
-	require.Equal(t, e, 1)
+	require.Equal(t, 1, e, "event is only tracked when the task runs")
 
 	resourcesPath = filepath.Join(tempDir, taskName, resourcesDir)
 	validateServices(t, true, []string{service.ID}, resourcesPath)
@@ -582,7 +582,7 @@ func TestE2E_TaskEndpoints_Create_Run_Now(t *testing.T) {
 
 	// Verify that the task did run and only a single event was stored
 	e := events(t, taskName, cts.Port())
-	require.Equal(t, len(e), 1)
+	require.Equal(t, 1, len(e))
 	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
 	validateServices(t, true, []string{service.ID}, resourcesPath)
 }

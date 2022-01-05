@@ -5,10 +5,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -20,11 +22,13 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	serverMocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/go-rootcerts"
 )
 
 func TestServe(t *testing.T) {
+	// TODO refactor tests after drivers are replaced with Server
 	t.Parallel()
 
 	cases := []struct {
@@ -62,13 +66,6 @@ func TestServe(t *testing.T) {
 			`{"enabled": true}`,
 			http.StatusOK,
 		},
-		{
-			"delete task",
-			"tasks/task_b",
-			http.MethodDelete,
-			"",
-			http.StatusOK,
-		},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -86,7 +83,7 @@ func TestServe(t *testing.T) {
 	d.On("Task").Return(task)
 	drivers.Add("task_b", d)
 
-	api, err := NewAPI(&APIConfig{
+	api, err := NewAPI(APIConfig{
 		Drivers: drivers,
 		Port:    port,
 	})
@@ -107,11 +104,91 @@ func TestServe(t *testing.T) {
 	}
 }
 
+func TestServe_refactored(t *testing.T) {
+	t.Parallel()
+
+	port := testutils.FreePort(t)
+	// remove request_id from response to simplify testing
+	re := regexp.MustCompile(`"request_id":"(\w|-)+",?`)
+	cases := []struct {
+		name       string
+		path       string
+		method     string
+		body       string
+		mock       func(*serverMocks.Server)
+		statusCode int
+		respBody   string
+	}{
+		{
+			"create task",
+			"tasks",
+			http.MethodPost,
+			`{
+	"name": "task_b",
+	"module": "module",
+	"services": ["api"],
+	"enabled": true
+}`,
+			func(ctrl *serverMocks.Server) {
+				taskConf := config.TaskConfig{
+					Name:     config.String("task_b"),
+					Enabled:  config.Bool(true),
+					Module:   config.String("module"),
+					Services: []string{"api"},
+				}
+				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
+				ctrl.On("TaskCreate", mock.Anything, taskConf).Return(taskConf, nil)
+			},
+			http.StatusCreated,
+			`{"task":{"enabled":true,"module":"module","name":"task_b","services":["api"]}}
+`,
+		}, {
+			"delete task",
+			"tasks/task_b",
+			http.MethodDelete,
+			"",
+			func(ctrl *serverMocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, nil)
+				ctrl.On("TaskDelete", mock.Anything, "task_b").Return(nil)
+			},
+			http.StatusOK,
+			"{}\n",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			ctrl := new(serverMocks.Server)
+			tc.mock(ctrl)
+			api, err := NewAPI(APIConfig{
+				Controller: ctrl,
+				Port:       port,
+			})
+			require.NoError(t, err)
+			go api.Serve(ctx)
+
+			u := fmt.Sprintf("http://localhost:%d/%s/%s",
+				port, defaultAPIVersion, tc.path)
+
+			resp := testutils.RequestHTTP(t, tc.method, u, tc.body)
+			defer resp.Body.Close()
+			assert.Equal(t, tc.statusCode, resp.StatusCode)
+
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			actual := re.ReplaceAll(respBody, nil)
+			assert.Equal(t, tc.respBody, string(actual))
+		})
+	}
+}
+
 func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	port := testutils.FreePort(t)
-	api, err := NewAPI(&APIConfig{Port: port})
+	api, err := NewAPI(APIConfig{Port: port})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -204,7 +281,7 @@ func TestServeWithTLS(t *testing.T) {
 				Cert:    config.String(tc.serverCert),
 				Key:     config.String(tc.serverKey),
 			}
-			api, err := NewAPI(&APIConfig{
+			api, err := NewAPI(APIConfig{
 				Drivers: drivers,
 				Port:    port,
 				TLS:     tlsConfig,
@@ -298,7 +375,7 @@ func TestServeWithMutualTLS(t *testing.T) {
 		VerifyIncoming: config.Bool(true),
 		CACert:         config.String(caCert),
 	}
-	api, err := NewAPI(&APIConfig{
+	api, err := NewAPI(APIConfig{
 		Port: port,
 		TLS:  tlsConfig,
 	})
@@ -422,7 +499,7 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 		VerifyIncoming: config.Bool(true),
 		CAPath:         config.String(tmpDir),
 	}
-	api, err := NewAPI(&APIConfig{
+	api, err := NewAPI(APIConfig{
 		Port: port,
 		TLS:  tlsConfig,
 	})

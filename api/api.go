@@ -64,6 +64,7 @@ const (
 type API struct {
 	store   *event.Store
 	drivers *driver.Drivers
+	ctrl    Server
 	port    int
 	version string
 	srv     *http.Server
@@ -71,19 +72,18 @@ type API struct {
 }
 
 type APIConfig struct {
-	Store               *event.Store
-	Drivers             *driver.Drivers
-	Port                int
-	TLS                 *config.CTSTLSConfig
-	BufferPeriod        *config.BufferPeriodConfig
-	WorkingDir          string
-	CreateNewTaskDriver func(taskConfig config.TaskConfig, variables map[string]string) (driver.Driver, error)
+	Store      *event.Store
+	Drivers    *driver.Drivers
+	Port       int
+	TLS        *config.CTSTLSConfig
+	Controller Server
 }
 
 // NewAPI create a new API object
-func NewAPI(conf *APIConfig) (*API, error) {
+func NewAPI(conf APIConfig) (*API, error) {
 	logger := logging.Global().Named(logSystemName)
 	api := &API{
+		ctrl:    conf.Controller,
 		port:    conf.Port,
 		drivers: conf.Drivers,
 		store:   conf.Store,
@@ -132,16 +132,8 @@ func NewAPI(conf *APIConfig) (*API, error) {
 		r.Use(withSwaggerValidate)
 
 		// Generated Endpoints
-		c := TaskLifeCycleHandlerConfig{
-			store:               api.store,
-			drivers:             api.drivers,
-			workingDir:          conf.WorkingDir,
-			bufferPeriod:        conf.BufferPeriod,
-			createNewTaskDriver: conf.CreateNewTaskDriver,
-		}
-
 		server := Handlers{
-			TaskLifeCycleHandler: NewTaskLifeCycleHandler(c),
+			TaskLifeCycleHandler: NewTaskLifeCycleHandler(api.ctrl),
 		}
 		oapigen.HandlerFromMux(server, r)
 	})

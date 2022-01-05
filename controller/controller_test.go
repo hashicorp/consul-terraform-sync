@@ -362,7 +362,7 @@ func newTestDriverTasks(conf *config.Config, providerConfigs driver.TerraformPro
 	tasks := make([]*driver.Task, len(*conf.Tasks))
 	for i, t := range *conf.Tasks {
 		var err error
-		tasks[i], err = newDriverTask(conf, t, nil, providerConfigs)
+		tasks[i], err = newDriverTask(conf, t, providerConfigs)
 		if err != nil {
 			return nil, err
 		}

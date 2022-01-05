@@ -2,8 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -16,41 +16,32 @@ func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.R
 	defer h.mu.Unlock()
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	logger := logging.FromContext(r.Context()).Named(deleteTaskSubsystemName)
-	logger.Trace("deleting task", "task_name", name)
+	ctx := r.Context()
+	requestID := requestIDFromContext(ctx)
+	logger := logging.FromContext(r.Context()).Named(createTaskSubsystemName).With("task_name", name)
+	logger.Trace("delete task request", "delete_task_request", name)
 
 	// Check if task exists
-	_, ok := h.drivers.Get(name)
-	if !ok {
-		err := fmt.Errorf("a task with the name '%s' does not exist or has not "+
-			"been initialized yet", name)
-		logger.Trace("task not found", "task_name", name, "error", err)
-		sendError(w, r, http.StatusNotFound, fmt.Sprint(err))
-		return
-	}
-
-	// Check if task is active
-	if h.drivers.IsActive(name) {
-		err := fmt.Errorf("task '%s' is currently running and cannot be deleted "+
-			"at this time", name)
-		logger.Trace("task active", "task_name", name, "error", err)
-		sendError(w, r, http.StatusConflict, fmt.Sprint(err))
-		return
-	}
-
-	// Delete task driver and events
-	err := h.drivers.Delete(name)
+	_, err := h.ctrl.Task(ctx, name)
 	if err != nil {
-		logger.Trace("unable to delete task", "task_name", name, "error", err)
-		sendError(w, r, http.StatusInternalServerError, fmt.Sprint(err))
+		logger.Trace("task not found", "error", err)
+		sendError(w, r, http.StatusNotFound, err)
 		return
 	}
-	h.store.Delete(name)
-	logger.Trace("task deleted", "task_name", name)
 
-	var resp oapigen.TaskResponse
-	requestID := requestIDFromContext(r.Context())
-	resp.RequestId = requestID
+	err = h.ctrl.TaskDelete(ctx, name)
+	if err != nil {
+		// TODO error types
+		if strings.Contains(err.Error(), "running and cannot be deleted") {
+			logger.Trace("task active", "error", err)
+			sendError(w, r, http.StatusConflict, err)
+		} else {
+			sendError(w, r, http.StatusInternalServerError, err)
+		}
+		return
+	}
+
+	resp := oapigen.TaskResponse{RequestId: requestID}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

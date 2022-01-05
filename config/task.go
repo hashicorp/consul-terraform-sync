@@ -50,6 +50,10 @@ type TaskConfig struct {
 	// of the files. Duplicate variables are overwritten with the later value.
 	VarFiles []string `mapstructure:"variable_files"`
 
+	// TODO: Not supported by config file yet
+	// TODO: Add validation
+	Variables map[string]string
+
 	// Version is the version of source the task will use. For the Terraform
 	// driver, this is the module version. The latest version will be used as
 	// the default if omitted.
@@ -103,6 +107,13 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	}
 
 	o.VarFiles = append(o.VarFiles, c.VarFiles...)
+
+	if c.Variables != nil {
+		o.Variables = make(map[string]string)
+		for k, v := range c.Variables {
+			o.Variables[k] = v
+		}
+	}
 
 	o.Version = StringCopy(c.Version)
 
@@ -169,6 +180,10 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 	}
 
 	r.VarFiles = append(r.VarFiles, o.VarFiles...)
+
+	for k, v := range o.Variables {
+		r.Variables[k] = v
+	}
 
 	if o.Version != nil {
 		r.Version = StringCopy(o.Version)
@@ -241,6 +256,10 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 
 	if c.VarFiles == nil {
 		c.VarFiles = []string{}
+	}
+
+	if c.Variables == nil {
+		c.Variables = make(map[string]string)
 	}
 
 	if c.Version == nil {
@@ -338,6 +357,8 @@ func (c *TaskConfig) Validate() error {
 		}
 		pNames[name] = true
 	}
+
+	// TODO validate c.Variables
 
 	if err := c.BufferPeriod.Validate(); err != nil {
 		return err

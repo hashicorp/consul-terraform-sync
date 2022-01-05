@@ -25,19 +25,18 @@ type Handlers struct {
 //go:generate oapi-codegen  -package oapigen -generate chi-server,spec -o oapigen/server.go openapi.yaml
 
 // sendError wraps sending of an error in the Error format
-func sendError(w http.ResponseWriter, r *http.Request, code int, message string) {
+func sendError(w http.ResponseWriter, r *http.Request, code int, err error) {
 	logger := logging.FromContext(r.Context()).Named(handlerSubsystemName)
 	taskErr := oapigen.ErrorResponse{
 		Error: oapigen.Error{
-			Message: message,
+			Message: err.Error(),
 		},
 		RequestId: requestIDFromContext(r.Context()),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	err := json.NewEncoder(w).Encode(taskErr)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(taskErr); err != nil {
 		logger.Error("error encoding json", "error", err, "error_response", taskErr)
 	}
 }

@@ -12,8 +12,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
+	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/version"
 	mcli "github.com/mitchellh/cli"
@@ -36,6 +39,8 @@ const (
 
 	logSystemName = "cli"
 )
+
+var _ api.Server = (*controller.ReadWrite)(nil)
 
 // CLI is the main entry point.
 type CLI struct {
@@ -263,14 +268,35 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 			if isInspect {
 				return
 			}
-			if err = ctrl.ServeAPI(ctx); err != nil {
-				if err == context.Canceled {
-					exitCh <- struct{}{}
-					return
-				}
+			// TODO: remove this once store and drivers are removed from status & task handlers
+			var store *event.Store
+			var drivers *driver.Drivers
+			switch c := ctrl.(type) {
+			case *controller.ReadWrite:
+				store = c.Store()
+				drivers = c.Drivers()
+			default:
+				store = event.NewStore()
+				drivers = driver.NewDrivers()
+			}
+
+			s, err := api.NewAPI(api.APIConfig{
+				Store:      store,
+				Drivers:    drivers,
+				Controller: ctrl.(api.Server),
+				Port:       config.IntVal(conf.Port),
+				TLS:        conf.TLS,
+			})
+			if err != nil {
 				errCh <- err
 				return
 			}
+			err = s.Serve(ctx)
+			if err != nil && err != context.Canceled {
+				errCh <- err
+				return
+			}
+			exitCh <- struct{}{}
 		}()
 
 		if err := ctrl.Run(ctx); err != nil {
