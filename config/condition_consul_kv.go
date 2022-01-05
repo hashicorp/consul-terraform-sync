@@ -74,7 +74,7 @@ func (c *ConsulKVConditionConfig) Finalize() {
 	}
 
 	if c.SourceIncludesVar == nil {
-		c.SourceIncludesVar = Bool(false)
+		c.SourceIncludesVar = Bool(true)
 	}
 
 	c.ConsulKVMonitorConfig.Finalize()

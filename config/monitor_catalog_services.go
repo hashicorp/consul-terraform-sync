@@ -104,7 +104,7 @@ func (c *CatalogServicesMonitorConfig) Finalize() {
 	}
 
 	if c.SourceIncludesVar == nil {
-		c.SourceIncludesVar = Bool(false)
+		c.SourceIncludesVar = Bool(true)
 	}
 
 	if c.Datacenter == nil {

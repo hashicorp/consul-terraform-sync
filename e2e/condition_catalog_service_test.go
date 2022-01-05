@@ -56,6 +56,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 	module = "./test_modules/local_instances_file"
 	condition "catalog-services" {
 		regexp = "^api$"
+		source_includes_var = false
 	}
 }`,
 			false,
@@ -106,6 +107,7 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 	module = "./test_modules/local_instances_file"
 	condition "catalog-services" {
 		regexp = "^api$|^db$"
+		source_includes_var = false
 	}
 }`,
 		},
