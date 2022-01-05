@@ -85,10 +85,20 @@ func dynamicValue(ctx context.Context, w tmpls.Watcher, r tmpls.Resolver, v cty.
 		//
 		// Render the template to evaluate the dynamic value and return
 		// out of recursion.
+
+		// add hcat template funcs supported by dynamic templates
+		funcMap := tfunc.Env()
+		for k, v := range tfunc.ConsulV0() {
+			funcMap[k] = v
+		}
+		for k, v := range tfunc.VaultV0() {
+			funcMap[k] = v
+		}
 		tmpl := hcat.NewTemplate(hcat.TemplateInput{
 			Contents:     v.AsString(),
-			FuncMapMerge: tfunc.Env(),
+			FuncMapMerge: funcMap,
 		})
+
 		w.Register(tmpl)
 		rendered, err := renderDynamicValue(ctx, w, r, tmpl)
 		if err != nil {
