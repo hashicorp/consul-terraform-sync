@@ -94,14 +94,26 @@ func (rw *ReadWrite) TaskDelete(ctx context.Context, name string) error {
 	return nil
 }
 
-func (rw *ReadWrite) TaskInspect(ctx context.Context, taskConfig config.TaskConfig) (bool, string, error) {
+func (rw *ReadWrite) TaskInspect(ctx context.Context, taskConfig config.TaskConfig) (bool, string, string, error) {
 	d, err := rw.createTask(ctx, taskConfig)
 	if err != nil {
-		return false, "", err
+		return false, "", "", err
 	}
 
 	plan, err := d.InspectTask(ctx)
-	return plan.ChangesPresent, plan.Plan, err
+	return plan.ChangesPresent, plan.Plan, "", err
+}
+
+func (rw *ReadWrite) TaskRun(ctx context.Context, taskName string) error {
+	d, ok := rw.drivers.Get(taskName)
+	if !ok {
+		return fmt.Errorf("task %s does not exist to run", taskName)
+	}
+	return rw.runTask(ctx, d)
+}
+
+func (rw *ReadWrite) TaskUpdate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
+	return config.TaskConfig{}, fmt.Errorf("not implemented")
 }
 
 func configFromDriverTask(t *driver.Task) config.TaskConfig {

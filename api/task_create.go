@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
@@ -51,10 +50,10 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	var tc config.TaskConfig
 	if params.Run == nil || *params.Run == "" {
 		tc, err = h.ctrl.TaskCreate(ctx, trc)
-	} else if *params.Run == driver.RunOptionNow {
+	} else if *params.Run == RunOptionNow {
 		logger.Trace("run now option")
 		tc, err = h.ctrl.TaskCreateAndRun(ctx, trc)
-	} else if *params.Run == driver.RunOptionInspect {
+	} else if *params.Run == RunOptionInspect {
 		logger.Trace("run inspect option")
 		h.createDryRunTask(w, r, trc)
 		return
@@ -82,7 +81,7 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 	logger := logging.FromContext(ctx).Named(createTaskSubsystemName).With("task_name", *taskConf.Name)
 
 	// Inspect task
-	_, plan, err := h.ctrl.TaskInspect(ctx, taskConf)
+	_, plan, _, err := h.ctrl.TaskInspect(ctx, taskConf)
 	if err != nil {
 		err = fmt.Errorf("error inspecting new task: %s", err)
 		sendError(w, r, http.StatusBadRequest, err)

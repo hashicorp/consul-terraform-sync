@@ -137,7 +137,7 @@ func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 
 	ctrl := new(mocks.Server)
 	ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
-		On("TaskInspect", mock.Anything, taskConf).Return(true, "foobar-plan", nil)
+		On("TaskInspect", mock.Anything, taskConf).Return(true, "foobar-plan", "", nil)
 	handler := NewTaskLifeCycleHandler(ctrl)
 
 	resp := runTestCreateTask(t, handler, "inspect", http.StatusOK, request)

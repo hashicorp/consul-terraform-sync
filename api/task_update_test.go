@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,9 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -32,7 +31,7 @@ func TestTask_New(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := newTaskHandler(event.NewStore(), driver.NewDrivers(), tc.version)
+			h := newTaskHandler(new(mocks.Server), tc.version)
 			assert.Equal(t, tc.version, h.version)
 		})
 	}
@@ -63,14 +62,10 @@ func TestTask_ServeHTTP(t *testing.T) {
 		},
 	}
 
-	drivers := driver.NewDrivers()
-	patchUpdateD := new(mocks.Driver)
-	patchUpdateD.On("UpdateTask", mock.Anything, mock.Anything).
-		Return(driver.InspectPlan{}, nil).Once()
-	err := drivers.Add("task_patch_update", patchUpdateD)
-	require.NoError(t, err)
-
-	handler := newTaskHandler(event.NewStore(), drivers, "v1")
+	ctrl := new(mocks.Server)
+	ctrl.On("Task", mock.Anything, mock.Anything).Return(config.TaskConfig{}, nil).
+		On("TaskUpdate", mock.Anything, mock.Anything, mock.Anything).Return(true, "", "", nil)
+	handler := newTaskHandler(ctrl, "v1")
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -92,107 +87,128 @@ func TestTask_updateTask(t *testing.T) {
 		name          string
 		path          string
 		body          string
+		mockSetup     func(*mocks.Server)
 		statusCode    int
-		updateTaskRet driver.InspectPlan
+		expected      UpdateTaskResponse
 		updateTaskErr error
 	}{
 		{
 			"happy path",
 			"/v1/tasks/task_a",
 			`{"enabled": true}`,
+			func(ctrl *mocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_a").Return(config.TaskConfig{}, nil).
+					On("TaskUpdate", mock.Anything, mock.Anything, "").Return(true, "", "", nil)
+			},
 			http.StatusOK,
-			driver.InspectPlan{},
+			UpdateTaskResponse{},
 			nil,
 		},
 		{
 			"happy path - inspect option",
 			"/v1/tasks/task_a?run=inspect",
 			`{"enabled": true}`,
+			func(ctrl *mocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_a").Return(config.TaskConfig{}, nil).
+					On("TaskUpdate", mock.Anything, mock.Anything, "inspect").Return(true, "my plan!", "", nil)
+			},
 			http.StatusOK,
-			driver.InspectPlan{
+			UpdateTaskResponse{Inspect: &InspectPlan{
 				ChangesPresent: true,
 				Plan:           "my plan!",
-			},
+			}},
 			nil,
 		},
 		{
 			"happy path - run now option",
 			"/v1/tasks/task_a?run=now",
 			`{"enabled": true}`,
+			func(ctrl *mocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_a").Return(config.TaskConfig{}, nil).
+					On("TaskUpdate", mock.Anything, mock.Anything, "now").Return(true, "", "", nil)
+			},
 			http.StatusOK,
-			driver.InspectPlan{},
+			UpdateTaskResponse{},
 			nil,
 		},
 		{
 			"bad path/taskname",
 			"/v1/tasks/task/a",
 			`{"enabled": true}`,
+			func(ctrl *mocks.Server) {},
 			http.StatusBadRequest,
-			driver.InspectPlan{},
+			UpdateTaskResponse{},
 			nil,
 		},
 		{
 			"no task specified",
 			"/v1/tasks",
 			`{"enabled": true}`,
+			func(ctrl *mocks.Server) {},
 			http.StatusBadRequest,
-			driver.InspectPlan{},
+			UpdateTaskResponse{},
 			nil,
 		},
 		{
 			"task not found",
 			"/v1/tasks/task_b",
 			`{"enabled": true}`,
+			func(ctrl *mocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
+			},
 			http.StatusNotFound,
-			driver.InspectPlan{},
+			UpdateTaskResponse{},
 			nil,
 		},
 		{
 			"ill formed request body",
 			"/v1/tasks/task_a",
 			`...???`,
+			func(ctrl *mocks.Server) {},
 			http.StatusBadRequest,
-			driver.InspectPlan{},
+			UpdateTaskResponse{},
 			nil,
 		},
 		{
 			"error when updating task",
 			"/v1/tasks/task_a",
 			`{"enabled": true}`,
+			func(ctrl *mocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_a").Return(config.TaskConfig{}, nil).
+					On("TaskUpdate", mock.Anything, mock.Anything, "").Return(false, "", "", fmt.Errorf("error updating task"))
+			},
 			http.StatusInternalServerError,
-			driver.InspectPlan{},
+			UpdateTaskResponse{},
 			errors.New("error updating task"),
 		},
 		{
 			"error when updating task with run-now",
 			"/v1/tasks/task_a?run=now",
 			`{"enabled": true}`,
+			func(ctrl *mocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_a").Return(config.TaskConfig{}, nil).
+					On("TaskUpdate", mock.Anything, mock.Anything, "now").Return(false, "", "", fmt.Errorf("update error"))
+			},
 			http.StatusInternalServerError,
-			driver.InspectPlan{},
+			UpdateTaskResponse{},
 			errors.New("error updating task"),
 		},
 		{
 			"invalid run option",
 			"/v1/tasks/task_a?run=bad-run-option",
 			`{"enabled": true}`,
+			func(ctrl *mocks.Server) {},
 			http.StatusBadRequest,
-			driver.InspectPlan{},
+			UpdateTaskResponse{},
 			nil,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			drivers := driver.NewDrivers()
-			d := new(mocks.Driver)
-			d.On("UpdateTask", mock.Anything, mock.Anything).
-				Return(tc.updateTaskRet, tc.updateTaskErr).Once()
-			d.On("Task").Return(&driver.Task{}).Once()
-			err := drivers.Add("task_a", d)
-			require.NoError(t, err)
-
-			store := event.NewStore()
-			handler := newTaskHandler(store, drivers, "v1")
+			ctrl := new(mocks.Server)
+			tc.mockSetup(ctrl)
+			handler := newTaskHandler(ctrl, "v1")
 
 			r := strings.NewReader(tc.body)
 			req, err := http.NewRequest(http.MethodPatch, tc.path, r)
@@ -207,37 +223,16 @@ func TestTask_updateTask(t *testing.T) {
 			err = decoder.Decode(&actual)
 			require.NoError(t, err)
 
-			emptyPlan := driver.InspectPlan{}
-			if tc.updateTaskRet == emptyPlan {
-				assert.Nil(t, actual.Inspect)
-			} else {
-				assert.Equal(t, tc.updateTaskRet, *actual.Inspect)
-			}
-
-			eventStored := strings.Contains(tc.path, "run=now")
-			data := store.Read("task_a")
-			events, ok := data["task_a"]
-			if !eventStored {
-				assert.False(t, ok)
-				return
-			}
-			require.True(t, ok)
-			assert.Len(t, events, 1, "expected one event")
-			e := events[0]
-			if tc.updateTaskErr == nil {
-				assert.True(t, e.Success)
-				assert.Nil(t, e.EventError)
-			} else {
-				assert.False(t, e.Success)
-				assert.NotNil(t, e.EventError)
-			}
+			assert.Equal(t, tc.expected, actual)
+			ctrl.AssertExpectations(t)
 		})
 	}
 
 	t.Run("cancel", func(t *testing.T) {
 		// have the server delay on response, and the client cancel to ensure
 		// the handler exits immediately
-		handler := newTaskHandler(event.NewStore(), driver.NewDrivers(), "v1")
+		ctrl := new(mocks.Server)
+		handler := newTaskHandler(ctrl, "v1")
 
 		ctx, cancel := context.WithCancel(context.Background())
 		req, err := http.NewRequestWithContext(ctx,
@@ -247,16 +242,12 @@ func TestTask_updateTask(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		d := new(mocks.Driver)
-		d.On("UpdateTask", mock.Anything, driver.PatchTask{Enabled: true}).
+		ctrl.On("Task", req.Context(), "task_a").Return(config.TaskConfig{}, nil)
+		ctrl.On("TaskUpdate", req.Context(), mock.Anything, "").
 			Run(func(mock.Arguments) {
 				<-req.Context().Done()
 				assert.Equal(t, req.Context().Err(), context.Canceled)
-			}).
-			Return(driver.InspectPlan{}, context.Canceled).Once()
-		d.On("Task").Return(&driver.Task{}).Once()
-		err = handler.drivers.Add("task_a", d)
-		require.NoError(t, err)
+			}).Return(false, "", "", context.Canceled).Once()
 
 		resp := httptest.NewRecorder()
 		go func() {
@@ -327,13 +318,13 @@ func TestTask_RunOption(t *testing.T) {
 		{
 			"happy path run now",
 			"/v1/tasks/task_a?run=now",
-			driver.RunOptionNow,
+			RunOptionNow,
 			false,
 		},
 		{
 			"happy path run inspect",
 			"/v1/tasks/task_a?run=inspect",
-			driver.RunOptionInspect,
+			RunOptionInspect,
 			false,
 		},
 		{
@@ -345,7 +336,7 @@ func TestTask_RunOption(t *testing.T) {
 		{
 			"not lower case",
 			"/v1/tasks/task_a?run=INSPECT",
-			driver.RunOptionInspect,
+			RunOptionInspect,
 			false,
 		},
 		{

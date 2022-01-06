@@ -9,12 +9,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -22,22 +19,21 @@ const (
 	createTaskSubsystemName = "createtask"
 	deleteTaskSubsystemName = "deletetask"
 	taskPath                = "tasks"
+
+	RunOptionInspect = "inspect"
+	RunOptionNow     = "now"
 )
 
 // taskHandler handles the tasks endpoint
 type taskHandler struct {
-	store   *event.Store
-	drivers *driver.Drivers
+	ctrl    Server
 	version string
 }
 
 // newTaskHandler returns a new taskHandler
-func newTaskHandler(store *event.Store, drivers *driver.Drivers,
-	version string) *taskHandler {
-
+func newTaskHandler(ctrl Server, version string) *taskHandler {
 	return &taskHandler{
-		store:   store,
-		drivers: drivers,
+		ctrl:    ctrl,
 		version: version,
 	}
 }
@@ -65,11 +61,17 @@ type UpdateTaskConfig struct {
 }
 
 type UpdateTaskResponse struct {
-	Inspect *driver.InspectPlan `json:"inspect,omitempty"`
+	Inspect *InspectPlan `json:"inspect,omitempty"`
+}
+
+type InspectPlan struct {
+	ChangesPresent bool   `json:"changes_present"`
+	Plan           string `json:"plan"`
 }
 
 // updateTask does a patch update to an existing task
 func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	taskName, err := getTaskName(r.URL.Path, taskPath, h.version)
 	logger := logging.FromContext(r.Context()).Named(updateTaskSubsystemName)
 	if err != nil {
@@ -86,17 +88,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
-
-	d, ok := h.drivers.Get(taskName)
-	if !ok {
-		err := fmt.Errorf("a task with the name '%s' does not exist or has not "+
-			"been initialized yet", taskName)
-		logger.Trace("task not found", "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusNotFound, err)
-		return
-	}
-	h.drivers.SetActive(taskName)
-	defer h.drivers.SetInactive(taskName)
+	logger = logger.With("task_name", taskName)
 
 	runOp, err := parseRunOption(r)
 	if err != nil {
@@ -107,79 +99,60 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		logger.Trace("unable to read request body from update", "task_name", taskName, "error", err)
+		logger.Trace("unable to read request body from update", "error", err)
 		jsonErrorResponse(r.Context(), w, http.StatusInternalServerError, err)
 		return
 	}
 
 	conf, err := decodeBody(body)
 	if err != nil {
-		logger.Trace("problem decoding body from update request "+
-			"for task", "task_name", taskName, "error", err)
+		logger.Trace("problem decoding body from update request for task", "error", err)
 		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
 
-	patch := driver.PatchTask{
-		RunOption: runOp,
+	// Check if task exists
+	tc, err := h.ctrl.Task(ctx, taskName)
+	if err != nil {
+		logger.Trace("task not found", "error", err)
+		sendError(w, r, http.StatusNotFound, err)
+		return
 	}
+
 	if conf.Enabled != nil {
-		patch.Enabled = config.BoolVal(conf.Enabled)
+		tc.Enabled = conf.Enabled
 
 		if runOp == driver.RunOptionInspect {
-			logger.Info("generating inspect plan if task becomes enabled",
-				"task_name", taskName)
+			logger.Info("generating inspect plan if task becomes enabled")
 		} else {
-			if patch.Enabled {
-				logger.Info("enabling task", "task_name", taskName)
+			if *conf.Enabled {
+				logger.Info("enabling task")
 			} else {
-				logger.Info("disabling task", "task_name", taskName)
+				logger.Info("disabling task")
 			}
 		}
 	}
 
-	var storedErr error
-	if runOp == driver.RunOptionNow {
-		task := d.Task()
-		ev, err := event.NewEvent(taskName, &event.Config{
-			Providers: task.ProviderNames(),
-			Services:  task.ServiceNames(),
-			Source:    task.Source(),
-		})
-		if err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("error creating task update"+
-				"event for %q", taskName))
-			logger.Error("error creating new event", "error", err)
-			jsonErrorResponse(r.Context(), w, http.StatusInternalServerError, err)
-			return
-		}
-		defer func() {
-			ev.End(storedErr)
-			logger.Trace("adding event", "event", ev.GoString())
-			if err := h.store.Add(*ev); err != nil {
-				// only log error since update task occurred successfully by now
-				logger.Error("error storing event", "event", ev.GoString(), "error", err)
-			}
-		}()
-		ev.Start()
-	}
-	var plan driver.InspectPlan
-	plan, storedErr = d.UpdateTask(r.Context(), patch)
-	if storedErr != nil {
-		logger.Trace("error while updating task", "task_name", taskName, "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusInternalServerError, storedErr)
+	// Update the task
+	changes, plan, _, err := h.ctrl.TaskUpdate(ctx, tc, runOp)
+	if err != nil {
+		sendError(w, r, http.StatusInternalServerError, err)
 		return
 	}
 
-	if runOp != driver.RunOptionInspect {
+	switch runOp {
+	case RunOptionInspect:
+		resp := UpdateTaskResponse{Inspect: &InspectPlan{
+			ChangesPresent: changes,
+			Plan:           plan,
+		}}
+		if err = jsonResponse(w, http.StatusOK, &resp); err != nil {
+			logger.Error("error, could not generate json response", "error", err)
+		}
+	case RunOptionNow, "":
 		if err = jsonResponse(w, http.StatusOK, UpdateTaskResponse{}); err != nil {
-			logger.Error("error, could not generate json error response", "error", err)
+			logger.Error("error, could not generate json response", "error", err)
 		}
-		return
-	}
-
-	if err = jsonResponse(w, http.StatusOK, UpdateTaskResponse{&plan}); err != nil {
-		logger.Error("error, could not generate json response", "error", err)
 	}
 }
 
@@ -246,11 +219,11 @@ func parseRunOption(r *http.Request) (string, error) {
 	value := keys[0]
 	value = strings.ToLower(value)
 	switch value {
-	case driver.RunOptionNow, driver.RunOptionInspect:
+	case RunOptionNow, RunOptionInspect:
 		return value, nil
 	default:
 		return "", fmt.Errorf("unsupported run parameter value. only "+
 			"supporting run values %s and %s but got %s",
-			driver.RunOptionNow, driver.RunOptionInspect, value)
+			RunOptionNow, RunOptionInspect, value)
 	}
 }
