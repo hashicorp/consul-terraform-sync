@@ -33,7 +33,8 @@ func TestServicesConditionConfig_Copy(t *testing.T) {
 						"key": "value",
 					},
 				},
-				SourceIncludesVar: Bool(false),
+				UseAsModuleInput:            Bool(false),
+				DeprecatedSourceIncludesVar: Bool(false),
 			},
 		},
 	}
@@ -86,27 +87,51 @@ func TestServicesConditionConfig_Merge(t *testing.T) {
 		},
 		{
 			"source_includes_var_overrides",
-			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
-			&ServicesConditionConfig{SourceIncludesVar: Bool(false)},
-			&ServicesConditionConfig{SourceIncludesVar: Bool(false)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(false)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(false)},
 		},
 		{
 			"source_includes_var_empty_one",
-			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
 			&ServicesConditionConfig{},
-			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
 		},
 		{
 			"source_includes_var_empty_two",
 			&ServicesConditionConfig{},
-			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
-			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
 		},
 		{
 			"source_includes_var_empty_same",
-			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
-			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
-			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+		},
+		{
+			"use_as_module_input_overrides",
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(false)},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(false)},
+		},
+		{
+			"use_as_module_input_empty_one",
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+			&ServicesConditionConfig{},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+		},
+		{
+			"use_as_module_input_empty_two",
+			&ServicesConditionConfig{},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+		},
+		{
+			"use_as_module_input_empty_same",
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
 		},
 		{
 			"happy_path",
@@ -118,7 +143,8 @@ func TestServicesConditionConfig_Merge(t *testing.T) {
 					Filter:             nil,
 					CTSUserDefinedMeta: map[string]string{},
 				},
-				SourceIncludesVar: Bool(true),
+				DeprecatedSourceIncludesVar: Bool(true),
+				UseAsModuleInput:            Bool(true),
 			},
 			&ServicesConditionConfig{
 				ServicesMonitorConfig: ServicesMonitorConfig{
@@ -128,7 +154,8 @@ func TestServicesConditionConfig_Merge(t *testing.T) {
 					Filter:             nil,
 					CTSUserDefinedMeta: map[string]string{},
 				},
-				SourceIncludesVar: Bool(false),
+				DeprecatedSourceIncludesVar: Bool(false),
+				UseAsModuleInput:            Bool(false),
 			},
 			&ServicesConditionConfig{
 				ServicesMonitorConfig: ServicesMonitorConfig{
@@ -138,7 +165,8 @@ func TestServicesConditionConfig_Merge(t *testing.T) {
 					Filter:             nil,
 					CTSUserDefinedMeta: map[string]string{},
 				},
-				SourceIncludesVar: Bool(false),
+				DeprecatedSourceIncludesVar: Bool(false),
+				UseAsModuleInput:            Bool(false),
 			},
 		},
 	}
@@ -170,7 +198,7 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 			nil,
 		},
 		{
-			"happy_path",
+			"empty",
 			&ServicesConditionConfig{},
 			&ServicesConditionConfig{
 				ServicesMonitorConfig: ServicesMonitorConfig{
@@ -181,7 +209,7 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 					Filter:             String(""),
 					CTSUserDefinedMeta: map[string]string{},
 				},
-				SourceIncludesVar: Bool(true),
+				UseAsModuleInput: Bool(true),
 			},
 		},
 	}
@@ -190,6 +218,50 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
+		})
+	}
+}
+
+func TestServicesConditionConfig_Finalize_DeprecatedSourceIncludesVar(t *testing.T) {
+	cases := []struct {
+		name     string
+		i        *ServicesConditionConfig
+		expected bool
+	}{
+		{
+			"use_as_module_input_configured",
+			&ServicesConditionConfig{
+				UseAsModuleInput: Bool(false),
+			},
+			false,
+		},
+		{
+			"source_includes_var_configured",
+			&ServicesConditionConfig{
+				DeprecatedSourceIncludesVar: Bool(false),
+			},
+			false,
+		},
+		{
+			"both_configured",
+			&ServicesConditionConfig{
+				UseAsModuleInput:            Bool(false),
+				DeprecatedSourceIncludesVar: Bool(true),
+			},
+			false,
+		},
+
+		{
+			"neither_configured",
+			&ServicesConditionConfig{},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.i.Finalize()
+			assert.Equal(t, tc.expected, *tc.i.UseAsModuleInput)
 		})
 	}
 }
@@ -264,10 +336,11 @@ func TestServicesCondition_GoString(t *testing.T) {
 						"key": "value",
 					},
 				},
+				UseAsModuleInput: Bool(false),
 			},
 			"&ServicesConditionConfig{&ServicesMonitorConfig{Regexp:^api$, Names:[], " +
 				"Datacenter:dc, Namespace:namespace, Filter:filter, " +
-				"CTSUserDefinedMeta:map[key:value]}, SourceIncludesVar:false}",
+				"CTSUserDefinedMeta:map[key:value]}, UseAsModuleInput:false}",
 		},
 	}
 

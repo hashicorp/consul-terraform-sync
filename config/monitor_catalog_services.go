@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 const catalogServicesType = "catalog-services"
@@ -13,11 +15,14 @@ var _ ConditionConfig = (*CatalogServicesConditionConfig)(nil)
 // of type 'catalog-services'. A catalog-services monitor is triggered by changes
 // that occur to services in the catalog-services api.
 type CatalogServicesMonitorConfig struct {
-	Regexp            *string           `mapstructure:"regexp"`
-	SourceIncludesVar *bool             `mapstructure:"source_includes_var"`
-	Datacenter        *string           `mapstructure:"datacenter"`
-	Namespace         *string           `mapstructure:"namespace"`
-	NodeMeta          map[string]string `mapstructure:"node_meta"`
+	Regexp     *string           `mapstructure:"regexp"`
+	Datacenter *string           `mapstructure:"datacenter"`
+	Namespace  *string           `mapstructure:"namespace"`
+	NodeMeta   map[string]string `mapstructure:"node_meta"`
+
+	// UseAsModuleInput was previously named SourceIncludesVar - deprecated v0.5
+	UseAsModuleInput            *bool `mapstructure:"use_as_module_input"`
+	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -29,9 +34,11 @@ func (c *CatalogServicesMonitorConfig) Copy() MonitorConfig {
 	var o CatalogServicesMonitorConfig
 
 	o.Regexp = StringCopy(c.Regexp)
-	o.SourceIncludesVar = BoolCopy(c.SourceIncludesVar)
 	o.Datacenter = StringCopy(c.Datacenter)
 	o.Namespace = StringCopy(c.Namespace)
+
+	o.UseAsModuleInput = BoolCopy(c.UseAsModuleInput)
+	o.DeprecatedSourceIncludesVar = BoolCopy(c.DeprecatedSourceIncludesVar)
 
 	if c.NodeMeta != nil {
 		o.NodeMeta = make(map[string]string)
@@ -71,8 +78,11 @@ func (c *CatalogServicesMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 		r2.Regexp = StringCopy(o2.Regexp)
 	}
 
-	if o2.SourceIncludesVar != nil {
-		r2.SourceIncludesVar = BoolCopy(o2.SourceIncludesVar)
+	if o2.UseAsModuleInput != nil {
+		r2.UseAsModuleInput = BoolCopy(o2.UseAsModuleInput)
+	}
+	if o2.DeprecatedSourceIncludesVar != nil {
+		r2.DeprecatedSourceIncludesVar = BoolCopy(o2.DeprecatedSourceIncludesVar)
 	}
 
 	if o2.Datacenter != nil {
@@ -103,8 +113,24 @@ func (c *CatalogServicesMonitorConfig) Finalize() {
 		return
 	}
 
-	if c.SourceIncludesVar == nil {
-		c.SourceIncludesVar = Bool(true)
+	logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
+	if c.DeprecatedSourceIncludesVar != nil {
+		logger.Warn("Catalog-service condition block's 'source_includes_var' " +
+			"field was marked for deprecation in v0.5.0. Please update your " +
+			"configuration to use the 'use_as_module_input' field instead")
+
+		if c.UseAsModuleInput != nil {
+			logger.Warn("Catalog-service condition block is configured with "+
+				"both 'source_includes_var' and 'use_as_module_input' field. "+
+				"Defaulting to 'use_as_module_input' value",
+				"use_as_module_input", c.UseAsModuleInput)
+		} else {
+			// Merge SourceIncludesVar with UseAsModuleInput. Use UseAsModuleInput onwards
+			c.UseAsModuleInput = c.DeprecatedSourceIncludesVar
+		}
+	}
+	if c.UseAsModuleInput == nil {
+		c.UseAsModuleInput = Bool(true)
 	}
 
 	if c.Datacenter == nil {
@@ -146,15 +172,15 @@ func (c *CatalogServicesMonitorConfig) GoString() string {
 
 	return fmt.Sprintf("&CatalogServicesMonitorConfig{"+
 		"Regexp:%s, "+
-		"SourceIncludesVar:%v, "+
 		"Datacenter:%v, "+
 		"Namespace:%v, "+
-		"NodeMeta:%s"+
+		"NodeMeta:%s, "+
+		"UseAsModuleInput:%v"+
 		"}",
 		StringVal(c.Regexp),
-		BoolVal(c.SourceIncludesVar),
 		StringVal(c.Datacenter),
 		StringVal(c.Namespace),
 		c.NodeMeta,
+		BoolVal(c.UseAsModuleInput),
 	)
 }

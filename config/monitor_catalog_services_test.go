@@ -25,10 +25,10 @@ func TestCatalogServicesMonitorConfig_Copy(t *testing.T) {
 			"fully_configured",
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
-					Regexp:            String(".*"),
-					SourceIncludesVar: Bool(true),
-					Datacenter:        String("dc2"),
-					Namespace:         String("ns2"),
+					Regexp:           String(".*"),
+					UseAsModuleInput: Bool(true),
+					Datacenter:       String("dc2"),
+					Namespace:        String("ns2"),
 					NodeMeta: map[string]string{
 						"key1": "value1",
 						"key2": "value2",
@@ -110,27 +110,51 @@ func TestCatalogServicesMonitorConfig_Merge(t *testing.T) {
 		},
 		{
 			"source_includes_var_overrides",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(false)}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(false)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{DeprecatedSourceIncludesVar: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{DeprecatedSourceIncludesVar: Bool(false)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{DeprecatedSourceIncludesVar: Bool(false)}},
 		},
 		{
 			"source_includes_var_empty_one",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{DeprecatedSourceIncludesVar: Bool(true)}},
 			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{DeprecatedSourceIncludesVar: Bool(true)}},
 		},
 		{
 			"source_includes_var_empty_two",
 			&CatalogServicesConditionConfig{},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{DeprecatedSourceIncludesVar: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{DeprecatedSourceIncludesVar: Bool(true)}},
 		},
 		{
 			"source_includes_var_empty_same",
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
-			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{SourceIncludesVar: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{DeprecatedSourceIncludesVar: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{DeprecatedSourceIncludesVar: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{DeprecatedSourceIncludesVar: Bool(true)}},
+		},
+		{
+			"use_as_module_input_overrides",
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{UseAsModuleInput: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{UseAsModuleInput: Bool(false)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{UseAsModuleInput: Bool(false)}},
+		},
+		{
+			"use_as_module_input_empty_one",
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{UseAsModuleInput: Bool(true)}},
+			&CatalogServicesConditionConfig{},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{UseAsModuleInput: Bool(true)}},
+		},
+		{
+			"use_as_module_input_empty_two",
+			&CatalogServicesConditionConfig{},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{UseAsModuleInput: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{UseAsModuleInput: Bool(true)}},
+		},
+		{
+			"use_as_module_input_empty_same",
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{UseAsModuleInput: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{UseAsModuleInput: Bool(true)}},
+			&CatalogServicesConditionConfig{CatalogServicesMonitorConfig{UseAsModuleInput: Bool(true)}},
 		},
 		{
 			"datacenter_overrides",
@@ -237,11 +261,11 @@ func TestCatalogServicesMonitorConfig_Finalize(t *testing.T) {
 			&CatalogServicesConditionConfig{},
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
-					Regexp:            nil,
-					SourceIncludesVar: Bool(true),
-					Datacenter:        String(""),
-					Namespace:         String(""),
-					NodeMeta:          map[string]string{},
+					Regexp:           nil,
+					UseAsModuleInput: Bool(true),
+					Datacenter:       String(""),
+					Namespace:        String(""),
+					NodeMeta:         map[string]string{},
 				},
 			},
 		},
@@ -251,6 +275,56 @@ func TestCatalogServicesMonitorConfig_Finalize(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
+		})
+	}
+}
+
+func TestCatalogServicesConditionConfig_Finalize_DeprecatedSourceIncludesVar(t *testing.T) {
+	cases := []struct {
+		name     string
+		i        *CatalogServicesConditionConfig
+		expected bool
+	}{
+		{
+			"use_as_module_input_configured",
+			&CatalogServicesConditionConfig{
+				CatalogServicesMonitorConfig{
+					UseAsModuleInput: Bool(false),
+				},
+			},
+			false,
+		},
+		{
+			"source_includes_var_configured",
+			&CatalogServicesConditionConfig{
+				CatalogServicesMonitorConfig{
+					DeprecatedSourceIncludesVar: Bool(false),
+				},
+			},
+			false,
+		},
+		{
+			"both_configured",
+			&CatalogServicesConditionConfig{
+				CatalogServicesMonitorConfig{
+					UseAsModuleInput:            Bool(false),
+					DeprecatedSourceIncludesVar: Bool(true),
+				},
+			},
+			false,
+		},
+
+		{
+			"neither_configured",
+			&CatalogServicesConditionConfig{},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.i.Finalize()
+			assert.Equal(t, tc.expected, *tc.i.UseAsModuleInput)
 		})
 	}
 }

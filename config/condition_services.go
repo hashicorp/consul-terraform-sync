@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 var _ ConditionConfig = (*ServicesConditionConfig)(nil)
@@ -11,7 +13,10 @@ var _ ConditionConfig = (*ServicesConditionConfig)(nil)
 // triggered when changes occur to the task's services.
 type ServicesConditionConfig struct {
 	ServicesMonitorConfig `mapstructure:",squash"`
-	SourceIncludesVar     *bool `mapstructure:"source_includes_var"`
+
+	// UseAsModuleInput was previously named SourceIncludesVar - deprecated v0.5
+	UseAsModuleInput            *bool `mapstructure:"use_as_module_input"`
+	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -21,7 +26,8 @@ func (c *ServicesConditionConfig) Copy() MonitorConfig {
 	}
 
 	var o ServicesConditionConfig
-	o.SourceIncludesVar = BoolCopy(c.SourceIncludesVar)
+	o.UseAsModuleInput = BoolCopy(c.UseAsModuleInput)
+	o.DeprecatedSourceIncludesVar = BoolCopy(c.DeprecatedSourceIncludesVar)
 
 	svc, ok := c.ServicesMonitorConfig.Copy().(*ServicesMonitorConfig)
 	if !ok {
@@ -55,8 +61,12 @@ func (c *ServicesConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 	}
 
 	r2 := r.(*ServicesConditionConfig)
-	if o2.SourceIncludesVar != nil {
-		r2.SourceIncludesVar = BoolCopy(o2.SourceIncludesVar)
+
+	if o2.UseAsModuleInput != nil {
+		r2.UseAsModuleInput = BoolCopy(o2.UseAsModuleInput)
+	}
+	if o2.DeprecatedSourceIncludesVar != nil {
+		r2.DeprecatedSourceIncludesVar = BoolCopy(o2.DeprecatedSourceIncludesVar)
 	}
 
 	merged, ok := c.ServicesMonitorConfig.Merge(&o2.ServicesMonitorConfig).(*ServicesMonitorConfig)
@@ -74,8 +84,24 @@ func (c *ServicesConditionConfig) Finalize() {
 		return
 	}
 
-	if c.SourceIncludesVar == nil {
-		c.SourceIncludesVar = Bool(true)
+	logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
+	if c.DeprecatedSourceIncludesVar != nil {
+		logger.Warn("Services condition block's 'source_includes_var' " +
+			"field was marked for deprecation in v0.5.0. Please update your " +
+			"configuration to use the 'use_as_module_input' field instead")
+
+		if c.UseAsModuleInput != nil {
+			logger.Warn("Services condition block is configured with "+
+				"both 'source_includes_var' and 'use_as_module_input' field. "+
+				"Defaulting to 'use_as_module_input' value",
+				"use_as_module_input", c.UseAsModuleInput)
+		} else {
+			// Merge SourceIncludesVar with UseAsModuleInput. Use UseAsModuleInput onwards
+			c.UseAsModuleInput = c.DeprecatedSourceIncludesVar
+		}
+	}
+	if c.UseAsModuleInput == nil {
+		c.UseAsModuleInput = Bool(true)
 	}
 
 	c.ServicesMonitorConfig.Finalize()
@@ -102,9 +128,9 @@ func (c *ServicesConditionConfig) GoString() string {
 
 	return fmt.Sprintf("&ServicesConditionConfig{"+
 		"%s, "+
-		"SourceIncludesVar:%v"+
+		"UseAsModuleInput:%v"+
 		"}",
 		c.ServicesMonitorConfig.GoString(),
-		BoolVal(c.SourceIncludesVar),
+		BoolVal(c.UseAsModuleInput),
 	)
 }
