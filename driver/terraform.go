@@ -226,7 +226,9 @@ func (tf *Terraform) InspectTask(ctx context.Context) (InspectPlan, error) {
 	if !tf.task.IsEnabled() {
 		tf.logger.Trace(
 			"task disabled. skip inspecting", taskNameLogKey, tf.task.Name())
-		return InspectPlan{}, nil
+		return InspectPlan{
+			Plan: "Task is disabled, inspection was skipped.",
+		}, nil
 	}
 
 	plan, err := tf.inspectTask(ctx, true)
