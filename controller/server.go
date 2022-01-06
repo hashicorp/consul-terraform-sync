@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/pkg/errors"
 )
 
 func (rw *ReadWrite) Config() config.Config {
@@ -104,16 +105,67 @@ func (rw *ReadWrite) TaskInspect(ctx context.Context, taskConfig config.TaskConf
 	return plan.ChangesPresent, plan.Plan, "", err
 }
 
-func (rw *ReadWrite) TaskRun(ctx context.Context, taskName string) error {
+func (rw *ReadWrite) TaskUpdate(ctx context.Context, taskConfig config.TaskConfig, runOp string) (bool, string, string, error) {
+	// Only enabled changes are supported at this time
+	if taskConfig.Enabled == nil {
+		return false, "", "", nil
+	}
+
+	if taskConfig.Name == nil || *taskConfig.Name == "" {
+		return false, "", "", fmt.Errorf("task name is required")
+	}
+
+	taskName := *taskConfig.Name
+	logger := rw.logger.With(taskNameLogKey, taskName)
+	logger.Trace("updating task")
+	if rw.drivers.IsActive(taskName) {
+		return false, "", "", fmt.Errorf("task '%s' is active and cannot be updated at this time", taskName)
+	}
+	rw.drivers.SetActive(taskName)
+	defer rw.drivers.SetInactive(taskName)
+
 	d, ok := rw.drivers.Get(taskName)
 	if !ok {
-		return fmt.Errorf("task %s does not exist to run", taskName)
+		return false, "", "", fmt.Errorf("task %s does not exist to run", taskName)
 	}
-	return rw.runTask(ctx, d)
-}
 
-func (rw *ReadWrite) TaskUpdate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
-	return config.TaskConfig{}, fmt.Errorf("not implemented")
+	var storedErr error
+	if runOp == driver.RunOptionNow {
+		task := d.Task()
+		ev, err := event.NewEvent(taskName, &event.Config{
+			Providers: task.ProviderNames(),
+			Services:  task.ServiceNames(),
+			Source:    task.Source(),
+		})
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("error creating task update"+
+				"event for %q", taskName))
+			logger.Error("error creating new event", "error", err)
+			return false, "", "", err
+		}
+		defer func() {
+			ev.End(storedErr)
+			logger.Trace("adding event", "event", ev.GoString())
+			if err := rw.store.Add(*ev); err != nil {
+				// only log error since update task occurred successfully by now
+				logger.Error("error storing event", "event", ev.GoString(), "error", err)
+			}
+		}()
+		ev.Start()
+	}
+
+	patch := driver.PatchTask{
+		RunOption: runOp,
+		Enabled:   *taskConfig.Enabled,
+	}
+	var plan driver.InspectPlan
+	plan, storedErr = d.UpdateTask(ctx, patch)
+	if storedErr != nil {
+		logger.Trace("error while updating task", "error", storedErr)
+		return false, "", "", storedErr
+	}
+
+	return plan.ChangesPresent, plan.Plan, "", nil
 }
 
 func configFromDriverTask(t *driver.Task) config.TaskConfig {
