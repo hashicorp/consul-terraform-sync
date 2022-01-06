@@ -221,8 +221,8 @@ func (d *servicesRegexQuery) SetOptions(opts hcat.QueryOptions) {
 	d.opts = opts
 }
 
-// String returns the human-friendly version of this query.
-func (d *servicesRegexQuery) String() string {
+// ID returns the human-friendly version of this query.
+func (d *servicesRegexQuery) ID() string {
 	var opts []string
 	opts = append(opts, fmt.Sprintf("regexp=%s", d.regexp.String()))
 
@@ -242,6 +242,11 @@ func (d *servicesRegexQuery) String() string {
 	sort.Strings(opts)
 	return fmt.Sprintf("service.regex(%s)",
 		strings.Join(opts, "&"))
+}
+
+// Stringer interface reuses ID
+func (d *servicesRegexQuery) String() string {
+	return d.ID()
 }
 
 // Stop halts the query's fetch function.
