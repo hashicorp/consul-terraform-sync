@@ -25,7 +25,6 @@ import (
 const (
 	createTestTaskTemplate = `{
 	   "description": "Writes the service name, id, and IP address to a file",
-	   "enabled": true,
 	   "name": "%s",
 	   "providers": [
 	       "local"
