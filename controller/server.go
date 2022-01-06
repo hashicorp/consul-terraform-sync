@@ -94,14 +94,15 @@ func (rw *ReadWrite) TaskDelete(ctx context.Context, name string) error {
 	return nil
 }
 
-func (rw *ReadWrite) TaskInspect(ctx context.Context, taskConfig config.TaskConfig) (bool, string, error) {
+// TaskInspect creates and inspects a temporary task that is not added to the drivers list.
+func (rw *ReadWrite) TaskInspect(ctx context.Context, taskConfig config.TaskConfig) (bool, string, string, error) {
 	d, err := rw.createTask(ctx, taskConfig)
 	if err != nil {
-		return false, "", err
+		return false, "", "", err
 	}
 
 	plan, err := d.InspectTask(ctx)
-	return plan.ChangesPresent, plan.Plan, err
+	return plan.ChangesPresent, plan.Plan, "", err
 }
 
 func configFromDriverTask(t *driver.Task) config.TaskConfig {

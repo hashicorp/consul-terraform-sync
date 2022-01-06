@@ -107,7 +107,7 @@ func (_m *Server) TaskDelete(ctx context.Context, taskName string) error {
 }
 
 // TaskInspect provides a mock function with given fields: _a0, _a1
-func (_m *Server) TaskInspect(_a0 context.Context, _a1 config.TaskConfig) (bool, string, error) {
+func (_m *Server) TaskInspect(_a0 context.Context, _a1 config.TaskConfig) (bool, string, string, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 bool
@@ -124,12 +124,19 @@ func (_m *Server) TaskInspect(_a0 context.Context, _a1 config.TaskConfig) (bool,
 		r1 = ret.Get(1).(string)
 	}
 
-	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context, config.TaskConfig) error); ok {
+	var r2 string
+	if rf, ok := ret.Get(2).(func(context.Context, config.TaskConfig) string); ok {
 		r2 = rf(_a0, _a1)
 	} else {
-		r2 = ret.Error(2)
+		r2 = ret.Get(2).(string)
 	}
 
-	return r0, r1, r2
+	var r3 error
+	if rf, ok := ret.Get(3).(func(context.Context, config.TaskConfig) error); ok {
+		r3 = rf(_a0, _a1)
+	} else {
+		r3 = ret.Error(3)
+	}
+
+	return r0, r1, r2, r3
 }
