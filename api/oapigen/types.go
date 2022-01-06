@@ -83,8 +83,9 @@ type ScheduleCondition struct {
 
 // ServicesCondition defines model for ServicesCondition.
 type ServicesCondition struct {
-	Names  *[]string `json:"names,omitempty"`
-	Regexp *string   `json:"regexp,omitempty"`
+	Names             *[]string `json:"names,omitempty"`
+	Regexp            *string   `json:"regexp,omitempty"`
+	SourceIncludesVar *bool     `json:"source_includes_var,omitempty"`
 }
 
 // ServicesSourceInput defines model for ServicesSourceInput.
