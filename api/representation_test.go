@@ -118,7 +118,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp: config.String("^web.*"),
 					},
-					SourceIncludesVar: config.Bool(false),
+					UseAsModuleInput: config.Bool(false),
 				},
 			},
 		},
@@ -143,7 +143,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Names: []string{"api", "web"},
 					},
-					SourceIncludesVar: config.Bool(false),
+					UseAsModuleInput: config.Bool(false),
 				},
 			},
 		},
@@ -172,10 +172,10 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Module: config.String("path"),
 				Condition: &config.CatalogServicesConditionConfig{
 					config.CatalogServicesMonitorConfig{
-						Regexp:            config.String(".*"),
-						SourceIncludesVar: config.Bool(true),
-						Datacenter:        config.String("dc2"),
-						Namespace:         config.String("ns2"),
+						Regexp:           config.String(".*"),
+						UseAsModuleInput: config.Bool(true),
+						Datacenter:       config.String("dc2"),
+						Namespace:        config.String("ns2"),
 						NodeMeta: map[string]string{
 							"key1": "value1",
 							"key2": "value2",
@@ -211,7 +211,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 						Datacenter: config.String("dc2"),
 						Namespace:  config.String("ns2"),
 					},
-					SourceIncludesVar: config.Bool(true),
+					UseAsModuleInput: config.Bool(true),
 				},
 			},
 		},
@@ -451,7 +451,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 						Filter:             config.String("filter"),
 						CTSUserDefinedMeta: map[string]string{"key": "value"},
 					},
-					SourceIncludesVar: config.Bool(false),
+					UseAsModuleInput: config.Bool(false),
 				},
 			},
 			expectedResponse: taskResponse{
@@ -483,7 +483,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 						Filter:             config.String(""),
 						CTSUserDefinedMeta: map[string]string{},
 					},
-					SourceIncludesVar: config.Bool(false),
+					UseAsModuleInput: config.Bool(false),
 				},
 			},
 			expectedResponse: taskResponse{
@@ -509,10 +509,10 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				Enabled: config.Bool(true),
 				Condition: &config.CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
-						Regexp:            config.String(".*"),
-						SourceIncludesVar: config.Bool(true),
-						Datacenter:        config.String("dc2"),
-						Namespace:         config.String("ns2"),
+						Regexp:           config.String(".*"),
+						UseAsModuleInput: config.Bool(true),
+						Datacenter:       config.String("dc2"),
+						Namespace:        config.String("ns2"),
 						NodeMeta: map[string]string{
 							"key1": "value1",
 							"key2": "value2",
@@ -557,7 +557,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 						Datacenter: config.String("dc2"),
 						Namespace:  config.String("ns2"),
 					},
-					SourceIncludesVar: config.Bool(true),
+					UseAsModuleInput: config.Bool(true),
 				},
 			},
 			expectedResponse: taskResponse{

@@ -102,10 +102,10 @@ var (
 				Module:      String("Y"),
 				Condition: &CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig{
-						Regexp:            String(".*"),
-						SourceIncludesVar: Bool(true),
-						Datacenter:        String("dc2"),
-						Namespace:         String("ns2"),
+						Regexp:           String(".*"),
+						UseAsModuleInput: Bool(true),
+						Datacenter:       String("dc2"),
+						Namespace:        String("ns2"),
 						NodeMeta: map[string]string{
 							"key1": "value1",
 							"key2": "value2",

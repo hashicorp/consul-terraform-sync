@@ -95,7 +95,7 @@
       "condition": {
         "catalog-services": {
           "regexp": ".*",
-          "source_includes_var": true,
+          "use_as_module_input": true,
           "datacenter": "dc2",
           "namespace": "ns2",
           "node_meta": {

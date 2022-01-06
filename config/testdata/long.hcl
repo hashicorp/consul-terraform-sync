@@ -85,7 +85,7 @@ task {
   module = "Y"
   condition "catalog-services" {
     regexp = ".*"
-    source_includes_var = true
+    use_as_module_input = true
     namespace = "ns2"
     datacenter = "dc2"
     node_meta {
