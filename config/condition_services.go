@@ -11,6 +11,7 @@ var _ ConditionConfig = (*ServicesConditionConfig)(nil)
 // triggered when changes occur to the task's services.
 type ServicesConditionConfig struct {
 	ServicesMonitorConfig `mapstructure:",squash"`
+	SourceIncludesVar     *bool `mapstructure:"source_includes_var"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -19,13 +20,16 @@ func (c *ServicesConditionConfig) Copy() MonitorConfig {
 		return nil
 	}
 
+	var o ServicesConditionConfig
+	o.SourceIncludesVar = BoolCopy(c.SourceIncludesVar)
+
 	svc, ok := c.ServicesMonitorConfig.Copy().(*ServicesMonitorConfig)
 	if !ok {
 		return nil
 	}
-	return &ServicesConditionConfig{
-		ServicesMonitorConfig: *svc,
-	}
+
+	o.ServicesMonitorConfig = *svc
+	return &o
 }
 
 // Merge combines all values in this configuration with the values in the other
@@ -44,19 +48,24 @@ func (c *ServicesConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 		return c.Copy()
 	}
 
-	scc, ok := o.(*ServicesConditionConfig)
+	r := c.Copy()
+	o2, ok := o.(*ServicesConditionConfig)
 	if !ok {
 		return nil
 	}
 
-	merged, ok := c.ServicesMonitorConfig.Merge(&scc.ServicesMonitorConfig).(*ServicesMonitorConfig)
+	r2 := r.(*ServicesConditionConfig)
+	if o2.SourceIncludesVar != nil {
+		r2.SourceIncludesVar = BoolCopy(o2.SourceIncludesVar)
+	}
+
+	merged, ok := c.ServicesMonitorConfig.Merge(&o2.ServicesMonitorConfig).(*ServicesMonitorConfig)
 	if !ok {
 		return nil
 	}
 
-	return &ServicesConditionConfig{
-		ServicesMonitorConfig: *merged,
-	}
+	r2.ServicesMonitorConfig = *merged
+	return r2
 }
 
 // Finalize ensures there no nil pointers.
@@ -64,6 +73,11 @@ func (c *ServicesConditionConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}
+
+	if c.SourceIncludesVar == nil {
+		c.SourceIncludesVar = Bool(true)
+	}
+
 	c.ServicesMonitorConfig.Finalize()
 }
 
@@ -87,8 +101,10 @@ func (c *ServicesConditionConfig) GoString() string {
 	}
 
 	return fmt.Sprintf("&ServicesConditionConfig{"+
-		"%s"+
+		"%s, "+
+		"SourceIncludesVar:%v"+
 		"}",
 		c.ServicesMonitorConfig.GoString(),
+		BoolVal(c.SourceIncludesVar),
 	)
 }

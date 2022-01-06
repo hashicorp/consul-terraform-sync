@@ -24,7 +24,7 @@ func TestServicesConditionConfig_Copy(t *testing.T) {
 		{
 			"happy_path",
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:     String("^web.*"),
 					Datacenter: String("dc"),
 					Namespace:  String("namespace"),
@@ -33,6 +33,7 @@ func TestServicesConditionConfig_Copy(t *testing.T) {
 						"key": "value",
 					},
 				},
+				SourceIncludesVar: Bool(false),
 			},
 		},
 	}
@@ -84,33 +85,60 @@ func TestServicesConditionConfig_Merge(t *testing.T) {
 			&ServicesConditionConfig{},
 		},
 		{
+			"source_includes_var_overrides",
+			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{SourceIncludesVar: Bool(false)},
+			&ServicesConditionConfig{SourceIncludesVar: Bool(false)},
+		},
+		{
+			"source_includes_var_empty_one",
+			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{},
+			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+		},
+		{
+			"source_includes_var_empty_two",
+			&ServicesConditionConfig{},
+			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+		},
+		{
+			"source_includes_var_empty_same",
+			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{SourceIncludesVar: Bool(true)},
+		},
+		{
 			"happy_path",
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:             String("regexp"),
-					Datacenter:         String("datacenter_overriden"),
+					Datacenter:         String("datacenter_overridden"),
 					Namespace:          nil,
 					Filter:             nil,
 					CTSUserDefinedMeta: map[string]string{},
 				},
+				SourceIncludesVar: Bool(true),
 			},
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:             nil,
 					Datacenter:         String("datacenter"),
 					Namespace:          String("namespace"),
 					Filter:             nil,
 					CTSUserDefinedMeta: map[string]string{},
 				},
+				SourceIncludesVar: Bool(false),
 			},
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:             String("regexp"),
 					Datacenter:         String("datacenter"),
 					Namespace:          String("namespace"),
 					Filter:             nil,
 					CTSUserDefinedMeta: map[string]string{},
 				},
+				SourceIncludesVar: Bool(false),
 			},
 		},
 	}
@@ -145,7 +173,7 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 			"happy_path",
 			&ServicesConditionConfig{},
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:             nil,
 					Names:              []string{},
 					Datacenter:         String(""),
@@ -153,6 +181,7 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 					Filter:             String(""),
 					CTSUserDefinedMeta: map[string]string{},
 				},
+				SourceIncludesVar: Bool(true),
 			},
 		},
 	}
@@ -177,7 +206,7 @@ func TestServicesConditionConfig_Validate(t *testing.T) {
 			"valid",
 			false,
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp: String(".*"),
 				},
 			},
@@ -186,7 +215,7 @@ func TestServicesConditionConfig_Validate(t *testing.T) {
 			"invalid",
 			true,
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp: String("*"),
 				},
 			},
@@ -226,7 +255,7 @@ func TestServicesCondition_GoString(t *testing.T) {
 		{
 			"fully_configured",
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:     String("^api$"),
 					Datacenter: String("dc"),
 					Namespace:  String("namespace"),
@@ -238,7 +267,7 @@ func TestServicesCondition_GoString(t *testing.T) {
 			},
 			"&ServicesConditionConfig{&ServicesMonitorConfig{Regexp:^api$, Names:[], " +
 				"Datacenter:dc, Namespace:namespace, Filter:filter, " +
-				"CTSUserDefinedMeta:map[key:value]}}",
+				"CTSUserDefinedMeta:map[key:value]}, SourceIncludesVar:false}",
 		},
 	}
 

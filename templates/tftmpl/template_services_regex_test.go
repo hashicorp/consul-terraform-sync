@@ -47,9 +47,7 @@ services = {
 			`
 {{- with $srv := servicesRegex "regexp=.*" "dc=dc1" "ns=ns1" "filter" }}
   {{- range $s := $srv}}
-  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
-{{ HCLService $s | indent 4 }}
-  },
+  {{- /* Empty template. Detects changes in Services */ -}}
   {{- end}}
 {{- end}}
 `,
@@ -63,9 +61,7 @@ services = {
 			`
 {{- with $srv := servicesRegex "regexp=" }}
   {{- range $s := $srv}}
-  "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
-{{ HCLService $s | indent 4 }}
-  },
+  {{- /* Empty template. Detects changes in Services */ -}}
   {{- end}}
 {{- end}}
 `,

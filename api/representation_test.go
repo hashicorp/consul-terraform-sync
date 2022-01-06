@@ -109,7 +109,8 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Enabled: config.Bool(true),
 				Condition: &oapigen.Condition{
 					Services: &oapigen.ServicesCondition{
-						Regexp: config.String("^web.*"),
+						Regexp:            config.String("^web.*"),
+						SourceIncludesVar: config.Bool(false),
 					},
 				},
 			},
@@ -121,6 +122,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp: config.String("^web.*"),
 					},
+					SourceIncludesVar: config.Bool(false),
 				},
 			},
 		},
@@ -132,7 +134,8 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Enabled: config.Bool(true),
 				Condition: &oapigen.Condition{
 					Services: &oapigen.ServicesCondition{
-						Names: &[]string{"api", "web"},
+						Names:             &[]string{"api", "web"},
+						SourceIncludesVar: config.Bool(false),
 					},
 				},
 			},
@@ -144,6 +147,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Names: []string{"api", "web"},
 					},
+					SourceIncludesVar: config.Bool(false),
 				},
 			},
 		},
@@ -454,6 +458,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 						Filter:             config.String("filter"),
 						CTSUserDefinedMeta: map[string]string{"key": "value"},
 					},
+					SourceIncludesVar: config.Bool(false),
 				},
 			},
 			expectedResponse: taskResponse{
@@ -464,7 +469,8 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					Enabled: config.Bool(true),
 					Condition: &oapigen.Condition{
 						Services: &oapigen.ServicesCondition{
-							Regexp: config.String("^web.*"),
+							Regexp:            config.String("^web.*"),
+							SourceIncludesVar: config.Bool(false),
 						},
 					},
 				},
@@ -484,6 +490,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 						Filter:             config.String(""),
 						CTSUserDefinedMeta: map[string]string{},
 					},
+					SourceIncludesVar: config.Bool(false),
 				},
 			},
 			expectedResponse: taskResponse{
@@ -494,7 +501,8 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					Enabled: config.Bool(true),
 					Condition: &oapigen.Condition{
 						Services: &oapigen.ServicesCondition{
-							Names: &[]string{"api", "web"},
+							Names:             &[]string{"api", "web"},
+							SourceIncludesVar: config.Bool(false),
 						},
 					},
 				},

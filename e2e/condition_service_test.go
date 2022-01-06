@@ -23,40 +23,61 @@ import (
 func TestCondition_Services(t *testing.T) {
 	t.Parallel()
 
+	regexpConfig := `task {
+		name = "%s"
+		module = "./test_modules/local_instances_file"
+		condition "services" {
+			regexp = "api-"
+			filter = "Service.Tags not contains \"tag_a\""
+			cts_user_defined_meta {
+				my_meta_key = "my_meta_value"
+			}
+			source_includes_var = %t
+		}
+	}`
+
+	namesConfig := `task {
+		name = "%s"
+		module = "./test_modules/local_instances_file"
+		condition "services" {
+			names  = ["api-web"]
+			filter = "Service.Tags not contains \"tag_a\""
+			cts_user_defined_meta {
+				my_meta_key = "my_meta_value"
+			}
+			source_includes_var = %t
+		}
+	}`
+
 	cases := []struct {
-		name       string
-		taskName   string
-		taskConfig string
+		name              string
+		taskName          string
+		taskConfig        string
+		sourceIncludesVar bool
 	}{
 		{
-			"services condition - regexp",
-			"services_condition_regexp",
-			`task {
-				name = "%s"
-				module = "./test_modules/local_instances_file"
-				condition "services" {
-					regexp = "api-"
-					filter = "Service.Tags not contains \"tag_a\""
-					cts_user_defined_meta {
-						my_meta_key = "my_meta_value"
-					}
-				}
-			}`,
+			"regexp & includes true",
+			"services_cond_regexp_include",
+			regexpConfig,
+			true,
 		},
 		{
-			"services condition - names",
-			"services_condition_names",
-			`task {
-				name = "%s"
-				module = "./test_modules/local_instances_file"
-				condition "services" {
-					names  = ["api-web"]
-					filter = "Service.Tags not contains \"tag_a\""
-					cts_user_defined_meta {
-						my_meta_key = "my_meta_value"
-					}
-				}
-			}`,
+			"regexp & includes false",
+			"services_cond_regexp_include_false",
+			regexpConfig,
+			false,
+		},
+		{
+			"names & includes true",
+			"services_cond_names_include",
+			namesConfig,
+			true,
+		},
+		{
+			"names & includes false",
+			"services_cond_names_include_false",
+			namesConfig,
+			false,
 		},
 	}
 
@@ -71,7 +92,7 @@ func TestCondition_Services(t *testing.T) {
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.taskName)
 
-			config := fmt.Sprintf(tc.taskConfig, tc.taskName)
+			config := fmt.Sprintf(tc.taskConfig, tc.taskName, tc.sourceIncludesVar)
 			cts := ctsSetup(t, srv, tempDir, config)
 
 			// Test that regex filter is filtering service registration information and
@@ -81,10 +102,11 @@ func TestCondition_Services(t *testing.T) {
 			// 1. Register db service instance. Confirm that the task was not triggered
 			//    (no new event) and its data is filtered out of services variable.
 			// 2. Register api-web service instance. Confirm that task was triggered
-			//    (one new event) and its data exists in the services variable and
-			//    confirm metadata in tfvars
-			// 3. Register a second node to the api-web service. Confirm that task was triggered
-			//    (one new event) and its data exists in the services variable.
+			//    (one new event). Confirm data exists in the services variable and
+			//    confirm metadata in tfvars (source_includes_var=true only).
+			// 3. Register a second node to the api-web service. Confirm that
+			//    task was triggered (one new event). Confirm data exists in
+			//    the services variable (source_includes_var=true only).
 			// 4. Register a third node to the api-web service with tag_a. Confirm that
 			//    task was not triggered and the data is not in the services variable.
 
@@ -116,8 +138,8 @@ func TestCondition_Services(t *testing.T) {
 			require.Equal(t, eventCountExpected, eventCountNow,
 				"event count did not increment once. task was not triggered as expected")
 			resourcesPath := filepath.Join(workingDir, resourcesDir)
-			validateServices(t, true, []string{"api-web-1"}, resourcesPath)
-			validateVariable(t, true, workingDir, "services", "my_meta_value")
+			validateServices(t, tc.sourceIncludesVar, []string{"api-web-1"}, resourcesPath)
+			validateVariable(t, tc.sourceIncludesVar, workingDir, "services", "my_meta_value")
 
 			// 3. Add a second node to the service "api-web"
 			now = time.Now()
@@ -128,7 +150,7 @@ func TestCondition_Services(t *testing.T) {
 			eventCountExpected++
 			require.Equal(t, eventCountExpected, eventCountNow,
 				"event count did not increment once. task was not triggered as expected")
-			validateServices(t, true, []string{"api-web-1", "api-web-2"}, resourcesPath)
+			validateServices(t, tc.sourceIncludesVar, []string{"api-web-1", "api-web-2"}, resourcesPath)
 
 			// 4. Register a matched service "api-web" with tag_a
 			now = time.Now()

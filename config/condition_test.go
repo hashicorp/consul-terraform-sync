@@ -64,7 +64,7 @@ task {
 			"services: happy path",
 			false,
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:     String(".*"),
 					Names:      []string{},
 					Datacenter: String("dc"),
@@ -74,6 +74,7 @@ task {
 						"key": "value",
 					},
 				},
+				SourceIncludesVar: Bool(true),
 			},
 			"config.hcl",
 			`

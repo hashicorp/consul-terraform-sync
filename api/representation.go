@@ -58,7 +58,9 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	// Convert condition
 	if tr.Condition != nil {
 		if tr.Condition.Services != nil {
-			cond := &config.ServicesConditionConfig{}
+			cond := &config.ServicesConditionConfig{
+				SourceIncludesVar: tr.Condition.Services.SourceIncludesVar,
+			}
 			if tr.Condition.Services.Names != nil && len(*tr.Condition.Services.Names) > 0 {
 				cond.Names = *tr.Condition.Services.Names
 			} else {
@@ -186,15 +188,15 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		task.Condition = new(oapigen.Condition)
 		switch cond := tc.Condition.(type) {
 		case *config.ServicesConditionConfig:
-			if len(cond.Names) > 0 {
-				task.Condition.Services = &oapigen.ServicesCondition{
-					Names: &cond.Names,
-				}
-			} else {
-				task.Condition.Services = &oapigen.ServicesCondition{
-					Regexp: cond.Regexp,
-				}
+			services := &oapigen.ServicesCondition{
+				SourceIncludesVar: cond.SourceIncludesVar,
 			}
+			if len(cond.Names) > 0 {
+				services.Names = &cond.Names
+			} else {
+				services.Regexp = cond.Regexp
+			}
+			task.Condition.Services = services
 		case *config.CatalogServicesConditionConfig:
 			task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
 				Regexp:            *cond.Regexp,
