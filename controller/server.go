@@ -111,8 +111,8 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, taskConfig config.TaskConfi
 		return false, "", "", nil
 	}
 
-	if taskConfig.Name == nil || *taskConfig.Name == "" {
-		return false, "", "", fmt.Errorf("task name is required")
+	if err := taskConfig.Validate(); err != nil {
+		return false, "", "", err
 	}
 
 	taskName := *taskConfig.Name

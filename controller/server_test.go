@@ -12,6 +12,7 @@ import (
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -260,4 +261,103 @@ func TestServer_TaskDelete(t *testing.T) {
 			assert.True(t, exists, "unexpected delete")
 		})
 	}
+}
+
+func TestServer_TaskUpdate(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := ReadWrite{
+		baseController: &baseController{
+			conf: &config.Config{
+				BufferPeriod: config.DefaultBufferPeriodConfig(),
+				WorkingDir:   config.String(config.DefaultWorkingDir),
+			},
+			drivers: driver.NewDrivers(),
+			logger:  logging.NewNullLogger(),
+			watcher: new(mocksTmpl.Watcher),
+		},
+	}
+
+	t.Run("disable-then-enable", func(t *testing.T) {
+		// setup temp dir
+		tempDir := "disable-enable"
+		del := testutils.MakeTempDir(t, tempDir)
+		defer del()
+
+		taskName := "task_a"
+		task, err := driver.NewTask(driver.TaskConfig{
+			Enabled: true,
+			Name:    taskName,
+			Source:  "module",
+			Condition: &config.ServicesConditionConfig{
+				ServicesMonitorConfig: config.ServicesMonitorConfig{
+					Names: []string{"service"},
+				},
+			},
+			WorkingDir: tempDir,
+		})
+		require.NoError(t, err)
+
+		// add a driver
+		d, err := driver.NewTerraform(&driver.TerraformConfig{
+			Task:       task,
+			ClientType: "test",
+		})
+		require.NoError(t, err)
+		err = ctrl.drivers.Add(taskName, d)
+		require.NoError(t, err)
+		assert.True(t, d.Task().IsEnabled())
+
+		// Set the task to disabled
+		taskConf, err := ctrl.Task(ctx, taskName)
+		require.NoError(t, err)
+		taskConf.Enabled = config.Bool(false)
+
+		changed, plan, _, err := ctrl.TaskUpdate(ctx, taskConf, "")
+		require.NoError(t, err)
+		assert.False(t, d.Task().IsEnabled())
+		assert.False(t, changed)
+		assert.Empty(t, plan)
+
+		// Re-enable the task
+		taskConf.Enabled = config.Bool(true)
+		_, plan, _, err = ctrl.TaskUpdate(ctx, taskConf, "")
+		require.NoError(t, err)
+		assert.True(t, d.Task().IsEnabled())
+		assert.Empty(t, plan)
+	})
+
+	t.Run("task-not-found-error", func(t *testing.T) {
+		taskConf := config.TaskConfig{
+			Name:    config.String("non-existent-task"),
+			Enabled: config.Bool(true),
+		}
+		_, plan, _, err := ctrl.TaskUpdate(ctx, taskConf, "")
+		require.Error(t, err)
+		assert.Empty(t, plan)
+	})
+
+	t.Run("task-run-option", func(t *testing.T) {
+		expectedPlan := driver.InspectPlan{
+			ChangesPresent: true,
+			Plan:           "plan!",
+		}
+		// add a driver
+		d := new(mocksD.Driver)
+		d.On("UpdateTask", mock.Anything, mock.Anything).
+			Return(expectedPlan, nil).Once()
+		err := ctrl.drivers.Add("task_b", d)
+		require.NoError(t, err)
+
+		taskConf, err := ctrl.Task(ctx, "task_b")
+		require.NoError(t, err)
+		taskConf.Enabled = config.Bool(true)
+
+		changed, plan, _, err := ctrl.TaskUpdate(ctx, taskConf, driver.RunOptionInspect)
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedPlan.Plan, plan)
+		assert.Equal(t, expectedPlan.ChangesPresent, changed)
+	})
 }
