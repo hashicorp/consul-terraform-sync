@@ -20,7 +20,6 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 		Module:      &tr.Module,
 		Version:     tr.Version,
 		Enabled:     tr.Enabled,
-		WorkingDir:  tr.WorkingDir,
 	}
 
 	if tr.Providers != nil {
@@ -144,7 +143,6 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		Module:      *tc.Module,
 		Version:     tc.Version,
 		Enabled:     tc.Enabled,
-		WorkingDir:  tc.WorkingDir,
 	}
 
 	if tc.Variables != nil {
