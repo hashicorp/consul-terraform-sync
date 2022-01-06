@@ -153,7 +153,7 @@ task {
 	}
 	condition "catalog-services" {
 		regexp = ".*"
-		source_includes_var = false
+		use_as_module_input = false
 	}
 }`,
 		},
