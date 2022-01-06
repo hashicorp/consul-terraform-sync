@@ -156,10 +156,6 @@ components:
         version:
           type: string
           example: "1.0.0"
-        working_dir:
-          type: string
-          example: "./sync-tasks/task-name"
-          default: "sync-tasks"
         buffer_period:
           $ref: '#/components/schemas/BufferPeriod'
         condition:

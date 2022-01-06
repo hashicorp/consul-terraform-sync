@@ -113,7 +113,6 @@ type Task struct {
 	SourceInput  *SourceInput  `json:"source_input,omitempty"`
 	Variables    *VariableMap  `json:"variables,omitempty"`
 	Version      *string       `json:"version,omitempty"`
-	WorkingDir   *string       `json:"working_dir,omitempty"`
 }
 
 // TaskDeleteResponse defines model for TaskDeleteResponse.

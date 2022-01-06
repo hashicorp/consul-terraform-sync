@@ -56,16 +56,14 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "minimum_required_only",
 			request: &taskRequest{
-				Name:       "test-name",
-				Module:     "path",
-				Services:   &[]string{"api", "web"},
-				WorkingDir: config.String("sync-tasks"),
+				Name:     "test-name",
+				Module:   "path",
+				Services: &[]string{"api", "web"},
 			},
 			taskConfigExpected: config.TaskConfig{
-				Name:       config.String("test-name"),
-				Services:   []string{"api", "web"},
-				Module:     config.String("path"),
-				WorkingDir: config.String("sync-tasks"),
+				Name:     config.String("test-name"),
+				Services: []string{"api", "web"},
+				Module:   config.String("path"),
 			},
 		},
 		{
@@ -82,8 +80,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Max:     config.String("5m"),
 					Min:     config.String("30s"),
 				},
-				Enabled:    config.Bool(true),
-				WorkingDir: config.String("sync-tasks"),
+				Enabled: config.Bool(true),
 			},
 			taskConfigExpected: config.TaskConfig{
 				Description: config.String("test-description"),
@@ -97,8 +94,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 					Max:     config.TimeDuration(time.Duration(5 * time.Minute)),
 					Min:     config.TimeDuration(time.Duration(30 * time.Second)),
 				},
-				Enabled:    config.Bool(true),
-				WorkingDir: config.String("sync-tasks"),
+				Enabled: config.Bool(true),
 			},
 		},
 		{
@@ -364,7 +360,6 @@ func TestTaskResponse_String(t *testing.T) {
 					Regexp: config.String(""),
 				},
 			},
-			WorkingDir: config.String("sync-tasks/task"),
 		},
 	}
 
@@ -374,7 +369,7 @@ func TestTaskResponse_String(t *testing.T) {
 		`"condition":{"catalog_services":{"datacenter":"dc2","namespace":"ns2",` +
 		`"node_meta":{"key1":"value1","key2":"value2"},"regexp":".*",` +
 		`"source_includes_var":true}},"enabled":true,"module":"path","name":"task",` +
-		`"source_input":{"services":{"regexp":""}},"version":"","working_dir":"sync-tasks/task"}}`
+		`"source_input":{"services":{"regexp":""}},"version":""}}`
 	require.Equal(t, expected, actual)
 }
 
@@ -420,7 +415,6 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
 				Enabled:      config.Bool(true),
 				Condition:    config.EmptyConditionConfig(),
-				WorkingDir:   config.String("sync-tasks"),
 				SourceInput:  config.EmptySourceInputConfig(),
 			},
 			expectedResponse: taskResponse{
@@ -438,7 +432,6 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					Enabled:     config.Bool(true),
 					Condition:   &oapigen.Condition{},
 					SourceInput: &oapigen.SourceInput{},
-					WorkingDir:  config.String("sync-tasks"),
 					Services:    &[]string{"api", "web"},
 					Providers:   &[]string{"test-provider-1", "test-provider-2"},
 				},
