@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 // BenchmarkTaskTrigger benchmarks the time for a Consul catalog change to
@@ -39,8 +40,7 @@ func BenchmarkTaskTrigger(b *testing.B) {
 		numServices: 25,
 	})
 
-	ctrl, err := controller.NewReadWrite(conf)
-	rwCtrl := ctrl.(*controller.ReadWrite)
+	rwCtrl, err := controller.NewReadWrite(conf)
 	require.NoError(b, err)
 	err = rwCtrl.Init(ctx)
 	require.NoError(b, err)
@@ -49,7 +49,7 @@ func BenchmarkTaskTrigger(b *testing.B) {
 
 	ctrlStopped := make(chan error)
 	go func() {
-		err := ctrl.Run(ctx)
+		err := rwCtrl.Run(ctx)
 		ctrlStopped <- err
 	}()
 
