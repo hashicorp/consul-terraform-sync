@@ -148,7 +148,8 @@ func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 	require.NoError(t, decoder.Decode(&actual))
 	expected := generateExpectedResponse(t, request)
 	expected.Run = &oapigen.Run{
-		Plan: config.String("foobar-plan"),
+		Plan:           config.String("foobar-plan"),
+		ChangesPresent: config.Bool(true),
 	}
 	assert.Equal(t, expected, oapigen.TaskResponse(actual))
 	ctrl.AssertExpectations(t)
