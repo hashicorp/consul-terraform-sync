@@ -45,27 +45,27 @@ func moduleInputToTypeFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		// abstract sourceInputs map out depending on hcl vs. json formatting
+		// abstract moduleInputs map out depending on hcl vs. json formatting
 		// data hcl ex: [map[services:[map[regexp:.*]]]]
 		// data json ex: map[services:map[regexp:.*]]
-		var sourceInputs map[string]interface{}
+		var moduleInputs map[string]interface{}
 		if hcl, ok := data.([]map[string]interface{}); ok {
 			if len(hcl) != 1 {
 				return nil, fmt.Errorf("expected only one item in hcl "+
-					"sourceInput but got %d: %v", len(hcl), data)
+					"module_input but got %d: %v", len(hcl), data)
 			}
-			sourceInputs = hcl[0]
+			moduleInputs = hcl[0]
 		}
 		if json, ok := data.(map[string]interface{}); ok {
-			sourceInputs = json
+			moduleInputs = json
 		}
 
-		if c, ok := sourceInputs[servicesType]; ok {
+		if c, ok := moduleInputs[servicesType]; ok {
 			var config ServicesModuleInputConfig
 			return decodeModuleInputToType(c, &config)
 		}
 
-		if c, ok := sourceInputs[consulKVType]; ok {
+		if c, ok := moduleInputs[consulKVType]; ok {
 			var config ConsulKVModuleInputConfig
 			return decodeModuleInputToType(c, &config)
 		}
@@ -77,7 +77,7 @@ func moduleInputToTypeFunc() mapstructure.DecodeHookFunc {
 // decodeModuleInputToType is used by the overall config mapstructure decode hook
 // ModuleInputToTypeFunc in order to convert ModuleInputConfig in the form
 // of an interface into an implementation
-func decodeModuleInputToType(data interface{}, sourceInput ModuleInputConfig) (ModuleInputConfig, error) {
+func decodeModuleInputToType(data interface{}, moduleInput ModuleInputConfig) (ModuleInputConfig, error) {
 	var md mapstructure.Metadata
 	logger := logging.Global().Named(logSystemName)
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
@@ -87,7 +87,7 @@ func decodeModuleInputToType(data interface{}, sourceInput ModuleInputConfig) (M
 		WeaklyTypedInput: true,
 		ErrorUnused:      false,
 		Metadata:         &md,
-		Result:           &sourceInput,
+		Result:           &moduleInput,
 	})
 	if err != nil {
 		logger.Error("module_input mapstructure decoder create failed", "error", err)
@@ -106,7 +106,7 @@ func decodeModuleInputToType(data interface{}, sourceInput ModuleInputConfig) (M
 		return nil, err
 	}
 
-	return sourceInput, nil
+	return moduleInput, nil
 }
 
 // isModuleInputNil returns true if the module input is nil and false otherwise
