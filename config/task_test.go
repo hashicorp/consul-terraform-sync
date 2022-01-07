@@ -483,7 +483,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 			},
 		},
 		{
-			"with_services_source_input",
+			"with_services_module_input",
 			&TaskConfig{
 				Name:      String("task"),
 				Condition: &ScheduleConditionConfig{},
@@ -811,7 +811,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"valid: sched cond: service source_input configured & no services",
+			"valid: sched cond: service module_input configured & no services",
 			&TaskConfig{
 				Name:      String("task"),
 				Module:    String("path"),
@@ -822,7 +822,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			true,
 		},
 		{
-			"invalid: sched cond: no services & no source_input",
+			"invalid: sched cond: no services & no module_input",
 			&TaskConfig{
 				Name:      String("task"),
 				Module:    String("path"),
@@ -831,7 +831,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: sched cond: services source_input configured & services configured",
+			"invalid: sched cond: services module_input configured & services configured",
 			&TaskConfig{
 				Name:      String("task"),
 				Module:    String("path"),
@@ -844,7 +844,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			false,
 		},
 		{
-			"invalid: sched cond: kv source_input configured & no services",
+			"invalid: sched cond: kv module_input configured & no services",
 			&TaskConfig{
 				Name:      String("task"),
 				Module:    String("path"),
@@ -859,7 +859,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 		},
 		// non-schedule condition test-cases
 		{
-			"invalid: non-sched cond: source_input configured",
+			"invalid: non-sched cond: module_input configured",
 			&TaskConfig{
 				Name:   String("task"),
 				Module: String("path"),
@@ -1020,7 +1020,7 @@ func TestTaskConfig_FinalizeValidate(t *testing.T) {
 			true,
 		},
 		{
-			"valid: no source_input included with schedule condition",
+			"valid: no module_input included with schedule condition",
 			&TaskConfig{
 				Name:      String("task_a"),
 				Module:    String("path"),

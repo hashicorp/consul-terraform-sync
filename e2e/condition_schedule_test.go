@@ -17,8 +17,9 @@ import (
 )
 
 // TestCondition_Schedule_Basic runs CTS in daemon-mode to test a task
-// configured with a schedule condition and monitoring task.services, task.source_input or both. This test
-// confirms some basic schedule condition behavior:
+// configured with a schedule condition and monitoring task.services,
+// task.module_input or both. This test confirms some basic schedule condition
+// behavior:
 // 1. Task successfully passes through once-mode and does not hang
 // 2. Task runs at the scheduled interval even when no dependency changes
 // 3. New dependencies do not trigger the task to run ahead of scheduled time
@@ -42,7 +43,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	condition "schedule" {
 		cron = "*/10 * * * * * *"
 	}
-    source_input "services"{
+    module_input "services"{
 	    regexp = "^web.*|^api.*"
     }
 }
@@ -54,7 +55,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	condition "schedule" {
       cron = "*/10 * * * * * *"
 	}
-    source_input "consul-kv" {
+    module_input "consul-kv" {
       path = "key-path"
       datacenter = "dc1"
     }
@@ -67,7 +68,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	condition "schedule" {
       cron = "*/10 * * * * * *"
 	}
-    source_input "consul-kv" {
+    module_input "consul-kv" {
       path = "key-path"
       datacenter = "dc1"
       recurse = true
@@ -90,21 +91,21 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			isRecurse:     false,
 		},
 		{
-			name:          "with source_input services",
+			name:          "with module_input services",
 			conditionTask: conditionWithSourceInput,
-			tempDir:       "schedule_basic_source_input",
+			tempDir:       "schedule_basic_module_input",
 			isConsulKV:    false,
 			isRecurse:     false,
 		},
 		{
-			name:          "with source_input consul_kv recurse false",
+			name:          "with module_input consul_kv recurse false",
 			conditionTask: sourceInputConsulKV,
 			tempDir:       "schedule_consulKV",
 			isConsulKV:    true,
 			isRecurse:     false,
 		},
 		{
-			name:          "with source_input consul_kvrecurse true",
+			name:          "with module_input consul_kvrecurse true",
 			conditionTask: sourceInputConsulKVRecurse,
 			tempDir:       "schedule_consulKV_recurse",
 			isConsulKV:    true,
