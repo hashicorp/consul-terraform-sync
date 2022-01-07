@@ -73,7 +73,7 @@ func (c *ServicesSourceInputConfig) Validate() error {
 		return nil
 	}
 	if err := c.ServicesMonitorConfig.Validate(); err != nil {
-		return fmt.Errorf("error validating `source_input \"services\"`: %s", err)
+		return fmt.Errorf("error validating `module_input \"services\"`: %s", err)
 	}
 	return nil
 }

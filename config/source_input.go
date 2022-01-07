@@ -69,7 +69,7 @@ func sourceInputToTypeFunc() mapstructure.DecodeHookFunc {
 			return decodeSourceInputToType(c, &config)
 		}
 
-		return nil, fmt.Errorf("unsupported source_input type: %v", data)
+		return nil, fmt.Errorf("unsupported module_input type: %v", data)
 	}
 }
 
@@ -89,19 +89,19 @@ func decodeSourceInputToType(data interface{}, sourceInput SourceInputConfig) (S
 		Result:           &sourceInput,
 	})
 	if err != nil {
-		logger.Error("source_input mapstructure decoder create failed", "error", err)
+		logger.Error("module_input mapstructure decoder create failed", "error", err)
 		return nil, err
 	}
 
 	if err := decoder.Decode(data); err != nil {
-		logger.Error("source_input mapstructure decode failed", "error", err)
+		logger.Error("module_input mapstructure decode failed", "error", err)
 		return nil, err
 	}
 
 	if len(md.Unused) > 0 {
 		sort.Strings(md.Unused)
 		err := fmt.Errorf("invalid keys: %s", strings.Join(md.Unused, ", "))
-		logger.Error("source_input invalid keys", "error", err)
+		logger.Error("module_input invalid keys", "error", err)
 		return nil, err
 	}
 

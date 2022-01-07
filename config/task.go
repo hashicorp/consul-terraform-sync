@@ -578,14 +578,14 @@ func (c *TaskConfig) validateCondition() error {
 		case *ScheduleConditionConfig:
 			if isSourceInputNil(c.ModuleInput) || isSourceInputEmpty(c.ModuleInput) {
 				return fmt.Errorf("schedule condition requires at least one service to " +
-					"be configured in task.services or a source_input must be provided")
+					"be configured in task.services or a module_input must be provided")
 			}
 		}
 	} else {
 		switch c.Condition.(type) {
 		case *ServicesConditionConfig:
 			err := fmt.Errorf("a task cannot be configured with both " +
-				"`services` field and `source_input` block. only one can be " +
+				"`services` field and `module_input` block. only one can be " +
 				"configured per task")
 			logging.Global().Named(logSystemName).Named(taskSubsystemName).
 				Error("list of services and service condition block both "+
@@ -600,14 +600,14 @@ func (c *TaskConfig) validateCondition() error {
 }
 
 func (c *TaskConfig) validateSourceInput() error {
-	// For now only schedule condition allows for source_input, so a condition
+	// For now only schedule condition allows for module_input, so a condition
 	// of type ScheduleConditionConfig is the only supported type
 	switch c.Condition.(type) {
 	case *ScheduleConditionConfig:
 		if len(c.Services) == 0 {
 			switch c.ModuleInput.(type) {
 			case *ConsulKVSourceInputConfig:
-				return fmt.Errorf("consul-kv source_input requires at least one service to " +
+				return fmt.Errorf("consul-kv module_input requires at least one service to " +
 					"be configured in task.services")
 			}
 		} else {
@@ -626,7 +626,7 @@ func (c *TaskConfig) validateSourceInput() error {
 		}
 	default:
 		if !isSourceInputNil(c.ModuleInput) && !isSourceInputEmpty(c.ModuleInput) {
-			return fmt.Errorf("source_input is only supported when a schedule condition is configured")
+			return fmt.Errorf("module_input is only supported when a schedule condition is configured")
 		}
 	}
 
