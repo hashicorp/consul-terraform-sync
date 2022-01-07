@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var _ SourceInputConfig = (*ServicesSourceInputConfig)(nil)
+var _ ModuleInputConfig = (*ServicesSourceInputConfig)(nil)
 
 // ServicesSourceInputConfig configures a source_input configuration block of type
 // 'services'. Data about the services monitored will be used as input for the source variables.

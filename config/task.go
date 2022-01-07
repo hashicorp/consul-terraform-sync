@@ -42,8 +42,8 @@ type TaskConfig struct {
 	// ModuleInput defines the Consul objects (e.g. services, kv) whose values are
 	// provided as the task module’s input variables.
 	// Previously named SourceInput - Deprecated in 0.5
-	ModuleInput           SourceInputConfig `mapstructure:"module_input"`
-	DeprecatedSourceInput SourceInputConfig `mapstructure:"source_input"`
+	ModuleInput           ModuleInputConfig `mapstructure:"module_input"`
+	DeprecatedSourceInput ModuleInputConfig `mapstructure:"source_input"`
 
 	// VarFiles is a list of paths to files containing variables for the
 	// task. For the Terraform driver, these are files ending in `.tfvars` and

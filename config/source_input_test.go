@@ -80,7 +80,7 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 	// Specifically test decoding module_input configs
 	cases := []struct {
 		name     string
-		expected SourceInputConfig
+		expected ModuleInputConfig
 		filename string
 		config   string
 	}{

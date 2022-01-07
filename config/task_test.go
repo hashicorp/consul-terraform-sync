@@ -576,7 +576,7 @@ func TestTaskConfig_Finalize_DeprecatedSourceInput(t *testing.T) {
 	cases := []struct {
 		name     string
 		i        *TaskConfig
-		expected SourceInputConfig
+		expected ModuleInputConfig
 	}{
 		{
 			"module_input_configured",

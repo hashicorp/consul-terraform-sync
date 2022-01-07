@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var _ SourceInputConfig = (*ConsulKVSourceInputConfig)(nil)
+var _ ModuleInputConfig = (*ConsulKVSourceInputConfig)(nil)
 
 // ConsulKVSourceInputConfig configures a source_input configuration block of type
 // 'consul-kv'. The consul key-values will be used as input for the source variables.

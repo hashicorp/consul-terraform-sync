@@ -11,26 +11,27 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// SourceInputConfig configures a source_input on a task. This Source Input defines which Consul objects to monitor
-// (e.g. services, kv) whose values are then provided as the task source’s input variables
-type SourceInputConfig interface {
+// ModuleInputConfig configures a module_input on a task. The module input
+// defines the Consul object(s) to monitor (e.g. services, kv). The object
+// values as passed to the task module's input variable
+type ModuleInputConfig interface {
 	MonitorConfig
 }
 
 // EmptyModuleInputConfig sets un-configured module inputs with a non-null
 // value
-func EmptyModuleInputConfig() SourceInputConfig {
+func EmptyModuleInputConfig() ModuleInputConfig {
 	return &NoMonitorConfig{}
 }
 
-// isModuleInputEmpty returns true if the provided SourceInputConfig `c` is
+// isModuleInputEmpty returns true if the provided ModuleInputConfig `c` is
 // of type NoMonitorConfig
-func isModuleInputEmpty(c SourceInputConfig) bool {
+func isModuleInputEmpty(c ModuleInputConfig) bool {
 	_, ok := c.(*NoMonitorConfig)
 	return ok
 }
 
-// moduleInputToTypeFunc is a decode hook function to decode a SourceInputConfig
+// moduleInputToTypeFunc is a decode hook function to decode a ModuleInputConfig
 // into a specific module var implementation structures. Used when decoding
 // cts config overall.
 func moduleInputToTypeFunc() mapstructure.DecodeHookFunc {
@@ -38,8 +39,8 @@ func moduleInputToTypeFunc() mapstructure.DecodeHookFunc {
 		f reflect.Type,
 		t reflect.Type,
 		data interface{}) (interface{}, error) {
-		// identify if parsing a SourceInputConfig
-		var i SourceInputConfig
+		// identify if parsing a ModuleInputConfig
+		var i ModuleInputConfig
 		if t != reflect.TypeOf(&i).Elem() {
 			return data, nil
 		}
@@ -74,9 +75,9 @@ func moduleInputToTypeFunc() mapstructure.DecodeHookFunc {
 }
 
 // decodeModuleInputToType is used by the overall config mapstructure decode hook
-// ModuleInputToTypeFunc in order to convert SourceInputConfig in the form
+// ModuleInputToTypeFunc in order to convert ModuleInputConfig in the form
 // of an interface into an implementation
-func decodeModuleInputToType(data interface{}, sourceInput SourceInputConfig) (SourceInputConfig, error) {
+func decodeModuleInputToType(data interface{}, sourceInput ModuleInputConfig) (ModuleInputConfig, error) {
 	var md mapstructure.Metadata
 	logger := logging.Global().Named(logSystemName)
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
@@ -109,6 +110,6 @@ func decodeModuleInputToType(data interface{}, sourceInput SourceInputConfig) (S
 }
 
 // isModuleInputNil returns true if the module input is nil and false otherwise
-func isModuleInputNil(si SourceInputConfig) bool {
+func isModuleInputNil(si ModuleInputConfig) bool {
 	return isMonitorNil(si)
 }
