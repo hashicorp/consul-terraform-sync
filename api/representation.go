@@ -58,7 +58,7 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	if tr.Condition != nil {
 		if tr.Condition.Services != nil {
 			cond := &config.ServicesConditionConfig{
-				UseAsModuleInput: tr.Condition.Services.SourceIncludesVar,
+				UseAsModuleInput: tr.Condition.Services.UseAsModuleInput,
 			}
 			if tr.Condition.Services.Names != nil && len(*tr.Condition.Services.Names) > 0 {
 				cond.Names = *tr.Condition.Services.Names
@@ -74,13 +74,13 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 					Path:       &tr.Condition.ConsulKv.Path,
 					Namespace:  tr.Condition.ConsulKv.Namespace,
 				},
-				UseAsModuleInput: tr.Condition.ConsulKv.SourceIncludesVar,
+				UseAsModuleInput: tr.Condition.ConsulKv.UseAsModuleInput,
 			}
 		} else if tr.Condition.CatalogServices != nil {
 			tc.Condition = &config.CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
 					Regexp:           config.String(tr.Condition.CatalogServices.Regexp),
-					UseAsModuleInput: tr.Condition.CatalogServices.SourceIncludesVar,
+					UseAsModuleInput: tr.Condition.CatalogServices.UseAsModuleInput,
 					Datacenter:       tr.Condition.CatalogServices.Datacenter,
 					Namespace:        tr.Condition.CatalogServices.Namespace,
 					NodeMeta:         tr.Condition.CatalogServices.NodeMeta.AdditionalProperties,
@@ -187,7 +187,7 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		switch cond := tc.Condition.(type) {
 		case *config.ServicesConditionConfig:
 			services := &oapigen.ServicesCondition{
-				SourceIncludesVar: cond.UseAsModuleInput,
+				UseAsModuleInput: cond.UseAsModuleInput,
 			}
 			if len(cond.Names) > 0 {
 				services.Names = &cond.Names
@@ -197,21 +197,21 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 			task.Condition.Services = services
 		case *config.CatalogServicesConditionConfig:
 			task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
-				Regexp:            *cond.Regexp,
-				SourceIncludesVar: cond.UseAsModuleInput,
-				Datacenter:        cond.Datacenter,
-				Namespace:         cond.Namespace,
+				Regexp:           *cond.Regexp,
+				UseAsModuleInput: cond.UseAsModuleInput,
+				Datacenter:       cond.Datacenter,
+				Namespace:        cond.Namespace,
 				NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
 					AdditionalProperties: cond.NodeMeta,
 				},
 			}
 		case *config.ConsulKVConditionConfig:
 			task.Condition.ConsulKv = &oapigen.ConsulKVCondition{
-				Datacenter:        cond.Datacenter,
-				Recurse:           cond.Recurse,
-				Path:              *cond.Path,
-				Namespace:         cond.Namespace,
-				SourceIncludesVar: cond.UseAsModuleInput,
+				Datacenter:       cond.Datacenter,
+				Recurse:          cond.Recurse,
+				Path:             *cond.Path,
+				Namespace:        cond.Namespace,
+				UseAsModuleInput: cond.UseAsModuleInput,
 			}
 		case *config.ScheduleConditionConfig:
 			task.Condition.Schedule = &oapigen.ScheduleCondition{
