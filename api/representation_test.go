@@ -233,7 +233,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_services_source_input",
+			name: "with_services_module_input",
 			request: &taskRequest{
 				Name:   "task",
 				Module: "path",
@@ -257,7 +257,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_consul_kv_source_input",
+			name: "with_consul_kv_module_input",
 			request: &taskRequest{
 				Name:     "task",
 				Module:   "path",
@@ -603,7 +603,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_services_source_input",
+			name: "with_services_module_input",
 			taskConfig: config.TaskConfig{
 				Name:      config.String("task"),
 				Module:    config.String("path"),
@@ -637,7 +637,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_consul_kv_source_input",
+			name: "with_consul_kv_module_input",
 			taskConfig: config.TaskConfig{
 				Name:      config.String("task"),
 				Services:  []string{"api", "web"},
