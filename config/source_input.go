@@ -17,9 +17,9 @@ type SourceInputConfig interface {
 	MonitorConfig
 }
 
-// EmptySourceInputConfig sets un-configured source inputs with a non-null
+// EmptyModuleInputConfig sets un-configured module inputs with a non-null
 // value
-func EmptySourceInputConfig() SourceInputConfig {
+func EmptyModuleInputConfig() SourceInputConfig {
 	return &NoMonitorConfig{}
 }
 

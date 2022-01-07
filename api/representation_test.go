@@ -416,7 +416,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
 				Enabled:      config.Bool(true),
 				Condition:    config.EmptyConditionConfig(),
-				ModuleInput:  config.EmptySourceInputConfig(),
+				ModuleInput:  config.EmptyModuleInputConfig(),
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",

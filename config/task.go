@@ -326,7 +326,7 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 
 	}
 	if isSourceInputNil(c.ModuleInput) {
-		c.ModuleInput = EmptySourceInputConfig()
+		c.ModuleInput = EmptyModuleInputConfig()
 	}
 	c.ModuleInput.Finalize()
 

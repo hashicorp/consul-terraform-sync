@@ -430,7 +430,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Enabled:      Bool(true),
 				Condition:    EmptyConditionConfig(),
 				WorkingDir:   String("sync-tasks"),
-				ModuleInput:  EmptySourceInputConfig(),
+				ModuleInput:  EmptyModuleInputConfig(),
 			},
 		},
 		{
@@ -452,7 +452,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Enabled:      Bool(true),
 				Condition:    EmptyConditionConfig(),
 				WorkingDir:   String("sync-tasks/task"),
-				ModuleInput:  EmptySourceInputConfig(),
+				ModuleInput:  EmptyModuleInputConfig(),
 			},
 		},
 		{
@@ -479,7 +479,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Enabled:     Bool(true),
 				Condition:   &ScheduleConditionConfig{String("")},
 				WorkingDir:  String("sync-tasks/task"),
-				ModuleInput: EmptySourceInputConfig(),
+				ModuleInput: EmptyModuleInputConfig(),
 			},
 		},
 		{
@@ -642,7 +642,7 @@ func TestTaskConfig_Finalize_DeprecatedSourceInput(t *testing.T) {
 		{
 			"none_configured",
 			&TaskConfig{},
-			EmptySourceInputConfig(),
+			EmptyModuleInputConfig(),
 		},
 	}
 
