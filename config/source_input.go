@@ -23,17 +23,17 @@ func EmptyModuleInputConfig() SourceInputConfig {
 	return &NoMonitorConfig{}
 }
 
-// isSourceInputEmpty returns true if the provided SourceInputConfig `c` is
+// isModuleInputEmpty returns true if the provided SourceInputConfig `c` is
 // of type NoMonitorConfig
-func isSourceInputEmpty(c SourceInputConfig) bool {
+func isModuleInputEmpty(c SourceInputConfig) bool {
 	_, ok := c.(*NoMonitorConfig)
 	return ok
 }
 
-// sourceInputToTypeFunc is a decode hook function to decode a SourceInputConfig
-// into a specific source var implementation structures. Used when decoding
+// moduleInputToTypeFunc is a decode hook function to decode a SourceInputConfig
+// into a specific module var implementation structures. Used when decoding
 // cts config overall.
-func sourceInputToTypeFunc() mapstructure.DecodeHookFunc {
+func moduleInputToTypeFunc() mapstructure.DecodeHookFunc {
 	return func(
 		f reflect.Type,
 		t reflect.Type,
@@ -61,22 +61,22 @@ func sourceInputToTypeFunc() mapstructure.DecodeHookFunc {
 
 		if c, ok := sourceInputs[servicesType]; ok {
 			var config ServicesSourceInputConfig
-			return decodeSourceInputToType(c, &config)
+			return decodeModuleInputToType(c, &config)
 		}
 
 		if c, ok := sourceInputs[consulKVType]; ok {
 			var config ConsulKVSourceInputConfig
-			return decodeSourceInputToType(c, &config)
+			return decodeModuleInputToType(c, &config)
 		}
 
 		return nil, fmt.Errorf("unsupported module_input type: %v", data)
 	}
 }
 
-// decodeSourceInputToType is used by the overall config mapstructure decode hook
-// SourceInputToTypeFunc in order to convert SourceInputConfig in the form
+// decodeModuleInputToType is used by the overall config mapstructure decode hook
+// ModuleInputToTypeFunc in order to convert SourceInputConfig in the form
 // of an interface into an implementation
-func decodeSourceInputToType(data interface{}, sourceInput SourceInputConfig) (SourceInputConfig, error) {
+func decodeModuleInputToType(data interface{}, sourceInput SourceInputConfig) (SourceInputConfig, error) {
 	var md mapstructure.Metadata
 	logger := logging.Global().Named(logSystemName)
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{

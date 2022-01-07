@@ -576,7 +576,7 @@ func (c *TaskConfig) validateCondition() error {
 			return fmt.Errorf("consul-kv condition requires at least one service to " +
 				"be configured in task.services")
 		case *ScheduleConditionConfig:
-			if isModuleInputNil(c.ModuleInput) || isSourceInputEmpty(c.ModuleInput) {
+			if isModuleInputNil(c.ModuleInput) || isModuleInputEmpty(c.ModuleInput) {
 				return fmt.Errorf("schedule condition requires at least one service to " +
 					"be configured in task.services or a module_input must be provided")
 			}
@@ -625,7 +625,7 @@ func (c *TaskConfig) validateSourceInput() error {
 			}
 		}
 	default:
-		if !isModuleInputNil(c.ModuleInput) && !isSourceInputEmpty(c.ModuleInput) {
+		if !isModuleInputNil(c.ModuleInput) && !isModuleInputEmpty(c.ModuleInput) {
 			return fmt.Errorf("module_input is only supported when a schedule condition is configured")
 		}
 	}
