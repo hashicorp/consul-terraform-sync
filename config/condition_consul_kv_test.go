@@ -30,7 +30,8 @@ func TestConsulKVConditionConfig_Copy(t *testing.T) {
 					Datacenter: String("dc2"),
 					Namespace:  String("ns2"),
 				},
-				SourceIncludesVar: Bool(true),
+				UseAsModuleInput:            Bool(true),
+				DeprecatedSourceIncludesVar: Bool(true),
 			},
 		},
 	}
@@ -131,27 +132,51 @@ func TestConsulKVConditionConfig_Merge(t *testing.T) {
 		},
 		{
 			"source_includes_var_overrides",
-			&ConsulKVConditionConfig{SourceIncludesVar: Bool(true)},
-			&ConsulKVConditionConfig{SourceIncludesVar: Bool(false)},
-			&ConsulKVConditionConfig{SourceIncludesVar: Bool(false)},
+			&ConsulKVConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ConsulKVConditionConfig{DeprecatedSourceIncludesVar: Bool(false)},
+			&ConsulKVConditionConfig{DeprecatedSourceIncludesVar: Bool(false)},
 		},
 		{
 			"source_includes_var_empty_one",
-			&ConsulKVConditionConfig{SourceIncludesVar: Bool(true)},
+			&ConsulKVConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
 			&ConsulKVConditionConfig{},
-			&ConsulKVConditionConfig{SourceIncludesVar: Bool(true)},
+			&ConsulKVConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
 		},
 		{
 			"source_includes_var_empty_two",
 			&ConsulKVConditionConfig{},
-			&ConsulKVConditionConfig{SourceIncludesVar: Bool(true)},
-			&ConsulKVConditionConfig{SourceIncludesVar: Bool(true)},
+			&ConsulKVConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ConsulKVConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
 		},
 		{
 			"source_includes_var_empty_same",
-			&ConsulKVConditionConfig{SourceIncludesVar: Bool(true)},
-			&ConsulKVConditionConfig{SourceIncludesVar: Bool(true)},
-			&ConsulKVConditionConfig{SourceIncludesVar: Bool(true)},
+			&ConsulKVConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ConsulKVConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ConsulKVConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+		},
+		{
+			"use_as_module_input_overrides",
+			&ConsulKVConditionConfig{UseAsModuleInput: Bool(true)},
+			&ConsulKVConditionConfig{UseAsModuleInput: Bool(false)},
+			&ConsulKVConditionConfig{UseAsModuleInput: Bool(false)},
+		},
+		{
+			"use_as_module_input_empty_one",
+			&ConsulKVConditionConfig{UseAsModuleInput: Bool(true)},
+			&ConsulKVConditionConfig{},
+			&ConsulKVConditionConfig{UseAsModuleInput: Bool(true)},
+		},
+		{
+			"use_as_module_input_empty_two",
+			&ConsulKVConditionConfig{},
+			&ConsulKVConditionConfig{UseAsModuleInput: Bool(true)},
+			&ConsulKVConditionConfig{UseAsModuleInput: Bool(true)},
+		},
+		{
+			"use_as_module_input_empty_same",
+			&ConsulKVConditionConfig{UseAsModuleInput: Bool(true)},
+			&ConsulKVConditionConfig{UseAsModuleInput: Bool(true)},
+			&ConsulKVConditionConfig{UseAsModuleInput: Bool(true)},
 		},
 		{
 			"datacenter_overrides",
@@ -234,7 +259,7 @@ func TestConsulKVConditionConfig_Finalize(t *testing.T) {
 					Datacenter: String(""),
 					Namespace:  String(""),
 				},
-				SourceIncludesVar: Bool(true),
+				UseAsModuleInput: Bool(true),
 			},
 		},
 	}
@@ -243,6 +268,50 @@ func TestConsulKVConditionConfig_Finalize(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
+		})
+	}
+}
+
+func TestConsulKVConditionConfig_Finalize_DeprecatedSourceIncludesVar(t *testing.T) {
+	cases := []struct {
+		name     string
+		i        *ConsulKVConditionConfig
+		expected bool
+	}{
+		{
+			"use_as_module_input_configured",
+			&ConsulKVConditionConfig{
+				UseAsModuleInput: Bool(false),
+			},
+			false,
+		},
+		{
+			"source_includes_var_configured",
+			&ConsulKVConditionConfig{
+				DeprecatedSourceIncludesVar: Bool(false),
+			},
+			false,
+		},
+		{
+			"both_configured",
+			&ConsulKVConditionConfig{
+				UseAsModuleInput:            Bool(false),
+				DeprecatedSourceIncludesVar: Bool(true),
+			},
+			false,
+		},
+
+		{
+			"neither_configured",
+			&ConsulKVConditionConfig{},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.i.Finalize()
+			assert.Equal(t, tc.expected, *tc.i.UseAsModuleInput)
 		})
 	}
 }
@@ -265,7 +334,7 @@ func TestConsulKVConditionConfig_Validate(t *testing.T) {
 					Datacenter: String("dc2"),
 					Namespace:  String("ns2"),
 				},
-				SourceIncludesVar: Bool(true),
+				UseAsModuleInput: Bool(true),
 			},
 		},
 		{

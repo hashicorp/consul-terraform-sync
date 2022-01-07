@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 var _ ConditionConfig = (*ConsulKVConditionConfig)(nil)
@@ -11,7 +13,10 @@ var _ ConditionConfig = (*ConsulKVConditionConfig)(nil)
 // that occur to consul key-values.
 type ConsulKVConditionConfig struct {
 	ConsulKVMonitorConfig `mapstructure:",squash"`
-	SourceIncludesVar     *bool `mapstructure:"source_includes_var"`
+
+	// UseAsModuleInput was previously named SourceIncludesVar - deprecated v0.5
+	UseAsModuleInput            *bool `mapstructure:"use_as_module_input"`
+	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -21,7 +26,8 @@ func (c *ConsulKVConditionConfig) Copy() MonitorConfig {
 	}
 
 	var o ConsulKVConditionConfig
-	o.SourceIncludesVar = BoolCopy(c.SourceIncludesVar)
+	o.UseAsModuleInput = BoolCopy(c.UseAsModuleInput)
+	o.DeprecatedSourceIncludesVar = BoolCopy(c.DeprecatedSourceIncludesVar)
 
 	m, ok := c.ConsulKVMonitorConfig.Copy().(*ConsulKVMonitorConfig)
 	if !ok {
@@ -54,8 +60,12 @@ func (c *ConsulKVConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 	}
 
 	r2 := r.(*ConsulKVConditionConfig)
-	if o2.SourceIncludesVar != nil {
-		r2.SourceIncludesVar = BoolCopy(o2.SourceIncludesVar)
+
+	if o2.UseAsModuleInput != nil {
+		r2.UseAsModuleInput = BoolCopy(o2.UseAsModuleInput)
+	}
+	if o2.DeprecatedSourceIncludesVar != nil {
+		r2.DeprecatedSourceIncludesVar = BoolCopy(o2.DeprecatedSourceIncludesVar)
 	}
 
 	mm, ok := c.ConsulKVMonitorConfig.Merge(&o2.ConsulKVMonitorConfig).(*ConsulKVMonitorConfig)
@@ -73,8 +83,24 @@ func (c *ConsulKVConditionConfig) Finalize() {
 		return
 	}
 
-	if c.SourceIncludesVar == nil {
-		c.SourceIncludesVar = Bool(true)
+	logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
+	if c.DeprecatedSourceIncludesVar != nil {
+		logger.Warn("Consul-KV condition block's 'source_includes_var' " +
+			"field was marked for deprecation in v0.5.0. Please update your " +
+			"configuration to use the 'use_as_module_input' field instead")
+
+		if c.UseAsModuleInput != nil {
+			logger.Warn("Consul-KV condition block is configured with "+
+				"both 'source_includes_var' and 'use_as_module_input' field. "+
+				"Defaulting to 'use_as_module_input' value",
+				"use_as_module_input", c.UseAsModuleInput)
+		} else {
+			// Merge SourceIncludesVar with UseAsModuleInput. Use UseAsModuleInput onwards
+			c.UseAsModuleInput = c.DeprecatedSourceIncludesVar
+		}
+	}
+	if c.UseAsModuleInput == nil {
+		c.UseAsModuleInput = Bool(true)
 	}
 
 	c.ConsulKVMonitorConfig.Finalize()
@@ -97,10 +123,10 @@ func (c *ConsulKVConditionConfig) GoString() string {
 	}
 
 	return fmt.Sprintf("&ConsulKVConditionConfig{"+
-		"SourceIncludesVar:%v, "+
-		"%s"+
+		"%s, "+
+		"UseAsModuleInput:%v"+
 		"}",
-		BoolVal(c.SourceIncludesVar),
 		c.ConsulKVMonitorConfig.GoString(),
+		BoolVal(c.UseAsModuleInput),
 	)
 }

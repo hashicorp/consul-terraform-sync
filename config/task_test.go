@@ -34,10 +34,10 @@ func TestTaskConfig_Copy(t *testing.T) {
 				Enabled:     Bool(true),
 				Condition: &CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig{
-						Regexp:            String(".*"),
-						SourceIncludesVar: Bool(true),
-						Datacenter:        String("dc2"),
-						Namespace:         String("ns2"),
+						Regexp:           String(".*"),
+						UseAsModuleInput: Bool(true),
+						Datacenter:       String("dc2"),
+						Namespace:        String("ns2"),
 						NodeMeta: map[string]string{
 							"key": "value",
 						},

@@ -32,7 +32,7 @@ func TestCondition_Services(t *testing.T) {
 			cts_user_defined_meta {
 				my_meta_key = "my_meta_value"
 			}
-			source_includes_var = %t
+			use_as_module_input = %t
 		}
 	}`
 
@@ -45,7 +45,7 @@ func TestCondition_Services(t *testing.T) {
 			cts_user_defined_meta {
 				my_meta_key = "my_meta_value"
 			}
-			source_includes_var = %t
+			use_as_module_input = %t
 		}
 	}`
 
@@ -103,10 +103,10 @@ func TestCondition_Services(t *testing.T) {
 			//    (no new event) and its data is filtered out of services variable.
 			// 2. Register api-web service instance. Confirm that task was triggered
 			//    (one new event). Confirm data exists in the services variable and
-			//    confirm metadata in tfvars (source_includes_var=true only).
+			//    confirm metadata in tfvars (use_as_module_input=true only).
 			// 3. Register a second node to the api-web service. Confirm that
 			//    task was triggered (one new event). Confirm data exists in
-			//    the services variable (source_includes_var=true only).
+			//    the services variable (use_as_module_input=true only).
 			// 4. Register a third node to the api-web service with tag_a. Confirm that
 			//    task was not triggered and the data is not in the services variable.
 

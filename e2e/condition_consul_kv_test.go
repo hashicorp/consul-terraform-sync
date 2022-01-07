@@ -38,7 +38,7 @@ func newKVTaskConfig(taskName string, opts kvTaskOpts) string {
 		module = "%s"
 		condition "consul-kv" {
 			path = "%s"
-			source_includes_var = %t
+			use_as_module_input = %t
 			recurse = %t
 		}
 	}
@@ -70,12 +70,12 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 			false,
 		},
 		{
-			"single_key_source_includes_var_true",
+			"single_key_use_as_module_input_true",
 			false,
 			true,
 		},
 		{
-			"recurse_source_includes_var_true",
+			"recurse_use_as_module_input_true",
 			true,
 			true,
 		},
@@ -178,12 +178,12 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 			false,
 		},
 		{
-			"single_key_source_includes_var_true",
+			"single_key_use_as_module_input_true",
 			false,
 			true,
 		},
 		{
-			"recurse_source_includes_var_true",
+			"recurse_use_as_module_input_true",
 			true,
 			true,
 		},
@@ -305,12 +305,12 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 			false,
 		},
 		{
-			"single_key_source_includes_var_true",
+			"single_key_use_as_module_input_true",
 			false,
 			true,
 		},
 		{
-			"recurse_source_includes_var_true",
+			"recurse_use_as_module_input_true",
 			true,
 			true,
 		},

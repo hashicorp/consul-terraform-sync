@@ -229,7 +229,7 @@ components:
           items:
             type: string
             example: ["web", "api"]
-        source_includes_var:
+        use_as_module_input:
           type: boolean
           default: true
           example: false
@@ -251,7 +251,7 @@ components:
             type: string
           example:
             key: value
-        source_includes_var:
+        use_as_module_input:
           type: boolean
           default: true
           example: false
@@ -273,7 +273,7 @@ components:
         namespace:
           type: string
           example: "default"
-        source_includes_var:
+        use_as_module_input:
           type: boolean
           default: true
           example: false

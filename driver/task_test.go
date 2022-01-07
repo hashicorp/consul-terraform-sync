@@ -174,7 +174,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 						Namespace:  config.String("ns1"),
 						Filter:     config.String("filter"),
 					},
-					SourceIncludesVar: config.Bool(false),
+					UseAsModuleInput: config.Bool(false),
 				},
 			},
 			expectedTemplates: []tftmpl.Template{
@@ -197,7 +197,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 						Namespace:  config.String("ns1"),
 						Filter:     config.String("filter"),
 					},
-					SourceIncludesVar: config.Bool(false),
+					UseAsModuleInput: config.Bool(false),
 				},
 			},
 			expectedTemplates: []tftmpl.Template{

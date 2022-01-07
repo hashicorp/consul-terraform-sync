@@ -17,11 +17,11 @@ type BufferPeriod struct {
 
 // CatalogServicesCondition defines model for CatalogServicesCondition.
 type CatalogServicesCondition struct {
-	Datacenter        *string                            `json:"datacenter,omitempty"`
-	Namespace         *string                            `json:"namespace,omitempty"`
-	NodeMeta          *CatalogServicesCondition_NodeMeta `json:"node_meta,omitempty"`
-	Regexp            string                             `json:"regexp"`
-	SourceIncludesVar *bool                              `json:"source_includes_var,omitempty"`
+	Datacenter       *string                            `json:"datacenter,omitempty"`
+	Namespace        *string                            `json:"namespace,omitempty"`
+	NodeMeta         *CatalogServicesCondition_NodeMeta `json:"node_meta,omitempty"`
+	Regexp           string                             `json:"regexp"`
+	UseAsModuleInput *bool                              `json:"use_as_module_input,omitempty"`
 }
 
 // CatalogServicesCondition_NodeMeta defines model for CatalogServicesCondition.NodeMeta.
@@ -39,11 +39,11 @@ type Condition struct {
 
 // ConsulKVCondition defines model for ConsulKVCondition.
 type ConsulKVCondition struct {
-	Datacenter        *string `json:"datacenter,omitempty"`
-	Namespace         *string `json:"namespace,omitempty"`
-	Path              string  `json:"path"`
-	Recurse           *bool   `json:"recurse,omitempty"`
-	SourceIncludesVar *bool   `json:"source_includes_var,omitempty"`
+	Datacenter       *string `json:"datacenter,omitempty"`
+	Namespace        *string `json:"namespace,omitempty"`
+	Path             string  `json:"path"`
+	Recurse          *bool   `json:"recurse,omitempty"`
+	UseAsModuleInput *bool   `json:"use_as_module_input,omitempty"`
 }
 
 // ConsulKVSourceInput defines model for ConsulKVSourceInput.
@@ -85,9 +85,9 @@ type ScheduleCondition struct {
 
 // ServicesCondition defines model for ServicesCondition.
 type ServicesCondition struct {
-	Names             *[]string `json:"names,omitempty"`
-	Regexp            *string   `json:"regexp,omitempty"`
-	SourceIncludesVar *bool     `json:"source_includes_var,omitempty"`
+	Names            *[]string `json:"names,omitempty"`
+	Regexp           *string   `json:"regexp,omitempty"`
+	UseAsModuleInput *bool     `json:"use_as_module_input,omitempty"`
 }
 
 // ServicesSourceInput defines model for ServicesSourceInput.
