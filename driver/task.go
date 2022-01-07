@@ -350,17 +350,17 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			SourceIncludesVar: *v.UseAsModuleInput,
 		}
 	case *config.ServicesConditionConfig:
-		if len(v.Names) > 0 {
-			condition = &tftmpl.ServicesTemplate{
-				Names:             v.Names,
+		if v.Regexp != nil {
+			condition = &tftmpl.ServicesRegexTemplate{
+				Regexp:            *v.Regexp,
 				Datacenter:        *v.Datacenter,
 				Namespace:         *v.Namespace,
 				Filter:            *v.Filter,
 				SourceIncludesVar: *v.UseAsModuleInput,
 			}
 		} else {
-			condition = &tftmpl.ServicesRegexTemplate{
-				Regexp:            *v.Regexp,
+			condition = &tftmpl.ServicesTemplate{
+				Names:             v.Names,
 				Datacenter:        *v.Datacenter,
 				Namespace:         *v.Namespace,
 				Filter:            *v.Filter,
@@ -389,9 +389,9 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	var sourceInput tftmpl.Template
 	switch v := t.sourceInput.(type) {
 	case *config.ServicesModuleInputConfig:
-		if len(v.Names) > 0 {
-			sourceInput = &tftmpl.ServicesTemplate{
-				Names:      v.Names,
+		if v.Regexp != nil {
+			sourceInput = &tftmpl.ServicesRegexTemplate{
+				Regexp:     *v.Regexp,
 				Datacenter: *v.Datacenter,
 				Namespace:  *v.Namespace,
 				Filter:     *v.Filter,
@@ -399,8 +399,8 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 				SourceIncludesVar: true,
 			}
 		} else {
-			sourceInput = &tftmpl.ServicesRegexTemplate{
-				Regexp:     *v.Regexp,
+			sourceInput = &tftmpl.ServicesTemplate{
+				Names:      v.Names,
 				Datacenter: *v.Datacenter,
 				Namespace:  *v.Namespace,
 				Filter:     *v.Filter,
