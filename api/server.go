@@ -16,5 +16,5 @@ type Server interface {
 	TaskCreate(context.Context, config.TaskConfig) (config.TaskConfig, error)
 	TaskCreateAndRun(context.Context, config.TaskConfig) (config.TaskConfig, error)
 	TaskDelete(ctx context.Context, taskName string) error
-	TaskInspect(context.Context, config.TaskConfig) (bool, string, error)
+	TaskInspect(context.Context, config.TaskConfig) (bool, string, string, error)
 }

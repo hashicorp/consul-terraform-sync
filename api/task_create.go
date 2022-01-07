@@ -82,7 +82,7 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 	logger := logging.FromContext(ctx).Named(createTaskSubsystemName).With("task_name", *taskConf.Name)
 
 	// Inspect task
-	changes, plan, err := h.ctrl.TaskInspect(ctx, taskConf)
+	changes, plan, _, err := h.ctrl.TaskInspect(ctx, taskConf)
 	if err != nil {
 		err = fmt.Errorf("error inspecting new task: %s", err)
 		sendError(w, r, http.StatusBadRequest, err)

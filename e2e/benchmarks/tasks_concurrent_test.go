@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 // BenchmarkTasksConcurrent executes the ReadWrite controller directly to
@@ -73,9 +74,8 @@ func benchmarkTasksConcurrent(b *testing.B, bConf benchmarkConfig) {
 
 	conf := generateConf(b, bConf)
 
-	ctrl, err := controller.NewReadWrite(conf)
+	rwCtrl, err := controller.NewReadWrite(conf)
 	require.NoError(b, err)
-	rwCtrl := ctrl.(*controller.ReadWrite)
 
 	err = rwCtrl.Init(context.Background())
 	require.NoError(b, err)
