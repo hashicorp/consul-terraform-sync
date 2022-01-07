@@ -299,7 +299,7 @@ func TestE2EValidateError(t *testing.T) {
 	services = ["api", "db"]
 	condition "catalog-services" {
 		regexp = "^api$|^db$"
-		source_includes_var = true
+		use_as_module_input = true
 	}
 }
 `, taskName)
