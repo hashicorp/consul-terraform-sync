@@ -41,9 +41,9 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 			if tr.SourceInput.Services.Names != nil {
 				si.Names = *tr.SourceInput.Services.Names
 			}
-			tc.SourceInput = si
+			tc.ModuleInput = si
 		} else if tr.SourceInput.ConsulKv != nil {
-			tc.SourceInput = &config.ConsulKVSourceInputConfig{
+			tc.ModuleInput = &config.ConsulKVSourceInputConfig{
 				ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 					Datacenter: tr.SourceInput.ConsulKv.Datacenter,
 					Recurse:    tr.SourceInput.ConsulKv.Recurse,
@@ -159,9 +159,9 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		task.Services = &tc.Services
 	}
 
-	if tc.SourceInput != nil {
+	if tc.ModuleInput != nil {
 		task.SourceInput = new(oapigen.SourceInput)
-		switch si := tc.SourceInput.(type) {
+		switch si := tc.ModuleInput.(type) {
 		case *config.ServicesSourceInputConfig:
 			if len(si.Names) > 0 {
 				task.SourceInput.Services = &oapigen.ServicesSourceInput{

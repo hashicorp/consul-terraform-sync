@@ -124,7 +124,7 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 			// confirm source_input decoding
 			tasks := *config.Tasks
 			require.Equal(t, 1, len(tasks))
-			require.Equal(t, tc.expected, tasks[0].SourceInput)
+			require.Equal(t, tc.expected, tasks[0].ModuleInput)
 		})
 	}
 }

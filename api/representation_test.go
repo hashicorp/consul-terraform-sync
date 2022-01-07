@@ -249,7 +249,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Name:      config.String("task"),
 				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				SourceInput: &config.ServicesSourceInputConfig{
+				ModuleInput: &config.ServicesSourceInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp: config.String("^api$"),
 					},
@@ -278,7 +278,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Services:  []string{"api", "web"},
 				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				SourceInput: &config.ConsulKVSourceInputConfig{
+				ModuleInput: &config.ConsulKVSourceInputConfig{
 					config.ConsulKVMonitorConfig{
 						Path:       config.String("fake-path"),
 						Recurse:    config.Bool(true),
@@ -415,7 +415,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
 				Enabled:      config.Bool(true),
 				Condition:    config.EmptyConditionConfig(),
-				SourceInput:  config.EmptySourceInputConfig(),
+				ModuleInput:  config.EmptySourceInputConfig(),
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
@@ -608,7 +608,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				Module:    config.String("path"),
 				Enabled:   config.Bool(true),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				SourceInput: &config.ServicesSourceInputConfig{
+				ModuleInput: &config.ServicesSourceInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp:             config.String("^api$"),
 						Datacenter:         config.String("dc"),
@@ -643,7 +643,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				Module:    config.String("path"),
 				Enabled:   config.Bool(true),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				SourceInput: &config.ConsulKVSourceInputConfig{
+				ModuleInput: &config.ConsulKVSourceInputConfig{
 					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 						Path:       config.String("fake-path"),
 						Recurse:    config.Bool(false),
