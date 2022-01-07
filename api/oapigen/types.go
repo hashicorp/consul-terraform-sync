@@ -46,8 +46,8 @@ type ConsulKVCondition struct {
 	UseAsModuleInput *bool   `json:"use_as_module_input,omitempty"`
 }
 
-// ConsulKVSourceInput defines model for ConsulKVSourceInput.
-type ConsulKVSourceInput struct {
+// ConsulKVModuleInput defines model for ConsulKVModuleInput.
+type ConsulKVModuleInput struct {
 	Datacenter *string `json:"datacenter,omitempty"`
 	Namespace  *string `json:"namespace,omitempty"`
 	Path       string  `json:"path"`
@@ -63,6 +63,12 @@ type Error struct {
 type ErrorResponse struct {
 	Error     Error     `json:"error"`
 	RequestId RequestID `json:"request_id"`
+}
+
+// ModuleInput defines model for ModuleInput.
+type ModuleInput struct {
+	ConsulKv *ConsulKVModuleInput `json:"consul_kv,omitempty"`
+	Services *ServicesModuleInput `json:"services,omitempty"`
 }
 
 // RequestID defines model for RequestID.
@@ -90,16 +96,10 @@ type ServicesCondition struct {
 	UseAsModuleInput *bool     `json:"use_as_module_input,omitempty"`
 }
 
-// ServicesSourceInput defines model for ServicesSourceInput.
-type ServicesSourceInput struct {
+// ServicesModuleInput defines model for ServicesModuleInput.
+type ServicesModuleInput struct {
 	Names  *[]string `json:"names,omitempty"`
 	Regexp *string   `json:"regexp,omitempty"`
-}
-
-// SourceInput defines model for SourceInput.
-type SourceInput struct {
-	ConsulKv *ConsulKVSourceInput `json:"consul_kv,omitempty"`
-	Services *ServicesSourceInput `json:"services,omitempty"`
 }
 
 // Task defines model for Task.
@@ -109,10 +109,10 @@ type Task struct {
 	Description  *string       `json:"description,omitempty"`
 	Enabled      *bool         `json:"enabled,omitempty"`
 	Module       string        `json:"module"`
+	ModuleInput  *ModuleInput  `json:"module_input,omitempty"`
 	Name         string        `json:"name"`
 	Providers    *[]string     `json:"providers,omitempty"`
 	Services     *[]string     `json:"services,omitempty"`
-	SourceInput  *SourceInput  `json:"source_input,omitempty"`
 	Variables    *VariableMap  `json:"variables,omitempty"`
 	Version      *string       `json:"version,omitempty"`
 }
