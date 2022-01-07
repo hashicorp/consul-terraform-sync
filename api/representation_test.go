@@ -249,7 +249,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Name:      config.String("task"),
 				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				ModuleInput: &config.ServicesSourceInputConfig{
+				ModuleInput: &config.ServicesModuleInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp: config.String("^api$"),
 					},
@@ -609,7 +609,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				Module:    config.String("path"),
 				Enabled:   config.Bool(true),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				ModuleInput: &config.ServicesSourceInputConfig{
+				ModuleInput: &config.ServicesModuleInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp:             config.String("^api$"),
 						Datacenter:         config.String("dc"),

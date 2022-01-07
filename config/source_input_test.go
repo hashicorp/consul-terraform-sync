@@ -86,7 +86,7 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 	}{
 		{
 			name: "services happy path",
-			expected: &ServicesSourceInputConfig{
+			expected: &ServicesModuleInputConfig{
 				ServicesMonitorConfig{
 					Regexp:             String(".*"),
 					Names:              []string{},

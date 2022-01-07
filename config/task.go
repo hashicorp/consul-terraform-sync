@@ -612,7 +612,7 @@ func (c *TaskConfig) validateSourceInput() error {
 			}
 		} else {
 			switch c.ModuleInput.(type) {
-			case *ServicesSourceInputConfig:
+			case *ServicesModuleInputConfig:
 				err := fmt.Errorf("a task cannot be configured with both " +
 					"`services` field and `condition` block. only one can be " +
 					"configured per task")

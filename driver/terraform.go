@@ -567,7 +567,7 @@ func (tf *Terraform) setNotifier(tmpl templates.Template) {
 	if cond, ok := tf.task.Condition().(*config.ServicesConditionConfig); ok {
 		serviceCount = len(cond.Names)
 	}
-	if si, ok := tf.task.SourceInput().(*config.ServicesSourceInputConfig); ok {
+	if si, ok := tf.task.SourceInput().(*config.ServicesModuleInputConfig); ok {
 		serviceCount = len(si.Names)
 	}
 
@@ -649,7 +649,7 @@ func getServicesMetaData(logger logging.Logger, task *Task) (*tmplfunc.ServicesM
 	}
 
 	// Introduced in 0.5. Metadata comes from source_input "services"
-	servicesInput, ok := task.SourceInput().(*config.ServicesSourceInputConfig)
+	servicesInput, ok := task.SourceInput().(*config.ServicesModuleInputConfig)
 	if ok {
 		err := servicesMeta.SetMeta(servicesInput.CTSUserDefinedMeta)
 		if err != nil {

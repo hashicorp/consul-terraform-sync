@@ -388,7 +388,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 
 	var sourceInput tftmpl.Template
 	switch v := t.sourceInput.(type) {
-	case *config.ServicesSourceInputConfig:
+	case *config.ServicesModuleInputConfig:
 		if len(v.Names) > 0 {
 			sourceInput = &tftmpl.ServicesTemplate{
 				Names:      v.Names,

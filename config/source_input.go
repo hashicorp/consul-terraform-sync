@@ -61,7 +61,7 @@ func moduleInputToTypeFunc() mapstructure.DecodeHookFunc {
 		}
 
 		if c, ok := sourceInputs[servicesType]; ok {
-			var config ServicesSourceInputConfig
+			var config ServicesModuleInputConfig
 			return decodeModuleInputToType(c, &config)
 		}
 

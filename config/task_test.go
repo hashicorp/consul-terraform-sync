@@ -43,7 +43,7 @@ func TestTaskConfig_Copy(t *testing.T) {
 						},
 					},
 				},
-				DeprecatedSourceInput: &ServicesSourceInputConfig{
+				DeprecatedSourceInput: &ServicesModuleInputConfig{
 					ServicesMonitorConfig: ServicesMonitorConfig{
 						Regexp: String(".*"),
 					},
@@ -351,51 +351,51 @@ func TestTaskConfig_Merge(t *testing.T) {
 		},
 		{
 			"source_input_overrides",
-			&TaskConfig{DeprecatedSourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{DeprecatedSourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
-			&TaskConfig{DeprecatedSourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
+			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
+			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
 		},
 		{
 			"source_input_empty_one",
-			&TaskConfig{DeprecatedSourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
 			&TaskConfig{},
-			&TaskConfig{DeprecatedSourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
 		},
 		{
 			"source_input_empty_two",
 			&TaskConfig{},
-			&TaskConfig{DeprecatedSourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{DeprecatedSourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
 		},
 		{
 			"source_input_same",
-			&TaskConfig{DeprecatedSourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{DeprecatedSourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{DeprecatedSourceInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
 		},
 		{
 			"module_input_overrides",
-			&TaskConfig{ModuleInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{ModuleInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
-			&TaskConfig{ModuleInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
+			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
+			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
 		},
 		{
 			"module_input_empty_one",
-			&TaskConfig{ModuleInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
 			&TaskConfig{},
-			&TaskConfig{ModuleInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
 		},
 		{
 			"module_input_empty_two",
 			&TaskConfig{},
-			&TaskConfig{ModuleInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{ModuleInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
 		},
 		{
 			"module_input_same",
-			&TaskConfig{ModuleInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{ModuleInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{ModuleInput: &ServicesSourceInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
 		},
 	}
 
@@ -487,7 +487,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 			&TaskConfig{
 				Name:      String("task"),
 				Condition: &ScheduleConditionConfig{},
-				ModuleInput: &ServicesSourceInputConfig{
+				ModuleInput: &ServicesModuleInputConfig{
 					ServicesMonitorConfig{Regexp: String("^api$")}},
 			},
 			&TaskConfig{
@@ -508,7 +508,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Enabled:    Bool(true),
 				Condition:  &ScheduleConditionConfig{String("")},
 				WorkingDir: String("sync-tasks/task"),
-				ModuleInput: &ServicesSourceInputConfig{
+				ModuleInput: &ServicesModuleInputConfig{
 					ServicesMonitorConfig{
 						Regexp:             String("^api$"),
 						Names:              []string{},
@@ -599,13 +599,13 @@ func TestTaskConfig_Finalize_DeprecatedSourceInput(t *testing.T) {
 		{
 			"source_input_configured",
 			&TaskConfig{
-				DeprecatedSourceInput: &ServicesSourceInputConfig{
+				DeprecatedSourceInput: &ServicesModuleInputConfig{
 					ServicesMonitorConfig: ServicesMonitorConfig{
 						Regexp: String(".*"),
 					},
 				},
 			},
-			&ServicesSourceInputConfig{
+			&ServicesModuleInputConfig{
 				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:             String(".*"),
 					Names:              []string{},
@@ -624,7 +624,7 @@ func TestTaskConfig_Finalize_DeprecatedSourceInput(t *testing.T) {
 						Path: String("path"),
 					},
 				},
-				DeprecatedSourceInput: &ServicesSourceInputConfig{
+				DeprecatedSourceInput: &ServicesModuleInputConfig{
 					ServicesMonitorConfig: ServicesMonitorConfig{
 						Regexp: String(".*"),
 					},
@@ -816,7 +816,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Name:      String("task"),
 				Module:    String("path"),
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				ModuleInput: &ServicesSourceInputConfig{
+				ModuleInput: &ServicesModuleInputConfig{
 					ServicesMonitorConfig{Regexp: String(".*")}},
 			},
 			true,
@@ -837,7 +837,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Module:    String("path"),
 				Services:  []string{"api"},
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				ModuleInput: &ServicesSourceInputConfig{
+				ModuleInput: &ServicesModuleInputConfig{
 					ServicesMonitorConfig{Names: []string{"api"}},
 				},
 			},
@@ -866,7 +866,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Condition: &ServicesConditionConfig{
 					ServicesMonitorConfig: ServicesMonitorConfig{
 						Regexp: String(".*")}},
-				ModuleInput: &ServicesSourceInputConfig{
+				ModuleInput: &ServicesModuleInputConfig{
 					ServicesMonitorConfig{Regexp: String(".*")}},
 			},
 			false,

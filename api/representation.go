@@ -33,7 +33,7 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	// Convert source input
 	if tr.ModuleInput != nil {
 		if tr.ModuleInput.Services != nil {
-			si := &config.ServicesSourceInputConfig{
+			si := &config.ServicesModuleInputConfig{
 				ServicesMonitorConfig: config.ServicesMonitorConfig{
 					Regexp: tr.ModuleInput.Services.Regexp,
 				},
@@ -162,7 +162,7 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 	if tc.ModuleInput != nil {
 		task.ModuleInput = new(oapigen.ModuleInput)
 		switch si := tc.ModuleInput.(type) {
-		case *config.ServicesSourceInputConfig:
+		case *config.ServicesModuleInputConfig:
 			if len(si.Names) > 0 {
 				task.ModuleInput.Services = &oapigen.ServicesModuleInput{
 					Names: &si.Names,

@@ -4,16 +4,17 @@ import (
 	"fmt"
 )
 
-var _ ModuleInputConfig = (*ServicesSourceInputConfig)(nil)
+var _ ModuleInputConfig = (*ServicesModuleInputConfig)(nil)
 
-// ServicesSourceInputConfig configures a source_input configuration block of type
-// 'services'. Data about the services monitored will be used as input for the source variables.
-type ServicesSourceInputConfig struct {
+// ServicesModuleInputConfig configures a module_input configuration block of
+// type 'services'. Data about the services monitored will be used as input for
+// the module variables.
+type ServicesModuleInputConfig struct {
 	ServicesMonitorConfig `mapstructure:",squash"`
 }
 
 // Copy returns a deep copy of this configuration.
-func (c *ServicesSourceInputConfig) Copy() MonitorConfig {
+func (c *ServicesModuleInputConfig) Copy() MonitorConfig {
 	if c == nil {
 		return nil
 	}
@@ -22,7 +23,7 @@ func (c *ServicesSourceInputConfig) Copy() MonitorConfig {
 	if !ok {
 		return nil
 	}
-	return &ServicesSourceInputConfig{
+	return &ServicesModuleInputConfig{
 		ServicesMonitorConfig: *svc,
 	}
 }
@@ -31,7 +32,7 @@ func (c *ServicesSourceInputConfig) Copy() MonitorConfig {
 // configuration `o`, with values in the other configuration taking precedence.
 // Maps and slices are merged, most other values are overwritten. Complex
 // structs define their own merge functionality.
-func (c *ServicesSourceInputConfig) Merge(o MonitorConfig) MonitorConfig {
+func (c *ServicesModuleInputConfig) Merge(o MonitorConfig) MonitorConfig {
 	if c == nil {
 		if isModuleInputNil(o) { // o is interface, use isConditionNil()
 			return nil
@@ -43,7 +44,7 @@ func (c *ServicesSourceInputConfig) Merge(o MonitorConfig) MonitorConfig {
 		return c.Copy()
 	}
 
-	scc, ok := o.(*ServicesSourceInputConfig)
+	scc, ok := o.(*ServicesModuleInputConfig)
 	if !ok {
 		return nil
 	}
@@ -53,13 +54,13 @@ func (c *ServicesSourceInputConfig) Merge(o MonitorConfig) MonitorConfig {
 		return nil
 	}
 
-	return &ServicesSourceInputConfig{
+	return &ServicesModuleInputConfig{
 		ServicesMonitorConfig: *merged,
 	}
 }
 
 // Finalize ensures there are no nil pointers.
-func (c *ServicesSourceInputConfig) Finalize() {
+func (c *ServicesModuleInputConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}
@@ -68,7 +69,7 @@ func (c *ServicesSourceInputConfig) Finalize() {
 
 // Validate validates the values and required options. This method is recommended
 // to run after Finalize() to ensure the configuration is safe to proceed.
-func (c *ServicesSourceInputConfig) Validate() error {
+func (c *ServicesModuleInputConfig) Validate() error {
 	if c == nil { // config not required, return early
 		return nil
 	}
@@ -79,12 +80,12 @@ func (c *ServicesSourceInputConfig) Validate() error {
 }
 
 // GoString defines the printable version of this struct.
-func (c *ServicesSourceInputConfig) GoString() string {
+func (c *ServicesModuleInputConfig) GoString() string {
 	if c == nil {
-		return "(*ServicesSourceInputConfig)(nil)"
+		return "(*ServicesModuleInputConfig)(nil)"
 	}
 
-	return fmt.Sprintf("&ServicesSourceInputConfig{"+
+	return fmt.Sprintf("&ServicesModuleInputConfig{"+
 		"%s"+
 		"}",
 		c.ServicesMonitorConfig.GoString(),

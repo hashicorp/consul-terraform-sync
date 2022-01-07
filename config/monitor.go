@@ -33,7 +33,7 @@ func isMonitorNil(c MonitorConfig) bool {
 		result = v == nil
 
 	// Module Inputs
-	case *ServicesSourceInputConfig:
+	case *ServicesModuleInputConfig:
 		result = v == nil
 	case *ConsulKVSourceInputConfig:
 		result = v == nil
