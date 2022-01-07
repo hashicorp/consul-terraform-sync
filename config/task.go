@@ -104,10 +104,10 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.Module = StringCopy(c.Module)
 	o.DeprecatedSource = StringCopy(c.DeprecatedSource)
 
-	if !isSourceInputNil(c.ModuleInput) {
+	if !isModuleInputNil(c.ModuleInput) {
 		o.ModuleInput = c.ModuleInput.Copy()
 	}
-	if !isSourceInputNil(c.DeprecatedSourceInput) {
+	if !isModuleInputNil(c.DeprecatedSourceInput) {
 		o.DeprecatedSourceInput = c.DeprecatedSourceInput.Copy()
 	}
 
@@ -176,15 +176,15 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.DeprecatedSource = StringCopy(o.DeprecatedSource)
 	}
 
-	if !isSourceInputNil(o.ModuleInput) {
-		if isSourceInputNil(r.ModuleInput) {
+	if !isModuleInputNil(o.ModuleInput) {
+		if isModuleInputNil(r.ModuleInput) {
 			r.ModuleInput = o.ModuleInput.Copy()
 		} else {
 			r.ModuleInput = r.ModuleInput.Merge(o.ModuleInput)
 		}
 	}
-	if !isSourceInputNil(o.DeprecatedSourceInput) {
-		if isSourceInputNil(r.DeprecatedSourceInput) {
+	if !isModuleInputNil(o.DeprecatedSourceInput) {
+		if isModuleInputNil(r.DeprecatedSourceInput) {
 			r.DeprecatedSourceInput = o.DeprecatedSourceInput.Copy()
 		} else {
 			r.DeprecatedSourceInput = r.DeprecatedSourceInput.Merge(o.DeprecatedSourceInput)
@@ -310,12 +310,12 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	}
 	c.Condition.Finalize()
 
-	if !isSourceInputNil(c.DeprecatedSourceInput) {
+	if !isModuleInputNil(c.DeprecatedSourceInput) {
 		logger.Warn("Task's 'source_input' block was marked for deprecation " +
 			"in v0.5.0. Please update your configuration to use 'module_input'" +
 			" instead.")
 
-		if !isSourceInputNil(c.ModuleInput) {
+		if !isModuleInputNil(c.ModuleInput) {
 			logger.Warn("Task is configured with both 'source_input' block and "+
 				"'module_input' block. Defaulting to 'module_input' block's value",
 				"module_input", c.ModuleInput)
@@ -325,7 +325,7 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 		}
 
 	}
-	if isSourceInputNil(c.ModuleInput) {
+	if isModuleInputNil(c.ModuleInput) {
 		c.ModuleInput = EmptyModuleInputConfig()
 	}
 	c.ModuleInput.Finalize()
@@ -397,7 +397,7 @@ func (c *TaskConfig) Validate() error {
 		}
 	}
 
-	if !isSourceInputNil(c.ModuleInput) {
+	if !isModuleInputNil(c.ModuleInput) {
 		if err := c.ModuleInput.Validate(); err != nil {
 			return err
 		}
@@ -576,7 +576,7 @@ func (c *TaskConfig) validateCondition() error {
 			return fmt.Errorf("consul-kv condition requires at least one service to " +
 				"be configured in task.services")
 		case *ScheduleConditionConfig:
-			if isSourceInputNil(c.ModuleInput) || isSourceInputEmpty(c.ModuleInput) {
+			if isModuleInputNil(c.ModuleInput) || isSourceInputEmpty(c.ModuleInput) {
 				return fmt.Errorf("schedule condition requires at least one service to " +
 					"be configured in task.services or a module_input must be provided")
 			}
@@ -625,7 +625,7 @@ func (c *TaskConfig) validateSourceInput() error {
 			}
 		}
 	default:
-		if !isSourceInputNil(c.ModuleInput) && !isSourceInputEmpty(c.ModuleInput) {
+		if !isModuleInputNil(c.ModuleInput) && !isSourceInputEmpty(c.ModuleInput) {
 			return fmt.Errorf("module_input is only supported when a schedule condition is configured")
 		}
 	}

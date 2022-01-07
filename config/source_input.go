@@ -108,7 +108,7 @@ func decodeSourceInputToType(data interface{}, sourceInput SourceInputConfig) (S
 	return sourceInput, nil
 }
 
-// isSourceInputNil returns true if the condition is Nil and false otherwise
-func isSourceInputNil(si SourceInputConfig) bool {
+// isModuleInputNil returns true if the module input is nil and false otherwise
+func isModuleInputNil(si SourceInputConfig) bool {
 	return isMonitorNil(si)
 }

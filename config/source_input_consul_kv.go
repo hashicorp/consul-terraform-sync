@@ -33,13 +33,13 @@ func (c *ConsulKVSourceInputConfig) Copy() MonitorConfig {
 // structs define their own merge functionality.
 func (c *ConsulKVSourceInputConfig) Merge(o MonitorConfig) MonitorConfig {
 	if c == nil {
-		if isSourceInputNil(o) { // o is interface, use isConditionNil()
+		if isModuleInputNil(o) { // o is interface, use isConditionNil()
 			return nil
 		}
 		return o.Copy()
 	}
 
-	if isSourceInputNil(o) {
+	if isModuleInputNil(o) {
 		return c.Copy()
 	}
 
