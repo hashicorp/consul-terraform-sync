@@ -82,7 +82,7 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 	logger := logging.FromContext(ctx).Named(createTaskSubsystemName).With("task_name", *taskConf.Name)
 
 	// Inspect task
-	_, plan, err := h.ctrl.TaskInspect(ctx, taskConf)
+	changes, plan, err := h.ctrl.TaskInspect(ctx, taskConf)
 	if err != nil {
 		err = fmt.Errorf("error inspecting new task: %s", err)
 		sendError(w, r, http.StatusBadRequest, err)
@@ -94,7 +94,8 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 	requestID := requestIDFromContext(ctx)
 	resp := taskResponseFromTaskConfig(taskConf, requestID)
 	resp.Run = &oapigen.Run{
-		Plan: &plan,
+		Plan:           &plan,
+		ChangesPresent: &changes,
 	}
 	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
