@@ -606,7 +606,7 @@ func (c *TaskConfig) validateSourceInput() error {
 	case *ScheduleConditionConfig:
 		if len(c.Services) == 0 {
 			switch c.ModuleInput.(type) {
-			case *ConsulKVSourceInputConfig:
+			case *ConsulKVModuleInputConfig:
 				return fmt.Errorf("consul-kv module_input requires at least one service to " +
 					"be configured in task.services")
 			}

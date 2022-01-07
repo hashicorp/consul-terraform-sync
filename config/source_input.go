@@ -66,7 +66,7 @@ func moduleInputToTypeFunc() mapstructure.DecodeHookFunc {
 		}
 
 		if c, ok := sourceInputs[consulKVType]; ok {
-			var config ConsulKVSourceInputConfig
+			var config ConsulKVModuleInputConfig
 			return decodeModuleInputToType(c, &config)
 		}
 

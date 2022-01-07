@@ -43,7 +43,7 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 			}
 			tc.ModuleInput = si
 		} else if tr.ModuleInput.ConsulKv != nil {
-			tc.ModuleInput = &config.ConsulKVSourceInputConfig{
+			tc.ModuleInput = &config.ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 					Datacenter: tr.ModuleInput.ConsulKv.Datacenter,
 					Recurse:    tr.ModuleInput.ConsulKv.Recurse,
@@ -172,7 +172,7 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 					Regexp: si.Regexp,
 				}
 			}
-		case *config.ConsulKVSourceInputConfig:
+		case *config.ConsulKVModuleInputConfig:
 			task.ModuleInput.ConsulKv = &oapigen.ConsulKVModuleInput{
 				Datacenter: si.Datacenter,
 				Recurse:    si.Recurse,

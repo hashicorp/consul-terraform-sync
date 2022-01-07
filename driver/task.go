@@ -408,7 +408,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 				SourceIncludesVar: true,
 			}
 		}
-	case *config.ConsulKVSourceInputConfig:
+	case *config.ConsulKVModuleInputConfig:
 		sourceInput = &tftmpl.ConsulKVTemplate{
 			Path:       *v.Path,
 			Datacenter: *v.Datacenter,

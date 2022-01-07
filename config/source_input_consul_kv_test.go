@@ -8,12 +8,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConsulKVSourceInputConfig_Copy(t *testing.T) {
+func TestConsulKVModuleInputConfig_Copy(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name string
-		a    *ConsulKVSourceInputConfig
+		a    *ConsulKVModuleInputConfig
 	}{
 		{
 			"nil",
@@ -21,11 +21,11 @@ func TestConsulKVSourceInputConfig_Copy(t *testing.T) {
 		},
 		{
 			"empty",
-			&ConsulKVSourceInputConfig{},
+			&ConsulKVModuleInputConfig{},
 		},
 		{
 			"fully_configured",
-			&ConsulKVSourceInputConfig{
+			&ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig{
 					Path:       String("key-path"),
 					Recurse:    Bool(true),
@@ -49,26 +49,26 @@ func TestConsulKVSourceInputConfig_Copy(t *testing.T) {
 	}
 }
 
-func TestConsulKVSourceInputConfig_Merge(t *testing.T) {
+func TestConsulKVModuleInputConfig_Merge(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name string
-		a    *ConsulKVSourceInputConfig
-		b    *ConsulKVSourceInputConfig
-		r    *ConsulKVSourceInputConfig
+		a    *ConsulKVModuleInputConfig
+		b    *ConsulKVModuleInputConfig
+		r    *ConsulKVModuleInputConfig
 	}{
 		{
 			"nil_a",
 			nil,
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{},
 		},
 		{
 			"nil_b",
-			&ConsulKVSourceInputConfig{},
+			&ConsulKVModuleInputConfig{},
 			nil,
-			&ConsulKVSourceInputConfig{},
+			&ConsulKVModuleInputConfig{},
 		},
 		{
 			"nil_both",
@@ -78,105 +78,105 @@ func TestConsulKVSourceInputConfig_Merge(t *testing.T) {
 		},
 		{
 			"empty",
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{},
 		},
 		{
 			"path_overrides",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Path: String("different")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Path: String("different")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Path: String("different")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Path: String("different")}},
 		},
 		{
 			"path_empty_one",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
 		},
 		{
 			"path_empty_two",
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
 		},
 		{
 			"path_empty_same",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Path: String("same")}},
 		},
 		{
 			"recurse_overrides",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Recurse: Bool(false)}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Recurse: Bool(false)}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Recurse: Bool(false)}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Recurse: Bool(false)}},
 		},
 		{
 			"recurse_empty_one",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
 		},
 		{
 			"recurse_empty_two",
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
 		},
 		{
 			"recurse_empty_same",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Recurse: Bool(true)}},
 		},
 		{
 			"datacenter_overrides",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Datacenter: String("different")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Datacenter: String("different")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Datacenter: String("different")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Datacenter: String("different")}},
 		},
 		{
 			"datacenter_empty_one",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
 		},
 		{
 			"datacenter_empty_two",
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
 		},
 		{
 			"datacenter_empty_same",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Datacenter: String("same")}},
 		},
 		{
 			"namespace_overrides",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Namespace: String("different")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Namespace: String("different")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Namespace: String("different")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Namespace: String("different")}},
 		},
 		{
 			"namespace_empty_one",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
 		},
 		{
 			"namespace_empty_two",
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
 		},
 		{
 			"namespace_empty_same",
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
-			&ConsulKVSourceInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
+			&ConsulKVModuleInputConfig{ConsulKVMonitorConfig{Namespace: String("same")}},
 		},
 	}
 
@@ -193,18 +193,18 @@ func TestConsulKVSourceInputConfig_Merge(t *testing.T) {
 	}
 }
 
-func TestConsulKVSourceInputConfig_Finalize(t *testing.T) {
+func TestConsulKVModuleInputConfig_Finalize(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name string
-		i    *ConsulKVSourceInputConfig
-		r    *ConsulKVSourceInputConfig
+		i    *ConsulKVModuleInputConfig
+		r    *ConsulKVModuleInputConfig
 	}{
 		{
 			"empty",
-			&ConsulKVSourceInputConfig{},
-			&ConsulKVSourceInputConfig{
+			&ConsulKVModuleInputConfig{},
+			&ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig{
 					Path:       String(""),
 					Recurse:    Bool(false),
@@ -223,18 +223,18 @@ func TestConsulKVSourceInputConfig_Finalize(t *testing.T) {
 	}
 }
 
-func TestConsulKVSourceInputConfig_Validate(t *testing.T) {
+func TestConsulKVModuleInputConfig_Validate(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name      string
 		expectErr bool
-		c         *ConsulKVSourceInputConfig
+		c         *ConsulKVModuleInputConfig
 	}{
 		{
 			"happy_path",
 			false,
-			&ConsulKVSourceInputConfig{
+			&ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig{
 					Path:       String("key-path"),
 					Recurse:    Bool(true),
@@ -246,7 +246,7 @@ func TestConsulKVSourceInputConfig_Validate(t *testing.T) {
 		{
 			"nil_path",
 			true,
-			&ConsulKVSourceInputConfig{},
+			&ConsulKVModuleInputConfig{},
 		},
 	}
 
@@ -262,17 +262,17 @@ func TestConsulKVSourceInputConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestConsulKVSourceInputConfig_GoString(t *testing.T) {
+func TestConsulKVModuleInputConfig_GoString(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name     string
-		ckv      *ConsulKVSourceInputConfig
+		ckv      *ConsulKVModuleInputConfig
 		expected string
 	}{
 		{
 			"configured services module_input",
-			&ConsulKVSourceInputConfig{
+			&ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig{
 					Path:       String("path"),
 					Recurse:    Bool(true),
@@ -280,7 +280,7 @@ func TestConsulKVSourceInputConfig_GoString(t *testing.T) {
 					Namespace:  String("ns"),
 				},
 			},
-			"&ConsulKVSourceInputConfig{" +
+			"&ConsulKVModuleInputConfig{" +
 				"&ConsulKVMonitorConfig{" +
 				"Path:path, " +
 				"Recurse:true, " +
@@ -292,7 +292,7 @@ func TestConsulKVSourceInputConfig_GoString(t *testing.T) {
 		{
 			"nil services module_input",
 			nil,
-			"(*ConsulKVSourceInputConfig)(nil)",
+			"(*ConsulKVModuleInputConfig)(nil)",
 		},
 	}
 

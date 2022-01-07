@@ -579,8 +579,8 @@ func (tf *Terraform) setNotifier(tmpl templates.Template) {
 	case *config.ScheduleConditionConfig:
 		additionalDepCount := 0
 		switch tf.task.SourceInput().(type) {
-		case *config.ConsulKVSourceInputConfig:
-			// If a ConsulKVSourceInputConfig is specified, then we need to add
+		case *config.ConsulKVModuleInputConfig:
+			// If a ConsulKVModuleInputConfig is specified, then we need to add
 			// to the number of dependencies passed to the notifier, since consul-kv adds a dependency
 			additionalDepCount = 1
 		}

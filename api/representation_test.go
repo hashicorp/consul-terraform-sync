@@ -278,7 +278,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Services:  []string{"api", "web"},
 				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				ModuleInput: &config.ConsulKVSourceInputConfig{
+				ModuleInput: &config.ConsulKVModuleInputConfig{
 					config.ConsulKVMonitorConfig{
 						Path:       config.String("fake-path"),
 						Recurse:    config.Bool(true),
@@ -644,7 +644,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				Module:    config.String("path"),
 				Enabled:   config.Bool(true),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				ModuleInput: &config.ConsulKVSourceInputConfig{
+				ModuleInput: &config.ConsulKVModuleInputConfig{
 					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 						Path:       config.String("fake-path"),
 						Recurse:    config.Bool(false),

@@ -48,7 +48,7 @@ func TestTaskConfig_Copy(t *testing.T) {
 						Regexp: String(".*"),
 					},
 				},
-				ModuleInput: &ConsulKVSourceInputConfig{
+				ModuleInput: &ConsulKVModuleInputConfig{
 					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
 						Path: String("path"),
 					},
@@ -581,13 +581,13 @@ func TestTaskConfig_Finalize_DeprecatedSourceInput(t *testing.T) {
 		{
 			"module_input_configured",
 			&TaskConfig{
-				ModuleInput: &ConsulKVSourceInputConfig{
+				ModuleInput: &ConsulKVModuleInputConfig{
 					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
 						Path: String("path"),
 					},
 				},
 			},
-			&ConsulKVSourceInputConfig{
+			&ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig: ConsulKVMonitorConfig{
 					Path:       String("path"),
 					Recurse:    Bool(false),
@@ -619,7 +619,7 @@ func TestTaskConfig_Finalize_DeprecatedSourceInput(t *testing.T) {
 		{
 			"both_configured",
 			&TaskConfig{
-				ModuleInput: &ConsulKVSourceInputConfig{
+				ModuleInput: &ConsulKVModuleInputConfig{
 					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
 						Path: String("path"),
 					},
@@ -630,7 +630,7 @@ func TestTaskConfig_Finalize_DeprecatedSourceInput(t *testing.T) {
 					},
 				},
 			},
-			&ConsulKVSourceInputConfig{
+			&ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig: ConsulKVMonitorConfig{
 					Path:       String("path"),
 					Recurse:    Bool(false),
@@ -849,7 +849,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Name:      String("task"),
 				Module:    String("path"),
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				ModuleInput: &ConsulKVSourceInputConfig{
+				ModuleInput: &ConsulKVModuleInputConfig{
 					ConsulKVMonitorConfig{
 						Path: String("path"),
 					},

@@ -100,7 +100,7 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 		},
 		{
 			name: "consul-kv: happy path",
-			expected: &ConsulKVSourceInputConfig{
+			expected: &ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig{
 					Path:       String("key-path"),
 					Datacenter: String("dc2"),
