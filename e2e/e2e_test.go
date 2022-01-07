@@ -405,3 +405,32 @@ func TestE2E_FilterStatus(t *testing.T) {
 		})
 	}
 }
+
+// TestE2EInspectMode tests running CTS in inspect mode and verifies that
+// the plan is outputted and no changes are actually applied.
+func TestE2EInspectMode(t *testing.T) {
+	t.Parallel()
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "inspect")
+	delete := testutils.MakeTempDir(t, tempDir)
+	defer delete()
+
+	config := baseConfig(tempDir).appendConsulBlock(srv).
+		appendTerraformBlock().appendWebTask()
+
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath),
+		api.CTSInspectFlag)
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	cmd.Run()
+
+	assert.Contains(t, buf.String(), "Plan: 2 to add, 0 to change, 0 to destroy.")
+	resourcePath := filepath.Join(tempDir, webTaskName, resourcesDir)
+	validateServices(t, false, []string{"web", "api"}, resourcePath)
+}
