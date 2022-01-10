@@ -66,7 +66,7 @@ task {
 	}
 	source_input "consul-kv" {
 		path = "key-path"
-        source_includes_var = true
+        use_as_module_input = true
 		namespace = "ns2"
 		datacenter = "dc2"
 		recurse = true

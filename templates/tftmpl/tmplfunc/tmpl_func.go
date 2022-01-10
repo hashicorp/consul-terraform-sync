@@ -6,7 +6,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/hcat/tfunc"
 )
@@ -14,7 +13,7 @@ import (
 // HCLMap is the map of template functions for rendering HCL
 // to their respective implementations
 func HCLMap(meta *ServicesMeta) template.FuncMap {
-	tmplFuncs := hcat.FuncMapConsulV1()
+	tmplFuncs := tfunc.FuncMapConsulV1()
 	tmplFuncs["catalogServicesRegistration"] = catalogServicesRegistrationFunc
 	tmplFuncs["servicesRegex"] = servicesRegexFunc
 	tmplFuncs["indent"] = tfunc.Helpers()["indent"]

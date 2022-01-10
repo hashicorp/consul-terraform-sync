@@ -347,26 +347,24 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			Datacenter:        *v.Datacenter,
 			Namespace:         *v.Namespace,
 			NodeMeta:          v.NodeMeta,
-			SourceIncludesVar: *v.SourceIncludesVar,
+			SourceIncludesVar: *v.UseAsModuleInput,
 		}
 	case *config.ServicesConditionConfig:
 		if len(v.Names) > 0 {
 			condition = &tftmpl.ServicesTemplate{
-				Names:      v.Names,
-				Datacenter: *v.Datacenter,
-				Namespace:  *v.Namespace,
-				Filter:     *v.Filter,
-				// SourceIncludesVar=false not yet supported
-				SourceIncludesVar: true,
+				Names:             v.Names,
+				Datacenter:        *v.Datacenter,
+				Namespace:         *v.Namespace,
+				Filter:            *v.Filter,
+				SourceIncludesVar: *v.UseAsModuleInput,
 			}
 		} else {
 			condition = &tftmpl.ServicesRegexTemplate{
-				Regexp:     *v.Regexp,
-				Datacenter: *v.Datacenter,
-				Namespace:  *v.Namespace,
-				Filter:     *v.Filter,
-				// SourceIncludesVar=false not yet supported
-				SourceIncludesVar: true,
+				Regexp:            *v.Regexp,
+				Datacenter:        *v.Datacenter,
+				Namespace:         *v.Namespace,
+				Filter:            *v.Filter,
+				SourceIncludesVar: *v.UseAsModuleInput,
 			}
 		}
 	case *config.ConsulKVConditionConfig:
@@ -375,7 +373,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			Datacenter:        *v.Datacenter,
 			Recurse:           *v.Recurse,
 			Namespace:         *v.Namespace,
-			SourceIncludesVar: *v.SourceIncludesVar,
+			SourceIncludesVar: *v.UseAsModuleInput,
 		}
 	default:
 		// no-op: condition block currently not required since services.list

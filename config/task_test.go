@@ -34,10 +34,10 @@ func TestTaskConfig_Copy(t *testing.T) {
 				Enabled:     Bool(true),
 				Condition: &CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig{
-						Regexp:            String(".*"),
-						SourceIncludesVar: Bool(true),
-						Datacenter:        String("dc2"),
-						Namespace:         String("ns2"),
+						Regexp:           String(".*"),
+						UseAsModuleInput: Bool(true),
+						Datacenter:       String("dc2"),
+						Namespace:        String("ns2"),
 						NodeMeta: map[string]string{
 							"key": "value",
 						},
@@ -647,7 +647,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Name:   String("task"),
 				Module: String("path"),
 				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
 						Regexp: String(".*"),
 					},
 				},
@@ -661,7 +661,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Module:   String("path"),
 				Services: []string{"api"},
 				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
 						Regexp: String(""),
 					},
 				},
@@ -747,7 +747,8 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Name:   String("task"),
 				Module: String("path"),
 				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig{Regexp: String(".*")}},
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Regexp: String(".*")}},
 				SourceInput: &ServicesSourceInputConfig{
 					ServicesMonitorConfig{Regexp: String(".*")}},
 			},

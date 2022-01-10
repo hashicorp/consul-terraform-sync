@@ -34,16 +34,17 @@ func (t ServicesRegexTemplate) appendModuleAttribute(*hclwrite.Body) {}
 func (t ServicesRegexTemplate) appendTemplate(w io.Writer) error {
 	q := t.hcatQuery()
 
+	tmpl := ""
 	if t.SourceIncludesVar {
-		if _, err := fmt.Fprintf(w, servicesRegexIncludesVarTmpl, q); err != nil {
-			return err
-		}
-		return nil
+		tmpl = fmt.Sprintf(servicesRegexIncludesVarTmpl, q)
+	} else {
+		tmpl = fmt.Sprintf(servicesRegexEmptyTmpl, q)
 	}
 
-	if _, err := fmt.Fprintf(w, servicesRegexBaseTmpl, q); err != nil {
+	if _, err := fmt.Fprint(w, tmpl); err != nil {
 		logging.Global().Named(logSystemName).Named(tftmplSubsystemName).Error(
-			"unable to write service condition empty template", "error", err)
+			"unable to write services regex template", "error", err,
+			"source_includes_var", t.SourceIncludesVar)
 		return err
 	}
 	return nil
@@ -96,6 +97,14 @@ const servicesRegexBaseTmpl = `
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
 {{ HCLService $s | indent 4 }}
   },
+  {{- end}}
+{{- end}}
+`
+
+const servicesRegexEmptyTmpl = `
+{{- with $srv := servicesRegex %s }}
+  {{- range $s := $srv}}
+  {{- /* Empty template. Detects changes in Services */ -}}
   {{- end}}
 {{- end}}
 `

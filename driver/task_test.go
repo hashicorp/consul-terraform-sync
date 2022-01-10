@@ -174,6 +174,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 						Namespace:  config.String("ns1"),
 						Filter:     config.String("filter"),
 					},
+					UseAsModuleInput: config.Bool(false),
 				},
 			},
 			expectedTemplates: []tftmpl.Template{
@@ -182,7 +183,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 					Datacenter:        "dc1",
 					Namespace:         "ns1",
 					Filter:            "filter",
-					SourceIncludesVar: true,
+					SourceIncludesVar: false,
 				},
 			},
 		},
@@ -196,6 +197,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 						Namespace:  config.String("ns1"),
 						Filter:     config.String("filter"),
 					},
+					UseAsModuleInput: config.Bool(false),
 				},
 			},
 			expectedTemplates: []tftmpl.Template{
@@ -204,7 +206,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 					Datacenter:        "dc1",
 					Namespace:         "ns1",
 					Filter:            "filter",
-					SourceIncludesVar: true,
+					SourceIncludesVar: false,
 				},
 			},
 		},

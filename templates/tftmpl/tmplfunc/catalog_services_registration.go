@@ -149,8 +149,8 @@ func (d *catalogServicesRegistrationQuery) SetOptions(opts hcat.QueryOptions) {
 	d.opts = opts
 }
 
-// String returns the human-friendly version of this query.
-func (d *catalogServicesRegistrationQuery) String() string {
+// ID returns the human-friendly version of this query.
+func (d *catalogServicesRegistrationQuery) ID() string {
 	var opts []string
 	if d.regexp != nil {
 		opts = append(opts, fmt.Sprintf("regexp=%s", d.regexp.String()))
@@ -170,6 +170,11 @@ func (d *catalogServicesRegistrationQuery) String() string {
 			strings.Join(opts, "&"))
 	}
 	return "catalog.services.registration"
+}
+
+// Stringer interface reuses ID
+func (d *catalogServicesRegistrationQuery) String() string {
+	return d.ID()
 }
 
 // Stop halts the query's fetch function.

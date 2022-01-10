@@ -21,10 +21,10 @@ func TestCatalogServicesConditionConfig_Copy(t *testing.T) {
 			"happy_path",
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
-					Regexp:            String(".*"),
-					SourceIncludesVar: Bool(true),
-					Datacenter:        String("dc2"),
-					Namespace:         String("ns2"),
+					Regexp:           String(".*"),
+					UseAsModuleInput: Bool(true),
+					Datacenter:       String("dc2"),
+					Namespace:        String("ns2"),
 					NodeMeta: map[string]string{
 						"key1": "value1",
 						"key2": "value2",
@@ -78,10 +78,10 @@ func TestCatalogServicesConditionConfig_Merge(t *testing.T) {
 			"happy_path",
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
-					Regexp:            String("regexp"),
-					Datacenter:        String("datacenter_overriden"),
-					Namespace:         nil,
-					SourceIncludesVar: Bool(true),
+					Regexp:           String("regexp"),
+					Datacenter:       String("datacenter_overriden"),
+					Namespace:        nil,
+					UseAsModuleInput: Bool(true),
 					NodeMeta: map[string]string{
 						"foo1": "bar1",
 					},
@@ -89,10 +89,10 @@ func TestCatalogServicesConditionConfig_Merge(t *testing.T) {
 			},
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
-					Regexp:            nil,
-					Datacenter:        String("datacenter"),
-					Namespace:         String("namespace"),
-					SourceIncludesVar: Bool(false),
+					Regexp:           nil,
+					Datacenter:       String("datacenter"),
+					Namespace:        String("namespace"),
+					UseAsModuleInput: Bool(false),
 					NodeMeta: map[string]string{
 						"foo2": "bar2",
 					},
@@ -100,10 +100,10 @@ func TestCatalogServicesConditionConfig_Merge(t *testing.T) {
 			},
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
-					Regexp:            String("regexp"),
-					Datacenter:        String("datacenter"),
-					Namespace:         String("namespace"),
-					SourceIncludesVar: Bool(false),
+					Regexp:           String("regexp"),
+					Datacenter:       String("datacenter"),
+					Namespace:        String("namespace"),
+					UseAsModuleInput: Bool(false),
 					NodeMeta: map[string]string{
 						"foo1": "bar1",
 						"foo2": "bar2",
@@ -144,11 +144,11 @@ func TestCatalogServicesConditionConfig_Finalize(t *testing.T) {
 			&CatalogServicesConditionConfig{},
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
-					Regexp:            nil,
-					SourceIncludesVar: Bool(true),
-					Datacenter:        String(""),
-					Namespace:         String(""),
-					NodeMeta:          map[string]string{},
+					Regexp:           nil,
+					UseAsModuleInput: Bool(true),
+					Datacenter:       String(""),
+					Namespace:        String(""),
+					NodeMeta:         map[string]string{},
 				},
 			},
 		},
@@ -180,10 +180,10 @@ func TestCatalogServicesConditionConfig_Validate(t *testing.T) {
 			false,
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
-					Regexp:            String(".*"),
-					SourceIncludesVar: Bool(true),
-					Datacenter:        String("dc2"),
-					Namespace:         String("ns2"),
+					Regexp:           String(".*"),
+					UseAsModuleInput: Bool(true),
+					Datacenter:       String("dc2"),
+					Namespace:        String("ns2"),
 					NodeMeta: map[string]string{
 						"key1": "value1",
 						"key2": "value2",

@@ -20,7 +20,6 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 		Module:      &tr.Module,
 		Version:     tr.Version,
 		Enabled:     tr.Enabled,
-		WorkingDir:  tr.WorkingDir,
 	}
 
 	if tr.Providers != nil {
@@ -58,7 +57,9 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	// Convert condition
 	if tr.Condition != nil {
 		if tr.Condition.Services != nil {
-			cond := &config.ServicesConditionConfig{}
+			cond := &config.ServicesConditionConfig{
+				UseAsModuleInput: tr.Condition.Services.UseAsModuleInput,
+			}
 			if tr.Condition.Services.Names != nil && len(*tr.Condition.Services.Names) > 0 {
 				cond.Names = *tr.Condition.Services.Names
 			} else {
@@ -73,16 +74,16 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 					Path:       &tr.Condition.ConsulKv.Path,
 					Namespace:  tr.Condition.ConsulKv.Namespace,
 				},
-				SourceIncludesVar: tr.Condition.ConsulKv.SourceIncludesVar,
+				UseAsModuleInput: tr.Condition.ConsulKv.UseAsModuleInput,
 			}
 		} else if tr.Condition.CatalogServices != nil {
 			tc.Condition = &config.CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
-					Regexp:            config.String(tr.Condition.CatalogServices.Regexp),
-					SourceIncludesVar: tr.Condition.CatalogServices.SourceIncludesVar,
-					Datacenter:        tr.Condition.CatalogServices.Datacenter,
-					Namespace:         tr.Condition.CatalogServices.Namespace,
-					NodeMeta:          tr.Condition.CatalogServices.NodeMeta.AdditionalProperties,
+					Regexp:           config.String(tr.Condition.CatalogServices.Regexp),
+					UseAsModuleInput: tr.Condition.CatalogServices.UseAsModuleInput,
+					Datacenter:       tr.Condition.CatalogServices.Datacenter,
+					Namespace:        tr.Condition.CatalogServices.Namespace,
+					NodeMeta:         tr.Condition.CatalogServices.NodeMeta.AdditionalProperties,
 				},
 			}
 		} else if tr.Condition.Schedule != nil {
@@ -142,7 +143,6 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		Module:      *tc.Module,
 		Version:     tc.Version,
 		Enabled:     tc.Enabled,
-		WorkingDir:  tc.WorkingDir,
 	}
 
 	if tc.Variables != nil {
@@ -186,32 +186,32 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		task.Condition = new(oapigen.Condition)
 		switch cond := tc.Condition.(type) {
 		case *config.ServicesConditionConfig:
-			if len(cond.Names) > 0 {
-				task.Condition.Services = &oapigen.ServicesCondition{
-					Names: &cond.Names,
-				}
-			} else {
-				task.Condition.Services = &oapigen.ServicesCondition{
-					Regexp: cond.Regexp,
-				}
+			services := &oapigen.ServicesCondition{
+				UseAsModuleInput: cond.UseAsModuleInput,
 			}
+			if len(cond.Names) > 0 {
+				services.Names = &cond.Names
+			} else {
+				services.Regexp = cond.Regexp
+			}
+			task.Condition.Services = services
 		case *config.CatalogServicesConditionConfig:
 			task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
-				Regexp:            *cond.Regexp,
-				SourceIncludesVar: cond.SourceIncludesVar,
-				Datacenter:        cond.Datacenter,
-				Namespace:         cond.Namespace,
+				Regexp:           *cond.Regexp,
+				UseAsModuleInput: cond.UseAsModuleInput,
+				Datacenter:       cond.Datacenter,
+				Namespace:        cond.Namespace,
 				NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
 					AdditionalProperties: cond.NodeMeta,
 				},
 			}
 		case *config.ConsulKVConditionConfig:
 			task.Condition.ConsulKv = &oapigen.ConsulKVCondition{
-				Datacenter:        cond.Datacenter,
-				Recurse:           cond.Recurse,
-				Path:              *cond.Path,
-				Namespace:         cond.Namespace,
-				SourceIncludesVar: cond.SourceIncludesVar,
+				Datacenter:       cond.Datacenter,
+				Recurse:          cond.Recurse,
+				Path:             *cond.Path,
+				Namespace:        cond.Namespace,
+				UseAsModuleInput: cond.UseAsModuleInput,
 			}
 		case *config.ScheduleConditionConfig:
 			task.Condition.Schedule = &oapigen.ScheduleCondition{

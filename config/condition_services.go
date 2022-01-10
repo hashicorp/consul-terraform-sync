@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 var _ ConditionConfig = (*ServicesConditionConfig)(nil)
@@ -11,6 +13,10 @@ var _ ConditionConfig = (*ServicesConditionConfig)(nil)
 // triggered when changes occur to the task's services.
 type ServicesConditionConfig struct {
 	ServicesMonitorConfig `mapstructure:",squash"`
+
+	// UseAsModuleInput was previously named SourceIncludesVar - deprecated v0.5
+	UseAsModuleInput            *bool `mapstructure:"use_as_module_input"`
+	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -19,13 +25,17 @@ func (c *ServicesConditionConfig) Copy() MonitorConfig {
 		return nil
 	}
 
+	var o ServicesConditionConfig
+	o.UseAsModuleInput = BoolCopy(c.UseAsModuleInput)
+	o.DeprecatedSourceIncludesVar = BoolCopy(c.DeprecatedSourceIncludesVar)
+
 	svc, ok := c.ServicesMonitorConfig.Copy().(*ServicesMonitorConfig)
 	if !ok {
 		return nil
 	}
-	return &ServicesConditionConfig{
-		ServicesMonitorConfig: *svc,
-	}
+
+	o.ServicesMonitorConfig = *svc
+	return &o
 }
 
 // Merge combines all values in this configuration with the values in the other
@@ -44,19 +54,28 @@ func (c *ServicesConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 		return c.Copy()
 	}
 
-	scc, ok := o.(*ServicesConditionConfig)
+	r := c.Copy()
+	o2, ok := o.(*ServicesConditionConfig)
 	if !ok {
 		return nil
 	}
 
-	merged, ok := c.ServicesMonitorConfig.Merge(&scc.ServicesMonitorConfig).(*ServicesMonitorConfig)
+	r2 := r.(*ServicesConditionConfig)
+
+	if o2.UseAsModuleInput != nil {
+		r2.UseAsModuleInput = BoolCopy(o2.UseAsModuleInput)
+	}
+	if o2.DeprecatedSourceIncludesVar != nil {
+		r2.DeprecatedSourceIncludesVar = BoolCopy(o2.DeprecatedSourceIncludesVar)
+	}
+
+	merged, ok := c.ServicesMonitorConfig.Merge(&o2.ServicesMonitorConfig).(*ServicesMonitorConfig)
 	if !ok {
 		return nil
 	}
 
-	return &ServicesConditionConfig{
-		ServicesMonitorConfig: *merged,
-	}
+	r2.ServicesMonitorConfig = *merged
+	return r2
 }
 
 // Finalize ensures there no nil pointers.
@@ -64,6 +83,27 @@ func (c *ServicesConditionConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}
+
+	logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
+	if c.DeprecatedSourceIncludesVar != nil {
+		logger.Warn("Services condition block's 'source_includes_var' " +
+			"field was marked for deprecation in v0.5.0. Please update your " +
+			"configuration to use the 'use_as_module_input' field instead")
+
+		if c.UseAsModuleInput != nil {
+			logger.Warn("Services condition block is configured with "+
+				"both 'source_includes_var' and 'use_as_module_input' field. "+
+				"Defaulting to 'use_as_module_input' value",
+				"use_as_module_input", c.UseAsModuleInput)
+		} else {
+			// Merge SourceIncludesVar with UseAsModuleInput. Use UseAsModuleInput onwards
+			c.UseAsModuleInput = c.DeprecatedSourceIncludesVar
+		}
+	}
+	if c.UseAsModuleInput == nil {
+		c.UseAsModuleInput = Bool(true)
+	}
+
 	c.ServicesMonitorConfig.Finalize()
 }
 
@@ -87,8 +127,10 @@ func (c *ServicesConditionConfig) GoString() string {
 	}
 
 	return fmt.Sprintf("&ServicesConditionConfig{"+
-		"%s"+
+		"%s, "+
+		"UseAsModuleInput:%v"+
 		"}",
 		c.ServicesMonitorConfig.GoString(),
+		BoolVal(c.UseAsModuleInput),
 	)
 }

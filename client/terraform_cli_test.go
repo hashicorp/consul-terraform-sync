@@ -308,7 +308,7 @@ module for task "test-workspace" is missing the "services" variable
 		{
 			"missing catalog_services error",
 			`
-module for task "test-workspace" is missing the "catalog_services" variable, add to module or set "source_includes_var" to false
+module for task "test-workspace" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false
 `,
 			`{
 	"valid": false,
