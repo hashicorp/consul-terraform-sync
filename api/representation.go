@@ -33,15 +33,15 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	// Convert source input
 	if tr.ModuleInput != nil {
 		if tr.ModuleInput.Services != nil {
-			si := &config.ServicesModuleInputConfig{
+			input := &config.ServicesModuleInputConfig{
 				ServicesMonitorConfig: config.ServicesMonitorConfig{
 					Regexp: tr.ModuleInput.Services.Regexp,
 				},
 			}
 			if tr.ModuleInput.Services.Names != nil {
-				si.Names = *tr.ModuleInput.Services.Names
+				input.Names = *tr.ModuleInput.Services.Names
 			}
-			tc.ModuleInput = si
+			tc.ModuleInput = input
 		} else if tr.ModuleInput.ConsulKv != nil {
 			tc.ModuleInput = &config.ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
@@ -161,23 +161,23 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 
 	if tc.ModuleInput != nil {
 		task.ModuleInput = new(oapigen.ModuleInput)
-		switch si := tc.ModuleInput.(type) {
+		switch input := tc.ModuleInput.(type) {
 		case *config.ServicesModuleInputConfig:
-			if len(si.Names) > 0 {
+			if len(input.Names) > 0 {
 				task.ModuleInput.Services = &oapigen.ServicesModuleInput{
-					Names: &si.Names,
+					Names: &input.Names,
 				}
 			} else {
 				task.ModuleInput.Services = &oapigen.ServicesModuleInput{
-					Regexp: si.Regexp,
+					Regexp: input.Regexp,
 				}
 			}
 		case *config.ConsulKVModuleInputConfig:
 			task.ModuleInput.ConsulKv = &oapigen.ConsulKVModuleInput{
-				Datacenter: si.Datacenter,
-				Recurse:    si.Recurse,
-				Path:       *si.Path,
-				Namespace:  si.Namespace,
+				Datacenter: input.Datacenter,
+				Recurse:    input.Recurse,
+				Path:       *input.Path,
+				Namespace:  input.Namespace,
 			}
 		}
 	}
