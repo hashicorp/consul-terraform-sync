@@ -105,17 +105,16 @@ func (rw *ReadWrite) TaskInspect(ctx context.Context, taskConfig config.TaskConf
 	return plan.ChangesPresent, plan.Plan, "", err
 }
 
-func (rw *ReadWrite) TaskUpdate(ctx context.Context, taskConfig config.TaskConfig, runOp string) (bool, string, string, error) {
+func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfig, runOp string) (bool, string, string, error) {
 	// Only enabled changes are supported at this time
-	if taskConfig.Enabled == nil {
+	if updateConf.Enabled == nil {
 		return false, "", "", nil
 	}
-
-	if err := taskConfig.Validate(); err != nil {
-		return false, "", "", err
+	if updateConf.Name == nil || *updateConf.Name == "" {
+		return false, "", "", fmt.Errorf("task name is required for updating a task")
 	}
 
-	taskName := *taskConfig.Name
+	taskName := *updateConf.Name
 	logger := rw.logger.With(taskNameLogKey, taskName)
 	logger.Trace("updating task")
 	if rw.drivers.IsActive(taskName) {
@@ -156,7 +155,7 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, taskConfig config.TaskConfi
 
 	patch := driver.PatchTask{
 		RunOption: runOp,
-		Enabled:   *taskConfig.Enabled,
+		Enabled:   *updateConf.Enabled,
 	}
 	var plan driver.InspectPlan
 	plan, storedErr = d.UpdateTask(ctx, patch)

@@ -12,7 +12,6 @@ import (
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates"
-	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -269,63 +268,58 @@ func TestServer_TaskUpdate(t *testing.T) {
 	ctx := context.Background()
 	ctrl := ReadWrite{
 		baseController: &baseController{
-			conf: &config.Config{
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				WorkingDir:   config.String(config.DefaultWorkingDir),
-			},
+			conf:    &config.Config{},
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
-			watcher: new(mocksTmpl.Watcher),
 		},
+		store: event.NewStore(),
 	}
+	ctrl.conf.Finalize()
 
 	t.Run("disable-then-enable", func(t *testing.T) {
-		// setup temp dir
-		tempDir := "disable-enable"
-		del := testutils.MakeTempDir(t, tempDir)
-		defer del()
-
 		taskName := "task_a"
-		task, err := driver.NewTask(driver.TaskConfig{
-			Enabled: true,
-			Name:    taskName,
-			Source:  "module",
+		taskConf := config.TaskConfig{
+			Name:   config.String("task_a"),
+			Module: config.String("findkim/print/cts"),
 			Condition: &config.ServicesConditionConfig{
 				ServicesMonitorConfig: config.ServicesMonitorConfig{
 					Names: []string{"service"},
 				},
 			},
-			WorkingDir: tempDir,
-		})
+		}
+		taskConf.Finalize(ctrl.conf.BufferPeriod, *ctrl.conf.WorkingDir)
+		task, err := newDriverTask(ctrl.conf, &taskConf, nil)
 		require.NoError(t, err)
 
-		// add a driver
-		d, err := driver.NewTerraform(&driver.TerraformConfig{
-			Task:       task,
-			ClientType: "test",
-		})
-		require.NoError(t, err)
+		d := new(mocksD.Driver)
+		d.On("Task").Return(task).
+			On("UpdateTask", mock.Anything, driver.PatchTask{Enabled: false}).
+			Return(driver.InspectPlan{ChangesPresent: false, Plan: ""}, nil)
 		err = ctrl.drivers.Add(taskName, d)
 		require.NoError(t, err)
-		assert.True(t, d.Task().IsEnabled())
 
 		// Set the task to disabled
-		taskConf, err := ctrl.Task(ctx, taskName)
-		require.NoError(t, err)
-		taskConf.Enabled = config.Bool(false)
+		updateConf := config.TaskConfig{
+			Name:    &taskName,
+			Enabled: config.Bool(false),
+		}
 
-		changed, plan, _, err := ctrl.TaskUpdate(ctx, taskConf, "")
+		changed, plan, _, err := ctrl.TaskUpdate(ctx, updateConf, "")
 		require.NoError(t, err)
-		assert.False(t, d.Task().IsEnabled())
 		assert.False(t, changed)
 		assert.Empty(t, plan)
 
 		// Re-enable the task
-		taskConf.Enabled = config.Bool(true)
-		_, plan, _, err = ctrl.TaskUpdate(ctx, taskConf, "")
+		updateConf.Enabled = config.Bool(true)
+		d.On("UpdateTask", mock.Anything, driver.PatchTask{Enabled: true}).
+			Return(driver.InspectPlan{ChangesPresent: false, Plan: ""}, nil)
+		_, plan, _, err = ctrl.TaskUpdate(ctx, updateConf, "")
 		require.NoError(t, err)
-		assert.True(t, d.Task().IsEnabled())
 		assert.Empty(t, plan)
+
+		// No events since the task did not run
+		events := ctrl.store.Read(taskName)
+		assert.Empty(t, events)
 	})
 
 	t.Run("task-not-found-error", func(t *testing.T) {
@@ -345,16 +339,17 @@ func TestServer_TaskUpdate(t *testing.T) {
 		}
 		// add a driver
 		d := new(mocksD.Driver)
-		d.On("UpdateTask", mock.Anything, mock.Anything).
-			Return(expectedPlan, nil).Once()
+		d.On("Task").Return(&driver.Task{}, nil).
+			On("UpdateTask", mock.Anything, mock.Anything).Return(expectedPlan, nil).Once()
 		err := ctrl.drivers.Add("task_b", d)
 		require.NoError(t, err)
 
-		taskConf, err := ctrl.Task(ctx, "task_b")
-		require.NoError(t, err)
-		taskConf.Enabled = config.Bool(true)
+		updateConf := config.TaskConfig{
+			Name:    config.String("task_b"),
+			Enabled: config.Bool(true),
+		}
 
-		changed, plan, _, err := ctrl.TaskUpdate(ctx, taskConf, driver.RunOptionInspect)
+		changed, plan, _, err := ctrl.TaskUpdate(ctx, updateConf, driver.RunOptionInspect)
 
 		require.NoError(t, err)
 		assert.Equal(t, expectedPlan.Plan, plan)

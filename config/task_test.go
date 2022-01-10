@@ -902,19 +902,6 @@ func TestTaskConfig_FinalizeValidate(t *testing.T) {
 			true,
 		},
 		{
-			"valid: validate twice with services condition",
-			&TaskConfig{
-				Name:   String("task_a"),
-				Module: String("path"),
-				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig: ServicesMonitorConfig{
-						Names: []string{"serviceA"},
-					},
-				},
-			},
-			true,
-		},
-		{
 			"valid: no source_input included with schedule condition",
 			&TaskConfig{
 				Name:      String("task_a"),
@@ -930,16 +917,6 @@ func TestTaskConfig_FinalizeValidate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.config.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
 			err := tc.config.Validate()
-			if tc.valid {
-				assert.NoError(t, err)
-			} else {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "condition",
-					"error does not seem to be about condition configuration")
-			}
-
-			// Second validate
-			err = tc.config.Validate()
 			if tc.valid {
 				assert.NoError(t, err)
 			} else {
