@@ -73,11 +73,11 @@ type InspectPlan struct {
 func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	taskName, err := getTaskName(r.URL.Path, taskPath, h.version)
-	logger := logging.FromContext(r.Context()).Named(updateTaskSubsystemName)
+	logger := logging.FromContext(ctx).Named(updateTaskSubsystemName)
 	if err != nil {
 		logger.Trace("bad request", "error", err)
 
-		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
+		jsonErrorResponse(ctx, w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -85,7 +85,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		err := fmt.Errorf("no task name was included in the api request. " +
 			"Updating a task requires the task name: '/v1/tasks/:task_name'")
 		logger.Trace("bad request", "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
+		jsonErrorResponse(ctx, w, http.StatusBadRequest, err)
 		return
 	}
 	logger = logger.With("task_name", taskName)
@@ -93,21 +93,21 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	runOp, err := parseRunOption(r)
 	if err != nil {
 		logger.Trace("unsupported run option", "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
+		jsonErrorResponse(ctx, w, http.StatusBadRequest, err)
 		return
 	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		logger.Trace("unable to read request body from update", "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusInternalServerError, err)
+		jsonErrorResponse(ctx, w, http.StatusInternalServerError, err)
 		return
 	}
 
 	conf, err := decodeBody(body)
 	if err != nil {
 		logger.Trace("problem decoding body from update request for task", "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
+		jsonErrorResponse(ctx, w, http.StatusBadRequest, err)
 		return
 	}
 
