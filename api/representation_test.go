@@ -34,7 +34,7 @@ const (
 )
 
 func TestTaskRequest_String(t *testing.T) {
-	var req taskRequest
+	var req TaskRequest
 
 	err := json.Unmarshal([]byte(taskReq), &req)
 	require.NoError(t, err)
@@ -50,12 +50,12 @@ func TestTaskRequest_String(t *testing.T) {
 func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 	cases := []struct {
 		name               string
-		request            *taskRequest
+		request            *TaskRequest
 		taskConfigExpected config.TaskConfig
 	}{
 		{
 			name: "minimum_required_only",
-			request: &taskRequest{
+			request: &TaskRequest{
 				Name:     "test-name",
 				Module:   "path",
 				Services: &[]string{"api", "web"},
@@ -68,7 +68,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		},
 		{
 			name: "basic_fields_filled",
-			request: &taskRequest{
+			request: &TaskRequest{
 				Description: config.String("test-description"),
 				Name:        "test-name",
 				Services:    &[]string{"api", "web"},
@@ -99,7 +99,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_services_condition_regexp",
-			request: &taskRequest{
+			request: &TaskRequest{
 				Name:    "task",
 				Module:  "path",
 				Enabled: config.Bool(true),
@@ -124,7 +124,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_services_condition_names",
-			request: &taskRequest{
+			request: &TaskRequest{
 				Name:    "task",
 				Module:  "path",
 				Enabled: config.Bool(true),
@@ -149,7 +149,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_catalog_services_condition",
-			request: &taskRequest{
+			request: &TaskRequest{
 				Name:   "task",
 				Module: "path",
 				Condition: &oapigen.Condition{
@@ -186,7 +186,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_consul_kv_condition",
-			request: &taskRequest{
+			request: &TaskRequest{
 				Name:     "task",
 				Module:   "path",
 				Services: &[]string{"api", "web"},
@@ -217,7 +217,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_schedule_condition",
-			request: &taskRequest{
+			request: &TaskRequest{
 				Name:     "task",
 				Module:   "path",
 				Services: &[]string{"api", "web"},
@@ -234,7 +234,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_services_module_input",
-			request: &taskRequest{
+			request: &TaskRequest{
 				Name:   "task",
 				Module: "path",
 				Condition: &oapigen.Condition{
@@ -258,7 +258,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		},
 		{
 			name: "with_consul_kv_module_input",
-			request: &taskRequest{
+			request: &TaskRequest{
 				Name:     "task",
 				Module:   "path",
 				Services: &[]string{"api", "web"},
@@ -302,12 +302,12 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 func TestTaskRequest_ToRequestTaskConfig_Error(t *testing.T) {
 	cases := []struct {
 		name     string
-		request  *taskRequest
+		request  *TaskRequest
 		contains string
 	}{
 		{
 			name: "invalid conversion",
-			request: &taskRequest{
+			request: &TaskRequest{
 				Name:     "test-name",
 				Services: &[]string{"api", "web"},
 				BufferPeriod: &oapigen.BufferPeriod{
@@ -329,7 +329,7 @@ func TestTaskRequest_ToRequestTaskConfig_Error(t *testing.T) {
 }
 
 func TestTaskResponse_String(t *testing.T) {
-	resp := taskResponse{
+	resp := TaskResponse{
 		RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 		Task: &oapigen.Task{
 			Name:    "task",
@@ -378,7 +378,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 	cases := []struct {
 		name             string
 		taskConfig       config.TaskConfig
-		expectedResponse taskResponse
+		expectedResponse TaskResponse
 	}{
 		{
 			name: "minimum_required_only",
@@ -390,7 +390,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					ServicesMonitorConfig: config.ServicesMonitorConfig{Names: []string{"api", "web"}},
 				},
 			},
-			expectedResponse: taskResponse{
+			expectedResponse: TaskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:    "test-name",
@@ -418,7 +418,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				Condition:    config.EmptyConditionConfig(),
 				ModuleInput:  config.EmptyModuleInputConfig(),
 			},
-			expectedResponse: taskResponse{
+			expectedResponse: TaskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:        "test-name",
@@ -455,7 +455,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					UseAsModuleInput: config.Bool(false),
 				},
 			},
-			expectedResponse: taskResponse{
+			expectedResponse: TaskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:    "task",
@@ -487,7 +487,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					UseAsModuleInput: config.Bool(false),
 				},
 			},
-			expectedResponse: taskResponse{
+			expectedResponse: TaskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:    "task",
@@ -521,7 +521,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					},
 				},
 			},
-			expectedResponse: taskResponse{
+			expectedResponse: TaskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:    "task",
@@ -561,7 +561,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					UseAsModuleInput: config.Bool(true),
 				},
 			},
-			expectedResponse: taskResponse{
+			expectedResponse: TaskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:     "task",
@@ -589,7 +589,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				Enabled:   config.Bool(true),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
 			},
-			expectedResponse: taskResponse{
+			expectedResponse: TaskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:     "task",
@@ -619,7 +619,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					},
 				},
 			},
-			expectedResponse: taskResponse{
+			expectedResponse: TaskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:    "task",
@@ -653,7 +653,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					},
 				},
 			},
-			expectedResponse: taskResponse{
+			expectedResponse: TaskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 				Task: &oapigen.Task{
 					Name:    "task",

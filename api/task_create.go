@@ -20,7 +20,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	logger.Trace("create task request received, reading request")
 
 	// Decode the task request
-	var req taskRequest
+	var req TaskRequest
 	ctx := r.Context()
 	requestID := requestIDFromContext(ctx)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

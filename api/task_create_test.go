@@ -144,7 +144,7 @@ func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 
 	// Check response, expect task and run
 	decoder := json.NewDecoder(resp.Body)
-	var actual taskResponse
+	var actual TaskResponse
 	require.NoError(t, decoder.Decode(&actual))
 	expected := generateExpectedResponse(t, request)
 	expected.Run = &oapigen.Run{
