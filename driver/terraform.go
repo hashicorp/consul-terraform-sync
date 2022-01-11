@@ -253,6 +253,7 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 type InspectPlan struct {
 	ChangesPresent bool   `json:"changes_present"`
 	Plan           string `json:"plan"`
+	URL            string `json:"url,omitempty"`
 }
 
 // UpdateTask updates the task on the driver. Makes any calls to re-init
