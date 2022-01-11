@@ -56,7 +56,7 @@ func TestNewFiles(t *testing.T) {
 					})},
 				ProviderInfo: map[string]interface{}{
 					"testProvider": map[string]interface{}{
-						"version": "1.0.0",
+						"version": "1.1.0",
 						"source":  "namespace/testProvider",
 					},
 				},
