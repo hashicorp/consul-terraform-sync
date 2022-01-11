@@ -332,7 +332,7 @@ func TestServer_TaskUpdate(t *testing.T) {
 		assert.Empty(t, plan)
 	})
 
-	t.Run("task-run-option", func(t *testing.T) {
+	t.Run("task-run-inspect", func(t *testing.T) {
 		expectedPlan := driver.InspectPlan{
 			ChangesPresent: true,
 			Plan:           "plan!",
@@ -354,5 +354,34 @@ func TestServer_TaskUpdate(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedPlan.Plan, plan)
 		assert.Equal(t, expectedPlan.ChangesPresent, changed)
+
+		// No events since the task did not run
+		events := ctrl.store.Read("task_b")
+		assert.Empty(t, events)
+	})
+
+	t.Run("task-run-now", func(t *testing.T) {
+		taskName := "task_c"
+
+		// add a driver
+		d := new(mocksD.Driver)
+		d.On("Task").Return(&driver.Task{}, nil).
+			On("UpdateTask", mock.Anything, mock.Anything).Return(driver.InspectPlan{}, nil).Once()
+		err := ctrl.drivers.Add(taskName, d)
+		require.NoError(t, err)
+
+		updateConf := config.TaskConfig{
+			Name:    &taskName,
+			Enabled: config.Bool(true),
+		}
+
+		changed, plan, _, err := ctrl.TaskUpdate(ctx, updateConf, driver.RunOptionNow)
+
+		require.NoError(t, err)
+		assert.Equal(t, "", plan, "run now does not return plan info")
+		assert.False(t, changed, "run now does not return plan info")
+
+		events := ctrl.store.Read(taskName)
+		assert.Len(t, events, 1)
 	})
 }
