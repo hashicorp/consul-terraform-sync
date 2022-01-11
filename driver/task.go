@@ -64,7 +64,7 @@ type Task struct {
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
 	condition    config.ConditionConfig
-	sourceInput  config.SourceInputConfig
+	sourceInput  config.ModuleInputConfig
 	workingDir   string
 	logger       logging.Logger
 }
@@ -83,7 +83,7 @@ type TaskConfig struct {
 	Version      string
 	BufferPeriod *BufferPeriod
 	Condition    config.ConditionConfig
-	SourceInput  config.SourceInputConfig
+	SourceInput  config.ModuleInputConfig
 	WorkingDir   string
 }
 
@@ -148,7 +148,7 @@ func (t *Task) Condition() config.ConditionConfig {
 }
 
 // SourceInput returns the type of sourceInput for the task to run
-func (t *Task) SourceInput() config.SourceInputConfig {
+func (t *Task) SourceInput() config.ModuleInputConfig {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.sourceInput
@@ -388,7 +388,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 
 	var sourceInput tftmpl.Template
 	switch v := t.sourceInput.(type) {
-	case *config.ServicesSourceInputConfig:
+	case *config.ServicesModuleInputConfig:
 		if len(v.Names) > 0 {
 			sourceInput = &tftmpl.ServicesTemplate{
 				Names:      v.Names,
@@ -408,7 +408,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 				SourceIncludesVar: true,
 			}
 		}
-	case *config.ConsulKVSourceInputConfig:
+	case *config.ConsulKVModuleInputConfig:
 		sourceInput = &tftmpl.ConsulKVTemplate{
 			Path:       *v.Path,
 			Datacenter: *v.Datacenter,

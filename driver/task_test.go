@@ -213,7 +213,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 		{
 			name: "templates: services module_input regex",
 			task: Task{
-				sourceInput: &config.ServicesSourceInputConfig{
+				sourceInput: &config.ServicesModuleInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp:     config.String("^web.*"),
 						Datacenter: config.String("dc1"),
@@ -235,7 +235,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 		{
 			name: "templates: services module_input names",
 			task: Task{
-				sourceInput: &config.ServicesSourceInputConfig{
+				sourceInput: &config.ServicesModuleInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Names:      []string{"api"},
 						Datacenter: config.String("dc1"),

@@ -233,7 +233,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_services_source_input",
+			name: "with_services_module_input",
 			request: &taskRequest{
 				Name:   "task",
 				Module: "path",
@@ -249,7 +249,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Name:      config.String("task"),
 				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				ModuleInput: &config.ServicesSourceInputConfig{
+				ModuleInput: &config.ServicesModuleInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp: config.String("^api$"),
 					},
@@ -257,7 +257,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_consul_kv_source_input",
+			name: "with_consul_kv_module_input",
 			request: &taskRequest{
 				Name:     "task",
 				Module:   "path",
@@ -278,7 +278,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Services:  []string{"api", "web"},
 				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				ModuleInput: &config.ConsulKVSourceInputConfig{
+				ModuleInput: &config.ConsulKVModuleInputConfig{
 					config.ConsulKVMonitorConfig{
 						Path:       config.String("fake-path"),
 						Recurse:    config.Bool(true),
@@ -416,7 +416,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
 				Enabled:      config.Bool(true),
 				Condition:    config.EmptyConditionConfig(),
-				ModuleInput:  config.EmptySourceInputConfig(),
+				ModuleInput:  config.EmptyModuleInputConfig(),
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
@@ -603,13 +603,13 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_services_source_input",
+			name: "with_services_module_input",
 			taskConfig: config.TaskConfig{
 				Name:      config.String("task"),
 				Module:    config.String("path"),
 				Enabled:   config.Bool(true),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				ModuleInput: &config.ServicesSourceInputConfig{
+				ModuleInput: &config.ServicesModuleInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp:             config.String("^api$"),
 						Datacenter:         config.String("dc"),
@@ -637,14 +637,14 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_consul_kv_source_input",
+			name: "with_consul_kv_module_input",
 			taskConfig: config.TaskConfig{
 				Name:      config.String("task"),
 				Services:  []string{"api", "web"},
 				Module:    config.String("path"),
 				Enabled:   config.Bool(true),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				ModuleInput: &config.ConsulKVSourceInputConfig{
+				ModuleInput: &config.ConsulKVModuleInputConfig{
 					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 						Path:       config.String("fake-path"),
 						Recurse:    config.Bool(false),

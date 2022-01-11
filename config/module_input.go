@@ -11,72 +11,73 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// SourceInputConfig configures a source_input on a task. This Source Input defines which Consul objects to monitor
-// (e.g. services, kv) whose values are then provided as the task source’s input variables
-type SourceInputConfig interface {
+// ModuleInputConfig configures a module_input on a task. The module input
+// defines the Consul object(s) to monitor (e.g. services, kv). The object
+// values as passed to the task module's input variable
+type ModuleInputConfig interface {
 	MonitorConfig
 }
 
-// EmptySourceInputConfig sets un-configured source inputs with a non-null
+// EmptyModuleInputConfig sets un-configured module inputs with a non-null
 // value
-func EmptySourceInputConfig() SourceInputConfig {
+func EmptyModuleInputConfig() ModuleInputConfig {
 	return &NoMonitorConfig{}
 }
 
-// isSourceInputEmpty returns true if the provided SourceInputConfig `c` is
+// isModuleInputEmpty returns true if the provided ModuleInputConfig `c` is
 // of type NoMonitorConfig
-func isSourceInputEmpty(c SourceInputConfig) bool {
+func isModuleInputEmpty(c ModuleInputConfig) bool {
 	_, ok := c.(*NoMonitorConfig)
 	return ok
 }
 
-// sourceInputToTypeFunc is a decode hook function to decode a SourceInputConfig
-// into a specific source var implementation structures. Used when decoding
+// moduleInputToTypeFunc is a decode hook function to decode a ModuleInputConfig
+// into a specific module var implementation structures. Used when decoding
 // cts config overall.
-func sourceInputToTypeFunc() mapstructure.DecodeHookFunc {
+func moduleInputToTypeFunc() mapstructure.DecodeHookFunc {
 	return func(
 		f reflect.Type,
 		t reflect.Type,
 		data interface{}) (interface{}, error) {
-		// identify if parsing a SourceInputConfig
-		var i SourceInputConfig
+		// identify if parsing a ModuleInputConfig
+		var i ModuleInputConfig
 		if t != reflect.TypeOf(&i).Elem() {
 			return data, nil
 		}
 
-		// abstract sourceInputs map out depending on hcl vs. json formatting
+		// abstract moduleInputs map out depending on hcl vs. json formatting
 		// data hcl ex: [map[services:[map[regexp:.*]]]]
 		// data json ex: map[services:map[regexp:.*]]
-		var sourceInputs map[string]interface{}
+		var moduleInputs map[string]interface{}
 		if hcl, ok := data.([]map[string]interface{}); ok {
 			if len(hcl) != 1 {
 				return nil, fmt.Errorf("expected only one item in hcl "+
-					"sourceInput but got %d: %v", len(hcl), data)
+					"module_input but got %d: %v", len(hcl), data)
 			}
-			sourceInputs = hcl[0]
+			moduleInputs = hcl[0]
 		}
 		if json, ok := data.(map[string]interface{}); ok {
-			sourceInputs = json
+			moduleInputs = json
 		}
 
-		if c, ok := sourceInputs[servicesType]; ok {
-			var config ServicesSourceInputConfig
-			return decodeSourceInputToType(c, &config)
+		if c, ok := moduleInputs[servicesType]; ok {
+			var config ServicesModuleInputConfig
+			return decodeModuleInputToType(c, &config)
 		}
 
-		if c, ok := sourceInputs[consulKVType]; ok {
-			var config ConsulKVSourceInputConfig
-			return decodeSourceInputToType(c, &config)
+		if c, ok := moduleInputs[consulKVType]; ok {
+			var config ConsulKVModuleInputConfig
+			return decodeModuleInputToType(c, &config)
 		}
 
 		return nil, fmt.Errorf("unsupported module_input type: %v", data)
 	}
 }
 
-// decodeSourceInputToType is used by the overall config mapstructure decode hook
-// SourceInputToTypeFunc in order to convert SourceInputConfig in the form
+// decodeModuleInputToType is used by the overall config mapstructure decode hook
+// ModuleInputToTypeFunc in order to convert ModuleInputConfig in the form
 // of an interface into an implementation
-func decodeSourceInputToType(data interface{}, sourceInput SourceInputConfig) (SourceInputConfig, error) {
+func decodeModuleInputToType(data interface{}, moduleInput ModuleInputConfig) (ModuleInputConfig, error) {
 	var md mapstructure.Metadata
 	logger := logging.Global().Named(logSystemName)
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
@@ -86,7 +87,7 @@ func decodeSourceInputToType(data interface{}, sourceInput SourceInputConfig) (S
 		WeaklyTypedInput: true,
 		ErrorUnused:      false,
 		Metadata:         &md,
-		Result:           &sourceInput,
+		Result:           &moduleInput,
 	})
 	if err != nil {
 		logger.Error("module_input mapstructure decoder create failed", "error", err)
@@ -105,10 +106,10 @@ func decodeSourceInputToType(data interface{}, sourceInput SourceInputConfig) (S
 		return nil, err
 	}
 
-	return sourceInput, nil
+	return moduleInput, nil
 }
 
-// isSourceInputNil returns true if the condition is Nil and false otherwise
-func isSourceInputNil(si SourceInputConfig) bool {
+// isModuleInputNil returns true if the module input is nil and false otherwise
+func isModuleInputNil(si ModuleInputConfig) bool {
 	return isMonitorNil(si)
 }

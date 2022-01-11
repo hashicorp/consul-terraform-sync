@@ -788,7 +788,7 @@ func TestGetServicesMetaData(t *testing.T) {
 		{
 			"meta-data configured in source_input",
 			&Task{
-				sourceInput: &config.ServicesSourceInputConfig{
+				sourceInput: &config.ServicesModuleInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						CTSUserDefinedMeta: meta,
 					},

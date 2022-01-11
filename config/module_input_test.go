@@ -9,7 +9,7 @@ import (
 const (
 
 	// Success
-	testSourceInputServicesSuccess = `
+	testModuleInputServicesSuccess = `
 task {
 	name = "module_input_task"
 	module = "..."
@@ -27,7 +27,7 @@ task {
 	}
 }`
 
-	testSourceInputConsulKVSuccess = `
+	testModuleInputConsulKVSuccess = `
 task {
 	name = "condition_task"
 	module = "..."
@@ -44,7 +44,7 @@ task {
 }`
 
 	// Errors
-	testSourceInputServicesUnsupportedFieldError = `
+	testModuleInputServicesUnsupportedFieldError = `
 task {
 	name = "condition_task"
 	module = "..."
@@ -56,7 +56,7 @@ task {
 		cron = "* * * * * * *"
 	}
 }`
-	testSourceInputConsulKVUnsupportedFieldError = `
+	testModuleInputConsulKVUnsupportedFieldError = `
 task {
 	name = "condition_task"
 	module = "..."
@@ -76,17 +76,17 @@ task {
 	testFileName = "config.hcl"
 )
 
-func TestSourceInput_DecodeConfig_Success(t *testing.T) {
+func TestModuleInput_DecodeConfig_Success(t *testing.T) {
 	// Specifically test decoding module_input configs
 	cases := []struct {
 		name     string
-		expected SourceInputConfig
+		expected ModuleInputConfig
 		filename string
 		config   string
 	}{
 		{
 			name: "services happy path",
-			expected: &ServicesSourceInputConfig{
+			expected: &ServicesModuleInputConfig{
 				ServicesMonitorConfig{
 					Regexp:             String(".*"),
 					Names:              []string{},
@@ -96,11 +96,11 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 					CTSUserDefinedMeta: map[string]string{"key": "value"},
 				},
 			},
-			config: testSourceInputServicesSuccess,
+			config: testModuleInputServicesSuccess,
 		},
 		{
 			name: "consul-kv: happy path",
-			expected: &ConsulKVSourceInputConfig{
+			expected: &ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig{
 					Path:       String("key-path"),
 					Datacenter: String("dc2"),
@@ -108,7 +108,7 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 					Recurse:    Bool(true),
 				},
 			},
-			config: testSourceInputConsulKVSuccess,
+			config: testModuleInputConsulKVSuccess,
 		},
 	}
 
@@ -129,7 +129,7 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 	}
 }
 
-func TestSourceInput_DecodeConfig_Error(t *testing.T) {
+func TestModuleInput_DecodeConfig_Error(t *testing.T) {
 	// specifically test decoding condition configs
 	cases := []struct {
 		name     string
@@ -139,12 +139,12 @@ func TestSourceInput_DecodeConfig_Error(t *testing.T) {
 		{
 			name:     "services unsupported field",
 			expected: nil,
-			config:   testSourceInputServicesUnsupportedFieldError,
+			config:   testModuleInputServicesUnsupportedFieldError,
 		},
 		{
 			name:     "consul kv unsupported field",
 			expected: nil,
-			config:   testSourceInputConsulKVUnsupportedFieldError,
+			config:   testModuleInputConsulKVUnsupportedFieldError,
 		},
 	}
 

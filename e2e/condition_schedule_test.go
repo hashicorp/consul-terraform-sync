@@ -37,7 +37,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	}
 }
 `, taskName)
-	conditionWithSourceInput := fmt.Sprintf(`task {
+	moduleInputServices := fmt.Sprintf(`task {
 	name = "%s"
 	module = "./test_modules/local_instances_file"
 	condition "schedule" {
@@ -48,7 +48,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
     }
 }
 `, taskName)
-	sourceInputConsulKV := fmt.Sprintf(`task {
+	moduleInputConsulKV := fmt.Sprintf(`task {
 	name = "%s"
 	services = ["api", "web"]
 	module = "./test_modules/consul_kv_file"
@@ -61,7 +61,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
     }
 }
 `, taskName)
-	sourceInputConsulKVRecurse := fmt.Sprintf(`task {
+	moduleInputConsulKVRecurse := fmt.Sprintf(`task {
 	name = "%s"
 	module = "./test_modules/consul_kv_file"
     services = ["api", "web"]
@@ -92,21 +92,21 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 		},
 		{
 			name:          "with module_input services",
-			conditionTask: conditionWithSourceInput,
+			conditionTask: moduleInputServices,
 			tempDir:       "schedule_basic_module_input",
 			isConsulKV:    false,
 			isRecurse:     false,
 		},
 		{
 			name:          "with module_input consul_kv recurse false",
-			conditionTask: sourceInputConsulKV,
+			conditionTask: moduleInputConsulKV,
 			tempDir:       "schedule_consulKV",
 			isConsulKV:    true,
 			isRecurse:     false,
 		},
 		{
 			name:          "with module_input consul_kvrecurse true",
-			conditionTask: sourceInputConsulKVRecurse,
+			conditionTask: moduleInputConsulKVRecurse,
 			tempDir:       "schedule_consulKV_recurse",
 			isConsulKV:    true,
 			isRecurse:     true,

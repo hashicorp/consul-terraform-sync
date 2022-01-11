@@ -42,8 +42,8 @@ type TaskConfig struct {
 	// ModuleInput defines the Consul objects (e.g. services, kv) whose values are
 	// provided as the task module’s input variables.
 	// Previously named SourceInput - Deprecated in 0.5
-	ModuleInput           SourceInputConfig `mapstructure:"module_input"`
-	DeprecatedSourceInput SourceInputConfig `mapstructure:"source_input"`
+	ModuleInput           ModuleInputConfig `mapstructure:"module_input"`
+	DeprecatedSourceInput ModuleInputConfig `mapstructure:"source_input"`
 
 	// VarFiles is a list of paths to files containing variables for the
 	// task. For the Terraform driver, these are files ending in `.tfvars` and
@@ -104,10 +104,10 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.Module = StringCopy(c.Module)
 	o.DeprecatedSource = StringCopy(c.DeprecatedSource)
 
-	if !isSourceInputNil(c.ModuleInput) {
+	if !isModuleInputNil(c.ModuleInput) {
 		o.ModuleInput = c.ModuleInput.Copy()
 	}
-	if !isSourceInputNil(c.DeprecatedSourceInput) {
+	if !isModuleInputNil(c.DeprecatedSourceInput) {
 		o.DeprecatedSourceInput = c.DeprecatedSourceInput.Copy()
 	}
 
@@ -176,15 +176,15 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.DeprecatedSource = StringCopy(o.DeprecatedSource)
 	}
 
-	if !isSourceInputNil(o.ModuleInput) {
-		if isSourceInputNil(r.ModuleInput) {
+	if !isModuleInputNil(o.ModuleInput) {
+		if isModuleInputNil(r.ModuleInput) {
 			r.ModuleInput = o.ModuleInput.Copy()
 		} else {
 			r.ModuleInput = r.ModuleInput.Merge(o.ModuleInput)
 		}
 	}
-	if !isSourceInputNil(o.DeprecatedSourceInput) {
-		if isSourceInputNil(r.DeprecatedSourceInput) {
+	if !isModuleInputNil(o.DeprecatedSourceInput) {
+		if isModuleInputNil(r.DeprecatedSourceInput) {
 			r.DeprecatedSourceInput = o.DeprecatedSourceInput.Copy()
 		} else {
 			r.DeprecatedSourceInput = r.DeprecatedSourceInput.Merge(o.DeprecatedSourceInput)
@@ -310,12 +310,12 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	}
 	c.Condition.Finalize()
 
-	if !isSourceInputNil(c.DeprecatedSourceInput) {
+	if !isModuleInputNil(c.DeprecatedSourceInput) {
 		logger.Warn("Task's 'source_input' block was marked for deprecation " +
 			"in v0.5.0. Please update your configuration to use 'module_input'" +
 			" instead.")
 
-		if !isSourceInputNil(c.ModuleInput) {
+		if !isModuleInputNil(c.ModuleInput) {
 			logger.Warn("Task is configured with both 'source_input' block and "+
 				"'module_input' block. Defaulting to 'module_input' block's value",
 				"module_input", c.ModuleInput)
@@ -325,8 +325,8 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 		}
 
 	}
-	if isSourceInputNil(c.ModuleInput) {
-		c.ModuleInput = EmptySourceInputConfig()
+	if isModuleInputNil(c.ModuleInput) {
+		c.ModuleInput = EmptyModuleInputConfig()
 	}
 	c.ModuleInput.Finalize()
 
@@ -397,7 +397,7 @@ func (c *TaskConfig) Validate() error {
 		}
 	}
 
-	if !isSourceInputNil(c.ModuleInput) {
+	if !isModuleInputNil(c.ModuleInput) {
 		if err := c.ModuleInput.Validate(); err != nil {
 			return err
 		}
@@ -576,7 +576,7 @@ func (c *TaskConfig) validateCondition() error {
 			return fmt.Errorf("consul-kv condition requires at least one service to " +
 				"be configured in task.services")
 		case *ScheduleConditionConfig:
-			if isSourceInputNil(c.ModuleInput) || isSourceInputEmpty(c.ModuleInput) {
+			if isModuleInputNil(c.ModuleInput) || isModuleInputEmpty(c.ModuleInput) {
 				return fmt.Errorf("schedule condition requires at least one service to " +
 					"be configured in task.services or a module_input must be provided")
 			}
@@ -606,13 +606,13 @@ func (c *TaskConfig) validateSourceInput() error {
 	case *ScheduleConditionConfig:
 		if len(c.Services) == 0 {
 			switch c.ModuleInput.(type) {
-			case *ConsulKVSourceInputConfig:
+			case *ConsulKVModuleInputConfig:
 				return fmt.Errorf("consul-kv module_input requires at least one service to " +
 					"be configured in task.services")
 			}
 		} else {
 			switch c.ModuleInput.(type) {
-			case *ServicesSourceInputConfig:
+			case *ServicesModuleInputConfig:
 				err := fmt.Errorf("a task cannot be configured with both " +
 					"`services` field and `condition` block. only one can be " +
 					"configured per task")
@@ -625,7 +625,7 @@ func (c *TaskConfig) validateSourceInput() error {
 			}
 		}
 	default:
-		if !isSourceInputNil(c.ModuleInput) && !isSourceInputEmpty(c.ModuleInput) {
+		if !isModuleInputNil(c.ModuleInput) && !isModuleInputEmpty(c.ModuleInput) {
 			return fmt.Errorf("module_input is only supported when a schedule condition is configured")
 		}
 	}
