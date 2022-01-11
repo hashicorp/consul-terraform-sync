@@ -1,12 +1,19 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
+)
+
+const (
+	RunOptionInspect = "inspect"
+	RunOptionNow     = "now"
 )
 
 // TaskLifecycleClient defines a client for task lifecycle requests
@@ -79,6 +86,42 @@ func (c *TaskLifecycleClient) FullAddress() string {
 // Scheme returns the scheme being used by the client
 func (c *TaskLifecycleClient) Scheme() string {
 	return fmt.Sprintf(c.scheme)
+}
+
+// CreateTask takes a task request and run option and sends this information to the client. It then returns
+// a task response object and any errors to the caller.
+func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, req TaskRequest) (TaskResponse, error) {
+	var run oapigen.CreateTaskParamsRun
+	switch runOption {
+	case RunOptionInspect:
+		run = RunOptionInspect
+	case RunOptionNow:
+		run = RunOptionNow
+	default:
+		err := errors.New("invalid run option provided")
+		return TaskResponse{}, err
+	}
+
+	resp, err := c.Client.CreateTask(ctx, &oapigen.CreateTaskParams{Run: &run}, oapigen.CreateTaskJSONRequestBody(req))
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		err = fmt.Errorf("error creating task %s, %w", req.Name, err)
+
+		return TaskResponse{}, err
+	}
+
+	var taskResp TaskResponse
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&taskResp)
+	if err != nil {
+		err = fmt.Errorf("invalid response for task %s, %w", req.Name, err)
+
+		return TaskResponse{}, err
+	}
+
+	return taskResp, nil
 }
 
 var _ httpClient = (*TaskLifecycleHTTPClient)(nil)
