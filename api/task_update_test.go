@@ -161,6 +161,14 @@ func TestTask_updateTask(t *testing.T) {
 			UpdateTaskResponse{},
 		},
 		{
+			"missing required 'enabled'",
+			"/v1/tasks/task_a",
+			`{}`,
+			func(ctrl *mocks.Server) {},
+			http.StatusBadRequest,
+			UpdateTaskResponse{},
+		},
+		{
 			"error when updating task",
 			"/v1/tasks/task_a",
 			`{"enabled": true}`,

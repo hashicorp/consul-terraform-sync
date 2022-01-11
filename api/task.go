@@ -76,7 +76,6 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	logger := logging.FromContext(ctx).Named(updateTaskSubsystemName)
 	if err != nil {
 		logger.Trace("bad request", "error", err)
-
 		jsonErrorResponse(ctx, w, http.StatusBadRequest, err)
 		return
 	}
@@ -111,6 +110,12 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if conf.Enabled == nil {
+		err = fmt.Errorf("/v1/tasks/:task_name currently only supports the 'enabled' field. Missing 'enabled' from the request body.")
+		jsonErrorResponse(ctx, w, http.StatusBadRequest, err)
+		return
+	}
+
 	// Check if task exists
 	tc, err := h.ctrl.Task(ctx, taskName)
 	if err != nil {
@@ -119,17 +124,14 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if conf.Enabled != nil {
-		tc.Enabled = conf.Enabled
-
-		if runOp == driver.RunOptionInspect {
-			logger.Info("generating inspect plan if task becomes enabled")
+	tc.Enabled = conf.Enabled
+	if runOp == driver.RunOptionInspect {
+		logger.Info("generating inspect plan if task becomes enabled")
+	} else {
+		if *conf.Enabled {
+			logger.Info("enabling task")
 		} else {
-			if *conf.Enabled {
-				logger.Info("enabling task")
-			} else {
-				logger.Info("disabling task")
-			}
+			logger.Info("disabling task")
 		}
 	}
 
