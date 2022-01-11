@@ -10,6 +10,7 @@ BREAKING CHANGES:
 
 FEATURES:
 * Support for deleting an existing task through the API and CLI. [[GH-522](https://github.com/hashicorp/consul-terraform-sync/issues/522)]
+* Support for Terraform v1.1 [[GH-588](https://github.com/hashicorp/consul-terraform-sync/pull/588)]
 
 IMPROVEMENTS:
 * Support configuring a task's `condition "services"` and `source_input "services"` blocks with query parameters: `datacenter`, `namespace`, `filter`, and `cts_user_defined_meta`. [[GH-357](https://github.com/hashicorp/consul-terraform-sync/issues/357)]
