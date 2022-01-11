@@ -18,6 +18,8 @@ const (
 	CTSOnceModeFlag = "-once"
 	// CTSDevModeFlag is an optional flag to run CTS with development client
 	CTSDevModeFlag = "--client-type=development"
+	// CTSInspectFlag is an optional flag to run CTS in inspect mode
+	CTSInspectFlag = "-inspect"
 )
 
 // StartCTS starts the CTS from binary and returns a function to stop CTS. If
@@ -47,7 +49,7 @@ func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSC
 
 	// run CTS in once-mode
 	for _, opt := range opts {
-		if opt == CTSOnceModeFlag {
+		if opt == CTSOnceModeFlag || opt == CTSInspectFlag {
 			cmd.Run() // blocking
 			return nil, func(t *testing.T) {}
 		}
