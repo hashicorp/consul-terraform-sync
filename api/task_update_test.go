@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -84,13 +83,12 @@ func TestTask_ServeHTTP(t *testing.T) {
 func TestTask_updateTask(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name          string
-		path          string
-		body          string
-		mockSetup     func(*mocks.Server)
-		statusCode    int
-		expected      UpdateTaskResponse
-		updateTaskErr error
+		name       string
+		path       string
+		body       string
+		mockSetup  func(*mocks.Server)
+		statusCode int
+		expected   UpdateTaskResponse
 	}{
 		{
 			"happy path",
@@ -102,7 +100,6 @@ func TestTask_updateTask(t *testing.T) {
 			},
 			http.StatusOK,
 			UpdateTaskResponse{},
-			nil,
 		},
 		{
 			"happy path - inspect option",
@@ -117,7 +114,6 @@ func TestTask_updateTask(t *testing.T) {
 				ChangesPresent: true,
 				Plan:           "my plan!",
 			}},
-			nil,
 		},
 		{
 			"happy path - run now option",
@@ -129,7 +125,6 @@ func TestTask_updateTask(t *testing.T) {
 			},
 			http.StatusOK,
 			UpdateTaskResponse{},
-			nil,
 		},
 		{
 			"bad path/taskname",
@@ -138,7 +133,6 @@ func TestTask_updateTask(t *testing.T) {
 			func(ctrl *mocks.Server) {},
 			http.StatusBadRequest,
 			UpdateTaskResponse{},
-			nil,
 		},
 		{
 			"no task specified",
@@ -147,7 +141,6 @@ func TestTask_updateTask(t *testing.T) {
 			func(ctrl *mocks.Server) {},
 			http.StatusBadRequest,
 			UpdateTaskResponse{},
-			nil,
 		},
 		{
 			"task not found",
@@ -158,7 +151,6 @@ func TestTask_updateTask(t *testing.T) {
 			},
 			http.StatusNotFound,
 			UpdateTaskResponse{},
-			nil,
 		},
 		{
 			"ill formed request body",
@@ -167,7 +159,6 @@ func TestTask_updateTask(t *testing.T) {
 			func(ctrl *mocks.Server) {},
 			http.StatusBadRequest,
 			UpdateTaskResponse{},
-			nil,
 		},
 		{
 			"error when updating task",
@@ -179,7 +170,6 @@ func TestTask_updateTask(t *testing.T) {
 			},
 			http.StatusInternalServerError,
 			UpdateTaskResponse{},
-			errors.New("error updating task"),
 		},
 		{
 			"error when updating task with run-now",
@@ -191,7 +181,6 @@ func TestTask_updateTask(t *testing.T) {
 			},
 			http.StatusInternalServerError,
 			UpdateTaskResponse{},
-			errors.New("error updating task"),
 		},
 		{
 			"invalid run option",
@@ -200,7 +189,6 @@ func TestTask_updateTask(t *testing.T) {
 			func(ctrl *mocks.Server) {},
 			http.StatusBadRequest,
 			UpdateTaskResponse{},
-			nil,
 		},
 	}
 
