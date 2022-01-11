@@ -54,7 +54,7 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 
 	// Values provide both default values, and documentation for the default value when -help is used
 	m.port = m.flags.Int(FlagPort, config.DefaultPort,
-		fmt.Sprintf("The port to use for the Consul Terraform Sync API server, it is preferred to use the %s field instead", FlagHTTPAddr))
+		fmt.Sprintf("The port to use for the Consul-Terraform-Sync API server, it is preferred to use the %s field instead", FlagHTTPAddr))
 	m.addr = m.flags.String(FlagHTTPAddr, api.DefaultAddress, fmt.Sprintf("The `address` and port of the CTS daemon. The value can be an IP "+
 		"address or DNS address, but it must also include the port. This can "+
 		"also be specified via the %s environment variable. The "+
@@ -196,7 +196,7 @@ func (m *meta) requestUserApprovalEnable(taskName string) (int, bool) {
 	m.UI.Info("Enabling the task will perform the actions described above.")
 	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
 	m.UI.Output(" - This action cannot be undone.")
-	m.UI.Output(" - Consul Terraform Sync cannot guarantee Terraform will perform")
+	m.UI.Output(" - Consul-Terraform-Sync cannot guarantee Terraform will perform")
 	m.UI.Output("   these exact actions if monitored services have changed.\n")
 	return m.requestUserApproval(taskName, "enabling")
 }
@@ -208,6 +208,18 @@ func (m *meta) requestUserApprovalDelete(taskName string) (int, bool) {
 	m.UI.Info(fmt.Sprintf("Do you want to delete '%s'?", taskName))
 	m.UI.Output(" - This action cannot be undone.")
 	return m.requestUserApproval(taskName, "deleting")
+}
+
+// requestUserApprovalCreate prints a prompt for user approval of deleting a task
+// and waits for the user input. It returns an exit code and boolean describing
+// if the user approved.
+func (m *meta) requestUserApprovalCreate(taskName string) (int, bool) {
+	m.UI.Info("Creating the task will perform the actions described above.")
+	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
+	m.UI.Output(" - This action cannot be undone.")
+	m.UI.Output(" - Consul-Terraform-Sync cannot guarantee Terraform will perform")
+	m.UI.Output("   these exact actions if monitored services have changed.\n")
+	return m.requestUserApproval(taskName, "creating")
 }
 
 // Returns true if the flags have been parsed

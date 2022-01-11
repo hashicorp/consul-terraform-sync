@@ -31,6 +31,9 @@ func Commands() map[string]cli.CommandFactory {
 		cmdTaskDeleteName: func() (cli.Command, error) {
 			return newTaskDeleteCommand(m), nil
 		},
+		cmdTaskCreateName: func() (cli.Command, error) {
+			return newTaskCreateCommand(m), nil
+		},
 	}
 
 	return all
