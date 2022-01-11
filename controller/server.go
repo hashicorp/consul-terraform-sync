@@ -102,7 +102,7 @@ func (rw *ReadWrite) TaskInspect(ctx context.Context, taskConfig config.TaskConf
 	}
 
 	plan, err := d.InspectTask(ctx)
-	return plan.ChangesPresent, plan.Plan, "", err
+	return plan.ChangesPresent, plan.Plan, plan.URL, err
 }
 
 func configFromDriverTask(t *driver.Task) config.TaskConfig {
