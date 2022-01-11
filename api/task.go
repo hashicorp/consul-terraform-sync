@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/mitchellh/mapstructure"
 )
@@ -67,6 +66,7 @@ type UpdateTaskResponse struct {
 type InspectPlan struct {
 	ChangesPresent bool   `json:"changes_present"`
 	Plan           string `json:"plan"`
+	URL            string `json:"url,omitempty"`
 }
 
 // updateTask does a patch update to an existing task
@@ -125,7 +125,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tc.Enabled = conf.Enabled
-	if runOp == driver.RunOptionInspect {
+	if runOp == RunOptionInspect {
 		logger.Info("generating inspect plan if task becomes enabled")
 	} else {
 		if *conf.Enabled {
@@ -136,7 +136,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the task
-	changes, plan, _, err := h.ctrl.TaskUpdate(ctx, tc, runOp)
+	changes, plan, url, err := h.ctrl.TaskUpdate(ctx, tc, runOp)
 	if err != nil {
 		sendError(w, r, http.StatusInternalServerError, err)
 		return
@@ -147,6 +147,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		resp := UpdateTaskResponse{Inspect: &InspectPlan{
 			ChangesPresent: changes,
 			Plan:           plan,
+			URL:            url,
 		}}
 		if err = jsonResponse(w, http.StatusOK, &resp); err != nil {
 			logger.Error("error, could not generate json response", "error", err)
