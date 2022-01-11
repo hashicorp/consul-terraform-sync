@@ -271,7 +271,7 @@ func TestConsulKVSourceInputConfig_GoString(t *testing.T) {
 		expected string
 	}{
 		{
-			"configured services source_input",
+			"configured services module_input",
 			&ConsulKVSourceInputConfig{
 				ConsulKVMonitorConfig{
 					Path:       String("path"),
@@ -290,7 +290,7 @@ func TestConsulKVSourceInputConfig_GoString(t *testing.T) {
 				"}",
 		},
 		{
-			"nil services source_input",
+			"nil services module_input",
 			nil,
 			"(*ConsulKVSourceInputConfig)(nil)",
 		},

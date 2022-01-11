@@ -272,7 +272,7 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		Variables:    taskConfig.Variables,
 		BufferPeriod: bp,
 		Condition:    taskConfig.Condition,
-		SourceInput:  taskConfig.SourceInput,
+		SourceInput:  taskConfig.ModuleInput,
 		WorkingDir:   *taskConfig.WorkingDir,
 	})
 	if err != nil {

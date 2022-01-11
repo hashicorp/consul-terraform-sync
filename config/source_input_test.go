@@ -11,9 +11,9 @@ const (
 	// Success
 	testSourceInputServicesSuccess = `
 task {
-	name = "source_input_task"
+	name = "module_input_task"
 	module = "..."
-	source_input "services" {
+	module_input "services" {
 		regexp = ".*"
 		datacenter = "dc2"
 		namespace = "ns2"
@@ -35,7 +35,7 @@ task {
 	condition "schedule" {
 		cron = "* * * * * * *"
 	}
-	source_input "consul-kv" {
+	module_input "consul-kv" {
 		path = "key-path"
 		namespace = "ns2"
 		datacenter = "dc2"
@@ -49,7 +49,7 @@ task {
 	name = "condition_task"
 	module = "..."
 	services = ["api"]
-	source_input "services" {
+	module_input "services" {
 		nonexistent_field = true
 	}
 	condition "schedule" {
@@ -64,7 +64,7 @@ task {
 	condition "schedule" {
 		cron = "* * * * * * *"
 	}
-	source_input "consul-kv" {
+	module_input "consul-kv" {
 		path = "key-path"
         use_as_module_input = true
 		namespace = "ns2"
@@ -77,7 +77,7 @@ task {
 )
 
 func TestSourceInput_DecodeConfig_Success(t *testing.T) {
-	// Specifically test decoding source_input configs
+	// Specifically test decoding module_input configs
 	cases := []struct {
 		name     string
 		expected SourceInputConfig
@@ -121,10 +121,10 @@ func TestSourceInput_DecodeConfig_Success(t *testing.T) {
 			err = config.Validate()
 			require.NoError(t, err)
 
-			// confirm source_input decoding
+			// confirm module_input decoding
 			tasks := *config.Tasks
 			require.Equal(t, 1, len(tasks))
-			require.Equal(t, tc.expected, tasks[0].SourceInput)
+			require.Equal(t, tc.expected, tasks[0].ModuleInput)
 		})
 	}
 }

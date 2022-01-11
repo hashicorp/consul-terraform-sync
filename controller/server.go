@@ -138,7 +138,7 @@ func configFromDriverTask(t *driver.Task) config.TaskConfig {
 		Version:      config.String(t.Version()),
 		BufferPeriod: &bpConf,
 		Condition:    t.Condition(),
-		SourceInput:  t.SourceInput(),
+		ModuleInput:  t.SourceInput(),
 		WorkingDir:   config.String(t.WorkingDir()),
 	}
 }

@@ -240,8 +240,8 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Condition: &oapigen.Condition{
 					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
 				},
-				SourceInput: &oapigen.SourceInput{
-					Services: &oapigen.ServicesSourceInput{
+				ModuleInput: &oapigen.ModuleInput{
+					Services: &oapigen.ServicesModuleInput{
 						Regexp: config.String("^api$"),
 					}},
 			},
@@ -249,7 +249,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Name:      config.String("task"),
 				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				SourceInput: &config.ServicesSourceInputConfig{
+				ModuleInput: &config.ServicesSourceInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp: config.String("^api$"),
 					},
@@ -265,8 +265,8 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Condition: &oapigen.Condition{
 					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
 				},
-				SourceInput: &oapigen.SourceInput{
-					ConsulKv: &oapigen.ConsulKVSourceInput{
+				ModuleInput: &oapigen.ModuleInput{
+					ConsulKv: &oapigen.ConsulKVModuleInput{
 						Path:       "fake-path",
 						Recurse:    config.Bool(true),
 						Datacenter: config.String("dc"),
@@ -278,7 +278,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Services:  []string{"api", "web"},
 				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				SourceInput: &config.ConsulKVSourceInputConfig{
+				ModuleInput: &config.ConsulKVSourceInputConfig{
 					config.ConsulKVMonitorConfig{
 						Path:       config.String("fake-path"),
 						Recurse:    config.Bool(true),
@@ -355,8 +355,8 @@ func TestTaskResponse_String(t *testing.T) {
 					},
 				},
 			},
-			SourceInput: &oapigen.SourceInput{
-				Services: &oapigen.ServicesSourceInput{
+			ModuleInput: &oapigen.ModuleInput{
+				Services: &oapigen.ServicesModuleInput{
 					Regexp: config.String(""),
 				},
 			},
@@ -368,8 +368,9 @@ func TestTaskResponse_String(t *testing.T) {
 		`"task":{"buffer_period":{"enabled":false,"max":"0s","min":"0s"},` +
 		`"condition":{"catalog_services":{"datacenter":"dc2","namespace":"ns2",` +
 		`"node_meta":{"key1":"value1","key2":"value2"},"regexp":".*",` +
-		`"use_as_module_input":true}},"enabled":true,"module":"path","name":"task",` +
-		`"source_input":{"services":{"regexp":""}},"version":""}}`
+		`"use_as_module_input":true}},"enabled":true,"module":"path",` +
+		`"module_input":{"services":{"regexp":""}},"name":"task",` +
+		`"version":""}}`
 	require.Equal(t, expected, actual)
 }
 
@@ -415,7 +416,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
 				Enabled:      config.Bool(true),
 				Condition:    config.EmptyConditionConfig(),
-				SourceInput:  config.EmptySourceInputConfig(),
+				ModuleInput:  config.EmptySourceInputConfig(),
 			},
 			expectedResponse: taskResponse{
 				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
@@ -431,7 +432,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					},
 					Enabled:     config.Bool(true),
 					Condition:   &oapigen.Condition{},
-					SourceInput: &oapigen.SourceInput{},
+					ModuleInput: &oapigen.ModuleInput{},
 					Services:    &[]string{"api", "web"},
 					Providers:   &[]string{"test-provider-1", "test-provider-2"},
 				},
@@ -608,7 +609,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				Module:    config.String("path"),
 				Enabled:   config.Bool(true),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				SourceInput: &config.ServicesSourceInputConfig{
+				ModuleInput: &config.ServicesSourceInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp:             config.String("^api$"),
 						Datacenter:         config.String("dc"),
@@ -627,8 +628,8 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					Condition: &oapigen.Condition{
 						Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
 					},
-					SourceInput: &oapigen.SourceInput{
-						Services: &oapigen.ServicesSourceInput{
+					ModuleInput: &oapigen.ModuleInput{
+						Services: &oapigen.ServicesModuleInput{
 							Regexp: config.String("^api$"),
 						},
 					},
@@ -643,7 +644,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 				Module:    config.String("path"),
 				Enabled:   config.Bool(true),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				SourceInput: &config.ConsulKVSourceInputConfig{
+				ModuleInput: &config.ConsulKVSourceInputConfig{
 					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 						Path:       config.String("fake-path"),
 						Recurse:    config.Bool(false),
@@ -661,8 +662,8 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 					Condition: &oapigen.Condition{
 						Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
 					},
-					SourceInput: &oapigen.SourceInput{
-						ConsulKv: &oapigen.ConsulKVSourceInput{
+					ModuleInput: &oapigen.ModuleInput{
+						ConsulKv: &oapigen.ConsulKVModuleInput{
 							Path:       "fake-path",
 							Recurse:    config.Bool(false),
 							Datacenter: config.String("dc"),

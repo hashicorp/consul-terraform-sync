@@ -211,7 +211,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 			},
 		},
 		{
-			name: "templates: services source_input regex",
+			name: "templates: services module_input regex",
 			task: Task{
 				sourceInput: &config.ServicesSourceInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
@@ -233,7 +233,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 			},
 		},
 		{
-			name: "templates: services source_input names",
+			name: "templates: services module_input names",
 			task: Task{
 				sourceInput: &config.ServicesSourceInputConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{

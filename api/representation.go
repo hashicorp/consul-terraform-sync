@@ -31,24 +31,24 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	}
 
 	// Convert source input
-	if tr.SourceInput != nil {
-		if tr.SourceInput.Services != nil {
+	if tr.ModuleInput != nil {
+		if tr.ModuleInput.Services != nil {
 			si := &config.ServicesSourceInputConfig{
 				ServicesMonitorConfig: config.ServicesMonitorConfig{
-					Regexp: tr.SourceInput.Services.Regexp,
+					Regexp: tr.ModuleInput.Services.Regexp,
 				},
 			}
-			if tr.SourceInput.Services.Names != nil {
-				si.Names = *tr.SourceInput.Services.Names
+			if tr.ModuleInput.Services.Names != nil {
+				si.Names = *tr.ModuleInput.Services.Names
 			}
-			tc.SourceInput = si
-		} else if tr.SourceInput.ConsulKv != nil {
-			tc.SourceInput = &config.ConsulKVSourceInputConfig{
+			tc.ModuleInput = si
+		} else if tr.ModuleInput.ConsulKv != nil {
+			tc.ModuleInput = &config.ConsulKVSourceInputConfig{
 				ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
-					Datacenter: tr.SourceInput.ConsulKv.Datacenter,
-					Recurse:    tr.SourceInput.ConsulKv.Recurse,
-					Path:       &tr.SourceInput.ConsulKv.Path,
-					Namespace:  tr.SourceInput.ConsulKv.Namespace,
+					Datacenter: tr.ModuleInput.ConsulKv.Datacenter,
+					Recurse:    tr.ModuleInput.ConsulKv.Recurse,
+					Path:       &tr.ModuleInput.ConsulKv.Path,
+					Namespace:  tr.ModuleInput.ConsulKv.Namespace,
 				},
 			}
 		}
@@ -159,21 +159,21 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		task.Services = &tc.Services
 	}
 
-	if tc.SourceInput != nil {
-		task.SourceInput = new(oapigen.SourceInput)
-		switch si := tc.SourceInput.(type) {
+	if tc.ModuleInput != nil {
+		task.ModuleInput = new(oapigen.ModuleInput)
+		switch si := tc.ModuleInput.(type) {
 		case *config.ServicesSourceInputConfig:
 			if len(si.Names) > 0 {
-				task.SourceInput.Services = &oapigen.ServicesSourceInput{
+				task.ModuleInput.Services = &oapigen.ServicesModuleInput{
 					Names: &si.Names,
 				}
 			} else {
-				task.SourceInput.Services = &oapigen.ServicesSourceInput{
+				task.ModuleInput.Services = &oapigen.ServicesModuleInput{
 					Regexp: si.Regexp,
 				}
 			}
 		case *config.ConsulKVSourceInputConfig:
-			task.SourceInput.ConsulKv = &oapigen.ConsulKVSourceInput{
+			task.ModuleInput.ConsulKv = &oapigen.ConsulKVModuleInput{
 				Datacenter: si.Datacenter,
 				Recurse:    si.Recurse,
 				Path:       *si.Path,

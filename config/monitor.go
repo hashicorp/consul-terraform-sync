@@ -22,6 +22,7 @@ func isMonitorNil(c MonitorConfig) bool {
 	var result bool
 	// switching on type is a performance enhancement
 	switch v := c.(type) {
+	// Conditions
 	case *ServicesConditionConfig:
 		result = v == nil
 	case *CatalogServicesConditionConfig:
@@ -30,7 +31,11 @@ func isMonitorNil(c MonitorConfig) bool {
 		result = v == nil
 	case *ScheduleConditionConfig:
 		result = v == nil
+
+	// Module Inputs
 	case *ServicesSourceInputConfig:
+		result = v == nil
+	case *ConsulKVSourceInputConfig:
 		result = v == nil
 	default:
 		return c == nil || reflect.ValueOf(c).IsNil()

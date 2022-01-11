@@ -220,7 +220,7 @@ func TestGoString(t *testing.T) {
 		expected string
 	}{
 		{
-			"configured services source_input",
+			"configured services module_input",
 			&ServicesSourceInputConfig{
 				ServicesMonitorConfig{
 					Regexp:     String("^api$"),
@@ -244,7 +244,7 @@ func TestGoString(t *testing.T) {
 				"}",
 		},
 		{
-			"nil services source_input",
+			"nil services module_input",
 			nil,
 			"(*ServicesSourceInputConfig)(nil)",
 		},
