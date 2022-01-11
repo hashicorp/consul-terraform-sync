@@ -348,6 +348,195 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 	}
 }
 
+// TestE2E_CreateTaskCommand tests creating a task with the CTS CLI
+func TestE2E_CreateTaskCommand(t *testing.T) {
+	t.Parallel()
+	taskName := "new-task"
+	cases := []struct {
+		name           string
+		taskName       string
+		inputTask      string
+		args           []string
+		input          string
+		outputContains []string
+		expectErr      bool
+		expectStatus   bool
+	}{
+		{
+			name:     "happy_path",
+			taskName: taskName,
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["api"]
+  enabled = true
+}`, taskName),
+			input: "yes\n",
+			outputContains: []string{
+				fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName),
+				fmt.Sprintf("Task '%s' created", taskName)},
+			expectErr:    false,
+			expectStatus: true,
+		},
+		{
+			name:     "auto_approve",
+			taskName: taskName,
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["api"]
+  enabled = true
+}`, taskName),
+			outputContains: []string{
+				fmt.Sprintf("Task '%s' created", taskName)},
+			expectErr:    false,
+			expectStatus: true,
+			args:         []string{"-auto-approve"},
+		},
+		{
+			name:     "user_dose_not_approve_creation",
+			taskName: taskName,
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["api"]
+  enabled = true
+}`, taskName),
+			input: "no\n",
+			outputContains: []string{
+				fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName),
+				fmt.Sprintf("Cancelled creating task '%s'", taskName),
+			},
+			expectErr:    false,
+			expectStatus: false,
+		},
+		{
+			name:     "error_task_already_exists",
+			taskName: dbTaskName,
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["api"]
+  enabled = true
+}`, dbTaskName),
+			input: "no\n",
+			outputContains: []string{
+				fmt.Sprintf("Error: unable to generate plan for '%s'", dbTaskName),
+				fmt.Sprintf("error: task with name %s already exists", dbTaskName),
+			},
+			expectErr:    true,
+			expectStatus: true,
+		},
+		{
+			name:     "error_more_than_one_task",
+			taskName: taskName,
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["api"]
+  enabled = true
+}
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["api"]
+  enabled = true
+}
+`, taskName, taskName),
+			input: "yes\n",
+			outputContains: []string{
+				"cannot contain more than 1 task, contains 2 tasks",
+			},
+			expectErr:    true,
+			expectStatus: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := newTestConsulServer(t)
+			defer srv.Stop()
+			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_cmd")
+			cts := ctsSetup(t, srv, tempDir, dbTask())
+
+			// Write task config file
+			var taskConfig hclConfig
+			taskConfig = taskConfig.appendString(tc.inputTask)
+			taskFilePath := filepath.Join(tempDir, "task.hcl")
+			taskConfig.write(t, taskFilePath)
+
+			// Create command and user approval input if required
+			subcmd := []string{"task", "create",
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+			}
+			subcmd = append(subcmd, tc.args...)
+			subcmd = append(subcmd, fmt.Sprintf("--task-file=%s", taskFilePath))
+			output, err := runSubcommand(t, tc.input, subcmd...)
+
+			// Verify result and output of command
+			if tc.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			for _, expect := range tc.outputContains {
+				assert.Contains(t, output, expect)
+			}
+
+			// Confirm whether the task is deleted or not
+			_, err = cts.Status().Task(tc.taskName, nil)
+			if tc.expectStatus {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+// TestE2E_CreateTaskCommand_NoTaskFileProvided tests creating a task with the CTS CLI when no Task File is provided
+func TestE2E_CreateTaskCommand_NoTaskFileProvided(t *testing.T) {
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_no_file_cmd")
+	cts := ctsSetup(t, srv, tempDir, dbTask())
+
+	// Create command and user approval input if required
+	subcmd := []string{"task", "create",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+	}
+	output, err := runSubcommand(t, "", subcmd...)
+
+	assert.Error(t, err)
+
+	outputContains := []string{
+		"Error: no task file provided",
+		"For additional help try 'consul-terraform-sync task create --help'",
+	}
+
+	for _, expect := range outputContains {
+		assert.Contains(t, output, expect)
+	}
+}
+
 // TestE2E_DeleteTaskCommand_Help tests that the usage is outputted
 // for the task help commands. Does not require a running CTS binary.
 func TestE2E_TaskCommand_Help(t *testing.T) {
@@ -373,6 +562,13 @@ func TestE2E_TaskCommand_Help(t *testing.T) {
 			command: "delete",
 			outputContains: []string{
 				"Usage: consul-terraform-sync task delete [options] <task name>",
+				"auto-approve false",
+			},
+		},
+		{
+			command: "create",
+			outputContains: []string{
+				"Usage: consul-terraform-sync task create [options] --task-file=<task config>",
 				"auto-approve false",
 			},
 		},
