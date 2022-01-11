@@ -140,3 +140,38 @@ func (_m *Server) TaskInspect(_a0 context.Context, _a1 config.TaskConfig) (bool,
 
 	return r0, r1, r2, r3
 }
+
+// TaskUpdate provides a mock function with given fields: ctx, updateConf, runOp
+func (_m *Server) TaskUpdate(ctx context.Context, updateConf config.TaskConfig, runOp string) (bool, string, string, error) {
+	ret := _m.Called(ctx, updateConf, runOp)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(context.Context, config.TaskConfig, string) bool); ok {
+		r0 = rf(ctx, updateConf, runOp)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	var r1 string
+	if rf, ok := ret.Get(1).(func(context.Context, config.TaskConfig, string) string); ok {
+		r1 = rf(ctx, updateConf, runOp)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+
+	var r2 string
+	if rf, ok := ret.Get(2).(func(context.Context, config.TaskConfig, string) string); ok {
+		r2 = rf(ctx, updateConf, runOp)
+	} else {
+		r2 = ret.Get(2).(string)
+	}
+
+	var r3 error
+	if rf, ok := ret.Get(3).(func(context.Context, config.TaskConfig, string) error); ok {
+		r3 = rf(ctx, updateConf, runOp)
+	} else {
+		r3 = ret.Error(3)
+	}
+
+	return r0, r1, r2, r3
+}

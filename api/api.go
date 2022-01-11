@@ -122,7 +122,7 @@ func NewAPI(conf APIConfig) (*API, error) {
 
 		// crud task
 		r.Mount(fmt.Sprintf("/%s", taskPath),
-			newTaskHandler(api.store, api.drivers, defaultAPIVersion))
+			newTaskHandler(api.ctrl, defaultAPIVersion))
 	})
 
 	r.Group(func(r chi.Router) {

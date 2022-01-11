@@ -261,3 +261,127 @@ func TestServer_TaskDelete(t *testing.T) {
 		})
 	}
 }
+
+func TestServer_TaskUpdate(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := ReadWrite{
+		baseController: &baseController{
+			conf:    &config.Config{},
+			drivers: driver.NewDrivers(),
+			logger:  logging.NewNullLogger(),
+		},
+		store: event.NewStore(),
+	}
+	ctrl.conf.Finalize()
+
+	t.Run("disable-then-enable", func(t *testing.T) {
+		taskName := "task_a"
+		taskConf := config.TaskConfig{
+			Name:   config.String("task_a"),
+			Module: config.String("findkim/print/cts"),
+			Condition: &config.ServicesConditionConfig{
+				ServicesMonitorConfig: config.ServicesMonitorConfig{
+					Names: []string{"service"},
+				},
+			},
+		}
+		taskConf.Finalize(ctrl.conf.BufferPeriod, *ctrl.conf.WorkingDir)
+		task, err := newDriverTask(ctrl.conf, &taskConf, nil)
+		require.NoError(t, err)
+
+		d := new(mocksD.Driver)
+		d.On("Task").Return(task).
+			On("UpdateTask", mock.Anything, driver.PatchTask{Enabled: false}).
+			Return(driver.InspectPlan{ChangesPresent: false, Plan: ""}, nil)
+		err = ctrl.drivers.Add(taskName, d)
+		require.NoError(t, err)
+
+		// Set the task to disabled
+		updateConf := config.TaskConfig{
+			Name:    &taskName,
+			Enabled: config.Bool(false),
+		}
+
+		changed, plan, _, err := ctrl.TaskUpdate(ctx, updateConf, "")
+		require.NoError(t, err)
+		assert.False(t, changed)
+		assert.Empty(t, plan)
+
+		// Re-enable the task
+		updateConf.Enabled = config.Bool(true)
+		d.On("UpdateTask", mock.Anything, driver.PatchTask{Enabled: true}).
+			Return(driver.InspectPlan{ChangesPresent: false, Plan: ""}, nil)
+		_, plan, _, err = ctrl.TaskUpdate(ctx, updateConf, "")
+		require.NoError(t, err)
+		assert.Empty(t, plan)
+
+		// No events since the task did not run
+		events := ctrl.store.Read(taskName)
+		assert.Empty(t, events)
+	})
+
+	t.Run("task-not-found-error", func(t *testing.T) {
+		taskConf := config.TaskConfig{
+			Name:    config.String("non-existent-task"),
+			Enabled: config.Bool(true),
+		}
+		_, plan, _, err := ctrl.TaskUpdate(ctx, taskConf, "")
+		require.Error(t, err)
+		assert.Empty(t, plan)
+	})
+
+	t.Run("task-run-inspect", func(t *testing.T) {
+		expectedPlan := driver.InspectPlan{
+			ChangesPresent: true,
+			Plan:           "plan!",
+		}
+		// add a driver
+		d := new(mocksD.Driver)
+		d.On("Task").Return(&driver.Task{}, nil).
+			On("UpdateTask", mock.Anything, mock.Anything).Return(expectedPlan, nil).Once()
+		err := ctrl.drivers.Add("task_b", d)
+		require.NoError(t, err)
+
+		updateConf := config.TaskConfig{
+			Name:    config.String("task_b"),
+			Enabled: config.Bool(true),
+		}
+
+		changed, plan, _, err := ctrl.TaskUpdate(ctx, updateConf, driver.RunOptionInspect)
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedPlan.Plan, plan)
+		assert.Equal(t, expectedPlan.ChangesPresent, changed)
+
+		// No events since the task did not run
+		events := ctrl.store.Read("task_b")
+		assert.Empty(t, events)
+	})
+
+	t.Run("task-run-now", func(t *testing.T) {
+		taskName := "task_c"
+
+		// add a driver
+		d := new(mocksD.Driver)
+		d.On("Task").Return(&driver.Task{}, nil).
+			On("UpdateTask", mock.Anything, mock.Anything).Return(driver.InspectPlan{}, nil).Once()
+		err := ctrl.drivers.Add(taskName, d)
+		require.NoError(t, err)
+
+		updateConf := config.TaskConfig{
+			Name:    &taskName,
+			Enabled: config.Bool(true),
+		}
+
+		changed, plan, _, err := ctrl.TaskUpdate(ctx, updateConf, driver.RunOptionNow)
+
+		require.NoError(t, err)
+		assert.Equal(t, "", plan, "run now does not return plan info")
+		assert.False(t, changed, "run now does not return plan info")
+
+		events := ctrl.store.Read(taskName)
+		assert.Len(t, events, 1)
+	})
+}

@@ -10,11 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
-	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -275,80 +273,6 @@ func TestStatus(t *testing.T) {
 				}
 			})
 		}
-	})
-}
-
-func Test_Task_Update(t *testing.T) {
-	t.Parallel()
-
-	// start up server
-	port := testutils.FreePort(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	drivers := driver.NewDrivers()
-	api, err := NewAPI(APIConfig{
-		Drivers: drivers,
-		Port:    port,
-	})
-	require.NoError(t, err)
-	go api.Serve(ctx)
-
-	c, err := NewClient(&ClientConfig{Port: port}, nil)
-	require.NoError(t, err)
-	err = c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
-	require.NoError(t, err)
-
-	t.Run("disable-then-enable", func(t *testing.T) {
-		// setup temp dir
-		tempDir := "disable-enable"
-		del := testutils.MakeTempDir(t, tempDir)
-		defer del()
-
-		task, err := driver.NewTask(driver.TaskConfig{Enabled: true, WorkingDir: tempDir})
-		require.NoError(t, err)
-
-		// add a driver
-		d, err := driver.NewTerraform(&driver.TerraformConfig{
-			Task:       task,
-			ClientType: "test",
-		})
-		require.NoError(t, err)
-		err = drivers.Add("task_a", d)
-		require.NoError(t, err)
-
-		assert.True(t, d.Task().IsEnabled())
-		plan, err := c.Task().Update("task_a", UpdateTaskConfig{
-			Enabled: config.Bool(false),
-		}, nil)
-		require.NoError(t, err)
-		assert.False(t, d.Task().IsEnabled())
-		assert.Empty(t, plan)
-	})
-	t.Run("task-not-found-error", func(t *testing.T) {
-		plan, err := c.Task().Update("non-existent-task", UpdateTaskConfig{
-			Enabled: config.Bool(false),
-		}, nil)
-		require.Error(t, err)
-		assert.Empty(t, plan)
-	})
-	t.Run("task-run-option", func(t *testing.T) {
-		expectedPlan := driver.InspectPlan{
-			ChangesPresent: true,
-			Plan:           "plan!",
-		}
-		// add a driver
-		d := new(mocksD.Driver)
-		d.On("UpdateTask", mock.Anything, mock.Anything).
-			Return(expectedPlan, nil).Once()
-		err = drivers.Add("task_b", d)
-		require.NoError(t, err)
-
-		actual, err := c.Task().Update("task_b", UpdateTaskConfig{
-			Enabled: config.Bool(false),
-		}, &QueryParam{Run: driver.RunOptionInspect})
-
-		require.NoError(t, err)
-		assert.Equal(t, expectedPlan, *actual.Inspect)
 	})
 }
 

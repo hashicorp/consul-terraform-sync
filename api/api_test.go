@@ -59,13 +59,6 @@ func TestServe(t *testing.T) {
 			"",
 			http.StatusOK,
 		},
-		{
-			"update task (patch)",
-			"tasks/task_b",
-			http.MethodPatch,
-			`{"enabled": true}`,
-			http.StatusOK,
-		},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -150,6 +143,17 @@ func TestServe_refactored(t *testing.T) {
 			func(ctrl *serverMocks.Server) {
 				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskDelete", mock.Anything, "task_b").Return(nil)
+			},
+			http.StatusOK,
+			"{}\n",
+		}, {
+			"update task (patch)",
+			"tasks/task_b",
+			http.MethodPatch,
+			`{"enabled": true}`,
+			func(ctrl *serverMocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, nil)
+				ctrl.On("TaskUpdate", mock.Anything, mock.Anything, "").Return(true, "", "", nil)
 			},
 			http.StatusOK,
 			"{}\n",
@@ -558,14 +562,14 @@ func TestJsonResponse(t *testing.T) {
 			"task status: success",
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_a": TaskStatus{
+				"task_a": {
 					TaskName:  "task_a",
 					Status:    StatusErrored,
 					Providers: []string{"local", "null", "f5"},
 					Services:  []string{"api", "web", "db"},
 					EventsURL: "/v1/status/tasks/test_task?include=events",
 				},
-				"task_b": TaskStatus{
+				"task_b": {
 					TaskName:  "task_b",
 					Status:    StatusUnknown,
 					Providers: []string{},
@@ -578,14 +582,14 @@ func TestJsonResponse(t *testing.T) {
 			"task status: success with events",
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_a": TaskStatus{
+				"task_a": {
 					TaskName:  "task_a",
 					Status:    StatusErrored,
 					Providers: []string{"local", "null", "f5"},
 					Services:  []string{"api", "web", "db"},
 					EventsURL: "/v1/status/tasks/test_task?include=events",
 					Events: []event.Event{
-						event.Event{
+						{
 							ID:        "123",
 							TaskName:  "task_a",
 							StartTime: time.Now(),
@@ -597,7 +601,7 @@ func TestJsonResponse(t *testing.T) {
 								Source:    "./test_modules/local_instances_file",
 							},
 						},
-						event.Event{
+						{
 							ID:        "456",
 							TaskName:  "task_a",
 							StartTime: time.Now(),
@@ -637,7 +641,7 @@ func TestJsonResponse(t *testing.T) {
 			"update task inspect",
 			http.StatusOK,
 			UpdateTaskResponse{
-				Inspect: &driver.InspectPlan{
+				Inspect: &InspectPlan{
 					ChangesPresent: true,
 					Plan:           "plan!",
 				},
