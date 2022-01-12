@@ -64,7 +64,7 @@ type Task struct {
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
 	condition    config.ConditionConfig
-	sourceInput  config.ModuleInputConfig
+	moduleInputs config.ModuleInputConfigs
 	workingDir   string
 	logger       logging.Logger
 }
@@ -83,7 +83,7 @@ type TaskConfig struct {
 	Version      string
 	BufferPeriod *BufferPeriod
 	Condition    config.ConditionConfig
-	SourceInput  config.ModuleInputConfig
+	ModuleInputs config.ModuleInputConfigs
 	WorkingDir   string
 }
 
@@ -127,7 +127,7 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
 		condition:    conf.Condition,
-		sourceInput:  conf.SourceInput,
+		moduleInputs: conf.ModuleInputs,
 		workingDir:   conf.WorkingDir,
 		logger:       logging.Global().Named(logSystemName),
 	}, nil
@@ -151,11 +151,11 @@ func (t *Task) Condition() config.ConditionConfig {
 	return t.condition
 }
 
-// SourceInput returns the type of sourceInput for the task to run
-func (t *Task) SourceInput() config.ModuleInputConfig {
+// ModuleInputs returns the type of module input for the task to run
+func (t *Task) ModuleInputs() config.ModuleInputConfigs {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.sourceInput
+	return *t.moduleInputs.Copy()
 }
 
 // IsScheduled returns if the task is a scheduled task or not (a dynamic task)
