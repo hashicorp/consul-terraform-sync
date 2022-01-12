@@ -453,3 +453,27 @@ func TestServicesMonitorConfig_GoString(t *testing.T) {
 		})
 	}
 }
+
+// TestServicesMonitorConfig_RegexpNil tests the exception that when `Regexp` is
+// unset, it retains nil value after Finalize() and Validate(). Tests it is
+// idempotent
+func TestServicesMonitorConfig_RegexpNil(t *testing.T) {
+	t.Parallel()
+
+	conf := &ServicesMonitorConfig{
+		Names: []string{"api"},
+		// Regexp unset
+	}
+
+	// Confirm `Regexp` nil
+	conf.Finalize()
+	err := conf.Validate()
+	assert.NoError(t, err)
+	assert.Nil(t, conf.Regexp)
+
+	// Confirm idempotent - Validate() doesn't error and `Regexp` still nil
+	conf.Finalize()
+	err = conf.Validate()
+	assert.NoError(t, err)
+	assert.Nil(t, conf.Regexp)
+}
