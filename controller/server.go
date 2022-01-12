@@ -15,7 +15,7 @@ func (rw *ReadWrite) Config() config.Config {
 }
 
 func (rw *ReadWrite) Events(ctx context.Context, taskName string) (map[string][]event.Event, error) {
-	return nil, fmt.Errorf("not implemented")
+	return rw.store.Read(taskName), nil
 }
 
 func (rw *ReadWrite) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
@@ -161,6 +161,16 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 	return plan.ChangesPresent, plan.Plan, "", nil
 }
 
+func (rw *ReadWrite) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
+	drivers := rw.drivers.Map()
+	confs := make([]config.TaskConfig, 0, len(drivers))
+	for _, d := range rw.drivers.Map() {
+		conf := configFromDriverTask(d.Task())
+		confs = append(confs, conf)
+	}
+	return confs, nil
+}
+
 func configFromDriverTask(t *driver.Task) config.TaskConfig {
 	vars := make(map[string]string)
 	for k, v := range t.Variables() {
@@ -197,8 +207,4 @@ func configFromDriverTask(t *driver.Task) config.TaskConfig {
 		ModuleInput:  t.SourceInput(),
 		WorkingDir:   config.String(t.WorkingDir()),
 	}
-}
-
-func (rw *ReadWrite) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
-	return nil, fmt.Errorf("not implemented")
 }
