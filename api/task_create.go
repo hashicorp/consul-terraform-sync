@@ -11,7 +11,6 @@ import (
 )
 
 // CreateTask creates a task
-// TODO: handle inclusion of variables map[string]string
 // TODO: handle setting the bufferPeriod of the driver
 func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request, params oapigen.CreateTaskParams) {
 	h.mu.Lock()
@@ -20,7 +19,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	logger.Trace("create task request received, reading request")
 
 	// Decode the task request
-	var req taskRequest
+	var req TaskRequest
 	ctx := r.Context()
 	requestID := requestIDFromContext(ctx)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

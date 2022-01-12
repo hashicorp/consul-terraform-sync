@@ -8,12 +8,20 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 )
 
-// taskRequest is a wrapper around the generated TaskRequest
+// TaskRequest is a wrapper around the generated TaskRequest
 // this allows for the task request to be extended
-type taskRequest oapigen.TaskRequest
+type TaskRequest oapigen.TaskRequest
 
-// ToTaskConfig converts a taskRequest object to a Config TaskConfig object.
-func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
+// TaskRequestFromTaskRequestConfig converts a taskRequest object to a Config TaskConfig object.
+func TaskRequestFromTaskRequestConfig(tc config.TaskConfig) TaskRequest {
+	// TODO: add variable parsing
+	tc.Variables = make(map[string]string)
+	tr := oapigenTaskFromConfigTask(tc)
+	return TaskRequest(tr)
+}
+
+// ToTaskConfig converts a TaskRequest object to a Config TaskConfig object.
+func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	tc := config.TaskConfig{
 		Description: tr.Description,
 		Name:        &tr.Name,
@@ -129,14 +137,29 @@ func (tr taskRequest) ToTaskConfig() (config.TaskConfig, error) {
 
 // String writes out the task request in an easily readable way
 // useful for logging
-func (tr taskRequest) String() string {
+func (tr TaskRequest) String() string {
 	data, _ := json.Marshal(tr)
 	return string(data)
 }
 
-type taskResponse oapigen.TaskResponse
+type TaskResponse oapigen.TaskResponse
 
-func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestID) taskResponse {
+func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestID) TaskResponse {
+	task := oapigenTaskFromConfigTask(tc)
+
+	tr := TaskResponse{
+		RequestId: requestID,
+		Task:      &task,
+	}
+	return tr
+}
+
+func (tresp TaskResponse) String() string {
+	data, _ := json.Marshal(tresp)
+	return string(data)
+}
+
+func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	task := oapigen.Task{
 		Description: tc.Description,
 		Name:        *tc.Name,
@@ -230,14 +253,5 @@ func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestI
 		}
 	}
 
-	tr := taskResponse{
-		RequestId: requestID,
-		Task:      &task,
-	}
-	return tr
-}
-
-func (tresp taskResponse) String() string {
-	data, _ := json.Marshal(tresp)
-	return string(data)
+	return task
 }
