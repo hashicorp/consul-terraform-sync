@@ -7,6 +7,7 @@ package e2e
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -496,6 +497,10 @@ task {
 			} else {
 				assert.NoError(t, err)
 			}
+
+			// remove newlines from output
+			re := regexp.MustCompile(`\r?\n`)
+			output = re.ReplaceAllString(output, " ")
 
 			for _, expect := range tc.outputContains {
 				assert.Contains(t, output, expect)

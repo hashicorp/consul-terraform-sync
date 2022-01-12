@@ -102,8 +102,6 @@ func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, 
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		err = fmt.Errorf("error creating task %s, %w", req.Name, err)
-
 		return TaskResponse{}, err
 	}
 
