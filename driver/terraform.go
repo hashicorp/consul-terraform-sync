@@ -553,7 +553,7 @@ func (tf *Terraform) initTaskTemplate() error {
 		}
 
 		// cleanup old template from watcher
-		tf.watcher.Mark(tf.template)
+		tf.watcher.MarkForSweep(tf.template)
 		tf.watcher.Sweep(tf.template)
 	}
 

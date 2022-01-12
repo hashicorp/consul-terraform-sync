@@ -44,7 +44,7 @@ type Watcher interface {
 	WaitCh(context.Context) <-chan error
 	Buffer(hcat.Notifier) bool
 	BufferReset(hcat.Notifier)
-	Mark(notifier hcat.IDer)
+	MarkForSweep(notifier hcat.IDer)
 	SetBufferPeriod(min, max time.Duration, tmplIDs ...string)
 	Size() int
 	Stop()

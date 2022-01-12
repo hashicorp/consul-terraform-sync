@@ -49,8 +49,8 @@ func (_m *Watcher) Complete(_a0 hcat.Notifier) bool {
 	return r0
 }
 
-// Mark provides a mock function with given fields: notifier
-func (_m *Watcher) Mark(notifier hcat.IDer) {
+// MarkForSweep provides a mock function with given fields: notifier
+func (_m *Watcher) MarkForSweep(notifier hcat.IDer) {
 	_m.Called(notifier)
 }
 
