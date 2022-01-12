@@ -112,6 +112,16 @@ var (
 						},
 					},
 				},
+				ModuleInputs: &ModuleInputConfigs{
+					&ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig{
+							Path:       String("key-path"),
+							Recurse:    Bool(true),
+							Datacenter: String("dc2"),
+							Namespace:  String("ns2"),
+						},
+					},
+				},
 			},
 		},
 		TerraformProviders: &TerraformProviderConfigs{{
@@ -320,7 +330,6 @@ func TestConfig_Finalize(t *testing.T) {
 	(*expected.Tasks)[0].BufferPeriod.Max = TimeDuration(60 * time.Second)
 	(*expected.Tasks)[0].Variables = map[string]string{}
 	(*expected.Tasks)[0].WorkingDir = String("working/task")
-	(*expected.Tasks)[0].ModuleInput = EmptyModuleInputConfig()
 	(*expected.Services)[0].ID = String("serviceA")
 	(*expected.Services)[0].Namespace = String("")
 	(*expected.Services)[0].Datacenter = String("")
@@ -338,7 +347,6 @@ func TestConfig_Finalize(t *testing.T) {
 
 func TestConfig_Validate(t *testing.T) {
 	valid := longConfig.Copy()
-	(*valid.Tasks)[0].ModuleInput = EmptyModuleInputConfig() // Finalize()
 
 	// 2 tasks using same provider w/ auto_commit enabled (should err)
 	autoCommit := valid.Copy()
@@ -356,15 +364,14 @@ func TestConfig_Validate(t *testing.T) {
 
 	// valid case with multiple tasks w/ different providers
 	validMultiTask := longConfig.Copy()
-	(*validMultiTask.Tasks)[0].ModuleInput = EmptyModuleInputConfig() // Finalize()
 	*validMultiTask.Tasks = append(*validMultiTask.Tasks, &TaskConfig{
-		Description: String("test task1"),
-		Name:        String("task1"),
-		Services:    []string{"serviceD"},
-		Providers:   []string{"Y"},
-		Module:      String("Z"),
-		Condition:   EmptyConditionConfig(),
-		ModuleInput: EmptyModuleInputConfig(),
+		Description:  String("test task1"),
+		Name:         String("task1"),
+		Services:     []string{"serviceD"},
+		Providers:    []string{"Y"},
+		Module:       String("Z"),
+		Condition:    EmptyConditionConfig(),
+		ModuleInputs: DefaultModuleInputConfigs(),
 	})
 	*validMultiTask.TerraformProviders = append(*validMultiTask.TerraformProviders,
 		&TerraformProviderConfig{"Y": map[string]interface{}{}})
