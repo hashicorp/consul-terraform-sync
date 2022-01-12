@@ -11,11 +11,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 )
 
-const (
-	RunOptionInspect = "inspect"
-	RunOptionNow     = "now"
-)
-
 // TaskLifecycleClient defines a client for task lifecycle requests
 // Currently non task lifecycle requests use the client in api/client.go, but eventually all endpoint
 // may use this new client. In that case TaskLifecycleClient should be renamed
