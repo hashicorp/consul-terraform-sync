@@ -14,16 +14,9 @@ func (rw *ReadWrite) Config() config.Config {
 	return *rw.baseController.conf
 }
 
-// TODO: remove getter functions when status and task API handlers are refactored
-func (rw *ReadWrite) Drivers() *driver.Drivers {
-	return rw.drivers
+func (rw *ReadWrite) Events(ctx context.Context, taskName string) (map[string][]event.Event, error) {
+	return rw.store.Read(taskName), nil
 }
-
-func (rw *ReadWrite) Store() *event.Store {
-	return rw.store
-}
-
-// End TODO
 
 func (rw *ReadWrite) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
 	// TODO handle ctx while waiting for driver lock if it is currently active
@@ -166,6 +159,16 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 	}
 
 	return plan.ChangesPresent, plan.Plan, "", nil
+}
+
+func (rw *ReadWrite) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
+	drivers := rw.drivers.Map()
+	confs := make([]config.TaskConfig, 0, len(drivers))
+	for _, d := range rw.drivers.Map() {
+		conf := configFromDriverTask(d.Task())
+		confs = append(confs, conf)
+	}
+	return confs, nil
 }
 
 func configFromDriverTask(t *driver.Task) config.TaskConfig {

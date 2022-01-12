@@ -2,15 +2,15 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sort"
 	"testing"
 
-	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/event"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
-	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	serverMocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -29,7 +29,7 @@ func TestTaskStatus_New(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := newTaskStatusHandler(event.NewStore(), nil, tc.version)
+			h := newTaskStatusHandler(new(serverMocks.Server), tc.version)
 			assert.Equal(t, tc.version, h.version)
 		})
 	}
@@ -53,28 +53,33 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	eventsC := createTaskEvents("task_c", []bool{false, true, true})
 	addEvents(store, eventsC)
 
-	drivers := driver.NewDrivers()
-	drivers.Add("task_a", createDriver(t, "task_a", true))
-	drivers.Add("task_b", createDriver(t, "task_b", true))
-	drivers.Add("task_c", createDriver(t, "task_c", true))
+	disabledTask := config.TaskConfig{
+		Name:      config.String("task_d"),
+		Enabled:   config.Bool(false),
+		Module:    config.String("module"),
+		Providers: []string{"null"},
+		Services:  []string{"web"},
+	}
+	configs := map[string]config.TaskConfig{
+		"task_a": createTaskConf("task_a", true),
+		"task_b": createTaskConf("task_b", true),
+		"task_c": createTaskConf("task_c", true),
+		"task_d": disabledTask,
+	}
 
-	disabledTask, err := driver.NewTask(driver.TaskConfig{
-		Name:    "task_d",
-		Enabled: false,
-		Providers: driver.NewTerraformProviderBlocks(
-			hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
-				{"null": map[string]interface{}{}},
-			})),
-		Services: []driver.Service{
-			driver.Service{Name: "web"},
-		},
-	})
-	require.NoError(t, err)
-	disabledD := new(mocks.Driver)
-	disabledD.On("Task").Return(disabledTask)
-	drivers.Add("task_d", disabledD)
+	ctrl := new(serverMocks.Server)
+	confs := make([]config.TaskConfig, 0, len(configs))
+	for taskName, conf := range configs {
+		confs = append(confs, conf)
+		ctrl.On("Events", mock.Anything, taskName).Return(store.Read(taskName), nil).
+			On("Task", mock.Anything, taskName).Return(conf, nil)
+	}
+	ctrl.On("Events", mock.Anything, "task_nonexistent").Return(nil, nil).
+		On("Task", mock.Anything, "task_nonexistent").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
+	ctrl.On("Events", mock.Anything, "").Return(store.Read(""), nil)
+	ctrl.On("Tasks", mock.Anything).Return(confs, nil)
 
-	handler := newTaskStatusHandler(store, drivers, "v1")
+	handler := newTaskStatusHandler(ctrl, "v1")
 
 	cases := []struct {
 		name       string
@@ -317,16 +322,13 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 }
 
 func TestTaskStatus_MakeStatus(t *testing.T) {
-	enabledTask, err := driver.NewTask(driver.TaskConfig{Name: "test_task", Enabled: true})
-	require.NoError(t, err)
-
-	disabledTask, err := driver.NewTask(driver.TaskConfig{Name: "test_task", Enabled: false})
-	require.NoError(t, err)
+	enabledTask := createTaskConf("test_task", true)
+	disabledTask := createTaskConf("test_task", false)
 
 	cases := []struct {
 		name     string
 		events   []event.Event
-		task     *driver.Task
+		task     config.TaskConfig
 		expected TaskStatus
 	}{
 		{
@@ -678,14 +680,9 @@ func addEvents(store *event.Store, events []event.Event) {
 	}
 }
 
-func createDriver(tb testing.TB, taskName string, enabled bool) driver.Driver {
-	task, err := driver.NewTask(driver.TaskConfig{
-		Name:    taskName,
-		Enabled: enabled,
-	})
-	require.NoError(tb, err)
-	d := new(mocks.Driver)
-	d.On("UpdateTask", mock.Anything, mock.Anything).Return("", nil).Once()
-	d.On("Task").Return(task)
-	return d
+func createTaskConf(taskName string, enabled bool) config.TaskConfig {
+	return config.TaskConfig{
+		Name:    &taskName,
+		Enabled: &enabled,
+	}
 }

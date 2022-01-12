@@ -6,9 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/event"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +27,7 @@ func TestOverallStatus_New(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := newOverallStatusHandler(event.NewStore(), nil, tc.version)
+			h := newOverallStatusHandler(new(mocks.Server), tc.version)
 			assert.Equal(t, tc.version, h.version)
 		})
 	}
@@ -81,15 +83,23 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 	eventsD := createTaskEvents("critical_d", []bool{false, false, true})
 	addEvents(store, eventsD)
 
-	// set up driver
-	drivers := driver.NewDrivers()
-	drivers.Add("success_a", createDriver(t, "success_a", true))
-	drivers.Add("success_b", createDriver(t, "success_b", true))
-	drivers.Add("errored_c", createDriver(t, "errored_c", true))
-	drivers.Add("critical_d", createDriver(t, "critical_d", true))
-	drivers.Add("disabled_e", createDriver(t, "disabled_e", false))
+	ctrl := new(mocks.Server)
+	taskSetup := map[string]bool{
+		"success_a":  true,
+		"success_b":  true,
+		"errored_c":  true,
+		"critical_d": true,
+		"disabled_e": false,
+	}
+	confs := make([]config.TaskConfig, 0, len(taskSetup))
+	for taskName, enabled := range taskSetup {
+		conf := createTaskConf(taskName, enabled)
+		confs = append(confs, conf)
+	}
+	ctrl.On("Events", mock.Anything, "").Return(store.Read(""), nil).
+		On("Tasks", mock.Anything).Return(confs, nil)
 
-	handler := newOverallStatusHandler(store, drivers, "v1")
+	handler := newOverallStatusHandler(ctrl, "v1")
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

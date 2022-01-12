@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
@@ -28,16 +28,14 @@ type TaskStatus struct {
 
 // taskStatusHandler handles the task status endpoint
 type taskStatusHandler struct {
-	store   *event.Store
-	drivers *driver.Drivers
+	ctrl    Server
 	version string
 }
 
 // newTaskStatusHandler returns a new TaskStatusHandler
-func newTaskStatusHandler(store *event.Store, drivers *driver.Drivers, version string) *taskStatusHandler {
+func newTaskStatusHandler(ctrl Server, version string) *taskStatusHandler {
 	return &taskStatusHandler{
-		store:   store,
-		drivers: drivers,
+		ctrl:    ctrl,
 		version: version,
 	}
 }
@@ -60,40 +58,40 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // getTaskStatus returns a map of taskname to task status
 func (h *taskStatusHandler) getTaskStatus(w http.ResponseWriter, r *http.Request) {
-	logger := logging.FromContext(r.Context()).Named(taskStatusSubsystemName)
+	ctx := r.Context()
+	logger := logging.FromContext(ctx).Named(taskStatusSubsystemName)
 
 	taskName, err := getTaskName(r.URL.Path, taskStatusPath, h.version)
 	if err != nil {
 		logger.Trace("bad request", "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
+		jsonErrorResponse(ctx, w, http.StatusBadRequest, err)
 		return
 	}
 
 	filter, err := statusFilter(r)
 	if err != nil {
 		logger.Trace("bad request", "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
+		jsonErrorResponse(ctx, w, http.StatusBadRequest, err)
 		return
 	}
 
 	include, err := include(r)
 	if err != nil {
 		logger.Trace("bad request", "error", err)
-		jsonErrorResponse(r.Context(), w, http.StatusBadRequest, err)
+		jsonErrorResponse(ctx, w, http.StatusBadRequest, err)
 		return
 	}
 
-	data := h.store.Read(taskName)
+	data, err := h.ctrl.Events(ctx, taskName)
 	statuses := make(map[string]TaskStatus)
 	for taskName, events := range data {
-		d, ok := h.drivers.Get(taskName)
-		if !ok {
-			err := fmt.Errorf("task '%s' does not have a driver", taskName)
-			logger.Trace("error getting driver", "error", err)
-			jsonErrorResponse(r.Context(), w, http.StatusNotFound, err)
+		task, err := h.ctrl.Task(ctx, taskName)
+		if err != nil {
+			logger.Trace("error getting task", "error", err)
+			jsonErrorResponse(ctx, w, http.StatusNotFound, err)
 			return
 		}
-		status := makeTaskStatus(events, d.Task(), h.version)
+		status := makeTaskStatus(events, task, h.version)
 
 		if filter != "" && status.Status != filter {
 			continue
@@ -108,23 +106,28 @@ func (h *taskStatusHandler) getTaskStatus(w http.ResponseWriter, r *http.Request
 	// a driver exists
 	if taskName != "" {
 		if _, ok := data[taskName]; !ok {
-			if d, ok := h.drivers.Get(taskName); ok {
-				statuses[taskName] = makeTaskStatusUnknown(d.Task())
-			} else {
-				err := fmt.Errorf("task '%s' does not exist", taskName)
+			task, err := h.ctrl.Task(ctx, taskName)
+			if err != nil {
 				logger.Trace("error getting task", "error", err)
-				jsonErrorResponse(r.Context(), w, http.StatusNotFound, err)
+				jsonErrorResponse(ctx, w, http.StatusNotFound, err)
 				return
 			}
+			statuses[taskName] = makeTaskStatusUnknown(task)
 		}
 	}
 
 	// if user requested all tasks and status filter applicable, check driver
 	// for tasks without events
 	if taskName == "" && (filter == "" || filter == StatusUnknown) {
-		for tN, d := range h.drivers.Map() {
-			if _, ok := data[tN]; !ok {
-				statuses[tN] = makeTaskStatusUnknown(d.Task())
+		tasks, err := h.ctrl.Tasks(ctx)
+		if err != nil {
+			logger.Trace("error getting tasks", "error", err)
+			jsonErrorResponse(ctx, w, http.StatusInternalServerError, err)
+			return
+		}
+		for _, task := range tasks {
+			if _, ok := data[*task.Name]; !ok {
+				statuses[*task.Name] = makeTaskStatusUnknown(task)
 			}
 		}
 	}
@@ -135,7 +138,7 @@ func (h *taskStatusHandler) getTaskStatus(w http.ResponseWriter, r *http.Request
 }
 
 // makeTaskStatus takes event data for a task and returns a task status
-func makeTaskStatus(events []event.Event, task *driver.Task,
+func makeTaskStatus(events []event.Event, task config.TaskConfig,
 	version string) TaskStatus {
 
 	successes := make([]bool, len(events))
@@ -155,11 +158,11 @@ func makeTaskStatus(events []event.Event, task *driver.Task,
 		}
 	}
 
-	taskName := task.Name()
+	taskName := *task.Name
 	return TaskStatus{
 		TaskName:  taskName,
 		Status:    successToStatus(successes),
-		Enabled:   task.IsEnabled(),
+		Enabled:   *task.Enabled,
 		Providers: mapKeyToArray(uniqProviders),
 		Services:  mapKeyToArray(uniqServices),
 		EventsURL: makeEventsURL(events, version, taskName),
@@ -168,13 +171,13 @@ func makeTaskStatus(events []event.Event, task *driver.Task,
 
 // makeTaskStatusUnknown returns a task status for tasks that do not have events
 // but still exist within CTS. Example: a task that has been disabled from the start
-func makeTaskStatusUnknown(task *driver.Task) TaskStatus {
+func makeTaskStatusUnknown(task config.TaskConfig) TaskStatus {
 	return TaskStatus{
-		TaskName:  task.Name(),
+		TaskName:  *task.Name,
 		Status:    StatusUnknown,
-		Enabled:   task.IsEnabled(),
-		Providers: task.ProviderNames(),
-		Services:  task.ServiceNames(),
+		Enabled:   *task.Enabled,
+		Providers: task.Providers,
+		Services:  task.Services,
 		EventsURL: "",
 	}
 }

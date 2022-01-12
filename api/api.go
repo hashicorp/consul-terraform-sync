@@ -13,8 +13,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-rootcerts"
@@ -62,8 +60,6 @@ const (
 
 // API supports api requests to the cts binary
 type API struct {
-	store   *event.Store
-	drivers *driver.Drivers
 	ctrl    Server
 	port    int
 	version string
@@ -72,8 +68,6 @@ type API struct {
 }
 
 type APIConfig struct {
-	Store      *event.Store
-	Drivers    *driver.Drivers
 	Port       int
 	TLS        *config.CTSTLSConfig
 	Controller Server
@@ -85,18 +79,8 @@ func NewAPI(conf APIConfig) (*API, error) {
 	api := &API{
 		ctrl:    conf.Controller,
 		port:    conf.Port,
-		drivers: conf.Drivers,
-		store:   conf.Store,
 		version: defaultAPIVersion,
 		tls:     conf.TLS,
-	}
-
-	if conf.Store == nil {
-		api.store = event.NewStore()
-	}
-
-	if conf.Drivers == nil {
-		api.drivers = driver.NewDrivers()
 	}
 
 	if conf.TLS == nil {
@@ -114,11 +98,11 @@ func NewAPI(conf APIConfig) (*API, error) {
 		// Legacy Endpoints
 		// retrieve overall status
 		r.Mount(fmt.Sprintf("/%s", overallStatusPath),
-			newOverallStatusHandler(api.store, api.drivers, defaultAPIVersion))
+			newOverallStatusHandler(api.ctrl, defaultAPIVersion))
 
 		// retrieve all task statuses
 		r.Mount(fmt.Sprintf("/%s", taskStatusPath),
-			newTaskStatusHandler(api.store, api.drivers, defaultAPIVersion))
+			newTaskStatusHandler(api.ctrl, defaultAPIVersion))
 
 		// crud task
 		r.Mount(fmt.Sprintf("/%s", taskPath),

@@ -7,6 +7,8 @@ import (
 
 	config "github.com/hashicorp/consul-terraform-sync/config"
 
+	event "github.com/hashicorp/consul-terraform-sync/event"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -29,20 +31,43 @@ func (_m *Server) Config() config.Config {
 	return r0
 }
 
-// Task provides a mock function with given fields: ctx, taskname
-func (_m *Server) Task(ctx context.Context, taskname string) (config.TaskConfig, error) {
-	ret := _m.Called(ctx, taskname)
+// Events provides a mock function with given fields: ctx, taskName
+func (_m *Server) Events(ctx context.Context, taskName string) (map[string][]event.Event, error) {
+	ret := _m.Called(ctx, taskName)
+
+	var r0 map[string][]event.Event
+	if rf, ok := ret.Get(0).(func(context.Context, string) map[string][]event.Event); ok {
+		r0 = rf(ctx, taskName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string][]event.Event)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, taskName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Task provides a mock function with given fields: ctx, taskName
+func (_m *Server) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
+	ret := _m.Called(ctx, taskName)
 
 	var r0 config.TaskConfig
 	if rf, ok := ret.Get(0).(func(context.Context, string) config.TaskConfig); ok {
-		r0 = rf(ctx, taskname)
+		r0 = rf(ctx, taskName)
 	} else {
 		r0 = ret.Get(0).(config.TaskConfig)
 	}
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, taskname)
+		r1 = rf(ctx, taskName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -174,4 +199,27 @@ func (_m *Server) TaskUpdate(ctx context.Context, updateConf config.TaskConfig, 
 	}
 
 	return r0, r1, r2, r3
+}
+
+// Tasks provides a mock function with given fields: _a0
+func (_m *Server) Tasks(_a0 context.Context) ([]config.TaskConfig, error) {
+	ret := _m.Called(_a0)
+
+	var r0 []config.TaskConfig
+	if rf, ok := ret.Get(0).(func(context.Context) []config.TaskConfig); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]config.TaskConfig)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
