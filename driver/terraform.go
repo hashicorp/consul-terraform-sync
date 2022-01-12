@@ -393,7 +393,10 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 		tf.task.source = moduleSource
 	}
 
-	tf.task.configureRootModuleInput(&input)
+	if err := tf.task.configureRootModuleInput(&input); err != nil {
+		return err
+	}
+
 	if err := tftmpl.InitRootModule(&input); err != nil {
 		return err
 	}
