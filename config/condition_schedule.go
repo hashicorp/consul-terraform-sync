@@ -16,6 +16,10 @@ type ScheduleConditionConfig struct {
 	Cron *string `mapstructure:"cron"`
 }
 
+func (c *ScheduleConditionConfig) VariableType() string {
+	return ""
+}
+
 // Copy returns a deep copy of this configuration.
 func (c *ScheduleConditionConfig) Copy() MonitorConfig {
 	if c == nil {

@@ -25,6 +25,10 @@ type CatalogServicesMonitorConfig struct {
 	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var"`
 }
 
+func (c *CatalogServicesMonitorConfig) VariableType() string {
+	return "catalog_services"
+}
+
 // Copy returns a deep copy of this configuration.
 func (c *CatalogServicesMonitorConfig) Copy() MonitorConfig {
 	if c == nil {
