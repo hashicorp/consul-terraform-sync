@@ -323,7 +323,7 @@ func TestRequest_TaskRequestFromTaskConfig(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := TaskRequestFromTaskConfig(tc.taskConfig)
+			actual, err := TaskRequestFromTaskRequestConfig(tc.taskConfig)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expectedRequest, actual)
 		})
@@ -962,7 +962,7 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := taskResponseFromTaskConfig(tc.taskConfig, "e9926514-79b8-a8fc-8761-9b6aaccf1e15")
-			assert.Equal(t, tc.expectedResponse, actual)
+			assert.Equal(t, actual, tc.expectedResponse)
 		})
 	}
 }
