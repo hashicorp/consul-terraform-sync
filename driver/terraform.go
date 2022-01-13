@@ -659,17 +659,21 @@ func getServicesMetaData(logger logging.Logger, task *Task) (*tmplfunc.ServicesM
 		return servicesMeta, nil
 	}
 
-	// Introduced in 0.5. Metadata comes from source_input "services"
-	servicesInput, ok := task.SourceInput().(*config.ServicesModuleInputConfig)
-	if ok {
-		err := servicesMeta.SetMeta(servicesInput.CTSUserDefinedMeta)
-		if err != nil {
-			logger.Error("unable to to set metadata from services source input",
-				taskNameLogKey, task.Name(), "error", err)
-			return nil, err
-		}
+	// Introduced in 0.5. Metadata comes from module_input "services"
+	for _, moduleInput := range task.ModuleInputs() {
+		servicesInput, ok := moduleInput.(*config.ServicesModuleInputConfig)
+		if ok {
+			err := servicesMeta.SetMeta(servicesInput.CTSUserDefinedMeta)
+			if err != nil {
+				logger.Error("unable to to set metadata from services module_input",
+					taskNameLogKey, task.Name(), "error", err)
+				return nil, err
+			}
 
-		return servicesMeta, nil
+			// currently due to config validation, only on services module_input
+			// can be configured
+			return servicesMeta, nil
+		}
 	}
 
 	// Deprecated in 0.5. Metadata comes from service block
@@ -677,6 +681,10 @@ func getServicesMetaData(logger logging.Logger, task *Task) (*tmplfunc.ServicesM
 	services := task.Services()
 	for _, s := range services {
 		metaMap[s.Name] = s.UserDefinedMeta
+	}
+
+	if len(metaMap) == 0 {
+		return servicesMeta, nil
 	}
 
 	if err := servicesMeta.SetMetaMap(metaMap); err != nil {
