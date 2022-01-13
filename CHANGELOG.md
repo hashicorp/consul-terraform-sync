@@ -1,3 +1,10 @@
+## UNRELEASED
+SECURITY:
+* Upgrade Go to address [CVE-2021-44716](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44716) and [CVE-2021-44717](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44717)
+
+FEATURES:
+* Support for Terraform v1.1 [[GH-588](https://github.com/hashicorp/consul-terraform-sync/pull/588)]
+
 ## 0.3.0 (September 01, 2021)
 BREAKING CHANGES:
 * `INFO` log level is now the default, changed from `WARN`. [[GH-23](https://github.com/hashicorp/consul-terraform-sync/issues/23)]
