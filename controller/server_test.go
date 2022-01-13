@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates"
@@ -58,9 +59,7 @@ func TestServer_TaskCreate(t *testing.T) {
 		require.NoError(t, err)
 
 		mockD := new(mocksD.Driver)
-		mockD.On("Task").Return(driverTask).
-			On("InitTask", mock.Anything).Return(nil).
-			On("RenderTemplate", mock.Anything).Return(true, nil)
+		mockDriver(ctx, mockD, driverTask)
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
@@ -126,10 +125,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 			Name:    "task",
 		})
 		require.NoError(t, err)
-		mockD.On("Task").Return(task).
-			On("InitTask", ctx).Return(nil).
-			On("RenderTemplate", mock.Anything).Return(true, nil).
-			On("ApplyTask", ctx).Return(nil)
+		mockDriver(ctx, mockD, task)
 		ctrl.store = event.NewStore()
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
@@ -155,9 +151,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 			Name:    "task",
 		})
 		require.NoError(t, err)
-		mockD.On("Task").Return(task).
-			On("InitTask", ctx).Return(nil).
-			On("RenderTemplate", mock.Anything).Return(true, nil)
+		mockDriver(ctx, mockD, task)
 		ctrl.store = event.NewStore()
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
@@ -223,6 +217,7 @@ func TestServer_TaskDelete(t *testing.T) {
 		{
 			"success",
 			func(d *driver.Drivers) {
+				mockD.On("TemplateIDs").Return(nil)
 				d.Add("success", mockD)
 			},
 			"",
@@ -233,6 +228,7 @@ func TestServer_TaskDelete(t *testing.T) {
 		}, {
 			"active",
 			func(d *driver.Drivers) {
+				mockD.On("TemplateIDs").Return(nil)
 				d.Add("active", mockD)
 				d.SetActive("active")
 			},
@@ -292,8 +288,8 @@ func TestServer_TaskUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		d := new(mocksD.Driver)
-		d.On("Task").Return(task).
-			On("UpdateTask", mock.Anything, driver.PatchTask{Enabled: false}).
+		mockDriver(ctx, d, task)
+		d.On("UpdateTask", mock.Anything, driver.PatchTask{Enabled: false}).
 			Return(driver.InspectPlan{ChangesPresent: false, Plan: ""}, nil)
 		err = ctrl.drivers.Add(taskName, d)
 		require.NoError(t, err)
@@ -339,8 +335,8 @@ func TestServer_TaskUpdate(t *testing.T) {
 		}
 		// add a driver
 		d := new(mocksD.Driver)
-		d.On("Task").Return(&driver.Task{}, nil).
-			On("UpdateTask", mock.Anything, mock.Anything).Return(expectedPlan, nil).Once()
+		mockDriver(ctx, d, &driver.Task{})
+		d.On("UpdateTask", mock.Anything, mock.Anything).Return(expectedPlan, nil).Once()
 		err := ctrl.drivers.Add("task_b", d)
 		require.NoError(t, err)
 
@@ -365,8 +361,8 @@ func TestServer_TaskUpdate(t *testing.T) {
 
 		// add a driver
 		d := new(mocksD.Driver)
-		d.On("Task").Return(&driver.Task{}, nil).
-			On("UpdateTask", mock.Anything, mock.Anything).Return(driver.InspectPlan{}, nil).Once()
+		mockDriver(ctx, d, &driver.Task{})
+		d.On("UpdateTask", mock.Anything, mock.Anything).Return(driver.InspectPlan{}, nil).Once()
 		err := ctrl.drivers.Add(taskName, d)
 		require.NoError(t, err)
 
@@ -384,4 +380,13 @@ func TestServer_TaskUpdate(t *testing.T) {
 		events := ctrl.store.Read(taskName)
 		assert.Len(t, events, 1)
 	})
+}
+
+// mockDriver sets up a mock driver with the happy path for all methods
+func mockDriver(ctx context.Context, d *mocks.Driver, task *driver.Task) {
+	d.On("Task").Return(task).
+		On("InitTask", ctx).Return(nil).
+		On("TemplateIDs").Return(nil).
+		On("RenderTemplate", mock.Anything).Return(true, nil).
+		On("ApplyTask", ctx).Return(nil)
 }

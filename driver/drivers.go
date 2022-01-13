@@ -54,7 +54,7 @@ func (d *Drivers) Add(taskName string, driver Driver) error {
 	return nil
 }
 
-// Get retrieves the driver for a task
+// Get retrieves the driver for a task by task name
 func (d *Drivers) Get(taskName string) (Driver, bool) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -67,12 +67,18 @@ func (d *Drivers) Get(taskName string) (Driver, bool) {
 	return driver, true
 }
 
-func (d *Drivers) GetTask(tmplID string) (string, bool) {
+// GetTaskByTemplate retrieves the driver for a task by template ID
+func (d *Drivers) GetTaskByTemplate(tmplID string) (Driver, bool) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
 	taskName, ok := d.driverTemplates[tmplID]
-	return taskName, ok
+	if !ok {
+		return nil, false
+	}
+
+	driver, ok := d.drivers[taskName]
+	return driver, ok
 }
 
 func (d *Drivers) Reset() {

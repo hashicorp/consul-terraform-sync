@@ -86,13 +86,13 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	for i := int64(1); ; i++ {
 		select {
 		case tmplID := <-rw.watcherCh:
-			taskName, ok := rw.drivers.GetTask(tmplID)
+			d, ok := rw.drivers.GetTaskByTemplate(tmplID)
 			if !ok {
 				rw.logger.Debug("template was notified for update but the template ID does not match any task", "template_id", tmplID)
 				continue
 			}
 
-			go rw.runTask(ctx, taskName) // errors are logged for now
+			go rw.runTask(ctx, d) // errors are logged for now
 
 		case err := <-errCh:
 			return err
@@ -146,46 +146,6 @@ func (rw *ReadWrite) runDynamicTasks(ctx context.Context) chan error {
 	}()
 
 	return errCh
-}
-
-func (rw *ReadWrite) runTask(ctx context.Context, taskName string) error {
-	logger := rw.logger.With(taskNameLogKey, taskName)
-
-	d, ok := rw.drivers.Get(taskName)
-	if !ok {
-		return fmt.Errorf("driver for task %q does not exist to run", taskName)
-	}
-
-	if rw.drivers.IsActive(taskName) {
-		// The driver is currently active with the task, initiated by an ad-hoc run.
-		logger.Trace("task is active")
-		return nil
-	}
-
-	switch d.Task().Condition().(type) {
-	case *config.CatalogServicesConditionConfig:
-		// Catalog services condition has multiple API calls it depends on for
-		// updates. This adds an additional delay for hcat to process any new
-		// updates in the background that may be related to this task. 1 second is
-		// used to account for Consul cluster propagation of the change at scale.
-		// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
-		<-time.After(time.Second)
-	case *config.ScheduleConditionConfig:
-		// Schedule tasks are not dynamic and run in a different process
-		// In the future we may want to run a scheduled task ad-hoc
-		return nil
-	}
-
-	complete, err := rw.checkApply(ctx, d, true, false)
-	if err != nil {
-		logger.Error("error running task", "error", err)
-		return err
-	}
-
-	if rw.taskNotify != nil && complete {
-		rw.taskNotify <- taskName
-	}
-	return nil
 }
 
 // runScheduledTask starts up a go-routine for a given scheduled task/driver.
@@ -446,6 +406,20 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 	rw.drivers.SetActive(taskName)
 	defer rw.drivers.SetInactive(taskName)
 
+	switch task.Condition().(type) {
+	case *config.CatalogServicesConditionConfig:
+		// Catalog services condition has multiple API calls it depends on for
+		// updates. This adds an additional delay for hcat to process any new
+		// updates in the background that may be related to this task. 1 second is
+		// used to account for Consul cluster propagation of the change at scale.
+		// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
+		<-time.After(time.Second)
+	case *config.ScheduleConditionConfig:
+		// Schedule tasks are not dynamic and run in a different process
+		// In the future we may want to run a scheduled task ad-hoc
+		return nil
+	}
+
 	// Create new event for task run
 	ev, err := event.NewEvent(taskName, &event.Config{
 		Providers: task.ProviderNames(),
@@ -471,6 +445,10 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 	if err := rw.store.Add(*ev); err != nil {
 		// only log error since creating a task occurred successfully by now
 		logger.Error("error storing event", "event", ev.GoString(), "error", err)
+	}
+
+	if rw.taskNotify != nil {
+		rw.taskNotify <- taskName
 	}
 
 	return err
