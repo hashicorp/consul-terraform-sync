@@ -76,10 +76,14 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		rw.watcherCh = make(chan string, rw.drivers.Len()+2)
 	}
 	go func() {
-		err := rw.watcher.Watch(ctx, rw.watcherCh)
-		if err != nil {
-			rw.logger.Error("error watching template dependencies", "error", err)
-			errCh <- err
+		for {
+			rw.logger.Trace("starting template dependency monitoring")
+			err := rw.watcher.Watch(ctx, rw.watcherCh)
+			if err == nil || err == context.Canceled {
+				rw.logger.Info("stopping dependency monitoring")
+				return
+			}
+			rw.logger.Error("error monitoring template dependencies", "error", err)
 		}
 	}()
 
