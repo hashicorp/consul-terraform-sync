@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/pkg/errors"
+	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
 func (rw *ReadWrite) Config() config.Config {
@@ -173,8 +174,12 @@ func (rw *ReadWrite) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
 
 func configFromDriverTask(t *driver.Task) config.TaskConfig {
 	vars := make(map[string]string)
+
+	// value can be anything so marshal it to equivalent json
+	// and store json as the string value in the map
 	for k, v := range t.Variables() {
-		vars[k] = v.AsString()
+		b, _ := ctyjson.Marshal(v, v.Type())
+		vars[k] = string(b)
 	}
 
 	var bpConf config.BufferPeriodConfig
