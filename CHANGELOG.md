@@ -1,3 +1,8 @@
+## 0.2.2 (January 13, 2022)
+
+SECURITY:
+* Upgrade Go to address [CVE-2021-44716](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44716) and [CVE-2021-44717](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44717)
+
 ## 0.2.1 (July 14, 2021)
 FEATURES:
 * Add support for Terraform v1.0 [[GH-333](https://github.com/hashicorp/consul-terraform-sync/pull/333)]
