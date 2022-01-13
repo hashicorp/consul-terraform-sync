@@ -6,18 +6,43 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
+	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
 // TaskRequest is a wrapper around the generated TaskRequest
 // this allows for the task request to be extended
 type TaskRequest oapigen.TaskRequest
 
-// TaskRequestFromTaskRequestConfig converts a taskRequest object to a Config TaskConfig object.
-func TaskRequestFromTaskRequestConfig(tc config.TaskConfig) TaskRequest {
-	// TODO: add variable parsing
-	tc.Variables = make(map[string]string)
+// TaskRequestFromTaskConfig converts a taskRequest object to a Config TaskConfig object.
+func TaskRequestFromTaskConfig(tc config.TaskConfig) (TaskRequest, error) {
+	if len(tc.VarFiles) > 0 {
+		// Load all variables from passed in variable files before
+		// converting to map[string]string
+		loadedVars := make(hcltmpl.Variables)
+		for _, vf := range tc.VarFiles {
+			tfvars, err := tftmpl.LoadModuleVariables(vf)
+			if err != nil {
+				return TaskRequest{}, err
+			}
+
+			for k, v := range tfvars {
+				loadedVars[k] = v
+			}
+		}
+
+		// Value can be anything so marshal it to equivalent json
+		// and store json as the string value in the map
+		tc.Variables = make(map[string]string)
+		for k, v := range loadedVars {
+			b, _ := ctyjson.Marshal(v, v.Type())
+			tc.Variables[k] = string(b)
+		}
+	}
+
 	tr := oapigenTaskFromConfigTask(tc)
-	return TaskRequest(tr)
+	return TaskRequest(tr), nil
 }
 
 // ToTaskConfig converts a TaskRequest object to a Config TaskConfig object.
@@ -162,10 +187,16 @@ func (tresp TaskResponse) String() string {
 func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	task := oapigen.Task{
 		Description: tc.Description,
-		Name:        *tc.Name,
-		Module:      *tc.Module,
 		Version:     tc.Version,
 		Enabled:     tc.Enabled,
+	}
+
+	if tc.Name != nil {
+		task.Name = *tc.Name
+	}
+
+	if tc.Module != nil {
+		task.Module = *tc.Module
 	}
 
 	if tc.Variables != nil {

@@ -26,7 +26,12 @@ func (rw *ReadWrite) Task(ctx context.Context, taskName string) (config.TaskConf
 		return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
 	}
 
-	return configFromDriverTask(d.Task()), nil
+	conf, err := configFromDriverTask(d.Task())
+	if err != nil {
+		return config.TaskConfig{}, err
+	}
+
+	return conf, nil
 }
 
 func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
@@ -43,7 +48,11 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 	if err != nil {
 		return config.TaskConfig{}, err
 	}
-	return configFromDriverTask(d.Task()), nil
+	conf, err := configFromDriverTask(d.Task())
+	if err != nil {
+		return config.TaskConfig{}, err
+	}
+	return conf, nil
 }
 
 func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
@@ -64,7 +73,11 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 	if err != nil {
 		return config.TaskConfig{}, err
 	}
-	return configFromDriverTask(d.Task()), nil
+	conf, err := configFromDriverTask(d.Task())
+	if err != nil {
+		return config.TaskConfig{}, err
+	}
+	return conf, nil
 }
 
 func (rw *ReadWrite) TaskDelete(ctx context.Context, name string) error {
@@ -166,19 +179,25 @@ func (rw *ReadWrite) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
 	drivers := rw.drivers.Map()
 	confs := make([]config.TaskConfig, 0, len(drivers))
 	for _, d := range rw.drivers.Map() {
-		conf := configFromDriverTask(d.Task())
+		conf, err := configFromDriverTask(d.Task())
+		if err != nil {
+			return nil, err
+		}
 		confs = append(confs, conf)
 	}
 	return confs, nil
 }
 
-func configFromDriverTask(t *driver.Task) config.TaskConfig {
+func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 	vars := make(map[string]string)
 
 	// value can be anything so marshal it to equivalent json
 	// and store json as the string value in the map
 	for k, v := range t.Variables() {
-		b, _ := ctyjson.Marshal(v, v.Type())
+		b, err := ctyjson.Marshal(v, v.Type())
+		if err != nil {
+			return config.TaskConfig{}, err
+		}
 		vars[k] = string(b)
 	}
 
@@ -211,5 +230,5 @@ func configFromDriverTask(t *driver.Task) config.TaskConfig {
 		Condition:    t.Condition(),
 		ModuleInput:  t.SourceInput(),
 		WorkingDir:   config.String(t.WorkingDir()),
-	}
+	}, nil
 }
