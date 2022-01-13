@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -96,7 +95,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 				continue
 			}
 
-			go rw.runTask(ctx, d) // errors are logged for now
+			go rw.runDynamicTask(ctx, d) // errors are logged for now
 
 		case err := <-errCh:
 			return err
@@ -110,46 +109,31 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	}
 }
 
-// runDynamicTasks runs through all the dynamic tasks/drivers. For each dynamic
-// task, it will try to render the template and apply the task if necessary.
-//
-// Returned error channel closes when done with all tasks
-func (rw *ReadWrite) runDynamicTasks(ctx context.Context) chan error {
-	// keep error chan and waitgroup here to keep runDynamicTask simple (on task)
-	errCh := make(chan error, 1)
-	wg := sync.WaitGroup{}
-	for taskName, d := range rw.drivers.Map() {
-		if d.Task().IsScheduled() {
-			// Schedule tasks are not dynamic and run in a different process
-			continue
-		}
-
-		if rw.drivers.IsActive(taskName) {
-			// The driver is currently active with the task, initiated by an ad-hoc run.
-			// There may be updates for other tasks, so we'll continue checking
-			rw.logger.Trace("task is active", taskNameLogKey, taskName)
-			continue
-		}
-		wg.Add(1)
-		go func(taskName string, d driver.Driver) {
-			complete, err := rw.checkApply(ctx, d, true, false)
-			if err != nil {
-				errCh <- err
-			}
-
-			if rw.taskNotify != nil && complete {
-				rw.taskNotify <- taskName
-			}
-			wg.Done()
-		}(taskName, d)
+// runDynamicTask will try to render the template and apply the task if necessary.
+func (rw *ReadWrite) runDynamicTask(ctx context.Context, d driver.Driver) error {
+	task := d.Task()
+	taskName := task.Name()
+	if task.IsScheduled() {
+		// Schedule tasks are not dynamic and run in a different process
+		return nil
 	}
 
-	go func() {
-		wg.Wait()
-		close(errCh)
-	}()
+	if rw.drivers.IsActive(taskName) {
+		// The driver is currently active with the task, initiated by an ad-hoc run.
+		// There may be updates for other tasks, so we'll continue checking
+		rw.logger.Trace("task is active", taskNameLogKey, taskName)
+		return nil
+	}
 
-	return errCh
+	complete, err := rw.checkApply(ctx, d, true, false)
+	if err != nil {
+		return err
+	}
+
+	if rw.taskNotify != nil && complete {
+		rw.taskNotify <- taskName
+	}
+	return nil
 }
 
 // runScheduledTask starts up a go-routine for a given scheduled task/driver.
@@ -280,6 +264,21 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 		return true, nil
 	}
 
+	switch cond := task.Condition().(type) {
+	// Services condition (with regex) and catalog services condition have
+	// multiple API calls it depends on for updates. This adds an additional
+	// delay for hcat to process any new updates in the background that may be
+	// related to this task. 1 second is  used to account for Consul cluster
+	// propagation of the change at scale.
+	// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
+	case *config.ServicesConditionConfig:
+		if len(cond.Names) == 0 {
+			<-time.After(time.Second)
+		}
+	case *config.CatalogServicesConditionConfig:
+		<-time.After(time.Second)
+	}
+
 	// setup to store event information
 	ev, err := event.NewEvent(taskName, &event.Config{
 		Providers: task.ProviderNames(),
@@ -396,7 +395,7 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 	}
 }
 
-// Run task will set the driver to active, apply it, and store a run event.
+// runTask will set the driver to active, apply it, and store a run event.
 // This method will run the task as-is with current values of templates that
 // have already been resolved and rendered. This does not handle any templating.
 func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
@@ -407,21 +406,23 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 		logger.Trace("skipping disabled task")
 		return nil
 	}
+
 	rw.drivers.SetActive(taskName)
 	defer rw.drivers.SetInactive(taskName)
 
-	switch task.Condition().(type) {
+	switch cond := task.Condition().(type) {
+	// Services condition (with regex) and catalog services condition have
+	// multiple API calls it depends on for updates. This adds an additional
+	// delay for hcat to process any new updates in the background that may be
+	// related to this task. 1 second is  used to account for Consul cluster
+	// propagation of the change at scale.
+	// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
+	case *config.ServicesConditionConfig:
+		if len(cond.Names) == 0 {
+			<-time.After(time.Second)
+		}
 	case *config.CatalogServicesConditionConfig:
-		// Catalog services condition has multiple API calls it depends on for
-		// updates. This adds an additional delay for hcat to process any new
-		// updates in the background that may be related to this task. 1 second is
-		// used to account for Consul cluster propagation of the change at scale.
-		// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
 		<-time.After(time.Second)
-	case *config.ScheduleConditionConfig:
-		// Schedule tasks are not dynamic and run in a different process
-		// In the future we may want to run a scheduled task ad-hoc
-		return nil
 	}
 
 	// Create new event for task run

@@ -96,13 +96,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			d.On("TemplateIDs").Return(nil)
 			drivers.Add(tc.taskName, d)
 
-			controller := ReadWrite{
-				baseController: &baseController{
-					drivers: drivers,
-					logger:  logging.NewNullLogger(),
-				},
-				store: event.NewStore(),
-			}
+			controller := newTestController()
 			ctx := context.Background()
 
 			_, err := controller.checkApply(ctx, d, false, false)
@@ -141,13 +135,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 		// Test the behavior for once-mode and daemon-mode for the situation
 		// where a scheduled task's template did not render
 
-		controller := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
+		controller := newTestController()
 
 		d := new(mocksD.Driver)
 		taskName := "scheduled_task"
@@ -185,13 +173,7 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 		disabledD.On("Task").Return(disabledTestTask(t, "task_b"))
 		disabledD.On("TemplateIDs").Return(nil)
 
-		controller := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
+		controller := newTestController()
 
 		controller.drivers.Add("task_a", d)
 		controller.drivers.Add("task_b", disabledD)
@@ -334,67 +316,37 @@ func TestReadWrite_Once_error(t *testing.T) {
 	}
 }
 
-func TestReadWrite_runDynamicTasks(t *testing.T) {
+func TestReadWrite_runDynamicTask(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
-		controller := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
-
-		d := new(mocksD.Driver)
-		d.On("Task").Return(enabledTestTask(t, "task"))
-		d.On("TemplateIDs").Return(nil)
-		d.On("InitWork", mock.Anything).Return(nil)
-		d.On("RenderTemplate", mock.Anything).Return(true, nil)
-		d.On("ApplyTask", mock.Anything).Return(nil)
-		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
-		controller.drivers.Add("task", d)
+		controller := newTestController()
 
 		ctx := context.Background()
-		errCh := controller.runDynamicTasks(ctx)
-		err := <-errCh
-		if err != nil {
-			t.Error(err)
-		}
+		d := new(mocksD.Driver)
+		mockDriver(ctx, d, enabledTestTask(t, "task"))
+		controller.drivers.Add("task", d)
+
+		err := controller.runDynamicTask(ctx, d)
+		assert.NoError(t, err)
 	})
 
 	t.Run("apply-error", func(t *testing.T) {
-		controller := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
+		controller := newTestController()
 
+		testErr := fmt.Errorf("could not apply: %s", "test")
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, "task"))
 		d.On("TemplateIDs").Return(nil)
 		d.On("InitWork", mock.Anything).Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
-		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
+		d.On("ApplyTask", mock.Anything).Return(testErr)
 		controller.drivers.Add("task", d)
 
-		ctx := context.Background()
-		errCh := controller.runDynamicTasks(ctx)
-		err := <-errCh
-		testErr := fmt.Errorf("could not apply: %s", "test")
-		if errors.Is(err, testErr) {
-			t.Error(
-				fmt.Sprintf("bad error, expected '%v', got '%v'", testErr, err))
-		}
+		err := controller.runDynamicTask(context.Background(), d)
+		assert.Contains(t, err.Error(), testErr.Error())
 	})
 
 	t.Run("skip-scheduled-tasks", func(t *testing.T) {
-		controller := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-			},
-			store: event.NewStore(),
-		}
+		controller := newTestController()
 
 		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
@@ -403,24 +355,14 @@ func TestReadWrite_runDynamicTasks(t *testing.T) {
 		// no other methods should be called (or mocked)
 		controller.drivers.Add(taskName, d)
 
-		ctx := context.Background()
-		errCh := controller.runDynamicTasks(ctx)
-		err := <-errCh
-		if err != nil {
-			t.Error(err)
-		}
+		err := controller.runDynamicTask(context.Background(), d)
+		assert.NoError(t, err)
 	})
 }
 
 func TestReadWrite_runScheduledTask(t *testing.T) {
 	t.Run("happy-path", func(t *testing.T) {
-		ctrl := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
+		ctrl := newTestController()
 
 		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
@@ -450,13 +392,7 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 	})
 
 	t.Run("dynamic-task-errors", func(t *testing.T) {
-		ctrl := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
+		ctrl := newTestController()
 
 		taskName := "dynamic_task"
 		d := new(mocksD.Driver)
@@ -664,4 +600,14 @@ func scheduledTestTask(tb testing.TB, name string) *driver.Task {
 	})
 	require.NoError(tb, err)
 	return task
+}
+
+func newTestController() ReadWrite {
+	return ReadWrite{
+		baseController: &baseController{
+			drivers: driver.NewDrivers(),
+			logger:  logging.NewNullLogger(),
+		},
+		store: event.NewStore(),
+	}
 }
