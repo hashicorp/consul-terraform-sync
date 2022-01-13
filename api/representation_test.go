@@ -141,7 +141,7 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
 				Enabled:      config.Bool(true),
 				Condition:    config.EmptyConditionConfig(),
-				ModuleInput:  config.EmptyModuleInputConfig(),
+				ModuleInputs: config.DefaultModuleInputConfigs(),
 			},
 			expectedRequest: oapigen.Task{
 				Name:        "test-name",
@@ -276,15 +276,25 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			},
 		},
 		{
-			name: "with_services_module_input",
+			name: "with_module_inputs",
 			taskConfig: config.TaskConfig{
-				ModuleInput: &config.ServicesModuleInputConfig{
-					ServicesMonitorConfig: config.ServicesMonitorConfig{
-						Regexp:             config.String("^api$"),
-						Datacenter:         config.String("dc"),
-						Namespace:          config.String("ns"),
-						Filter:             config.String("filter"),
-						CTSUserDefinedMeta: map[string]string{"key": "value"},
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp:             config.String("^api$"),
+							Datacenter:         config.String("dc"),
+							Namespace:          config.String("ns"),
+							Filter:             config.String("filter"),
+							CTSUserDefinedMeta: map[string]string{"key": "value"},
+						},
+					},
+					&config.ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+							Path:       config.String("fake-path"),
+							Recurse:    config.Bool(false),
+							Datacenter: config.String("dc"),
+							Namespace:  config.String("ns"),
+						},
 					},
 				},
 			},
@@ -293,28 +303,38 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 					Services: &oapigen.ServicesModuleInput{
 						Regexp: config.String("^api$"),
 					},
-				},
-			},
-		},
-		{
-			name: "with_consul_kv_module_input",
-			taskConfig: config.TaskConfig{
-				ModuleInput: &config.ConsulKVModuleInputConfig{
-					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
-						Path:       config.String("fake-path"),
+					ConsulKv: &oapigen.ConsulKVModuleInput{
+						Path:       "fake-path",
 						Recurse:    config.Bool(false),
 						Datacenter: config.String("dc"),
 						Namespace:  config.String("ns"),
 					},
 				},
 			},
+		},
+		{
+			name: "with_module_input_services_names",
+			// separate test-case for services names because it can't be
+			// combined with 'with_module_inputs' test case.
+			// oapigen.ModuleInput.Services can be set with only 1 Services
+			// module input
+			taskConfig: config.TaskConfig{
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names:              []string{"api"},
+							Datacenter:         config.String("dc"),
+							Namespace:          config.String("ns"),
+							Filter:             config.String("filter"),
+							CTSUserDefinedMeta: map[string]string{"key": "value"},
+						},
+					},
+				},
+			},
 			expectedRequest: oapigen.Task{
 				ModuleInput: &oapigen.ModuleInput{
-					ConsulKv: &oapigen.ConsulKVModuleInput{
-						Path:       "fake-path",
-						Recurse:    config.Bool(false),
-						Datacenter: config.String("dc"),
-						Namespace:  config.String("ns"),
+					Services: &oapigen.ServicesModuleInput{
+						Names: &[]string{"api"},
 					},
 				},
 			},
@@ -515,7 +535,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with_services_module_input",
+			name: "with_module_inputs",
 			request: &TaskRequest{
 				Name:   "task",
 				Module: "path",
@@ -525,47 +545,67 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				ModuleInput: &oapigen.ModuleInput{
 					Services: &oapigen.ServicesModuleInput{
 						Regexp: config.String("^api$"),
-					}},
-			},
-			taskConfigExpected: config.TaskConfig{
-				Name:      config.String("task"),
-				Module:    config.String("path"),
-				Condition: &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-				ModuleInput: &config.ServicesModuleInputConfig{
-					ServicesMonitorConfig: config.ServicesMonitorConfig{
-						Regexp: config.String("^api$"),
 					},
-				},
-			},
-		},
-		{
-			name: "with_consul_kv_module_input",
-			request: &TaskRequest{
-				Name:     "task",
-				Module:   "path",
-				Services: &[]string{"api", "web"},
-				Condition: &oapigen.Condition{
-					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
-				},
-				ModuleInput: &oapigen.ModuleInput{
 					ConsulKv: &oapigen.ConsulKVModuleInput{
 						Path:       "fake-path",
 						Recurse:    config.Bool(true),
 						Datacenter: config.String("dc"),
 						Namespace:  config.String("ns"),
-					}},
+					},
+				},
 			},
 			taskConfigExpected: config.TaskConfig{
-				Name:      config.String("task"),
-				Services:  []string{"api", "web"},
-				Module:    config.String("path"),
-				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
-				ModuleInput: &config.ConsulKVModuleInputConfig{
-					config.ConsulKVMonitorConfig{
-						Path:       config.String("fake-path"),
-						Recurse:    config.Bool(true),
-						Datacenter: config.String("dc"),
-						Namespace:  config.String("ns"),
+				Name:   config.String("task"),
+				Module: config.String("path"),
+				Condition: &config.ScheduleConditionConfig{
+					Cron: config.String("*/10 * * * * * *"),
+				},
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp: config.String("^api$"),
+						},
+					},
+					&config.ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+							Path:       config.String("fake-path"),
+							Recurse:    config.Bool(true),
+							Datacenter: config.String("dc"),
+							Namespace:  config.String("ns"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "with_module_input_services_names",
+			// separate test-case for services names because it can't be
+			// combined with 'with_module_inputs' test case.
+			// oapigen.ModuleInput.Services can be set with only 1 Services
+			// module input
+			request: &TaskRequest{
+				Name:   "task",
+				Module: "path",
+				Condition: &oapigen.Condition{
+					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
+				},
+				ModuleInput: &oapigen.ModuleInput{
+					Services: &oapigen.ServicesModuleInput{
+						Names: &[]string{"api"},
+					},
+				},
+			},
+			taskConfigExpected: config.TaskConfig{
+				Name:   config.String("task"),
+				Module: config.String("path"),
+				Condition: &config.ScheduleConditionConfig{
+					Cron: config.String("*/10 * * * * * *"),
+				},
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names: []string{"api"},
+						},
 					},
 				},
 			},
