@@ -5,6 +5,9 @@ SECURITY:
 FEATURES:
 * Support for Terraform v1.1 [[GH-588](https://github.com/hashicorp/consul-terraform-sync/pull/588)]
 
+BUG FIXES:
+* Fix issue where enabling a task can display an EOF error in terminal even though task is enabled. [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
+
 ## 0.4.2 (November 22, 2021)
 KNOWN ISSUES:
 * Enabling a task can display an EOF error in terminal even though task is enabled. [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
