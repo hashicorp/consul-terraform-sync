@@ -6,6 +6,8 @@ package e2e
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -352,11 +354,17 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 // TestE2E_CreateTaskCommand tests creating a task with the CTS CLI
 func TestE2E_CreateTaskCommand(t *testing.T) {
 	t.Parallel()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_cmd")
+	objectVarsFileName := filepath.Join(tempDir, "object.tfvars")
+	filenameVarsFileName := filepath.Join(tempDir, "filename.tfvars")
 	taskName := "new-task"
+
 	cases := []struct {
 		name           string
 		taskName       string
 		inputTask      string
+		tfVarsFiles    map[string]string
 		args           []string
 		input          string
 		outputContains []string
@@ -375,6 +383,38 @@ task {
   services       = ["api"]
   enabled = true
 }`, taskName),
+			input: "yes\n",
+			outputContains: []string{
+				fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName),
+				fmt.Sprintf("Task '%s' created", taskName)},
+			expectErr:    false,
+			expectStatus: true,
+		},
+		{
+			name:     "with_tf_vars_files",
+			taskName: taskName,
+			tfVarsFiles: map[string]string{
+				objectVarsFileName: "filename = \"e2e.txt\"",
+				filenameVarsFileName: `
+sample = {
+  tags = ["engineer", "cts"]
+  user_meta = {
+    age             = "32"
+    day_of_the_week = "Tuesday"
+    name            = "michael"
+  }
+}`,
+			},
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/with_tfvars_file"
+  providers      = ["local"]
+  services       = ["api"]
+  enabled        = true
+  variable_files = ["%s","%s"]
+}`, taskName, filenameVarsFileName, objectVarsFileName),
 			input: "yes\n",
 			outputContains: []string{
 				fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName),
@@ -474,8 +514,17 @@ task {
 		t.Run(tc.name, func(t *testing.T) {
 			srv := newTestConsulServer(t)
 			defer srv.Stop()
-			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_cmd")
 			cts := ctsSetup(t, srv, tempDir, dbTask())
+
+			// Write terraform variable files if required by test case
+			var vf []string
+			for k, v := range tc.tfVarsFiles {
+				f, err := os.Create(k)
+				require.NoError(t, err)
+				_, err = f.WriteString(v)
+				require.NoError(t, err)
+				vf = append(vf, k)
+			}
 
 			// Write task config file
 			var taskConfig hclConfig
@@ -506,7 +555,15 @@ task {
 				assert.Contains(t, output, expect)
 			}
 
-			// Confirm whether the task is deleted or not
+			// If required by test case, verify contents of generated variables file
+			for _, v := range tc.tfVarsFiles {
+				expectedFilePath := filepath.Join(tempDir, taskName, "variables.auto.tfvars")
+				b, err := ioutil.ReadFile(expectedFilePath)
+				require.NoError(t, err)
+				assert.Contains(t, string(b), v)
+			}
+
+			// Confirm whether the task is created or not
 			_, err = cts.Status().Task(tc.taskName, nil)
 			if tc.expectStatus {
 				require.NoError(t, err)

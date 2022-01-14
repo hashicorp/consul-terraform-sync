@@ -67,7 +67,9 @@ func TestServer_TaskCreate(t *testing.T) {
 
 		actual, err := ctrl.TaskCreate(ctx, taskConf)
 		assert.NoError(t, err)
-		assert.Equal(t, configFromDriverTask(driverTask), actual)
+		conf, err := configFromDriverTask(driverTask)
+		assert.NoError(t, err)
+		assert.Equal(t, conf, actual)
 
 		_, ok := ctrl.drivers.Get("task")
 		assert.True(t, ok, "task should have a driver")

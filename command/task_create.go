@@ -138,7 +138,15 @@ func (c *taskCreateCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("Inspecting changes to resource if creating task '%s'...\n", taskName))
 	c.UI.Output("Generating plan that Consul Terraform Sync will use Terraform to execute\n")
 
-	taskReq := api.TaskRequestFromTaskRequestConfig(*taskConfig)
+	taskReq, err := api.TaskRequestFromTaskConfig(*taskConfig)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error: unable to convert task file %s to request", taskFile))
+		msg := wordwrap.WrapString(err.Error(), uint(78))
+		c.UI.Output(msg)
+
+		return ExitCodeError
+	}
+
 	taskResp, err := client.CreateTask(context.Background(), api.RunOptionInspect, taskReq)
 
 	if err != nil {
