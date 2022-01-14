@@ -30,7 +30,7 @@ task {
 
 	testModuleInputConsulKVSuccess = `
 task {
-	name = "condition_task"
+	name = "module_input_task"
 	module = "..."
 	services = ["api"]
 	condition "schedule" {
@@ -43,11 +43,25 @@ task {
 		recurse = true
 	}
 }`
+	testModuleInputsSuccess = `
+task {
+	name = "module_input_task"
+	module = "..."
+	condition "catalog-services" {
+		regexp = ".*"
+	}
+	module_input "services" {
+		names = ["api"]
+	}
+	module_input "consul-kv" {
+		path = "my/path"
+	}
+}`
 
 	// Errors
 	testModuleInputServicesUnsupportedFieldError = `
 task {
-	name = "condition_task"
+	name = "module_input_task"
 	module = "..."
 	services = ["api"]
 	module_input "services" {
@@ -59,7 +73,7 @@ task {
 }`
 	testModuleInputConsulKVUnsupportedFieldError = `
 task {
-	name = "condition_task"
+	name = "module_input_task"
 	module = "..."
 	services = ["api"]
 	condition "schedule" {
@@ -81,35 +95,61 @@ func TestModuleInput_DecodeConfig_Success(t *testing.T) {
 	// Specifically test decoding module_input configs
 	cases := []struct {
 		name     string
-		expected ModuleInputConfig
-		filename string
+		expected *ModuleInputConfigs
 		config   string
 	}{
 		{
-			name: "services happy path",
-			expected: &ServicesModuleInputConfig{
-				ServicesMonitorConfig{
-					Regexp:             String(".*"),
-					Names:              []string{},
-					Datacenter:         String("dc2"),
-					Namespace:          String("ns2"),
-					Filter:             String("some-filter"),
-					CTSUserDefinedMeta: map[string]string{"key": "value"},
+			name: "services",
+			expected: &ModuleInputConfigs{
+				&ServicesModuleInputConfig{
+					ServicesMonitorConfig{
+						Regexp:             String(".*"),
+						Names:              []string{},
+						Datacenter:         String("dc2"),
+						Namespace:          String("ns2"),
+						Filter:             String("some-filter"),
+						CTSUserDefinedMeta: map[string]string{"key": "value"},
+					},
 				},
 			},
 			config: testModuleInputServicesSuccess,
 		},
 		{
-			name: "consul-kv: happy path",
-			expected: &ConsulKVModuleInputConfig{
-				ConsulKVMonitorConfig{
-					Path:       String("key-path"),
-					Datacenter: String("dc2"),
-					Namespace:  String("ns2"),
-					Recurse:    Bool(true),
+			name: "consul-kv",
+			expected: &ModuleInputConfigs{
+				&ConsulKVModuleInputConfig{
+					ConsulKVMonitorConfig{
+						Path:       String("key-path"),
+						Datacenter: String("dc2"),
+						Namespace:  String("ns2"),
+						Recurse:    Bool(true),
+					},
 				},
 			},
 			config: testModuleInputConsulKVSuccess,
+		},
+		{
+			name: "multiple unique module_inputs",
+			expected: &ModuleInputConfigs{
+				&ServicesModuleInputConfig{
+					ServicesMonitorConfig{
+						Names:              []string{"api"},
+						Datacenter:         String(""),
+						Namespace:          String(""),
+						Filter:             String(""),
+						CTSUserDefinedMeta: map[string]string{},
+					},
+				},
+				&ConsulKVModuleInputConfig{
+					ConsulKVMonitorConfig{
+						Path:       String("my/path"),
+						Recurse:    Bool(false),
+						Datacenter: String(""),
+						Namespace:  String(""),
+					},
+				},
+			},
+			config: testModuleInputsSuccess,
 		},
 	}
 
@@ -125,7 +165,7 @@ func TestModuleInput_DecodeConfig_Success(t *testing.T) {
 			// confirm module_input decoding
 			tasks := *config.Tasks
 			require.Equal(t, 1, len(tasks))
-			require.Equal(t, tc.expected, tasks[0].ModuleInput)
+			require.Equal(t, tc.expected, tasks[0].ModuleInputs)
 		})
 	}
 }

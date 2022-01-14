@@ -39,11 +39,11 @@ type TaskConfig struct {
 	Module           *string `mapstructure:"module"`
 	DeprecatedSource *string `mapstructure:"source"`
 
-	// ModuleInput defines the Consul objects (e.g. services, kv) whose values are
-	// provided as the task module’s input variables.
+	// ModuleInputs defines the Consul objects (e.g. services, kv) whose values
+	// are provided as the task module's input variables.
 	// Previously named SourceInput - Deprecated in 0.5
-	ModuleInput           ModuleInputConfig `mapstructure:"module_input"`
-	DeprecatedSourceInput ModuleInputConfig `mapstructure:"source_input"`
+	ModuleInputs           *ModuleInputConfigs `mapstructure:"module_input"`
+	DeprecatedSourceInputs *ModuleInputConfigs `mapstructure:"source_input"`
 
 	// VarFiles is a list of paths to files containing variables for the
 	// task. For the Terraform driver, these are files ending in `.tfvars` and
@@ -104,12 +104,8 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.Module = StringCopy(c.Module)
 	o.DeprecatedSource = StringCopy(c.DeprecatedSource)
 
-	if !isModuleInputNil(c.ModuleInput) {
-		o.ModuleInput = c.ModuleInput.Copy()
-	}
-	if !isModuleInputNil(c.DeprecatedSourceInput) {
-		o.DeprecatedSourceInput = c.DeprecatedSourceInput.Copy()
-	}
+	o.ModuleInputs = c.ModuleInputs.Copy()
+	o.DeprecatedSourceInputs = c.DeprecatedSourceInputs.Copy()
 
 	o.VarFiles = append(o.VarFiles, c.VarFiles...)
 
@@ -176,19 +172,11 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.DeprecatedSource = StringCopy(o.DeprecatedSource)
 	}
 
-	if !isModuleInputNil(o.ModuleInput) {
-		if isModuleInputNil(r.ModuleInput) {
-			r.ModuleInput = o.ModuleInput.Copy()
-		} else {
-			r.ModuleInput = r.ModuleInput.Merge(o.ModuleInput)
-		}
+	if o.ModuleInputs != nil {
+		r.ModuleInputs = r.ModuleInputs.Merge(o.ModuleInputs)
 	}
-	if !isModuleInputNil(o.DeprecatedSourceInput) {
-		if isModuleInputNil(r.DeprecatedSourceInput) {
-			r.DeprecatedSourceInput = o.DeprecatedSourceInput.Copy()
-		} else {
-			r.DeprecatedSourceInput = r.DeprecatedSourceInput.Merge(o.DeprecatedSourceInput)
-		}
+	if o.DeprecatedSourceInputs != nil {
+		r.DeprecatedSourceInputs = r.DeprecatedSourceInputs.Merge(o.DeprecatedSourceInputs)
 	}
 
 	r.VarFiles = append(r.VarFiles, o.VarFiles...)
@@ -310,25 +298,20 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	}
 	c.Condition.Finalize()
 
-	if !isModuleInputNil(c.DeprecatedSourceInput) {
-		logger.Warn("Task's 'source_input' block was marked for deprecation " +
-			"in v0.5.0. Please update your configuration to use 'module_input'" +
-			" instead.")
-
-		if !isModuleInputNil(c.ModuleInput) {
-			logger.Warn("Task is configured with both 'source_input' block and "+
-				"'module_input' block. Defaulting to 'module_input' block's value",
-				"module_input", c.ModuleInput)
-		} else {
-			// Merge SourceInput with ModuleInput. Use ModuleInput onwards
-			c.ModuleInput = c.DeprecatedSourceInput
+	if c.DeprecatedSourceInputs != nil {
+		if len(*c.DeprecatedSourceInputs) > 0 {
+			logger.Warn("Task's 'source_input' block was marked for " +
+				"deprecation in v0.5.0. Please update your configuration to " +
+				"use 'module_input' instead.")
+			c.ModuleInputs = c.ModuleInputs.Merge(c.DeprecatedSourceInputs)
 		}
 
+		c.DeprecatedSourceInputs = nil
 	}
-	if isModuleInputNil(c.ModuleInput) {
-		c.ModuleInput = EmptyModuleInputConfig()
+	if c.ModuleInputs == nil {
+		c.ModuleInputs = DefaultModuleInputConfigs()
 	}
-	c.ModuleInput.Finalize()
+	c.ModuleInputs.Finalize()
 
 	if c.WorkingDir == nil {
 		c.WorkingDir = String(filepath.Join(wd, *c.Name))
@@ -363,11 +346,6 @@ func (c *TaskConfig) Validate() error {
 		return fmt.Errorf("module for the task is required")
 	}
 
-	err = c.validateSourceInput()
-	if err != nil {
-		return err
-	}
-
 	if c.TFVersion != nil && *c.TFVersion != "" {
 		return fmt.Errorf("unsupported configuration 'terraform_version' for "+
 			"task %q. This option is available for Consul-Terraform-Sync Enterprise "+
@@ -397,10 +375,8 @@ func (c *TaskConfig) Validate() error {
 		}
 	}
 
-	if !isModuleInputNil(c.ModuleInput) {
-		if err := c.ModuleInput.Validate(); err != nil {
-			return err
-		}
+	if err := c.ModuleInputs.Validate(c.Services, c.Condition); err != nil {
+		return err
 	}
 
 	return nil
@@ -438,7 +414,7 @@ func (c *TaskConfig) GoString() string {
 		c.BufferPeriod.GoString(),
 		BoolVal(c.Enabled),
 		c.Condition.GoString(),
-		c.ModuleInput.GoString(),
+		c.ModuleInputs.GoString(),
 	)
 }
 
@@ -593,39 +569,5 @@ func (c *TaskConfig) validateCondition() error {
 				"task_name", StringVal(c.Name), "error", err)
 		return err
 	}
-	return nil
-}
-
-func (c *TaskConfig) validateSourceInput() error {
-	// For now only schedule condition allows for module_input, so a condition
-	// of type ScheduleConditionConfig is the only supported type
-	switch c.Condition.(type) {
-	case *ScheduleConditionConfig:
-		if len(c.Services) == 0 {
-			switch c.ModuleInput.(type) {
-			case *ConsulKVModuleInputConfig:
-				return fmt.Errorf("consul-kv module_input requires at least one service to " +
-					"be configured in task.services")
-			}
-		} else {
-			switch c.ModuleInput.(type) {
-			case *ServicesModuleInputConfig:
-				err := fmt.Errorf("a task cannot be configured with both " +
-					"`services` field and `condition` block. only one can be " +
-					"configured per task")
-				logging.Global().Named(logSystemName).Named(taskSubsystemName).
-					Error("list of services and service condition block both "+
-						"provided. If both are needed, consider combining the "+
-						"list into the condition block or creating separate tasks",
-						"task_name", StringVal(c.Name), "error", err)
-				return err
-			}
-		}
-	default:
-		if !isModuleInputNil(c.ModuleInput) && !isModuleInputEmpty(c.ModuleInput) {
-			return fmt.Errorf("module_input is only supported when a schedule condition is configured")
-		}
-	}
-
 	return nil
 }
