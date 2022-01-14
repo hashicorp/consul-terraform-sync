@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"io"
+	"os"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
@@ -18,31 +20,48 @@ type TaskRequest oapigen.TaskRequest
 // TaskRequestFromTaskConfig converts a taskRequest object to a Config TaskConfig object.
 func TaskRequestFromTaskConfig(tc config.TaskConfig) (TaskRequest, error) {
 	if len(tc.VarFiles) > 0 {
-		// Load all variables from passed in variable files before
-		// converting to map[string]string
-		loadedVars := make(hcltmpl.Variables)
+		tc.Variables = make(map[string]string)
 		for _, vf := range tc.VarFiles {
-			tfvars, err := tftmpl.LoadModuleVariables(vf)
+			f, err := os.Open(vf)
 			if err != nil {
 				return TaskRequest{}, err
 			}
 
-			for k, v := range tfvars {
-				loadedVars[k] = v
+			err = readToVariablesMap(vf, f, tc.Variables)
+			if err != nil {
+				return TaskRequest{}, err
 			}
-		}
-
-		// Value can be anything so marshal it to equivalent json
-		// and store json as the string value in the map
-		tc.Variables = make(map[string]string)
-		for k, v := range loadedVars {
-			b, _ := ctyjson.Marshal(v, v.Type())
-			tc.Variables[k] = string(b)
 		}
 	}
 
 	tr := oapigenTaskFromConfigTask(tc)
 	return TaskRequest(tr), nil
+}
+
+func readToVariablesMap(filename string, reader io.Reader, variables map[string]string) error {
+	// Load all variables from passed in variable files before
+	// converting to map[string]string
+	loadedVars := make(hcltmpl.Variables)
+	tfvars, err := tftmpl.LoadModuleVariables(filename, reader)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range tfvars {
+		loadedVars[k] = v
+	}
+
+	// Value can be anything so marshal it to equivalent json
+	// and store json as the string value in the map
+	for k, v := range loadedVars {
+		b, err := ctyjson.Marshal(v, v.Type())
+		if err != nil {
+			return err
+		}
+		variables[k] = string(b)
+	}
+
+	return nil
 }
 
 // ToTaskConfig converts a TaskRequest object to a Config TaskConfig object.

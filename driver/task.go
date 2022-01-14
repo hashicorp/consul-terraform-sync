@@ -91,7 +91,11 @@ func NewTask(conf TaskConfig) (*Task, error) {
 	// Load all variables from passed in variable files
 	loadedVars := make(hcltmpl.Variables)
 	for _, vf := range conf.VarFiles {
-		tfvars, err := tftmpl.LoadModuleVariables(vf)
+		f, err := os.Open(vf)
+		if err != nil {
+			return nil, err
+		}
+		tfvars, err := tftmpl.LoadModuleVariables(vf, f)
 		if err != nil {
 			return nil, err
 		}

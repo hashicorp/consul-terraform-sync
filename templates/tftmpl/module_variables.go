@@ -3,7 +3,6 @@ package tftmpl
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
@@ -15,8 +14,9 @@ import (
 )
 
 // LoadModuleVariables loads Terraform input variables from a file.
-func LoadModuleVariables(filePath string) (hcltmpl.Variables, error) {
-	content, err := ioutil.ReadFile(filePath)
+func LoadModuleVariables(filePath string, reader io.Reader) (hcltmpl.Variables, error) {
+	content, err := io.ReadAll(reader)
+
 	if err != nil {
 		return nil, err
 	}
