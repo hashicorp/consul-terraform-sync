@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
@@ -146,18 +147,30 @@ func (d *TaskLifecycleHTTPClient) Do(req *http.Request) (*http.Response, error) 
 		checkStatusCodeCategory(ServerErrorResponseCategory, resp.StatusCode) {
 		defer resp.Body.Close()
 
-		var errResp ErrorResponse
-		decoder := json.NewDecoder(resp.Body)
-		if err = decoder.Decode(&errResp); err != nil {
-			return nil, err
+		// Nominal scenario is an error will be application/json type, if not application/json assume that the error
+		// is plaintext
+		var errMsg string
+		if resp.Header.Get("Content-Type") == "application/json" {
+			var errResp oapigen.ErrorResponse
+			decoder := json.NewDecoder(resp.Body)
+			if err = decoder.Decode(&errResp); err != nil {
+				return nil, err
+			}
+			errMsg = fmt.Sprintf("%s, Request ID: %s", errResp.Error.Message, errResp.RequestId)
+		} else {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			errMsg = string(b)
 		}
 
-		if msg, ok := errResp.ErrorMessage(); ok && msg != "" {
+		if errMsg == "" {
+			return nil, fmt.Errorf("request returned %d status code", resp.StatusCode)
+		} else {
 			return nil, fmt.Errorf("request returned %d status code with error: %s",
-				resp.StatusCode, msg)
+				resp.StatusCode, errMsg)
 		}
-
-		return nil, fmt.Errorf("request returned %d status code", resp.StatusCode)
 	}
 
 	return resp, nil
