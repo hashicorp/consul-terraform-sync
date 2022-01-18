@@ -12,7 +12,9 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
+	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/notifier"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/tmplfunc"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/hcat"
@@ -878,6 +880,62 @@ func TestTerraform_countTmplFunc(t *testing.T) {
 		})
 	}
 }
+
+func TestTerraform_setNotifier(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name         string
+		task         *Task
+		expectedType templates.Template
+	}{
+		{
+			"condition: none, default to services field",
+			&Task{},
+			&notifier.Services{},
+		},
+		{
+			"condition: schedule",
+			&Task{
+				condition: &config.ScheduleConditionConfig{},
+			},
+			&notifier.SuppressNotification{},
+		},
+		{
+			"condition: catalog-services",
+			&Task{
+				condition: &config.CatalogServicesConditionConfig{},
+			},
+			&notifier.CatalogServicesRegistration{},
+		},
+		{
+			"condition: consul-kv",
+			&Task{
+				condition: &config.ConsulKVConditionConfig{},
+			},
+			&notifier.ConsulKV{},
+		},
+		{
+			"condition: services",
+			&Task{
+				condition: &config.ServicesConditionConfig{},
+			},
+			&notifier.Services{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tf := &Terraform{
+				task: tc.task,
+			}
+			err := tf.setNotifier(&hcat.Template{})
+			assert.NoError(t, err)
+			assert.IsType(t, tc.expectedType, tf.template)
+		})
+	}
+}
+
 func TestGetServicesMetaData(t *testing.T) {
 	meta := map[string]string{
 		"my_key": "my_value",
