@@ -571,6 +571,7 @@ func (tf *Terraform) initTaskTemplate() error {
 	return nil
 }
 
+// setNotifier TODO: update to support multiple module_inputs
 func (tf *Terraform) setNotifier(tmpl templates.Template) {
 	// Get the service count. Only one of task.services, condition "services",
 	// and source_input "services" can be configured per task
@@ -578,8 +579,23 @@ func (tf *Terraform) setNotifier(tmpl templates.Template) {
 	if cond, ok := tf.task.Condition().(*config.ServicesConditionConfig); ok {
 		serviceCount = len(cond.Names)
 	}
-	if si, ok := tf.task.SourceInput().(*config.ServicesModuleInputConfig); ok {
-		serviceCount = len(si.Names)
+	for _, input := range tf.task.ModuleInputs() {
+		if services, ok := input.(*config.ServicesModuleInputConfig); ok {
+			serviceCount = len(services.Names)
+			// config validation ensures that module_input blocks only have
+			// one services type
+			break
+		}
+	}
+
+	additionalDepCount := 0
+	for _, input := range tf.task.ModuleInputs() {
+		switch input.(type) {
+		case *config.ConsulKVModuleInputConfig:
+			// If a ConsulKVModuleInputConfig is specified, then we need to add
+			// to the number of dependencies passed to the notifier, since consul-kv adds a dependency
+			additionalDepCount = 1
+		}
 	}
 
 	switch tf.task.Condition().(type) {
@@ -588,13 +604,6 @@ func (tf *Terraform) setNotifier(tmpl templates.Template) {
 	case *config.ConsulKVConditionConfig:
 		tf.template = notifier.NewConsulKV(tmpl, serviceCount)
 	case *config.ScheduleConditionConfig:
-		additionalDepCount := 0
-		switch tf.task.SourceInput().(type) {
-		case *config.ConsulKVModuleInputConfig:
-			// If a ConsulKVModuleInputConfig is specified, then we need to add
-			// to the number of dependencies passed to the notifier, since consul-kv adds a dependency
-			additionalDepCount = 1
-		}
 		tf.template = notifier.NewSuppressNotification(tmpl, serviceCount+additionalDepCount)
 	default:
 		tf.template = tmpl
