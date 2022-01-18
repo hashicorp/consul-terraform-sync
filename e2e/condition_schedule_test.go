@@ -61,55 +61,30 @@ func TestCondition_Schedule_Basic(t *testing.T) {
     }
 }
 `, taskName)
-	moduleInputConsulKVRecurse := fmt.Sprintf(`task {
-	name = "%s"
-	module = "./test_modules/consul_kv_file"
-    services = ["api", "web"]
-	condition "schedule" {
-      cron = "*/10 * * * * * *"
-	}
-    module_input "consul-kv" {
-      path = "key-path"
-      datacenter = "dc1"
-      recurse = true
-    }
-}
-`, taskName)
 
 	testcases := []struct {
 		name          string
 		conditionTask string
 		tempDir       string
 		isConsulKV    bool
-		isRecurse     bool
 	}{
 		{
 			name:          "with services",
 			conditionTask: conditionWithServices,
 			tempDir:       "schedule_basic_services",
 			isConsulKV:    false,
-			isRecurse:     false,
 		},
 		{
 			name:          "with module_input services",
 			conditionTask: moduleInputServices,
 			tempDir:       "schedule_basic_module_input",
 			isConsulKV:    false,
-			isRecurse:     false,
 		},
 		{
-			name:          "with module_input consul_kv recurse false",
+			name:          "with module_input consul_kv",
 			conditionTask: moduleInputConsulKV,
 			tempDir:       "schedule_consulKV",
 			isConsulKV:    true,
-			isRecurse:     false,
-		},
-		{
-			name:          "with module_input consul_kvrecurse true",
-			conditionTask: moduleInputConsulKVRecurse,
-			tempDir:       "schedule_consulKV_recurse",
-			isConsulKV:    true,
-			isRecurse:     true,
 		},
 	}
 
@@ -178,13 +153,8 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 				// wait for next event before starting this process
 				api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
 				registerTime = time.Now()
-
-				// add two keys and values, expected that the recursive key will only be
-				// checked when recurse is enabled
 				expectedKV := "red"
-				expectedRecurseKV := "blue"
 				srv.SetKVString(t, "key-path", expectedKV)
-				srv.SetKVString(t, "key-path/recursive", expectedRecurseKV)
 
 				// check scheduled task did not trigger immediately and ran only on schedule
 				api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
@@ -192,13 +162,6 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 
 				// confirm key-value resources created, and that the values are as expected
 				validateModuleFile(t, true, true, resourcesPath, "key-path", expectedKV)
-
-				if tc.isRecurse {
-					validateModuleFile(t, true, true, resourcesPath, "key-path/recursive", expectedRecurseKV)
-				} else {
-					// if recurse is disabled, then the recursive key should not be present
-					validateModuleFile(t, true, false, resourcesPath, "key-path/recursive", "")
-				}
 			}
 		})
 	}
