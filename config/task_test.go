@@ -723,9 +723,10 @@ func TestTaskConfig_Validate(t *testing.T) {
 		{
 			"valid: no cond: services configured",
 			&TaskConfig{
-				Name:     String("task"),
-				Services: []string{"api"},
-				Module:   String("path"),
+				Name:      String("task"),
+				Services:  []string{"api"},
+				Module:    String("path"),
+				Variables: make(map[string]string),
 			},
 			true,
 		},
@@ -747,8 +748,9 @@ func TestTaskConfig_Validate(t *testing.T) {
 		{
 			"valid: cs-cond: cond.regexp configured & no services",
 			&TaskConfig{
-				Name:   String("task"),
-				Module: String("path"),
+				Name:      String("task"),
+				Module:    String("path"),
+				Variables: make(map[string]string),
 				Condition: &CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig{
 						Regexp: String(".*"),
@@ -761,8 +763,9 @@ func TestTaskConfig_Validate(t *testing.T) {
 		{
 			"valid: services cond: no services",
 			&TaskConfig{
-				Name:   String("task"),
-				Module: String("path"),
+				Name:      String("task"),
+				Module:    String("path"),
+				Variables: make(map[string]string),
 				Condition: &ServicesConditionConfig{
 					ServicesMonitorConfig: ServicesMonitorConfig{
 						Regexp: String(".*"),
@@ -806,6 +809,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Name:      String("task"),
 				Module:    String("path"),
 				Services:  []string{"api"},
+				Variables: make(map[string]string),
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 			},
 			true,
@@ -815,6 +819,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 			&TaskConfig{
 				Name:      String("task"),
 				Module:    String("path"),
+				Variables: make(map[string]string),
 				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
 				ModuleInput: &ServicesModuleInputConfig{
 					ServicesMonitorConfig{Regexp: String(".*")}},
@@ -903,6 +908,7 @@ func TestTasksConfig_Validate(t *testing.T) {
 					Services:  []string{"serviceA", "serviceB"},
 					Module:    String("path"),
 					Providers: []string{"providerA", "providerB"},
+					Variables: make(map[string]string),
 				},
 			},
 			isValid: true,
@@ -914,12 +920,14 @@ func TestTasksConfig_Validate(t *testing.T) {
 					Services:  []string{"serviceA", "serviceB"},
 					Module:    String("path"),
 					Providers: []string{"providerA", "providerB"},
+					Variables: make(map[string]string),
 				},
 				{
 					Name:      String("task2"),
 					Services:  []string{"serviceC"},
 					Module:    String("sourceC"),
 					Providers: []string{"providerC"},
+					Variables: make(map[string]string),
 				},
 			},
 			isValid: true,

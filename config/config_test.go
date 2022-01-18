@@ -100,6 +100,7 @@ var (
 				Services:    []string{"serviceA", "serviceB", "serviceC"},
 				Providers:   []string{"X"},
 				Module:      String("Y"),
+				Variables:   make(map[string]string),
 				Condition: &CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig{
 						Regexp:           String(".*"),
@@ -235,11 +236,13 @@ func TestFromPath(t *testing.T) {
 				},
 				Tasks: &TaskConfigs{
 					{
-						Name:     String("taskA"),
-						Services: []string{"serviceA", "serviceB"},
+						Name:      String("taskA"),
+						Services:  []string{"serviceA", "serviceB"},
+						Variables: make(map[string]string),
 					}, {
-						Name:     String("taskB"),
-						Services: []string{"serviceC", "serviceD"},
+						Name:      String("taskB"),
+						Services:  []string{"serviceC", "serviceD"},
+						Variables: make(map[string]string),
 					},
 				},
 			},
@@ -272,6 +275,7 @@ func TestFromPath(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			c, err := fromPath(tc.path)
+
 			if tc.expected == nil {
 				assert.Error(t, err)
 				return
@@ -279,6 +283,13 @@ func TestFromPath(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotNil(t, c)
+
+			// TODO: remove when tasks.Variables supported by config file
+			if c.Tasks != nil {
+				for i := range *c.Tasks {
+					(*c.Tasks)[i].Variables = make(map[string]string)
+				}
+			}
 			assert.Equal(t, *tc.expected, *c)
 		})
 	}
@@ -365,6 +376,7 @@ func TestConfig_Validate(t *testing.T) {
 		Module:      String("Z"),
 		Condition:   EmptyConditionConfig(),
 		ModuleInput: EmptyModuleInputConfig(),
+		Variables:   make(map[string]string),
 	})
 	*validMultiTask.TerraformProviders = append(*validMultiTask.TerraformProviders,
 		&TerraformProviderConfig{"Y": map[string]interface{}{}})

@@ -53,7 +53,6 @@ type TaskConfig struct {
 	VarFiles []string `mapstructure:"variable_files"`
 
 	// TODO: Not supported by config file yet
-	// TODO: Add validation
 	Variables map[string]string
 
 	// Version is the version of source the task will use. For the Terraform
@@ -385,7 +384,9 @@ func (c *TaskConfig) Validate() error {
 		pNames[name] = true
 	}
 
-	// TODO validate c.Variables
+	if c.Variables == nil {
+		return fmt.Errorf("variables cannot be nil")
+	}
 
 	if err := c.BufferPeriod.Validate(); err != nil {
 		return err
