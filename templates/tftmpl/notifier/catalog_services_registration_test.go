@@ -58,7 +58,7 @@ func Test_CatalogServicesRegistration_Notify(t *testing.T) {
 
 		tmpl := new(mocks.Template)
 		tmpl.On("Notify", mock.Anything).Return(true).Twice()
-		n := NewCatalogServicesRegistration(tmpl, 2)
+		n := NewCatalogServicesRegistration(tmpl, 3)
 
 		// 1. first services dependency does not notify
 		notify := n.Notify([]*dep.HealthService{})
@@ -93,7 +93,7 @@ func Test_CatalogServicesRegistration_Notify(t *testing.T) {
 
 		tmpl := new(mocks.Template)
 		tmpl.On("Notify", mock.Anything).Return(true).Once()
-		n := NewCatalogServicesRegistration(tmpl, 1)
+		n := NewCatalogServicesRegistration(tmpl, 2)
 
 		// 1. services dependency does not notify
 		notify := n.Notify([]*dep.HealthService{})
