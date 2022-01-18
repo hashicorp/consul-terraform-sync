@@ -1,3 +1,13 @@
+## 0.4.3 (January 14, 2022)
+SECURITY:
+* Upgrade Go to address [CVE-2021-44716](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44716) and [CVE-2021-44717](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44717)
+
+FEATURES:
+* Support for Terraform v1.1 [[GH-588](https://github.com/hashicorp/consul-terraform-sync/pull/588)]
+
+BUG FIXES:
+* Fix issue where enabling a task can display an EOF error in terminal even though task is enabled. [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
+
 ## 0.4.2 (November 22, 2021)
 KNOWN ISSUES:
 * Enabling a task can display an EOF error in terminal even though task is enabled. [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
@@ -46,6 +56,13 @@ BUG FIXES:
 * Enforce GET request method for Overall Status API (`/v1/status`) so that other methods return 405 Method Not Allowed. [[GH-427](https://github.com/hashicorp/consul-terraform-sync/issues/427)]
 * Enforce GET request method for Task Status API (`/v1/status/tasks`) so that other methods return 405 Method Not Allowed. [[GH-360](https://github.com/hashicorp/consul-terraform-sync/issues/360)]
 
+## 0.3.1 (January 14, 2022)
+SECURITY:
+* Upgrade Go to address [CVE-2021-44716](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44716) and [CVE-2021-44717](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44717)
+
+FEATURES:
+* Support for Terraform v1.1 [[GH-588](https://github.com/hashicorp/consul-terraform-sync/pull/588)]
+
 ## 0.3.0 (September 01, 2021)
 BREAKING CHANGES:
 * `INFO` log level is now the default, changed from `WARN`. [[GH-23](https://github.com/hashicorp/consul-terraform-sync/issues/23)]
@@ -62,6 +79,10 @@ IMPROVEMENTS:
 BUG FIXES:
 - Fix loading the `CONSUL_HTTP_ADDR` environment variable. [[GH-351](https://github.com/hashicorp/consul-terraform-sync/pull/351)]
 - Fix issue where the task-level `buffer_period` configuration did not override the global-level `buffer_period` configuration when the task-level `buffer_period` was disabled. [[GH-359](https://github.com/hashicorp/consul-terraform-sync/pull/359)]
+
+## 0.2.2 (January 13, 2022)
+SECURITY:
+* Upgrade Go to address [CVE-2021-44716](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44716) and [CVE-2021-44717](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44717)
 
 ## 0.2.1 (July 14, 2021)
 FEATURES:
