@@ -720,157 +720,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 			},
 			false,
 		},
-		{
-			"valid: no cond: services configured",
-			&TaskConfig{
-				Name:     String("task"),
-				Services: []string{"api"},
-				Module:   String("path"),
-			},
-			true,
-		},
-		{
-			"invalid: no cond: no services",
-			&TaskConfig{Name: String("task"), Module: String("path")},
-			false,
-		},
-		// catalog-services condition test cases
-		{
-			"invalid: cs cond: no cond.regexp & no services",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Condition: &CatalogServicesConditionConfig{},
-			},
-			false,
-		},
-		{
-			"valid: cs-cond: cond.regexp configured & no services",
-			&TaskConfig{
-				Name:   String("task"),
-				Module: String("path"),
-				Condition: &CatalogServicesConditionConfig{
-					CatalogServicesMonitorConfig{
-						Regexp: String(".*"),
-					},
-				},
-			},
-			true,
-		},
-		// services condition test case
-		{
-			"valid: services cond: no services",
-			&TaskConfig{
-				Name:   String("task"),
-				Module: String("path"),
-				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig: ServicesMonitorConfig{
-						Regexp: String(".*"),
-					},
-				},
-			},
-			true,
-		},
-		{
-			"invalid: services cond: services configured",
-			&TaskConfig{
-				Name:     String("task"),
-				Module:   String("path"),
-				Services: []string{"api"},
-				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig: ServicesMonitorConfig{
-						Regexp: String(""),
-					},
-				},
-			},
-			false,
-		},
-		// consul-kv condition test cases
-		{
-			"invalid: kv cond: no services",
-			&TaskConfig{
-				Name:   String("task"),
-				Module: String("path"),
-				Condition: &ConsulKVConditionConfig{
-					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
-						Path: String("path"),
-					},
-				},
-			},
-			false,
-		},
-		// schedule condition test cases
-		{
-			"valid: sched cond: services configured",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Services:  []string{"api"},
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-			},
-			true,
-		},
-		{
-			"valid: sched cond: service module_input configured & no services",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				ModuleInput: &ServicesModuleInputConfig{
-					ServicesMonitorConfig{Regexp: String(".*")}},
-			},
-			true,
-		},
-		{
-			"invalid: sched cond: no services & no module_input",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-			},
-			false,
-		},
-		{
-			"invalid: sched cond: services module_input configured & services configured",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Services:  []string{"api"},
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				ModuleInput: &ServicesModuleInputConfig{
-					ServicesMonitorConfig{Names: []string{"api"}},
-				},
-			},
-			false,
-		},
-		{
-			"invalid: sched cond: kv module_input configured & no services",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				ModuleInput: &ConsulKVModuleInputConfig{
-					ConsulKVMonitorConfig{
-						Path: String("path"),
-					},
-				},
-			},
-			false,
-		},
-		// non-schedule condition test-cases
-		{
-			"invalid: non-sched cond: module_input configured",
-			&TaskConfig{
-				Name:   String("task"),
-				Module: String("path"),
-				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig: ServicesMonitorConfig{
-						Regexp: String(".*")}},
-				ModuleInput: &ServicesModuleInputConfig{
-					ServicesMonitorConfig{Regexp: String(".*")}},
-			},
-			false,
-		},
 	}
 
 	for i, tc := range cases {
@@ -978,6 +827,67 @@ func TestTasksConfig_Validate(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.i.Validate()
+			if tc.isValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestTaskConfig_validateCondition(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		i       *TaskConfig
+		isValid bool
+	}{
+		{
+			"valid: only services list",
+			&TaskConfig{
+				Services: []string{"api"},
+			},
+			true,
+		},
+		{
+			"valid: only cond-block",
+			&TaskConfig{
+				Condition: &ServicesConditionConfig{},
+			},
+			true,
+		},
+		{
+			"valid: services list & non-service cond-block",
+			&TaskConfig{
+				Services:  []string{"api"},
+				Condition: &ConsulKVConditionConfig{},
+			},
+			true,
+		},
+		{
+			"invalid: no services list & no cond-block configured",
+			&TaskConfig{},
+			false,
+		},
+		{
+			"invalid: services & services cond-block configured",
+			&TaskConfig{
+				Services:  []string{"api"},
+				Condition: &ServicesConditionConfig{},
+			},
+			false,
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			// add additional required task fields
+			tc.i.Name = String("task")
+			tc.i.Module = String("path")
+
+			err := tc.i.validateCondition()
 			if tc.isValid {
 				assert.NoError(t, err)
 			} else {

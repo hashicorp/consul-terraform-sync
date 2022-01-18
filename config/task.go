@@ -559,43 +559,40 @@ func FilterTasks(tasks *TaskConfigs, names []string) (*TaskConfigs, error) {
 	return &filtered, nil
 }
 
+// validateCondition validates condition block taking into account services list
+// - ensure task is configured with a condition (condition block or services
+//   list)
+// - if services list is configured, condition block's monitored variable type
+// cannot be services
+//
+// Note: checking that a condition block's monitored variable type is different
+// from module_input blocks is handled in ModuleInputConfigs.Validate()
 func (c *TaskConfig) validateCondition() error {
+	// Confirm task is configured with a condition
 	if len(c.Services) == 0 {
 		if isConditionNil(c.Condition) {
-			return fmt.Errorf("at least one service or a condition must be " +
-				"configured")
+			// Error message omits task.services option since it is deprecated
+			return fmt.Errorf("task should be configured with a condition block")
 		}
-		switch cond := c.Condition.(type) {
-		case *CatalogServicesConditionConfig:
-			if cond.Regexp == nil {
-				return fmt.Errorf("catalog-services condition requires either" +
-					"task.condition.regexp or at least one service in " +
-					"task.services to be configured")
-			}
-		case *ConsulKVConditionConfig:
-			return fmt.Errorf("consul-kv condition requires at least one service to " +
-				"be configured in task.services")
-		case *ScheduleConditionConfig:
-			if isModuleInputNil(c.ModuleInput) || isModuleInputEmpty(c.ModuleInput) {
-				return fmt.Errorf("schedule condition requires at least one service to " +
-					"be configured in task.services or a module_input must be provided")
-			}
-		}
-	} else {
-		switch c.Condition.(type) {
-		case *ServicesConditionConfig:
-			err := fmt.Errorf("a task cannot be configured with both " +
-				"`services` field and `module_input` block. only one can be " +
-				"configured per task")
-			logging.Global().Named(logSystemName).Named(taskSubsystemName).
-				Error("list of services and service condition block both "+
-					"provided. If both are needed, consider combining the "+
-					"list into the condition block or creating separate tasks",
-					"task_name", StringVal(c.Name), "error", err)
-			return err
-		}
+
+		// task.services not configured. No need to worry about condition's
+		// variable type
+		return nil
 	}
 
+	// Confirm that condition's variable type is not services since task.services
+	// is configured
+	if _, ok := c.Condition.(*ServicesConditionConfig); ok {
+		err := fmt.Errorf("task's `services` field and `condition " +
+			"'services'` block both monitor \"services\" variable type. only " +
+			"one of these can be configured per task")
+		logging.Global().Named(logSystemName).Named(taskSubsystemName).
+			Error("list of `services` and `condition 'services'` block cannot "+
+				"both be configured. Consider combining the list into the "+
+				"condition block or creating separate tasks",
+				"task_name", StringVal(c.Name), "error", err)
+		return err
+	}
 	return nil
 }
 
