@@ -746,6 +746,138 @@ func TestInitTask(t *testing.T) {
 	}
 }
 
+func TestTerraform_countTmplFunc(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		expected int
+		task     *Task
+	}{
+		{
+			"services field",
+			3,
+			&Task{
+				services: []Service{{Name: "api"}, {Name: "db"}, {Name: "web"}},
+			},
+		},
+		{
+			"condition: schedule",
+			0, // on its own, schedule cond has no tmpl funcs
+			&Task{
+				condition: &config.ScheduleConditionConfig{},
+			},
+		},
+		{
+			"condition: catalog-services",
+			1,
+			&Task{
+				condition: &config.CatalogServicesConditionConfig{},
+			},
+		},
+		{
+			"condition: consul-kv",
+			1,
+			&Task{
+				condition: &config.ConsulKVConditionConfig{},
+			},
+		},
+		{
+			"condition: services-regex",
+			1,
+			&Task{
+				condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Regexp: config.String(".*"),
+					},
+				},
+			},
+		},
+		{
+			"condition: services-names",
+			3,
+			&Task{
+				condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Names: []string{"api", "db", "web"},
+					},
+				},
+			},
+		},
+		{
+			"module_input: consul-kv",
+			1,
+			&Task{
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ConsulKVModuleInputConfig{},
+				},
+			},
+		},
+		{
+			"module_input: services-regex",
+			1,
+			&Task{
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp: config.String(".*"),
+						},
+					},
+				},
+			},
+		},
+		{
+			"module_input: services-names",
+			3,
+			&Task{
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names: []string{"api", "db", "web"},
+						},
+					},
+				},
+			},
+		},
+		{
+			"combination",
+			3,
+			&Task{
+				condition: &config.CatalogServicesConditionConfig{},
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ConsulKVModuleInputConfig{},
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp: config.String(".*"),
+						},
+					},
+				},
+			},
+		},
+		{
+			"combination w services",
+			4,
+			&Task{
+				services:  []Service{{Name: "api"}, {Name: "db"}, {Name: "web"}},
+				condition: &config.ScheduleConditionConfig{},
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ConsulKVModuleInputConfig{},
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tf := &Terraform{
+				task: tc.task,
+			}
+			actual, err := tf.countTmplFunc()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
 func TestGetServicesMetaData(t *testing.T) {
 	meta := map[string]string{
 		"my_key": "my_value",

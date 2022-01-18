@@ -610,6 +610,52 @@ func (tf *Terraform) setNotifier(tmpl templates.Template) {
 	}
 }
 
+// countTmplFunc counts the number of template functions (tmplfunc) that are
+// added to the template file. Counts the tmplfunc needed by the task's
+// services field, condition block, and module_input blocks.
+func (tf *Terraform) countTmplFunc() (int, error) {
+	// Count tmplfuncs for the service variable separately. Currently services
+	// can only be configured in one of services field, condition "services",
+	// and module_input "services". Enforced by config validation
+	serviceCount := len(tf.task.Services())
+	nonServiceCount := 0
+
+	switch cond := tf.task.Condition().(type) {
+	case *config.CatalogServicesConditionConfig:
+		nonServiceCount++
+	case *config.ServicesConditionConfig:
+		if cond.Regexp != nil {
+			serviceCount = 1
+		} else {
+			serviceCount = len(cond.Names)
+		}
+	case *config.ConsulKVConditionConfig:
+		nonServiceCount++
+	default:
+		// no-op: condition block currently not required since services list
+		// can be used alternatively. enforced by config validation
+	}
+
+	for _, moduleInput := range tf.task.ModuleInputs() {
+		switch input := moduleInput.(type) {
+		case *config.ServicesModuleInputConfig:
+			// relies on config validation to restrict to one ServicesModuleInput
+			if input.Regexp != nil {
+				serviceCount = 1
+			} else {
+				serviceCount = len(input.Names)
+			}
+		case *config.ConsulKVModuleInputConfig:
+			nonServiceCount++
+		default:
+			return 0, fmt.Errorf("task %q has unsupported type of module_input "+
+				"block configuration %T", tf.task.name, input)
+		}
+	}
+
+	return serviceCount + nonServiceCount, nil
+}
+
 func (tf *Terraform) validateTask(ctx context.Context) error {
 	err := tf.client.Validate(ctx)
 	if err != nil {
