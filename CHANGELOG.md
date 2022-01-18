@@ -19,6 +19,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 * Fix CLI client enable task command timing out when buffer period is enabled [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
+* Fix Services condition when configured with regex and Catalog Services condition to use cached indexes for Consul API blocking queries. [[GH-529](https://github.com/hashicorp/consul-terraform-sync/issues/529)]
 * **(Enterprise Only)** Fix task not triggering after re-enabled when running with the TFC driver.
 
 ## 0.4.3 (January 14, 2022)
