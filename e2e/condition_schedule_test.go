@@ -134,7 +134,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 
 			port := cts.Port()
 			taskSchedule := 10 * time.Second
-			scheduledWait := taskSchedule + 5*time.Second // buffer for task to execute
+			scheduledWait := taskSchedule + 7*time.Second // buffer for task to execute
 
 			// 0. Confirm one event for once-mode
 			eventCountBase := eventCount(t, taskName, port)
