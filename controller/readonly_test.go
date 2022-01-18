@@ -64,6 +64,7 @@ func TestReadOnlyRun(t *testing.T) {
 
 			d := new(mocksD.Driver)
 			d.On("Task").Return(enabledTestTask(t, "task"))
+			d.On("TemplateIDs").Return(nil)
 			d.On("RenderTemplate", mock.Anything).
 				Return(true, tc.renderTmplErr)
 			d.On("InspectTask", mock.Anything).
@@ -95,6 +96,7 @@ func TestReadOnlyRun_context_cancel(t *testing.T) {
 
 	d := new(mocksD.Driver)
 	d.On("Task").Return(enabledTestTask(t, "task"))
+	d.On("TemplateIDs").Return(nil)
 	d.On("RenderTemplate", mock.Anything).Return(false, nil)
 	drivers := driver.NewDrivers()
 	err := drivers.Add("task", d)

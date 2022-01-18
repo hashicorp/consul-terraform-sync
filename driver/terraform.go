@@ -47,7 +47,7 @@ var (
 // Terraform is a Sync driver that uses the Terraform CLI to interface with
 // low-level network infrastructure.
 type Terraform struct {
-	mu *sync.RWMutex
+	mu sync.RWMutex
 
 	task              *Task
 	backend           map[string]interface{}
@@ -132,7 +132,6 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 	}
 
 	return &Terraform{
-		mu:                &sync.RWMutex{},
 		task:              config.Task,
 		backend:           config.Backend,
 		requiredProviders: config.RequiredProviders,
@@ -196,6 +195,16 @@ func (tf *Terraform) SetBufferPeriod() {
 
 	tf.logger.Trace("set buffer period for task", taskNameLogKey, taskName, "buffer_period", bp)
 	tf.watcher.SetBufferPeriod(bp.Min, bp.Max, tf.template.ID())
+}
+
+func (tf *Terraform) TemplateIDs() []string {
+	tf.mu.RLock()
+	defer tf.mu.RUnlock()
+
+	if tf.template == nil {
+		return nil
+	}
+	return []string{tf.template.ID()}
 }
 
 // RenderTemplate fetches data for the template. If the data is complete fetched,
@@ -544,18 +553,16 @@ func (tf *Terraform) initTaskTemplate() error {
 		}
 
 		// cleanup old template from watcher
-		tf.watcher.Mark(tf.template)
+		tf.watcher.MarkForSweep(tf.template)
 		tf.watcher.Sweep(tf.template)
 	}
 
 	tf.setNotifier(tmpl)
 
-	if !tf.watcher.Watching(tf.template.ID()) {
-		err = tf.watcher.Register(tf.template)
-		if err != nil && err != hcat.RegistryErr {
-			tf.logger.Error("unable to register template", taskNameLogKey, tf.task.Name(), "error", err)
-			return err
-		}
+	err = tf.watcher.Register(tf.template)
+	if err != nil && err != hcat.RegistryErr {
+		tf.logger.Error("unable to register template", taskNameLogKey, tf.task.Name(), "error", err)
+		return err
 	}
 
 	return nil

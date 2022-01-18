@@ -108,10 +108,10 @@ func (d *catalogServicesRegistrationQuery) Fetch(clients dep.Clients) (interface
 	default:
 	}
 
-	hcatOpts := &hcat.QueryOptions{
+	hcatOpts := d.opts.Merge(&hcat.QueryOptions{
 		Datacenter: d.dc,
 		Namespace:  d.ns,
-	}
+	})
 	opts := hcatOpts.ToConsulOpts()
 	if len(d.nodeMeta) != 0 {
 		opts.NodeMeta = d.nodeMeta

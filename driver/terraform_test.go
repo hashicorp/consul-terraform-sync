@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -86,7 +85,6 @@ func TestRenderTemplate(t *testing.T) {
 			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.renderErr).Once()
 
 			tf := &Terraform{
-				mu:       &sync.RWMutex{},
 				task:     &Task{name: "RenderTemplateTest", enabled: true, logger: logging.NewNullLogger()},
 				resolver: r,
 				template: tmpl,
@@ -148,7 +146,6 @@ func TestApplyTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyReturn).Once()
 
 			tf := &Terraform{
-				mu:        &sync.RWMutex{},
 				task:      &Task{name: "ApplyTaskTest", enabled: true, logger: logging.NewNullLogger()},
 				client:    c,
 				postApply: tc.postApply,
@@ -263,10 +260,8 @@ func TestUpdateTask(t *testing.T) {
 			}
 
 			w := new(mocksTmpl.Watcher)
-			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 			tf := &Terraform{
-				mu: &sync.RWMutex{},
 				task: &Task{name: "test_task", enabled: tc.orig.Enabled, workingDir: tc.dirName,
 					logger: logging.NewNullLogger()},
 				client:   c,
@@ -369,11 +364,9 @@ func TestUpdateTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyErr).Once()
 
 			w := new(mocksTmpl.Watcher)
-			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 
 			tf := &Terraform{
-				mu: &sync.RWMutex{},
 				task: &Task{name: "test_task", enabled: false, workingDir: tc.dirName,
 					logger: logging.NewNullLogger()},
 				client:   c,
@@ -442,11 +435,9 @@ func TestUpdateTask_Inspect(t *testing.T) {
 			c.On("SetStdout", mock.Anything)
 
 			w := new(mocksTmpl.Watcher)
-			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil)
 
 			tf := &Terraform{
-				mu:       &sync.RWMutex{},
 				task:     tc.task,
 				client:   c,
 				resolver: r,
@@ -531,7 +522,6 @@ func TestSetBufferPeriod(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			tf := &Terraform{
-				mu:     &sync.RWMutex{},
 				task:   tc.task,
 				logger: logging.NewNullLogger(),
 			}
@@ -579,7 +569,6 @@ func TestInitTaskTemplates(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := new(mocksTmpl.Watcher)
-			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 			tf := &Terraform{
 				fileReader: tc.fileReader,
@@ -669,7 +658,6 @@ func TestDisabledTask(t *testing.T) {
 		// not throw any errors
 
 		tf := &Terraform{
-			mu:      &sync.RWMutex{},
 			task:    &Task{name: "disabled_task", enabled: false},
 			watcher: new(mocksTmpl.Watcher),
 			logger:  logging.NewNullLogger(),
@@ -738,11 +726,9 @@ func TestInitTask(t *testing.T) {
 			c.On("Validate", ctx).Return(tc.validateErr)
 
 			w := new(mocksTmpl.Watcher)
-			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 
 			tf := &Terraform{
-				mu:         &sync.RWMutex{},
 				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName, logger: logging.NewNullLogger()},
 				client:     c,
 				fileReader: func(string) ([]byte, error) { return []byte{}, nil },

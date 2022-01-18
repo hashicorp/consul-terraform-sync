@@ -116,6 +116,7 @@ func TestBaseControllerInit(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			d := new(mocksD.Driver)
+			d.On("TemplateIDs").Return(nil)
 			d.On("InitTask", mock.Anything).Return(tc.initTaskErr).Once()
 
 			baseCtrl := baseController{

@@ -118,7 +118,7 @@ func newServicesRegexQuery(opts []string) (*servicesRegexQuery, error) {
 		_, err := bexpr.CreateFilter(opt)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"health.service: invalid filter: %q: %s", opt, err)
+				"service.regex: invalid filter: %q: %s", opt, err)
 		}
 		filters = append(filters, opt)
 	}
@@ -144,10 +144,10 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	}
 
 	// Fetch all services via catalog services
-	hcatOpts := &hcat.QueryOptions{
+	hcatOpts := d.opts.Merge(&hcat.QueryOptions{
 		Datacenter: d.dc,
 		Namespace:  d.ns,
-	}
+	})
 	opts := hcatOpts.ToConsulOpts()
 	if len(d.nodeMeta) != 0 {
 		opts.NodeMeta = d.nodeMeta
@@ -155,6 +155,12 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	catalog, qm, err := clients.Consul().Catalog().Services(opts)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
+	}
+
+	// Track the indexes of catalog services, not the individual health services
+	rm := &dep.ResponseMetadata{
+		LastIndex:   qm.LastIndex,
+		LastContact: qm.LastContact,
 	}
 
 	// Filter out only the services that match the regex
@@ -166,14 +172,23 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 		matchServices = append(matchServices, name)
 	}
 
-	// Fetch the health of each matching service
-	if d.filter != "" {
-		opts.Filter = d.filter
+	// Fetch the health of each matching service. We aren't tracking the latest
+	// index for each service, only for the catalog, so we'll do synchronous API
+	// requests to fetch the latest
+	hcatOpts = &hcat.QueryOptions{
+		Datacenter: d.dc,
+		Namespace:  d.ns,
+		Filter:     d.filter,
 	}
+	opts = hcatOpts.ToConsulOpts()
+	if len(d.nodeMeta) != 0 {
+		opts.NodeMeta = d.nodeMeta
+	}
+
 	var services []*dep.HealthService
 	for _, s := range matchServices {
 		var entries []*consulapi.ServiceEntry
-		entries, qm, err = clients.Consul().Health().Service(s, "", false, opts)
+		entries, _, err = clients.Consul().Health().Service(s, "", true, opts)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, d.String())
 		}
@@ -206,12 +221,6 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	}
 
 	sort.Stable(ByNodeThenID(services))
-
-	rm := &dep.ResponseMetadata{
-		LastIndex:   qm.LastIndex,
-		LastContact: qm.LastContact,
-	}
-
 	return services, rm, nil
 }
 
