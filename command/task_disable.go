@@ -103,13 +103,3 @@ func (c *taskDisableCommand) Run(args []string) int {
 
 	return ExitCodeOK
 }
-
-func processEOFError(scheme string, err error) error {
-	if strings.Contains(err.Error(), "EOF") && scheme == api.HTTPScheme {
-		err = fmt.Errorf("%s. Scheme %s was used, "+
-			"this error can be caused by a client using http to connect to a CTS server with TLS enabled, "+
-			"consider using %s scheme instead", err, scheme, api.HTTPSScheme)
-	}
-
-	return err
-}

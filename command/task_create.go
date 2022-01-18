@@ -151,7 +151,6 @@ func (c *taskCreateCommand) Run(args []string) int {
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to generate plan for '%s'", taskName))
-		err = processEOFError(client.Scheme(), err)
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 
@@ -174,7 +173,6 @@ func (c *taskCreateCommand) Run(args []string) int {
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to create '%s'", taskName))
-		err = processEOFError(client.Scheme(), err)
 
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
