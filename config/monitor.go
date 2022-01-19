@@ -12,6 +12,15 @@ type MonitorConfig interface {
 	Finalize()
 	Validate() error
 	GoString() string
+
+	// VariableType returns type of variable that a module_input or a condition
+	// block monitors. For example, `condition "services"` monitors the variable
+	// type "services.
+	//
+	// Used to ensure requirement that configured monitored variable types are
+	// unique for a given task. Must be unique across module_input, condition,
+	// and services.
+	VariableType() string
 }
 
 // isMonitorNil can be used to check if a MonitorConfig interface is nil by
