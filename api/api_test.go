@@ -139,7 +139,7 @@ func TestServe(t *testing.T) {
 			})
 			require.NoError(t, err)
 			go api.Serve(ctx)
-			time.Sleep(time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 
 			u := fmt.Sprintf("http://localhost:%d/%s/%s",
 				port, defaultAPIVersion, tc.path)
