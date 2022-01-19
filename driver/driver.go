@@ -32,6 +32,9 @@ type Driver interface {
 	// UpdateTask supports updating certain fields of a task
 	UpdateTask(ctx context.Context, task PatchTask) (InspectPlan, error)
 
+	// DeleteTask deletes a task from the driver
+	DeleteTask(ctx context.Context)
+
 	// Task returns the task information of the driver
 	Task() *Task
 

@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -143,6 +144,12 @@ func (d *Drivers) Delete(taskName string) error {
 
 	if taskName == "" {
 		return errors.New("task name cannot be empty")
+	}
+
+	driver, ok := d.drivers[taskName]
+
+	if ok {
+		driver.DeleteTask(context.Background())
 	}
 
 	delete(d.drivers, taskName)
