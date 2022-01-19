@@ -1,8 +1,6 @@
 package notifier
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat/dep"
@@ -82,7 +80,7 @@ func NewCatalogServicesRegistration(tmpl templates.Template, tmplFuncTotal int) 
 // when all dependencies are received.
 // Resolved by sending a special notification for once-mode. Bullet B above.
 func (n *CatalogServicesRegistration) Notify(d interface{}) (notify bool) {
-	n.logger.Debug("received dependency change", "dependency_type", fmt.Sprintf("%T", d))
+	logDependency(n.logger, d)
 	notify = false
 
 	if !n.once {

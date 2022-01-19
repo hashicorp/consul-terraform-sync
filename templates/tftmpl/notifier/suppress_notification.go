@@ -1,8 +1,6 @@
 package notifier
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 )
@@ -60,8 +58,7 @@ func NewSuppressNotification(tmpl templates.Template, tmplFuncTotal int) *Suppre
 // Once-mode requires a notification when all dependencies are received in order
 // to trigger CTS. Otherwise it will hang.
 func (n *SuppressNotification) Notify(d interface{}) (notify bool) {
-	n.logger.Debug("received dependency change", "dependency_type", fmt.Sprintf("%T", d))
-
+	logDependency(n.logger, d)
 	notify = false
 
 	if !n.once {

@@ -1,8 +1,6 @@
 package notifier
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat/dep"
@@ -61,7 +59,7 @@ func NewConsulKV(tmpl templates.Template, tmplFuncTotal int) *ConsulKV {
 //  - Other types of dependencies that are not Consul KV. For example,
 //    Services ([]*dep.HealthService).
 func (n *ConsulKV) Notify(d interface{}) (notify bool) {
-	n.logger.Debug("received dependency change", "dependency_type", fmt.Sprintf("%T", d))
+	logDependency(n.logger, d)
 	notify = false
 
 	if !n.once {
