@@ -26,18 +26,30 @@ type SuppressNotification struct {
 	logger logging.Logger
 
 	// count all dependencies needed to complete once-mode
-	once     bool
-	depTotal int
-	counter  int
+	once    bool
+	tfTotal int
+	counter int
 }
 
 // NewSuppressNotification creates a new SuppressNotification notifier.
-// serviceCount parameter: the number of services the task is configured with
-func NewSuppressNotification(tmpl templates.Template, dependencyCount int) *SuppressNotification {
+//
+// tmplFuncTotal param: the total number of monitored tmplFuncs in the template.
+// This is the number of monitored tmplfuncs needed for the scheduled task's
+// module inputs. This number is equivalent to the number of hashicat dependencies
+//
+// Examples:
+// - services-regex: 1 tmplfunc
+// - services-name: len(services) tmplfuncs
+// - consul-kv: 1 tmplfunc
+func NewSuppressNotification(tmpl templates.Template, tmplFuncTotal int) *SuppressNotification {
+	logger := logging.Global().Named(logSystemName).Named(supSubsystemName)
+	logger.Trace("creating notifier", "type", supSubsystemName,
+		"tmpl_func_total", tmplFuncTotal)
+
 	return &SuppressNotification{
 		Template: tmpl,
-		depTotal: dependencyCount,
-		logger:   logging.Global().Named(logSystemName).Named(supSubsystemName),
+		tfTotal:  tmplFuncTotal,
+		logger:   logger,
 	}
 }
 
@@ -46,7 +58,7 @@ func NewSuppressNotification(tmpl templates.Template, dependencyCount int) *Supp
 // task is triggered by another means.
 //
 // Once-mode requires a notification when all dependencies are received in order
-// to trigger CTS. It will hang otherwise.
+// to trigger CTS. Otherwise it will hang.
 func (n *SuppressNotification) Notify(d interface{}) (notify bool) {
 	n.logger.Debug("received dependency change", "dependency_type", fmt.Sprintf("%T", d))
 
@@ -54,16 +66,17 @@ func (n *SuppressNotification) Notify(d interface{}) (notify bool) {
 
 	if !n.once {
 		n.counter++
-		// after all dependencies are received, notify so once-mode can complete
-		if n.counter >= n.depTotal {
+		// after a dependency for each tmplfunc is received, send notification
+		// so that once-mode can complete
+		if n.counter >= n.tfTotal {
 			n.logger.Debug("notify once-mode complete")
 			n.once = true
 			notify = true
 		}
 	}
 
-	// still let the template know that its dependencies have been updated so
-	// that it will re-render when triggered, even if we do not notify watcher.
+	// let the template know that its dependencies have updated so that it will
+	// re-render when trigger. this does not cause task trigger
 	n.Template.Notify(d)
 
 	return notify

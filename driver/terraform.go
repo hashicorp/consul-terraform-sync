@@ -571,43 +571,74 @@ func (tf *Terraform) initTaskTemplate() error {
 	return nil
 }
 
-// setNotifier TODO: update to support multiple module_inputs
-func (tf *Terraform) setNotifier(tmpl templates.Template) {
-	// Get the service count. Only one of task.services, condition "services",
-	// and source_input "services" can be configured per task
-	serviceCount := len(tf.task.Services())
-	if cond, ok := tf.task.Condition().(*config.ServicesConditionConfig); ok {
-		serviceCount = len(cond.Names)
-	}
-	for _, input := range tf.task.ModuleInputs() {
-		if services, ok := input.(*config.ServicesModuleInputConfig); ok {
-			serviceCount = len(services.Names)
-			// config validation ensures that module_input blocks only have
-			// one services type
-			break
-		}
-	}
-
-	additionalDepCount := 0
-	for _, input := range tf.task.ModuleInputs() {
-		switch input.(type) {
-		case *config.ConsulKVModuleInputConfig:
-			// If a ConsulKVModuleInputConfig is specified, then we need to add
-			// to the number of dependencies passed to the notifier, since consul-kv adds a dependency
-			additionalDepCount = 1
-		}
+// setNotifier sets a notifier on the template to ensure only the condition's
+// monitored changes (and not the module input's changes) trigger the task.
+func (tf *Terraform) setNotifier(tmpl templates.Template) error {
+	tmplFuncTotal, err := tf.countTmplFunc()
+	if err != nil {
+		return err
 	}
 
 	switch tf.task.Condition().(type) {
+	case *config.ServicesConditionConfig:
+		tf.template = notifier.NewServices(tmpl, tmplFuncTotal)
 	case *config.CatalogServicesConditionConfig:
-		tf.template = notifier.NewCatalogServicesRegistration(tmpl, serviceCount)
+		tf.template = notifier.NewCatalogServicesRegistration(tmpl, tmplFuncTotal)
 	case *config.ConsulKVConditionConfig:
-		tf.template = notifier.NewConsulKV(tmpl, serviceCount)
+		tf.template = notifier.NewConsulKV(tmpl, tmplFuncTotal)
 	case *config.ScheduleConditionConfig:
-		tf.template = notifier.NewSuppressNotification(tmpl, serviceCount+additionalDepCount)
+		tf.template = notifier.NewSuppressNotification(tmpl, tmplFuncTotal)
 	default:
-		tf.template = tmpl
+		// services list
+		tf.template = notifier.NewServices(tmpl, tmplFuncTotal)
 	}
+	return nil
+}
+
+// countTmplFunc counts the number of template functions (tmplfunc) that are
+// added to the template file. Counts the tmplfunc needed by the task's
+// services field, condition block, and module_input blocks.
+func (tf *Terraform) countTmplFunc() (int, error) {
+	// Count tmplfuncs for the service variable separately. Currently services
+	// can only be configured in one of services field, condition "services",
+	// and module_input "services". Enforced by config validation
+	serviceCount := len(tf.task.Services())
+	nonServiceCount := 0
+
+	switch cond := tf.task.Condition().(type) {
+	case *config.CatalogServicesConditionConfig:
+		nonServiceCount++
+	case *config.ServicesConditionConfig:
+		if cond.Regexp != nil {
+			serviceCount = 1
+		} else {
+			serviceCount = len(cond.Names)
+		}
+	case *config.ConsulKVConditionConfig:
+		nonServiceCount++
+	default:
+		// no-op: condition block currently not required since services list
+		// can be used alternatively. enforced by config validation
+	}
+
+	for _, moduleInput := range tf.task.ModuleInputs() {
+		switch input := moduleInput.(type) {
+		case *config.ServicesModuleInputConfig:
+			// relies on config validation to restrict to one ServicesModuleInput
+			if input.Regexp != nil {
+				serviceCount = 1
+			} else {
+				serviceCount = len(input.Names)
+			}
+		case *config.ConsulKVModuleInputConfig:
+			nonServiceCount++
+		default:
+			return 0, fmt.Errorf("task %q has unsupported type of module_input "+
+				"block configuration %T", tf.task.name, input)
+		}
+	}
+
+	return serviceCount + nonServiceCount, nil
 }
 
 func (tf *Terraform) validateTask(ctx context.Context) error {
