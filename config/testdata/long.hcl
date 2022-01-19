@@ -93,4 +93,10 @@ task {
       "key2" = "value2"
     }
   }
+  module_input "consul-kv" {
+    path = "key-path"
+    recurse = true
+    datacenter = "dc2"
+    namespace = "ns2"
+  }
 }

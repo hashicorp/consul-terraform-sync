@@ -393,7 +393,10 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 		tf.task.source = moduleSource
 	}
 
-	tf.task.configureRootModuleInput(&input)
+	if err := tf.task.configureRootModuleInput(&input); err != nil {
+		return err
+	}
+
 	if err := tftmpl.InitRootModule(&input); err != nil {
 		return err
 	}
@@ -568,6 +571,7 @@ func (tf *Terraform) initTaskTemplate() error {
 	return nil
 }
 
+// setNotifier TODO: update to support multiple module_inputs
 func (tf *Terraform) setNotifier(tmpl templates.Template) {
 	// Get the service count. Only one of task.services, condition "services",
 	// and source_input "services" can be configured per task
@@ -575,8 +579,23 @@ func (tf *Terraform) setNotifier(tmpl templates.Template) {
 	if cond, ok := tf.task.Condition().(*config.ServicesConditionConfig); ok {
 		serviceCount = len(cond.Names)
 	}
-	if si, ok := tf.task.SourceInput().(*config.ServicesModuleInputConfig); ok {
-		serviceCount = len(si.Names)
+	for _, input := range tf.task.ModuleInputs() {
+		if services, ok := input.(*config.ServicesModuleInputConfig); ok {
+			serviceCount = len(services.Names)
+			// config validation ensures that module_input blocks only have
+			// one services type
+			break
+		}
+	}
+
+	additionalDepCount := 0
+	for _, input := range tf.task.ModuleInputs() {
+		switch input.(type) {
+		case *config.ConsulKVModuleInputConfig:
+			// If a ConsulKVModuleInputConfig is specified, then we need to add
+			// to the number of dependencies passed to the notifier, since consul-kv adds a dependency
+			additionalDepCount = 1
+		}
 	}
 
 	switch tf.task.Condition().(type) {
@@ -585,13 +604,6 @@ func (tf *Terraform) setNotifier(tmpl templates.Template) {
 	case *config.ConsulKVConditionConfig:
 		tf.template = notifier.NewConsulKV(tmpl, serviceCount)
 	case *config.ScheduleConditionConfig:
-		additionalDepCount := 0
-		switch tf.task.SourceInput().(type) {
-		case *config.ConsulKVModuleInputConfig:
-			// If a ConsulKVModuleInputConfig is specified, then we need to add
-			// to the number of dependencies passed to the notifier, since consul-kv adds a dependency
-			additionalDepCount = 1
-		}
 		tf.template = notifier.NewSuppressNotification(tmpl, serviceCount+additionalDepCount)
 	default:
 		tf.template = tmpl
@@ -656,17 +668,21 @@ func getServicesMetaData(logger logging.Logger, task *Task) (*tmplfunc.ServicesM
 		return servicesMeta, nil
 	}
 
-	// Introduced in 0.5. Metadata comes from source_input "services"
-	servicesInput, ok := task.SourceInput().(*config.ServicesModuleInputConfig)
-	if ok {
-		err := servicesMeta.SetMeta(servicesInput.CTSUserDefinedMeta)
-		if err != nil {
-			logger.Error("unable to to set metadata from services source input",
-				taskNameLogKey, task.Name(), "error", err)
-			return nil, err
-		}
+	// Introduced in 0.5. Metadata comes from module_input "services"
+	for _, moduleInput := range task.ModuleInputs() {
+		servicesInput, ok := moduleInput.(*config.ServicesModuleInputConfig)
+		if ok {
+			err := servicesMeta.SetMeta(servicesInput.CTSUserDefinedMeta)
+			if err != nil {
+				logger.Error("unable to to set metadata from services module_input",
+					taskNameLogKey, task.Name(), "error", err)
+				return nil, err
+			}
 
-		return servicesMeta, nil
+			// currently due to config validation, only on services module_input
+			// can be configured
+			return servicesMeta, nil
+		}
 	}
 
 	// Deprecated in 0.5. Metadata comes from service block
@@ -674,6 +690,10 @@ func getServicesMetaData(logger logging.Logger, task *Task) (*tmplfunc.ServicesM
 	services := task.Services()
 	for _, s := range services {
 		metaMap[s.Name] = s.UserDefinedMeta
+	}
+
+	if len(metaMap) == 0 {
+		return servicesMeta, nil
 	}
 
 	if err := servicesMeta.SetMetaMap(metaMap); err != nil {

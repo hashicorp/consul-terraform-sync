@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTaskConfig_Copy(t *testing.T) {
@@ -43,14 +42,18 @@ func TestTaskConfig_Copy(t *testing.T) {
 						},
 					},
 				},
-				DeprecatedSourceInput: &ServicesModuleInputConfig{
-					ServicesMonitorConfig: ServicesMonitorConfig{
-						Regexp: String(".*"),
+				DeprecatedSourceInputs: &ModuleInputConfigs{
+					&ServicesModuleInputConfig{
+						ServicesMonitorConfig: ServicesMonitorConfig{
+							Regexp: String(".*"),
+						},
 					},
 				},
-				ModuleInput: &ConsulKVModuleInputConfig{
-					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
-						Path: String("path"),
+				ModuleInputs: &ModuleInputConfigs{
+					&ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig: ConsulKVMonitorConfig{
+							Path: String("path"),
+						},
 					},
 				},
 				WorkingDir: String("cts-dir"),
@@ -350,52 +353,46 @@ func TestTaskConfig_Merge(t *testing.T) {
 			&TaskConfig{WorkingDir: String("cts-dir")},
 		},
 		{
-			"source_input_overrides",
-			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
-			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
+			"source_input_merges",
+			&TaskConfig{DeprecatedSourceInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("a")}}}},
+			&TaskConfig{DeprecatedSourceInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("b")}}}},
+			&TaskConfig{DeprecatedSourceInputs: &ModuleInputConfigs{
+				&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("a")}},
+				&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("b")}},
+			}},
 		},
 		{
 			"source_input_empty_one",
-			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}}},
 			&TaskConfig{},
-			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}}},
 		},
 		{
 			"source_input_empty_two",
 			&TaskConfig{},
-			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{DeprecatedSourceInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}}},
+			&TaskConfig{DeprecatedSourceInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}}},
 		},
 		{
-			"source_input_same",
-			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{DeprecatedSourceInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-		},
-		{
-			"module_input_overrides",
-			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
-			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("")}}},
+			"module_input_merges",
+			&TaskConfig{ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("a")}}}},
+			&TaskConfig{ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("b")}}}},
+			&TaskConfig{ModuleInputs: &ModuleInputConfigs{
+				&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("a")}},
+				&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String("b")}},
+			}},
 		},
 		{
 			"module_input_empty_one",
-			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}}},
 			&TaskConfig{},
-			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}}},
 		},
 		{
 			"module_input_empty_two",
 			&TaskConfig{},
-			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-		},
-		{
-			"module_input_same",
-			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
-			&TaskConfig{ModuleInput: &ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}},
+			&TaskConfig{ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}}},
+			&TaskConfig{ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}}},
 		},
 	}
 
@@ -430,7 +427,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Enabled:      Bool(true),
 				Condition:    EmptyConditionConfig(),
 				WorkingDir:   String("sync-tasks"),
-				ModuleInput:  EmptyModuleInputConfig(),
+				ModuleInputs: DefaultModuleInputConfigs(),
 			},
 		},
 		{
@@ -452,7 +449,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Enabled:      Bool(true),
 				Condition:    EmptyConditionConfig(),
 				WorkingDir:   String("sync-tasks/task"),
-				ModuleInput:  EmptyModuleInputConfig(),
+				ModuleInputs: DefaultModuleInputConfigs(),
 			},
 		},
 		{
@@ -476,10 +473,10 @@ func TestTaskConfig_Finalize(t *testing.T) {
 					Min:     TimeDuration(0 * time.Second),
 					Max:     TimeDuration(0 * time.Second),
 				},
-				Enabled:     Bool(true),
-				Condition:   &ScheduleConditionConfig{String("")},
-				WorkingDir:  String("sync-tasks/task"),
-				ModuleInput: EmptyModuleInputConfig(),
+				Enabled:      Bool(true),
+				Condition:    &ScheduleConditionConfig{String("")},
+				WorkingDir:   String("sync-tasks/task"),
+				ModuleInputs: DefaultModuleInputConfigs(),
 			},
 		},
 		{
@@ -487,8 +484,10 @@ func TestTaskConfig_Finalize(t *testing.T) {
 			&TaskConfig{
 				Name:      String("task"),
 				Condition: &ScheduleConditionConfig{},
-				ModuleInput: &ServicesModuleInputConfig{
-					ServicesMonitorConfig{Regexp: String("^api$")}},
+				ModuleInputs: &ModuleInputConfigs{
+					&ServicesModuleInputConfig{
+						ServicesMonitorConfig{Regexp: String("^api$")}},
+				},
 			},
 			&TaskConfig{
 				Description: String(""),
@@ -508,7 +507,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Enabled:    Bool(true),
 				Condition:  &ScheduleConditionConfig{String("")},
 				WorkingDir: String("sync-tasks/task"),
-				ModuleInput: &ServicesModuleInputConfig{
+				ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{
 					ServicesMonitorConfig{
 						Regexp:             String("^api$"),
 						Names:              []string{},
@@ -516,7 +515,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 						Namespace:          String(""),
 						Filter:             String(""),
 						CTSUserDefinedMeta: map[string]string{},
-					}},
+					}}},
 			},
 		},
 	}
@@ -572,85 +571,110 @@ func TestTaskConfig_Finalize_DeprecatedSource(t *testing.T) {
 	}
 }
 
-func TestTaskConfig_Finalize_DeprecatedSourceInput(t *testing.T) {
+func TestTaskConfig_Finalize_DeprecatedSourceInputs(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name     string
 		i        *TaskConfig
-		expected ModuleInputConfig
+		expected *ModuleInputConfigs
 	}{
 		{
 			"module_input_configured",
 			&TaskConfig{
-				ModuleInput: &ConsulKVModuleInputConfig{
-					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
-						Path: String("path"),
+				ModuleInputs: &ModuleInputConfigs{
+					&ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig: ConsulKVMonitorConfig{
+							Path: String("path"),
+						},
 					},
 				},
 			},
-			&ConsulKVModuleInputConfig{
-				ConsulKVMonitorConfig: ConsulKVMonitorConfig{
-					Path:       String("path"),
-					Recurse:    Bool(false),
-					Datacenter: String(""),
-					Namespace:  String(""),
+			&ModuleInputConfigs{
+				&ConsulKVModuleInputConfig{
+					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
+						Path:       String("path"),
+						Recurse:    Bool(false),
+						Datacenter: String(""),
+						Namespace:  String(""),
+					},
 				},
 			},
 		},
 		{
 			"source_input_configured",
 			&TaskConfig{
-				DeprecatedSourceInput: &ServicesModuleInputConfig{
-					ServicesMonitorConfig: ServicesMonitorConfig{
-						Regexp: String(".*"),
+				DeprecatedSourceInputs: &ModuleInputConfigs{
+					&ServicesModuleInputConfig{
+						ServicesMonitorConfig: ServicesMonitorConfig{
+							Regexp: String(".*"),
+						},
 					},
 				},
 			},
-			&ServicesModuleInputConfig{
-				ServicesMonitorConfig: ServicesMonitorConfig{
-					Regexp:             String(".*"),
-					Names:              []string{},
-					Datacenter:         String(""),
-					Namespace:          String(""),
-					Filter:             String(""),
-					CTSUserDefinedMeta: map[string]string{},
+			&ModuleInputConfigs{
+				&ServicesModuleInputConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Regexp:             String(".*"),
+						Names:              []string{},
+						Datacenter:         String(""),
+						Namespace:          String(""),
+						Filter:             String(""),
+						CTSUserDefinedMeta: map[string]string{},
+					},
 				},
 			},
 		},
 		{
 			"both_configured",
 			&TaskConfig{
-				ModuleInput: &ConsulKVModuleInputConfig{
-					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
-						Path: String("path"),
+				ModuleInputs: &ModuleInputConfigs{
+					&ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig: ConsulKVMonitorConfig{
+							Path: String("path"),
+						},
 					},
 				},
-				DeprecatedSourceInput: &ServicesModuleInputConfig{
-					ServicesMonitorConfig: ServicesMonitorConfig{
-						Regexp: String(".*"),
+				DeprecatedSourceInputs: &ModuleInputConfigs{
+					&ServicesModuleInputConfig{
+						ServicesMonitorConfig: ServicesMonitorConfig{
+							Regexp: String(".*"),
+						},
 					},
 				},
 			},
-			&ConsulKVModuleInputConfig{
-				ConsulKVMonitorConfig: ConsulKVMonitorConfig{
-					Path:       String("path"),
-					Recurse:    Bool(false),
-					Datacenter: String(""),
-					Namespace:  String(""),
+			&ModuleInputConfigs{
+				&ConsulKVModuleInputConfig{
+					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
+						Path:       String("path"),
+						Recurse:    Bool(false),
+						Datacenter: String(""),
+						Namespace:  String(""),
+					},
+				},
+				&ServicesModuleInputConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Regexp:             String(".*"),
+						Names:              []string{},
+						Datacenter:         String(""),
+						Namespace:          String(""),
+						Filter:             String(""),
+						CTSUserDefinedMeta: map[string]string{},
+					},
 				},
 			},
 		},
 		{
 			"none_configured",
 			&TaskConfig{},
-			EmptyModuleInputConfig(),
+			DefaultModuleInputConfigs(),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
-			// assert.NotEqual(t, tc.expected, tc.i.ModuleInput)
-			assert.Equal(t, tc.expected, tc.i.ModuleInput)
+			assert.Equal(t, tc.expected, tc.i.ModuleInputs)
 		})
 	}
 }
@@ -717,157 +741,6 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Services:  []string{"api"},
 				Module:    String("path"),
 				Providers: []string{"providerA", "providerA.alias"},
-			},
-			false,
-		},
-		{
-			"valid: no cond: services configured",
-			&TaskConfig{
-				Name:     String("task"),
-				Services: []string{"api"},
-				Module:   String("path"),
-			},
-			true,
-		},
-		{
-			"invalid: no cond: no services",
-			&TaskConfig{Name: String("task"), Module: String("path")},
-			false,
-		},
-		// catalog-services condition test cases
-		{
-			"invalid: cs cond: no cond.regexp & no services",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Condition: &CatalogServicesConditionConfig{},
-			},
-			false,
-		},
-		{
-			"valid: cs-cond: cond.regexp configured & no services",
-			&TaskConfig{
-				Name:   String("task"),
-				Module: String("path"),
-				Condition: &CatalogServicesConditionConfig{
-					CatalogServicesMonitorConfig{
-						Regexp: String(".*"),
-					},
-				},
-			},
-			true,
-		},
-		// services condition test case
-		{
-			"valid: services cond: no services",
-			&TaskConfig{
-				Name:   String("task"),
-				Module: String("path"),
-				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig: ServicesMonitorConfig{
-						Regexp: String(".*"),
-					},
-				},
-			},
-			true,
-		},
-		{
-			"invalid: services cond: services configured",
-			&TaskConfig{
-				Name:     String("task"),
-				Module:   String("path"),
-				Services: []string{"api"},
-				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig: ServicesMonitorConfig{
-						Regexp: String(""),
-					},
-				},
-			},
-			false,
-		},
-		// consul-kv condition test cases
-		{
-			"invalid: kv cond: no services",
-			&TaskConfig{
-				Name:   String("task"),
-				Module: String("path"),
-				Condition: &ConsulKVConditionConfig{
-					ConsulKVMonitorConfig: ConsulKVMonitorConfig{
-						Path: String("path"),
-					},
-				},
-			},
-			false,
-		},
-		// schedule condition test cases
-		{
-			"valid: sched cond: services configured",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Services:  []string{"api"},
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-			},
-			true,
-		},
-		{
-			"valid: sched cond: service module_input configured & no services",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				ModuleInput: &ServicesModuleInputConfig{
-					ServicesMonitorConfig{Regexp: String(".*")}},
-			},
-			true,
-		},
-		{
-			"invalid: sched cond: no services & no module_input",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-			},
-			false,
-		},
-		{
-			"invalid: sched cond: services module_input configured & services configured",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Services:  []string{"api"},
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				ModuleInput: &ServicesModuleInputConfig{
-					ServicesMonitorConfig{Names: []string{"api"}},
-				},
-			},
-			false,
-		},
-		{
-			"invalid: sched cond: kv module_input configured & no services",
-			&TaskConfig{
-				Name:      String("task"),
-				Module:    String("path"),
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-				ModuleInput: &ConsulKVModuleInputConfig{
-					ConsulKVMonitorConfig{
-						Path: String("path"),
-					},
-				},
-			},
-			false,
-		},
-		// non-schedule condition test-cases
-		{
-			"invalid: non-sched cond: module_input configured",
-			&TaskConfig{
-				Name:   String("task"),
-				Module: String("path"),
-				Condition: &ServicesConditionConfig{
-					ServicesMonitorConfig: ServicesMonitorConfig{
-						Regexp: String(".*")}},
-				ModuleInput: &ServicesModuleInputConfig{
-					ServicesMonitorConfig{Regexp: String(".*")}},
 			},
 			false,
 		},
@@ -987,60 +860,62 @@ func TestTasksConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestTaskConfig_FinalizeValidate(t *testing.T) {
-	// Tests the full finalize then validate process, particularly how it handles the
-	// relationship between task.services and task.condition
-	//
-	// Relationships:
-	// - When catalog-service condition's regexp is nil or empty string, test
-	//    how regexp is handled by Finalize() which impacts Validate()
+func TestTaskConfig_validateCondition(t *testing.T) {
+	t.Parallel()
 
 	cases := []struct {
-		name   string
-		config *TaskConfig
-		valid  bool
+		name    string
+		i       *TaskConfig
+		isValid bool
 	}{
 		{
-			"invalid: no services with catalog-service condition missing regexp",
+			"valid: only services list",
 			&TaskConfig{
-				Name:      String("task_a"),
-				Module:    String("path"),
-				Condition: &CatalogServicesConditionConfig{},
+				Services: []string{"api"},
 			},
+			true,
+		},
+		{
+			"valid: only cond-block",
+			&TaskConfig{
+				Condition: &ServicesConditionConfig{},
+			},
+			true,
+		},
+		{
+			"valid: services list & non-service cond-block",
+			&TaskConfig{
+				Services:  []string{"api"},
+				Condition: &ConsulKVConditionConfig{},
+			},
+			true,
+		},
+		{
+			"invalid: no services list & no cond-block configured",
+			&TaskConfig{},
 			false,
 		},
 		{
-			"valid: no services with catalog-service condition's regexp is empty string",
+			"invalid: services & services cond-block configured",
 			&TaskConfig{
-				Name:      String("task_a"),
-				Module:    String("path"),
-				Services:  []string{"serviceA"},
-				Condition: &CatalogServicesConditionConfig{CatalogServicesMonitorConfig{Regexp: String("")}},
+				Services:  []string{"api"},
+				Condition: &ServicesConditionConfig{},
 			},
-			true,
-		},
-		{
-			"valid: no module_input included with schedule condition",
-			&TaskConfig{
-				Name:      String("task_a"),
-				Module:    String("path"),
-				Services:  []string{"serviceA"},
-				Condition: &ScheduleConditionConfig{String("* * * * * * *")},
-			},
-			true,
+			false,
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			tc.config.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
-			err := tc.config.Validate()
-			if tc.valid {
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			// add additional required task fields
+			tc.i.Name = String("task")
+			tc.i.Module = String("path")
+
+			err := tc.i.validateCondition()
+			if tc.isValid {
 				assert.NoError(t, err)
 			} else {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "condition",
-					"error does not seem to be about condition configuration")
+				assert.Error(t, err)
 			}
 		})
 	}

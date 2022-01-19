@@ -772,11 +772,13 @@ func TestGetServicesMetaData(t *testing.T) {
 			},
 		},
 		{
-			"meta-data configured in source_input",
+			"meta-data configured in module_input",
 			&Task{
-				sourceInput: &config.ServicesModuleInputConfig{
-					ServicesMonitorConfig: config.ServicesMonitorConfig{
-						CTSUserDefinedMeta: meta,
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							CTSUserDefinedMeta: meta,
+						},
 					},
 				},
 			},
@@ -801,6 +803,18 @@ func TestGetServicesMetaData(t *testing.T) {
 				metaMap := map[string]map[string]string{"api": meta}
 				sm.SetMetaMap(metaMap)
 				return sm
+			},
+		},
+		{
+			"no meta-data",
+			&Task{
+				condition: &config.ConsulKVConditionConfig{},
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ConsulKVModuleInputConfig{},
+				},
+			},
+			func() *tmplfunc.ServicesMeta {
+				return &tmplfunc.ServicesMeta{}
 			},
 		},
 	}

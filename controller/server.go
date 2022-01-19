@@ -217,6 +217,8 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		}
 	}
 
+	inputs := t.ModuleInputs()
+
 	return config.TaskConfig{
 		Description:  config.String(t.Description()),
 		Name:         config.String(t.Name()),
@@ -228,7 +230,7 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		Version:      config.String(t.Version()),
 		BufferPeriod: &bpConf,
 		Condition:    t.Condition(),
-		ModuleInput:  t.SourceInput(),
+		ModuleInputs: &inputs,
 		WorkingDir:   config.String(t.WorkingDir()),
 	}, nil
 }

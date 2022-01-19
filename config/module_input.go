@@ -25,19 +25,6 @@ func DefaultModuleInputConfigs() *ModuleInputConfigs {
 	return &ModuleInputConfigs{}
 }
 
-// EmptyModuleInputConfig sets un-configured module inputs with a non-null
-// value
-func EmptyModuleInputConfig() ModuleInputConfig {
-	return &NoMonitorConfig{}
-}
-
-// isModuleInputEmpty returns true if the provided ModuleInputConfig `c` is
-// of type NoMonitorConfig
-func isModuleInputEmpty(c ModuleInputConfig) bool {
-	_, ok := c.(*NoMonitorConfig)
-	return ok
-}
-
 // moduleInputToTypeFunc is a decode hook function to decode a ModuleInputConfig
 // into a specific module var implementation structures. Used when decoding
 // cts config overall.
