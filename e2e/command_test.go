@@ -592,6 +592,22 @@ task {
 			} else {
 				require.Error(t, err)
 			}
+
+			// If we expected a task status, then the task exists, verify it is updating on changes
+			if tc.expectStatus {
+				// 1. get current number of events
+				eventCountBase := eventCount(t, dbTaskName, cts.Port())
+
+				// 2. register api service. check triggers task
+				now := time.Now()
+				service := testutil.TestService{ID: "api-1", Name: "api"}
+				testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+				api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
+
+				eventCountNow := eventCount(t, dbTaskName, cts.Port())
+				require.Equal(t, eventCountBase+1, eventCountNow,
+					"event count did not increment once. task was not triggered as expected")
+			}
 		})
 	}
 }
@@ -619,6 +635,83 @@ func TestE2E_CreateTaskCommand_NoTaskFileProvided(t *testing.T) {
 	for _, expect := range outputContains {
 		assert.Contains(t, output, expect)
 	}
+}
+
+// TestE2E_CreateDeleteCreateTrigger tests that after creating a task, then deleting
+// the task, and then finally re-creating the task, the task will trigger
+func TestE2E_CreateDeleteCreateTrigger(t *testing.T) {
+	t.Parallel()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_delete_create_cmd")
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+	cts := ctsSetup(t, srv, tempDir, dbTask())
+
+	// Write task config file
+	var taskConfig hclConfig
+	taskName := "new-task"
+	inputTask := fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["api"]
+  enabled = true
+}`, taskName)
+	taskConfig = taskConfig.appendString(inputTask)
+	taskFilePath := filepath.Join(tempDir, "task.hcl")
+	taskConfig.write(t, taskFilePath)
+
+	// Create task
+	subcmdCreate := []string{"task", "create",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+		fmt.Sprintf("--task-file=%s", taskFilePath),
+	}
+
+	input := "yes\n"
+	_, err := runSubcommand(t, input, subcmdCreate...)
+	assert.NoError(t, err)
+
+	// Confirm task was created
+	_, err = cts.Status().Task(taskName, nil)
+	assert.NoError(t, err)
+
+	// Delete task
+	subcmdDelete := []string{"task", "delete",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+		taskName,
+	}
+	_, err = runSubcommand(t, input, subcmdDelete...)
+	require.NoError(t, err)
+
+	// Confirm task was deleted
+	_, err = cts.Status().Task(taskName, nil)
+	assert.Error(t, err)
+
+	// Re-create task
+	_, err = runSubcommand(t, input, subcmdCreate...)
+	assert.NoError(t, err)
+
+	// Confirm task was re-created
+	_, err = cts.Status().Task(taskName, nil)
+	require.NoError(t, err)
+
+	// Verify events trigger
+	// 1. get current number of events
+	eventCountBase := eventCount(t, dbTaskName, cts.Port())
+
+	// 2. register api service. check triggers task
+	now := time.Now()
+	service := testutil.TestService{ID: "api-1", Name: "api"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
+
+	eventCountNow := eventCount(t, dbTaskName, cts.Port())
+	require.Equal(t, eventCountBase+1, eventCountNow,
+		"event count did not increment once. task was not triggered as expected")
+
 }
 
 // TestE2E_DeleteTaskCommand_Help tests that the usage is outputted
