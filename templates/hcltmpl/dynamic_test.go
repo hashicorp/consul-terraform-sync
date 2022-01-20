@@ -97,7 +97,7 @@ func TestLoadDynamicConfig(t *testing.T) {
 		Return(hcat.ResolveEvent{Complete: true, Contents: []byte(tmplStr)}, nil)
 
 	w := new(mocks.Watcher)
-	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil)
+	w.On("WaitCh", mock.Anything).Return(nil)
 	w.On("Register", mock.Anything).Return(nil)
 
 	testCases := []struct {

@@ -477,7 +477,7 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 
 func TestReadWriteRun_context_cancel(t *testing.T) {
 	w := new(mocks.Watcher)
-	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil).
+	w.On("WaitCh", mock.Anything).Return(nil).
 		On("Size").Return(5).
 		On("Stop").Return()
 
@@ -548,7 +548,7 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 		// Once is expected to complete during first iteration with the
 		// mocked values, so we don't initialize Wait until after. Otherwise,
 		// the test would panic on missing mock method.
-		w.On("WaitCh", mock.Anything, mock.Anything).Return(watcherChRc)
+		w.On("WaitCh", mock.Anything).Return(watcherChRc)
 
 		err = ctrl.Run(ctx)
 		if err != nil {

@@ -88,7 +88,7 @@ func TestReadOnlyRun_context_cancel(t *testing.T) {
 		Return(hcat.ResolveEvent{Complete: false}, nil)
 
 	w := new(mocks.Watcher)
-	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil).
+	w.On("WaitCh", mock.Anything).Return(nil).
 		On("Size").Return(5).
 		On("Stop").Return()
 
