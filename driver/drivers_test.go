@@ -3,7 +3,9 @@ package driver
 import (
 	"testing"
 
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -142,7 +144,11 @@ func TestDrivers_Delete(t *testing.T) {
 	}
 
 	drivers := NewDrivers()
-	err := drivers.Add("task_a", &Terraform{})
+
+	w := new(mocks.Watcher)
+	w.On("Deregister", mock.Anything).Return()
+
+	err := drivers.Add("task_a", &Terraform{watcher: w})
 	require.NoError(t, err)
 
 	for _, tc := range cases {

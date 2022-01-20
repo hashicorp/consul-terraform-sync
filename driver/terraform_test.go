@@ -271,6 +271,9 @@ func TestUpdateTask(t *testing.T) {
 				watcher:  w,
 				logger:   logging.NewNullLogger(),
 			}
+			if tc.callInspect {
+				w.On("Deregister", mock.Anything).Return()
+			}
 
 			if tc.callInit {
 				c.On("Init", ctx).Return(nil).Once()
@@ -438,6 +441,7 @@ func TestUpdateTask_Inspect(t *testing.T) {
 
 			w := new(mocksTmpl.Watcher)
 			w.On("Register", mock.Anything).Return(nil)
+			w.On("Deregister", mock.Anything).Return()
 
 			tf := &Terraform{
 				task:     tc.task,

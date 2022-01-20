@@ -221,6 +221,7 @@ func TestServer_TaskDelete(t *testing.T) {
 			func(d *driver.Drivers) {
 				mockD.On("TemplateIDs").Return(nil)
 				d.Add("success", mockD)
+				mockD.On("DeleteTask", ctx).Return()
 			},
 			"",
 		}, {
@@ -240,6 +241,7 @@ func TestServer_TaskDelete(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			drivers := driver.NewDrivers()
+
 			tc.setup(drivers)
 			ctrl.baseController.drivers = drivers
 
