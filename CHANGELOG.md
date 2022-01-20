@@ -16,6 +16,7 @@ IMPROVEMENTS:
 * Support configuring a task's `condition "services"` and `source_input "services"` blocks with query parameters: `datacenter`, `namespace`, `filter`, and `cts_user_defined_meta`. [[GH-357](https://github.com/hashicorp/consul-terraform-sync/issues/357)]
 * Support new `names` field for configuring a task's `condition "services"` and `source_input "services"` blocks as an optional alternative to `regexp` to list monitored services by name. [[GH-561](https://github.com/hashicorp/consul-terraform-sync/issues/561)]
 * Support `source_includes_var` field for a task's `condition "services"` block. [[GH-584](https://github.com/hashicorp/consul-terraform-sync/pull/584)]
+* Added deprecation warning for `port` CLI option. Use `http-addr` option instead. [[GH-617](https://github.com/hashicorp/consul-terraform-sync/pull/617)]
 
 BUG FIXES:
 * Fix CLI client enable task command timing out when buffer period is enabled [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
