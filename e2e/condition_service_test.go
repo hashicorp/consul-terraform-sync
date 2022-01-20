@@ -222,6 +222,7 @@ func TestCondition_ServicesRegex_Multiple(t *testing.T) {
 
 			// confirm service resources created
 			api.WaitForEvent(t, cts, tc.taskName, registerTime, defaultWaitForAPI)
+			time.Sleep(5 * time.Second) // wait a little for second event
 			resourcesPath := filepath.Join(tempDir, tc.taskName, resourcesDir)
 			validateServices(t, true, []string{"api-1", "web-1"}, resourcesPath)
 		})
