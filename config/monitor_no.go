@@ -33,7 +33,7 @@ func (c *NoMonitorConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *NoMonitorConfig) GoString() string {
+// String defines the printable version of this struct.
+func (c *NoMonitorConfig) String() string {
 	return "{}"
 }
