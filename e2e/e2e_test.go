@@ -298,7 +298,8 @@ func TestE2EValidateError(t *testing.T) {
 	module = "./test_modules/incompatible_w_cts"
 	services = ["api", "db"]
 	condition "catalog-services" {
-		source_includes_var = true
+		regexp = "^api$|^db$"
+		use_as_module_input = true
 	}
 }
 `, taskName)
@@ -315,7 +316,121 @@ func TestE2EValidateError(t *testing.T) {
 	assert.Contains(t, buf.String(), fmt.Sprintf(`module for task "%s" is missing the "services" variable`, taskName))
 	require.Contains(t,
 		buf.String(),
-		fmt.Sprintf(`module for task "%s" is missing the "catalog_services" variable, add to module or set "source_includes_var" to false`,
+		fmt.Sprintf(`module for task "%s" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false`,
 			taskName))
 	delete()
+}
+
+// TestE2E_FilterStatus checks the behavior of including/excluding non-passing
+// service instances. It runs Consul registered with a critical service instance
+// and CTS in once-mode and checks the terraform.tfvars contents to see whats
+// included/excluded. It checks the following behavior:
+// 1. By default, CTS only includes passing service instances (checked by
+//    confirming in terraform.tfvars)
+// 2. CTS can include non-passing service instances through additional
+//    configuration
+func TestE2E_FilterStatus(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name         string
+		tmpDirSuffix string
+		config       string
+		checkTfvars  func(*testing.T, string)
+	}{
+		{
+			"default config excludes non-passing service instances",
+			"_default",
+			`task {
+				name = "%s"
+				source = "./test_modules/null_resource"
+				services = ["api", "unhealthy-service"]
+			}
+			`,
+			func(t *testing.T, contents string) {
+				assert.NotContains(t, contents, "unhealthy-service")
+				assert.NotContains(t, contents, `= "critical"`)
+
+				// confirm that healthy service is still included
+				assert.Contains(t, contents, "api")
+				assert.Contains(t, contents, `= "passing"`)
+			},
+		},
+		{
+			"services filter includes non-passing service instances",
+			"_w_filter",
+			`task {
+				name = "%s"
+				source = "./test_modules/null_resource"
+				services = ["api", "unhealthy-service"]
+			}
+			service {
+				name = "unhealthy-service"
+				filter = "Checks.Status != \"\""
+			}
+			`,
+			func(t *testing.T, contents string) {
+				assert.Contains(t, contents, "unhealthy-service")
+				assert.Contains(t, contents, `= "critical"`)
+
+				// confirm that healthy service is still included
+				assert.Contains(t, contents, "api")
+				assert.Contains(t, contents, `= "passing"`)
+			},
+		},
+	}
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tempDir := fmt.Sprintf("%s%s%s", tempDirPrefix, "filter_statuses", tc.tmpDirSuffix)
+			delete := testutils.MakeTempDir(t, tempDir)
+
+			taskName := "status_filter_task"
+
+			configPath := filepath.Join(tempDir, configFile)
+			config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
+				appendString(fmt.Sprintf(tc.config, taskName))
+			config.write(t, configPath)
+
+			api.StartCTS(t, configPath, api.CTSOnceModeFlag)
+
+			taskDir := filepath.Join(tempDir, taskName)
+			contents := testutils.CheckFile(t, true, taskDir, "terraform.tfvars")
+
+			tc.checkTfvars(t, contents)
+			delete()
+		})
+	}
+}
+
+// TestE2EInspectMode tests running CTS in inspect mode and verifies that
+// the plan is outputted and no changes are actually applied.
+func TestE2EInspectMode(t *testing.T) {
+	t.Parallel()
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "inspect")
+	delete := testutils.MakeTempDir(t, tempDir)
+	defer delete()
+
+	config := baseConfig(tempDir).appendConsulBlock(srv).
+		appendTerraformBlock().appendWebTask()
+
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath),
+		api.CTSInspectFlag)
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	cmd.Run()
+
+	assert.Contains(t, buf.String(), "Plan: 2 to add, 0 to change, 0 to destroy.")
+	resourcePath := filepath.Join(tempDir, webTaskName, resourcesDir)
+	validateServices(t, false, []string{"web", "api"}, resourcePath)
 }

@@ -6,7 +6,7 @@ orbs:
 executors:
   go:
     docker:
-      - image: docker.mirror.hashicorp.services/circleci/golang:${GO_VERSION}
+      - image: docker.mirror.hashicorp.services/cimg/go:${GO_VERSION}
     environment:
       CONSUL_VERSION: "1.10.3"
       GOMAXPROCS: 4
@@ -20,12 +20,11 @@ jobs:
   unit_integration_tests:
     executor:
       name: go
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
       - restore_cache:
           keys:
-            - ct-modcache-v1-{{ checksum "go.mod" }}
+            - ct-modcache-v2-{{ checksum "go.mod" }}
       - run: |
           curl -sLo consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
           unzip consul.zip
@@ -37,19 +36,18 @@ jobs:
           template: basic_fail_1
           branch_pattern: main,release/.+
       - save_cache:
-          key: ct-modcache-v1-{{ checksum "go.mod" }}
+          key: ct-modcache-v2-{{ checksum "go.mod" }}
           paths:
             - /go/pkg/mod
 
   vault_integration_tests:
     executor:
       name: go
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
       - restore_cache:
           keys:
-            - ct-modcache-v1-{{ checksum "go.mod" }}
+            - ct-modcache-v2-{{ checksum "go.mod" }}
       - run:
           name: Install Vault
           command: |
@@ -60,20 +58,19 @@ jobs:
       - run: |
           go test -count=1 -timeout=80s -tags 'integration vault' ./... -run Vault
       - save_cache:
-          key: ct-modcache-v1-{{ checksum "go.mod" }}
+          key: ct-modcache-v2-{{ checksum "go.mod" }}
           paths:
             - /go/pkg/mod
-            
+
   e2e_tests:
     executor:
       name: go
     resource_class: medium+
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
       - restore_cache:
           keys:
-            - ct-modcache-v1-{{ checksum "go.mod" }}
+            - ct-modcache-v2-{{ checksum "go.mod" }}
       - run: |
           curl -sLo consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
           unzip consul.zip
@@ -85,26 +82,25 @@ jobs:
           template: basic_fail_1
           branch_pattern: main,release/.+
       - save_cache:
-          key: ct-modcache-v1-{{ checksum "go.mod" }}
+          key: ct-modcache-v2-{{ checksum "go.mod" }}
           paths:
             - /go/pkg/mod
 
   consul_compatibility_tests:
     executor:
       name: go
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
       - restore_cache:
           keys:
-            - ct-modcache-v1-{{ checksum "go.mod" }}
+            - ct-modcache-v2-{{ checksum "go.mod" }}
       - run: |
           make test-compat
       - slack/notify:
           event: fail
           template: basic_fail_1
       - save_cache:
-          key: ct-modcache-v1-{{ checksum "go.mod" }}
+          key: ct-modcache-v2-{{ checksum "go.mod" }}
           paths:
             - /go/pkg/mod
 
@@ -116,7 +112,6 @@ jobs:
         type: string
         description: the job times out after this duration with no output
         default: 30m
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
       - run:

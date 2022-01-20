@@ -14,8 +14,9 @@ var _ MonitorConfig = (*ServicesMonitorConfig)(nil)
 // that occur to services. ServicesMonitorConfig shares similar fields as the
 // deprecated ServiceConfig
 type ServicesMonitorConfig struct {
-	// Regexp configures the services to monitor by matching on the service name
-	// Either Regexp or Names must be configured, not both.
+	// Regexp configures the services to monitor by matching on the service name.
+	// Either Regexp or Names must be configured, not both. When Regexp is unset,
+	// it will retain a nil value even after Finalize().
 	Regexp *string `mapstructure:"regexp" json:"regexp"`
 
 	// Names configures the services to monitor by listing the service name.
@@ -37,6 +38,10 @@ type ServicesMonitorConfig struct {
 	// CTSUserDefinedMeta is metadata added to a service automated by CTS for
 	// network infrastructure automation.
 	CTSUserDefinedMeta map[string]string `mapstructure:"cts_user_defined_meta" json:"cts_user_defined_meta"`
+}
+
+func (c *ServicesMonitorConfig) VariableType() string {
+	return "services"
 }
 
 // Copy returns a deep copy of this configuration.
@@ -112,10 +117,14 @@ func (c *ServicesMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 	return r2
 }
 
-// Finalize ensures there no nil pointers. with the _exception_ of Regexp. There
-// is a need to distinguish betweeen nil regex (unconfigured regex) and empty
-// string regex ("" regex pattern) at Validate()
-func (c *ServicesMonitorConfig) Finalize([]string) {
+// Finalize ensures there no nil pointers.
+//
+// Exception: `Regexp` is never finalized and can potentially be nil.
+//  - There is a need to distinguish betweeen nil regex (unconfigured regex) and
+//  empty string regex ("" regex pattern) at Validate().
+//  - Setting `Regexp` as an empty string is not idempotent. There is a need to
+//  call Finalize() and Validate() multiple times.
+func (c *ServicesMonitorConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}
@@ -162,8 +171,6 @@ func (c *ServicesMonitorConfig) Validate() error {
 		if _, err := regexp.Compile(StringVal(c.Regexp)); err != nil {
 			return fmt.Errorf("unable to compile services regexp: %s", err)
 		}
-	} else {
-		c.Regexp = String("") // Finalize
 	}
 
 	// Check that names does not contain empty strings

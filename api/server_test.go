@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
-	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	apiMocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -72,7 +71,7 @@ func TestRequest(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			hc := new(mocks.HttpClient)
+			hc := new(apiMocks.HttpClient)
 
 			// set up return response on mock
 			b, err := json.Marshal(tc.httpResponseBody)
@@ -113,23 +112,24 @@ func TestStatus(t *testing.T) {
 	eventsC := createTaskEvents("task_c", []bool{false, false, true})
 	addEvents(store, eventsC)
 
-	// setup drivers
-	drivers := driver.NewDrivers()
-	err := drivers.Add("task_a", createDriver(t, "task_a", true))
-	require.NoError(t, err)
-	err = drivers.Add("task_b", createDriver(t, "task_b", true))
-	require.NoError(t, err)
-	err = drivers.Add("task_c", createDriver(t, "task_c", true))
-	require.NoError(t, err)
+	ctrl := new(mocks.Server)
+	var confs []config.TaskConfig
+	for _, taskName := range []string{"task_a", "task_b", "task_c"} {
+		conf := createTaskConf(taskName, true)
+		confs = append(confs, conf)
+		ctrl.On("Task", mock.Anything, taskName).Return(conf, nil).
+			On("Events", mock.Anything, taskName).Return(store.Read(taskName), nil)
+	}
+	ctrl.On("Tasks", mock.Anything).Return(confs, nil)
+	ctrl.On("Events", mock.Anything, "").Return(store.Read(""), nil)
 
 	// start up server
 	port := testutils.FreePort(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	api, err := NewAPI(&APIConfig{
-		Store:   store,
-		Drivers: drivers,
-		Port:    port,
+	api, err := NewAPI(APIConfig{
+		Controller: ctrl,
+		Port:       port,
 	})
 	require.NoError(t, err)
 	go api.Serve(ctx)
@@ -278,80 +278,6 @@ func TestStatus(t *testing.T) {
 	})
 }
 
-func Test_Task_Update(t *testing.T) {
-	t.Parallel()
-
-	// start up server
-	port := testutils.FreePort(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	drivers := driver.NewDrivers()
-	api, err := NewAPI(&APIConfig{
-		Drivers: drivers,
-		Port:    port,
-	})
-	require.NoError(t, err)
-	go api.Serve(ctx)
-
-	c, err := NewClient(&ClientConfig{Port: port}, nil)
-	require.NoError(t, err)
-	err = c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
-	require.NoError(t, err)
-
-	t.Run("disable-then-enable", func(t *testing.T) {
-		// setup temp dir
-		tempDir := "disable-enable"
-		del := testutils.MakeTempDir(t, tempDir)
-		defer del()
-
-		task, err := driver.NewTask(driver.TaskConfig{Enabled: true, WorkingDir: tempDir})
-		require.NoError(t, err)
-
-		// add a driver
-		d, err := driver.NewTerraform(&driver.TerraformConfig{
-			Task:       task,
-			ClientType: "test",
-		})
-		require.NoError(t, err)
-		err = drivers.Add("task_a", d)
-		require.NoError(t, err)
-
-		assert.True(t, d.Task().IsEnabled())
-		plan, err := c.Task().Update("task_a", UpdateTaskConfig{
-			Enabled: config.Bool(false),
-		}, nil)
-		require.NoError(t, err)
-		assert.False(t, d.Task().IsEnabled())
-		assert.Empty(t, plan)
-	})
-	t.Run("task-not-found-error", func(t *testing.T) {
-		plan, err := c.Task().Update("non-existent-task", UpdateTaskConfig{
-			Enabled: config.Bool(false),
-		}, nil)
-		require.Error(t, err)
-		assert.Empty(t, plan)
-	})
-	t.Run("task-run-option", func(t *testing.T) {
-		expectedPlan := driver.InspectPlan{
-			ChangesPresent: true,
-			Plan:           "plan!",
-		}
-		// add a driver
-		d := new(mocksD.Driver)
-		d.On("UpdateTask", mock.Anything, mock.Anything).
-			Return(expectedPlan, nil).Once()
-		err = drivers.Add("task_b", d)
-		require.NoError(t, err)
-
-		actual, err := c.Task().Update("task_b", UpdateTaskConfig{
-			Enabled: config.Bool(false),
-		}, &QueryParam{Run: driver.RunOptionInspect})
-
-		require.NoError(t, err)
-		assert.Equal(t, expectedPlan, *actual.Inspect)
-	})
-}
-
 func TestWaitForAPI(t *testing.T) {
 	t.Parallel()
 
@@ -363,12 +289,17 @@ func TestWaitForAPI(t *testing.T) {
 	})
 
 	t.Run("available", func(t *testing.T) {
+		ctrl := new(mocks.Server)
+		ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+			On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
+
 		// start up server
 		port := testutils.FreePort(t)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		api, err := NewAPI(&APIConfig{
-			Port: port,
+		api, err := NewAPI(APIConfig{
+			Controller: ctrl,
+			Port:       port,
 		})
 		require.NoError(t, err)
 		go api.Serve(ctx)

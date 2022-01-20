@@ -34,6 +34,7 @@ func (c taskDisableCommand) Name() string {
 
 // Help returns the command's usage, list of flags, and examples
 func (c *taskDisableCommand) Help() string {
+	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
 Usage: consul-terraform-sync task disable [options] <task name>
 
@@ -101,14 +102,4 @@ func (c *taskDisableCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("'%s' disable complete!", taskName))
 
 	return ExitCodeOK
-}
-
-func processEOFError(scheme string, err error) error {
-	if strings.Contains(err.Error(), "EOF") && scheme == api.HTTPScheme {
-		err = fmt.Errorf("%s. Scheme %s was used, "+
-			"this error can be caused by a client using http to connect to a CTS server with TLS enabled, "+
-			"consider using %s scheme instead", err, scheme, api.HTTPSScheme)
-	}
-
-	return err
 }

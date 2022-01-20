@@ -39,9 +39,11 @@ type TaskConfig struct {
 	Module           *string `mapstructure:"module" json:"module"`
 	DeprecatedSource *string `mapstructure:"source" json:"source"`
 
-	// SourceInput defines the Consul objects (e.g. services, kv) whose values are
-	// provided as the task source’s input variables
-	SourceInput SourceInputConfig `mapstructure:"source_input" json:"source_input"`
+	// ModuleInputs defines the Consul objects (e.g. services, kv) whose values
+	// are provided as the task module's input variables.
+	// Previously named SourceInput - Deprecated in 0.5
+	ModuleInputs           *ModuleInputConfigs `mapstructure:"module_input" json:"module_input"`
+	DeprecatedSourceInputs *ModuleInputConfigs `mapstructure:"source_input" json:"source_input"`
 
 	// VarFiles is a list of paths to files containing variables for the
 	// task. For the Terraform driver, these are files ending in `.tfvars` and
@@ -49,6 +51,10 @@ type TaskConfig struct {
 	// module. Variables are loaded in the same order as they appear in the order
 	// of the files. Duplicate variables are overwritten with the later value.
 	VarFiles []string `mapstructure:"variable_files" json:"variable_files"`
+
+	// TODO: Not supported by config file yet
+	// TODO: Add validation
+	Variables map[string]string
 
 	// Version is the version of source the task will use. For the Terraform
 	// driver, this is the module version. The latest version will be used as
@@ -98,11 +104,17 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.Module = StringCopy(c.Module)
 	o.DeprecatedSource = StringCopy(c.DeprecatedSource)
 
-	if !isSourceInputNil(c.SourceInput) {
-		o.SourceInput = c.SourceInput.Copy()
-	}
+	o.ModuleInputs = c.ModuleInputs.Copy()
+	o.DeprecatedSourceInputs = c.DeprecatedSourceInputs.Copy()
 
 	o.VarFiles = append(o.VarFiles, c.VarFiles...)
+
+	if c.Variables != nil {
+		o.Variables = make(map[string]string)
+		for k, v := range c.Variables {
+			o.Variables[k] = v
+		}
+	}
 
 	o.Version = StringCopy(c.Version)
 
@@ -160,15 +172,18 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.DeprecatedSource = StringCopy(o.DeprecatedSource)
 	}
 
-	if !isSourceInputNil(o.SourceInput) {
-		if isSourceInputNil(r.SourceInput) {
-			r.SourceInput = o.SourceInput.Copy()
-		} else {
-			r.SourceInput = r.SourceInput.Merge(o.SourceInput)
-		}
+	if o.ModuleInputs != nil {
+		r.ModuleInputs = r.ModuleInputs.Merge(o.ModuleInputs)
+	}
+	if o.DeprecatedSourceInputs != nil {
+		r.DeprecatedSourceInputs = r.DeprecatedSourceInputs.Merge(o.DeprecatedSourceInputs)
 	}
 
 	r.VarFiles = append(r.VarFiles, o.VarFiles...)
+
+	for k, v := range o.Variables {
+		r.Variables[k] = v
+	}
 
 	if o.Version != nil {
 		r.Version = StringCopy(o.Version)
@@ -243,6 +258,10 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 		c.VarFiles = []string{}
 	}
 
+	if c.Variables == nil {
+		c.Variables = make(map[string]string)
+	}
+
 	if c.Version == nil {
 		c.Version = String("")
 	}
@@ -277,12 +296,22 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if isConditionNil(c.Condition) {
 		c.Condition = EmptyConditionConfig()
 	}
-	c.Condition.Finalize(c.Services)
+	c.Condition.Finalize()
 
-	if isSourceInputNil(c.SourceInput) {
-		c.SourceInput = EmptySourceInputConfig()
+	if c.DeprecatedSourceInputs != nil {
+		if len(*c.DeprecatedSourceInputs) > 0 {
+			logger.Warn("Task's 'source_input' block was marked for " +
+				"deprecation in v0.5.0. Please update your configuration to " +
+				"use 'module_input' instead.")
+			c.ModuleInputs = c.ModuleInputs.Merge(c.DeprecatedSourceInputs)
+		}
+
+		c.DeprecatedSourceInputs = nil
 	}
-	c.SourceInput.Finalize(c.Services)
+	if c.ModuleInputs == nil {
+		c.ModuleInputs = DefaultModuleInputConfigs()
+	}
+	c.ModuleInputs.Finalize()
 
 	if c.WorkingDir == nil {
 		c.WorkingDir = String(filepath.Join(wd, *c.Name))
@@ -317,11 +346,6 @@ func (c *TaskConfig) Validate() error {
 		return fmt.Errorf("module for the task is required")
 	}
 
-	err = c.validateSourceInput()
-	if err != nil {
-		return err
-	}
-
 	if c.TFVersion != nil && *c.TFVersion != "" {
 		return fmt.Errorf("unsupported configuration 'terraform_version' for "+
 			"task %q. This option is available for Consul-Terraform-Sync Enterprise "+
@@ -339,6 +363,8 @@ func (c *TaskConfig) Validate() error {
 		pNames[name] = true
 	}
 
+	// TODO validate c.Variables
+
 	if err := c.BufferPeriod.Validate(); err != nil {
 		return err
 	}
@@ -349,10 +375,8 @@ func (c *TaskConfig) Validate() error {
 		}
 	}
 
-	if !isSourceInputNil(c.SourceInput) {
-		if err := c.SourceInput.Validate(); err != nil {
-			return err
-		}
+	if err := c.ModuleInputs.Validate(c.Services, c.Condition); err != nil {
+		return err
 	}
 
 	return nil
@@ -373,8 +397,8 @@ func (c TaskConfig) String() string {
 		"TFVersion: %s, "+
 		"BufferPeriod:%s, "+
 		"Enabled:%t, "+
-		"Condition:%v"+
-		"SourceInput:%v"+
+		"Condition:%s, "+
+		"ModuleInput:%s"+
 		"}",
 		StringVal(c.Name),
 		StringVal(c.Description),
@@ -387,7 +411,7 @@ func (c TaskConfig) String() string {
 		c.BufferPeriod.String(),
 		BoolVal(c.Enabled),
 		c.Condition.String(),
-		c.SourceInput.String(),
+		c.ModuleInputs.GoString(),
 	)
 }
 
@@ -508,76 +532,39 @@ func FilterTasks(tasks *TaskConfigs, names []string) (*TaskConfigs, error) {
 	return &filtered, nil
 }
 
+// validateCondition validates condition block taking into account services list
+// - ensure task is configured with a condition (condition block or services
+//   list)
+// - if services list is configured, condition block's monitored variable type
+// cannot be services
+//
+// Note: checking that a condition block's monitored variable type is different
+// from module_input blocks is handled in ModuleInputConfigs.Validate()
 func (c *TaskConfig) validateCondition() error {
+	// Confirm task is configured with a condition
 	if len(c.Services) == 0 {
 		if isConditionNil(c.Condition) {
-			return fmt.Errorf("at least one service or a condition must be " +
-				"configured")
+			// Error message omits task.services option since it is deprecated
+			return fmt.Errorf("task should be configured with a condition block")
 		}
-		switch cond := c.Condition.(type) {
-		case *CatalogServicesConditionConfig:
-			if cond.Regexp == nil {
-				return fmt.Errorf("catalog-services condition requires either" +
-					"task.condition.regexp or at least one service in " +
-					"task.services to be configured")
-			}
-		case *ConsulKVConditionConfig:
-			return fmt.Errorf("consul-kv condition requires at least one service to " +
-				"be configured in task.services")
-		case *ScheduleConditionConfig:
-			if isSourceInputNil(c.SourceInput) || isSourceInputEmpty(c.SourceInput) {
-				return fmt.Errorf("schedule condition requires at least one service to " +
-					"be configured in task.services or a source_input must be provided")
-			}
-		}
-	} else {
-		switch c.Condition.(type) {
-		case *ServicesConditionConfig:
-			err := fmt.Errorf("a task cannot be configured with both " +
-				"`services` field and `source_input` block. only one can be " +
-				"configured per task")
-			logging.Global().Named(logSystemName).Named(taskSubsystemName).
-				Error("list of services and service condition block both "+
-					"provided. If both are needed, consider combining the "+
-					"list into the condition block or creating separate tasks",
-					"task_name", StringVal(c.Name), "error", err)
-			return err
-		}
+
+		// task.services not configured. No need to worry about condition's
+		// variable type
+		return nil
 	}
 
-	return nil
-}
-
-func (c *TaskConfig) validateSourceInput() error {
-	// For now only schedule condition allows for source_input, so a condition
-	// of type ScheduleConditionConfig is the only supported type
-	switch c.Condition.(type) {
-	case *ScheduleConditionConfig:
-		if len(c.Services) == 0 {
-			switch c.SourceInput.(type) {
-			case *ConsulKVSourceInputConfig:
-				return fmt.Errorf("consul-kv source_input requires at least one service to " +
-					"be configured in task.services")
-			}
-		} else {
-			switch c.SourceInput.(type) {
-			case *ServicesSourceInputConfig:
-				err := fmt.Errorf("a task cannot be configured with both " +
-					"`services` field and `condition` block. only one can be " +
-					"configured per task")
-				logging.Global().Named(logSystemName).Named(taskSubsystemName).
-					Error("list of services and service condition block both "+
-						"provided. If both are needed, consider combining the "+
-						"list into the condition block or creating separate tasks",
-						"task_name", StringVal(c.Name), "error", err)
-				return err
-			}
-		}
-	default:
-		if !isSourceInputNil(c.SourceInput) && !isSourceInputEmpty(c.SourceInput) {
-			return fmt.Errorf("source_input is only supported when a schedule condition is configured")
-		}
+	// Confirm that condition's variable type is not services since task.services
+	// is configured
+	if _, ok := c.Condition.(*ServicesConditionConfig); ok {
+		err := fmt.Errorf("task's `services` field and `condition " +
+			"'services'` block both monitor \"services\" variable type. only " +
+			"one of these can be configured per task")
+		logging.Global().Named(logSystemName).Named(taskSubsystemName).
+			Error("list of `services` and `condition 'services'` block cannot "+
+				"both be configured. Consider combining the list into the "+
+				"condition block or creating separate tasks",
+				"task_name", StringVal(c.Name), "error", err)
+		return err
 	}
-
 	return nil
 }

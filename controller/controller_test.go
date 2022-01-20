@@ -116,6 +116,7 @@ func TestBaseControllerInit(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			d := new(mocksD.Driver)
+			d.On("TemplateIDs").Return(nil)
 			d.On("InitTask", mock.Anything).Return(tc.initTaskErr).Once()
 
 			baseCtrl := baseController{
@@ -202,11 +203,11 @@ func TestNewDriverTask(t *testing.T) {
 						"source": "source/providerA",
 					},
 				},
-				Services:    []driver.Service{},
-				Source:      "path",
-				VarFiles:    []string{},
-				Condition:   config.EmptyConditionConfig(),
-				SourceInput: config.EmptySourceInputConfig(),
+				Services:     []driver.Service{},
+				Source:       "path",
+				VarFiles:     []string{},
+				Condition:    config.EmptyConditionConfig(),
+				ModuleInputs: *config.DefaultModuleInputConfigs(),
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
@@ -269,11 +270,11 @@ func TestNewDriverTask(t *testing.T) {
 						"source": "source/providerA",
 					},
 				},
-				Services:    []driver.Service{},
-				Source:      "path",
-				VarFiles:    []string{},
-				Condition:   config.EmptyConditionConfig(),
-				SourceInput: config.EmptySourceInputConfig(),
+				Services:     []driver.Service{},
+				Source:       "path",
+				VarFiles:     []string{},
+				Condition:    config.EmptyConditionConfig(),
+				ModuleInputs: *config.DefaultModuleInputConfigs(),
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
@@ -325,7 +326,7 @@ func TestNewDriverTask(t *testing.T) {
 				Source:       "path",
 				VarFiles:     []string{},
 				Condition:    config.EmptyConditionConfig(),
-				SourceInput:  config.EmptySourceInputConfig(),
+				ModuleInputs: *config.DefaultModuleInputConfigs(),
 				BufferPeriod: &driver.BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
@@ -362,7 +363,7 @@ func newTestDriverTasks(conf *config.Config, providerConfigs driver.TerraformPro
 	tasks := make([]*driver.Task, len(*conf.Tasks))
 	for i, t := range *conf.Tasks {
 		var err error
-		tasks[i], err = newDriverTask(conf, t, nil, providerConfigs)
+		tasks[i], err = newDriverTask(conf, t, providerConfigs)
 		if err != nil {
 			return nil, err
 		}

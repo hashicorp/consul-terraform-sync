@@ -3,7 +3,8 @@ package config
 import (
 	"fmt"
 	"regexp"
-	"strings"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 const catalogServicesType = "catalog-services"
@@ -14,11 +15,18 @@ var _ ConditionConfig = (*CatalogServicesConditionConfig)(nil)
 // of type 'catalog-services'. A catalog-services monitor is triggered by changes
 // that occur to services in the catalog-services api.
 type CatalogServicesMonitorConfig struct {
-	Regexp            *string           `mapstructure:"regexp" json:"regexp"`
-	SourceIncludesVar *bool             `mapstructure:"source_includes_var" json:"source_includes_var"`
-	Datacenter        *string           `mapstructure:"datacenter" json:"datacenter"`
-	Namespace         *string           `mapstructure:"namespace" json:"namespace"`
-	NodeMeta          map[string]string `mapstructure:"node_meta" json:"node_meta"`
+	Regexp     *string           `mapstructure:"regexp" json:"regexp"`
+	Datacenter *string           `mapstructure:"datacenter" json:"datacenter"`
+	Namespace  *string           `mapstructure:"namespace" json:"namespace"`
+	NodeMeta   map[string]string `mapstructure:"node_meta" json:"node_meta"`
+
+	// UseAsModuleInput was previously named SourceIncludesVar - deprecated v0.5
+	UseAsModuleInput            *bool `mapstructure:"use_as_module_input" json:"use_as_module_input"`
+	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var" json:"source_includes_var"`
+}
+
+func (c *CatalogServicesMonitorConfig) VariableType() string {
+	return "catalog_services"
 }
 
 // Copy returns a deep copy of this configuration.
@@ -30,9 +38,11 @@ func (c *CatalogServicesMonitorConfig) Copy() MonitorConfig {
 	var o CatalogServicesMonitorConfig
 
 	o.Regexp = StringCopy(c.Regexp)
-	o.SourceIncludesVar = BoolCopy(c.SourceIncludesVar)
 	o.Datacenter = StringCopy(c.Datacenter)
 	o.Namespace = StringCopy(c.Namespace)
+
+	o.UseAsModuleInput = BoolCopy(c.UseAsModuleInput)
+	o.DeprecatedSourceIncludesVar = BoolCopy(c.DeprecatedSourceIncludesVar)
 
 	if c.NodeMeta != nil {
 		o.NodeMeta = make(map[string]string)
@@ -72,8 +82,11 @@ func (c *CatalogServicesMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 		r2.Regexp = StringCopy(o2.Regexp)
 	}
 
-	if o2.SourceIncludesVar != nil {
-		r2.SourceIncludesVar = BoolCopy(o2.SourceIncludesVar)
+	if o2.UseAsModuleInput != nil {
+		r2.UseAsModuleInput = BoolCopy(o2.UseAsModuleInput)
+	}
+	if o2.DeprecatedSourceIncludesVar != nil {
+		r2.DeprecatedSourceIncludesVar = BoolCopy(o2.DeprecatedSourceIncludesVar)
 	}
 
 	if o2.Datacenter != nil {
@@ -97,26 +110,31 @@ func (c *CatalogServicesMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there no nil pointers with the _exception_ of Regexp. There
-// is a need to distinguish betweeen nil regex (unconfigured regex) and empty
+// is a need to distinguish between nil regex (unconfigured regex) and empty
 // string regex ("" regex pattern) at Validate()
-func (c *CatalogServicesMonitorConfig) Finalize(services []string) {
+func (c *CatalogServicesMonitorConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}
 
-	if c.Regexp == nil && len(services) > 0 {
-		// default behavior: exact match on any of the services configured for
-		// the task. cannot default to "" since it is possible regex config.
-		// ex: ["api", "web", "db"] => "^api$|^web$|^db$"
-		regex := make([]string, len(services))
-		for ix, s := range services {
-			regex[ix] = fmt.Sprintf("^%s$", s) // exact match on service's name
-		}
-		c.Regexp = String(strings.Join(regex, "|"))
-	}
+	logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
+	if c.DeprecatedSourceIncludesVar != nil {
+		logger.Warn("Catalog-service condition block's 'source_includes_var' " +
+			"field was marked for deprecation in v0.5.0. Please update your " +
+			"configuration to use the 'use_as_module_input' field instead")
 
-	if c.SourceIncludesVar == nil {
-		c.SourceIncludesVar = Bool(false)
+		if c.UseAsModuleInput != nil {
+			logger.Warn("Catalog-service condition block is configured with "+
+				"both 'source_includes_var' and 'use_as_module_input' field. "+
+				"Defaulting to 'use_as_module_input' value",
+				"use_as_module_input", c.UseAsModuleInput)
+		} else {
+			// Merge SourceIncludesVar with UseAsModuleInput. Use UseAsModuleInput onwards
+			c.UseAsModuleInput = c.DeprecatedSourceIncludesVar
+		}
+	}
+	if c.UseAsModuleInput == nil {
+		c.UseAsModuleInput = Bool(true)
 	}
 
 	if c.Datacenter == nil {
@@ -141,12 +159,11 @@ func (c *CatalogServicesMonitorConfig) Validate() error {
 	}
 
 	if c.Regexp == nil {
-		return fmt.Errorf("task.services and catalog-services regexp cannot " +
-			"both be unset")
+		return fmt.Errorf("catalog-services 'regexp' field must be set")
 	}
 
 	if _, err := regexp.Compile(StringVal(c.Regexp)); err != nil {
-		return fmt.Errorf("unable to compile catalog-services regexp: %s", err)
+		return fmt.Errorf("unable to compile catalog-services 'regexp': %s", err)
 	}
 	return nil
 }
@@ -156,15 +173,15 @@ func (c CatalogServicesMonitorConfig) String() string {
 
 	return fmt.Sprintf("{"+
 		"Regexp:%s, "+
-		"SourceIncludesVar:%v, "+
 		"Datacenter:%v, "+
 		"Namespace:%v, "+
-		"NodeMeta:%s"+
+		"NodeMeta:%s, "+
+		"UseAsModuleInput:%v"+
 		"}",
 		StringVal(c.Regexp),
-		BoolVal(c.SourceIncludesVar),
 		StringVal(c.Datacenter),
 		StringVal(c.Namespace),
 		c.NodeMeta,
+		BoolVal(c.UseAsModuleInput),
 	)
 }

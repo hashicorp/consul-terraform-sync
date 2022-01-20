@@ -20,10 +20,10 @@ func TestCondition_DecodeConfig(t *testing.T) {
 			false,
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
-					Regexp:            String(".*"),
-					SourceIncludesVar: Bool(true),
-					Datacenter:        String("dc2"),
-					Namespace:         String("ns2"),
+					Regexp:           String(".*"),
+					UseAsModuleInput: Bool(true),
+					Datacenter:       String("dc2"),
+					Namespace:        String("ns2"),
 					NodeMeta: map[string]string{
 						"key1": "value1",
 						"key2": "value2",
@@ -38,35 +38,13 @@ task {
 	services = ["api"]
 	condition "catalog-services" {
 		regexp = ".*"
-		source_includes_var = true
+		use_as_module_input = true
 		namespace = "ns2"
 		datacenter = "dc2"
 		node_meta {
 		  "key1" = "value1"
 		  "key2" = "value2"
 		}
-	}
-}`,
-		},
-		{
-			"catalog-services: unconfigured",
-			false,
-			&CatalogServicesConditionConfig{
-				CatalogServicesMonitorConfig{
-					Regexp:            String("^api$"),
-					SourceIncludesVar: Bool(false),
-					Datacenter:        String(""),
-					Namespace:         String(""),
-					NodeMeta:          map[string]string{},
-				},
-			},
-			"config.hcl",
-			`
-task {
-	name = "condition_task"
-	module = "..."
-	services = ["api"]
-	condition "catalog-services" {
 	}
 }`,
 		},
@@ -86,7 +64,7 @@ task {
 			"services: happy path",
 			false,
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:     String(".*"),
 					Names:      []string{},
 					Datacenter: String("dc"),
@@ -96,6 +74,7 @@ task {
 						"key": "value",
 					},
 				},
+				UseAsModuleInput: Bool(true),
 			},
 			"config.hcl",
 			`
@@ -174,7 +153,7 @@ task {
 	}
 	condition "catalog-services" {
 		regexp = ".*"
-		source_includes_var = false
+		use_as_module_input = false
 	}
 }`,
 		},
@@ -188,7 +167,7 @@ task {
 					Namespace:  String("ns2"),
 					Recurse:    Bool(true),
 				},
-				SourceIncludesVar: Bool(true),
+				UseAsModuleInput: Bool(true),
 			},
 			"config.hcl",
 			`
@@ -198,7 +177,7 @@ task {
 	services = ["api"]
 	condition "consul-kv" {
 		path = "key-path"
-		source_includes_var = true
+		use_as_module_input = true
 		namespace = "ns2"
 		datacenter = "dc2"
 		recurse = true
@@ -224,10 +203,10 @@ task {
 			false,
 			&CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig{
-					Regexp:            String(".*"),
-					SourceIncludesVar: Bool(true),
-					Datacenter:        String("dc2"),
-					Namespace:         String("ns2"),
+					Regexp:           String(".*"),
+					UseAsModuleInput: Bool(true),
+					Datacenter:       String("dc2"),
+					Namespace:        String("ns2"),
 					NodeMeta: map[string]string{
 						"key1": "value1",
 						"key2": "value2",
@@ -247,7 +226,7 @@ task {
 		  "condition": {
 			"catalog-services": {
 			  "regexp": ".*",
-			  "source_includes_var": true,
+			  "use_as_module_input": true,
 			  "datacenter": "dc2",
 			  "namespace": "ns2",
 			  "node_meta": {

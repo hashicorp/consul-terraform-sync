@@ -47,7 +47,7 @@ var (
 // Terraform is a Sync driver that uses the Terraform CLI to interface with
 // low-level network infrastructure.
 type Terraform struct {
-	mu *sync.RWMutex
+	mu sync.RWMutex
 
 	task              *Task
 	backend           map[string]interface{}
@@ -132,7 +132,6 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 	}
 
 	return &Terraform{
-		mu:                &sync.RWMutex{},
 		task:              config.Task,
 		backend:           config.Backend,
 		requiredProviders: config.RequiredProviders,
@@ -198,6 +197,16 @@ func (tf *Terraform) SetBufferPeriod() {
 	tf.watcher.SetBufferPeriod(bp.Min, bp.Max, tf.template.ID())
 }
 
+func (tf *Terraform) TemplateIDs() []string {
+	tf.mu.RLock()
+	defer tf.mu.RUnlock()
+
+	if tf.template == nil {
+		return nil
+	}
+	return []string{tf.template.ID()}
+}
+
 // RenderTemplate fetches data for the template. If the data is complete fetched,
 // renders the template. Rendering a template for the first time may take several
 // cycles to load all the dependencies asynchronously. Returns a boolean whether
@@ -226,7 +235,9 @@ func (tf *Terraform) InspectTask(ctx context.Context) (InspectPlan, error) {
 	if !tf.task.IsEnabled() {
 		tf.logger.Trace(
 			"task disabled. skip inspecting", taskNameLogKey, tf.task.Name())
-		return InspectPlan{}, nil
+		return InspectPlan{
+			Plan: "Task is disabled, inspection was skipped.",
+		}, nil
 	}
 
 	plan, err := tf.inspectTask(ctx, true)
@@ -251,6 +262,7 @@ func (tf *Terraform) ApplyTask(ctx context.Context) error {
 type InspectPlan struct {
 	ChangesPresent bool   `json:"changes_present"`
 	Plan           string `json:"plan"`
+	URL            string `json:"url,omitempty"`
 }
 
 // UpdateTask updates the task on the driver. Makes any calls to re-init
@@ -381,7 +393,10 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 		tf.task.source = moduleSource
 	}
 
-	tf.task.configureRootModuleInput(&input)
+	if err := tf.task.configureRootModuleInput(&input); err != nil {
+		return err
+	}
+
 	if err := tftmpl.InitRootModule(&input); err != nil {
 		return err
 	}
@@ -541,51 +556,89 @@ func (tf *Terraform) initTaskTemplate() error {
 		}
 
 		// cleanup old template from watcher
-		tf.watcher.Mark(tf.template)
+		tf.watcher.MarkForSweep(tf.template)
 		tf.watcher.Sweep(tf.template)
 	}
 
 	tf.setNotifier(tmpl)
 
-	if !tf.watcher.Watching(tf.template.ID()) {
-		err = tf.watcher.Register(tf.template)
-		if err != nil && err != hcat.RegistryErr {
-			tf.logger.Error("unable to register template", taskNameLogKey, tf.task.Name(), "error", err)
-			return err
-		}
+	err = tf.watcher.Register(tf.template)
+	if err != nil && err != hcat.RegistryErr {
+		tf.logger.Error("unable to register template", taskNameLogKey, tf.task.Name(), "error", err)
+		return err
 	}
 
 	return nil
 }
 
-func (tf *Terraform) setNotifier(tmpl templates.Template) {
-	// Get the service count. Only one of task.services, condition "services",
-	// and source_input "services" can be configured per task
-	serviceCount := len(tf.task.Services())
-	if cond, ok := tf.task.Condition().(*config.ServicesConditionConfig); ok {
-		serviceCount = len(cond.Names)
-	}
-	if si, ok := tf.task.SourceInput().(*config.ServicesSourceInputConfig); ok {
-		serviceCount = len(si.Names)
+// setNotifier sets a notifier on the template to ensure only the condition's
+// monitored changes (and not the module input's changes) trigger the task.
+func (tf *Terraform) setNotifier(tmpl templates.Template) error {
+	tmplFuncTotal, err := tf.countTmplFunc()
+	if err != nil {
+		return err
 	}
 
 	switch tf.task.Condition().(type) {
+	case *config.ServicesConditionConfig:
+		tf.template = notifier.NewServices(tmpl, tmplFuncTotal)
 	case *config.CatalogServicesConditionConfig:
-		tf.template = notifier.NewCatalogServicesRegistration(tmpl, serviceCount)
+		tf.template = notifier.NewCatalogServicesRegistration(tmpl, tmplFuncTotal)
 	case *config.ConsulKVConditionConfig:
-		tf.template = notifier.NewConsulKV(tmpl, serviceCount)
+		tf.template = notifier.NewConsulKV(tmpl, tmplFuncTotal)
 	case *config.ScheduleConditionConfig:
-		additionalDepCount := 0
-		switch tf.task.SourceInput().(type) {
-		case *config.ConsulKVSourceInputConfig:
-			// If a ConsulKVSourceInputConfig is specified, then we need to add
-			// to the number of dependencies passed to the notifier, since consul-kv adds a dependency
-			additionalDepCount = 1
-		}
-		tf.template = notifier.NewSuppressNotification(tmpl, serviceCount+additionalDepCount)
+		tf.template = notifier.NewSuppressNotification(tmpl, tmplFuncTotal)
 	default:
-		tf.template = tmpl
+		// services list
+		tf.template = notifier.NewServices(tmpl, tmplFuncTotal)
 	}
+	return nil
+}
+
+// countTmplFunc counts the number of template functions (tmplfunc) that are
+// added to the template file. Counts the tmplfunc needed by the task's
+// services field, condition block, and module_input blocks.
+func (tf *Terraform) countTmplFunc() (int, error) {
+	// Count tmplfuncs for the service variable separately. Currently services
+	// can only be configured in one of services field, condition "services",
+	// and module_input "services". Enforced by config validation
+	serviceCount := len(tf.task.Services())
+	nonServiceCount := 0
+
+	switch cond := tf.task.Condition().(type) {
+	case *config.CatalogServicesConditionConfig:
+		nonServiceCount++
+	case *config.ServicesConditionConfig:
+		if cond.Regexp != nil {
+			serviceCount = 1
+		} else {
+			serviceCount = len(cond.Names)
+		}
+	case *config.ConsulKVConditionConfig:
+		nonServiceCount++
+	default:
+		// no-op: condition block currently not required since services list
+		// can be used alternatively. enforced by config validation
+	}
+
+	for _, moduleInput := range tf.task.ModuleInputs() {
+		switch input := moduleInput.(type) {
+		case *config.ServicesModuleInputConfig:
+			// relies on config validation to restrict to one ServicesModuleInput
+			if input.Regexp != nil {
+				serviceCount = 1
+			} else {
+				serviceCount = len(input.Names)
+			}
+		case *config.ConsulKVModuleInputConfig:
+			nonServiceCount++
+		default:
+			return 0, fmt.Errorf("task %q has unsupported type of module_input "+
+				"block configuration %T", tf.task.name, input)
+		}
+	}
+
+	return serviceCount + nonServiceCount, nil
 }
 
 func (tf *Terraform) validateTask(ctx context.Context) error {
@@ -646,17 +699,21 @@ func getServicesMetaData(logger logging.Logger, task *Task) (*tmplfunc.ServicesM
 		return servicesMeta, nil
 	}
 
-	// Introduced in 0.5. Metadata comes from source_input "services"
-	servicesInput, ok := task.SourceInput().(*config.ServicesSourceInputConfig)
-	if ok {
-		err := servicesMeta.SetMeta(servicesInput.CTSUserDefinedMeta)
-		if err != nil {
-			logger.Error("unable to to set metadata from services source input",
-				taskNameLogKey, task.Name(), "error", err)
-			return nil, err
-		}
+	// Introduced in 0.5. Metadata comes from module_input "services"
+	for _, moduleInput := range task.ModuleInputs() {
+		servicesInput, ok := moduleInput.(*config.ServicesModuleInputConfig)
+		if ok {
+			err := servicesMeta.SetMeta(servicesInput.CTSUserDefinedMeta)
+			if err != nil {
+				logger.Error("unable to to set metadata from services module_input",
+					taskNameLogKey, task.Name(), "error", err)
+				return nil, err
+			}
 
-		return servicesMeta, nil
+			// currently due to config validation, only on services module_input
+			// can be configured
+			return servicesMeta, nil
+		}
 	}
 
 	// Deprecated in 0.5. Metadata comes from service block
@@ -664,6 +721,10 @@ func getServicesMetaData(logger logging.Logger, task *Task) (*tmplfunc.ServicesM
 	services := task.Services()
 	for _, s := range services {
 		metaMap[s.Name] = s.UserDefinedMeta
+	}
+
+	if len(metaMap) == 0 {
+		return servicesMeta, nil
 	}
 
 	if err := servicesMeta.SetMetaMap(metaMap); err != nil {

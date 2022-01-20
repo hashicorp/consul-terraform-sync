@@ -4,6 +4,10 @@ package config
 // condition configuration block when it is unconfigured.
 type NoMonitorConfig struct{}
 
+func (c *NoMonitorConfig) VariableType() string {
+	return ""
+}
+
 // Copy returns a deep copy of this configuration.
 func (c *NoMonitorConfig) Copy() MonitorConfig {
 	if c == nil {
@@ -24,7 +28,7 @@ func (c *NoMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *NoMonitorConfig) Finalize(services []string) {
+func (c *NoMonitorConfig) Finalize() {
 }
 
 // Validate validates the values and required options. This method is recommended

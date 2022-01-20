@@ -105,6 +105,22 @@ func (_m *Driver) Task() *driver.Task {
 	return r0
 }
 
+// TemplateIDs provides a mock function with given fields:
+func (_m *Driver) TemplateIDs() []string {
+	ret := _m.Called()
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func() []string); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	return r0
+}
+
 // UpdateTask provides a mock function with given fields: ctx, task
 func (_m *Driver) UpdateTask(ctx context.Context, task driver.PatchTask) (driver.InspectPlan, error) {
 	ret := _m.Called(ctx, task)

@@ -4,16 +4,17 @@ import (
 	"fmt"
 )
 
-var _ SourceInputConfig = (*ConsulKVSourceInputConfig)(nil)
+var _ ModuleInputConfig = (*ConsulKVModuleInputConfig)(nil)
 
-// ConsulKVSourceInputConfig configures a source_input configuration block of type
-// 'consul-kv'. The consul key-values will be used as input for the source variables.
-type ConsulKVSourceInputConfig struct {
+// ConsulKVModuleInputConfig configures a module_input configuration block of
+// type 'consul-kv'. The consul key-values will be used as input for the
+// module variables.
+type ConsulKVModuleInputConfig struct {
 	ConsulKVMonitorConfig `mapstructure:",squash"`
 }
 
 // Copy returns a deep copy of this configuration.
-func (c *ConsulKVSourceInputConfig) Copy() MonitorConfig {
+func (c *ConsulKVModuleInputConfig) Copy() MonitorConfig {
 	if c == nil {
 		return nil
 	}
@@ -22,7 +23,7 @@ func (c *ConsulKVSourceInputConfig) Copy() MonitorConfig {
 	if !ok {
 		return nil
 	}
-	return &ConsulKVSourceInputConfig{
+	return &ConsulKVModuleInputConfig{
 		ConsulKVMonitorConfig: *svc,
 	}
 }
@@ -31,19 +32,19 @@ func (c *ConsulKVSourceInputConfig) Copy() MonitorConfig {
 // configuration `o`, with values in the other configuration taking precedence.
 // Maps and slices are merged, most other values are overwritten. Complex
 // structs define their own merge functionality.
-func (c *ConsulKVSourceInputConfig) Merge(o MonitorConfig) MonitorConfig {
+func (c *ConsulKVModuleInputConfig) Merge(o MonitorConfig) MonitorConfig {
 	if c == nil {
-		if isSourceInputNil(o) { // o is interface, use isConditionNil()
+		if isModuleInputNil(o) { // o is interface, use isConditionNil()
 			return nil
 		}
 		return o.Copy()
 	}
 
-	if isSourceInputNil(o) {
+	if isModuleInputNil(o) {
 		return c.Copy()
 	}
 
-	scc, ok := o.(*ConsulKVSourceInputConfig)
+	scc, ok := o.(*ConsulKVModuleInputConfig)
 	if !ok {
 		return nil
 	}
@@ -53,22 +54,22 @@ func (c *ConsulKVSourceInputConfig) Merge(o MonitorConfig) MonitorConfig {
 		return nil
 	}
 
-	return &ConsulKVSourceInputConfig{
+	return &ConsulKVModuleInputConfig{
 		ConsulKVMonitorConfig: *merged,
 	}
 }
 
 // Finalize ensures there are no nil pointers.
-func (c *ConsulKVSourceInputConfig) Finalize(services []string) {
+func (c *ConsulKVModuleInputConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}
-	c.ConsulKVMonitorConfig.Finalize(services)
+	c.ConsulKVMonitorConfig.Finalize()
 }
 
 // Validate validates the values and required options. This method is recommended
 // to run after Finalize() to ensure the configuration is safe to proceed.
-func (c *ConsulKVSourceInputConfig) Validate() error {
+func (c *ConsulKVModuleInputConfig) Validate() error {
 	if c == nil { // config not required, return early
 		return nil
 	}
@@ -76,7 +77,7 @@ func (c *ConsulKVSourceInputConfig) Validate() error {
 }
 
 // String defines the printable version of this struct.
-func (c ConsulKVSourceInputConfig) String() string {
+func (c ConsulKVModuleInputConfig) String() string {
 
 	return fmt.Sprintf("{"+
 		"%s"+

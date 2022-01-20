@@ -6,89 +6,60 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	"github.com/hashicorp/consul-terraform-sync/config"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 	t.Parallel()
-	existingTask := "task_a"
+	taskName := "task"
 	cases := []struct {
 		name       string
-		taskName   string
-		active     bool
-		deleted    bool
+		mock       func(*mocks.Server)
 		statusCode int
 	}{
 		{
 			"happy_path",
-			existingTask,
-			false,
-			true,
+			func(ctrl *mocks.Server) {
+				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, nil)
+				ctrl.On("TaskDelete", mock.Anything, taskName).Return(nil)
+			},
 			http.StatusOK,
 		},
 		{
 			"task_not_found",
-			"task_b",
-			false,
-			true,
+			func(ctrl *mocks.Server) {
+				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, fmt.Errorf("DNE"))
+			},
 			http.StatusNotFound,
 		},
 		{
 			"task_is_running",
-			existingTask,
-			true,
-			false,
+			func(ctrl *mocks.Server) {
+				err := fmt.Errorf("task '%s' is currently running and cannot be deleted at this time", taskName)
+				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, nil)
+				ctrl.On("TaskDelete", mock.Anything, taskName).Return(err)
+			},
 			http.StatusConflict,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			drivers := driver.NewDrivers()
-			d := new(mocks.Driver)
-			drivers.Add(existingTask, d)
-			if tc.active {
-				drivers.SetActive(existingTask)
-			}
+			ctrl := new(mocks.Server)
+			tc.mock(ctrl)
+			handler := NewTaskLifeCycleHandler(ctrl)
 
-			store := event.NewStore()
-			err := store.Add(event.Event{TaskName: existingTask})
-			require.NoError(t, err)
-
-			c := TaskLifeCycleHandlerConfig{
-				store:   store,
-				drivers: drivers,
-			}
-			handler := NewTaskLifeCycleHandler(c)
-
-			path := fmt.Sprintf("/v1/tasks/%s", tc.taskName)
+			path := fmt.Sprintf("/v1/tasks/%s", taskName)
 			req, err := http.NewRequest(http.MethodDelete, path, nil)
 			require.NoError(t, err)
 			resp := httptest.NewRecorder()
 
-			handler.DeleteTaskByName(resp, req, tc.taskName)
-			require.Equal(t, tc.statusCode, resp.Code)
-
-			_, ok := drivers.Get(tc.taskName)
-			if tc.deleted {
-				assert.False(t, ok, "task should have been deleted")
-			} else {
-				assert.True(t, ok, "task should not have been deleted")
-			}
-
-			data := store.Read(tc.taskName)
-			events, ok := data[tc.taskName]
-
-			if tc.deleted {
-				require.False(t, ok, "task should have been deleted")
-			} else {
-				require.True(t, ok, "task should not have been deleted")
-				assert.Equal(t, 1, len(events))
-			}
+			handler.DeleteTaskByName(resp, req, taskName)
+			assert.Equal(t, tc.statusCode, resp.Code)
 		})
 	}
 }

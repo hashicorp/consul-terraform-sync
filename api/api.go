@@ -13,8 +13,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-rootcerts"
@@ -62,8 +60,7 @@ const (
 
 // API supports api requests to the cts binary
 type API struct {
-	store   *event.Store
-	drivers *driver.Drivers
+	ctrl    Server
 	port    int
 	version string
 	srv     *http.Server
@@ -71,32 +68,19 @@ type API struct {
 }
 
 type APIConfig struct {
-	Store               *event.Store
-	Drivers             *driver.Drivers
-	Port                int
-	TLS                 *config.CTSTLSConfig
-	BufferPeriod        *config.BufferPeriodConfig
-	WorkingDir          string
-	CreateNewTaskDriver func(taskConfig config.TaskConfig, variables map[string]string) (driver.Driver, error)
+	Port       int
+	TLS        *config.CTSTLSConfig
+	Controller Server
 }
 
 // NewAPI create a new API object
-func NewAPI(conf *APIConfig) (*API, error) {
+func NewAPI(conf APIConfig) (*API, error) {
 	logger := logging.Global().Named(logSystemName)
 	api := &API{
+		ctrl:    conf.Controller,
 		port:    conf.Port,
-		drivers: conf.Drivers,
-		store:   conf.Store,
 		version: defaultAPIVersion,
 		tls:     conf.TLS,
-	}
-
-	if conf.Store == nil {
-		api.store = event.NewStore()
-	}
-
-	if conf.Drivers == nil {
-		api.drivers = driver.NewDrivers()
 	}
 
 	if conf.TLS == nil {
@@ -114,15 +98,15 @@ func NewAPI(conf *APIConfig) (*API, error) {
 		// Legacy Endpoints
 		// retrieve overall status
 		r.Mount(fmt.Sprintf("/%s", overallStatusPath),
-			newOverallStatusHandler(api.store, api.drivers, defaultAPIVersion))
+			newOverallStatusHandler(api.ctrl, defaultAPIVersion))
 
 		// retrieve all task statuses
 		r.Mount(fmt.Sprintf("/%s", taskStatusPath),
-			newTaskStatusHandler(api.store, api.drivers, defaultAPIVersion))
+			newTaskStatusHandler(api.ctrl, defaultAPIVersion))
 
 		// crud task
 		r.Mount(fmt.Sprintf("/%s", taskPath),
-			newTaskHandler(api.store, api.drivers, defaultAPIVersion))
+			newTaskHandler(api.ctrl, defaultAPIVersion))
 	})
 
 	r.Group(func(r chi.Router) {
@@ -132,16 +116,8 @@ func NewAPI(conf *APIConfig) (*API, error) {
 		r.Use(withSwaggerValidate)
 
 		// Generated Endpoints
-		c := TaskLifeCycleHandlerConfig{
-			store:               api.store,
-			drivers:             api.drivers,
-			workingDir:          conf.WorkingDir,
-			bufferPeriod:        conf.BufferPeriod,
-			createNewTaskDriver: conf.CreateNewTaskDriver,
-		}
-
 		server := Handlers{
-			TaskLifeCycleHandler: NewTaskLifeCycleHandler(c),
+			TaskLifeCycleHandler: NewTaskLifeCycleHandler(api.ctrl),
 		}
 		oapigen.HandlerFromMux(server, r)
 	})

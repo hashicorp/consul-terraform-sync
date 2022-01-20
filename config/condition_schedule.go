@@ -16,6 +16,10 @@ type ScheduleConditionConfig struct {
 	Cron *string `mapstructure:"cron"`
 }
 
+func (c *ScheduleConditionConfig) VariableType() string {
+	return ""
+}
+
 // Copy returns a deep copy of this configuration.
 func (c *ScheduleConditionConfig) Copy() MonitorConfig {
 	if c == nil {
@@ -58,7 +62,7 @@ func (c *ScheduleConditionConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *ScheduleConditionConfig) Finalize([]string) {
+func (c *ScheduleConditionConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}

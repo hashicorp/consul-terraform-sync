@@ -24,7 +24,7 @@ func TestServicesConditionConfig_Copy(t *testing.T) {
 		{
 			"happy_path",
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:     String("^web.*"),
 					Datacenter: String("dc"),
 					Namespace:  String("namespace"),
@@ -33,6 +33,8 @@ func TestServicesConditionConfig_Copy(t *testing.T) {
 						"key": "value",
 					},
 				},
+				UseAsModuleInput:            Bool(false),
+				DeprecatedSourceIncludesVar: Bool(false),
 			},
 		},
 	}
@@ -84,33 +86,87 @@ func TestServicesConditionConfig_Merge(t *testing.T) {
 			&ServicesConditionConfig{},
 		},
 		{
+			"source_includes_var_overrides",
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(false)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(false)},
+		},
+		{
+			"source_includes_var_empty_one",
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+		},
+		{
+			"source_includes_var_empty_two",
+			&ServicesConditionConfig{},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+		},
+		{
+			"source_includes_var_empty_same",
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+			&ServicesConditionConfig{DeprecatedSourceIncludesVar: Bool(true)},
+		},
+		{
+			"use_as_module_input_overrides",
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(false)},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(false)},
+		},
+		{
+			"use_as_module_input_empty_one",
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+			&ServicesConditionConfig{},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+		},
+		{
+			"use_as_module_input_empty_two",
+			&ServicesConditionConfig{},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+		},
+		{
+			"use_as_module_input_empty_same",
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+			&ServicesConditionConfig{UseAsModuleInput: Bool(true)},
+		},
+		{
 			"happy_path",
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:             String("regexp"),
-					Datacenter:         String("datacenter_overriden"),
+					Datacenter:         String("datacenter_overridden"),
 					Namespace:          nil,
 					Filter:             nil,
 					CTSUserDefinedMeta: map[string]string{},
 				},
+				DeprecatedSourceIncludesVar: Bool(true),
+				UseAsModuleInput:            Bool(true),
 			},
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:             nil,
 					Datacenter:         String("datacenter"),
 					Namespace:          String("namespace"),
 					Filter:             nil,
 					CTSUserDefinedMeta: map[string]string{},
 				},
+				DeprecatedSourceIncludesVar: Bool(false),
+				UseAsModuleInput:            Bool(false),
 			},
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:             String("regexp"),
 					Datacenter:         String("datacenter"),
 					Namespace:          String("namespace"),
 					Filter:             nil,
 					CTSUserDefinedMeta: map[string]string{},
 				},
+				DeprecatedSourceIncludesVar: Bool(false),
+				UseAsModuleInput:            Bool(false),
 			},
 		},
 	}
@@ -133,22 +189,19 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 
 	cases := []struct {
 		name string
-		s    []string
 		i    *ServicesConditionConfig
 		r    *ServicesConditionConfig
 	}{
 		{
 			"nil",
-			[]string{},
 			nil,
 			nil,
 		},
 		{
-			"happy_path",
-			[]string{},
+			"empty",
 			&ServicesConditionConfig{},
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:             nil,
 					Names:              []string{},
 					Datacenter:         String(""),
@@ -156,14 +209,59 @@ func TestServicesConditionConfig_Finalize(t *testing.T) {
 					Filter:             String(""),
 					CTSUserDefinedMeta: map[string]string{},
 				},
+				UseAsModuleInput: Bool(true),
 			},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.Finalize(tc.s)
+			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
+		})
+	}
+}
+
+func TestServicesConditionConfig_Finalize_DeprecatedSourceIncludesVar(t *testing.T) {
+	cases := []struct {
+		name     string
+		i        *ServicesConditionConfig
+		expected bool
+	}{
+		{
+			"use_as_module_input_configured",
+			&ServicesConditionConfig{
+				UseAsModuleInput: Bool(false),
+			},
+			false,
+		},
+		{
+			"source_includes_var_configured",
+			&ServicesConditionConfig{
+				DeprecatedSourceIncludesVar: Bool(false),
+			},
+			false,
+		},
+		{
+			"both_configured",
+			&ServicesConditionConfig{
+				UseAsModuleInput:            Bool(false),
+				DeprecatedSourceIncludesVar: Bool(true),
+			},
+			false,
+		},
+
+		{
+			"neither_configured",
+			&ServicesConditionConfig{},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.i.Finalize()
+			assert.Equal(t, tc.expected, *tc.i.UseAsModuleInput)
 		})
 	}
 }
@@ -180,7 +278,7 @@ func TestServicesConditionConfig_Validate(t *testing.T) {
 			"valid",
 			false,
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp: String(".*"),
 				},
 			},
@@ -189,7 +287,7 @@ func TestServicesConditionConfig_Validate(t *testing.T) {
 			"invalid",
 			true,
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp: String("*"),
 				},
 			},
@@ -229,7 +327,7 @@ func TestServicesCondition_GoString(t *testing.T) {
 		{
 			"fully_configured",
 			&ServicesConditionConfig{
-				ServicesMonitorConfig{
+				ServicesMonitorConfig: ServicesMonitorConfig{
 					Regexp:     String("^api$"),
 					Datacenter: String("dc"),
 					Namespace:  String("namespace"),
@@ -238,10 +336,11 @@ func TestServicesCondition_GoString(t *testing.T) {
 						"key": "value",
 					},
 				},
+				UseAsModuleInput: Bool(false),
 			},
 			"&ServicesConditionConfig{&ServicesMonitorConfig{Regexp:^api$, Names:[], " +
 				"Datacenter:dc, Namespace:namespace, Filter:filter, " +
-				"CTSUserDefinedMeta:map[key:value]}}",
+				"CTSUserDefinedMeta:map[key:value]}, UseAsModuleInput:false}",
 		},
 	}
 

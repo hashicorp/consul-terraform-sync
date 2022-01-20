@@ -10,9 +10,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -26,9 +24,9 @@ const (
     "providers": [
         "local"
     ],
-    "services": [
-        "api"
-    ],
+    "condition": {
+			"services": {"names": ["api"]}
+		},
     "module": "./example-module"
 }`
 	testCreateTaskRequestVariables = `{
@@ -38,9 +36,9 @@ const (
     "providers": [
         "local"
     ],
-    "services": [
-        "api"
-    ],
+    "condition": {
+			"services": {"names": ["api"]}
+		},
     "variables":{
         "filename": "test.txt"
     },
@@ -52,119 +50,112 @@ const (
 
 func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 	t.Parallel()
+
+	taskConf := config.TaskConfig{
+		Name:        config.String(testTaskName),
+		Enabled:     config.Bool(true),
+		Description: config.String("Writes the service name, id, and IP address to a file"),
+		Module:      config.String("./example-module"),
+		Condition: &config.ServicesConditionConfig{
+			ServicesMonitorConfig: config.ServicesMonitorConfig{Names: []string{"api"}},
+		},
+		Providers: []string{"local"},
+	}
+	taskConfVars := *taskConf.Copy()
+	taskConfVars.Variables = map[string]string{"filename": "test.txt"}
 	cases := []struct {
 		name       string
 		taskName   string
 		request    string
 		run        string
-		variables  map[string]string
+		mockReturn config.TaskConfig
 		statusCode int
 	}{
 		{
 			name:       "happy_path",
-			taskName:   testTaskName,
 			request:    testCreateTaskRequest,
 			run:        "",
+			mockReturn: taskConf,
 			statusCode: http.StatusCreated,
 		},
 		{
 			name:       "happy_path_run_now",
-			taskName:   testTaskName,
 			request:    testCreateTaskRequest,
-			run:        driver.RunOptionNow,
+			run:        "now",
+			mockReturn: taskConf,
 			statusCode: http.StatusCreated,
 		},
 		{
 			name:       "happy_path_with_variables",
-			taskName:   testTaskName,
 			request:    testCreateTaskRequestVariables,
-			run:        driver.RunOptionNow,
+			run:        "now",
+			mockReturn: taskConfVars,
 			statusCode: http.StatusCreated,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c, d := generateTaskLifecycleHandlerTestDependencies()
+			ctrl := new(mocks.Server)
+			ctrl.On("Task", mock.Anything, testTaskName).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
+				On("TaskCreate", mock.Anything, tc.mockReturn).Return(tc.mockReturn, nil).
+				On("TaskCreateAndRun", mock.Anything, tc.mockReturn).Return(tc.mockReturn, nil)
+			handler := NewTaskLifeCycleHandler(ctrl)
 
-			// Expected driver mock calls and returns
-			conf := driver.TaskConfig{
-				Name: tc.taskName,
-			}
-			task, err := driver.NewTask(conf)
-			require.NoError(t, err)
-
-			d.On("Task").Return(task)
-			d.On("InitTask", mock.Anything).Return(nil)
-			d.On("RenderTemplate", mock.Anything).Return(true, nil)
-			if tc.run == driver.RunOptionNow {
-				d.On("ApplyTask", mock.Anything).Return(nil)
-			}
-
-			resp := runTestCreateTask(t, c, tc.run, tc.statusCode, tc.request)
-
-			// Task should be added to the drivers list
-			_, ok := c.drivers.Get(tc.taskName)
-			require.True(t, ok)
-
-			// A single event should be registered
-			checkTestEventCount(t, tc.taskName, c.store, 1)
+			resp := runTestCreateTask(t, handler, tc.run, tc.statusCode, tc.request)
 
 			// Check response
 			decoder := json.NewDecoder(resp.Body)
-			var actual taskResponse
-			err = decoder.Decode(&actual)
+			var actual oapigen.TaskResponse
+			err := decoder.Decode(&actual)
 			require.NoError(t, err)
 			expected := generateExpectedResponse(t, tc.request)
 			assert.Equal(t, expected, actual)
-			d.AssertExpectations(t)
 		})
 	}
 }
 
 func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 	t.Parallel()
-	c, d := generateTaskLifecycleHandlerTestDependencies()
-	// Expected driver mock calls and returns
+
+	// Expected ctrl mock calls and returns
 	taskName := "inspected_task"
 	request := fmt.Sprintf(`{
 		"name": "%s",
-		"services": ["api"],
+		"enabled": true,
+		"condition": {"services": {"names": ["api"]}},
 		"module": "mkam/hello/cts"
 	}`, taskName)
-	conf := driver.TaskConfig{
-		Name: taskName,
+	taskConf := config.TaskConfig{
+		Name:    config.String(taskName),
+		Enabled: config.Bool(true),
+		Module:  config.String("mkam/hello/cts"),
+		Condition: &config.ServicesConditionConfig{
+			ServicesMonitorConfig: config.ServicesMonitorConfig{Names: []string{"api"}},
+		},
 	}
-	task, err := driver.NewTask(conf)
-	require.NoError(t, err)
 
-	d.On("Task").Return(task)
-	d.On("InitTask", mock.Anything).Return(nil)
-	d.On("RenderTemplate", mock.Anything).Return(true, nil)
-	d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, nil)
+	ctrl := new(mocks.Server)
+	ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
+		On("TaskInspect", mock.Anything, taskConf).Return(true, "foobar-plan", "", nil)
+	handler := NewTaskLifeCycleHandler(ctrl)
 
-	resp := runTestCreateTask(t, c, "inspect", http.StatusOK, request)
+	resp := runTestCreateTask(t, handler, "inspect", http.StatusOK, request)
 
 	// Check response, expect task and run
 	decoder := json.NewDecoder(resp.Body)
-	var actual taskResponse
-	err = decoder.Decode(&actual)
-	require.NoError(t, err)
+	var actual TaskResponse
+	require.NoError(t, decoder.Decode(&actual))
 	expected := generateExpectedResponse(t, request)
-	plan := ""
 	expected.Run = &oapigen.Run{
-		Plan: &plan,
+		Plan:           config.String("foobar-plan"),
+		ChangesPresent: config.Bool(true),
 	}
-	assert.Equal(t, expected, actual)
-	d.AssertExpectations(t)
-
-	// Check task not added to driver, no events registered
-	_, ok := c.drivers.Get(taskName)
-	require.False(t, ok)
-	checkTestEventCount(t, taskName, c.store, 0)
+	assert.Equal(t, expected, oapigen.TaskResponse(actual))
+	ctrl.AssertExpectations(t)
 
 	// Run the inspect a second time with same task, expect return 200 OK
-	runTestCreateTask(t, c, "inspect", http.StatusOK, request)
+	runTestCreateTask(t, handler, "inspect", http.StatusOK, request)
 }
 
 func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
@@ -200,26 +191,16 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c, d := generateTaskLifecycleHandlerTestDependencies()
+			ctrl := new(mocks.Server)
+			ctrl.On("Task", mock.Anything, tc.taskName).Return(config.TaskConfig{}, nil)
+			handler := NewTaskLifeCycleHandler(ctrl)
 
-			err := c.drivers.Add(existingTask, d)
-			require.NoError(t, err)
-
-			resp := runTestCreateTask(t, c, tc.run, tc.statusCode, tc.request)
-
-			// Task should not be in driver's list
-			if tc.taskName != existingTask {
-				_, ok := c.drivers.Get(tc.taskName)
-				require.False(t, ok)
-			}
-
-			// No events should be registered
-			checkTestEventCount(t, tc.taskName, c.store, 0)
+			resp := runTestCreateTask(t, handler, "", tc.statusCode, tc.request)
 
 			// Check response
 			decoder := json.NewDecoder(resp.Body)
 			var actual oapigen.ErrorResponse
-			err = decoder.Decode(&actual)
+			err := decoder.Decode(&actual)
 			require.NoError(t, err)
 
 			expected := generateErrorResponse("", tc.message)
@@ -228,101 +209,37 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 	}
 }
 
-func TestTaskLifeCycleHandler_CreateTask_DriverError(t *testing.T) {
+func TestTaskLifeCycleHandler_CreateTask_InternalError(t *testing.T) {
 	t.Parallel()
-	cases := []struct {
-		name              string
-		run               string
-		message           string
-		initTaskErr       error
-		renderTemplateErr error
-		inspectTaskErr    error
-		events            int
-	}{
-		{
-			name:        "init failed",
-			message:     "error initializing new task: tf-init error",
-			initTaskErr: fmt.Errorf("tf-init error"),
-			events:      1,
-		},
-		{
-			name:        "init with inspect run",
-			run:         "inspect",
-			message:     "error initializing new task: tf-init error",
-			initTaskErr: fmt.Errorf("tf-init error"),
-			events:      0,
-		},
-		{
-			name: "render template",
-			message: "error initializing new task: error rendering template " +
-				"for task 'api-task': render tmpl error", renderTemplateErr: fmt.Errorf("render tmpl error"),
-			events: 1,
-		},
-		{
-			name: "render template with inspect run",
-			run:  "inspect",
-			message: "error initializing new task: error rendering template " +
-				"for task 'api-task': render tmpl error",
-			renderTemplateErr: fmt.Errorf("render tmpl error"),
-			events:            0,
-		},
-		{
-			name:           "inspect task",
-			run:            "inspect",
-			message:        "error inspecting task: tf-plan error",
-			inspectTaskErr: fmt.Errorf("tf-plan error"),
-			events:         0,
-		},
-	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			c, d := generateTaskLifecycleHandlerTestDependencies()
+	errMsg := "error initializing new task, mock error"
 
-			taskName := testTaskName
-			d.On("InitTask", mock.Anything).Return(tc.initTaskErr)
-			d.On("RenderTemplate", mock.Anything).Return(true, tc.renderTemplateErr)
-			d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, tc.inspectTaskErr)
-			conf := driver.TaskConfig{
-				Name: taskName,
-			}
-			task, err := driver.NewTask(conf)
-			require.NoError(t, err)
-			d.On("Task").Return(task)
+	ctrl := new(mocks.Server)
+	ctrl.On("Task", mock.Anything, testTaskName).Return(config.TaskConfig{}, fmt.Errorf("DNE"))
+	ctrl.On("TaskCreate", mock.Anything, mock.Anything).Return(config.TaskConfig{}, fmt.Errorf(errMsg))
+	handler := NewTaskLifeCycleHandler(ctrl)
 
-			resp := runTestCreateTask(t, c, tc.run, http.StatusBadRequest, testCreateTaskRequest)
+	resp := runTestCreateTask(t, handler, "", http.StatusInternalServerError, testCreateTaskRequest)
 
-			// Task should not be added to the list
-			_, ok := c.drivers.Get(taskName)
-			assert.False(t, ok)
+	// Check response
+	decoder := json.NewDecoder(resp.Body)
+	var actual oapigen.ErrorResponse
+	err := decoder.Decode(&actual)
+	require.NoError(t, err)
 
-			// Check expected number of events
-			checkTestEventCount(t, taskName, c.store, tc.events)
-
-			// Check response
-			decoder := json.NewDecoder(resp.Body)
-			var actual oapigen.ErrorResponse
-			err = decoder.Decode(&actual)
-			require.NoError(t, err)
-
-			expected := generateErrorResponse("", tc.message)
-			assert.Equal(t, expected, actual)
-		})
-	}
+	expected := generateErrorResponse("", errMsg)
+	assert.Equal(t, expected, actual)
 }
 
-func generateExpectedResponse(t *testing.T, req string) taskResponse {
-	var treq taskRequest
+func generateExpectedResponse(t *testing.T, req string) oapigen.TaskResponse {
+	var treq oapigen.TaskRequest
 	err := json.Unmarshal([]byte(req), &treq)
 	require.NoError(t, err)
 
-	trc, err := treq.ToTaskRequestConfig(config.DefaultBufferPeriodConfig(), testWorkingDirectory)
-	require.NoError(t, err)
-
-	tresp := taskResponseFromTaskRequestConfig(trc, "")
-	require.NoError(t, err)
-
-	return tresp
+	task := oapigen.Task(treq)
+	return oapigen.TaskResponse{
+		Task: &task,
+	}
 }
 
 func generateErrorResponse(requestID, message string) oapigen.ErrorResponse {
@@ -336,27 +253,8 @@ func generateErrorResponse(requestID, message string) oapigen.ErrorResponse {
 	return errResp
 }
 
-func generateTaskLifecycleHandlerTestDependencies() (TaskLifeCycleHandlerConfig, *mocks.Driver) {
-	// Create dependencies
-	d := new(mocks.Driver)
-	createNewTaskDriver := func(taskConfig config.TaskConfig, variables map[string]string) (driver.Driver, error) {
-		return d, nil
-	}
-
-	c := TaskLifeCycleHandlerConfig{
-		store:               event.NewStore(),
-		drivers:             driver.NewDrivers(),
-		bufferPeriod:        config.DefaultBufferPeriodConfig(),
-		workingDir:          testWorkingDirectory,
-		createNewTaskDriver: createNewTaskDriver,
-	}
-
-	return c, d
-}
-
-func runTestCreateTask(t *testing.T, c TaskLifeCycleHandlerConfig, run string, expectedStatus int, request string) *httptest.ResponseRecorder {
+func runTestCreateTask(t *testing.T, handler *TaskLifeCycleHandler, run string, expectedStatus int, request string) *httptest.ResponseRecorder {
 	path := "/v1/tasks"
-	handler := NewTaskLifeCycleHandler(c)
 	r := strings.NewReader(request)
 	req, err := http.NewRequest(http.MethodPost, path, r)
 	require.NoError(t, err)
@@ -371,16 +269,4 @@ func runTestCreateTask(t *testing.T, c TaskLifeCycleHandlerConfig, run string, e
 	require.Equal(t, expectedStatus, resp.Code)
 
 	return resp
-}
-
-func checkTestEventCount(t *testing.T, taskName string, store *event.Store, eventCount int) {
-	data := store.Read(taskName)
-	events, ok := data[taskName]
-
-	if eventCount <= 0 {
-		assert.False(t, ok)
-	} else {
-		assert.True(t, ok)
-	}
-	assert.Equal(t, eventCount, len(events), "event count not expected")
 }

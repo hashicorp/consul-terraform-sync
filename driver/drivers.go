@@ -11,15 +11,22 @@ import (
 type Drivers struct {
 	mu *sync.RWMutex
 
+	// Map of task name to driver
 	drivers map[string]Driver
-	active  sync.Map
+
+	// Map of template ID to task name
+	driverTemplates map[string]string
+
+	// Tracks which driver is currently active
+	active sync.Map
 }
 
 // NewDrivers returns a new drivers object
 func NewDrivers() *Drivers {
 	return &Drivers{
-		mu:      &sync.RWMutex{},
-		drivers: make(map[string]Driver),
+		mu:              &sync.RWMutex{},
+		drivers:         make(map[string]Driver),
+		driverTemplates: make(map[string]string),
 	}
 }
 
@@ -41,10 +48,13 @@ func (d *Drivers) Add(taskName string, driver Driver) error {
 	}
 
 	d.drivers[taskName] = driver
+	for _, id := range driver.TemplateIDs() {
+		d.driverTemplates[id] = taskName
+	}
 	return nil
 }
 
-// Get retrieves the driver for a task
+// Get retrieves the driver for a task by task name
 func (d *Drivers) Get(taskName string) (Driver, bool) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -55,6 +65,20 @@ func (d *Drivers) Get(taskName string) (Driver, bool) {
 	}
 
 	return driver, true
+}
+
+// GetTaskByTemplate retrieves the driver for a task by template ID
+func (d *Drivers) GetTaskByTemplate(tmplID string) (Driver, bool) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	taskName, ok := d.driverTemplates[tmplID]
+	if !ok {
+		return nil, false
+	}
+
+	driver, ok := d.drivers[taskName]
+	return driver, ok
 }
 
 func (d *Drivers) Reset() {

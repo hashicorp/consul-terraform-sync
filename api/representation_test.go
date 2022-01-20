@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -34,7 +35,7 @@ const (
 )
 
 func TestTaskRequest_String(t *testing.T) {
-	var req taskRequest
+	var req TaskRequest
 
 	err := json.Unmarshal([]byte(taskReq), &req)
 	require.NoError(t, err)
@@ -47,183 +48,187 @@ func TestTaskRequest_String(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
+// Test only bare minimum, task conversion scenarios covered in
+// TestRequest_oapigenTaskFromConfigTask and terraform variable files
+// covered in TestRequest_readToVariablesMap
+func TestRequest_TaskRequestFromTaskConfig(t *testing.T) {
 	cases := []struct {
-		name               string
-		request            *taskRequest
-		taskConfigExpected taskRequestConfig
+		name            string
+		taskConfig      config.TaskConfig
+		expectedRequest TaskRequest
 	}{
 		{
-			name: "minimum_required_only",
-			request: &taskRequest{
-				Name:       "test-name",
-				Module:     "path",
-				Services:   &[]string{"api", "web"},
-				WorkingDir: config.String("sync-tasks"),
-			},
-			taskConfigExpected: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String(""),
-					Name:         config.String("test-name"),
-					Providers:    []string{},
-					Services:     []string{"api", "web"},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					Version:      config.String(""),
-					TFVersion:    config.String(""),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition:    config.EmptyConditionConfig(),
-					WorkingDir:   config.String("sync-tasks"),
-					SourceInput:  config.EmptySourceInputConfig(),
-				},
-			},
+			name:            "default_values_only",
+			taskConfig:      config.TaskConfig{},
+			expectedRequest: TaskRequest{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := TaskRequestFromTaskConfig(tc.taskConfig)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedRequest, actual)
+		})
+	}
+}
+
+func TestRequest_readToVariablesMap(t *testing.T) {
+	// Simulate input multiple "files" and check various hcl supported types
+	inputTFVars := map[string][]byte{
+		"simple.tfvars": []byte("singleKey = \"value\""),
+		"complex.tfvars": []byte(`
+b = true
+key = "some_key"
+num = 10
+obj = {
+  argStr = "value"
+  argNum = 10
+  argList = ["l", "i", "s", "t"]
+  argMap = {}
+}
+l = [1, 2, 3]
+tup = ["abc", 123, true]`),
+	}
+	expectedMap := map[string]string{
+		"singleKey": "\"value\"",
+		"key":       "\"some_key\"",
+		"b":         "true",
+		"num":       "10",
+		"obj":       "{\"argList\":[\"l\",\"i\",\"s\",\"t\"],\"argMap\":{},\"argNum\":10,\"argStr\":\"value\"}",
+		"l":         "[1,2,3]",
+		"tup":       "[\"abc\",123,true]",
+	}
+
+	// Length should equal number of fields in inputTFVars
+	expectedLength := 7
+
+	m := make(map[string]string)
+
+	for k, v := range inputTFVars {
+		err := readToVariablesMap(k, bytes.NewReader(v), m)
+		assert.NoError(t, err)
+	}
+
+	assert.Equal(t, expectedLength, len(m))
+
+	for k := range expectedMap {
+		assert.Equal(t, m[k], expectedMap[k])
+	}
+}
+
+func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
+	cases := []struct {
+		name            string
+		taskConfig      config.TaskConfig
+		expectedRequest oapigen.Task
+	}{
+		{
+			name:            "default_values_only",
+			taskConfig:      config.TaskConfig{},
+			expectedRequest: oapigen.Task{},
 		},
 		{
 			name: "basic_fields_filled",
-			request: &taskRequest{
-				Description: config.String("test-description"),
+			taskConfig: config.TaskConfig{
+				Description:  config.String("test-description"),
+				Name:         config.String("test-name"),
+				Providers:    []string{"test-provider-1", "test-provider-2"},
+				Services:     []string{"api", "web"},
+				Module:       config.String("path"),
+				TFVersion:    config.String(""),
+				Version:      config.String("test-version"),
+				BufferPeriod: config.DefaultBufferPeriodConfig(),
+				Enabled:      config.Bool(true),
+				Condition:    config.EmptyConditionConfig(),
+				ModuleInputs: config.DefaultModuleInputConfigs(),
+			},
+			expectedRequest: oapigen.Task{
 				Name:        "test-name",
-				Services:    &[]string{"api", "web"},
-				Providers:   &[]string{"test-provider-1", "test-provider-2"},
 				Module:      "path",
 				Version:     config.String("test-version"),
-				Enabled:     config.Bool(true),
-				WorkingDir:  config.String("sync-tasks"),
-			},
-			taskConfigExpected: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String("test-description"),
-					Name:         config.String("test-name"),
-					Providers:    []string{"test-provider-1", "test-provider-2"},
-					Services:     []string{"api", "web"},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					Version:      config.String("test-version"),
-					TFVersion:    config.String(""),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition:    config.EmptyConditionConfig(),
-					WorkingDir:   config.String("sync-tasks"),
-					SourceInput:  config.EmptySourceInputConfig(),
+				Description: config.String("test-description"),
+				BufferPeriod: &oapigen.BufferPeriod{
+					Enabled: config.Bool(true),
+					Max:     config.String("20s"),
+					Min:     config.String("5s"),
 				},
+				Enabled:     config.Bool(true),
+				Condition:   &oapigen.Condition{},
+				ModuleInput: &oapigen.ModuleInput{},
+				Services:    &[]string{"api", "web"},
+				Providers:   &[]string{"test-provider-1", "test-provider-2"},
 			},
 		},
 		{
 			name: "with_services_condition_regexp",
-			request: &taskRequest{
-				Name:   "task",
-				Module: "path",
-				BufferPeriod: &oapigen.BufferPeriod{
-					Enabled: config.Bool(false),
-					Max:     config.String("0s"),
-					Min:     config.String("0s"),
+			taskConfig: config.TaskConfig{
+				Condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Regexp:             config.String("^web.*"),
+						Datacenter:         config.String("dc"),
+						Namespace:          config.String("ns"),
+						Filter:             config.String("filter"),
+						CTSUserDefinedMeta: map[string]string{"key": "value"},
+					},
+					UseAsModuleInput: config.Bool(false),
 				},
-				Enabled: config.Bool(true),
+			},
+			expectedRequest: oapigen.Task{
 				Condition: &oapigen.Condition{
 					Services: &oapigen.ServicesCondition{
-						Regexp: config.String("^web.*"),
+						Regexp:           config.String("^web.*"),
+						UseAsModuleInput: config.Bool(false),
 					},
-				},
-				WorkingDir: config.String("sync-tasks/task"),
-			},
-			taskConfigExpected: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description: config.String(""),
-					Name:        config.String("task"),
-					Providers:   []string{},
-					Services:    []string{},
-					Module:      config.String("path"),
-					VarFiles:    []string{},
-					Version:     config.String(""),
-					TFVersion:   config.String(""),
-					BufferPeriod: &config.BufferPeriodConfig{
-						Enabled: config.Bool(false),
-						Min:     config.TimeDuration(0 * time.Second),
-						Max:     config.TimeDuration(0 * time.Second),
-					},
-					Enabled: config.Bool(true),
-					Condition: &config.ServicesConditionConfig{
-						ServicesMonitorConfig: config.ServicesMonitorConfig{
-							Regexp:             config.String("^web.*"),
-							Names:              []string{},
-							Datacenter:         config.String(""),
-							Namespace:          config.String(""),
-							Filter:             config.String(""),
-							CTSUserDefinedMeta: map[string]string{},
-						},
-					},
-					WorkingDir:  config.String("sync-tasks/task"),
-					SourceInput: config.EmptySourceInputConfig(),
 				},
 			},
 		},
 		{
 			name: "with_services_condition_names",
-			request: &taskRequest{
-				Name:   "task",
-				Module: "path",
-				BufferPeriod: &oapigen.BufferPeriod{
-					Enabled: config.Bool(false),
-					Max:     config.String("0s"),
-					Min:     config.String("0s"),
+			taskConfig: config.TaskConfig{
+				Condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Names:              []string{"api", "web"},
+						Datacenter:         config.String(""),
+						Namespace:          config.String(""),
+						Filter:             config.String(""),
+						CTSUserDefinedMeta: map[string]string{},
+					},
+					UseAsModuleInput: config.Bool(false),
 				},
-				Enabled: config.Bool(true),
+			},
+			expectedRequest: oapigen.Task{
 				Condition: &oapigen.Condition{
 					Services: &oapigen.ServicesCondition{
-						Names: &[]string{"api", "web"},
+						Names:            &[]string{"api", "web"},
+						UseAsModuleInput: config.Bool(false),
 					},
-				},
-				WorkingDir: config.String("sync-tasks/task"),
-			},
-			taskConfigExpected: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description: config.String(""),
-					Name:        config.String("task"),
-					Providers:   []string{},
-					Services:    []string{},
-					Module:      config.String("path"),
-					VarFiles:    []string{},
-					Version:     config.String(""),
-					TFVersion:   config.String(""),
-					BufferPeriod: &config.BufferPeriodConfig{
-						Enabled: config.Bool(false),
-						Min:     config.TimeDuration(0 * time.Second),
-						Max:     config.TimeDuration(0 * time.Second),
-					},
-					Enabled: config.Bool(true),
-					Condition: &config.ServicesConditionConfig{
-						ServicesMonitorConfig: config.ServicesMonitorConfig{
-							Regexp:             config.String(""),
-							Names:              []string{"api", "web"},
-							Datacenter:         config.String(""),
-							Namespace:          config.String(""),
-							Filter:             config.String(""),
-							CTSUserDefinedMeta: map[string]string{},
-						},
-					},
-					WorkingDir:  config.String("sync-tasks/task"),
-					SourceInput: config.EmptySourceInputConfig(),
 				},
 			},
 		},
 		{
 			name: "with_catalog_services_condition",
-			request: &taskRequest{
-				Name:   "task",
-				Module: "path",
-				BufferPeriod: &oapigen.BufferPeriod{
-					Enabled: config.Bool(false),
-					Max:     config.String("0s"),
-					Min:     config.String("0s"),
+			taskConfig: config.TaskConfig{
+				Condition: &config.CatalogServicesConditionConfig{
+					CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
+						Regexp:           config.String(".*"),
+						UseAsModuleInput: config.Bool(true),
+						Datacenter:       config.String("dc2"),
+						Namespace:        config.String("ns2"),
+						NodeMeta: map[string]string{
+							"key1": "value1",
+							"key2": "value2",
+						},
+					},
 				},
-				Enabled: config.Bool(true),
+			},
+			expectedRequest: oapigen.Task{
 				Condition: &oapigen.Condition{
 					CatalogServices: &oapigen.CatalogServicesCondition{
-						Regexp:            config.String(".*"),
-						SourceIncludesVar: config.Bool(true),
-						Datacenter:        config.String("dc2"),
-						Namespace:         config.String("ns2"),
+						Regexp:           ".*",
+						UseAsModuleInput: config.Bool(true),
+						Datacenter:       config.String("dc2"),
+						Namespace:        config.String("ns2"),
 						NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
 							AdditionalProperties: map[string]string{
 								"key1": "value1",
@@ -232,232 +237,374 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 						},
 					},
 				},
-				WorkingDir: config.String("sync-tasks/task"),
-			},
-			taskConfigExpected: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description: config.String(""),
-					Name:        config.String("task"),
-					Providers:   []string{},
-					Services:    []string{},
-					Module:      config.String("path"),
-					VarFiles:    []string{},
-					Version:     config.String(""),
-					TFVersion:   config.String(""),
-					BufferPeriod: &config.BufferPeriodConfig{
-						Enabled: config.Bool(false),
-						Min:     config.TimeDuration(0 * time.Second),
-						Max:     config.TimeDuration(0 * time.Second),
-					},
-					Enabled: config.Bool(true),
-					Condition: &config.CatalogServicesConditionConfig{
-						config.CatalogServicesMonitorConfig{
-							Regexp:            config.String(".*"),
-							SourceIncludesVar: config.Bool(true),
-							Datacenter:        config.String("dc2"),
-							Namespace:         config.String("ns2"),
-							NodeMeta: map[string]string{
-								"key1": "value1",
-								"key2": "value2",
-							},
-						},
-					},
-					WorkingDir:  config.String("sync-tasks/task"),
-					SourceInput: config.EmptySourceInputConfig(),
-				},
 			},
 		},
 		{
 			name: "with_consul_kv_condition",
-			request: &taskRequest{
-				Name:     "task",
-				Module:   "path",
-				Services: &[]string{"api", "web"},
-				BufferPeriod: &oapigen.BufferPeriod{
-					Enabled: config.Bool(false),
-					Max:     config.String("0s"),
-					Min:     config.String("0s"),
+			taskConfig: config.TaskConfig{
+				Condition: &config.ConsulKVConditionConfig{
+					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+						Path:       config.String("key-path"),
+						Recurse:    config.Bool(true),
+						Datacenter: config.String("dc2"),
+						Namespace:  config.String("ns2"),
+					},
+					UseAsModuleInput: config.Bool(true),
 				},
-				Enabled: config.Bool(true),
+			},
+			expectedRequest: oapigen.Task{
 				Condition: &oapigen.Condition{
 					ConsulKv: &oapigen.ConsulKVCondition{
-						Path:              "key-path",
-						Recurse:           config.Bool(true),
-						Datacenter:        config.String("dc2"),
-						Namespace:         config.String("ns2"),
-						SourceIncludesVar: config.Bool(true),
+						Path:             "key-path",
+						Recurse:          config.Bool(true),
+						Datacenter:       config.String("dc2"),
+						Namespace:        config.String("ns2"),
+						UseAsModuleInput: config.Bool(true),
 					},
-				},
-				WorkingDir: config.String("sync-tasks/task"),
-			},
-			taskConfigExpected: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description: config.String(""),
-					Name:        config.String("task"),
-					Providers:   []string{},
-					Services:    []string{"api", "web"},
-					Module:      config.String("path"),
-					VarFiles:    []string{},
-					Version:     config.String(""),
-					TFVersion:   config.String(""),
-					BufferPeriod: &config.BufferPeriodConfig{
-						Enabled: config.Bool(false),
-						Min:     config.TimeDuration(0 * time.Second),
-						Max:     config.TimeDuration(0 * time.Second),
-					},
-					Enabled: config.Bool(true),
-					Condition: &config.ConsulKVConditionConfig{
-						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
-							Path:       config.String("key-path"),
-							Recurse:    config.Bool(true),
-							Datacenter: config.String("dc2"),
-							Namespace:  config.String("ns2"),
-						},
-						SourceIncludesVar: config.Bool(true),
-					},
-					WorkingDir:  config.String("sync-tasks/task"),
-					SourceInput: config.EmptySourceInputConfig(),
 				},
 			},
 		},
 		{
 			name: "with_schedule_condition",
-			request: &taskRequest{
-				Name:     "task",
-				Module:   "path",
-				Services: &[]string{"api", "web"},
-				BufferPeriod: &oapigen.BufferPeriod{
-					Enabled: config.Bool(false),
-					Max:     config.String("0s"),
-					Min:     config.String("0s"),
-				},
-				Enabled: config.Bool(true),
+			taskConfig: config.TaskConfig{
+				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+			},
+			expectedRequest: oapigen.Task{
 				Condition: &oapigen.Condition{
 					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
-				},
-				WorkingDir: config.String("sync-tasks/task"),
-			},
-			taskConfigExpected: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description: config.String(""),
-					Name:        config.String("task"),
-					Providers:   []string{},
-					Services:    []string{"api", "web"},
-					Module:      config.String("path"),
-					VarFiles:    []string{},
-					Version:     config.String(""),
-					TFVersion:   config.String(""),
-					BufferPeriod: &config.BufferPeriodConfig{
-						Enabled: config.Bool(false),
-						Min:     config.TimeDuration(0 * time.Second),
-						Max:     config.TimeDuration(0 * time.Second),
-					},
-					Enabled:     config.Bool(true),
-					Condition:   &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-					WorkingDir:  config.String("sync-tasks/task"),
-					SourceInput: config.EmptySourceInputConfig(),
 				},
 			},
 		},
 		{
-			name: "with_services_source_input",
-			request: &taskRequest{
-				Name:   "task",
-				Module: "path",
-				BufferPeriod: &oapigen.BufferPeriod{
-					Enabled: config.Bool(false),
-					Max:     config.String("0s"),
-					Min:     config.String("0s"),
-				},
-				Enabled: config.Bool(true),
-				Condition: &oapigen.Condition{
-					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
-				},
-				WorkingDir: config.String("sync-tasks/task"),
-				SourceInput: &oapigen.SourceInput{
-					Services: &oapigen.ServicesSourceInput{
-						Regexp: config.String("^api$"),
-					}},
-			},
-			taskConfigExpected: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description: config.String(""),
-					Name:        config.String("task"),
-					Services:    []string{},
-					Providers:   []string{},
-					Module:      config.String("path"),
-					VarFiles:    []string{},
-					Version:     config.String(""),
-					TFVersion:   config.String(""),
-					BufferPeriod: &config.BufferPeriodConfig{
-						Enabled: config.Bool(false),
-						Min:     config.TimeDuration(0 * time.Second),
-						Max:     config.TimeDuration(0 * time.Second),
-					},
-					Enabled:    config.Bool(true),
-					Condition:  &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-					WorkingDir: config.String("sync-tasks/task"),
-					SourceInput: &config.ServicesSourceInputConfig{
+			name: "with_module_inputs",
+			taskConfig: config.TaskConfig{
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
 						ServicesMonitorConfig: config.ServicesMonitorConfig{
 							Regexp:             config.String("^api$"),
-							Names:              []string{},
-							Datacenter:         config.String(""),
-							Namespace:          config.String(""),
-							Filter:             config.String(""),
-							CTSUserDefinedMeta: map[string]string{},
+							Datacenter:         config.String("dc"),
+							Namespace:          config.String("ns"),
+							Filter:             config.String("filter"),
+							CTSUserDefinedMeta: map[string]string{"key": "value"},
+						},
+					},
+					&config.ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+							Path:       config.String("fake-path"),
+							Recurse:    config.Bool(false),
+							Datacenter: config.String("dc"),
+							Namespace:  config.String("ns"),
+						},
+					},
+				},
+			},
+			expectedRequest: oapigen.Task{
+				ModuleInput: &oapigen.ModuleInput{
+					Services: &oapigen.ServicesModuleInput{
+						Regexp: config.String("^api$"),
+					},
+					ConsulKv: &oapigen.ConsulKVModuleInput{
+						Path:       "fake-path",
+						Recurse:    config.Bool(false),
+						Datacenter: config.String("dc"),
+						Namespace:  config.String("ns"),
+					},
+				},
+			},
+		},
+		{
+			name: "with_module_input_services_names",
+			// separate test-case for services names because it can't be
+			// combined with 'with_module_inputs' test case.
+			// oapigen.ModuleInput.Services can be set with only 1 Services
+			// module input
+			taskConfig: config.TaskConfig{
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names:              []string{"api"},
+							Datacenter:         config.String("dc"),
+							Namespace:          config.String("ns"),
+							Filter:             config.String("filter"),
+							CTSUserDefinedMeta: map[string]string{"key": "value"},
+						},
+					},
+				},
+			},
+			expectedRequest: oapigen.Task{
+				ModuleInput: &oapigen.ModuleInput{
+					Services: &oapigen.ServicesModuleInput{
+						Names: &[]string{"api"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := oapigenTaskFromConfigTask(tc.taskConfig)
+			assert.Equal(t, tc.expectedRequest, actual)
+		})
+	}
+}
+
+func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
+	cases := []struct {
+		name               string
+		request            *TaskRequest
+		taskConfigExpected config.TaskConfig
+	}{
+		{
+			name: "minimum_required_only",
+			request: &TaskRequest{
+				Name:     "test-name",
+				Module:   "path",
+				Services: &[]string{"api", "web"},
+			},
+			taskConfigExpected: config.TaskConfig{
+				Name:     config.String("test-name"),
+				Services: []string{"api", "web"},
+				Module:   config.String("path"),
+			},
+		},
+		{
+			name: "basic_fields_filled",
+			request: &TaskRequest{
+				Description: config.String("test-description"),
+				Name:        "test-name",
+				Services:    &[]string{"api", "web"},
+				Providers:   &[]string{"test-provider-1", "test-provider-2"},
+				Module:      "path",
+				Version:     config.String("test-version"),
+				BufferPeriod: &oapigen.BufferPeriod{
+					Enabled: config.Bool(true),
+					Max:     config.String("5m"),
+					Min:     config.String("30s"),
+				},
+				Enabled: config.Bool(true),
+			},
+			taskConfigExpected: config.TaskConfig{
+				Description: config.String("test-description"),
+				Name:        config.String("test-name"),
+				Providers:   []string{"test-provider-1", "test-provider-2"},
+				Services:    []string{"api", "web"},
+				Module:      config.String("path"),
+				Version:     config.String("test-version"),
+				BufferPeriod: &config.BufferPeriodConfig{
+					Enabled: config.Bool(true),
+					Max:     config.TimeDuration(time.Duration(5 * time.Minute)),
+					Min:     config.TimeDuration(time.Duration(30 * time.Second)),
+				},
+				Enabled: config.Bool(true),
+			},
+		},
+		{
+			name: "with_services_condition_regexp",
+			request: &TaskRequest{
+				Name:    "task",
+				Module:  "path",
+				Enabled: config.Bool(true),
+				Condition: &oapigen.Condition{
+					Services: &oapigen.ServicesCondition{
+						Regexp:           config.String("^web.*"),
+						UseAsModuleInput: config.Bool(false),
+					},
+				},
+			},
+			taskConfigExpected: config.TaskConfig{
+				Name:    config.String("task"),
+				Module:  config.String("path"),
+				Enabled: config.Bool(true),
+				Condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Regexp: config.String("^web.*"),
+					},
+					UseAsModuleInput: config.Bool(false),
+				},
+			},
+		},
+		{
+			name: "with_services_condition_names",
+			request: &TaskRequest{
+				Name:    "task",
+				Module:  "path",
+				Enabled: config.Bool(true),
+				Condition: &oapigen.Condition{
+					Services: &oapigen.ServicesCondition{
+						Names:            &[]string{"api", "web"},
+						UseAsModuleInput: config.Bool(false),
+					},
+				},
+			},
+			taskConfigExpected: config.TaskConfig{
+				Name:    config.String("task"),
+				Module:  config.String("path"),
+				Enabled: config.Bool(true),
+				Condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Names: []string{"api", "web"},
+					},
+					UseAsModuleInput: config.Bool(false),
+				},
+			},
+		},
+		{
+			name: "with_catalog_services_condition",
+			request: &TaskRequest{
+				Name:   "task",
+				Module: "path",
+				Condition: &oapigen.Condition{
+					CatalogServices: &oapigen.CatalogServicesCondition{
+						Regexp:           ".*",
+						UseAsModuleInput: config.Bool(true),
+						Datacenter:       config.String("dc2"),
+						Namespace:        config.String("ns2"),
+						NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
+							AdditionalProperties: map[string]string{
+								"key1": "value1",
+								"key2": "value2",
+							},
+						},
+					},
+				},
+			},
+			taskConfigExpected: config.TaskConfig{
+				Name:   config.String("task"),
+				Module: config.String("path"),
+				Condition: &config.CatalogServicesConditionConfig{
+					config.CatalogServicesMonitorConfig{
+						Regexp:           config.String(".*"),
+						UseAsModuleInput: config.Bool(true),
+						Datacenter:       config.String("dc2"),
+						Namespace:        config.String("ns2"),
+						NodeMeta: map[string]string{
+							"key1": "value1",
+							"key2": "value2",
 						},
 					},
 				},
 			},
 		},
 		{
-			name: "with_consul_kv_source_input",
-			request: &taskRequest{
+			name: "with_consul_kv_condition",
+			request: &TaskRequest{
 				Name:     "task",
 				Module:   "path",
 				Services: &[]string{"api", "web"},
-				BufferPeriod: &oapigen.BufferPeriod{
-					Enabled: config.Bool(false),
-					Max:     config.String("0s"),
-					Min:     config.String("0s"),
+				Condition: &oapigen.Condition{
+					ConsulKv: &oapigen.ConsulKVCondition{
+						Path:             "key-path",
+						Recurse:          config.Bool(true),
+						Datacenter:       config.String("dc2"),
+						Namespace:        config.String("ns2"),
+						UseAsModuleInput: config.Bool(true),
+					},
 				},
-				Enabled: config.Bool(true),
+			},
+			taskConfigExpected: config.TaskConfig{
+				Name:     config.String("task"),
+				Services: []string{"api", "web"},
+				Module:   config.String("path"),
+				Condition: &config.ConsulKVConditionConfig{
+					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+						Path:       config.String("key-path"),
+						Recurse:    config.Bool(true),
+						Datacenter: config.String("dc2"),
+						Namespace:  config.String("ns2"),
+					},
+					UseAsModuleInput: config.Bool(true),
+				},
+			},
+		},
+		{
+			name: "with_schedule_condition",
+			request: &TaskRequest{
+				Name:     "task",
+				Module:   "path",
+				Services: &[]string{"api", "web"},
 				Condition: &oapigen.Condition{
 					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
 				},
-				WorkingDir: config.String("sync-tasks/task"),
-				SourceInput: &oapigen.SourceInput{
-					ConsulKv: &oapigen.ConsulKVSourceInput{
-						Path:       "fake-path",
-						Recurse:    config.Bool(false),
-						Datacenter: config.String(""),
-						Namespace:  config.String(""),
-					}},
 			},
-			taskConfigExpected: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description: config.String(""),
-					Name:        config.String("task"),
-					Services:    []string{"api", "web"},
-					Providers:   []string{},
-					Module:      config.String("path"),
-					VarFiles:    []string{},
-					Version:     config.String(""),
-					TFVersion:   config.String(""),
-					BufferPeriod: &config.BufferPeriodConfig{
-						Enabled: config.Bool(false),
-						Min:     config.TimeDuration(0 * time.Second),
-						Max:     config.TimeDuration(0 * time.Second),
+			taskConfigExpected: config.TaskConfig{
+				Name:      config.String("task"),
+				Services:  []string{"api", "web"},
+				Module:    config.String("path"),
+				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+			},
+		},
+		{
+			name: "with_module_inputs",
+			request: &TaskRequest{
+				Name:   "task",
+				Module: "path",
+				Condition: &oapigen.Condition{
+					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
+				},
+				ModuleInput: &oapigen.ModuleInput{
+					Services: &oapigen.ServicesModuleInput{
+						Regexp: config.String("^api$"),
 					},
-					Enabled:    config.Bool(true),
-					Condition:  &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-					WorkingDir: config.String("sync-tasks/task"),
-					SourceInput: &config.ConsulKVSourceInputConfig{
-						config.ConsulKVMonitorConfig{
+					ConsulKv: &oapigen.ConsulKVModuleInput{
+						Path:       "fake-path",
+						Recurse:    config.Bool(true),
+						Datacenter: config.String("dc"),
+						Namespace:  config.String("ns"),
+					},
+				},
+			},
+			taskConfigExpected: config.TaskConfig{
+				Name:   config.String("task"),
+				Module: config.String("path"),
+				Condition: &config.ScheduleConditionConfig{
+					Cron: config.String("*/10 * * * * * *"),
+				},
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp: config.String("^api$"),
+						},
+					},
+					&config.ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 							Path:       config.String("fake-path"),
-							Recurse:    config.Bool(false),
-							Datacenter: config.String(""),
-							Namespace:  config.String(""),
+							Recurse:    config.Bool(true),
+							Datacenter: config.String("dc"),
+							Namespace:  config.String("ns"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "with_module_input_services_names",
+			// separate test-case for services names because it can't be
+			// combined with 'with_module_inputs' test case.
+			// oapigen.ModuleInput.Services can be set with only 1 Services
+			// module input
+			request: &TaskRequest{
+				Name:   "task",
+				Module: "path",
+				Condition: &oapigen.Condition{
+					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
+				},
+				ModuleInput: &oapigen.ModuleInput{
+					Services: &oapigen.ServicesModuleInput{
+						Names: &[]string{"api"},
+					},
+				},
+			},
+			taskConfigExpected: config.TaskConfig{
+				Name:   config.String("task"),
+				Module: config.String("path"),
+				Condition: &config.ScheduleConditionConfig{
+					Cron: config.String("*/10 * * * * * *"),
+				},
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names: []string{"api"},
 						},
 					},
 				},
@@ -467,9 +614,9 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := tc.request.ToTaskRequestConfig(config.DefaultBufferPeriodConfig(), "task-sync")
+			actual, err := tc.request.ToTaskConfig()
 			require.NoError(t, err)
-			assert.Equal(t, actual, tc.taskConfigExpected)
+			assert.Equal(t, tc.taskConfigExpected, actual)
 		})
 	}
 }
@@ -477,23 +624,25 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 func TestTaskRequest_ToRequestTaskConfig_Error(t *testing.T) {
 	cases := []struct {
 		name     string
-		request  *taskRequest
+		request  *TaskRequest
 		contains string
 	}{
 		{
-			name: "invalid config - missing required field",
-			request: &taskRequest{
-				Name:       "test-name",
-				Services:   &[]string{"api", "web"},
-				WorkingDir: config.String("sync-tasks"),
+			name: "invalid conversion",
+			request: &TaskRequest{
+				Name:     "test-name",
+				Services: &[]string{"api", "web"},
+				BufferPeriod: &oapigen.BufferPeriod{
+					Max: config.String("invalid"),
+				},
 			},
-			contains: "module for the task is required",
+			contains: "invalid duration",
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.request.ToTaskRequestConfig(config.DefaultBufferPeriodConfig(), "task-sync")
+			_, err := tc.request.ToTaskConfig()
 			fmt.Println(err)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tc.contains)
@@ -502,7 +651,7 @@ func TestTaskRequest_ToRequestTaskConfig_Error(t *testing.T) {
 }
 
 func TestTaskResponse_String(t *testing.T) {
-	resp := taskResponse{
+	resp := TaskResponse{
 		RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
 		Task: &oapigen.Task{
 			Name:    "task",
@@ -516,10 +665,10 @@ func TestTaskResponse_String(t *testing.T) {
 			Enabled: config.Bool(true),
 			Condition: &oapigen.Condition{
 				CatalogServices: &oapigen.CatalogServicesCondition{
-					Regexp:            config.String(".*"),
-					SourceIncludesVar: config.Bool(true),
-					Datacenter:        config.String("dc2"),
-					Namespace:         config.String("ns2"),
+					Regexp:           ".*",
+					UseAsModuleInput: config.Bool(true),
+					Datacenter:       config.String("dc2"),
+					Namespace:        config.String("ns2"),
 					NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
 						AdditionalProperties: map[string]string{
 							"key1": "value1",
@@ -528,492 +677,39 @@ func TestTaskResponse_String(t *testing.T) {
 					},
 				},
 			},
-			SourceInput: &oapigen.SourceInput{
-				Services: &oapigen.ServicesSourceInput{
+			ModuleInput: &oapigen.ModuleInput{
+				Services: &oapigen.ServicesModuleInput{
 					Regexp: config.String(""),
 				},
 			},
-			WorkingDir: config.String("sync-tasks/task"),
 		},
 	}
 
-	actual := fmt.Sprintf("%s", resp)
+	actual := fmt.Sprint(resp)
 	expected := `{"request_id":"e9926514-79b8-a8fc-8761-9b6aaccf1e15",` +
 		`"task":{"buffer_period":{"enabled":false,"max":"0s","min":"0s"},` +
 		`"condition":{"catalog_services":{"datacenter":"dc2","namespace":"ns2",` +
 		`"node_meta":{"key1":"value1","key2":"value2"},"regexp":".*",` +
-		`"source_includes_var":true}},"enabled":true,"module":"path","name":"task",` +
-		`"source_input":{"services":{"regexp":""}},"version":"","working_dir":"sync-tasks/task"}}`
+		`"use_as_module_input":true}},"enabled":true,"module":"path",` +
+		`"module_input":{"services":{"regexp":""}},"name":"task",` +
+		`"version":""}}`
 	require.Equal(t, expected, actual)
 }
 
-func TestTaskResponse_taskResponseFromConfigTaskConfig(t *testing.T) {
-	cases := []struct {
-		name              string
-		taskRequestConfig taskRequestConfig
-		expectedResponse  taskResponse
+// Test only bare minimum, task conversion scenarios covered in
+// TestRequest_oapigenTaskFromConfigTask
+func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
+	tc := struct {
+		taskConfig       config.TaskConfig
+		expectedResponse TaskResponse
 	}{
-		{
-			name: "minimum_required_only",
-			taskRequestConfig: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String(""),
-					Name:         config.String("test-name"),
-					Providers:    []string{},
-					Services:     []string{"api", "web"},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					Version:      config.String(""),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition:    config.EmptyConditionConfig(),
-					WorkingDir:   config.String("sync-tasks"),
-					SourceInput:  config.EmptySourceInputConfig(),
-				},
-			},
-			expectedResponse: taskResponse{
-				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
-				Task: &oapigen.Task{
-					Name:        "test-name",
-					Module:      "path",
-					Version:     config.String(""),
-					Description: config.String(""),
-					BufferPeriod: &oapigen.BufferPeriod{
-						Enabled: config.Bool(true),
-						Max:     config.String("20s"),
-						Min:     config.String("5s"),
-					},
-					Enabled:     config.Bool(true),
-					Condition:   &oapigen.Condition{},
-					SourceInput: &oapigen.SourceInput{},
-					WorkingDir:  config.String("sync-tasks"),
-					Services:    &[]string{"api", "web"},
-					Providers:   &[]string{},
-				},
-			},
-		},
-		{
-			name: "basic_fields_filled",
-			taskRequestConfig: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String("test-description"),
-					Name:         config.String("test-name"),
-					Providers:    []string{"test-provider-1", "test-provider-2"},
-					Services:     []string{"api", "web"},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					TFVersion:    config.String(""),
-					Version:      config.String("test-version"),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition:    config.EmptyConditionConfig(),
-					WorkingDir:   config.String("sync-tasks"),
-					SourceInput:  config.EmptySourceInputConfig(),
-				},
-			},
-			expectedResponse: taskResponse{
-				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
-				Task: &oapigen.Task{
-					Name:        "test-name",
-					Module:      "path",
-					Version:     config.String("test-version"),
-					Description: config.String("test-description"),
-					BufferPeriod: &oapigen.BufferPeriod{
-						Enabled: config.Bool(true),
-						Max:     config.String("20s"),
-						Min:     config.String("5s"),
-					},
-					Enabled:     config.Bool(true),
-					Condition:   &oapigen.Condition{},
-					SourceInput: &oapigen.SourceInput{},
-					WorkingDir:  config.String("sync-tasks"),
-					Services:    &[]string{"api", "web"},
-					Providers:   &[]string{"test-provider-1", "test-provider-2"},
-				},
-			},
-		},
-		{
-			name: "with_services_condition_regexp",
-			taskRequestConfig: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String(""),
-					Name:         config.String("task"),
-					Providers:    []string{},
-					Services:     []string{},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					Version:      config.String(""),
-					TFVersion:    config.String(""),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition: &config.ServicesConditionConfig{
-						config.ServicesMonitorConfig{
-							Regexp:             config.String("^web.*"),
-							Datacenter:         config.String(""),
-							Namespace:          config.String(""),
-							Filter:             config.String(""),
-							CTSUserDefinedMeta: map[string]string{},
-						},
-					},
-					WorkingDir:  config.String("sync-tasks"),
-					SourceInput: config.EmptySourceInputConfig(),
-				},
-			},
-			expectedResponse: taskResponse{
-				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
-				Task: &oapigen.Task{
-					Name:        "task",
-					Module:      "path",
-					Version:     config.String(""),
-					Description: config.String(""),
-					BufferPeriod: &oapigen.BufferPeriod{
-						Enabled: config.Bool(true),
-						Max:     config.String("20s"),
-						Min:     config.String("5s"),
-					},
-					Enabled: config.Bool(true),
-					Condition: &oapigen.Condition{
-						Services: &oapigen.ServicesCondition{
-							Regexp: config.String("^web.*"),
-						},
-					},
-					SourceInput: &oapigen.SourceInput{},
-					WorkingDir:  config.String("sync-tasks"),
-					Services:    &[]string{},
-					Providers:   &[]string{},
-				},
-			},
-		},
-		{
-			name: "with_services_condition_names",
-			taskRequestConfig: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String(""),
-					Name:         config.String("task"),
-					Providers:    []string{},
-					Services:     []string{},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					Version:      config.String(""),
-					TFVersion:    config.String(""),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition: &config.ServicesConditionConfig{
-						config.ServicesMonitorConfig{
-							Names:              []string{"api", "web"},
-							Datacenter:         config.String(""),
-							Namespace:          config.String(""),
-							Filter:             config.String(""),
-							CTSUserDefinedMeta: map[string]string{},
-						},
-					},
-					WorkingDir:  config.String("sync-tasks"),
-					SourceInput: config.EmptySourceInputConfig(),
-				},
-			},
-			expectedResponse: taskResponse{
-				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
-				Task: &oapigen.Task{
-					Name:        "task",
-					Module:      "path",
-					Version:     config.String(""),
-					Description: config.String(""),
-					BufferPeriod: &oapigen.BufferPeriod{
-						Enabled: config.Bool(true),
-						Max:     config.String("20s"),
-						Min:     config.String("5s"),
-					},
-					Enabled: config.Bool(true),
-					Condition: &oapigen.Condition{
-						Services: &oapigen.ServicesCondition{
-							Names: &[]string{"api", "web"},
-						},
-					},
-					SourceInput: &oapigen.SourceInput{},
-					WorkingDir:  config.String("sync-tasks"),
-					Services:    &[]string{},
-					Providers:   &[]string{},
-				},
-			},
-		},
-		{
-			name: "with_catalog_services_condition",
-			taskRequestConfig: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String(""),
-					Name:         config.String("task"),
-					Providers:    []string{},
-					Services:     []string{},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					Version:      config.String(""),
-					TFVersion:    config.String(""),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition: &config.CatalogServicesConditionConfig{
-						config.CatalogServicesMonitorConfig{
-							Regexp:            config.String(".*"),
-							SourceIncludesVar: config.Bool(true),
-							Datacenter:        config.String("dc2"),
-							Namespace:         config.String("ns2"),
-							NodeMeta: map[string]string{
-								"key1": "value1",
-								"key2": "value2",
-							},
-						},
-					},
-					WorkingDir:  config.String("sync-tasks"),
-					SourceInput: config.EmptySourceInputConfig(),
-				},
-			},
-			expectedResponse: taskResponse{
-				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
-				Task: &oapigen.Task{
-					Name:        "task",
-					Module:      "path",
-					Version:     config.String(""),
-					Description: config.String(""),
-					BufferPeriod: &oapigen.BufferPeriod{
-						Enabled: config.Bool(true),
-						Max:     config.String("20s"),
-						Min:     config.String("5s"),
-					},
-					Enabled: config.Bool(true),
-					Condition: &oapigen.Condition{
-						CatalogServices: &oapigen.CatalogServicesCondition{
-							Regexp:            config.String(".*"),
-							SourceIncludesVar: config.Bool(true),
-							Datacenter:        config.String("dc2"),
-							Namespace:         config.String("ns2"),
-							NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
-								AdditionalProperties: map[string]string{
-									"key1": "value1",
-									"key2": "value2",
-								},
-							},
-						},
-					},
-					SourceInput: &oapigen.SourceInput{},
-					WorkingDir:  config.String("sync-tasks"),
-					Services:    &[]string{},
-					Providers:   &[]string{},
-				},
-			},
-		},
-		{
-			name: "with_consul_kv_condition",
-			taskRequestConfig: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String(""),
-					Name:         config.String("task"),
-					Providers:    []string{},
-					Services:     []string{"api", "web"},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					Version:      config.String(""),
-					TFVersion:    config.String(""),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition: &config.ConsulKVConditionConfig{
-						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
-							Path:       config.String("key-path"),
-							Recurse:    config.Bool(true),
-							Datacenter: config.String("dc2"),
-							Namespace:  config.String("ns2"),
-						},
-						SourceIncludesVar: config.Bool(true),
-					},
-					WorkingDir:  config.String("sync-tasks"),
-					SourceInput: config.EmptySourceInputConfig(),
-				},
-			},
-			expectedResponse: taskResponse{
-				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
-				Task: &oapigen.Task{
-					Name:        "task",
-					Module:      "path",
-					Version:     config.String(""),
-					Description: config.String(""),
-					BufferPeriod: &oapigen.BufferPeriod{
-						Enabled: config.Bool(true),
-						Max:     config.String("20s"),
-						Min:     config.String("5s"),
-					},
-					Enabled: config.Bool(true),
-					Condition: &oapigen.Condition{
-						ConsulKv: &oapigen.ConsulKVCondition{
-							Path:              "key-path",
-							Recurse:           config.Bool(true),
-							Datacenter:        config.String("dc2"),
-							Namespace:         config.String("ns2"),
-							SourceIncludesVar: config.Bool(true),
-						},
-					},
-					SourceInput: &oapigen.SourceInput{},
-					WorkingDir:  config.String("sync-tasks"),
-					Services:    &[]string{"api", "web"},
-					Providers:   &[]string{},
-				},
-			},
-		},
-		{
-			name: "with_schedule_condition",
-			taskRequestConfig: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String(""),
-					Name:         config.String("task"),
-					Providers:    []string{},
-					Services:     []string{"api", "web"},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					Version:      config.String(""),
-					TFVersion:    config.String(""),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition:    &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-					WorkingDir:   config.String("sync-tasks"),
-					SourceInput:  config.EmptySourceInputConfig(),
-				},
-			},
-			expectedResponse: taskResponse{
-				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
-				Task: &oapigen.Task{
-					Name:        "task",
-					Module:      "path",
-					Version:     config.String(""),
-					Description: config.String(""),
-					BufferPeriod: &oapigen.BufferPeriod{
-						Enabled: config.Bool(true),
-						Max:     config.String("20s"),
-						Min:     config.String("5s"),
-					},
-					Enabled: config.Bool(true),
-					Condition: &oapigen.Condition{
-						Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
-					},
-					SourceInput: &oapigen.SourceInput{},
-					WorkingDir:  config.String("sync-tasks"),
-					Services:    &[]string{"api", "web"},
-					Providers:   &[]string{},
-				},
-			},
-		},
-		{
-			name: "with_services_source_input",
-			taskRequestConfig: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String(""),
-					Name:         config.String("task"),
-					Services:     []string{},
-					Providers:    []string{},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					Version:      config.String(""),
-					TFVersion:    config.String(""),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition:    &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-					WorkingDir:   config.String("sync-tasks"),
-					SourceInput: &config.ServicesSourceInputConfig{
-						config.ServicesMonitorConfig{
-							Regexp:             config.String("^api$"),
-							Datacenter:         config.String(""),
-							Namespace:          config.String(""),
-							Filter:             config.String(""),
-							CTSUserDefinedMeta: map[string]string{},
-						},
-					},
-				},
-			},
-			expectedResponse: taskResponse{
-				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
-				Task: &oapigen.Task{
-					Name:        "task",
-					Module:      "path",
-					Version:     config.String(""),
-					Description: config.String(""),
-					BufferPeriod: &oapigen.BufferPeriod{
-						Enabled: config.Bool(true),
-						Max:     config.String("20s"),
-						Min:     config.String("5s"),
-					},
-					Enabled: config.Bool(true),
-					Condition: &oapigen.Condition{
-						Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
-					},
-					SourceInput: &oapigen.SourceInput{
-						Services: &oapigen.ServicesSourceInput{
-							Regexp: config.String("^api$"),
-						},
-					},
-					WorkingDir: config.String("sync-tasks"),
-					Services:   &[]string{},
-					Providers:  &[]string{},
-				},
-			},
-		},
-		{
-			name: "with_consul_kv_source_input",
-			taskRequestConfig: taskRequestConfig{
-				TaskConfig: config.TaskConfig{
-					Description:  config.String(""),
-					Name:         config.String("task"),
-					Services:     []string{"api", "web"},
-					Providers:    []string{},
-					Module:       config.String("path"),
-					VarFiles:     []string{},
-					Version:      config.String(""),
-					TFVersion:    config.String(""),
-					BufferPeriod: config.DefaultBufferPeriodConfig(),
-					Enabled:      config.Bool(true),
-					Condition:    &config.ScheduleConditionConfig{config.String("*/10 * * * * * *")},
-					WorkingDir:   config.String("sync-tasks"),
-					SourceInput: &config.ConsulKVSourceInputConfig{
-						config.ConsulKVMonitorConfig{
-							Path:       config.String("fake-path"),
-							Recurse:    config.Bool(false),
-							Datacenter: config.String(""),
-							Namespace:  config.String(""),
-						},
-					},
-				},
-			},
-			expectedResponse: taskResponse{
-				RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
-				Task: &oapigen.Task{
-					Name:        "task",
-					Module:      "path",
-					Version:     config.String(""),
-					Description: config.String(""),
-					BufferPeriod: &oapigen.BufferPeriod{
-						Enabled: config.Bool(true),
-						Max:     config.String("20s"),
-						Min:     config.String("5s"),
-					},
-					Enabled: config.Bool(true),
-					Condition: &oapigen.Condition{
-						Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
-					},
-					SourceInput: &oapigen.SourceInput{
-						ConsulKv: &oapigen.ConsulKVSourceInput{
-							Path:       "fake-path",
-							Recurse:    config.Bool(false),
-							Datacenter: config.String(""),
-							Namespace:  config.String(""),
-						},
-					},
-					WorkingDir: config.String("sync-tasks"),
-					Services:   &[]string{"api", "web"},
-					Providers:  &[]string{},
-				},
-			},
+		taskConfig: config.TaskConfig{},
+		expectedResponse: TaskResponse{
+			RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
+			Task:      &oapigen.Task{},
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			actual := taskResponseFromTaskRequestConfig(tc.taskRequestConfig, "e9926514-79b8-a8fc-8761-9b6aaccf1e15")
-			assert.Equal(t, actual, tc.expectedResponse)
-		})
-	}
+	actual := taskResponseFromTaskConfig(tc.taskConfig, "e9926514-79b8-a8fc-8761-9b6aaccf1e15")
+	assert.Equal(t, tc.expectedResponse, actual)
 }

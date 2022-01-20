@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -23,7 +22,7 @@ type ReadOnly struct {
 }
 
 // NewReadOnly configures and initializes a new ReadOnly controller
-func NewReadOnly(conf *config.Config) (Controller, error) {
+func NewReadOnly(conf *config.Config) (*ReadOnly, error) {
 	// Run the driver with logging to output the Terraform plan to stdout
 	if tfConfig := conf.Driver.Terraform; tfConfig != nil && !MuteReadOnlyController {
 		tfConfig.Log = config.Bool(true)
@@ -81,11 +80,6 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 	}
 }
 
-// ServeAPI runs the API server for the controller
-func (ctrl *ReadOnly) ServeAPI(ctx context.Context) error {
-	return errors.New("server API is not supported for ReadOnly controller")
-}
-
 func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, error) {
 	task := d.Task()
 	taskName := task.Name()
@@ -104,8 +98,15 @@ func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, 
 		ctrl.logger.Trace("template for task rendered", taskNameLogKey, taskName)
 
 		ctrl.logger.Info("inspecting task", taskNameLogKey, taskName)
-		if _, err := d.InspectTask(ctx); err != nil {
+		p, err := d.InspectTask(ctx)
+		if err != nil {
 			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
+		}
+
+		if p.URL != "" {
+			ctrl.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan, "url", p.URL)
+		} else {
+			ctrl.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan)
 		}
 
 		ctrl.logger.Info("inspected task", taskNameLogKey, taskName)

@@ -7,12 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestServicesSourceInputConfig_Copy(t *testing.T) {
+func TestServicesModuleInputConfig_Copy(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name string
-		a    *ServicesSourceInputConfig
+		a    *ServicesModuleInputConfig
 	}{
 		{
 			"nil",
@@ -20,11 +20,11 @@ func TestServicesSourceInputConfig_Copy(t *testing.T) {
 		},
 		{
 			"empty",
-			&ServicesSourceInputConfig{},
+			&ServicesModuleInputConfig{},
 		},
 		{
 			"happy_path",
-			&ServicesSourceInputConfig{
+			&ServicesModuleInputConfig{
 				ServicesMonitorConfig{
 					Regexp:     String("^web.*"),
 					Datacenter: String("dc"),
@@ -51,26 +51,26 @@ func TestServicesSourceInputConfig_Copy(t *testing.T) {
 	}
 }
 
-func TestServicesSourceInputConfig_Merge(t *testing.T) {
+func TestServicesModuleInputConfig_Merge(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name string
-		a    *ServicesSourceInputConfig
-		b    *ServicesSourceInputConfig
-		r    *ServicesSourceInputConfig
+		a    *ServicesModuleInputConfig
+		b    *ServicesModuleInputConfig
+		r    *ServicesModuleInputConfig
 	}{
 		{
 			"nil_a",
 			nil,
-			&ServicesSourceInputConfig{},
-			&ServicesSourceInputConfig{},
+			&ServicesModuleInputConfig{},
+			&ServicesModuleInputConfig{},
 		},
 		{
 			"nil_b",
-			&ServicesSourceInputConfig{},
+			&ServicesModuleInputConfig{},
 			nil,
-			&ServicesSourceInputConfig{},
+			&ServicesModuleInputConfig{},
 		},
 		{
 			"nil_both",
@@ -80,13 +80,13 @@ func TestServicesSourceInputConfig_Merge(t *testing.T) {
 		},
 		{
 			"empty",
-			&ServicesSourceInputConfig{},
-			&ServicesSourceInputConfig{},
-			&ServicesSourceInputConfig{},
+			&ServicesModuleInputConfig{},
+			&ServicesModuleInputConfig{},
+			&ServicesModuleInputConfig{},
 		},
 		{
 			"happy_path",
-			&ServicesSourceInputConfig{
+			&ServicesModuleInputConfig{
 				ServicesMonitorConfig{
 					Regexp:             String("regexp"),
 					Datacenter:         String("datacenter_overriden"),
@@ -95,7 +95,7 @@ func TestServicesSourceInputConfig_Merge(t *testing.T) {
 					CTSUserDefinedMeta: map[string]string{},
 				},
 			},
-			&ServicesSourceInputConfig{
+			&ServicesModuleInputConfig{
 				ServicesMonitorConfig{
 					Regexp:             nil,
 					Datacenter:         String("datacenter"),
@@ -104,7 +104,7 @@ func TestServicesSourceInputConfig_Merge(t *testing.T) {
 					CTSUserDefinedMeta: map[string]string{},
 				},
 			},
-			&ServicesSourceInputConfig{
+			&ServicesModuleInputConfig{
 				ServicesMonitorConfig{
 					Regexp:             String("regexp"),
 					Datacenter:         String("datacenter"),
@@ -129,26 +129,23 @@ func TestServicesSourceInputConfig_Merge(t *testing.T) {
 	}
 }
 
-func TestServicesSourceInputConfig_Finalize(t *testing.T) {
+func TestServicesModuleInputConfig_Finalize(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name string
-		s    []string
-		i    *ServicesSourceInputConfig
-		r    *ServicesSourceInputConfig
+		i    *ServicesModuleInputConfig
+		r    *ServicesModuleInputConfig
 	}{
 		{
 			"nil",
-			[]string{},
 			nil,
 			nil,
 		},
 		{
 			"happy_path",
-			[]string{},
-			&ServicesSourceInputConfig{},
-			&ServicesSourceInputConfig{
+			&ServicesModuleInputConfig{},
+			&ServicesModuleInputConfig{
 				ServicesMonitorConfig{
 					Regexp:             nil,
 					Names:              []string{},
@@ -163,24 +160,24 @@ func TestServicesSourceInputConfig_Finalize(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.Finalize(tc.s)
+			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}
 }
 
-func TestServicesSourceInputConfig_Validate(t *testing.T) {
+func TestServicesModuleInputConfig_Validate(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name      string
 		expectErr bool
-		c         *ServicesSourceInputConfig
+		c         *ServicesModuleInputConfig
 	}{
 		{
 			"valid",
 			false,
-			&ServicesSourceInputConfig{
+			&ServicesModuleInputConfig{
 				ServicesMonitorConfig{
 					Regexp: String(".*"),
 				},
@@ -194,7 +191,7 @@ func TestServicesSourceInputConfig_Validate(t *testing.T) {
 		{
 			"invalid",
 			true,
-			&ServicesSourceInputConfig{
+			&ServicesModuleInputConfig{
 				ServicesMonitorConfig{
 					Regexp: String("*"),
 				},
@@ -219,12 +216,12 @@ func TestGoString(t *testing.T) {
 
 	cases := []struct {
 		name     string
-		ssv      *ServicesSourceInputConfig
+		ssv      *ServicesModuleInputConfig
 		expected string
 	}{
 		{
-			"configured services source_input",
-			&ServicesSourceInputConfig{
+			"configured services module_input",
+			&ServicesModuleInputConfig{
 				ServicesMonitorConfig{
 					Regexp:     String("^api$"),
 					Datacenter: String("dc2"),
@@ -235,7 +232,7 @@ func TestGoString(t *testing.T) {
 					},
 				},
 			},
-			"&ServicesSourceInputConfig{" +
+			"&ServicesModuleInputConfig{" +
 				"&ServicesMonitorConfig{" +
 				"Regexp:^api$, " +
 				"Names:[], " +
@@ -247,9 +244,9 @@ func TestGoString(t *testing.T) {
 				"}",
 		},
 		{
-			"nil services source_input",
+			"nil services module_input",
 			nil,
-			"(*ServicesSourceInputConfig)(nil)",
+			"(*ServicesModuleInputConfig)(nil)",
 		},
 	}
 

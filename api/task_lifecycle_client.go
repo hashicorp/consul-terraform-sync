@@ -1,8 +1,11 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
@@ -81,6 +84,40 @@ func (c *TaskLifecycleClient) Scheme() string {
 	return fmt.Sprintf(c.scheme)
 }
 
+// CreateTask takes a task request and run option and sends this information to the client. It then returns
+// a task response object and any errors to the caller.
+func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, req TaskRequest) (TaskResponse, error) {
+	var run oapigen.CreateTaskParamsRun
+	switch runOption {
+	case RunOptionInspect:
+		run = RunOptionInspect
+	case RunOptionNow:
+		run = RunOptionNow
+	default:
+		err := errors.New("invalid run option provided")
+		return TaskResponse{}, err
+	}
+
+	resp, err := c.Client.CreateTask(ctx, &oapigen.CreateTaskParams{Run: &run}, oapigen.CreateTaskJSONRequestBody(req))
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return TaskResponse{}, err
+	}
+
+	var taskResp TaskResponse
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&taskResp)
+	if err != nil {
+		err = fmt.Errorf("invalid response for task %s, %w", req.Name, err)
+
+		return TaskResponse{}, err
+	}
+
+	return taskResp, nil
+}
+
 var _ httpClient = (*TaskLifecycleHTTPClient)(nil)
 
 // TaskLifecycleHTTPClient is an httpClient for task life cycle requests and
@@ -106,21 +143,34 @@ func (d *TaskLifecycleHTTPClient) Do(req *http.Request) (*http.Response, error) 
 	// defer resp.Body.Close() not called for happy path, only called for
 	// unhappy path. caller of this method will close if returned err == nil.
 
-	if resp.StatusCode != http.StatusOK {
+	if checkStatusCodeCategory(ClientErrorResponseCategory, resp.StatusCode) ||
+		checkStatusCodeCategory(ServerErrorResponseCategory, resp.StatusCode) {
 		defer resp.Body.Close()
 
-		var errResp ErrorResponse
-		decoder := json.NewDecoder(resp.Body)
-		if err = decoder.Decode(&errResp); err != nil {
-			return nil, err
+		// Nominal scenario is an error will be application/json type, if not application/json assume that the error
+		// is plaintext
+		var errMsg string
+		if resp.Header.Get("Content-Type") == "application/json" {
+			var errResp oapigen.ErrorResponse
+			decoder := json.NewDecoder(resp.Body)
+			if err = decoder.Decode(&errResp); err != nil {
+				return nil, err
+			}
+			errMsg = fmt.Sprintf("%s, Request ID: %s", errResp.Error.Message, errResp.RequestId)
+		} else {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			errMsg = string(b)
 		}
 
-		if msg, ok := errResp.ErrorMessage(); ok && msg != "" {
+		if errMsg == "" {
+			return nil, fmt.Errorf("request returned %d status code", resp.StatusCode)
+		} else {
 			return nil, fmt.Errorf("request returned %d status code with error: %s",
-				resp.StatusCode, msg)
+				resp.StatusCode, errMsg)
 		}
-
-		return nil, fmt.Errorf("request returned %d status code", resp.StatusCode)
 	}
 
 	return resp, nil

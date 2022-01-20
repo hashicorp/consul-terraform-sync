@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
@@ -41,16 +39,14 @@ type EnabledSummary struct {
 
 // overallStatusHandler handles the overall status endpoint
 type overallStatusHandler struct {
-	store   *event.Store
-	drivers *driver.Drivers
+	ctrl    Server
 	version string
 }
 
 // newOverallStatusHandler returns a new overall status handler
-func newOverallStatusHandler(store *event.Store, drivers *driver.Drivers, version string) *overallStatusHandler {
+func newOverallStatusHandler(ctrl Server, version string) *overallStatusHandler {
 	return &overallStatusHandler{
-		store:   store,
-		drivers: drivers,
+		ctrl:    ctrl,
 		version: version,
 	}
 }
@@ -58,12 +54,18 @@ func newOverallStatusHandler(store *event.Store, drivers *driver.Drivers, versio
 // ServeHTTP serves the overall status endpoint which returns a struct
 // containing overall information across all tasks
 func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	logger := logging.FromContext(r.Context()).Named(overallStatusSubsystemName)
+	ctx := r.Context()
+	logger := logging.FromContext(ctx).Named(overallStatusSubsystemName)
 	logger.Trace("requesting task status", "url_path", r.URL.Path)
 	switch r.Method {
 	case http.MethodGet:
 
-		data := h.store.Read("")
+		data, err := h.ctrl.Events(ctx, "")
+		if err != nil {
+			jsonErrorResponse(ctx, w, http.StatusInternalServerError, err)
+			return
+		}
+
 		taskSummary := TaskSummary{}
 		for _, events := range data {
 			successes := make([]bool, len(events))
@@ -81,20 +83,25 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 			}
 		}
 
-		for taskName, d := range h.drivers.Map() {
+		tasks, err := h.ctrl.Tasks(ctx)
+		if err != nil {
+			jsonErrorResponse(ctx, w, http.StatusInternalServerError, err)
+			return
+		}
+		for _, task := range tasks {
 			// look for any tasks that have a driver but no events
-			if _, ok := data[taskName]; !ok {
+			if _, ok := data[*task.Name]; !ok {
 				taskSummary.Status.Unknown++
 			}
 
-			if d.Task().IsEnabled() {
+			if *task.Enabled {
 				taskSummary.Enabled.True++
 			} else {
 				taskSummary.Enabled.False++
 			}
 		}
 
-		err := jsonResponse(w, http.StatusOK, OverallStatus{
+		err = jsonResponse(w, http.StatusOK, OverallStatus{
 			TaskSummary: taskSummary,
 		})
 		if err != nil {
@@ -104,6 +111,6 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		err := fmt.Errorf("'%s' in an unsupported method. The overallStatus API "+
 			"currently supports the method(s): '%s'", r.Method, http.MethodGet)
 		logger.Trace("unsupported method: %s", err)
-		jsonErrorResponse(r.Context(), w, http.StatusMethodNotAllowed, err)
+		jsonErrorResponse(ctx, w, http.StatusMethodNotAllowed, err)
 	}
 }

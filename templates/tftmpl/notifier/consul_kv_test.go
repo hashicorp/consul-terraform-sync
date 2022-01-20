@@ -60,7 +60,7 @@ func Test_ConsulKV_Notify_Once_Mode_Key_Pairs(t *testing.T) {
 
 		tmpl := new(mocks.Template)
 		tmpl.On("Notify", mock.Anything).Return(true).Twice()
-		n := NewConsulKV(tmpl, 2)
+		n := NewConsulKV(tmpl, 3)
 
 		// 1. first services dependency does not notify
 		notify := n.Notify([]*dep.HealthService{})
@@ -94,7 +94,7 @@ func Test_ConsulKV_Notify_Once_Mode_Key_Pairs(t *testing.T) {
 
 		tmpl := new(mocks.Template)
 		tmpl.On("Notify", mock.Anything).Return(true).Once()
-		n := NewConsulKV(tmpl, 1)
+		n := NewConsulKV(tmpl, 2)
 
 		// 1. services dependency does not notify
 		notify := n.Notify([]*dep.HealthService{})
@@ -127,7 +127,7 @@ func Test_ConsulKV_Notify_Once_Mode_Single_Key(t *testing.T) {
 
 		tmpl := new(mocks.Template)
 		tmpl.On("Notify", mock.Anything).Return(true).Times(2)
-		n := NewConsulKV(tmpl, 2)
+		n := NewConsulKV(tmpl, 3)
 
 		// 1. first services dependency does not notify
 		notify := n.Notify([]*dep.HealthService{})
@@ -161,7 +161,7 @@ func Test_ConsulKV_Notify_Once_Mode_Single_Key(t *testing.T) {
 
 		tmpl := new(mocks.Template)
 		tmpl.On("Notify", mock.Anything).Return(true).Once()
-		n := NewConsulKV(tmpl, 1)
+		n := NewConsulKV(tmpl, 2)
 
 		// 1. services dependency does not notify
 		notify := n.Notify([]*dep.HealthService{})

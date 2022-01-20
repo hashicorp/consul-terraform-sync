@@ -252,19 +252,16 @@ func TestServicesMonitorConfig_Finalize(t *testing.T) {
 
 	cases := []struct {
 		name string
-		s    []string
 		i    *ServicesMonitorConfig
 		r    *ServicesMonitorConfig
 	}{
 		{
 			"nil",
-			[]string{},
 			nil,
 			nil,
 		},
 		{
 			"empty",
-			[]string{},
 			&ServicesMonitorConfig{},
 			&ServicesMonitorConfig{
 				Regexp:             nil,
@@ -277,7 +274,6 @@ func TestServicesMonitorConfig_Finalize(t *testing.T) {
 		},
 		{
 			"regexp_fully_configured",
-			[]string{},
 			&ServicesMonitorConfig{
 				Regexp:     String("^web.*"),
 				Datacenter: String("dc"),
@@ -300,7 +296,6 @@ func TestServicesMonitorConfig_Finalize(t *testing.T) {
 		},
 		{
 			"names_fully_configured",
-			[]string{},
 			&ServicesMonitorConfig{
 				Names:      []string{"api"},
 				Datacenter: String("dc"),
@@ -321,24 +316,11 @@ func TestServicesMonitorConfig_Finalize(t *testing.T) {
 				},
 			},
 		},
-		{
-			"services_param_unused",
-			[]string{"api"},
-			&ServicesMonitorConfig{},
-			&ServicesMonitorConfig{
-				Regexp:             nil,
-				Names:              []string{},
-				Datacenter:         String(""),
-				Namespace:          String(""),
-				Filter:             String(""),
-				CTSUserDefinedMeta: map[string]string{},
-			},
-		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.Finalize(tc.s)
+			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}
@@ -470,4 +452,28 @@ func TestServicesMonitorConfig_GoString(t *testing.T) {
 			require.Equal(t, tc.expected, actual)
 		})
 	}
+}
+
+// TestServicesMonitorConfig_RegexpNil tests the exception that when `Regexp` is
+// unset, it retains nil value after Finalize() and Validate(). Tests it is
+// idempotent
+func TestServicesMonitorConfig_RegexpNil(t *testing.T) {
+	t.Parallel()
+
+	conf := &ServicesMonitorConfig{
+		Names: []string{"api"},
+		// Regexp unset
+	}
+
+	// Confirm `Regexp` nil
+	conf.Finalize()
+	err := conf.Validate()
+	assert.NoError(t, err)
+	assert.Nil(t, conf.Regexp)
+
+	// Confirm idempotent - Validate() doesn't error and `Regexp` still nil
+	conf.Finalize()
+	err = conf.Validate()
+	assert.NoError(t, err)
+	assert.Nil(t, conf.Regexp)
 }

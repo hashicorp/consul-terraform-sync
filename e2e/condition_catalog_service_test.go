@@ -32,7 +32,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 		include     bool
 	}{
 		{
-			"source_includes_var=true",
+			"use_as_module_input=true",
 			"cs_condition_registration_include",
 			"api_tags.txt",
 			`task {
@@ -40,20 +40,24 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 	services = ["api"]
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
-		source_includes_var = true
+		regexp = "^api$"
+		use_as_module_input = true
 	}
 }`,
 			true,
 		},
 		{
-			"source_includes_var=false",
+			"use_as_module_input=false",
 			"cs_condition_registration",
 			"api-1.txt",
 			`task {
 	name = "catalog_task"
 	services = ["api"]
 	module = "./test_modules/local_instances_file"
-	condition "catalog-services" {}
+	condition "catalog-services" {
+		regexp = "^api$"
+		use_as_module_input = false
+	}
 }`,
 			false,
 		},
@@ -82,25 +86,29 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 		taskConf string
 	}{
 		{
-			"source_includes_var=true",
+			"use_as_module_input=true",
 			true,
 			`task {
 	name = "catalog_task"
 	services = ["api", "db"]
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
-		source_includes_var = true
+		regexp = "^api$|^db$"
+		use_as_module_input = true
 	}
 }`,
 		},
 		{
-			"source_includes_var=false",
+			"use_as_module_input=false",
 			false,
 			`task {
 	name = "catalog_task"
 	services = ["api", "db"]
 	module = "./test_modules/local_instances_file"
-	condition "catalog-services" {}
+	condition "catalog-services" {
+		regexp = "^api$|^db$"
+		use_as_module_input = false
+	}
 }`,
 		},
 	}
@@ -120,7 +128,7 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 
 // TestCondition_CatalogServices_Include runs the CTS binary. It specifically
 // tests a task configured with a catalog service condition with the
-// source_includes_var = true. This test confirms that the catalog_service
+// use_as_module_input = true. This test confirms that the catalog_service
 // definition is consumed by a module as expected.
 func TestCondition_CatalogServices_Include(t *testing.T) {
 	t.Parallel()
@@ -135,7 +143,7 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "db|web"
-		source_includes_var = true
+		use_as_module_input = true
 	}
 }
 `
@@ -172,7 +180,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "api-"
-		source_includes_var = true
+		use_as_module_input = true
 	}
 }
 `, taskName)
@@ -240,7 +248,7 @@ task {
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "api"
-		source_includes_var = true
+		use_as_module_input = true
 	}
 }
 task {
@@ -248,7 +256,7 @@ task {
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "^api$|^web$"
-		source_includes_var = true
+		use_as_module_input = true
 	}
 }
 task {
@@ -256,7 +264,7 @@ task {
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = ".*"
-		source_includes_var = true
+		use_as_module_input = true
 	}
 }
 `, apiTaskName, apiWebTaskName, allTaskName)

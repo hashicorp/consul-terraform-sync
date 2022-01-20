@@ -18,6 +18,10 @@ type ConsulKVMonitorConfig struct {
 	Namespace  *string `mapstructure:"namespace" json:"namespace"`
 }
 
+func (c *ConsulKVMonitorConfig) VariableType() string {
+	return "consul_kv"
+}
+
 // Copy returns a deep copy of this configuration.
 func (c *ConsulKVMonitorConfig) Copy() MonitorConfig {
 	if c == nil {
@@ -75,7 +79,7 @@ func (c *ConsulKVMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *ConsulKVMonitorConfig) Finalize([]string) {
+func (c *ConsulKVMonitorConfig) Finalize() {
 	if c == nil { // config not required, return early
 		return
 	}

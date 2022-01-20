@@ -5,104 +5,153 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/event"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
-	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
-	"github.com/hashicorp/consul-terraform-sync/testutils"
-	"github.com/hashicorp/go-rootcerts"
 )
 
 func TestServe(t *testing.T) {
 	t.Parallel()
 
+	port := testutils.FreePort(t)
+	// remove request_id from response to simplify testing
+	re := regexp.MustCompile(`"request_id":"(\w|-)+",?`)
 	cases := []struct {
 		name       string
 		path       string
 		method     string
 		body       string
+		mock       func(*mocks.Server)
 		statusCode int
+		respBody   string
 	}{
 		{
 			"overall status",
 			"status",
 			http.MethodGet,
 			"",
+			func(ctrl *mocks.Server) {
+				ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+					On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
+			},
 			http.StatusOK,
-		},
-		{
+			`{"task_summary":{"status":{"successful":0,"errored":0,"critical":0,"unknown":0},"enabled":{"true":0,"false":0}}}
+`,
+		}, {
 			"task status: all",
 			"status/tasks",
 			http.MethodGet,
 			"",
+			func(ctrl *mocks.Server) {
+				ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+					On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
+			},
 			http.StatusOK,
-		},
-		{
+			`{}
+`,
+		}, {
 			"task status: single",
 			"status/tasks/task_b",
 			http.MethodGet,
 			"",
+			func(ctrl *mocks.Server) {
+				taskName := "task_b"
+				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{
+					Name:    &taskName,
+					Enabled: config.Bool(true),
+				}, nil).
+					On("Events", mock.Anything, taskName).Return(map[string][]event.Event{}, nil)
+			},
 			http.StatusOK,
-		},
-		{
-			"update task (patch)",
-			"tasks/task_b",
-			http.MethodPatch,
-			`{"enabled": true}`,
-			http.StatusOK,
-		},
-		{
+			`{"task_b":{"task_name":"task_b","status":"unknown","enabled":true,"providers":null,"services":null,"events_url":""}}
+`,
+		}, {
+			"create task",
+			"tasks",
+			http.MethodPost,
+			`{
+	"name": "task_b",
+	"module": "module",
+	"services": ["api"],
+	"enabled": true
+}`,
+			func(ctrl *mocks.Server) {
+				taskConf := config.TaskConfig{
+					Name:     config.String("task_b"),
+					Enabled:  config.Bool(true),
+					Module:   config.String("module"),
+					Services: []string{"api"},
+				}
+				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
+				ctrl.On("TaskCreate", mock.Anything, taskConf).Return(taskConf, nil)
+			},
+			http.StatusCreated,
+			`{"task":{"enabled":true,"module":"module","name":"task_b","services":["api"]}}
+`,
+		}, {
 			"delete task",
 			"tasks/task_b",
 			http.MethodDelete,
 			"",
+			func(ctrl *mocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, nil)
+				ctrl.On("TaskDelete", mock.Anything, "task_b").Return(nil)
+			},
 			http.StatusOK,
+			"{}\n",
+		}, {
+			"update task (patch)",
+			"tasks/task_b",
+			http.MethodPatch,
+			`{"enabled": true}`,
+			func(ctrl *mocks.Server) {
+				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, nil)
+				ctrl.On("TaskUpdate", mock.Anything, mock.Anything, "").Return(true, "", "", nil)
+			},
+			http.StatusOK,
+			"{}\n",
 		},
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	port := testutils.FreePort(t)
-
-	task, err := driver.NewTask(driver.TaskConfig{Enabled: true})
-	require.NoError(t, err)
-
-	drivers := driver.NewDrivers()
-	d := new(mocks.Driver)
-	d.On("UpdateTask", mock.Anything, mock.Anything).
-		Return(driver.InspectPlan{}, nil).Once()
-	d.On("Task").Return(task)
-	drivers.Add("task_b", d)
-
-	api, err := NewAPI(&APIConfig{
-		Drivers: drivers,
-		Port:    port,
-	})
-	require.NoError(t, err)
-
-	go api.Serve(ctx)
-	time.Sleep(3 * time.Second)
-
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			ctrl := new(mocks.Server)
+			tc.mock(ctrl)
+			api, err := NewAPI(APIConfig{
+				Controller: ctrl,
+				Port:       port,
+			})
+			require.NoError(t, err)
+			go api.Serve(ctx)
+			time.Sleep(500 * time.Millisecond)
+
 			u := fmt.Sprintf("http://localhost:%d/%s/%s",
 				port, defaultAPIVersion, tc.path)
 
 			resp := testutils.RequestHTTP(t, tc.method, u, tc.body)
 			defer resp.Body.Close()
 			assert.Equal(t, tc.statusCode, resp.StatusCode)
+
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			actual := re.ReplaceAll(respBody, nil)
+			assert.Equal(t, tc.respBody, string(actual))
 		})
 	}
 }
@@ -111,7 +160,7 @@ func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	port := testutils.FreePort(t)
-	api, err := NewAPI(&APIConfig{Port: port})
+	api, err := NewAPI(APIConfig{Port: port})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -185,15 +234,9 @@ func TestServeWithTLS(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	task, err := driver.NewTask(driver.TaskConfig{Enabled: true})
-	require.NoError(t, err)
-
-	drivers := driver.NewDrivers()
-	d := new(mocks.Driver)
-	d.On("UpdateTask", mock.Anything, mock.Anything).
-		Return(driver.InspectPlan{}, nil).Once()
-	d.On("Task").Return(task)
-	drivers.Add("task_b", d)
+	ctrl := new(mocks.Server)
+	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -204,14 +247,14 @@ func TestServeWithTLS(t *testing.T) {
 				Cert:    config.String(tc.serverCert),
 				Key:     config.String(tc.serverKey),
 			}
-			api, err := NewAPI(&APIConfig{
-				Drivers: drivers,
-				Port:    port,
-				TLS:     tlsConfig,
+			api, err := NewAPI(APIConfig{
+				Controller: ctrl,
+				Port:       port,
+				TLS:        tlsConfig,
 			})
 			require.NoError(t, err)
 			go api.Serve(ctx)
-			time.Sleep(3 * time.Second)
+			time.Sleep(time.Microsecond)
 
 			// Set up a client with the CA for the test case
 			tlsConf := &tls.Config{}
@@ -298,13 +341,17 @@ func TestServeWithMutualTLS(t *testing.T) {
 		VerifyIncoming: config.Bool(true),
 		CACert:         config.String(caCert),
 	}
-	api, err := NewAPI(&APIConfig{
-		Port: port,
-		TLS:  tlsConfig,
+	ctrl := new(mocks.Server)
+	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
+	api, err := NewAPI(APIConfig{
+		Controller: ctrl,
+		Port:       port,
+		TLS:        tlsConfig,
 	})
 	require.NoError(t, err)
 	go api.Serve(ctx)
-	time.Sleep(3 * time.Second)
+	time.Sleep(time.Microsecond)
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -422,13 +469,17 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 		VerifyIncoming: config.Bool(true),
 		CAPath:         config.String(tmpDir),
 	}
-	api, err := NewAPI(&APIConfig{
-		Port: port,
-		TLS:  tlsConfig,
+	ctrl := new(mocks.Server)
+	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
+	api, err := NewAPI(APIConfig{
+		Controller: ctrl,
+		Port:       port,
+		TLS:        tlsConfig,
 	})
 	require.NoError(t, err)
 	go api.Serve(ctx)
-	time.Sleep(3 * time.Second)
+	time.Sleep(time.Microsecond)
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -481,14 +532,14 @@ func TestJsonResponse(t *testing.T) {
 			"task status: success",
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_a": TaskStatus{
+				"task_a": {
 					TaskName:  "task_a",
 					Status:    StatusErrored,
 					Providers: []string{"local", "null", "f5"},
 					Services:  []string{"api", "web", "db"},
 					EventsURL: "/v1/status/tasks/test_task?include=events",
 				},
-				"task_b": TaskStatus{
+				"task_b": {
 					TaskName:  "task_b",
 					Status:    StatusUnknown,
 					Providers: []string{},
@@ -501,14 +552,14 @@ func TestJsonResponse(t *testing.T) {
 			"task status: success with events",
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_a": TaskStatus{
+				"task_a": {
 					TaskName:  "task_a",
 					Status:    StatusErrored,
 					Providers: []string{"local", "null", "f5"},
 					Services:  []string{"api", "web", "db"},
 					EventsURL: "/v1/status/tasks/test_task?include=events",
 					Events: []event.Event{
-						event.Event{
+						{
 							ID:        "123",
 							TaskName:  "task_a",
 							StartTime: time.Now(),
@@ -520,7 +571,7 @@ func TestJsonResponse(t *testing.T) {
 								Source:    "./test_modules/local_instances_file",
 							},
 						},
-						event.Event{
+						{
 							ID:        "456",
 							TaskName:  "task_a",
 							StartTime: time.Now(),
@@ -560,7 +611,7 @@ func TestJsonResponse(t *testing.T) {
 			"update task inspect",
 			http.StatusOK,
 			UpdateTaskResponse{
-				Inspect: &driver.InspectPlan{
+				Inspect: &InspectPlan{
 					ChangesPresent: true,
 					Plan:           "plan!",
 				},

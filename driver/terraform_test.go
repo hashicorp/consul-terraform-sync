@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -13,7 +12,9 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
+	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/notifier"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/tmplfunc"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/hcat"
@@ -86,7 +87,6 @@ func TestRenderTemplate(t *testing.T) {
 			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.renderErr).Once()
 
 			tf := &Terraform{
-				mu:       &sync.RWMutex{},
 				task:     &Task{name: "RenderTemplateTest", enabled: true, logger: logging.NewNullLogger()},
 				resolver: r,
 				template: tmpl,
@@ -148,7 +148,6 @@ func TestApplyTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyReturn).Once()
 
 			tf := &Terraform{
-				mu:        &sync.RWMutex{},
 				task:      &Task{name: "ApplyTaskTest", enabled: true, logger: logging.NewNullLogger()},
 				client:    c,
 				postApply: tc.postApply,
@@ -263,10 +262,8 @@ func TestUpdateTask(t *testing.T) {
 			}
 
 			w := new(mocksTmpl.Watcher)
-			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 			tf := &Terraform{
-				mu: &sync.RWMutex{},
 				task: &Task{name: "test_task", enabled: tc.orig.Enabled, workingDir: tc.dirName,
 					logger: logging.NewNullLogger()},
 				client:   c,
@@ -369,11 +366,9 @@ func TestUpdateTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyErr).Once()
 
 			w := new(mocksTmpl.Watcher)
-			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 
 			tf := &Terraform{
-				mu: &sync.RWMutex{},
 				task: &Task{name: "test_task", enabled: false, workingDir: tc.dirName,
 					logger: logging.NewNullLogger()},
 				client:   c,
@@ -442,11 +437,9 @@ func TestUpdateTask_Inspect(t *testing.T) {
 			c.On("SetStdout", mock.Anything)
 
 			w := new(mocksTmpl.Watcher)
-			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil)
 
 			tf := &Terraform{
-				mu:       &sync.RWMutex{},
 				task:     tc.task,
 				client:   c,
 				resolver: r,
@@ -531,7 +524,6 @@ func TestSetBufferPeriod(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			tf := &Terraform{
-				mu:     &sync.RWMutex{},
 				task:   tc.task,
 				logger: logging.NewNullLogger(),
 			}
@@ -579,7 +571,6 @@ func TestInitTaskTemplates(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := new(mocksTmpl.Watcher)
-			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 			tf := &Terraform{
 				fileReader: tc.fileReader,
@@ -669,7 +660,6 @@ func TestDisabledTask(t *testing.T) {
 		// not throw any errors
 
 		tf := &Terraform{
-			mu:      &sync.RWMutex{},
 			task:    &Task{name: "disabled_task", enabled: false},
 			watcher: new(mocksTmpl.Watcher),
 			logger:  logging.NewNullLogger(),
@@ -688,7 +678,9 @@ func TestDisabledTask(t *testing.T) {
 
 		plan, err := tf.InspectTask(ctx)
 		assert.NoError(t, err)
-		assert.Equal(t, InspectPlan{}, plan)
+		assert.Equal(t, InspectPlan{
+			Plan: "Task is disabled, inspection was skipped.",
+		}, plan)
 
 		err = tf.ApplyTask(ctx)
 		assert.NoError(t, err)
@@ -736,11 +728,9 @@ func TestInitTask(t *testing.T) {
 			c.On("Validate", ctx).Return(tc.validateErr)
 
 			w := new(mocksTmpl.Watcher)
-			w.On("Watching", mock.Anything).Return(false)
 			w.On("Register", mock.Anything).Return(nil).Once()
 
 			tf := &Terraform{
-				mu:         &sync.RWMutex{},
 				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName, logger: logging.NewNullLogger()},
 				client:     c,
 				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
@@ -754,6 +744,194 @@ func TestInitTask(t *testing.T) {
 			} else {
 				assert.Error(t, err)
 			}
+		})
+	}
+}
+
+func TestTerraform_countTmplFunc(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		expected int
+		task     *Task
+	}{
+		{
+			"services field",
+			3,
+			&Task{
+				services: []Service{{Name: "api"}, {Name: "db"}, {Name: "web"}},
+			},
+		},
+		{
+			"condition: schedule",
+			0, // on its own, schedule cond has no tmpl funcs
+			&Task{
+				condition: &config.ScheduleConditionConfig{},
+			},
+		},
+		{
+			"condition: catalog-services",
+			1,
+			&Task{
+				condition: &config.CatalogServicesConditionConfig{},
+			},
+		},
+		{
+			"condition: consul-kv",
+			1,
+			&Task{
+				condition: &config.ConsulKVConditionConfig{},
+			},
+		},
+		{
+			"condition: services-regex",
+			1,
+			&Task{
+				condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Regexp: config.String(".*"),
+					},
+				},
+			},
+		},
+		{
+			"condition: services-names",
+			3,
+			&Task{
+				condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Names: []string{"api", "db", "web"},
+					},
+				},
+			},
+		},
+		{
+			"module_input: consul-kv",
+			1,
+			&Task{
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ConsulKVModuleInputConfig{},
+				},
+			},
+		},
+		{
+			"module_input: services-regex",
+			1,
+			&Task{
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp: config.String(".*"),
+						},
+					},
+				},
+			},
+		},
+		{
+			"module_input: services-names",
+			3,
+			&Task{
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names: []string{"api", "db", "web"},
+						},
+					},
+				},
+			},
+		},
+		{
+			"combination",
+			3,
+			&Task{
+				condition: &config.CatalogServicesConditionConfig{},
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ConsulKVModuleInputConfig{},
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp: config.String(".*"),
+						},
+					},
+				},
+			},
+		},
+		{
+			"combination w services",
+			4,
+			&Task{
+				services:  []Service{{Name: "api"}, {Name: "db"}, {Name: "web"}},
+				condition: &config.ScheduleConditionConfig{},
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ConsulKVModuleInputConfig{},
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tf := &Terraform{
+				task: tc.task,
+			}
+			actual, err := tf.countTmplFunc()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestTerraform_setNotifier(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name         string
+		task         *Task
+		expectedType templates.Template
+	}{
+		{
+			"condition: none, default to services field",
+			&Task{},
+			&notifier.Services{},
+		},
+		{
+			"condition: schedule",
+			&Task{
+				condition: &config.ScheduleConditionConfig{},
+			},
+			&notifier.SuppressNotification{},
+		},
+		{
+			"condition: catalog-services",
+			&Task{
+				condition: &config.CatalogServicesConditionConfig{},
+			},
+			&notifier.CatalogServicesRegistration{},
+		},
+		{
+			"condition: consul-kv",
+			&Task{
+				condition: &config.ConsulKVConditionConfig{},
+			},
+			&notifier.ConsulKV{},
+		},
+		{
+			"condition: services",
+			&Task{
+				condition: &config.ServicesConditionConfig{},
+			},
+			&notifier.Services{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tf := &Terraform{
+				task: tc.task,
+			}
+			err := tf.setNotifier(&hcat.Template{})
+			assert.NoError(t, err)
+			assert.IsType(t, tc.expectedType, tf.template)
 		})
 	}
 }
@@ -784,11 +962,13 @@ func TestGetServicesMetaData(t *testing.T) {
 			},
 		},
 		{
-			"meta-data configured in source_input",
+			"meta-data configured in module_input",
 			&Task{
-				sourceInput: &config.ServicesSourceInputConfig{
-					ServicesMonitorConfig: config.ServicesMonitorConfig{
-						CTSUserDefinedMeta: meta,
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							CTSUserDefinedMeta: meta,
+						},
 					},
 				},
 			},
@@ -813,6 +993,18 @@ func TestGetServicesMetaData(t *testing.T) {
 				metaMap := map[string]map[string]string{"api": meta}
 				sm.SetMetaMap(metaMap)
 				return sm
+			},
+		},
+		{
+			"no meta-data",
+			&Task{
+				condition: &config.ConsulKVConditionConfig{},
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ConsulKVModuleInputConfig{},
+				},
+			},
+			func() *tmplfunc.ServicesMeta {
+				return &tmplfunc.ServicesMeta{}
 			},
 		},
 	}

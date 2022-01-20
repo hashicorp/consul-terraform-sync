@@ -17,11 +17,11 @@ type BufferPeriod struct {
 
 // CatalogServicesCondition defines model for CatalogServicesCondition.
 type CatalogServicesCondition struct {
-	Datacenter        *string                            `json:"datacenter,omitempty"`
-	Namespace         *string                            `json:"namespace,omitempty"`
-	NodeMeta          *CatalogServicesCondition_NodeMeta `json:"node_meta,omitempty"`
-	Regexp            *string                            `json:"regexp,omitempty"`
-	SourceIncludesVar *bool                              `json:"source_includes_var,omitempty"`
+	Datacenter       *string                            `json:"datacenter,omitempty"`
+	Namespace        *string                            `json:"namespace,omitempty"`
+	NodeMeta         *CatalogServicesCondition_NodeMeta `json:"node_meta,omitempty"`
+	Regexp           string                             `json:"regexp"`
+	UseAsModuleInput *bool                              `json:"use_as_module_input,omitempty"`
 }
 
 // CatalogServicesCondition_NodeMeta defines model for CatalogServicesCondition.NodeMeta.
@@ -39,15 +39,15 @@ type Condition struct {
 
 // ConsulKVCondition defines model for ConsulKVCondition.
 type ConsulKVCondition struct {
-	Datacenter        *string `json:"datacenter,omitempty"`
-	Namespace         *string `json:"namespace,omitempty"`
-	Path              string  `json:"path"`
-	Recurse           *bool   `json:"recurse,omitempty"`
-	SourceIncludesVar *bool   `json:"source_includes_var,omitempty"`
+	Datacenter       *string `json:"datacenter,omitempty"`
+	Namespace        *string `json:"namespace,omitempty"`
+	Path             string  `json:"path"`
+	Recurse          *bool   `json:"recurse,omitempty"`
+	UseAsModuleInput *bool   `json:"use_as_module_input,omitempty"`
 }
 
-// ConsulKVSourceInput defines model for ConsulKVSourceInput.
-type ConsulKVSourceInput struct {
+// ConsulKVModuleInput defines model for ConsulKVModuleInput.
+type ConsulKVModuleInput struct {
 	Datacenter *string `json:"datacenter,omitempty"`
 	Namespace  *string `json:"namespace,omitempty"`
 	Path       string  `json:"path"`
@@ -65,12 +65,20 @@ type ErrorResponse struct {
 	RequestId RequestID `json:"request_id"`
 }
 
+// ModuleInput defines model for ModuleInput.
+type ModuleInput struct {
+	ConsulKv *ConsulKVModuleInput `json:"consul_kv,omitempty"`
+	Services *ServicesModuleInput `json:"services,omitempty"`
+}
+
 // RequestID defines model for RequestID.
 type RequestID string
 
 // Run defines model for Run.
 type Run struct {
-	Plan *string `json:"plan,omitempty"`
+	// Whether or not infrastructure changes were detected during task inspection.
+	ChangesPresent *bool   `json:"changes_present,omitempty"`
+	Plan           *string `json:"plan,omitempty"`
 
 	// Enterprise only. URL of Terraform Cloud run that corresponds to the task run.
 	TfcRunUrl *string `json:"tfc_run_url,omitempty"`
@@ -83,20 +91,15 @@ type ScheduleCondition struct {
 
 // ServicesCondition defines model for ServicesCondition.
 type ServicesCondition struct {
-	Names  *[]string `json:"names,omitempty"`
-	Regexp *string   `json:"regexp,omitempty"`
+	Names            *[]string `json:"names,omitempty"`
+	Regexp           *string   `json:"regexp,omitempty"`
+	UseAsModuleInput *bool     `json:"use_as_module_input,omitempty"`
 }
 
-// ServicesSourceInput defines model for ServicesSourceInput.
-type ServicesSourceInput struct {
+// ServicesModuleInput defines model for ServicesModuleInput.
+type ServicesModuleInput struct {
 	Names  *[]string `json:"names,omitempty"`
 	Regexp *string   `json:"regexp,omitempty"`
-}
-
-// SourceInput defines model for SourceInput.
-type SourceInput struct {
-	ConsulKv *ConsulKVSourceInput `json:"consul_kv,omitempty"`
-	Services *ServicesSourceInput `json:"services,omitempty"`
 }
 
 // Task defines model for Task.
@@ -106,13 +109,12 @@ type Task struct {
 	Description  *string       `json:"description,omitempty"`
 	Enabled      *bool         `json:"enabled,omitempty"`
 	Module       string        `json:"module"`
+	ModuleInput  *ModuleInput  `json:"module_input,omitempty"`
 	Name         string        `json:"name"`
 	Providers    *[]string     `json:"providers,omitempty"`
 	Services     *[]string     `json:"services,omitempty"`
-	SourceInput  *SourceInput  `json:"source_input,omitempty"`
 	Variables    *VariableMap  `json:"variables,omitempty"`
 	Version      *string       `json:"version,omitempty"`
-	WorkingDir   *string       `json:"working_dir,omitempty"`
 }
 
 // TaskDeleteResponse defines model for TaskDeleteResponse.

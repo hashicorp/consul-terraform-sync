@@ -393,7 +393,7 @@ func decodeConfig(content []byte, file string) (*Config, error) {
 		err = json.Unmarshal(content, &raw)
 		decodeHook = mapstructure.ComposeDecodeHookFunc(
 			conditionToTypeFunc(),
-			sourceInputToTypeFunc(),
+			moduleInputToTypeFunc(),
 			mapstructure.StringToTimeDurationHookFunc(),
 			decode.HookTranslateKeys,
 		)
@@ -401,7 +401,7 @@ func decodeConfig(content []byte, file string) (*Config, error) {
 		err = hcl.Decode(&raw, string(content))
 		decodeHook = mapstructure.ComposeDecodeHookFunc(
 			conditionToTypeFunc(),
-			sourceInputToTypeFunc(),
+			moduleInputToTypeFunc(),
 			decode.HookWeakDecodeFromSlice,
 			mapstructure.StringToTimeDurationHookFunc(),
 			decode.HookTranslateKeys)

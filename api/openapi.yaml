@@ -156,16 +156,12 @@ components:
         version:
           type: string
           example: "1.0.0"
-        working_dir:
-          type: string
-          example: "./sync-tasks/task-name"
-          default: "sync-tasks"
         buffer_period:
           $ref: '#/components/schemas/BufferPeriod'
         condition:
           $ref: '#/components/schemas/Condition'
-        source_input:
-          $ref: '#/components/schemas/SourceInput'
+        module_input:
+          $ref: '#/components/schemas/ModuleInput'
       required:
         - name
         - module
@@ -209,13 +205,13 @@ components:
         schedule:
           $ref: '#/components/schemas/ScheduleCondition'
 
-    SourceInput:
+    ModuleInput:
       type: object
       properties:
         services:
-          $ref: '#/components/schemas/ServicesSourceInput'
+          $ref: '#/components/schemas/ServicesModuleInput'
         consul_kv:
-          $ref: '#/components/schemas/ConsulKVSourceInput'
+          $ref: '#/components/schemas/ConsulKVModuleInput'
 
     VariableMap:
       type: object
@@ -233,6 +229,10 @@ components:
           items:
             type: string
             example: ["web", "api"]
+        use_as_module_input:
+          type: boolean
+          default: true
+          example: false
     CatalogServicesCondition:
       type: object
       properties:
@@ -251,10 +251,12 @@ components:
             type: string
           example:
             key: value
-        source_includes_var:
+        use_as_module_input:
           type: boolean
-          default: false
+          default: true
           example: false
+      required:
+        - regexp
     ConsulKVCondition:
       type: object
       properties:
@@ -271,9 +273,9 @@ components:
         namespace:
           type: string
           example: "default"
-        source_includes_var:
+        use_as_module_input:
           type: boolean
-          default: false
+          default: true
           example: false
       required:
         - path
@@ -286,7 +288,7 @@ components:
       required:
         - cron
 
-    ServicesSourceInput:
+    ServicesModuleInput:
       type: object
       properties:
         regexp:
@@ -297,7 +299,7 @@ components:
           items:
             type: string
             example: ["web", "api"]
-    ConsulKVSourceInput:
+    ConsulKVModuleInput:
       type: object
       properties:
         path:
@@ -322,6 +324,9 @@ components:
         plan:
           type: string
           example: "module.test-task.local_file.greeting_services: Refreshing state... [id=2d5049b47d16d9c4d15cc59950fdd3de24b79716]\nmodule.test-task.local_file.greeting: Refreshing state... [id=69342c5c39e5ae5f0077aecc32c0f81811fb8193]\n\nTerraform used the selected providers to generate the following execution\nplan. Resource actions are indicated with the following symbols:\n-/+ destroy and then create replacement\n\nTerraform will perform the following actions:\n\n  # module.test-task.local_file.greeting_services must be replaced\n-/+ resource \"local_file\" \"greeting_services\" {\n      ~ content              = <<-EOT # forces replacement\n          - Hello, api!\n            Hello, web!\n            Hello, web!\n        EOT\n      ~ id                   = \"2d5049b47d16d9c4d15cc59950fdd3de24b79716\" -> (known after apply)\n        # (3 unchanged attributes hidden)\n    }\n\nPlan: 1 to add, 0 to change, 1 to destroy.\n"
+        changes_present:
+          type: boolean
+          description: Whether or not infrastructure changes were detected during task inspection.
         tfc_run_url:
           type: string
           description: Enterprise only. URL of Terraform Cloud run that corresponds to the task run.

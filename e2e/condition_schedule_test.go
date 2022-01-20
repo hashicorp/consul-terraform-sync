@@ -17,8 +17,9 @@ import (
 )
 
 // TestCondition_Schedule_Basic runs CTS in daemon-mode to test a task
-// configured with a schedule condition and monitoring task.services, task.source_input or both. This test
-// confirms some basic schedule condition behavior:
+// configured with a schedule condition and monitoring task.services,
+// task.module_input or both. This test confirms some basic schedule condition
+// behavior:
 // 1. Task successfully passes through once-mode and does not hang
 // 2. Task runs at the scheduled interval even when no dependency changes
 // 3. New dependencies do not trigger the task to run ahead of scheduled time
@@ -36,41 +37,27 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	}
 }
 `, taskName)
-	conditionWithSourceInput := fmt.Sprintf(`task {
+	moduleInputServices := fmt.Sprintf(`task {
 	name = "%s"
 	module = "./test_modules/local_instances_file"
 	condition "schedule" {
 		cron = "*/10 * * * * * *"
 	}
-    source_input "services"{
+    module_input "services"{
 	    regexp = "^web.*|^api.*"
     }
 }
 `, taskName)
-	sourceInputConsulKV := fmt.Sprintf(`task {
+	moduleInputConsulKV := fmt.Sprintf(`task {
 	name = "%s"
 	services = ["api", "web"]
 	module = "./test_modules/consul_kv_file"
 	condition "schedule" {
       cron = "*/10 * * * * * *"
 	}
-    source_input "consul-kv" {
+    module_input "consul-kv" {
       path = "key-path"
       datacenter = "dc1"
-    }
-}
-`, taskName)
-	sourceInputConsulKVRecurse := fmt.Sprintf(`task {
-	name = "%s"
-	module = "./test_modules/consul_kv_file"
-    services = ["api", "web"]
-	condition "schedule" {
-      cron = "*/10 * * * * * *"
-	}
-    source_input "consul-kv" {
-      path = "key-path"
-      datacenter = "dc1"
-      recurse = true
     }
 }
 `, taskName)
@@ -80,35 +67,24 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 		conditionTask string
 		tempDir       string
 		isConsulKV    bool
-		isRecurse     bool
 	}{
 		{
 			name:          "with services",
 			conditionTask: conditionWithServices,
 			tempDir:       "schedule_basic_services",
 			isConsulKV:    false,
-			isRecurse:     false,
 		},
 		{
-			name:          "with source_input services",
-			conditionTask: conditionWithSourceInput,
-			tempDir:       "schedule_basic_source_input",
+			name:          "with module_input services",
+			conditionTask: moduleInputServices,
+			tempDir:       "schedule_basic_module_input",
 			isConsulKV:    false,
-			isRecurse:     false,
 		},
 		{
-			name:          "with source_input consul_kv recurse false",
-			conditionTask: sourceInputConsulKV,
+			name:          "with module_input consul_kv",
+			conditionTask: moduleInputConsulKV,
 			tempDir:       "schedule_consulKV",
 			isConsulKV:    true,
-			isRecurse:     false,
-		},
-		{
-			name:          "with source_input consul_kvrecurse true",
-			conditionTask: sourceInputConsulKVRecurse,
-			tempDir:       "schedule_consulKV_recurse",
-			isConsulKV:    true,
-			isRecurse:     true,
 		},
 	}
 
@@ -133,7 +109,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 
 			port := cts.Port()
 			taskSchedule := 10 * time.Second
-			scheduledWait := taskSchedule + 5*time.Second // buffer for task to execute
+			scheduledWait := taskSchedule + 7*time.Second // buffer for task to execute
 
 			// 0. Confirm one event for once-mode
 			eventCountBase := eventCount(t, taskName, port)
@@ -177,13 +153,8 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 				// wait for next event before starting this process
 				api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
 				registerTime = time.Now()
-
-				// add two keys and values, expected that the recursive key will only be
-				// checked when recurse is enabled
 				expectedKV := "red"
-				expectedRecurseKV := "blue"
 				srv.SetKVString(t, "key-path", expectedKV)
-				srv.SetKVString(t, "key-path/recursive", expectedRecurseKV)
 
 				// check scheduled task did not trigger immediately and ran only on schedule
 				api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
@@ -191,13 +162,6 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 
 				// confirm key-value resources created, and that the values are as expected
 				validateModuleFile(t, true, true, resourcesPath, "key-path", expectedKV)
-
-				if tc.isRecurse {
-					validateModuleFile(t, true, true, resourcesPath, "key-path/recursive", expectedRecurseKV)
-				} else {
-					// if recurse is disabled, then the recursive key should not be present
-					validateModuleFile(t, true, false, resourcesPath, "key-path/recursive", "")
-				}
 			}
 		})
 	}

@@ -9,6 +9,7 @@ on:
       # Push events to branches matching refs/heads/release/**
       - 'release/**'
 
+
 env:
   PKG_NAME: "consul-terraform-sync"
   GO_TAGS: ""
@@ -390,4 +391,3 @@ jobs:
           arch: ${{matrix.arch}}
           tags: |
             docker.io/hashicorp/${{env.repo}}:${{env.version}}
-            public.ecr.aws/hashicorp/${{env.repo}}:${{env.version}}

@@ -3,10 +3,8 @@ package controller
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
@@ -27,13 +25,15 @@ type ReadWrite struct {
 	store *event.Store
 	retry retry.Retry
 
+	watcherCh chan string
+
 	// taskNotify is only initialized if EnableTestMode() is used. It provides
 	// tests insight into which tasks were triggered and had completed
 	taskNotify chan string
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
-func NewReadWrite(conf *config.Config) (Controller, error) {
+func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 	baseCtrl, err := newBaseController(conf)
 	if err != nil {
 		return nil, err
@@ -70,72 +70,70 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		}
 	}
 
-	for i := int64(1); ; i++ {
-		// Blocking on Wait is first as we just ran in Once mode so we want
-		// to wait for updates before re-running. Doing it the other way is
-		// basically a noop as it checks if templates have been changed but
-		// the logs read weird. Revisit after async work is done.
-		select {
-		case err := <-rw.watcher.WaitCh(ctx):
-			if err != nil {
-				rw.logger.Error("error watching template dependencies", "error", err)
-				return err
+	errCh := make(chan error)
+	if rw.watcherCh == nil {
+		rw.watcherCh = make(chan string, rw.drivers.Len()+2)
+	}
+	go func() {
+		for {
+			rw.logger.Trace("starting template dependency monitoring")
+			err := rw.watcher.Watch(ctx, rw.watcherCh)
+			if err == nil || err == context.Canceled {
+				rw.logger.Info("stopping dependency monitoring")
+				return
 			}
+			rw.logger.Error("error monitoring template dependencies", "error", err)
+		}
+	}()
+
+	for i := int64(1); ; i++ {
+		select {
+		case tmplID := <-rw.watcherCh:
+			d, ok := rw.drivers.GetTaskByTemplate(tmplID)
+			if !ok {
+				rw.logger.Debug("template was notified for update but the template ID does not match any task", "template_id", tmplID)
+				continue
+			}
+
+			go rw.runDynamicTask(ctx, d) // errors are logged for now
+
+		case err := <-errCh:
+			return err
 
 		case <-ctx.Done():
 			rw.logger.Info("stopping controller")
 			return ctx.Err()
 		}
 
-		for err := range rw.runDynamicTasks(ctx) {
-			// aggregate collected errors and just log everything for now
-			rw.logger.Error("error running tasks", "error", err)
-		}
-
 		rw.logDepSize(50, i)
 	}
 }
 
-// runDynamicTasks runs through all the dynamic tasks/drivers. For each dynamic
-// task, it will try to render the template and apply the task if necessary.
-//
-// Returned error channel closes when done with all tasks
-func (rw *ReadWrite) runDynamicTasks(ctx context.Context) chan error {
-	// keep error chan and waitgroup here to keep runDynamicTask simple (on task)
-	errCh := make(chan error, 1)
-	wg := sync.WaitGroup{}
-	for taskName, d := range rw.drivers.Map() {
-		if d.Task().IsScheduled() {
-			// Schedule tasks are not dynamic and run in a different process
-			continue
-		}
-
-		if rw.drivers.IsActive(taskName) {
-			// The driver is currently active with the task, initiated by an ad-hoc run.
-			// There may be updates for other tasks, so we'll continue checking
-			rw.logger.Trace("task is active", taskNameLogKey, taskName)
-			continue
-		}
-		wg.Add(1)
-		go func(taskName string, d driver.Driver) {
-			complete, err := rw.checkApply(ctx, d, true, false)
-			if err != nil {
-				errCh <- err
-			}
-
-			if rw.taskNotify != nil && complete {
-				rw.taskNotify <- taskName
-			}
-			wg.Done()
-		}(taskName, d)
+// runDynamicTask will try to render the template and apply the task if necessary.
+func (rw *ReadWrite) runDynamicTask(ctx context.Context, d driver.Driver) error {
+	task := d.Task()
+	taskName := task.Name()
+	if task.IsScheduled() {
+		// Schedule tasks are not dynamic and run in a different process
+		return nil
 	}
 
-	go func() {
-		wg.Wait()
-		close(errCh)
-	}()
+	if rw.drivers.IsActive(taskName) {
+		// The driver is currently active with the task, initiated by an ad-hoc run.
+		// There may be updates for other tasks, so we'll continue checking
+		rw.logger.Trace("task is active", taskNameLogKey, taskName)
+		return nil
+	}
 
-	return errCh
+	complete, err := rw.checkApply(ctx, d, true, false)
+	if err != nil {
+		return err
+	}
+
+	if rw.taskNotify != nil && complete {
+		rw.taskNotify <- taskName
+	}
+	return nil
 }
 
 // runScheduledTask starts up a go-routine for a given scheduled task/driver.
@@ -238,23 +236,6 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 	}
 }
 
-// ServeAPI runs the API server for the controller
-func (rw *ReadWrite) ServeAPI(ctx context.Context) error {
-	a, err := api.NewAPI(&api.APIConfig{
-		Store:               rw.store,
-		Drivers:             rw.drivers,
-		Port:                config.IntVal(rw.conf.Port),
-		TLS:                 rw.conf.TLS,
-		BufferPeriod:        rw.conf.BufferPeriod,
-		WorkingDir:          *rw.conf.WorkingDir,
-		CreateNewTaskDriver: rw.createNewTaskDriverWithVars},
-	)
-	if err != nil {
-		return err
-	}
-	return a.Serve(ctx)
-}
-
 // checkApply runs a task by attempting to render the template and applying the
 // task as necessary.
 //
@@ -281,6 +262,21 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 			rw.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
 		}
 		return true, nil
+	}
+
+	switch cond := task.Condition().(type) {
+	// Services condition (with regex) and catalog services condition have
+	// multiple API calls it depends on for updates. This adds an additional
+	// delay for hcat to process any new updates in the background that may be
+	// related to this task. 1 second is  used to account for Consul cluster
+	// propagation of the change at scale.
+	// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
+	case *config.ServicesConditionConfig:
+		if len(cond.Names) == 0 {
+			<-time.After(time.Second)
+		}
+	case *config.CatalogServicesConditionConfig:
+		<-time.After(time.Second)
 	}
 
 	// setup to store event information
@@ -350,6 +346,117 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	}
 
 	return rendered, nil
+}
+
+// createTask creates and initializes a singular task from configuration
+func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfig) (driver.Driver, error) {
+	taskConfig.Finalize(rw.conf.BufferPeriod, *rw.conf.WorkingDir)
+	if err := taskConfig.Validate(); err != nil {
+		rw.logger.Trace("invalid config to create task", "error", err)
+		return nil, err
+	}
+
+	taskName := *taskConfig.Name
+	logger := rw.logger.With(taskNameLogKey, taskName)
+
+	// Check if task exists, if it does, do not create again
+	if _, ok := rw.drivers.Get(taskName); ok {
+		logger.Trace("task already exists")
+		return nil, fmt.Errorf("task with name %s already exists", taskName)
+	}
+
+	d, err := rw.createNewTaskDriver(taskConfig)
+	if err != nil {
+		logger.Error("error creating new task driver", "error", err)
+		return nil, fmt.Errorf("error creating new task driver: %v", err)
+	}
+
+	// Initialize the new task
+	err = d.InitTask(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing new task, %s", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+		ok, err := d.RenderTemplate(ctx)
+		if err != nil {
+			logger.Error("error rendering task template")
+			return nil, fmt.Errorf("error rendering template for task '%s': %s", taskName, err)
+		}
+		if ok {
+			// Once template rendering is finished, return
+			return d, nil
+		}
+	}
+}
+
+// runTask will set the driver to active, apply it, and store a run event.
+// This method will run the task as-is with current values of templates that
+// have already been resolved and rendered. This does not handle any templating.
+func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
+	task := d.Task()
+	taskName := task.Name()
+	logger := rw.logger.With(taskNameLogKey, taskName)
+	if !task.IsEnabled() {
+		logger.Trace("skipping disabled task")
+		return nil
+	}
+
+	rw.drivers.SetActive(taskName)
+	defer rw.drivers.SetInactive(taskName)
+
+	switch cond := task.Condition().(type) {
+	// Services condition (with regex) and catalog services condition have
+	// multiple API calls it depends on for updates. This adds an additional
+	// delay for hcat to process any new updates in the background that may be
+	// related to this task. 1 second is  used to account for Consul cluster
+	// propagation of the change at scale.
+	// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
+	case *config.ServicesConditionConfig:
+		if len(cond.Names) == 0 {
+			<-time.After(time.Second)
+		}
+	case *config.CatalogServicesConditionConfig:
+		<-time.After(time.Second)
+	}
+
+	// Create new event for task run
+	ev, err := event.NewEvent(taskName, &event.Config{
+		Providers: task.ProviderNames(),
+		Services:  task.ServiceNames(),
+		Source:    task.Source(),
+	})
+	if err != nil {
+		logger.Error("error initializing run task event", "error", err)
+		return err
+	}
+	ev.Start()
+
+	// Apply task
+	err = d.ApplyTask(ctx)
+	if err != nil {
+		logger.Error("error applying task", "error", err)
+		return err
+	}
+
+	// Store event if apply was successful and task will be created
+	ev.End(err)
+	logger.Trace("adding event", "event", ev.GoString())
+	if err := rw.store.Add(*ev); err != nil {
+		// only log error since creating a task occurred successfully by now
+		logger.Error("error storing event", "event", ev.GoString(), "error", err)
+	}
+
+	if rw.taskNotify != nil {
+		rw.taskNotify <- taskName
+	}
+
+	return err
 }
 
 // EnableTestMode is a helper for testing which tasks were triggered and

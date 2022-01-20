@@ -40,7 +40,7 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 				Datacenter:        "dc1",
 				Namespace:         "ns1",
 				Filter:            "filter",
-				SourceIncludesVar: false,
+				SourceIncludesVar: true,
 			},
 			`
 {{- with $srv := service "api" "dc=dc1" "ns=ns1" "filter" }}
@@ -59,7 +59,7 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 {{- end}}
 `},
 		{
-			"deprecated service fully configured",
+			"deprecated service fully configure & includes_var true",
 			&ServicesTemplate{
 				Names: []string{"api", "web"},
 				Services: map[string]Service{
@@ -94,7 +94,7 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 `,
 		},
 		{
-			"deprecated service some services configured",
+			"deprecated service some services configured & includes_var true",
 			&ServicesTemplate{
 				Names: []string{"api", "web"},
 				Services: map[string]Service{
@@ -119,6 +119,28 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
   "{{ joinStrings "." .ID .Node .Namespace .NodeDatacenter }}" = {
 {{ HCLService $s | indent 4 }}
   },
+  {{- end}}
+{{- end}}
+`,
+		},
+		{
+			"multi-name & fully configured & includes_var false",
+			&ServicesTemplate{
+				Names:             []string{"api", "web"},
+				Datacenter:        "dc1",
+				Namespace:         "ns1",
+				Filter:            "filter",
+				SourceIncludesVar: false,
+			},
+			`
+{{- with $srv := service "api" "dc=dc1" "ns=ns1" "filter" }}
+  {{- range $s := $srv}}
+  {{- /* Empty template. Detects changes in Services */ -}}
+  {{- end}}
+{{- end}}
+{{- with $srv := service "web" "dc=dc1" "ns=ns1" "filter" }}
+  {{- range $s := $srv}}
+  {{- /* Empty template. Detects changes in Services */ -}}
   {{- end}}
 {{- end}}
 `,
