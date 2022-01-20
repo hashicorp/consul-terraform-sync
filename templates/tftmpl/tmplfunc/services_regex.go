@@ -166,6 +166,7 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	// Filter out only the services that match the regex
 	var matchServices []string
 	for name := range catalog {
+		fmt.Println("services regex query catalog-services", name)
 		if d.regexp != nil && !d.regexp.MatchString(name) {
 			continue
 		}
@@ -187,6 +188,7 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 
 	var services []*dep.HealthService
 	for _, s := range matchServices {
+		fmt.Println("services regex query health-services", s)
 		var entries []*consulapi.ServiceEntry
 		entries, _, err = clients.Consul().Health().Service(s, "", true, opts)
 		if err != nil {
