@@ -109,6 +109,8 @@ components:
           $ref: '#/components/schemas/RequestID'
         run:
           $ref: '#/components/schemas/Run'
+        error:
+          $ref: '#/components/schemas/Error'
       required:
         - request_id
 
@@ -117,6 +119,8 @@ components:
       properties:
         request_id:
           $ref: '#/components/schemas/RequestID'
+        error:
+          $ref: '#/components/schemas/Error'
       required:
         - request_id
 
