@@ -82,8 +82,8 @@ func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSC
 			// if the test has failed for any reason, print log snippet
 			if t.Failed() && logLen > 0 {
 				logStr := buf.String()
-				numChar := 6000
-				if logLen < 6000 {
+				numChar := 16000
+				if logLen < numChar {
 					numChar = logLen
 				}
 				t.Logf("\nFailed Test: %s\nCTS logs:\n\n...%s", t.Name(),
