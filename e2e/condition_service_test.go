@@ -164,3 +164,66 @@ func TestCondition_Services(t *testing.T) {
 		})
 	}
 }
+
+// TestCondition_ServicesRegex_Multiple tmp task to understand if ServicesRegex
+// template is flakey as a condition (it is as a module-input)
+func TestCondition_ServicesRegex_Multiple(t *testing.T) {
+	t.Parallel()
+
+	regexpConfig := `task {
+		name = "%s"
+		module = "./test_modules/local_instances_file"
+		condition "services" {
+			regexp = "^web.*|^api.*"
+			use_as_module_input = %t
+		}
+	}`
+
+	cases := []struct {
+		name              string
+		taskName          string
+		taskConfig        string
+		sourceIncludesVar bool
+	}{
+		{
+			"regexp & includes true",
+			"services_cond_regexp_include",
+			regexpConfig,
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc // rebind tc into this lexical scope for parallel use
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel() // Run table tests in parallel as they can take a lot of time
+			srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+				HTTPSRelPath: "../testutils",
+			})
+			defer srv.Stop()
+
+			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.taskName)
+
+			config := fmt.Sprintf(tc.taskConfig, tc.taskName, tc.sourceIncludesVar)
+			cts := ctsSetup(t, srv, tempDir, config)
+
+			// 0. Confirm only one event. Confirm empty var catalog_services
+			eventCountExpected := eventCount(t, tc.taskName, cts.Port())
+			require.Equal(t, 1, eventCountExpected)
+
+			workingDir := fmt.Sprintf("%s/%s", tempDir, tc.taskName)
+			validateVariable(t, true, workingDir, "services", "{\n}")
+
+			// 1. Register two services
+			registerTime := time.Now()
+			services := []testutil.TestService{{ID: "api-1", Name: "api"},
+				{ID: "web-1", Name: "web"}}
+			testutils.AddServices(t, srv, services)
+
+			// confirm service resources created
+			api.WaitForEvent(t, cts, tc.taskName, registerTime, defaultWaitForAPI)
+			resourcesPath := filepath.Join(tempDir, tc.taskName, resourcesDir)
+			validateServices(t, true, []string{"api-1", "web-1"}, resourcesPath)
+		})
+	}
+}
