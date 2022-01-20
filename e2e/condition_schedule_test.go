@@ -48,6 +48,17 @@ func TestCondition_Schedule_Basic(t *testing.T) {
     }
 }
 `, taskName)
+	moduleInputServicesNames := fmt.Sprintf(`task {
+	name = "%s"
+	module = "./test_modules/local_instances_file"
+	condition "schedule" {
+		cron = "*/10 * * * * * *"
+	}
+    module_input "services"{
+		names = ["api", "web"]
+    }
+}
+`, taskName)
 	moduleInputConsulKV := fmt.Sprintf(`task {
 	name = "%s"
 	services = ["api", "web"]
@@ -75,8 +86,14 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			isConsulKV:    false,
 		},
 		{
-			name:          "with module_input services",
+			name:          "with module_input services regex",
 			conditionTask: moduleInputServices,
+			tempDir:       "schedule_basic_module_input",
+			isConsulKV:    false,
+		},
+		{
+			name:          "with module_input services names",
+			conditionTask: moduleInputServicesNames,
 			tempDir:       "schedule_basic_module_input",
 			isConsulKV:    false,
 		},
