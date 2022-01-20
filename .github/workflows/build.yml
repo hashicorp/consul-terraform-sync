@@ -101,7 +101,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
+        uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
           description: "Consul Terraform Sync is a service-oriented tool for managing network infrastructure near real-time."
@@ -167,7 +167,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
+        uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
           description: "Consul Terraform Sync is a service-oriented tool for managing network infrastructure near real-time."
@@ -233,7 +233,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
+        uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
           description: "Consul Terraform Sync is a service-oriented tool for managing network infrastructure near real-time."
@@ -296,7 +296,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
+        uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
           description: "Consul Terraform Sync is a service-oriented tool for managing network infrastructure near real-time."
