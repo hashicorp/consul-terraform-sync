@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/dep"
@@ -139,6 +140,25 @@ func (d *catalogServicesRegistrationQuery) Fetch(clients dep.Clients) (interface
 		LastIndex:   qm.LastIndex,
 		LastContact: qm.LastContact,
 	}
+
+	// Tasks monitoring CatalogServices will likely also monitor Services
+	// information. Without a delay, CatalogServices may have services that
+	// are not yet propagated to Services template function as healthy services
+	// since services are initially set as critical.
+	// https://www.consul.io/docs/discovery/checks#initial-health-check-status
+	//
+	// This adds an additional delay to process new Services used elsewhere for
+	// this task. 1 second is used to account for Consul cluster propagation of
+	// the change at scale. https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
+	//
+	// This affects template functions that have propagation depencies on
+	// services. KV query is not affected by this because it is a different
+	// entity within Consul.
+	//
+	// Note: this creates unnecessary latency for tasks that monitor
+	// CatalogServices but not Services. Currently this use-case seems unlikely
+	// so have not implemented this complexity at this time
+	time.Sleep(1 * time.Second)
 
 	return catalogServices, rm, nil
 }

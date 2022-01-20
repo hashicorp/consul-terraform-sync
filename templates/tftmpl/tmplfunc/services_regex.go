@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/go-bexpr"
@@ -184,6 +185,20 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	if len(d.nodeMeta) != 0 {
 		opts.NodeMeta = d.nodeMeta
 	}
+
+	// This Fetch depends on multiple API calls for update. This adds an
+	// additional delay to process new updates to this query result. 1 second is
+	// used to account for Consul cluster propagation of the change at scale.
+	// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
+	//
+	// This affects template functions that have propagation depencies on
+	// services. KV query is not affected by this because it is a different
+	// entity within Consul.
+	//
+	// Without this delay, CatalogServices may have services that are not yet
+	// propagated to HealthServices as healthy services since services are initially
+	// set as critical. https://www.consul.io/docs/discovery/checks#initial-health-check-status
+	time.Sleep(1 * time.Second)
 
 	var services []*dep.HealthService
 	for _, s := range matchServices {

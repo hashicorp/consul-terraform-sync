@@ -264,21 +264,6 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 		return true, nil
 	}
 
-	switch cond := task.Condition().(type) {
-	// Services condition (with regex) and catalog services condition have
-	// multiple API calls it depends on for updates. This adds an additional
-	// delay for hcat to process any new updates in the background that may be
-	// related to this task. 1 second is  used to account for Consul cluster
-	// propagation of the change at scale.
-	// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
-	case *config.ServicesConditionConfig:
-		if len(cond.Names) == 0 {
-			<-time.After(time.Second)
-		}
-	case *config.CatalogServicesConditionConfig:
-		<-time.After(time.Second)
-	}
-
 	// setup to store event information
 	ev, err := event.NewEvent(taskName, &event.Config{
 		Providers: task.ProviderNames(),
@@ -409,21 +394,6 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 
 	rw.drivers.SetActive(taskName)
 	defer rw.drivers.SetInactive(taskName)
-
-	switch cond := task.Condition().(type) {
-	// Services condition (with regex) and catalog services condition have
-	// multiple API calls it depends on for updates. This adds an additional
-	// delay for hcat to process any new updates in the background that may be
-	// related to this task. 1 second is  used to account for Consul cluster
-	// propagation of the change at scale.
-	// https://www.hashicorp.com/blog/hashicorp-consul-global-scale-benchmark
-	case *config.ServicesConditionConfig:
-		if len(cond.Names) == 0 {
-			<-time.After(time.Second)
-		}
-	case *config.CatalogServicesConditionConfig:
-		<-time.After(time.Second)
-	}
 
 	// Create new event for task run
 	ev, err := event.NewEvent(taskName, &event.Config{
