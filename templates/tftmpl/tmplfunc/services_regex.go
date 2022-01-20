@@ -156,7 +156,8 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
-
+	fmt.Println("-----------------------------------------")
+	fmt.Println("Last contact", qm.LastContact, "LastIndex", qm.LastIndex)
 	// Track the indexes of catalog services, not the individual health services
 	rm := &dep.ResponseMetadata{
 		LastIndex:   qm.LastIndex,
@@ -167,9 +168,7 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	var matchServices []string
 	for name := range catalog {
 		fmt.Println("services regex query catalog-services", name)
-		fmt.Println(" - regex", d.regexp, "match", d.regexp.MatchString(name))
 		if d.regexp != nil && !d.regexp.MatchString(name) {
-			fmt.Println(" - not a match")
 			continue
 		}
 		matchServices = append(matchServices, name)
