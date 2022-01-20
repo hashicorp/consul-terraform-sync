@@ -187,7 +187,7 @@ func TestCondition_ServicesRegex_Multiple(t *testing.T) {
 	}{
 		{
 			"regexp & includes true",
-			"services_cond_regexp_include",
+			"services_cond_regexp_include_2_dep",
 			regexpConfig,
 			true,
 		},

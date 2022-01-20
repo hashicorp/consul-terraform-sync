@@ -88,13 +88,13 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 		{
 			name:          "with module_input services regex",
 			conditionTask: moduleInputServices,
-			tempDir:       "schedule_basic_module_input",
+			tempDir:       "schedule_basic_module_input_regex",
 			isConsulKV:    false,
 		},
 		{
 			name:          "with module_input services names",
 			conditionTask: moduleInputServicesNames,
-			tempDir:       "schedule_basic_module_input",
+			tempDir:       "schedule_basic_module_input_names",
 			isConsulKV:    false,
 		},
 		{
