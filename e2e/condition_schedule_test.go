@@ -140,12 +140,15 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 
 			// 2. Register two new services. Confirm task only triggered on schedule
 
-			// wait for scheduled task to have just ran. then register consul services
+			// wait for scheduled task to have just ran. then register consul services and
+			// a Consul KV pair
 			api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
 			registerTime := time.Now()
 			services := []testutil.TestService{{ID: "api-1", Name: "api"},
 				{ID: "web-1", Name: "web"}}
 			testutils.AddServices(t, srv, services)
+			expectedKV := "red"
+			srv.SetKVString(t, "key-path", expectedKV)
 
 			// check scheduled task did not trigger immediately and ran only on schedule
 			api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
@@ -155,19 +158,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
 			validateServices(t, true, []string{"api-1", "web-1"}, resourcesPath)
 
-			// Check KV events
 			if tc.isConsulKV {
-				// 3. Add KV. Confirm task only triggered on schedule
-				// wait for next event before starting this process
-				api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
-				registerTime = time.Now()
-				expectedKV := "red"
-				srv.SetKVString(t, "key-path", expectedKV)
-
-				// check scheduled task did not trigger immediately and ran only on schedule
-				api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
-				checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
-
 				// confirm key-value resources created, and that the values are as expected
 				validateModuleFile(t, true, true, resourcesPath, "key-path", expectedKV)
 			}
