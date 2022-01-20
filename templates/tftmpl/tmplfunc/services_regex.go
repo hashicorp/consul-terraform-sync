@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/go-bexpr"
@@ -187,7 +188,8 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	if len(d.nodeMeta) != 0 {
 		opts.NodeMeta = d.nodeMeta
 	}
-
+	fmt.Println("waiting one second")
+	time.Sleep(1 * time.Second)
 	var services []*dep.HealthService
 	for _, s := range matchServices {
 		fmt.Println("services regex query health-services", s)
