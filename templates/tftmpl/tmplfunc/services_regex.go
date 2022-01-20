@@ -196,12 +196,13 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 		if err != nil {
 			return nil, nil, errors.Wrap(err, d.String())
 		}
+		fmt.Println(" - number of returned entries", len(entries))
 		for _, entry := range entries {
 			address := entry.Service.Address
 			if address == "" {
 				address = entry.Node.Address
 			}
-			fmt.Println("services regex query health-services entries", entry.Service.Service)
+			fmt.Println(" - services regex query health-services entries", entry.Service.Service)
 			services = append(services, &dep.HealthService{
 				Node:                entry.Node.Node,
 				NodeID:              entry.Node.ID,
