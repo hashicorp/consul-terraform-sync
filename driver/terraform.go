@@ -169,7 +169,7 @@ func (tf *Terraform) DeleteTask(ctx context.Context) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
-	tf.deleteTask(ctx)
+	tf.deregisterTemplate(ctx)
 }
 
 // SetBufferPeriod sets the buffer period for the task. Do not set this when
@@ -243,6 +243,7 @@ func (tf *Terraform) InspectTask(ctx context.Context) (InspectPlan, error) {
 	}
 
 	plan, err := tf.inspectTask(ctx, true)
+	tf.deregisterTemplate(ctx)
 	return plan, err
 }
 
@@ -427,8 +428,8 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 	return nil
 }
 
-// deleteTask attempts to delete and deregister the hashicat template
-func (tf *Terraform) deleteTask(ctx context.Context) {
+// deregisterTemplate attempts to deregister the hashicat template
+func (tf *Terraform) deregisterTemplate(ctx context.Context) {
 	tf.watcher.Deregister(tf.template)
 }
 
@@ -494,9 +495,6 @@ func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (InspectP
 		return InspectPlan{}, errors.Wrap(err,
 			fmt.Sprintf("error tf-plan for '%s'", taskName))
 	}
-
-	// Delete the task once the inspection has completed
-	tf.deleteTask(ctx)
 
 	return InspectPlan{
 		ChangesPresent: c,
