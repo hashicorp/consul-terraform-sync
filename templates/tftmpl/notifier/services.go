@@ -1,8 +1,6 @@
 package notifier
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat/dep"
@@ -55,7 +53,7 @@ func NewServices(tmpl templates.Template, tmplFuncTotal int) *Services {
 // Once-mode requires a notification when all dependencies are received in order
 // to trigger CTS. Otherwise it will hang.
 func (n *Services) Notify(d interface{}) (notify bool) {
-	n.logger.Debug("received dependency change", "dependency_type", fmt.Sprintf("%T", d))
+	logDependency(n.logger, d)
 	notify = false
 
 	if !n.once {
