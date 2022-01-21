@@ -1,8 +1,6 @@
 ## UNRELEASED
 
 BREAKING CHANGES:
-* **(Enterprise Only)** Deprecate `workspace_prefix` for the Terraform Cloud driver that adds unexpected `-` character added between the prefix and task name. Use the new `workspaces.prefix` option instead. [[GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442)]
-  * If the `workspace_prefix` option is in use by CTS v0.3.x or v0.4.x for the Terraform Cloud driver, visit [GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442) for upgrade guidelines.
 * Stop monitoring and including non-passing service instances in `terraform.tfvars` by default. CTS should only monitor passing service instances unless configured otherwise. [[GH-430](https://github.com/hashicorp/consul-terraform-sync/issues/430)]
 * Removed `driver.terraform.working_dir` configuration option that was deprecated in v0.3.0. Use top-level `working_dir` to configure parent directory for all tasks or `task.working_dir` to configure per task. [[GH-548](https://github.com/hashicorp/consul-terraform-sync/pull/548)]
 * Require that `condition "catalog-services"` block's `regexp` field be configured instead of relying on previous default behavior. [[GH-574](https://github.com/hashicorp/consul-terraform-sync/pull/574)]
@@ -16,7 +14,16 @@ IMPROVEMENTS:
 * Support configuring a task's `condition "services"` and `source_input "services"` blocks with query parameters: `datacenter`, `namespace`, `filter`, and `cts_user_defined_meta`. [[GH-357](https://github.com/hashicorp/consul-terraform-sync/issues/357)]
 * Support new `names` field for configuring a task's `condition "services"` and `source_input "services"` blocks as an optional alternative to `regexp` to list monitored services by name. [[GH-561](https://github.com/hashicorp/consul-terraform-sync/issues/561)]
 * Support `source_includes_var` field for a task's `condition "services"` block. [[GH-584](https://github.com/hashicorp/consul-terraform-sync/pull/584)]
-* Add deprecation warning for `port` CLI option. Use `http-addr` option instead. [[GH-617](https://github.com/hashicorp/consul-terraform-sync/pull/617)]
+* Expand `source_input` block usage to dynamic tasks and support multiple `source_input` blocks per task. [[GH-607](https://github.com/hashicorp/consul-terraform-sync/issues/607)]
+
+DEPRECATIONS:
+* **(Enterprise Only)** Deprecate `workspace_prefix` for the Terraform Cloud driver that adds unexpected `-` character added between the prefix and task name. Use the new `workspaces.prefix` option instead. [[GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442)]
+  * If the `workspace_prefix` option is in use by CTS v0.3.x or v0.4.x for the Terraform Cloud driver, visit [GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442) for upgrade guidelines.
+* Deprecate `port` CLI option. Use `http-addr` option instead. [[GH-617](https://github.com/hashicorp/consul-terraform-sync/pull/617)]
+* Deprecate `source` field in the API Status's events response object. Use the new `module` field instead. [[GH-569](https://github.com/hashicorp/consul-terraform-sync/issues/569)]
+* Deprecate `source` field in task configuration. Rename `source` to `module` in configuration. [[GH-566](https://github.com/hashicorp/consul-terraform-sync/issues/566)]
+* Deprecate `source_input` block in task configuration. Rename `source_input` to `module_input` in configuration. [[GH-567](https://github.com/hashicorp/consul-terraform-sync/issues/567)]
+* Deprecate `source_includes_var` field in task configuration's `condition` block. Rename `source_includes_var` to `use_as_module_input` in configuration. [[GH-568](https://github.com/hashicorp/consul-terraform-sync/issues/568)]
 
 BUG FIXES:
 * Fix CLI client enable task command timing out when buffer period is enabled [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
