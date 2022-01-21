@@ -54,7 +54,9 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 
 	// Values provide both default values, and documentation for the default value when -help is used
 	m.port = m.flags.Int(FlagPort, config.DefaultPort,
-		fmt.Sprintf("The port to use for the Consul-Terraform-Sync API server, it is preferred to use the %s field instead", FlagHTTPAddr))
+		fmt.Sprintf("[Deprecated] The port to use for the Consul-Terraform-Sync API server, "+
+			"it is preferred to use the %s field instead", FlagHTTPAddr))
+
 	m.addr = m.flags.String(FlagHTTPAddr, api.DefaultAddress, fmt.Sprintf("The `address` and port of the CTS daemon. The value can be an IP "+
 		"address or DNS address, but it must also include the port. This can "+
 		"also be specified via the %s environment variable. The "+
@@ -126,6 +128,8 @@ func (m *meta) clientConfig() *api.ClientConfig {
 	// Let the Client determine its default first, then override with command flag values
 	c := api.DefaultClientConfig()
 	if m.isFlagParsedAndFound(FlagPort) {
+		m.UI.Warn(fmt.Sprintf("Warning: '%s' option is deprecated and will be removed in a later version. "+
+			"It is preferred to use the '%s' option instead.\n", FlagPort, FlagHTTPAddr))
 		c.Port = *m.port
 	}
 	if m.isFlagParsedAndFound(FlagHTTPAddr) {
