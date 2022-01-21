@@ -77,12 +77,14 @@ paths:
             type: string
             example: "taskA"
       responses:
-        '204':
+        '200':
           description: Task deleted
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaskDeleteResponse'
+              example:
+                request_id: "bb63cd70-8f45-4f42-b27b-bc2a6f4931e6"
         default:
           description: Unexpected error
           content:

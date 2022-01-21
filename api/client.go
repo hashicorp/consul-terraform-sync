@@ -262,7 +262,7 @@ func (c *Client) request(method, path, query, body string) (*http.Response, erro
 	// defer resp.Body.Close() not called for happy path, only called for
 	// unhappy path. caller of this method will close if returned err == nil.
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()
 
 		var errResp ErrorResponse
