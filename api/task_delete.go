@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -14,7 +13,6 @@ import (
 func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.Request, name string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 	ctx := r.Context()
 	requestID := requestIDFromContext(ctx)
@@ -41,12 +39,7 @@ func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	resp := oapigen.TaskResponse{RequestId: requestID}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		logger.Error("error encoding json response", "error", err, "response", resp)
-	}
+	writeResponse(w, r, http.StatusOK, oapigen.TaskResponse{
+		RequestId: requestID,
+	})
 }

@@ -24,7 +24,8 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	requestID := requestIDFromContext(ctx)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("bad request", "error", err, "create_task_request", r.Body)
-		sendError(w, r, http.StatusBadRequest, fmt.Errorf("error decoding the request: %v", err))
+		sendError(w, r, http.StatusBadRequest,
+			fmt.Errorf("error decoding the request: %v", err))
 		return
 	}
 	logger = logger.With("task_name", req.Task.Name)
@@ -33,7 +34,8 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	// Check if task exists, if it does, do not create again
 	if _, err := h.ctrl.Task(ctx, req.Task.Name); err == nil {
 		logger.Trace("task already exists")
-		sendError(w, r, http.StatusBadRequest, fmt.Errorf("task with name %s already exists", req.Task.Name))
+		sendError(w, r, http.StatusBadRequest,
+			fmt.Errorf("task with name %s already exists", req.Task.Name))
 		return
 	}
 
@@ -64,13 +66,8 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 
 	// Return the task response
 	resp := taskResponseFromTaskConfig(tc, requestID)
+	writeResponse(w, r, http.StatusCreated, resp)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		logger.Error("error encoding json", "error", err, "create_task_response", resp)
-	}
 	logger.Trace("task created", "create_task_response", resp)
 }
 
@@ -87,8 +84,6 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	requestID := requestIDFromContext(ctx)
 	resp := taskResponseFromTaskConfig(taskConf, requestID)
 	resp.Run = &oapigen.Run{
@@ -98,9 +93,6 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 	if runUrl != "" {
 		resp.Run.TfcRunUrl = &runUrl
 	}
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		logger.Error("error encoding json", "error", err, "create_task_response", resp)
-	}
+	writeResponse(w, r, http.StatusOK, resp)
 	logger.Trace("task inspection complete", "create_task_response", resp)
 }
