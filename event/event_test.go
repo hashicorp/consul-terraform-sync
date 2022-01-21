@@ -1,6 +1,8 @@
 package event
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -82,7 +84,7 @@ func TestNewEvent(t *testing.T) {
 			&Config{
 				Providers: []string{"local"},
 				Services:  []string{"web", "api"},
-				Source:    "/my-module",
+				Module:    "/my-module",
 			},
 			false,
 		},
@@ -180,6 +182,27 @@ func TestEvent_End(t *testing.T) {
 	}
 }
 
+// TestNewEvent_DeprecatedSource checks that deprecated `source` is still set
+// auto-set by NewEvents and included in json payload
+func TestNewEvent_DeprecatedSource(t *testing.T) {
+	t.Parallel()
+
+	conf := &Config{
+		Providers: []string{"local"},
+		Services:  []string{"web", "api"},
+		Module:    "/my-module",
+	}
+
+	event, err := NewEvent("task_a", conf)
+	assert.NoError(t, err)
+
+	var buf bytes.Buffer
+	err = json.NewEncoder(&buf).Encode(event)
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `"source":"/my-module"`)
+	assert.Contains(t, buf.String(), `"module":"/my-module"`)
+}
+
 func businessLogic(expectError bool) (string, error) {
 	if expectError {
 		return "", errors.New("error")
@@ -210,13 +233,13 @@ func TestEvent_GoString(t *testing.T) {
 				Config: &Config{
 					Providers: []string{"local"},
 					Services:  []string{"web", "api"},
-					Source:    "/my-module",
+					Module:    "/my-module",
 				},
 			},
 			"&Event{ID:123, TaskName:happy, Success:false, " +
 				"StartTime:0001-01-01 00:00:00 +0000 UTC, " +
 				"EndTime:0001-01-01 00:00:00 +0000 UTC, EventError:&{error!}, " +
-				"Config:&{[local] [web api] /my-module}}",
+				"Config:&Config{Providers:[local], Services:[web api], Module:/my-module}}",
 		},
 	}
 
@@ -240,4 +263,5 @@ func assertEqualConfig(t *testing.T, exp, act *Config) {
 	assert.Equal(t, exp.Providers, act.Providers)
 	assert.Equal(t, exp.Services, act.Services)
 	assert.Equal(t, exp.Source, act.Source)
+	assert.Equal(t, exp.Module, act.Module)
 }

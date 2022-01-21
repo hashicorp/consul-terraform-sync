@@ -37,7 +37,12 @@ type Error struct {
 type Config struct {
 	Providers []string `json:"providers"`
 	Services  []string `json:"services"`
-	Source    string   `json:"source"`
+
+	// Source was deprecated in v0.5. Use Module instead. External packages
+	// should use Module except for tests
+	Source string `json:"source"`
+	// Module introduced in 0.5
+	Module string `json:"module"`
 }
 
 // NewEvent configures a new event with a task name and any relevant information
@@ -50,6 +55,12 @@ func NewEvent(taskName string, config *Config) (*Event, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Set deprecated 'source' field if not set
+	if config != nil && config.Source == "" {
+		config.Source = config.Module
+	}
+
 	return &Event{
 		ID:       uuid,
 		TaskName: taskName,
@@ -88,6 +99,23 @@ func (e *Event) End(err error) {
 }
 
 // GoString defines the printable version of this struct.
+func (c *Config) GoString() string {
+	if c == nil {
+		return "(*Config)(nil)"
+	}
+
+	return fmt.Sprintf("&Config{"+
+		"Providers:%s, "+
+		"Services:%s, "+
+		"Module:%s"+
+		"}",
+		c.Providers,
+		c.Services,
+		c.Module,
+	)
+}
+
+// GoString defines the printable version of this struct.
 func (e *Event) GoString() string {
 	if e == nil {
 		return "(*Event)(nil)"
@@ -108,6 +136,6 @@ func (e *Event) GoString() string {
 		e.StartTime,
 		e.EndTime,
 		e.EventError,
-		e.Config,
+		e.Config.GoString(),
 	)
 }

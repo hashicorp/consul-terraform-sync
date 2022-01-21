@@ -142,7 +142,7 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 		ev, err := event.NewEvent(taskName, &event.Config{
 			Providers: task.ProviderNames(),
 			Services:  task.ServiceNames(),
-			Source:    task.Source(),
+			Module:    task.Source(),
 		})
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("error creating task update"+
