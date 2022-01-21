@@ -159,6 +159,26 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			status, ok := taskStatuses[disabledTaskName]
 			require.True(t, ok)
 			assert.Equal(t, tc.expectEnabled, status.Enabled)
+
+			if !tc.expectEnabled {
+				// only check for events if we expect the task to be enabled
+				return
+			}
+
+			// check that there was an initial event
+			eventCountBase := 1
+			eventCountNow := eventCount(t, disabledTaskName, cts.Port())
+			require.Equal(t, eventCountBase, eventCountNow,
+				"event count did not increment once. task was not triggered as expected")
+
+			// make a change in Consul and confirm a new event is triggered
+			now := time.Now()
+			service := testutil.TestService{ID: "api-1", Name: "api"}
+			testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+			api.WaitForEvent(t, cts, disabledTaskName, now, defaultWaitForEvent)
+			eventCountNow = eventCount(t, disabledTaskName, cts.Port())
+			require.Equal(t, eventCountBase+1, eventCountNow,
+				"event count did not increment once. task was not triggered as expected")
 		})
 	}
 }
