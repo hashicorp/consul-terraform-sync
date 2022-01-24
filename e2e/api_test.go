@@ -670,7 +670,7 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 	taskName := "dryrun_task"
 	serviceName := "api"
 	req := &oapigen.TaskRequest{
-		Task: &oapigen.Task{
+		Task: oapigen.Task{
 			Name:     taskName,
 			Services: &[]string{serviceName},
 			Module:   "mkam/hello/cts",

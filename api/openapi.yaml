@@ -97,6 +97,8 @@ components:
       properties:
         task:
           $ref: '#/components/schemas/Task'
+      required:
+        - task
 
     TaskResponse:
       type: object

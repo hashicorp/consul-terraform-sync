@@ -50,7 +50,6 @@ func TestTaskRequest_String(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-// TODO CHECK LOGIC
 // Test only bare minimum, task conversion scenarios covered in
 // TestRequest_oapigenTaskFromConfigTask and terraform variable files
 // covered in TestRequest_readToVariablesMap
@@ -63,7 +62,7 @@ func TestRequest_TaskRequestFromTaskConfig(t *testing.T) {
 		{
 			name:            "default_values_only",
 			taskConfig:      config.TaskConfig{},
-			expectedRequest: TaskRequest{Task: &oapigen.Task{}},
+			expectedRequest: TaskRequest{Task: oapigen.Task{}},
 		},
 	}
 
@@ -361,7 +360,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "minimum_required_only",
 			request: &TaskRequest{
-				Task: &oapigen.Task{
+				Task: oapigen.Task{
 					Name:     "test-name",
 					Module:   "path",
 					Services: &[]string{"api", "web"},
@@ -376,7 +375,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "basic_fields_filled",
 			request: &TaskRequest{
-				Task: &oapigen.Task{
+				Task: oapigen.Task{
 					Description: config.String("test-description"),
 					Name:        "test-name",
 					Services:    &[]string{"api", "web"},
@@ -409,7 +408,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "with_services_condition_regexp",
 			request: &TaskRequest{
-				Task: &oapigen.Task{
+				Task: oapigen.Task{
 					Name:    "task",
 					Module:  "path",
 					Enabled: config.Bool(true),
@@ -436,7 +435,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "with_services_condition_names",
 			request: &TaskRequest{
-				Task: &oapigen.Task{
+				Task: oapigen.Task{
 					Name:    "task",
 					Module:  "path",
 					Enabled: config.Bool(true),
@@ -463,7 +462,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "with_catalog_services_condition",
 			request: &TaskRequest{
-				Task: &oapigen.Task{
+				Task: oapigen.Task{
 					Name:   "task",
 					Module: "path",
 					Condition: &oapigen.Condition{
@@ -502,7 +501,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "with_consul_kv_condition",
 			request: &TaskRequest{
-				Task: &oapigen.Task{
+				Task: oapigen.Task{
 					Name:     "task",
 					Module:   "path",
 					Services: &[]string{"api", "web"},
@@ -535,7 +534,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "with_schedule_condition",
 			request: &TaskRequest{
-				Task: &oapigen.Task{
+				Task: oapigen.Task{
 					Name:     "task",
 					Module:   "path",
 					Services: &[]string{"api", "web"},
@@ -554,7 +553,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 		{
 			name: "with_module_inputs",
 			request: &TaskRequest{
-				Task: &oapigen.Task{
+				Task: oapigen.Task{
 					Name:   "task",
 					Module: "path",
 					Condition: &oapigen.Condition{
@@ -603,7 +602,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			// oapigen.ModuleInput.Services can be set with only 1 Services
 			// module input
 			request: &TaskRequest{
-				Task: &oapigen.Task{
+				Task: oapigen.Task{
 					Name:   "task",
 					Module: "path",
 					Condition: &oapigen.Condition{
@@ -651,7 +650,7 @@ func TestTaskRequest_ToRequestTaskConfig_Error(t *testing.T) {
 		{
 			name: "invalid conversion",
 			request: &TaskRequest{
-				Task: &oapigen.Task{
+				Task: oapigen.Task{
 					Name:     "test-name",
 					Services: &[]string{"api", "web"},
 					BufferPeriod: &oapigen.BufferPeriod{

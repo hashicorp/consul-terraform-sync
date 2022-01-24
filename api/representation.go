@@ -35,7 +35,7 @@ func TaskRequestFromTaskConfig(tc config.TaskConfig) (TaskRequest, error) {
 	}
 
 	t := oapigenTaskFromConfigTask(tc)
-	return TaskRequest{Task: &t}, nil
+	return TaskRequest{Task: t}, nil
 }
 
 func readToVariablesMap(filename string, reader io.Reader, variables map[string]string) error {
@@ -66,8 +66,6 @@ func readToVariablesMap(filename string, reader io.Reader, variables map[string]
 
 // ToTaskConfig converts a TaskRequest object to a Config TaskConfig object.
 func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
-	// TODO check for nil Task?
-
 	tc := config.TaskConfig{
 		Description: tr.Task.Description,
 		Name:        &tr.Task.Name,

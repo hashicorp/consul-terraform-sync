@@ -245,7 +245,7 @@ func generateExpectedResponse(t *testing.T, req string) oapigen.TaskResponse {
 	require.NoError(t, err)
 
 	return oapigen.TaskResponse{
-		Task: treq.Task,
+		Task: &treq.Task,
 	}
 }
 

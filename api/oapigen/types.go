@@ -124,7 +124,7 @@ type TaskDeleteResponse struct {
 
 // TaskRequest defines model for TaskRequest.
 type TaskRequest struct {
-	Task *Task `json:"task,omitempty"`
+	Task Task `json:"task"`
 }
 
 // TaskResponse defines model for TaskResponse.
