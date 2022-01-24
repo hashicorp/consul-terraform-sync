@@ -198,6 +198,10 @@ func fakeHandlerConfig(dir string) hclConfig {
 	return hclConfig(fmt.Sprintf(`
 working_dir = "%s"
 
+buffer_period {
+	enabled = false
+}
+
 terraform_provider "fake-sync" {
 	alias = "failure"
 	name = "failure"

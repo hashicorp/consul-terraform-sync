@@ -33,7 +33,7 @@ require (
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.3.0
-	github.com/hashicorp/hcat v0.2.1-0.20220120230750-5ddff017e1a6
+	github.com/hashicorp/hcat v0.2.1-0.20220124222903-f099b707b749
 	github.com/hashicorp/hcl v1.0.1-vault-2
 	github.com/hashicorp/hcl/v2 v2.8.2
 	github.com/hashicorp/logutils v1.0.0
