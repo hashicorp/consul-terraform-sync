@@ -179,6 +179,8 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			eventCountNow = eventCount(t, disabledTaskName, cts.Port())
 			require.Equal(t, eventCountBase+1, eventCountNow,
 				"event count did not increment once. task was not triggered as expected")
+			resourcesPath := filepath.Join(tempDir, disabledTaskName, resourcesDir)
+			validateServices(t, true, []string{"api", "api-1", "web"}, resourcesPath)
 		})
 	}
 }

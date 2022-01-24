@@ -161,12 +161,6 @@ func (tf *Terraform) InitTask(ctx context.Context) error {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
-	if !tf.task.IsEnabled() {
-		tf.logger.Trace(
-			"task disabled. skip initializing", taskNameLogKey, tf.task.Name())
-		return nil
-	}
-
 	return tf.initTask(ctx)
 }
 
