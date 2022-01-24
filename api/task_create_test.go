@@ -18,31 +18,35 @@ import (
 
 const (
 	testCreateTaskRequest = `{
-    "description": "Writes the service name, id, and IP address to a file",
-    "enabled": true,
-    "name": "api-task",
-    "providers": [
-        "local"
-    ],
-    "condition": {
+	"task": {
+		"description": "Writes the service name, id, and IP address to a file",
+		"enabled": true,
+		"name": "api-task",
+		"providers": [
+			"local"
+		],
+		"condition": {
 			"services": {"names": ["api"]}
 		},
-    "module": "./example-module"
+		"module": "./example-module"
+	}
 }`
 	testCreateTaskRequestVariables = `{
-    "description": "Writes the service name, id, and IP address to a file",
-    "enabled": true,
-    "name": "api-task",
-    "providers": [
-        "local"
-    ],
-    "condition": {
+	"task": {
+		"description": "Writes the service name, id, and IP address to a file",
+		"enabled": true,
+		"name": "api-task",
+		"providers": [
+			"local"
+		],
+		"condition": {
 			"services": {"names": ["api"]}
 		},
-    "variables":{
-        "filename": "test.txt"
-    },
-    "module": "./example-module"
+		"variables":{
+			"filename": "test.txt"
+		},
+		"module": "./example-module"
+	}
 }`
 	testTaskName         = "api-task"
 	testWorkingDirectory = "sync-task"
@@ -121,10 +125,12 @@ func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 	// Expected ctrl mock calls and returns
 	taskName := "inspected_task"
 	request := fmt.Sprintf(`{
-		"name": "%s",
-		"enabled": true,
-		"condition": {"services": {"names": ["api"]}},
-		"module": "mkam/hello/cts"
+	"task": {
+			"name": "%s",
+			"enabled": true,
+			"condition": {"services": {"names": ["api"]}},
+			"module": "mkam/hello/cts"
+		}
 	}`, taskName)
 	taskConf := config.TaskConfig{
 		Name:    config.String(taskName),
@@ -173,10 +179,12 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 			name:     "task already exists",
 			taskName: existingTask,
 			request: fmt.Sprintf(`{
-				"name": "%s",
-				"services": ["api"],
-				"module": "./example-module"
-		}`, existingTask),
+				"task": {
+					"name": "%s",
+					"services": ["api"],
+					"module": "./example-module"
+				}
+			}`, existingTask),
 			message:    fmt.Sprintf("task with name %s already exists", existingTask),
 			statusCode: http.StatusBadRequest,
 		},
@@ -236,9 +244,8 @@ func generateExpectedResponse(t *testing.T, req string) oapigen.TaskResponse {
 	err := json.Unmarshal([]byte(req), &treq)
 	require.NoError(t, err)
 
-	task := oapigen.Task(treq)
 	return oapigen.TaskResponse{
-		Task: &task,
+		Task: treq.Task,
 	}
 }
 

@@ -34,8 +34,8 @@ func TaskRequestFromTaskConfig(tc config.TaskConfig) (TaskRequest, error) {
 		}
 	}
 
-	tr := oapigenTaskFromConfigTask(tc)
-	return TaskRequest(tr), nil
+	t := oapigenTaskFromConfigTask(tc)
+	return TaskRequest{Task: &t}, nil
 }
 
 func readToVariablesMap(filename string, reader io.Reader, variables map[string]string) error {
@@ -66,43 +66,45 @@ func readToVariablesMap(filename string, reader io.Reader, variables map[string]
 
 // ToTaskConfig converts a TaskRequest object to a Config TaskConfig object.
 func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
+	// TODO check for nil Task?
+
 	tc := config.TaskConfig{
-		Description: tr.Description,
-		Name:        &tr.Name,
-		Module:      &tr.Module,
-		Version:     tr.Version,
-		Enabled:     tr.Enabled,
+		Description: tr.Task.Description,
+		Name:        &tr.Task.Name,
+		Module:      &tr.Task.Module,
+		Version:     tr.Task.Version,
+		Enabled:     tr.Task.Enabled,
 	}
 
-	if tr.Providers != nil {
-		tc.Providers = *tr.Providers
+	if tr.Task.Providers != nil {
+		tc.Providers = *tr.Task.Providers
 	}
 
-	if tr.Services != nil {
-		tc.Services = *tr.Services
+	if tr.Task.Services != nil {
+		tc.Services = *tr.Task.Services
 	}
 
 	// Convert source input
-	if tr.ModuleInput != nil {
+	if tr.Task.ModuleInput != nil {
 		inputs := make(config.ModuleInputConfigs, 0)
-		if tr.ModuleInput.Services != nil {
+		if tr.Task.ModuleInput.Services != nil {
 			input := &config.ServicesModuleInputConfig{
 				ServicesMonitorConfig: config.ServicesMonitorConfig{
-					Regexp: tr.ModuleInput.Services.Regexp,
+					Regexp: tr.Task.ModuleInput.Services.Regexp,
 				},
 			}
-			if tr.ModuleInput.Services.Names != nil {
-				input.Names = *tr.ModuleInput.Services.Names
+			if tr.Task.ModuleInput.Services.Names != nil {
+				input.Names = *tr.Task.ModuleInput.Services.Names
 			}
 			inputs = append(inputs, input)
 		}
-		if tr.ModuleInput.ConsulKv != nil {
+		if tr.Task.ModuleInput.ConsulKv != nil {
 			input := &config.ConsulKVModuleInputConfig{
 				ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
-					Datacenter: tr.ModuleInput.ConsulKv.Datacenter,
-					Recurse:    tr.ModuleInput.ConsulKv.Recurse,
-					Path:       &tr.ModuleInput.ConsulKv.Path,
-					Namespace:  tr.ModuleInput.ConsulKv.Namespace,
+					Datacenter: tr.Task.ModuleInput.ConsulKv.Datacenter,
+					Recurse:    tr.Task.ModuleInput.ConsulKv.Recurse,
+					Path:       &tr.Task.ModuleInput.ConsulKv.Path,
+					Namespace:  tr.Task.ModuleInput.ConsulKv.Namespace,
 				},
 			}
 			inputs = append(inputs, input)
@@ -111,72 +113,72 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	}
 
 	// Convert condition
-	if tr.Condition != nil {
-		if tr.Condition.Services != nil {
+	if tr.Task.Condition != nil {
+		if tr.Task.Condition.Services != nil {
 			cond := &config.ServicesConditionConfig{
-				UseAsModuleInput: tr.Condition.Services.UseAsModuleInput,
+				UseAsModuleInput: tr.Task.Condition.Services.UseAsModuleInput,
 			}
-			if tr.Condition.Services.Names != nil && len(*tr.Condition.Services.Names) > 0 {
-				cond.Names = *tr.Condition.Services.Names
+			if tr.Task.Condition.Services.Names != nil && len(*tr.Task.Condition.Services.Names) > 0 {
+				cond.Names = *tr.Task.Condition.Services.Names
 			} else {
-				cond.Regexp = tr.Condition.Services.Regexp
+				cond.Regexp = tr.Task.Condition.Services.Regexp
 			}
 			tc.Condition = cond
-		} else if tr.Condition.ConsulKv != nil {
+		} else if tr.Task.Condition.ConsulKv != nil {
 			tc.Condition = &config.ConsulKVConditionConfig{
 				ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
-					Datacenter: tr.Condition.ConsulKv.Datacenter,
-					Recurse:    tr.Condition.ConsulKv.Recurse,
-					Path:       &tr.Condition.ConsulKv.Path,
-					Namespace:  tr.Condition.ConsulKv.Namespace,
+					Datacenter: tr.Task.Condition.ConsulKv.Datacenter,
+					Recurse:    tr.Task.Condition.ConsulKv.Recurse,
+					Path:       &tr.Task.Condition.ConsulKv.Path,
+					Namespace:  tr.Task.Condition.ConsulKv.Namespace,
 				},
-				UseAsModuleInput: tr.Condition.ConsulKv.UseAsModuleInput,
+				UseAsModuleInput: tr.Task.Condition.ConsulKv.UseAsModuleInput,
 			}
-		} else if tr.Condition.CatalogServices != nil {
+		} else if tr.Task.Condition.CatalogServices != nil {
 			tc.Condition = &config.CatalogServicesConditionConfig{
 				CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
-					Regexp:           config.String(tr.Condition.CatalogServices.Regexp),
-					UseAsModuleInput: tr.Condition.CatalogServices.UseAsModuleInput,
-					Datacenter:       tr.Condition.CatalogServices.Datacenter,
-					Namespace:        tr.Condition.CatalogServices.Namespace,
-					NodeMeta:         tr.Condition.CatalogServices.NodeMeta.AdditionalProperties,
+					Regexp:           config.String(tr.Task.Condition.CatalogServices.Regexp),
+					UseAsModuleInput: tr.Task.Condition.CatalogServices.UseAsModuleInput,
+					Datacenter:       tr.Task.Condition.CatalogServices.Datacenter,
+					Namespace:        tr.Task.Condition.CatalogServices.Namespace,
+					NodeMeta:         tr.Task.Condition.CatalogServices.NodeMeta.AdditionalProperties,
 				},
 			}
-		} else if tr.Condition.Schedule != nil {
+		} else if tr.Task.Condition.Schedule != nil {
 			tc.Condition = &config.ScheduleConditionConfig{
-				Cron: &tr.Condition.Schedule.Cron,
+				Cron: &tr.Task.Condition.Schedule.Cron,
 			}
 		}
 	}
 
-	if tr.BufferPeriod != nil {
+	if tr.Task.BufferPeriod != nil {
 		var max time.Duration
 		var err error
-		if tr.BufferPeriod.Max != nil {
-			max, err = time.ParseDuration(*tr.BufferPeriod.Max)
+		if tr.Task.BufferPeriod.Max != nil {
+			max, err = time.ParseDuration(*tr.Task.BufferPeriod.Max)
 			if err != nil {
 				return config.TaskConfig{}, err
 			}
 		}
 
 		var min time.Duration
-		if tr.BufferPeriod.Min != nil {
-			min, err = time.ParseDuration(*tr.BufferPeriod.Min)
+		if tr.Task.BufferPeriod.Min != nil {
+			min, err = time.ParseDuration(*tr.Task.BufferPeriod.Min)
 			if err != nil {
 				return config.TaskConfig{}, err
 			}
 		}
 
 		tc.BufferPeriod = &config.BufferPeriodConfig{
-			Enabled: tr.BufferPeriod.Enabled,
+			Enabled: tr.Task.BufferPeriod.Enabled,
 			Max:     &max,
 			Min:     &min,
 		}
 	}
 
-	if tr.Variables != nil {
+	if tr.Task.Variables != nil {
 		tc.Variables = make(map[string]string)
-		for k, v := range tr.Variables.AdditionalProperties {
+		for k, v := range tr.Task.Variables.AdditionalProperties {
 			tc.Variables[k] = v
 		}
 	}

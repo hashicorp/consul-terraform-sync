@@ -93,7 +93,10 @@ paths:
 components:
   schemas:
     TaskRequest:
-      $ref: '#/components/schemas/Task'
+      type: object
+      properties:
+        task:
+          $ref: '#/components/schemas/Task'
 
     TaskResponse:
       type: object

@@ -110,7 +110,7 @@ func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&taskResp)
 	if err != nil {
-		err = fmt.Errorf("invalid response for task %s, %w", req.Name, err)
+		err = fmt.Errorf("invalid response for task %s, %w", req.Task.Name, err)
 
 		return TaskResponse{}, err
 	}

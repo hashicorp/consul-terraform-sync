@@ -84,10 +84,12 @@ func TestServe(t *testing.T) {
 			"tasks",
 			http.MethodPost,
 			`{
-	"name": "task_b",
-	"module": "module",
-	"services": ["api"],
-	"enabled": true
+	"task": {
+		"name": "task_b",
+		"module": "module",
+		"services": ["api"],
+		"enabled": true
+	}
 }`,
 			func(ctrl *mocks.Server) {
 				taskConf := config.TaskConfig{

@@ -24,16 +24,18 @@ import (
 
 const (
 	createTestTaskTemplate = `{
-	   "description": "Writes the service name, id, and IP address to a file",
-	   "name": "%s",
-	   "providers": [
-	       "local"
-	   ],
-	   "services": [
-	       "%s"
-	   ],
-	   "module": "mkam/instance-files/local"
-	}`
+	"task": {
+		"description": "Writes the service name, id, and IP address to a file",
+		"name": "%s",
+		"providers": [
+			"local"
+		],
+		"services": [
+			"%s"
+		],
+		"module": "mkam/instance-files/local"
+	}
+}`
 )
 
 // TestE2E_StatusEndpoints tests all of the CTS status endpoints and query
@@ -610,16 +612,18 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 
 	taskName := "created-task"
 	badRequest := fmt.Sprintf(`{
-	   "description": "Writes the service name, id, and IP address to a file",
-	   "enabled": true,
-	   "name": "%s",
-	   "providers": [
-	       "local"
-	   ],
-	   "services": [
-	       "api"
-	   ],
-	   "module": true
+		"task": {
+			"description": "Writes the service name, id, and IP address to a file",
+			"enabled": true,
+			"name": "%s",
+			"providers": [
+				"local"
+			],
+			"services": [
+				"api"
+			],
+			"module": true
+		}
 	}`, taskName)
 
 	resp := testutils.RequestHTTP(t, http.MethodPost, u, badRequest)
@@ -632,7 +636,7 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Contains(t, errorResponse.Error.Message, `request body has an error: doesn't match the schema: `+
-		`Error at "/module": Field must be set to string or not be present`)
+		`Error at "/task/module": Field must be set to string or not be present`)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	// Check that the task has not been created
@@ -666,9 +670,11 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 	taskName := "dryrun_task"
 	serviceName := "api"
 	req := &oapigen.TaskRequest{
-		Name:     taskName,
-		Services: &[]string{serviceName},
-		Module:   "mkam/hello/cts",
+		Task: &oapigen.Task{
+			Name:     taskName,
+			Services: &[]string{serviceName},
+			Module:   "mkam/hello/cts",
+		},
 	}
 	resp := testutils.RequestJSON(t, http.MethodPost, u, req)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -689,9 +695,9 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 
 	// Verify task in response
 	assert.NotNil(t, r.Task)
-	assert.Equal(t, req.Name, r.Task.Name, "name not expected value")
-	assert.Equal(t, req.Module, r.Task.Module, "module not expected value")
-	assert.ElementsMatch(t, *req.Services, *r.Task.Services, "services not expected value")
+	assert.Equal(t, req.Task.Name, r.Task.Name, "name not expected value")
+	assert.Equal(t, req.Task.Module, r.Task.Module, "module not expected value")
+	assert.ElementsMatch(t, *req.Task.Services, *r.Task.Services, "services not expected value")
 
 	// Check that the task was not created
 	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
