@@ -382,10 +382,13 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 		return nil, fmt.Errorf("error initializing new task, %s", err)
 	}
 
+	timeout := time.After(5 * time.Minute)
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
+		case <-timeout:
+			return nil, fmt.Errorf("timed out rendering template for task '%s'", taskName)
 		default:
 		}
 		ok, err := d.RenderTemplate(ctx)
