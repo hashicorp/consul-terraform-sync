@@ -221,7 +221,7 @@ func TestServer_TaskDelete(t *testing.T) {
 			func(d *driver.Drivers) {
 				mockD.On("TemplateIDs").Return(nil)
 				d.Add("success", mockD)
-				mockD.On("DeleteTask", ctx).Return()
+				mockD.On("DestroyTask", ctx).Return()
 			},
 			"",
 		}, {

@@ -164,8 +164,8 @@ func (tf *Terraform) InitTask(ctx context.Context) error {
 	return tf.initTask(ctx)
 }
 
-// DeleteTask deletes the task on the driver
-func (tf *Terraform) DeleteTask(ctx context.Context) {
+// DestroyTask destroys task dependencies so that it is safe for deletion
+func (tf *Terraform) DestroyTask(ctx context.Context) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
