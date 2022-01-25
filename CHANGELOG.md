@@ -15,6 +15,7 @@ IMPROVEMENTS:
 * Support new `names` field for configuring a task's `condition "services"` and `source_input "services"` blocks as an optional alternative to `regexp` to list monitored services by name. [[GH-561](https://github.com/hashicorp/consul-terraform-sync/issues/561)]
 * Support `source_includes_var` field for a task's `condition "services"` block. [[GH-584](https://github.com/hashicorp/consul-terraform-sync/pull/584)]
 * Expand `source_input` block usage to dynamic tasks and support multiple `source_input` blocks per task. [[GH-607](https://github.com/hashicorp/consul-terraform-sync/issues/607)]
+* Initialize disabled tasks, which allows for earlier validation of a task. [[GH-625](https://github.com/hashicorp/consul-terraform-sync/pull/625)]
 
 DEPRECATIONS:
 * **(Enterprise Only)** Deprecate `workspace_prefix` for the Terraform Cloud driver that adds unexpected `-` character added between the prefix and task name. Use the new `workspaces.prefix` option instead. [[GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442)]
