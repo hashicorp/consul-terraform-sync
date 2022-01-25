@@ -27,13 +27,13 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 		sendError(w, r, http.StatusBadRequest, fmt.Errorf("error decoding the request: %v", err))
 		return
 	}
-	logger = logger.With("task_name", req.Name)
+	logger = logger.With("task_name", req.Task.Name)
 	logger.Trace("create task request", "create_task_request", req)
 
 	// Check if task exists, if it does, do not create again
-	if _, err := h.ctrl.Task(ctx, req.Name); err == nil {
+	if _, err := h.ctrl.Task(ctx, req.Task.Name); err == nil {
 		logger.Trace("task already exists")
-		sendError(w, r, http.StatusBadRequest, fmt.Errorf("task with name %s already exists", req.Name))
+		sendError(w, r, http.StatusBadRequest, fmt.Errorf("task with name %s already exists", req.Task.Name))
 		return
 	}
 
