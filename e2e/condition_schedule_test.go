@@ -5,15 +5,45 @@ package e2e
 
 import (
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	scheduledConsulKV = `task {
+	name = "%s"
+	module = "./test_modules/consul_kv_file"
+	condition "schedule" {
+			cron = "*/10 * * * * * *"
+	}
+	module_input "consul-kv" {
+		path = "key-path"
+		datacenter = "dc1"
+	}
+	module_input "services" {
+		names = ["web", "api"]
+	}
+}`
+
+	scheduledServices = `task {
+	name = "%s"
+	module = "./test_modules/local_instances_file"
+	condition "schedule" {
+		cron = "*/10 * * * * * *"
+	}
+	module_input "services"{
+		regexp = "^web.*|^api.*"
+	}
+}`
 )
 
 // TestCondition_Schedule_Basic runs CTS in daemon-mode to test a task
@@ -37,30 +67,8 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	}
 }
 `, taskName)
-	moduleInputServices := fmt.Sprintf(`task {
-	name = "%s"
-	module = "./test_modules/local_instances_file"
-	condition "schedule" {
-		cron = "*/10 * * * * * *"
-	}
-    module_input "services"{
-	    regexp = "^web.*|^api.*"
-    }
-}
-`, taskName)
-	moduleInputConsulKV := fmt.Sprintf(`task {
-	name = "%s"
-	services = ["api", "web"]
-	module = "./test_modules/consul_kv_file"
-	condition "schedule" {
-      cron = "*/10 * * * * * *"
-	}
-    module_input "consul-kv" {
-      path = "key-path"
-      datacenter = "dc1"
-    }
-}
-`, taskName)
+	moduleInputServices := fmt.Sprintf(scheduledServices, taskName)
+	moduleInputConsulKV := fmt.Sprintf(scheduledConsulKV, taskName)
 
 	testcases := []struct {
 		name          string
@@ -132,12 +140,15 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 
 			// 2. Register two new services. Confirm task only triggered on schedule
 
-			// wait for scheduled task to have just ran. then register consul services
+			// wait for scheduled task to have just ran. then register consul services and
+			// a Consul KV pair
 			api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
 			registerTime := time.Now()
 			services := []testutil.TestService{{ID: "api-1", Name: "api"},
 				{ID: "web-1", Name: "web"}}
 			testutils.AddServices(t, srv, services)
+			expectedKV := "red"
+			srv.SetKVString(t, "key-path", expectedKV)
 
 			// check scheduled task did not trigger immediately and ran only on schedule
 			api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
@@ -147,19 +158,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
 			validateServices(t, true, []string{"api-1", "web-1"}, resourcesPath)
 
-			// Check KV events
 			if tc.isConsulKV {
-				// 3. Add KV. Confirm task only triggered on schedule
-				// wait for next event before starting this process
-				api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
-				registerTime = time.Now()
-				expectedKV := "red"
-				srv.SetKVString(t, "key-path", expectedKV)
-
-				// check scheduled task did not trigger immediately and ran only on schedule
-				api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
-				checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
-
 				// confirm key-value resources created, and that the values are as expected
 				validateModuleFile(t, true, true, resourcesPath, "key-path", expectedKV)
 			}
@@ -271,6 +270,169 @@ func TestCondition_Schedule_Dynamic(t *testing.T) {
 	// check scheduled task didn't trigger immediately and ran on schedule
 	api.WaitForEvent(t, cts, schedTaskName, registrationTime, scheduledWait)
 	checkScheduledRun(t, schedTaskName, registrationTime, taskSchedule, port)
+}
+
+// TestCondition_Schedule_CreateAndDeleteCLI runs CTS in daemon-mode
+// with an initial scheduled task, creates a new scheduled task with
+// the CLI, and deletes both tasks with the CLI. This test confirms
+// that the newly created task runs on a schedule, and that the
+// deleted tasks no longer run.
+func TestCondition_Schedule_CreateAndDeleteCLI(t *testing.T) {
+	t.Parallel()
+
+	initTaskName := "init_scheduled_task"
+	initTask := fmt.Sprintf(scheduledServices, initTaskName)
+	taskName := "created_scheduled_task"
+	createdTask := fmt.Sprintf(scheduledConsulKV, taskName)
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "schedule_create_delete_cli")
+	cts := ctsSetup(t, srv, tempDir, initTask)
+
+	taskSchedule := 10 * time.Second
+	scheduledWait := taskSchedule + 7*time.Second // buffer for task to execute
+
+	// Create a scheduled task with the CLI and a task file
+	var taskConfig hclConfig
+	taskConfig = taskConfig.appendString(createdTask)
+	taskFilePath := filepath.Join(tempDir, "task.hcl")
+	taskConfig.write(t, taskFilePath)
+
+	subcmd := []string{"task", "create",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+		fmt.Sprintf("-task-file=%s", taskFilePath),
+	}
+	out, err := runSubcommand(t, "yes\n", subcmd...)
+	require.NoError(t, err, fmt.Sprintf("command '%s' failed:\n %s", subcmd, out))
+	require.Contains(t, out, fmt.Sprintf("Task '%s' created", taskName))
+
+	// 0. Confirm one event for when the task was created
+	port := cts.Port()
+	eventCountBase := eventCount(t, taskName, port)
+	assert.Equal(t, 1, eventCountBase, "expected a scheduled task event after creation")
+
+	// 1. Wait and confirm that the task was triggered at the scheduled time
+	beforeEvent := time.Now()
+	api.WaitForEvent(t, cts, taskName, beforeEvent, scheduledWait)
+
+	eventCountNow := eventCount(t, taskName, port)
+	assert.Equal(t, eventCountNow, eventCountBase+1)
+
+	e := events(t, taskName, port)
+	latestStartTime := e[0].StartTime.Round(time.Second)
+	assert.Equal(t, 0, latestStartTime.Second()%10, fmt.Sprintf("expected "+
+		"start time to be at the 10s mark but was at %s", latestStartTime))
+
+	// 2. Register two new services and a Consul KV pair. Confirm task only triggered on schedule
+
+	// wait for scheduled task to have just ran. then register consul services
+	api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
+	registerTime := time.Now()
+	services := []testutil.TestService{{ID: "api-1", Name: "api"},
+		{ID: "web-1", Name: "web"}}
+	testutils.AddServices(t, srv, services)
+	expectedKV := "red"
+	srv.SetKVString(t, "key-path", expectedKV)
+
+	// check scheduled task did not trigger immediately and ran only on schedule
+	api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
+	checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
+
+	// confirm resources created
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, true, []string{"api-1", "web-1"}, resourcesPath)
+	validateModuleFile(t, true, true, resourcesPath, "key-path", expectedKV)
+
+	// 3. Delete both the scheduled tasks
+	deleteCmd := []string{"task", "delete", "-auto-approve",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+	}
+
+	for _, n := range []string{taskName, initTaskName} {
+		subcmd = append(deleteCmd, n)
+		out, err = runSubcommand(t, "", subcmd...)
+		require.NoError(t, err, fmt.Sprintf("command '%s' failed:\n %s", subcmd, out))
+		require.Contains(t, out, fmt.Sprintf("Deleted task '%s'", n))
+
+		s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", n)
+		resp := testutils.RequestHTTP(t, http.MethodGet, s, "")
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	}
+
+	// check that tasks no longer run at the scheduled time
+	// modify services in Consul and wait for scheduled time
+	services = []testutil.TestService{{ID: "api-2", Name: "api"}}
+	testutils.AddServices(t, srv, services)
+	testutils.DeregisterConsulService(t, srv, "web-1")
+	testutils.DeregisterConsulService(t, srv, "api-1")
+	time.Sleep(scheduledWait)
+
+	for _, n := range []string{taskName, initTaskName} {
+		// confirm no events still and that resources aren't changed
+		s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", n)
+		resp := testutils.RequestHTTP(t, http.MethodGet, s, "")
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+		resourcesPath := filepath.Join(tempDir, n, resourcesDir)
+		validateServices(t, true, []string{"api-1", "web-1"}, resourcesPath)
+		validateServices(t, false, []string{"api-2"}, resourcesPath)
+	}
+}
+
+// TestCondition_Schedule_CreateCLICanceled tests if a task is not given
+// approval to be created, it will not run on a schedule.
+func TestCondition_Schedule_CreateCLICanceled(t *testing.T) {
+	t.Parallel()
+	taskName := "scheduled_task_create_canceled"
+	createdTask := fmt.Sprintf(scheduledConsulKV, taskName)
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	srv.SetKVString(t, "key-path", "test")
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "schedule_create_cli_canceled")
+	cts := ctsSetup(t, srv, tempDir, dbTask())
+
+	// Initiate a scheduled task creation but cancel at approval step
+	var taskConfig hclConfig
+	taskConfig = taskConfig.appendString(createdTask)
+	taskFilePath := filepath.Join(tempDir, "task.hcl")
+	taskConfig.write(t, taskFilePath)
+
+	subcmd := []string{"task", "create",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+		fmt.Sprintf("-task-file=%s", taskFilePath),
+	}
+	out, err := runSubcommand(t, "no\n", subcmd...)
+	require.NoError(t, err, fmt.Sprintf("command '%s' failed:\n %s", subcmd, out))
+	require.Contains(t, out, "Cancelled creating task")
+
+	// Make changes to Consul service and KV pair
+	services := []testutil.TestService{{ID: "api-1", Name: "api"},
+		{ID: "web-1", Name: "web"}}
+	testutils.AddServices(t, srv, services)
+
+	// Wait for scheduled time, confirm no events or resources
+	taskSchedule := 10 * time.Second
+	scheduledWait := taskSchedule + 7*time.Second // buffer for task to execute
+	time.Sleep(scheduledWait)
+
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
+	resp := testutils.RequestHTTP(t, http.MethodGet, s, "")
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, false, []string{"api-1", "web-1"}, resourcesPath)
+	validateModuleFile(t, true, false, resourcesPath, "key-path", "")
 }
 
 // checkScheduledRun checks that a scheduled task's most recent task run

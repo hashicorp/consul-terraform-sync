@@ -27,6 +27,10 @@ type ReadWrite struct {
 
 	watcherCh chan string
 
+	// scheduleCh is used to coordinate scheduled tasks
+	// created via the API
+	scheduleCh chan driver.Driver
+
 	// taskNotify is only initialized if EnableTestMode() is used. It provides
 	// tests insight into which tasks were triggered and had completed
 	taskNotify chan string
@@ -72,7 +76,14 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 	errCh := make(chan error)
 	if rw.watcherCh == nil {
-		rw.watcherCh = make(chan string, rw.drivers.Len()+2)
+		// Size of channel is larger than just current number of drivers
+		// to account for additional tasks created via the API. Adding 10
+		// is an arbitrarily chosen value.
+		rw.watcherCh = make(chan string, rw.drivers.Len()+10)
+	}
+	if rw.scheduleCh == nil {
+		// Size of channel is an arbitrarily chosen value.
+		rw.scheduleCh = make(chan driver.Driver, 10)
 	}
 	go func() {
 		for {
@@ -96,6 +107,10 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 			}
 
 			go rw.runDynamicTask(ctx, d) // errors are logged for now
+
+		case d := <-rw.scheduleCh:
+			// Run newly created scheduled tasks
+			go rw.runScheduledTask(ctx, d)
 
 		case err := <-errCh:
 			return err
@@ -168,6 +183,11 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver) erro
 	for {
 		select {
 		case <-time.After(waitTime):
+			if _, ok := rw.drivers.Get(taskName); !ok {
+				rw.logger.Info("stopping deleted scheduled task", taskNameLogKey, taskName)
+				return nil
+			}
+
 			rw.logger.Info("time for scheduled task", taskNameLogKey, taskName)
 			if rw.drivers.IsActive(taskName) {
 				// The driver is currently active with the task, initiated by an ad-hoc run.
