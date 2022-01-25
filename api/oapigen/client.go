@@ -307,7 +307,7 @@ func (r CreateTaskResponse) StatusCode() int {
 type DeleteTaskByNameResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON204      *TaskDeleteResponse
+	JSON200      *TaskDeleteResponse
 	JSONDefault  *ErrorResponse
 }
 
@@ -400,12 +400,12 @@ func ParseDeleteTaskByNameResponse(rsp *http.Response) (*DeleteTaskByNameRespons
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 204:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest TaskDeleteResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON204 = &dest
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse

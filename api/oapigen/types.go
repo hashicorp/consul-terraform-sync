@@ -119,6 +119,7 @@ type Task struct {
 
 // TaskDeleteResponse defines model for TaskDeleteResponse.
 type TaskDeleteResponse struct {
+	Error     *Error    `json:"error,omitempty"`
 	RequestId RequestID `json:"request_id"`
 }
 
@@ -129,6 +130,7 @@ type TaskRequest struct {
 
 // TaskResponse defines model for TaskResponse.
 type TaskResponse struct {
+	Error     *Error    `json:"error,omitempty"`
 	RequestId RequestID `json:"request_id"`
 	Run       *Run      `json:"run,omitempty"`
 	Task      *Task     `json:"task,omitempty"`
