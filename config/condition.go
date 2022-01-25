@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/consul/lib/decode"
+	"github.com/hashicorp/consul-terraform-sync/internal/decode"
 	"github.com/mitchellh/mapstructure"
 )
 
