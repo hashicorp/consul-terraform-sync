@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/internal/decode"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
-	"github.com/hashicorp/consul/lib/decode"
 	"github.com/hashicorp/hcl"
 	"github.com/mitchellh/mapstructure"
 )
