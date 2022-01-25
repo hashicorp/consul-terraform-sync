@@ -16,8 +16,13 @@ type Watcher struct {
 	mock.Mock
 }
 
-// Buffer provides a mock function with given fields: _a0
-func (_m *Watcher) Buffer(_a0 hcat.Notifier) bool {
+// BufferReset provides a mock function with given fields: _a0
+func (_m *Watcher) BufferReset(_a0 hcat.Notifier) {
+	_m.Called(_a0)
+}
+
+// Buffering provides a mock function with given fields: _a0
+func (_m *Watcher) Buffering(_a0 hcat.Notifier) bool {
 	ret := _m.Called(_a0)
 
 	var r0 bool
@@ -28,11 +33,6 @@ func (_m *Watcher) Buffer(_a0 hcat.Notifier) bool {
 	}
 
 	return r0
-}
-
-// BufferReset provides a mock function with given fields: _a0
-func (_m *Watcher) BufferReset(_a0 hcat.Notifier) {
-	_m.Called(_a0)
 }
 
 // Complete provides a mock function with given fields: _a0
@@ -47,6 +47,17 @@ func (_m *Watcher) Complete(_a0 hcat.Notifier) bool {
 	}
 
 	return r0
+}
+
+// Deregister provides a mock function with given fields: ns
+func (_m *Watcher) Deregister(ns ...hcat.Notifier) {
+	_va := make([]interface{}, len(ns))
+	for _i := range ns {
+		_va[_i] = ns[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _va...)
+	_m.Called(_ca...)
 }
 
 // MarkForSweep provides a mock function with given fields: notifier

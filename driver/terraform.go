@@ -164,6 +164,14 @@ func (tf *Terraform) InitTask(ctx context.Context) error {
 	return tf.initTask(ctx)
 }
 
+// DestroyTask destroys task dependencies so that it is safe for deletion
+func (tf *Terraform) DestroyTask(ctx context.Context) {
+	tf.mu.Lock()
+	defer tf.mu.Unlock()
+
+	tf.deregisterTemplate(ctx)
+}
+
 // SetBufferPeriod sets the buffer period for the task. Do not set this when
 // task needs to immediately render a template and run.
 func (tf *Terraform) SetBufferPeriod() {
@@ -235,6 +243,7 @@ func (tf *Terraform) InspectTask(ctx context.Context) (InspectPlan, error) {
 	}
 
 	plan, err := tf.inspectTask(ctx, true)
+	tf.deregisterTemplate(ctx)
 	return plan, err
 }
 
@@ -417,6 +426,11 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// deregisterTemplate attempts to deregister the hashicat template
+func (tf *Terraform) deregisterTemplate(ctx context.Context) {
+	tf.watcher.Deregister(tf.template)
 }
 
 // renderTemplate attempts to render the hashicat template

@@ -42,7 +42,7 @@ type Resolver interface {
 type Watcher interface {
 	Watch(context.Context, chan string) error
 	WaitCh(context.Context) <-chan error
-	Buffer(hcat.Notifier) bool
+	Buffering(hcat.Notifier) bool
 	BufferReset(hcat.Notifier)
 	MarkForSweep(notifier hcat.IDer)
 	SetBufferPeriod(min, max time.Duration, tmplIDs ...string)
@@ -53,4 +53,5 @@ type Watcher interface {
 	Complete(hcat.Notifier) bool
 	Recaller(hcat.Notifier) hcat.Recaller
 	Register(ns ...hcat.Notifier) error
+	Deregister(ns ...hcat.Notifier)
 }

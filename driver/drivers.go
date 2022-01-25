@@ -1,9 +1,12 @@
 package driver
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 // Drivers wraps the map of task-name to associated driver so that the map
@@ -143,6 +146,21 @@ func (d *Drivers) Delete(taskName string) error {
 
 	if taskName == "" {
 		return errors.New("task name cannot be empty")
+	}
+
+	driver, ok := d.drivers[taskName]
+
+	if ok {
+		driver.DestroyTask(context.Background())
+	} else {
+		logging.Global().Trace("attempted to destroy a non-existent task", taskNameLogKey, taskName)
+	}
+
+	// delete driver templates associated with task
+	for val, id := range d.driverTemplates {
+		if val == taskName {
+			delete(d.driverTemplates, id)
+		}
 	}
 
 	delete(d.drivers, taskName)
