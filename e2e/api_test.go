@@ -259,8 +259,8 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	t.Parallel()
 	// Test enabling and disabling a task
-	// 1. Start with disabled task. Confirm task not initialized, resources not
-	//    created
+	// 1. Start with disabled task. Confirm task is initialized, but
+	//    not run (resources not created)
 	// 2. API to inspect enabling task. Confirm plan looks good, resources not
 	//    created, and task not actually enabled.
 	// 3. API to actually enable task. Confirm resources are created
@@ -274,12 +274,14 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	cts := ctsSetup(t, srv, tempDir, disabledTaskConfig(tempDir))
 
-	// Confirm that terraform files were not generated for a disabled task
-	files := testutils.CheckDir(t, true, fmt.Sprintf("%s/%s", tempDir, "disabled_task"))
-	require.Equal(t, len(files), 0)
+	// Confirm that terraform files were generated for a disabled task
+	taskPath := filepath.Join(tempDir, disabledTaskName)
+	files := testutils.CheckDir(t, true, taskPath)
+	require.Greater(t, len(files), 0)
+	testutils.CheckFile(t, true, taskPath, "terraform.tfvars.tmpl")
 
 	// Confirm that resources were not created
-	resourcesPath := filepath.Join(tempDir, disabledTaskName, resourcesDir)
+	resourcesPath := filepath.Join(taskPath, resourcesDir)
 	testutils.CheckDir(t, false, resourcesPath)
 
 	// Update Task API: enable task with inspect run option

@@ -656,16 +656,30 @@ func TestGetTerraformHandlers(t *testing.T) {
 
 func TestDisabledTask(t *testing.T) {
 	t.Run("disabled-tasks", func(t *testing.T) {
-		// tests that disabled tasks don't require mocking any calls and does
-		// not throw any errors
-
-		tf := &Terraform{
-			task:    &Task{name: "disabled_task", enabled: false},
-			watcher: new(mocksTmpl.Watcher),
-			logger:  logging.NewNullLogger(),
-		}
+		// tests that disabled tasks don't require mocking any calls other
+		// than initialization and validation and that the calls do not
+		// throw any errors
 
 		ctx := context.Background()
+		c := new(mocks.Client)
+		c.On("Init", ctx).Return(nil).Once()
+		c.On("Validate", ctx).Return(nil).Once()
+
+		w := new(mocksTmpl.Watcher)
+		w.On("Register", mock.Anything).Return(nil).Once()
+
+		dirName := "disabled-task-test"
+		deleteTemp := testutils.MakeTempDir(t, dirName)
+		defer deleteTemp()
+
+		tf := &Terraform{
+			task: &Task{name: "disabled_task", enabled: false,
+				workingDir: dirName, logger: logging.NewNullLogger()},
+			client:     c,
+			fileReader: func(string) ([]byte, error) { return []byte{}, nil },
+			watcher:    w,
+			logger:     logging.NewNullLogger(),
+		}
 
 		err := tf.InitTask(ctx)
 		assert.NoError(t, err)
