@@ -205,8 +205,8 @@ module "test" {
 			},
 			templates: []Template{
 				&CatalogServicesTemplate{
-					Regexp:            ".*",
-					SourceIncludesVar: true,
+					Regexp:    ".*",
+					RenderVar: true,
 				},
 			},
 			varNames: nil,
@@ -248,8 +248,8 @@ module "test" {
 			},
 			templates: []Template{
 				&CatalogServicesTemplate{
-					Regexp:            ".*",
-					SourceIncludesVar: true,
+					Regexp:    ".*",
+					RenderVar: true,
 				},
 			},
 			varNames: nil,

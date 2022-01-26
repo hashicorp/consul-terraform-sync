@@ -335,8 +335,8 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 		template := &tftmpl.ServicesTemplate{
 			Names:    t.ServiceNames(),
 			Services: services,
-			// services list does not support SourceIncludesVar=false
-			SourceIncludesVar: true,
+			// services list must always render the variable
+			RenderVar: true,
 		}
 		templates = append(templates, template)
 
@@ -348,37 +348,37 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 	switch v := t.condition.(type) {
 	case *config.CatalogServicesConditionConfig:
 		condition = &tftmpl.CatalogServicesTemplate{
-			Regexp:            *v.Regexp,
-			Datacenter:        *v.Datacenter,
-			Namespace:         *v.Namespace,
-			NodeMeta:          v.NodeMeta,
-			SourceIncludesVar: *v.UseAsModuleInput,
+			Regexp:     *v.Regexp,
+			Datacenter: *v.Datacenter,
+			Namespace:  *v.Namespace,
+			NodeMeta:   v.NodeMeta,
+			RenderVar:  *v.UseAsModuleInput,
 		}
 	case *config.ServicesConditionConfig:
 		if v.Regexp != nil {
 			condition = &tftmpl.ServicesRegexTemplate{
-				Regexp:            *v.Regexp,
-				Datacenter:        *v.Datacenter,
-				Namespace:         *v.Namespace,
-				Filter:            *v.Filter,
-				SourceIncludesVar: *v.UseAsModuleInput,
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				RenderVar:  *v.UseAsModuleInput,
 			}
 		} else {
 			condition = &tftmpl.ServicesTemplate{
-				Names:             v.Names,
-				Datacenter:        *v.Datacenter,
-				Namespace:         *v.Namespace,
-				Filter:            *v.Filter,
-				SourceIncludesVar: *v.UseAsModuleInput,
+				Names:      v.Names,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				RenderVar:  *v.UseAsModuleInput,
 			}
 		}
 	case *config.ConsulKVConditionConfig:
 		condition = &tftmpl.ConsulKVTemplate{
-			Path:              *v.Path,
-			Datacenter:        *v.Datacenter,
-			Recurse:           *v.Recurse,
-			Namespace:         *v.Namespace,
-			SourceIncludesVar: *v.UseAsModuleInput,
+			Path:       *v.Path,
+			Datacenter: *v.Datacenter,
+			Recurse:    *v.Recurse,
+			Namespace:  *v.Namespace,
+			RenderVar:  *v.UseAsModuleInput,
 		}
 	default:
 		// no-op: condition block currently not required since services.list
@@ -402,8 +402,8 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 					Datacenter: *v.Datacenter,
 					Namespace:  *v.Namespace,
 					Filter:     *v.Filter,
-					// always include for module_input config
-					SourceIncludesVar: true,
+					// always render var for module_input config
+					RenderVar: true,
 				}
 			} else {
 				moduleInputs[ix] = &tftmpl.ServicesTemplate{
@@ -411,8 +411,8 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 					Datacenter: *v.Datacenter,
 					Namespace:  *v.Namespace,
 					Filter:     *v.Filter,
-					// always include for module_input config
-					SourceIncludesVar: true,
+					// always render var for module_input config
+					RenderVar: true,
 				}
 			}
 		case *config.ConsulKVModuleInputConfig:
@@ -421,8 +421,8 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 				Datacenter: *v.Datacenter,
 				Recurse:    *v.Recurse,
 				Namespace:  *v.Namespace,
-				// always include for module_input config
-				SourceIncludesVar: true,
+				// always render var for module_input config
+				RenderVar: true,
 			}
 		default:
 			return fmt.Errorf("task %q has unsupported type of module_input "+

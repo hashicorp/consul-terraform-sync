@@ -22,7 +22,9 @@ type ConsulKVTemplate struct {
 	Datacenter string
 	Namespace  string
 
-	SourceIncludesVar bool
+	// RenderVar informs whether the template should render the variable or not.
+	// Aligns with the task condition configuration `UseAsModuleInput``
+	RenderVar bool
 }
 
 // IsServicesVar returns false because the template returns a consul_kv
@@ -31,8 +33,8 @@ func (t ConsulKVTemplate) IsServicesVar() bool {
 	return false
 }
 
-func (t ConsulKVTemplate) SourceIncludesVariable() bool {
-	return t.SourceIncludesVar
+func (t ConsulKVTemplate) RendersVar() bool {
+	return t.RenderVar
 }
 
 func (t ConsulKVTemplate) appendModuleAttribute(body *hclwrite.Body) {
@@ -52,7 +54,7 @@ func (t ConsulKVTemplate) appendTemplate(w io.Writer) error {
 	logger := logging.Global().Named(logSystemName).Named(tftmplSubsystemName)
 	q := t.hcatQuery()
 
-	if t.SourceIncludesVar {
+	if t.RenderVar {
 		var baseTmpl string
 		if t.Recurse {
 			baseTmpl = fmt.Sprintf(consulKVRecurseBaseTmpl, q)
