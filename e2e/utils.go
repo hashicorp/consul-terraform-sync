@@ -318,7 +318,7 @@ func validateVariable(t *testing.T, contains bool, workingDir, name, value strin
 func setParallelism(t *testing.T) {
 	local, _ := getEnvBool(localTestEnvVarName)
 	if !local {
-		setParallelism(t)
+		t.Parallel()
 	}
 }
 
