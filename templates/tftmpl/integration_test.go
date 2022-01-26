@@ -126,7 +126,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		{
 			"happy path (consul kv)",
 			"testdata/consul-kv/terraform.tfvars",
-			"testdata/consul-kv/terraform_includes_vars.tfvars.tmpl",
+			"testdata/consul-kv/terraform_with_var.tfvars.tmpl",
 			true,
 			true,
 			false,

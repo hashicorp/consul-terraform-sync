@@ -341,7 +341,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "terraform.tfvars.tmpl (consul-kv - render var)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/consul-kv/terraform_includes_vars.tfvars.tmpl",
+			Golden: "testdata/consul-kv/terraform_with_var.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&ConsulKVTemplate{
