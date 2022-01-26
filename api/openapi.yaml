@@ -77,12 +77,14 @@ paths:
             type: string
             example: "taskA"
       responses:
-        '204':
+        '200':
           description: Task deleted
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaskDeleteResponse'
+              example:
+                request_id: "bb63cd70-8f45-4f42-b27b-bc2a6f4931e6"
         default:
           description: Unexpected error
           content:
@@ -109,6 +111,8 @@ components:
           $ref: '#/components/schemas/RequestID'
         run:
           $ref: '#/components/schemas/Run'
+        error:
+          $ref: '#/components/schemas/Error'
       required:
         - request_id
 
@@ -117,6 +121,8 @@ components:
       properties:
         request_id:
           $ref: '#/components/schemas/RequestID'
+        error:
+          $ref: '#/components/schemas/Error'
       required:
         - request_id
 

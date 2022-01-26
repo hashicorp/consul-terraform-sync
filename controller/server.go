@@ -52,6 +52,11 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 	if err != nil {
 		return config.TaskConfig{}, err
 	}
+
+	if d.Task().IsScheduled() {
+		rw.scheduleCh <- d
+	}
+
 	return conf, nil
 }
 
@@ -77,6 +82,11 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 	if err != nil {
 		return config.TaskConfig{}, err
 	}
+
+	if d.Task().IsScheduled() {
+		rw.scheduleCh <- d
+	}
+
 	return conf, nil
 }
 

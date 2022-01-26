@@ -369,6 +369,8 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 		d.On("Task").Return(scheduledTestTask(t, taskName)).Twice()
 		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
+		d.On("TemplateIDs").Return(nil)
+		ctrl.drivers.Add(taskName, d)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
@@ -417,6 +419,36 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 		}
 
 		d.AssertExpectations(t)
+	})
+
+	t.Run("deleted-scheduled-task", func(t *testing.T) {
+		ctrl := newTestController()
+
+		taskName := "scheduled_task"
+		d := new(mocksD.Driver)
+		d.On("Task").Return(scheduledTestTask(t, taskName)).Once()
+		// driver is not added to drivers map
+
+		ctx := context.Background()
+		errCh := make(chan error)
+		done := make(chan bool)
+		go func() {
+			err := ctrl.runScheduledTask(ctx, d)
+			if err != nil {
+				errCh <- err
+			}
+			done <- true
+		}()
+
+		select {
+		case <-errCh:
+			t.Fatal("runScheduledTask did not exit properly when task is not in map of drivers")
+		case <-done:
+			// runScheduledTask exited as expected
+			d.AssertExpectations(t)
+		case <-time.After(time.Second * 5):
+			t.Fatal("runScheduledTask did not exit as expected")
+		}
 	})
 }
 
