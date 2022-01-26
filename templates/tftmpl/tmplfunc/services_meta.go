@@ -19,7 +19,7 @@ type ServicesMeta struct {
 
 	// Introduced in 0.5. Replaces metaMap
 	// When this happens: when task.condition "services" or
-	// task.source_input "services" cts_user_defined_meta field is configured
+	// task.module_input "services" cts_user_defined_meta field is configured
 	meta map[string]string
 }
 
