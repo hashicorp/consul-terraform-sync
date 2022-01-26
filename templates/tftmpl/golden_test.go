@@ -69,7 +69,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "main.tf (catalog-services - render var)",
 			Func:   newMainTF,
-			Golden: "testdata/catalog-services/main_include.tf",
+			Golden: "testdata/catalog-services/main.tf",
 			Input: RootModuleInputData{
 				Backend: map[string]interface{}{},
 				Templates: []Template{
