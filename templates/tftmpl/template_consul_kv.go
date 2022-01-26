@@ -62,7 +62,7 @@ func (t ConsulKVTemplate) appendTemplate(w io.Writer) error {
 			baseTmpl = fmt.Sprintf(consulKVBaseTmpl, q)
 		}
 
-		if _, err := fmt.Fprintf(w, consulKVIncludesVarTmpl, baseTmpl); err != nil {
+		if _, err := fmt.Fprintf(w, consulKVSetVarTmpl, baseTmpl); err != nil {
 			logger.Error("unable to write consul-kv template with variable", "error", err)
 			return err
 		}
@@ -106,7 +106,7 @@ func (t ConsulKVTemplate) hcatQuery() string {
 	return ""
 }
 
-var consulKVIncludesVarTmpl = `
+var consulKVSetVarTmpl = `
 consul_kv = {%s}
 `
 

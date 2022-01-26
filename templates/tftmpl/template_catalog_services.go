@@ -47,7 +47,7 @@ func (t CatalogServicesTemplate) appendTemplate(w io.Writer) error {
 	q := t.hcatQuery()
 
 	if t.RenderVar {
-		_, err := fmt.Fprintf(w, catalogServicesIncludesVarTmpl, q)
+		_, err := fmt.Fprintf(w, catalogServicesSetVarTmpl, q)
 		if err != nil {
 			err = fmt.Errorf("unable to write catalog-service template with variable, error: %v", err)
 			return err
@@ -92,7 +92,7 @@ func (t CatalogServicesTemplate) hcatQuery() string {
 	return ""
 }
 
-var catalogServicesIncludesVarTmpl = fmt.Sprintf(`
+var catalogServicesSetVarTmpl = fmt.Sprintf(`
 catalog_services = {%s}
 `, catalogServicesBaseTmpl)
 
