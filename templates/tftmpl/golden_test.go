@@ -103,7 +103,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "variables.tf (catalog-services - render var)",
 			Func:   newVariablesTF,
-			Golden: "testdata/catalog-services/variables_include.tf",
+			Golden: "testdata/catalog-services/variables_with_var.tf",
 			Input: RootModuleInputData{
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
 				Templates: []Template{
