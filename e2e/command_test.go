@@ -392,6 +392,7 @@ func TestE2E_CreateTaskCommand(t *testing.T) {
 		outputContains []string
 		expectErr      bool
 		expectStatus   bool
+		checkEvents    bool
 	}{
 		{
 			name:     "happy_path",
@@ -402,7 +403,7 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  services       = ["web"]
   enabled = true
 }`, taskName),
 			input: "yes\n",
@@ -411,6 +412,7 @@ task {
 				fmt.Sprintf("Task '%s' created", taskName)},
 			expectErr:    false,
 			expectStatus: true,
+			checkEvents:  true,
 		},
 		{
 			name:     "with_tf_vars_files",
@@ -433,7 +435,7 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/with_tfvars_file"
   providers      = ["local"]
-  services       = ["api"]
+  services       = ["web"]
   enabled        = true
   variable_files = ["%s","%s"]
 }`, taskName, filenameVarsFileName, objectVarsFileName),
@@ -443,6 +445,7 @@ task {
 				fmt.Sprintf("Task '%s' created", taskName)},
 			expectErr:    false,
 			expectStatus: true,
+			checkEvents:  true,
 		},
 		{
 			name:     "auto_approve",
@@ -453,13 +456,14 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  services       = ["web"]
   enabled = true
 }`, taskName),
 			outputContains: []string{
 				fmt.Sprintf("Task '%s' created", taskName)},
 			expectErr:    false,
 			expectStatus: true,
+			checkEvents:  true,
 			args:         []string{"-auto-approve"},
 		},
 		{
@@ -471,7 +475,7 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  services       = ["web"]
   enabled = true
 }`, taskName),
 			input: "no\n",
@@ -481,6 +485,7 @@ task {
 			},
 			expectErr:    false,
 			expectStatus: false,
+			checkEvents:  true,
 		},
 		{
 			name:     "error_task_already_exists",
@@ -501,6 +506,7 @@ task {
 			},
 			expectErr:    true,
 			expectStatus: true,
+			checkEvents:  false,
 		},
 		{
 			name:     "error_more_than_one_task",
@@ -511,7 +517,7 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  services       = ["web"]
   enabled = true
 }
 task {
@@ -519,7 +525,7 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  services       = ["web"]
   enabled = true
 }
 `, taskName, taskName),
@@ -529,6 +535,7 @@ task {
 			},
 			expectErr:    true,
 			expectStatus: false,
+			checkEvents:  false,
 		},
 	}
 
@@ -591,20 +598,21 @@ task {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
+				return
 			}
 
-			// If we expected a task status, then the task exists, verify it is updating on changes
-			if tc.expectStatus {
+			// Check events if we expect events to be triggered
+			if tc.checkEvents {
 				// 1. get current number of events
-				eventCountBase := eventCount(t, dbTaskName, cts.Port())
+				eventCountBase := eventCount(t, tc.taskName, cts.Port())
 
-				// 2. register api service. check triggers task
+				// 2. register web service. check triggers task
 				now := time.Now()
-				service := testutil.TestService{ID: "api-1", Name: "api"}
+				service := testutil.TestService{ID: "web-1", Name: "web"}
 				testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-				api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
+				api.WaitForEvent(t, cts, tc.taskName, now, defaultWaitForEvent)
 
-				eventCountNow := eventCount(t, dbTaskName, cts.Port())
+				eventCountNow := eventCount(t, tc.taskName, cts.Port())
 				require.Equal(t, eventCountBase+1, eventCountNow,
 					"event count did not increment once. task was not triggered as expected")
 			}
@@ -657,7 +665,7 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  services       = ["web"]
   enabled = true
 }`, taskName)
 	taskConfig = taskConfig.appendString(inputTask)
@@ -700,18 +708,17 @@ task {
 
 	// Verify events trigger
 	// 1. get current number of events
-	eventCountBase := eventCount(t, dbTaskName, cts.Port())
+	eventCountBase := eventCount(t, taskName, cts.Port())
 
-	// 2. register api service. check triggers task
+	// 2. register web service. check triggers task
 	now := time.Now()
-	service := testutil.TestService{ID: "api-1", Name: "api"}
+	service := testutil.TestService{ID: "web-1", Name: "web"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 
-	eventCountNow := eventCount(t, dbTaskName, cts.Port())
+	eventCountNow := eventCount(t, taskName, cts.Port())
 	require.Equal(t, eventCountBase+1, eventCountNow,
 		"event count did not increment once. task was not triggered as expected")
-
 }
 
 // TestE2E_DeleteTaskCommand_Help tests that the usage is outputted
