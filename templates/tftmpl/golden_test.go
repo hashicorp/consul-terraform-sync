@@ -392,7 +392,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "terraform.tfvars.tmpl (consul-kv w recurse - no var)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/consul-kv/terraform_recurse_true_include_false.tfvars.tmpl",
+			Golden: "testdata/consul-kv/terraform_recurse_true_no_var.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&ConsulKVTemplate{
