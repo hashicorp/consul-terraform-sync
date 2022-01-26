@@ -26,7 +26,7 @@ import (
 // the command meta object. This starts up a local Consul server and runs
 // CTS in dev mode.
 func TestE2E_MetaCommandErrors(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -102,7 +102,7 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 // output and state given different paths. This starts up a local Consul server
 // and runs CTS with a disabled task.
 func TestE2E_EnableTaskCommand(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	cases := []struct {
 		name           string
@@ -188,7 +188,7 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 // TestE2E_DisableTaskCommand tests the CLI to disable an enabled task. This test
 // starts up a local Consul server and runs CTS in dev mode.
 func TestE2E_DisableTaskCommand(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -225,7 +225,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 // expected once re-enabled.
 // See https://github.com/hashicorp/consul-terraform-sync/issues/320
 func TestE2E_ReenableTaskTriggers(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
@@ -283,7 +283,7 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 
 // TestE2E_DeleteTaskCommand tests deleting a task with the CTS CLI
 func TestE2E_DeleteTaskCommand(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	cases := []struct {
 		name           string
 		taskName       string
@@ -375,7 +375,7 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 
 // TestE2E_CreateTaskCommand tests creating a task with the CTS CLI
 func TestE2E_CreateTaskCommand(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_cmd")
 	objectVarsFileName := filepath.Join(tempDir, "object.tfvars")
@@ -640,7 +640,7 @@ func TestE2E_CreateTaskCommand_NoTaskFileProvided(t *testing.T) {
 // TestE2E_CreateDeleteCreateTrigger tests that after creating a task, then deleting
 // the task, and then finally re-creating the task, the task will trigger
 func TestE2E_CreateDeleteCreateTrigger(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_delete_create_cmd")
 
@@ -717,7 +717,7 @@ task {
 // TestE2E_DeleteTaskCommand_Help tests that the usage is outputted
 // for the task help commands. Does not require a running CTS binary.
 func TestE2E_TaskCommand_Help(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	cases := []struct {
 		command        string
 		outputContains []string

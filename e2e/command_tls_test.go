@@ -37,7 +37,7 @@ task {
 // TestE2E_CommandTLSErrors tests error scenarios using CLI commands with TLS. This
 // starts up a local Consul server and runs CTS with TLS in dev mode.
 func TestE2E_CommandTLSErrors(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -156,7 +156,7 @@ func TestE2E_CommandTLSErrors(t *testing.T) {
 // TestE2E_CommandTLS tests CLI commands using TLS. This
 // starts up a local Consul server and runs CTS with TLS in dev mode.
 func TestE2E_CommandTLS(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -245,7 +245,7 @@ func TestE2E_CommandTLS(t *testing.T) {
 // TestE2E_CommandTLS_CAPath tests CLI commands using TLS providing a CA path instead of a CA cert file. This
 // starts up a local Consul server and runs CTS with TLS in dev mode.
 func TestE2E_CommandTLS_CAPath(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -328,7 +328,7 @@ func TestE2E_CommandTLS_CAPath(t *testing.T) {
 // TestE2E_CommandMTLSErrors tests error scenarios using CLI commands with mTLS. This
 // starts up a local Consul server and runs CTS with TLS in dev mode.
 func TestE2E_CommandMTLSErrors(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -432,7 +432,7 @@ func TestE2E_CommandMTLSErrors(t *testing.T) {
 // TestE2E_CommandMTLS tests CLI commands using mTLS. This
 // starts up a local Consul server and runs CTS with TLS in dev mode.
 func TestE2E_CommandMTLS(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -524,7 +524,7 @@ func TestE2E_CommandMTLS(t *testing.T) {
 // TestE2E_CommandMTLS_CAPath tests CLI commands using mTLS providing a CAPath rather than a CA cert file. This
 // starts up a local Consul server and runs CTS with TLS in dev mode.
 func TestE2E_CommandMTLS_CAPath(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()

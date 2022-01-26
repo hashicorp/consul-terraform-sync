@@ -25,7 +25,7 @@ import (
 // 3. New dependencies do not trigger the task to run ahead of scheduled time
 // 4. Task can handle multiple dependency changes
 func TestCondition_Schedule_Basic(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	taskName := "scheduled_task"
 	conditionWithServices := fmt.Sprintf(`task {
@@ -91,7 +91,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc // rebind tc into this lexical scope for parallel use
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel() // Run table tests in parallel as they can take a lot of time
+			setParallelism(t) // In the CI environment, run table tests in parallel as they can take a lot of time
 			srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 				HTTPSRelPath: "../testutils",
 			})
@@ -171,7 +171,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 // scheduled task and a dynamic task. This test confirms that the two types
 // of tasks can co-exist and operate as expected.
 func TestCondition_Schedule_Dynamic(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",

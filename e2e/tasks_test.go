@@ -21,7 +21,7 @@ import (
 // TestTasksUpdate tests multiple tasks are triggered on service registration
 // and de-registration by verifying the content of terraform.tfvars
 func TestTasksUpdate(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()

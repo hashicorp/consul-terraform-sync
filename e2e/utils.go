@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -38,7 +40,7 @@ const (
 
 	// liberal default times to wait
 	defaultWaitForRegistration = 8 * time.Second
-	defaultWaitForEvent        = 8 * time.Second
+	defaultWaitForEvent        = 15 * time.Second
 	defaultWaitForAPI          = 30 * time.Second
 
 	// liberal wait time to ensure event doesn't happen
@@ -53,6 +55,8 @@ const (
 	alternateCACert = "../testutils/certs/localhost_cert3.pem"
 	alternateCert   = "../testutils/certs/localhost_cert3.pem"
 	alternateKey    = "../testutils/certs/localhost_key3.pem"
+
+	localTestEnvVarName = "LOCAL"
 )
 
 type tlsConfig struct {
@@ -309,4 +313,24 @@ func validateVariable(t *testing.T, contains bool, workingDir, name, value strin
 		}
 	}
 	assert.Fail(t, fmt.Sprintf("variable '%s' not found in terraform.tfvars", name))
+}
+
+func setParallelism(t *testing.T) {
+	local, _ := getEnvBool(localTestEnvVarName)
+	if !local {
+		setParallelism(t)
+	}
+}
+
+func getEnvBool(name string) (bool, error) {
+	s, found := os.LookupEnv(name)
+	if !found {
+		return false, fmt.Errorf("environment variable [%s] is empty", name)
+	}
+
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		return false, err
+	}
+	return v, nil
 }

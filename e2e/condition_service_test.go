@@ -21,7 +21,7 @@ import (
 // doesn't match the task condition's regexp/names config, no task
 // is triggered.
 func TestCondition_Services(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	regexpConfig := `task {
 		name = "%s"
@@ -84,7 +84,7 @@ func TestCondition_Services(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc // rebind tc into this lexical scope for parallel use
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel() // Run table tests in parallel as they can take a lot of time
+			setParallelism(t) // In the CI environment, run table tests in parallel as they can take a lot of time
 			srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 				HTTPSRelPath: "../testutils",
 			})

@@ -43,7 +43,7 @@ const (
 // - module_input configuration field details
 // - multiple module_inputs
 func TestModuleInput_Basic_CatalogServicesCondition(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	testcases := []struct {
 		name        string
@@ -112,7 +112,7 @@ func TestModuleInput_Basic_CatalogServicesCondition(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc // rebind tc into this lexical scope for parallel use
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel() // Run table tests in parallel as they can take a lot of time
+			setParallelism(t) // In the CI environment, run table tests in parallel as they can take a lot of time
 
 			// set up Consul
 			srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
@@ -175,7 +175,7 @@ func TestModuleInput_Basic_CatalogServicesCondition(t *testing.T) {
 // TestModuleInput_ServicesCondition generally exercises different variations
 // of services condition block with different types of module_input blocks
 func TestModuleInput_ServicesCondition(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	testcases := []struct {
 		name        string
@@ -211,7 +211,7 @@ func TestModuleInput_ServicesCondition(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc // rebind tc into this lexical scope for parallel use
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel() // Run table tests in parallel as they can take a lot of time
+			setParallelism(t) // In the CI environment, run table tests in parallel as they can take a lot of time
 
 			// set up Consul
 			srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
@@ -269,7 +269,7 @@ func TestModuleInput_ServicesCondition(t *testing.T) {
 // TestModuleInput_ConsulKVCondition generally exercises the consul-kv condition
 // block with different types of module_input blocks
 func TestModuleInput_ConsulKVCondition(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	testcases := []struct {
 		name        string
@@ -290,7 +290,7 @@ func TestModuleInput_ConsulKVCondition(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc // rebind tc into this lexical scope for parallel use
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel() // Run table tests in parallel as they can take a lot of time
+			setParallelism(t) // In the CI environment, run table tests in parallel as they can take a lot of time
 
 			// set up Consul
 			srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
