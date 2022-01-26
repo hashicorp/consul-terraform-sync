@@ -186,7 +186,7 @@ func TestNewFiles(t *testing.T) {
 		{
 			Name:   "terraform.tfvars.tmpl (services regex - render var)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/terraform_services_source_input.tmpl",
+			Golden: "testdata/terraform_services_module_input.tmpl",
 			Input: RootModuleInputData{
 				Task: task,
 				Templates: []Template{
