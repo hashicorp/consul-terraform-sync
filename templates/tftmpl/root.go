@@ -329,7 +329,7 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string, te
 	})
 
 	for _, t := range templates {
-		if t != nil && t.SourceIncludesVariable() {
+		if t != nil && t.RendersVar() {
 			t.appendModuleAttribute(moduleBody)
 		}
 	}

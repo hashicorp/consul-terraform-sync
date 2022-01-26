@@ -33,7 +33,7 @@ func (t ConsulKVTemplate) IsServicesVar() bool {
 	return false
 }
 
-func (t ConsulKVTemplate) SourceIncludesVariable() bool {
+func (t ConsulKVTemplate) RendersVar() bool {
 	return t.RenderVar
 }
 

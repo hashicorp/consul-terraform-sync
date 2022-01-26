@@ -32,7 +32,7 @@ func (t CatalogServicesTemplate) IsServicesVar() bool {
 	return false
 }
 
-func (t CatalogServicesTemplate) SourceIncludesVariable() bool {
+func (t CatalogServicesTemplate) RendersVar() bool {
 	return t.RenderVar
 }
 

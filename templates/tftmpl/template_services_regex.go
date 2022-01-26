@@ -55,10 +55,7 @@ func (t ServicesRegexTemplate) appendVariable(io.Writer) error {
 	return nil
 }
 
-// SourceIncludesVariable returns true if the source variables are to be included in the template.
-// For the case of a service monitor, this always returns true and must be overridden to
-// return based on other conditions.
-func (t ServicesRegexTemplate) SourceIncludesVariable() bool {
+func (t ServicesRegexTemplate) RendersVar() bool {
 	return t.RenderVar
 }
 

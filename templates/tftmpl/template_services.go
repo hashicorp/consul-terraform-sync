@@ -117,7 +117,7 @@ func (t ServicesTemplate) appendVariable(io.Writer) error {
 	return nil
 }
 
-func (t ServicesTemplate) SourceIncludesVariable() bool {
+func (t ServicesTemplate) RendersVar() bool {
 	return t.RenderVar
 }
 
