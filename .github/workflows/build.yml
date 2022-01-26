@@ -347,6 +347,8 @@ jobs:
           go-version: ${{ matrix.go }}
 
       - name: Build
+        env:
+          GO_TAGS: "${{ env.GO_TAGS }} netcgo"
         run: |
           mkdir dist out
           go build -o dist/ \
