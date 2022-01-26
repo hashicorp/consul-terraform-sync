@@ -11,7 +11,6 @@ import (
 )
 
 // CreateTask creates a task
-// TODO: handle setting the bufferPeriod of the driver
 func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request, params oapigen.CreateTaskParams) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

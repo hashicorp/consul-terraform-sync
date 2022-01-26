@@ -40,8 +40,8 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 		return config.TaskConfig{}, err
 	}
 
-	// TODO: Set the buffer period
-	// d.SetBufferPeriod()
+	// Set the buffer period
+	d.SetBufferPeriod()
 
 	// Add the task driver to the driver list only after successful create
 	err = rw.drivers.Add(*taskConfig.Name, d)
@@ -70,8 +70,7 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 		return config.TaskConfig{}, err
 	}
 
-	// TODO: Set the buffer period
-	// d.SetBufferPeriod()
+	d.SetBufferPeriod()
 
 	// Add the task driver to the driver list only after successful create and run
 	err = rw.drivers.Add(*taskConfig.Name, d)
