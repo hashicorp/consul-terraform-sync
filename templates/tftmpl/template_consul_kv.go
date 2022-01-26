@@ -63,7 +63,7 @@ func (t ConsulKVTemplate) appendTemplate(w io.Writer) error {
 		}
 
 		if _, err := fmt.Fprintf(w, consulKVIncludesVarTmpl, baseTmpl); err != nil {
-			logger.Error("unable to write consul-kv template to include variable", "error", err)
+			logger.Error("unable to write consul-kv template with variable", "error", err)
 			return err
 		}
 		return nil

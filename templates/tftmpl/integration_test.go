@@ -168,7 +168,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			false,
 		},
 		{
-			"happy path (catalog-services condition - source_includes_var)",
+			"happy path (catalog-services condition - render var)",
 			"testdata/catalog-services/terraform_include.tfvars",
 			"testdata/catalog-services/terraform_include.tfvars.tmpl",
 			true,

@@ -15,7 +15,7 @@ func TestServicesRegexTemplate_appendTemplate(t *testing.T) {
 		exp  string
 	}{
 		{
-			"fully configured & includes_var true",
+			"fully configured & render var",
 			&ServicesRegexTemplate{
 				Regexp:     ".*",
 				Datacenter: "dc1",
@@ -36,7 +36,7 @@ services = {
 `,
 		},
 		{
-			"fully configured & includes_var false",
+			"fully configured & no var",
 			&ServicesRegexTemplate{
 				Regexp:     ".*",
 				Datacenter: "dc1",

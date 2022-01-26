@@ -30,8 +30,8 @@ type Template interface {
 	appendModuleAttribute(*hclwrite.Body)
 
 	// appendTemplate writes the generated variable template to the
-	// terrafort.tfvars.tmpl file based on whether the source includes the
-	// monitored variable.
+	// terrafort.tfvars.tmpl file based on whether the template should render
+	// the monitored variable.
 	appendTemplate(io.Writer) error
 
 	// appendVariable writes the corresponding Terraform variable block to

@@ -47,7 +47,7 @@ func TestConsulKVTemplate_appendTemplate(t *testing.T) {
 		exp  string
 	}{
 		{
-			"recurse false & includes_var true",
+			"recurse false & render var",
 			&ConsulKVTemplate{
 				Path:       "path",
 				Recurse:    false,
@@ -66,7 +66,7 @@ consul_kv = {
 `,
 		},
 		{
-			"recurse true & includes_var true",
+			"recurse true & render var",
 			&ConsulKVTemplate{
 				Path:       "path",
 				Recurse:    true,
@@ -85,7 +85,7 @@ consul_kv = {
 `,
 		},
 		{
-			"recurse false & includes_var false",
+			"recurse false & no var",
 			&ConsulKVTemplate{
 				Path:       "path",
 				Recurse:    false,
@@ -100,7 +100,7 @@ consul_kv = {
 `,
 		},
 		{
-			"recurse true includes var false",
+			"recurse true & no var",
 			&ConsulKVTemplate{
 				Path:       "path",
 				Recurse:    true,

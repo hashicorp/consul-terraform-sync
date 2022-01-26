@@ -49,7 +49,7 @@ func (t CatalogServicesTemplate) appendTemplate(w io.Writer) error {
 	if t.RenderVar {
 		_, err := fmt.Fprintf(w, catalogServicesIncludesVarTmpl, q)
 		if err != nil {
-			err = fmt.Errorf("unable to write catalog-service template to include variable, error: %v", err)
+			err = fmt.Errorf("unable to write catalog-service template with variable, error: %v", err)
 			return err
 		}
 		return nil

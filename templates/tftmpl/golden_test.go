@@ -67,7 +67,7 @@ func TestNewFiles(t *testing.T) {
 				},
 			},
 		}, {
-			Name:   "main.tf (catalog-services - include)",
+			Name:   "main.tf (catalog-services - render var)",
 			Func:   newMainTF,
 			Golden: "testdata/catalog-services/main_include.tf",
 			Input: RootModuleInputData{
@@ -101,7 +101,7 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "variables.tf (catalog-services - include)",
+			Name:   "variables.tf (catalog-services - render var)",
 			Func:   newVariablesTF,
 			Golden: "testdata/catalog-services/variables_include.tf",
 			Input: RootModuleInputData{
@@ -130,7 +130,7 @@ func TestNewFiles(t *testing.T) {
 				Task:             task,
 			},
 		}, {
-			Name:   "variables.tf (consul-kv - include)",
+			Name:   "variables.tf (consul-kv - render var)",
 			Func:   newVariablesTF,
 			Golden: "testdata/consul-kv/variables.tf",
 			Input: RootModuleInputData{
@@ -184,7 +184,7 @@ func TestNewFiles(t *testing.T) {
 			},
 		},
 		{
-			Name:   "terraform.tfvars.tmpl (services regex - includes)",
+			Name:   "terraform.tfvars.tmpl (services regex - render var)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/terraform_services_source_input.tmpl",
 			Input: RootModuleInputData{
@@ -201,7 +201,7 @@ func TestNewFiles(t *testing.T) {
 			},
 		},
 		{
-			Name:   "terraform.tfvars.tmpl (catalog-services - includes false)",
+			Name:   "terraform.tfvars.tmpl (catalog-services - no var)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/catalog-services/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
@@ -225,7 +225,7 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (catalog-services - includes)",
+			Name:   "terraform.tfvars.tmpl (catalog-services - render var)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/catalog-services/terraform_include.tfvars.tmpl",
 			Input: RootModuleInputData{
@@ -249,7 +249,7 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (catalog-services w filtering - includes)",
+			Name:   "terraform.tfvars.tmpl (catalog-services w filtering - render var)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/catalog-services/terraform_filter.tfvars.tmpl",
 			Input: RootModuleInputData{
@@ -288,7 +288,7 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv w no namespace - includes false)",
+			Name:   "terraform.tfvars.tmpl (consul-kv w no namespace - no var)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform.tfvars.tmpl",
 			Input: RootModuleInputData{
@@ -313,7 +313,7 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv - includes false)",
+			Name:   "terraform.tfvars.tmpl (consul-kv - no var)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_namespace.tfvars.tmpl",
 			Input: RootModuleInputData{
@@ -339,7 +339,7 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv - includes)",
+			Name:   "terraform.tfvars.tmpl (consul-kv - render var)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_includes_vars.tfvars.tmpl",
 			Input: RootModuleInputData{
@@ -364,7 +364,7 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv w recurse - includes)",
+			Name:   "terraform.tfvars.tmpl (consul-kv w recurse - render var)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_recurse_true.tfvars.tmpl",
 			Input: RootModuleInputData{
@@ -390,7 +390,7 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 			},
 		}, {
-			Name:   "terraform.tfvars.tmpl (consul-kv w recurse - includes false)",
+			Name:   "terraform.tfvars.tmpl (consul-kv w recurse - no var)",
 			Func:   newTFVarsTmpl,
 			Golden: "testdata/consul-kv/terraform_recurse_true_include_false.tfvars.tmpl",
 			Input: RootModuleInputData{
