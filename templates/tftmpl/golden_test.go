@@ -227,7 +227,7 @@ func TestNewFiles(t *testing.T) {
 		}, {
 			Name:   "terraform.tfvars.tmpl (catalog-services - render var)",
 			Func:   newTFVarsTmpl,
-			Golden: "testdata/catalog-services/terraform_include.tfvars.tmpl",
+			Golden: "testdata/catalog-services/terraform_with_var.tfvars.tmpl",
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&CatalogServicesTemplate{
