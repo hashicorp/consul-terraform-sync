@@ -17,11 +17,11 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 		{
 			"one name & fully configured & includes_var true",
 			&ServicesTemplate{
-				Names:             []string{"api"},
-				Datacenter:        "dc1",
-				Namespace:         "ns1",
-				Filter:            "filter",
-				SourceIncludesVar: true,
+				Names:      []string{"api"},
+				Datacenter: "dc1",
+				Namespace:  "ns1",
+				Filter:     "filter",
+				RenderVar:  true,
 			},
 			`
 {{- with $srv := service "api" "dc=dc1" "ns=ns1" "filter" }}
@@ -36,11 +36,11 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 		{
 			"multi-name & fully configured & includes_var true",
 			&ServicesTemplate{
-				Names:             []string{"api", "web"},
-				Datacenter:        "dc1",
-				Namespace:         "ns1",
-				Filter:            "filter",
-				SourceIncludesVar: true,
+				Names:      []string{"api", "web"},
+				Datacenter: "dc1",
+				Namespace:  "ns1",
+				Filter:     "filter",
+				RenderVar:  true,
 			},
 			`
 {{- with $srv := service "api" "dc=dc1" "ns=ns1" "filter" }}
@@ -74,7 +74,7 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 						Filter:     "filter2",
 					},
 				},
-				SourceIncludesVar: true,
+				RenderVar: true,
 			},
 			`
 {{- with $srv := service "api" "dc=dc1" "ns=ns1" "filter" }}
@@ -104,7 +104,7 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 						Filter:     "filter",
 					},
 				},
-				SourceIncludesVar: true,
+				RenderVar: true,
 			},
 			`
 {{- with $srv := service "api" "dc=dc1" "ns=ns1" "filter" }}
@@ -126,11 +126,11 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 		{
 			"multi-name & fully configured & includes_var false",
 			&ServicesTemplate{
-				Names:             []string{"api", "web"},
-				Datacenter:        "dc1",
-				Namespace:         "ns1",
-				Filter:            "filter",
-				SourceIncludesVar: false,
+				Names:      []string{"api", "web"},
+				Datacenter: "dc1",
+				Namespace:  "ns1",
+				Filter:     "filter",
+				RenderVar:  false,
 			},
 			`
 {{- with $srv := service "api" "dc=dc1" "ns=ns1" "filter" }}
@@ -219,8 +219,8 @@ func TestServicesTemplate_appendTemplate(t *testing.T) {
 		{
 			name: "happy path",
 			tmpl: &ServicesTemplate{
-				Names:             []string{"api"},
-				SourceIncludesVar: true,
+				Names:     []string{"api"},
+				RenderVar: true,
 			},
 			exp: `
 services = {

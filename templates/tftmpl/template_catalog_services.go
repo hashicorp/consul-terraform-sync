@@ -21,7 +21,9 @@ type CatalogServicesTemplate struct {
 	Namespace  string
 	NodeMeta   map[string]string
 
-	SourceIncludesVar bool
+	// RenderVar informs whether the template should render the variable or not.
+	// Aligns with the task condition configuration `UseAsModuleInput``
+	RenderVar bool
 }
 
 // IsServicesVar returns false because the template returns a catalog_services
@@ -31,7 +33,7 @@ func (t CatalogServicesTemplate) IsServicesVar() bool {
 }
 
 func (t CatalogServicesTemplate) SourceIncludesVariable() bool {
-	return t.SourceIncludesVar
+	return t.RenderVar
 }
 
 func (m CatalogServicesTemplate) appendModuleAttribute(body *hclwrite.Body) {
@@ -44,7 +46,7 @@ func (m CatalogServicesTemplate) appendModuleAttribute(body *hclwrite.Body) {
 func (t CatalogServicesTemplate) appendTemplate(w io.Writer) error {
 	q := t.hcatQuery()
 
-	if t.SourceIncludesVar {
+	if t.RenderVar {
 		_, err := fmt.Fprintf(w, catalogServicesIncludesVarTmpl, q)
 		if err != nil {
 			err = fmt.Errorf("unable to write catalog-service template to include variable, error: %v", err)

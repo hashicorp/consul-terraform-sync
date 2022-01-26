@@ -74,8 +74,8 @@ func TestNewFiles(t *testing.T) {
 				Backend: map[string]interface{}{},
 				Templates: []Template{
 					&CatalogServicesTemplate{
-						Regexp:            ".*",
-						SourceIncludesVar: true,
+						Regexp:    ".*",
+						RenderVar: true,
 					},
 				},
 				Task: task,
@@ -108,8 +108,8 @@ func TestNewFiles(t *testing.T) {
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
 				Templates: []Template{
 					&CatalogServicesTemplate{
-						Regexp:            ".*",
-						SourceIncludesVar: true,
+						Regexp:    ".*",
+						RenderVar: true,
 					},
 				},
 				Task: task,
@@ -121,9 +121,9 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&ConsulKVTemplate{
-						Path:              "key-path",
-						Datacenter:        "dc1",
-						SourceIncludesVar: true,
+						Path:       "key-path",
+						Datacenter: "dc1",
+						RenderVar:  true,
 					},
 				},
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
@@ -136,9 +136,9 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&ConsulKVTemplate{
-						Path:              "key-path",
-						Datacenter:        "dc1",
-						SourceIncludesVar: true,
+						Path:       "key-path",
+						Datacenter: "dc1",
+						RenderVar:  true,
 					},
 				},
 				TerraformVersion: goVersion.Must(goVersion.NewSemver("0.99.9")),
@@ -152,11 +152,11 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&ServicesTemplate{
-						Names:             []string{"web", "api"},
-						Namespace:         "ns1",
-						Datacenter:        "dc1",
-						Filter:            "\"tag\" in Service.Tags",
-						SourceIncludesVar: true,
+						Names:      []string{"web", "api"},
+						Namespace:  "ns1",
+						Datacenter: "dc1",
+						Filter:     "\"tag\" in Service.Tags",
+						RenderVar:  true,
 					},
 				},
 				Task: task,
@@ -177,7 +177,7 @@ func TestNewFiles(t *testing.T) {
 								Filter:     "\"tag\" in Service.Tags",
 							},
 						},
-						SourceIncludesVar: true,
+						RenderVar: true,
 					},
 				},
 				Task: task,
@@ -191,11 +191,11 @@ func TestNewFiles(t *testing.T) {
 				Task: task,
 				Templates: []Template{
 					&ServicesRegexTemplate{
-						Regexp:            ".*",
-						Datacenter:        "dc1",
-						Namespace:         "ns1",
-						Filter:            "some-filter",
-						SourceIncludesVar: true,
+						Regexp:     ".*",
+						Datacenter: "dc1",
+						Namespace:  "ns1",
+						Filter:     "some-filter",
+						RenderVar:  true,
 					},
 				},
 			},
@@ -207,8 +207,8 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&CatalogServicesTemplate{
-						Regexp:            ".*",
-						SourceIncludesVar: false,
+						Regexp:    ".*",
+						RenderVar: false,
 					},
 					&ServicesTemplate{
 						Names: []string{"web", "api"},
@@ -219,7 +219,7 @@ func TestNewFiles(t *testing.T) {
 								Filter:     "\"tag\" in Service.Tags",
 							},
 						},
-						SourceIncludesVar: true,
+						RenderVar: true,
 					},
 				},
 				Task: task,
@@ -231,8 +231,8 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&CatalogServicesTemplate{
-						Regexp:            "^web.*|^api.*",
-						SourceIncludesVar: true,
+						Regexp:    "^web.*|^api.*",
+						RenderVar: true,
 					},
 					&ServicesTemplate{
 						Names: []string{"web", "api"},
@@ -243,7 +243,7 @@ func TestNewFiles(t *testing.T) {
 								Filter:     "\"tag\" in Service.Tags",
 							},
 						},
-						SourceIncludesVar: true,
+						RenderVar: true,
 					},
 				},
 				Task: task,
@@ -255,10 +255,10 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&CatalogServicesTemplate{
-						Regexp:            "^web.*|^api.*",
-						Datacenter:        "dc1",
-						NodeMeta:          map[string]string{"k": "v"},
-						SourceIncludesVar: true,
+						Regexp:     "^web.*|^api.*",
+						Datacenter: "dc1",
+						NodeMeta:   map[string]string{"k": "v"},
+						RenderVar:  true,
 					},
 					&ServicesTemplate{
 						Names: []string{"web", "api"},
@@ -269,7 +269,7 @@ func TestNewFiles(t *testing.T) {
 								Filter:     "\"tag\" in Service.Tags",
 							},
 						},
-						SourceIncludesVar: true,
+						RenderVar: true,
 					},
 				},
 				Task: task,
@@ -281,8 +281,8 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&CatalogServicesTemplate{
-						Regexp:            ".*",
-						SourceIncludesVar: false,
+						Regexp:    ".*",
+						RenderVar: false,
 					},
 				},
 				Task: task,
@@ -294,9 +294,9 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&ConsulKVTemplate{
-						Path:              "key-path",
-						Datacenter:        "dc1",
-						SourceIncludesVar: false,
+						Path:       "key-path",
+						Datacenter: "dc1",
+						RenderVar:  false,
 					},
 					&ServicesTemplate{
 						Names: []string{"web", "api"},
@@ -307,7 +307,7 @@ func TestNewFiles(t *testing.T) {
 								Filter:     "\"tag\" in Service.Tags",
 							},
 						},
-						SourceIncludesVar: true,
+						RenderVar: true,
 					},
 				},
 				Task: task,
@@ -319,10 +319,10 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&ConsulKVTemplate{
-						Path:              "key-path",
-						Datacenter:        "dc1",
-						Namespace:         "test-ns",
-						SourceIncludesVar: false,
+						Path:       "key-path",
+						Datacenter: "dc1",
+						Namespace:  "test-ns",
+						RenderVar:  false,
 					},
 					&ServicesTemplate{
 						Names: []string{"web", "api"},
@@ -333,7 +333,7 @@ func TestNewFiles(t *testing.T) {
 								Filter:     "\"tag\" in Service.Tags",
 							},
 						},
-						SourceIncludesVar: true,
+						RenderVar: true,
 					},
 				},
 				Task: task,
@@ -345,9 +345,9 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&ConsulKVTemplate{
-						Path:              "key-path",
-						Datacenter:        "dc1",
-						SourceIncludesVar: true,
+						Path:       "key-path",
+						Datacenter: "dc1",
+						RenderVar:  true,
 					},
 					&ServicesTemplate{
 						Names: []string{"web", "api"},
@@ -358,7 +358,7 @@ func TestNewFiles(t *testing.T) {
 								Filter:     "\"tag\" in Service.Tags",
 							},
 						},
-						SourceIncludesVar: true,
+						RenderVar: true,
 					},
 				},
 				Task: task,
@@ -370,10 +370,10 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&ConsulKVTemplate{
-						Path:              "key-path",
-						Datacenter:        "dc1",
-						Recurse:           true,
-						SourceIncludesVar: true,
+						Path:       "key-path",
+						Datacenter: "dc1",
+						Recurse:    true,
+						RenderVar:  true,
 					},
 					&ServicesTemplate{
 						Names: []string{"web", "api"},
@@ -384,7 +384,7 @@ func TestNewFiles(t *testing.T) {
 								Filter:     "\"tag\" in Service.Tags",
 							},
 						},
-						SourceIncludesVar: true,
+						RenderVar: true,
 					},
 				},
 				Task: task,
@@ -396,10 +396,10 @@ func TestNewFiles(t *testing.T) {
 			Input: RootModuleInputData{
 				Templates: []Template{
 					&ConsulKVTemplate{
-						Path:              "key-path",
-						Datacenter:        "dc1",
-						Recurse:           true,
-						SourceIncludesVar: false,
+						Path:       "key-path",
+						Datacenter: "dc1",
+						Recurse:    true,
+						RenderVar:  false,
 					},
 					&ServicesTemplate{
 						Names: []string{"web", "api"},
@@ -410,7 +410,7 @@ func TestNewFiles(t *testing.T) {
 								Filter:     "\"tag\" in Service.Tags",
 							},
 						},
-						SourceIncludesVar: true,
+						RenderVar: true,
 					},
 				},
 				Task: task,

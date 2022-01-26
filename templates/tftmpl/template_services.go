@@ -19,7 +19,9 @@ var (
 type ServicesTemplate struct {
 	Names []string
 
-	SourceIncludesVar bool
+	// RenderVar informs whether the template should render the variable or not.
+	// Aligns with the task condition configuration `UseAsModuleInput``
+	RenderVar bool
 
 	// Introduced in 0.5 - optional overall service filtering configured through
 	// the task's condition "services". These configs or Services can be
@@ -56,7 +58,7 @@ func (t ServicesTemplate) appendTemplate(w io.Writer) error {
 		return err
 	}
 
-	if t.SourceIncludesVar {
+	if t.RenderVar {
 		tmpl = fmt.Sprintf(servicesIncludesVarTmpl, tmpl)
 	}
 
@@ -98,7 +100,7 @@ func (t ServicesTemplate) concatServiceTemplates() (string, error) {
 			query = t.hcatQuery(n, s.Datacenter, s.Namespace, s.Filter)
 		}
 
-		if t.SourceIncludesVar {
+		if t.RenderVar {
 			tmpl += fmt.Sprintf(serviceBaseTmpl, query)
 		} else {
 			tmpl += fmt.Sprintf(serviceEmptyTmpl, query)
@@ -116,7 +118,7 @@ func (t ServicesTemplate) appendVariable(io.Writer) error {
 }
 
 func (t ServicesTemplate) SourceIncludesVariable() bool {
-	return t.SourceIncludesVar
+	return t.RenderVar
 }
 
 func (t ServicesTemplate) hcatQuery(name, dc, ns, filter string) string {
