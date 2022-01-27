@@ -6,12 +6,11 @@ package e2e
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -55,9 +54,9 @@ const (
 	alternateCACert = "../testutils/certs/localhost_cert3.pem"
 	alternateCert   = "../testutils/certs/localhost_cert3.pem"
 	alternateKey    = "../testutils/certs/localhost_key3.pem"
-
-	localTestEnvVarName = "LOCAL"
 )
+
+var localFlag = flag.Bool("local", false, "flag for running E2E tests locally")
 
 type tlsConfig struct {
 	clientCert     string
@@ -316,21 +315,7 @@ func validateVariable(t *testing.T, contains bool, workingDir, name, value strin
 }
 
 func setParallelism(t *testing.T) {
-	local, _ := getEnvBool(localTestEnvVarName)
-	if !local {
+	if !*localFlag {
 		t.Parallel()
 	}
-}
-
-func getEnvBool(name string) (bool, error) {
-	s, found := os.LookupEnv(name)
-	if !found {
-		return false, fmt.Errorf("environment variable [%s] is empty", name)
-	}
-
-	v, err := strconv.ParseBool(s)
-	if err != nil {
-		return false, err
-	}
-	return v, nil
 }

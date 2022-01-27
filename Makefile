@@ -61,7 +61,7 @@ test-e2e-cirecleci: test-setup-e2e
 # test-e2e-local does e2e test setup and then runs the e2e tests
 test-e2e-local: test-setup-e2e
 	@echo "==> Testing ${NAME} (e2e)"
-	@LOCAL=1 /bin/bash -c "go test ./e2e -count=1 -v -timeout=30m -tags=e2e ./... ${TESTARGS}"
+	@go test ./e2e -count=1 -v -timeout=45m -tags=e2e -local ./... ${TESTARGS}
 .PHONY: test-e2e-local
 
 # test-compat sets up the CTS binary and then runs the compatibility tests
