@@ -318,7 +318,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 	var templates []tftmpl.Template
 
 	// Create a ServicesTemplate for task.services list. task.services is
-	// deprecated in 0.5 and is replaced by condition / source_input "services"
+	// deprecated in 0.5 and is replaced by condition / module_input "services"
 	// which is handled further below.
 	if len(t.services) > 0 {
 		// gather services query parameters
