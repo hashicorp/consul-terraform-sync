@@ -161,6 +161,9 @@ func (c *taskCreateCommand) Run(args []string) int {
 	b, _ := json.MarshalIndent(taskResp.Task, "    ", "  ")
 	c.UI.Output(fmt.Sprintf("Task: %s\n", string(b)))
 	c.UI.Output(fmt.Sprintf("Plan: \n%s", *taskResp.Run.Plan))
+	if taskResp.Run.TfcRunUrl != nil {
+		c.UI.Output(fmt.Sprintf("Terraform Cloud Run URL: %s\n", *taskResp.Run.TfcRunUrl))
+	}
 
 	if !*c.autoApprove {
 		if exitCode, approved := c.meta.requestUserApprovalCreate(taskName); !approved {
