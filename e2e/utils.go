@@ -6,6 +6,7 @@ package e2e
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"os/exec"
@@ -38,7 +39,7 @@ const (
 
 	// liberal default times to wait
 	defaultWaitForRegistration = 8 * time.Second
-	defaultWaitForEvent        = 8 * time.Second
+	defaultWaitForEvent        = 15 * time.Second
 	defaultWaitForAPI          = 30 * time.Second
 
 	// liberal wait time to ensure event doesn't happen
@@ -54,6 +55,8 @@ const (
 	alternateCert   = "../testutils/certs/localhost_cert3.pem"
 	alternateKey    = "../testutils/certs/localhost_key3.pem"
 )
+
+var localFlag = flag.Bool("local", false, "flag for running E2E tests locally")
 
 type tlsConfig struct {
 	clientCert     string
@@ -309,4 +312,10 @@ func validateVariable(t *testing.T, contains bool, workingDir, name, value strin
 		}
 	}
 	assert.Fail(t, fmt.Sprintf("variable '%s' not found in terraform.tfvars", name))
+}
+
+func setParallelism(t *testing.T) {
+	if !*localFlag {
+		t.Parallel()
+	}
 }

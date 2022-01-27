@@ -29,6 +29,7 @@ func TestE2EBasic(t *testing.T) {
 	// Note: no t.Parallel() for this particular test. Choosing this test to run 'first'
 	// since e2e test running simultaneously will download Terraform into shared
 	// directory causes some flakiness. All other e2e tests, should have t.Parallel()
+	// when run in the CI environment
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -96,7 +97,7 @@ func TestE2EBasic(t *testing.T) {
 // CTS results in no errors and can continue running based on the same config
 // and Consul storing state.
 func TestE2ERestart(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -121,7 +122,7 @@ func TestE2ERestart(t *testing.T) {
 // Consul agent had restarted, and CTS resumes monitoring changes to the
 // Consul catalog.
 func TestE2ERestartConsul(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	consul := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
@@ -170,7 +171,7 @@ func TestE2ERestartConsul(t *testing.T) {
 // TestE2EPanosHandlerError tests that CTS stops upon an error for a task with
 // invalid PANOS credentials.
 func TestE2EPanosHandlerError(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -198,7 +199,7 @@ func TestE2EPanosHandlerError(t *testing.T) {
 // TestE2ELocalBackend tests CTS configured with the Terraform driver using
 // the local backend.
 func TestE2ELocalBackend(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	cases := []struct {
 		name             string
@@ -282,7 +283,7 @@ func TestE2ELocalBackend(t *testing.T) {
 }
 
 func TestE2EValidateError(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -330,7 +331,7 @@ func TestE2EValidateError(t *testing.T) {
 // 2. CTS can include non-passing service instances through additional
 //    configuration
 func TestE2E_FilterStatus(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	cases := []struct {
 		name         string
@@ -409,7 +410,7 @@ func TestE2E_FilterStatus(t *testing.T) {
 // TestE2EInspectMode tests running CTS in inspect mode and verifies that
 // the plan is outputted and no changes are actually applied.
 func TestE2EInspectMode(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 

@@ -44,7 +44,7 @@ const (
 // 	GET	/v1/status/tasks/:task_name
 //	GET	/v1/status
 func TestE2E_StatusEndpoints(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -257,7 +257,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 // runs a Consul server and the CTS binary in daemon mode.
 //	PATCH	/v1/tasks/:task_name
 func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test enabling and disabling a task
 	// 1. Start with disabled task. Confirm task is initialized, but
 	//    not run (resources not created)
@@ -346,7 +346,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 // runs a Consul server and the CTS binary in daemon mode.
 //	DELETE/v1/tasks/:task_name
 func TestE2E_TaskEndpoints_Delete(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test deleting a task
 	// 1. Start with a task
 	// 2. Delete the task
@@ -395,7 +395,7 @@ func TestE2E_TaskEndpoints_Delete(t *testing.T) {
 // be deleted. This runs a Consul server and the CTS binary in daemon mode.
 //	DELETE/v1/tasks/:task_name
 func TestE2E_TaskEndpoints_Delete_Conflict(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test deleting a task
 	// 1. Start with a task
 	// 2. Trigger the task
@@ -452,7 +452,7 @@ func TestE2E_TaskEndpoints_Delete_Conflict(t *testing.T) {
 // runs a Consul server and the CTS binary in daemon mode.
 //	POST /v1/tasks
 func TestE2E_TaskEndpoints_Create(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test creating a task
 	// 1. Start with a task
 	// 2. Create infrastructure change that would trigger new task
@@ -537,7 +537,7 @@ func TestE2E_TaskEndpoints_Create(t *testing.T) {
 // This runs a Consul server and the CTS binary in daemon mode.
 // POST /v1/tasks
 func TestE2E_TaskEndpoints_Create_Run_Now(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test creating a task
 	// 1. Start with a task
 	// 2. Create infrastructure change that would trigger new task
@@ -594,7 +594,7 @@ func TestE2E_TaskEndpoints_Create_Run_Now(t *testing.T) {
 // should be created. This runs a Consul server and the CTS binary in daemon mode.
 //	POST /v1/tasks
 func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test deleting a task
 	// 1. Start with a task
 	// 2. Attempt to create a new task with an invalid schema
@@ -658,7 +658,7 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 // 5. Making a change that would trigger the task if it had been created
 // 6. Verifying again that no events or resources are created
 func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Start Consul and CTS
 	srv := newTestConsulServer(t)
 	defer srv.Stop()

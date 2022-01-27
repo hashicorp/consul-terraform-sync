@@ -23,7 +23,7 @@ var validTaskConf = config.TaskConfig{
 	Name:    config.String("task"),
 	Module:  config.String("module"),
 	Condition: &config.CatalogServicesConditionConfig{
-		config.CatalogServicesMonitorConfig{Regexp: config.String("regex")},
+		CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{Regexp: config.String("regex")},
 	},
 }
 

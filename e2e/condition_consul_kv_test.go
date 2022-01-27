@@ -52,7 +52,7 @@ func newKVTaskConfig(taskName string, opts kvTaskOpts) string {
 // an unrelated path, and add a key prefixed by the configured path. The expected
 // behavior of a prefixed path key will depend on whether recurse is set or not.
 func TestConditionConsulKV_NewKey(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	testcases := []struct {
 		name              string
@@ -84,7 +84,7 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			setParallelism(t)
 			// Set up Consul server
 			srv := newTestConsulServer(t)
 			t.Cleanup(func() {
@@ -160,7 +160,7 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 // condition block, where the monitored KV pair will exist initially in Consul. The
 // test will update the value, delete the key, and then add the same key back.
 func TestConditionConsulKV_ExistingKey(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	testcases := []struct {
 		name              string
@@ -192,7 +192,7 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			setParallelism(t)
 			// Set up Consul server
 			srv := newTestConsulServer(t)
 			t.Cleanup(func() {
@@ -287,7 +287,7 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 // TestConditionConsulKV_SuppressTriggers runs the CTS binary using a task with a consul-kv
 // condition block and tests that non-KV changes do not trigger the task.
 func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	testcases := []struct {
 		name              string
@@ -318,7 +318,7 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			setParallelism(t)
 			// Set up Consul server
 			srv := newTestConsulServer(t)
 			t.Cleanup(func() {
@@ -373,7 +373,7 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 // TestConditionConsul_namespace_oss tests conditions with configured namespace
 // meanwhile connecting with Consul OSS.
 func TestConditionConsul_namespace_oss(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()

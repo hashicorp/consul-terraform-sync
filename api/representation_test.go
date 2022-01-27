@@ -485,7 +485,7 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Name:   config.String("task"),
 				Module: config.String("path"),
 				Condition: &config.CatalogServicesConditionConfig{
-					config.CatalogServicesMonitorConfig{
+					CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
 						Regexp:           config.String(".*"),
 						UseAsModuleInput: config.Bool(true),
 						Datacenter:       config.String("dc2"),

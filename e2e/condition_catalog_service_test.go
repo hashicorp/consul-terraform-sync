@@ -22,7 +22,7 @@ import (
 // also covers ensuring that daemon-mode can pass through once-mode with no
 // initial service registrations
 func TestCondition_CatalogServices_Registration(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	cases := []struct {
 		name        string
@@ -78,7 +78,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 //    [de]registration
 //  - changes in service tag data
 func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	cases := []struct {
 		name     string
@@ -131,7 +131,7 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 // use_as_module_input = true. This test confirms that the catalog_service
 // definition is consumed by a module as expected.
 func TestCondition_CatalogServices_Include(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -166,7 +166,7 @@ func TestCondition_CatalogServices_Include(t *testing.T) {
 //     API that an event had not been added)
 //  2) the service information does not exist in the tfvars file
 func TestCondition_CatalogServices_Regexp(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
@@ -232,7 +232,7 @@ func TestCondition_CatalogServices_Regexp(t *testing.T) {
 }
 
 func TestCondition_CatalogServices_MultipleTasks(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
