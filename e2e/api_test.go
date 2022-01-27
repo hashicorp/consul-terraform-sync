@@ -609,7 +609,7 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 	cts := ctsSetup(t, srv, tempDir,
 		moduleTaskConfig(initialTaskName, "./test_modules/local_instances_file"))
 
-	// Create a task with invalid source field (boolean instead of string)
+	// Create a task with invalid module field (boolean instead of string)
 	u := fmt.Sprintf("http://localhost:%d/v1/tasks", cts.Port())
 
 	taskName := "created-task"
@@ -754,9 +754,9 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 		assert.Equal(t, []string{"api"}, e.Config.Services)
 		wd, err := os.Getwd()
 		assert.NoError(t, err)
-		source := filepath.Join(wd, "./test_modules/local_instances_file")
-		assert.Equal(t, source, e.Config.Module)
-		assert.Equal(t, source, e.Config.Source)
+		module := filepath.Join(wd, "./test_modules/local_instances_file")
+		assert.Equal(t, module, e.Config.Module)
+		assert.Equal(t, module, e.Config.Source)
 
 		if taskName == fakeSuccessTaskName {
 			assert.True(t, e.Success)

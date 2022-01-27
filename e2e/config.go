@@ -140,15 +140,16 @@ task {
 `, webTaskName))
 }
 
-// appendModuleTask adds a task configuration with the given name and source, along with any additional
+// appendModuleTask adds a task configuration with the given name and module, along with any additional
 // task configurations (e.g., condition, providers) provided with the opts parameter
-func (c hclConfig) appendModuleTask(name string, source string, opts ...string) hclConfig {
-	return c.appendString(moduleTaskConfig(name, source, opts...))
+func (c hclConfig) appendModuleTask(name string, module string, opts ...string) hclConfig {
+	return c.appendString(moduleTaskConfig(name, module, opts...))
 }
 
-// moduleTaskConfig generates a task configuration string with the given name and source, along with any
-// additional task configurations (e.g., condition, providers) provided with the opts parameter
-func moduleTaskConfig(name string, source string, opts ...string) string {
+// moduleTaskConfig generates a task configuration string with the given name
+// and module, along with any additional task configurations (e.g., condition,
+// providers) provided with the opts parameter
+func moduleTaskConfig(name string, module string, opts ...string) string {
 	var optsConfig string
 	if len(opts) > 0 {
 		optsConfig = "\n" + strings.Join(opts, "\n")
@@ -162,7 +163,7 @@ task {
 	module = "%s"
 	%s
 }
-`, name, source, optsConfig)
+`, name, module, optsConfig)
 }
 
 func baseConfig(wd string) hclConfig {
