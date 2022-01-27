@@ -256,8 +256,8 @@ func (t *Task) ServiceNames() []string {
 	return names
 }
 
-// Source returns the module source for the task
-func (t *Task) Source() string {
+// Module returns the task's module
+func (t *Task) Module() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.module
