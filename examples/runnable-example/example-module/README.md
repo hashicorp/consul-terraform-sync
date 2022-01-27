@@ -26,7 +26,7 @@ example.hcl
 task {
   name = "example-task"
   description = "Writes the service name, id, and IP address to a file"
-  source = "../../example-module"
+  module = "../../example-module"
   providers = ["local"]
   services = ["web", "api"]
   variable_files = [/path/to/task-example.tfvars]

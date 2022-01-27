@@ -791,7 +791,7 @@ func TestTasksConfig_Validate(t *testing.T) {
 				{
 					Name:      String("task2"),
 					Services:  []string{"serviceC"},
-					Module:    String("sourceC"),
+					Module:    String("path"),
 					Providers: []string{"providerC"},
 				},
 			},
@@ -807,7 +807,7 @@ func TestTasksConfig_Validate(t *testing.T) {
 				}, {
 					Name:      String("task"),
 					Services:  []string{"serviceA"},
-					Module:    String("source2"),
+					Module:    String("path"),
 					Providers: []string{"providerA"},
 				},
 			},

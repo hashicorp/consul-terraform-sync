@@ -1,7 +1,7 @@
 package config
 
-// NoMonitorConfig is used to set a non-null value to a task's source input or
-// condition configuration block when it is unconfigured.
+// NoMonitorConfig is used to set a non-null value to a task's condition
+// configuration block when it is unconfigured.
 type NoMonitorConfig struct{}
 
 func (c *NoMonitorConfig) VariableType() string {
