@@ -78,7 +78,7 @@ type TaskConfig struct {
 	Providers    TerraformProviderBlocks
 	ProviderInfo map[string]interface{}
 	Services     []Service
-	Source       string
+	Module       string
 	VarFiles     []string
 	Variables    map[string]string
 	Version      string
@@ -123,7 +123,7 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		providers:    conf.Providers,
 		providerInfo: conf.ProviderInfo,
 		services:     conf.Services,
-		source:       conf.Source,
+		source:       conf.Module,
 		variables:    loadedVars,
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
