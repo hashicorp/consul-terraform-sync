@@ -183,7 +183,7 @@ func TestAppendRootModuleBlocks(t *testing.T) {
 			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
-				Source:      "namespace/example/test-module",
+				Module:      "namespace/example/test-module",
 				Version:     "1.1.0",
 			},
 			templates: []Template{},
@@ -200,7 +200,7 @@ module "test" {
 			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
-				Source:      "namespace/example/test-module",
+				Module:      "namespace/example/test-module",
 				Version:     "1.1.0",
 			},
 			templates: []Template{
@@ -223,7 +223,7 @@ module "test" {
 			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
-				Source:      "namespace/example/test-module",
+				Module:      "namespace/example/test-module",
 				Version:     "1.1.0",
 			},
 			templates: []Template{},
@@ -243,7 +243,7 @@ module "test" {
 			task: Task{
 				Description: "user description for task named 'test'",
 				Name:        "test",
-				Source:      "namespace/example/test-module",
+				Module:      "namespace/example/test-module",
 				Version:     "1.1.0",
 			},
 			templates: []Template{

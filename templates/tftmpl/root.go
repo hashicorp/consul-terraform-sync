@@ -92,7 +92,7 @@ var (
 type Task struct {
 	Description string
 	Name        string
-	Source      string
+	Module      string
 	Version     string
 }
 
@@ -317,7 +317,7 @@ func appendRootModuleBlock(body *hclwrite.Body, task Task, varNames []string, te
 	moduleBlock := body.AppendNewBlock("module", []string{task.Name})
 	moduleBody := moduleBlock.Body()
 
-	moduleBody.SetAttributeValue("source", cty.StringVal(task.Source))
+	moduleBody.SetAttributeValue("source", cty.StringVal(task.Module))
 
 	if len(task.Version) > 0 {
 		moduleBody.SetAttributeValue("version", cty.StringVal(task.Version))

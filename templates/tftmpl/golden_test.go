@@ -21,7 +21,7 @@ func TestNewFiles(t *testing.T) {
 	task := Task{
 		Description: "user description for task named 'test'",
 		Name:        "test",
-		Source:      "namespace/consul-terraform-sync/consul//modules/test",
+		Module:      "namespace/consul-terraform-sync/consul//modules/test",
 		Version:     "0.0.0",
 	}
 
