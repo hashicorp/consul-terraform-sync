@@ -278,8 +278,8 @@ func validateServices(t *testing.T, expected bool, services []string, servicesPa
 //
 // e.g., checking that the module created a file for a Consul KV entry where the filename is the key and the
 // content is the value
-func validateModuleFile(t *testing.T, srcIncludesVar, expected bool, resourcesPath, name, expectedContent string) {
-	if !srcIncludesVar {
+func validateModuleFile(t *testing.T, useAsModuleInput, expected bool, resourcesPath, name, expectedContent string) {
+	if !useAsModuleInput {
 		// module will not generate files based on the module input variables,
 		// nothing to validate
 		return
