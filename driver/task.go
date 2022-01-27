@@ -60,7 +60,7 @@ type Task struct {
 	providers    TerraformProviderBlocks // task.providers config info
 	providerInfo map[string]interface{}  // driver.required_provider config info
 	services     []Service
-	source       string
+	module       string
 	variables    hcltmpl.Variables // loaded variables from varFiles
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
@@ -123,7 +123,7 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		providers:    conf.Providers,
 		providerInfo: conf.ProviderInfo,
 		services:     conf.Services,
-		source:       conf.Module,
+		module:       conf.Module,
 		variables:    loadedVars,
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
@@ -260,7 +260,7 @@ func (t *Task) ServiceNames() []string {
 func (t *Task) Source() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.source
+	return t.module
 }
 
 // Variables returns a copy of the loaded input variables for a module
@@ -311,7 +311,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 	input.Task = tftmpl.Task{
 		Description: t.description,
 		Name:        t.name,
-		Module:      t.source,
+		Module:      t.module,
 		Version:     t.version,
 	}
 

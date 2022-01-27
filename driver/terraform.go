@@ -384,7 +384,7 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 	}
 
 	// convert relative paths to absolute paths for local module sources
-	moduleSource := tf.task.source
+	moduleSource := tf.task.module
 	if strings.HasPrefix(moduleSource, "./") || strings.HasPrefix(moduleSource, "../") {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -392,8 +392,8 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 				"error", err)
 			return err
 		}
-		moduleSource = filepath.Join(wd, tf.task.source)
-		tf.task.source = moduleSource
+		moduleSource = filepath.Join(wd, tf.task.module)
+		tf.task.module = moduleSource
 	}
 
 	if err := tf.task.configureRootModuleInput(&input); err != nil {
