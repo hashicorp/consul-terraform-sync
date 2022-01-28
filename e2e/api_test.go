@@ -272,7 +272,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disabled_task")
 
-	cts := ctsSetup(t, srv, tempDir, disabledTaskConfig(tempDir))
+	cts := ctsSetup(t, srv, tempDir, disabledTaskConfig())
 
 	// Confirm that terraform files were generated for a disabled task
 	taskPath := filepath.Join(tempDir, disabledTaskName)

@@ -244,7 +244,7 @@ task {
 }
 
 // disabledTaskConfig returns a config file with a task that is disabled
-func disabledTaskConfig(dir string) string {
+func disabledTaskConfig() string {
 	return fmt.Sprintf(`
 task {
 	name = "%s"
