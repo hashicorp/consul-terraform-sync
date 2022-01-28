@@ -56,26 +56,26 @@ func TestCondition_Services(t *testing.T) {
 		useAsModuleInput bool
 	}{
 		{
-			"regexp & includes true",
-			"services_cond_regexp_include",
+			"regexp - use true",
+			"services_cond_regexp_use",
 			regexpConfig,
 			true,
 		},
 		{
-			"regexp & includes false",
-			"services_cond_regexp_include_false",
+			"regexp - use false",
+			"services_cond_regexp_use_false",
 			regexpConfig,
 			false,
 		},
 		{
-			"names & includes true",
-			"services_cond_names_include",
+			"names - use true",
+			"services_cond_names_use",
 			namesConfig,
 			true,
 		},
 		{
-			"names & includes false",
-			"services_cond_names_include_false",
+			"names - use false",
+			"services_cond_names_use_false",
 			namesConfig,
 			false,
 		},
