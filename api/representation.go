@@ -82,7 +82,7 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 		tc.Services = *tr.Task.Services
 	}
 
-	// Convert source input
+	// Convert module input
 	if tr.Task.ModuleInput != nil {
 		inputs := make(config.ModuleInputConfigs, 0)
 		if tr.Task.ModuleInput.Services != nil {

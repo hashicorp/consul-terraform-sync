@@ -56,9 +56,8 @@ type TaskConfig struct {
 	// TODO: Add validation
 	Variables map[string]string
 
-	// Version is the version of source the task will use. For the Terraform
-	// driver, this is the module version. The latest version will be used as
-	// the default if omitted.
+	// Version is the module version for the task to use. The latest version
+	// will be used as the default if omitted.
 	Version *string `mapstructure:"version"`
 
 	// The Terraform client version to use for the task when configured with CTS

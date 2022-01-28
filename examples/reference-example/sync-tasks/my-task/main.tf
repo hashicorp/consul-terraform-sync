@@ -30,7 +30,7 @@ provider "myprovider" {
 
 # automate services for website X
 module "my-task" {
-  source   = "namespace/example/module"
+  module   = "namespace/example/module"
   version  = "1.1.0"
   services = var.services
 
