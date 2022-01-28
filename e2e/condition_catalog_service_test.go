@@ -25,15 +25,13 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 	setParallelism(t)
 
 	cases := []struct {
-		name        string
-		tempDirName string
-		resource    string
-		taskConf    string
-		include     bool
+		name             string
+		resource         string
+		taskConf         string
+		useAsModuleInput bool
 	}{
 		{
-			"use_as_module_input=true",
-			"cs_condition_registration_include",
+			"use_as_module_input_true",
 			"api_tags.txt",
 			`task {
 	name = "catalog_task"
@@ -47,8 +45,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 			true,
 		},
 		{
-			"use_as_module_input=false",
-			"cs_condition_registration",
+			"use_as_module_input_false",
 			"api-1.txt",
 			`task {
 	name = "catalog_task"
@@ -66,7 +63,7 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			testCatalogServicesRegistration(t, tc.taskConf, "catalog_task",
-				tc.tempDirName, tc.resource, tc.include)
+				"cs_condition_registration_use_", tc.resource, tc.useAsModuleInput)
 		})
 	}
 }
@@ -326,7 +323,7 @@ func testCatalogServicesRegistration(t *testing.T, taskConf, taskName,
 	})
 	defer srv.Stop()
 
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tempDirName)
+	tempDir := fmt.Sprintf("%s%s%t", tempDirPrefix, tempDirName, useAsModuleInput)
 	cts := ctsSetup(t, srv, tempDir, taskConf)
 
 	// Test that task is triggered on service registration and deregistration
