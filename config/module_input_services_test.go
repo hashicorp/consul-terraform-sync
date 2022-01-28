@@ -252,7 +252,7 @@ func TestGoString(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := tc.ssv.GoString()
+			actual := tc.ssv.String()
 			require.Equal(t, tc.expected, actual)
 		})
 	}

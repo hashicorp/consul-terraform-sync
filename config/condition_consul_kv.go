@@ -15,8 +15,8 @@ type ConsulKVConditionConfig struct {
 	ConsulKVMonitorConfig `mapstructure:",squash"`
 
 	// UseAsModuleInput was previously named SourceIncludesVar - deprecated v0.5
-	UseAsModuleInput            *bool `mapstructure:"use_as_module_input"`
-	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var"`
+	UseAsModuleInput            *bool `mapstructure:"use_as_module_input" json:"use_as_module_input"`
+	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var" json:"source_includes_var"`
 }
 
 // Copy returns a deep copy of this configuration.
@@ -116,17 +116,23 @@ func (c *ConsulKVConditionConfig) Validate() error {
 	return c.ConsulKVMonitorConfig.Validate()
 }
 
-// GoString defines the printable version of this struct.
-func (c *ConsulKVConditionConfig) GoString() string {
-	if c == nil {
-		return "(*ConsulKVConditionConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c ConsulKVConditionConfig) String() string {
 
+<<<<<<< HEAD
+	return fmt.Sprintf("{"+
+		"SourceIncludesVar:%v, "+
+		"%s"+
+		"}",
+		BoolVal(c.SourceIncludesVar),
+		c.ConsulKVMonitorConfig.String(),
+=======
 	return fmt.Sprintf("&ConsulKVConditionConfig{"+
 		"%s, "+
 		"UseAsModuleInput:%v"+
 		"}",
 		c.ConsulKVMonitorConfig.GoString(),
 		BoolVal(c.UseAsModuleInput),
+>>>>>>> upstream/main
 	)
 }

@@ -181,7 +181,7 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 
 	// Print information on startup for debugging
 	logger.Info(version.GetHumanVersion())
-	logger.Debug("configuration", "config", conf.GoString())
+	logger.Debug("configuration", "config", conf.String())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

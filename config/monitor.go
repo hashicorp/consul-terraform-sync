@@ -11,7 +11,7 @@ type MonitorConfig interface {
 	Merge(MonitorConfig) MonitorConfig
 	Finalize()
 	Validate() error
-	GoString() string
+	String() string
 
 	// VariableType returns type of variable that a module_input or a condition
 	// block monitors. For example, `condition "services"` monitors the variable

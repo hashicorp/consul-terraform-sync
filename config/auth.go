@@ -6,9 +6,9 @@ const redactMessage = "(redacted)"
 
 // AuthConfig is the HTTP basic authentication data.
 type AuthConfig struct {
-	Enabled  *bool   `mapstructure:"enabled"`
-	Username *string `mapstructure:"username"`
-	Password *string `mapstructure:"password"`
+	Enabled  *bool   `mapstructure:"enabled" json"enabled"`
+	Username *string `mapstructure:"username" json"username"`
+	Password *string `mapstructure:"password" json"password"`
 }
 
 // DefaultAuthConfig is the default configuration.
@@ -83,14 +83,11 @@ func (c *AuthConfig) Finalize() {
 	}
 }
 
-// GoString defines the printable version of this struct.
+// String defines the printable version of this struct.
 // Sensitive information is redacted.
-func (c *AuthConfig) GoString() string {
-	if c == nil {
-		return "(*AuthConfig)(nil)"
-	}
+func (c AuthConfig) String() string {
 
-	return fmt.Sprintf("&AuthConfig{"+
+	return fmt.Sprintf("{"+
 		"Enabled:%v, "+
 		"Username:%s, "+
 		"Password:%s"+

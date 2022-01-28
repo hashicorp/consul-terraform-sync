@@ -20,20 +20,20 @@ const (
 // VaultConfig is the configuration for connecting to a vault server.
 type VaultConfig struct {
 	// Address is the URI to the Vault server.
-	Address *string `mapstructure:"address"`
+	Address *string `mapstructure:"address" json:"address"`
 
 	// Enabled controls whether the Vault integration is active.
-	Enabled *bool `mapstructure:"enabled"`
+	Enabled *bool `mapstructure:"enabled" json:"enabled"`
 
 	// Namespace is the Vault namespace to use for reading/writing secrets. This can
 	// also be set via the VAULT_NAMESPACE environment variable.
-	Namespace *string `mapstructure:"namespace"`
+	Namespace *string `mapstructure:"namespace" json:"namespace"`
 
 	// RenewToken renews the Vault token.
-	RenewToken *bool `mapstructure:"renew_token"`
+	RenewToken *bool `mapstructure:"renew_token" json:"renew_token"`
 
 	// TLS indicates we should use a secure connection while talking to Vault.
-	TLS *TLSConfig `mapstructure:"tls"`
+	TLS *TLSConfig `mapstructure:"tls" json:"tls"`
 
 	// Token is the Vault token to communicate with for requests. It may be
 	// a wrapped token or a real token. This can also be set via the VAULT_TOKEN
@@ -46,10 +46,10 @@ type VaultConfig struct {
 	VaultAgentTokenFile *string `mapstructure:"vault_agent_token_file" json:"-"`
 
 	// Transport configures the low-level network connection details.
-	Transport *TransportConfig `mapstructure:"transport"`
+	Transport *TransportConfig `mapstructure:"transport" json:"transport"`
 
 	// UnwrapToken unwraps the provided Vault token as a wrapped token.
-	UnwrapToken *bool `mapstructure:"unwrap_token"`
+	UnwrapToken *bool `mapstructure:"unwrap_token" json:"unwrap_token"`
 
 	// test will ignore the user's ~/.vault_token file for testing
 	test bool
@@ -229,13 +229,10 @@ func (c *VaultConfig) Finalize() {
 	}
 }
 
-// GoString defines the printable version of this struct.
-func (c *VaultConfig) GoString() string {
-	if c == nil {
-		return "(*VaultConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c VaultConfig) String() string {
 
-	return fmt.Sprintf("&VaultConfig{"+
+	return fmt.Sprintf("{"+
 		"Address:%s, "+
 		"Enabled:%v, "+
 		"Namespace:%s,"+
@@ -250,10 +247,10 @@ func (c *VaultConfig) GoString() string {
 		BoolVal(c.Enabled),
 		StringVal(c.Namespace),
 		BoolVal(c.RenewToken),
-		c.TLS.GoString(),
+		c.TLS.String(),
 		StringPresent(c.Token),
 		StringPresent(c.VaultAgentTokenFile),
-		c.Transport.GoString(),
+		c.Transport.String(),
 		BoolVal(c.UnwrapToken),
 	)
 }

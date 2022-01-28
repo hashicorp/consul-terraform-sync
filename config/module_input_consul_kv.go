@@ -76,15 +76,12 @@ func (c *ConsulKVModuleInputConfig) Validate() error {
 	return c.ConsulKVMonitorConfig.Validate()
 }
 
-// GoString defines the printable version of this struct.
-func (c *ConsulKVModuleInputConfig) GoString() string {
-	if c == nil {
-		return "(*ConsulKVModuleInputConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c ConsulKVModuleInputConfig) String() string {
 
-	return fmt.Sprintf("&ConsulKVModuleInputConfig{"+
+	return fmt.Sprintf("{"+
 		"%s"+
 		"}",
-		c.ConsulKVMonitorConfig.GoString(),
+		c.ConsulKVMonitorConfig.String(),
 	)
 }

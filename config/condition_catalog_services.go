@@ -79,15 +79,12 @@ func (c *CatalogServicesConditionConfig) Validate() error {
 	return c.CatalogServicesMonitorConfig.Validate()
 }
 
-// GoString defines the printable version of this struct.
-func (c *CatalogServicesConditionConfig) GoString() string {
-	if c == nil {
-		return "(*CatalogServicesConditionConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c CatalogServicesConditionConfig) String() string {
 
-	return fmt.Sprintf("&CatalogServicesConditionConfig{"+
+	return fmt.Sprintf("{"+
 		"%s"+
 		"}",
-		c.CatalogServicesMonitorConfig.GoString(),
+		c.CatalogServicesMonitorConfig.String(),
 	)
 }

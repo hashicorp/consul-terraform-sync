@@ -15,14 +15,14 @@ var _ ConditionConfig = (*CatalogServicesConditionConfig)(nil)
 // of type 'catalog-services'. A catalog-services monitor is triggered by changes
 // that occur to services in the catalog-services api.
 type CatalogServicesMonitorConfig struct {
-	Regexp     *string           `mapstructure:"regexp"`
-	Datacenter *string           `mapstructure:"datacenter"`
-	Namespace  *string           `mapstructure:"namespace"`
-	NodeMeta   map[string]string `mapstructure:"node_meta"`
+	Regexp     *string           `mapstructure:"regexp" json:"regexp"`
+	Datacenter *string           `mapstructure:"datacenter" json:"datacenter"`
+	Namespace  *string           `mapstructure:"namespace" json:"namespace"`
+	NodeMeta   map[string]string `mapstructure:"node_meta" json:"node_meta"`
 
 	// UseAsModuleInput was previously named SourceIncludesVar - deprecated v0.5
-	UseAsModuleInput            *bool `mapstructure:"use_as_module_input"`
-	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var"`
+	UseAsModuleInput            *bool `mapstructure:"use_as_module_input" json:"use_as_module_input"`
+	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var" json:"source_includes_var"`
 }
 
 func (c *CatalogServicesMonitorConfig) VariableType() string {
@@ -168,13 +168,10 @@ func (c *CatalogServicesMonitorConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *CatalogServicesMonitorConfig) GoString() string {
-	if c == nil {
-		return "(*CatalogServicesMonitorConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c CatalogServicesMonitorConfig) String() string {
 
-	return fmt.Sprintf("&CatalogServicesMonitorConfig{"+
+	return fmt.Sprintf("{"+
 		"Regexp:%s, "+
 		"Datacenter:%v, "+
 		"Namespace:%v, "+

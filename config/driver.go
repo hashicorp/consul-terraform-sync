@@ -7,7 +7,7 @@ import "fmt"
 type DriverConfig struct {
 	consul *ConsulConfig
 
-	Terraform *TerraformConfig `mapstructure:"terraform"`
+	Terraform *TerraformConfig `mapstructure:"terraform" json:"terraform"`
 }
 
 // DefaultDriverConfig returns the default configuration struct.
@@ -84,15 +84,12 @@ func (c *DriverConfig) Validate() error {
 	return c.Terraform.Validate()
 }
 
-// GoString defines the printable version of this struct.
-func (c *DriverConfig) GoString() string {
-	if c == nil {
-		return "(*DriverConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c DriverConfig) String() string {
 
-	return fmt.Sprintf("&DriverConfig{"+
+	return fmt.Sprintf("{"+
 		"Terraform:%s"+
 		"}",
-		c.Terraform.GoString(),
+		c.Terraform.String(),
 	)
 }

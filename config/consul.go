@@ -171,14 +171,11 @@ func (c *ConsulConfig) Finalize() {
 	c.Transport.Finalize()
 }
 
-// GoString defines the printable version of this struct.
+// String defines the printable version of this struct.
 // Sensitive information is redacted.
-func (c *ConsulConfig) GoString() string {
-	if c == nil {
-		return "(*ConsulConfig)(nil)"
-	}
+func (c ConsulConfig) String() string {
 
-	return fmt.Sprintf("&ConsulConfig{"+
+	return fmt.Sprintf("{"+
 		"Address:%s, "+
 		"Auth:%s, "+
 		"KVNamespace:%s, "+
@@ -188,12 +185,12 @@ func (c *ConsulConfig) GoString() string {
 		"Transport:%s"+
 		"}",
 		StringVal(c.Address),
-		c.Auth.GoString(),
+		c.Auth.String(),
 		StringVal(c.KVNamespace),
 		StringVal(c.KVPath),
-		c.TLS.GoString(),
+		c.TLS.String(),
 		sensitiveGoString(c.Token),
-		c.Transport.GoString(),
+		c.Transport.String(),
 	)
 }
 

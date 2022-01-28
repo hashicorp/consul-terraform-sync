@@ -346,7 +346,7 @@ func TestServicesCondition_GoString(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := tc.i.GoString()
+			actual := tc.i.String()
 			assert.Equal(t, tc.expected, actual)
 		})
 	}

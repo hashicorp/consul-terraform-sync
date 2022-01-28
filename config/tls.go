@@ -13,13 +13,13 @@ const (
 
 // TLSConfig is the configuration for TLS.
 type TLSConfig struct {
-	CACert     *string `mapstructure:"ca_cert"`
-	CAPath     *string `mapstructure:"ca_path"`
-	Cert       *string `mapstructure:"cert"`
-	Enabled    *bool   `mapstructure:"enabled"`
-	Key        *string `mapstructure:"key"`
-	ServerName *string `mapstructure:"server_name"`
-	Verify     *bool   `mapstructure:"verify"`
+	CACert     *string `mapstructure:"ca_cert" json:"ca_cert"`
+	CAPath     *string `mapstructure:"ca_path" json:"ca_path"`
+	Cert       *string `mapstructure:"cert" json:"cert"`
+	Enabled    *bool   `mapstructure:"enabled" json:"enabled"`
+	Key        *string `mapstructure:"key" json:"key"`
+	ServerName *string `mapstructure:"server_name" json:"server_name"`
+	Verify     *bool   `mapstructure:"verify" json:"verify"`
 }
 
 // DefaultTLSConfig returns a configuration that is populated with the
@@ -198,13 +198,10 @@ func (c *TLSConfig) FinalizeVault() {
 	}
 }
 
-// GoString defines the printable version of this struct.
-func (c *TLSConfig) GoString() string {
-	if c == nil {
-		return "(*TLSConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c TLSConfig) String() string {
 
-	return fmt.Sprintf("&TLSConfig{"+
+	return fmt.Sprintf("{"+
 		"CACert:%s, "+
 		"CAPath:%s, "+
 		"Cert:%s, "+

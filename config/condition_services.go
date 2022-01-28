@@ -120,17 +120,14 @@ func (c *ServicesConditionConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *ServicesConditionConfig) GoString() string {
-	if c == nil {
-		return "(*ServicesConditionConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c ServicesConditionConfig) String() string {
 
 	return fmt.Sprintf("&ServicesConditionConfig{"+
 		"%s, "+
 		"UseAsModuleInput:%v"+
 		"}",
-		c.ServicesMonitorConfig.GoString(),
+		c.ServicesMonitorConfig.String(),
 		BoolVal(c.UseAsModuleInput),
 	)
 }

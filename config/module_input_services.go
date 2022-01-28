@@ -79,15 +79,12 @@ func (c *ServicesModuleInputConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *ServicesModuleInputConfig) GoString() string {
-	if c == nil {
-		return "(*ServicesModuleInputConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c ServicesModuleInputConfig) String() string {
 
-	return fmt.Sprintf("&ServicesModuleInputConfig{"+
+	return fmt.Sprintf("{"+
 		"%s"+
 		"}",
-		c.ServicesMonitorConfig.GoString(),
+		c.ServicesMonitorConfig.String(),
 	)
 }

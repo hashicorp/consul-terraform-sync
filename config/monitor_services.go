@@ -17,27 +17,27 @@ type ServicesMonitorConfig struct {
 	// Regexp configures the services to monitor by matching on the service name.
 	// Either Regexp or Names must be configured, not both. When Regexp is unset,
 	// it will retain a nil value even after Finalize().
-	Regexp *string `mapstructure:"regexp"`
+	Regexp *string `mapstructure:"regexp" json:"regexp"`
 
 	// Names configures the services to monitor by listing the service name.
 	// Either Regexp or Names must be configured, not both.
-	Names []string `mapstructure:"names"`
+	Names []string `mapstructure:"names" json:"names"`
 
 	// Datacenter is the datacenter the service is deployed in.
-	Datacenter *string `mapstricture:"datacenter"`
+	Datacenter *string `mapstricture:"datacenter" json:"datacenter"`
 
 	// Namespace is the namespace of the service (Consul Enterprise only). If
 	// not provided, the namespace will be inferred from the CTS ACL token, or
 	// default to the `default` namespace.
-	Namespace *string `mapstructure:"namespace"`
+	Namespace *string `mapstructure:"namespace" json:"namespace"`
 
 	// Filter is used to filter nodes based on a Consul compatible filter
 	// expression.
-	Filter *string `mapstructure:"filter"`
+	Filter *string `mapstructure:"filter" json:"filter"`
 
 	// CTSUserDefinedMeta is metadata added to a service automated by CTS for
 	// network infrastructure automation.
-	CTSUserDefinedMeta map[string]string `mapstructure:"cts_user_defined_meta"`
+	CTSUserDefinedMeta map[string]string `mapstructure:"cts_user_defined_meta" json:"cts_user_defined_meta"`
 }
 
 func (c *ServicesMonitorConfig) VariableType() string {
@@ -186,13 +186,10 @@ func (c *ServicesMonitorConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *ServicesMonitorConfig) GoString() string {
-	if c == nil {
-		return "(*ServicesMonitorConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c ServicesMonitorConfig) String() string {
 
-	return fmt.Sprintf("&ServicesMonitorConfig{"+
+	return fmt.Sprintf("{"+
 		"Regexp:%s, "+
 		"Names:%s, "+
 		"Datacenter:%s, "+

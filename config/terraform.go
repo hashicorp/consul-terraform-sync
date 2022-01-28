@@ -20,12 +20,12 @@ const (
 
 // TerraformConfig is the configuration for the Terraform driver.
 type TerraformConfig struct {
-	Version           *string                `mapstructure:"version"`
-	Log               *bool                  `mapstructure:"log"`
-	PersistLog        *bool                  `mapstructure:"persist_log"`
-	Path              *string                `mapstructure:"path"`
-	Backend           map[string]interface{} `mapstructure:"backend"`
-	RequiredProviders map[string]interface{} `mapstructure:"required_providers"`
+	Version           *string                `mapstructure:"version" json:"version"`
+	Log               *bool                  `mapstructure:"log" json:"log"`
+	PersistLog        *bool                  `mapstructure:"persist_log" json:"persist_log"`
+	Path              *string                `mapstructure:"path" json:"path"`
+	Backend           map[string]interface{} `mapstructure:"backend" json:"backend"`
+	RequiredProviders map[string]interface{} `mapstructure:"required_providers" json:"required_providers"`
 }
 
 // DefaultTerraformConfig returns the default configuration struct.
@@ -285,13 +285,10 @@ func (c *TerraformConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *TerraformConfig) GoString() string {
-	if c == nil {
-		return "(*TerraformConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c TerraformConfig) String() string {
 
-	return fmt.Sprintf("&TerraformConfig{"+
+	return fmt.Sprintf("{"+
 		"Version:%s, "+
 		"Log:%v, "+
 		"PersistLog:%v, "+
@@ -307,6 +304,7 @@ func (c *TerraformConfig) GoString() string {
 		c.RequiredProviders,
 	)
 }
+
 
 // IsConsulBackend returns if the Terraform backend is using Consul KV for
 // remote state store.

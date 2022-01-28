@@ -372,7 +372,7 @@ func TestProviderConfigs_GoString(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			actual := tc.i.GoString()
+			actual := tc.i.String()
 			assert.Equal(t, tc.expected, actual)
 		})
 	}

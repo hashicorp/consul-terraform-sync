@@ -34,20 +34,20 @@ const (
 // interactions on the wire.
 type TransportConfig struct {
 	// DialKeepAlive is the amount of time for keep-alives.
-	DialKeepAlive *time.Duration `mapstructure:"dial_keep_alive"`
+	DialKeepAlive *time.Duration `mapstructure:"dial_keep_alive" json:"dial_keep_alive"`
 
 	// DialTimeout is the amount of time to wait to establish a connection.
-	DialTimeout *time.Duration `mapstructure:"dial_timeout"`
+	DialTimeout *time.Duration `mapstructure:"dial_timeout" json:"dial_timeout"`
 
 	// DisableKeepAlives determines if keep-alives should be used. Disabling this
 	// significantly decreases performance.
-	DisableKeepAlives *bool `mapstructure:"disable_keep_alives"`
+	DisableKeepAlives *bool `mapstructure:"disable_keep_alives" json:"disable_keep_alives"`
 
 	// IdleConnTimeout is the timeout for idle connections.
-	IdleConnTimeout *time.Duration `mapstructure:"idle_conn_timeout"`
+	IdleConnTimeout *time.Duration `mapstructure:"idle_conn_timeout" json:"idle_conn_timeout"`
 
 	// MaxIdleConns is the maximum number of total idle connections.
-	MaxIdleConns *int `mapstructure:"max_idle_conns"`
+	MaxIdleConns *int `mapstructure:"max_idle_conns" json:"max_idle_conns"`
 
 	// MaxIdleConnsPerHost is the maximum number of idle connections per remote
 	// host.
@@ -65,11 +65,11 @@ type TransportConfig struct {
 	// If max_idle_conns_per_host or the number of services in automation is greater
 	// than the Consul agent limit, Consul-Terraform-Sync may error due to
 	// connection limits (429).
-	MaxIdleConnsPerHost *int `mapstructure:"max_idle_conns_per_host"`
+	MaxIdleConnsPerHost *int `mapstructure:"max_idle_conns_per_host" json:"max_idle_conns_per_host"`
 
 	// TLSHandshakeTimeout is the amount of time to wait to complete the TLS
 	// handshake.
-	TLSHandshakeTimeout *time.Duration `mapstructure:"tls_handshake_timeout"`
+	TLSHandshakeTimeout *time.Duration `mapstructure:"tls_handshake_timeout" json:"tls_handshake_timeout"`
 }
 
 // DefaultTransportConfig returns a configuration that is populated with the
@@ -177,13 +177,10 @@ func (c *TransportConfig) Finalize() {
 	}
 }
 
-// GoString defines the printable version of this struct.
-func (c *TransportConfig) GoString() string {
-	if c == nil {
-		return "(*TransportConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c TransportConfig) String() string {
 
-	return fmt.Sprintf("&TransportConfig{"+
+	return fmt.Sprintf("{"+
 		"DialKeepAlive:%s, "+
 		"DialTimeout:%s, "+
 		"DisableKeepAlives:%t, "+

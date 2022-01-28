@@ -12,10 +12,10 @@ var _ MonitorConfig = (*ConsulKVMonitorConfig)(nil)
 // of type 'consul-kv'. A consul-kv monitor watches for changes
 // that occur in the consul kv.
 type ConsulKVMonitorConfig struct {
-	Path       *string `mapstructure:"path"`
-	Recurse    *bool   `mapstructure:"recurse"`
-	Datacenter *string `mapstructure:"datacenter"`
-	Namespace  *string `mapstructure:"namespace"`
+	Path       *string `mapstructure:"path" json:"path"`
+	Recurse    *bool   `mapstructure:"recurse" json:"recurse"`
+	Datacenter *string `mapstructure:"datacenter" json:"datacenter"`
+	Namespace  *string `mapstructure:"namespace" json:"namespace"`
 }
 
 func (c *ConsulKVMonitorConfig) VariableType() string {
@@ -116,13 +116,10 @@ func (c *ConsulKVMonitorConfig) Validate() error {
 	return nil
 }
 
-// GoString defines the printable version of this struct.
-func (c *ConsulKVMonitorConfig) GoString() string {
-	if c == nil {
-		return "(*ConsulKVMonitorConfig)(nil)"
-	}
+// String defines the printable version of this struct.
+func (c ConsulKVMonitorConfig) String() string {
 
-	return fmt.Sprintf("&ConsulKVMonitorConfig{"+
+	return fmt.Sprintf("{"+
 		"Path:%s, "+
 		"Recurse:%v, "+
 		"Datacenter:%v, "+
