@@ -8,7 +8,7 @@ GOARCH=$(shell go env GOARCH)
 GOPATH=$(shell go env GOPATH)
 GOPATH := $(lastword $(subst :, ,${GOPATH}))# use last GOPATH entry
 
-# Project information
+#  Project information
 GOVERSION := 1.16
 PROJECT := $(shell go list -m)
 NAME := $(notdir $(PROJECT))
