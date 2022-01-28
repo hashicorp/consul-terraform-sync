@@ -272,15 +272,15 @@ func validateServices(t *testing.T, expected bool, services []string, servicesPa
 	}
 }
 
-// validateModuleFile checks whether a file dependent on a source input variable was created or not by the module.
-// If the file exists, then the content of the file is checked as well. If source_includes_var is set to false,
+// validateModuleFile checks whether a file dependent on a module input variable was created or not by the module.
+// If the file exists, then the content of the file is checked as well. If use_as_module_input is set to false,
 // then no file is expected to be created so no checks will be made. Assumes the file has a .txt extension.
 //
 // e.g., checking that the module created a file for a Consul KV entry where the filename is the key and the
 // content is the value
-func validateModuleFile(t *testing.T, srcIncludesVar, expected bool, resourcesPath, name, expectedContent string) {
-	if !srcIncludesVar {
-		// module will not generate files based on the source input variables,
+func validateModuleFile(t *testing.T, useAsModuleInput, expected bool, resourcesPath, name, expectedContent string) {
+	if !useAsModuleInput {
+		// module will not generate files based on the module input variables,
 		// nothing to validate
 		return
 	}

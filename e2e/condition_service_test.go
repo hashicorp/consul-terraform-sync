@@ -50,32 +50,32 @@ func TestCondition_Services(t *testing.T) {
 	}`
 
 	cases := []struct {
-		name              string
-		taskName          string
-		taskConfig        string
-		sourceIncludesVar bool
+		name             string
+		taskName         string
+		taskConfig       string
+		useAsModuleInput bool
 	}{
 		{
-			"regexp & includes true",
-			"services_cond_regexp_include",
+			"regexp - use true",
+			"services_cond_regexp_use",
 			regexpConfig,
 			true,
 		},
 		{
-			"regexp & includes false",
-			"services_cond_regexp_include_false",
+			"regexp - use false",
+			"services_cond_regexp_use_false",
 			regexpConfig,
 			false,
 		},
 		{
-			"names & includes true",
-			"services_cond_names_include",
+			"names - use true",
+			"services_cond_names_use",
 			namesConfig,
 			true,
 		},
 		{
-			"names & includes false",
-			"services_cond_names_include_false",
+			"names - use false",
+			"services_cond_names_use_false",
 			namesConfig,
 			false,
 		},
@@ -92,7 +92,7 @@ func TestCondition_Services(t *testing.T) {
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.taskName)
 
-			config := fmt.Sprintf(tc.taskConfig, tc.taskName, tc.sourceIncludesVar)
+			config := fmt.Sprintf(tc.taskConfig, tc.taskName, tc.useAsModuleInput)
 			cts := ctsSetup(t, srv, tempDir, config)
 
 			// Test that regex filter is filtering service registration information and
@@ -138,8 +138,8 @@ func TestCondition_Services(t *testing.T) {
 			require.Equal(t, eventCountExpected, eventCountNow,
 				"event count did not increment once. task was not triggered as expected")
 			resourcesPath := filepath.Join(workingDir, resourcesDir)
-			validateServices(t, tc.sourceIncludesVar, []string{"api-web-1"}, resourcesPath)
-			validateVariable(t, tc.sourceIncludesVar, workingDir, "services", "my_meta_value")
+			validateServices(t, tc.useAsModuleInput, []string{"api-web-1"}, resourcesPath)
+			validateVariable(t, tc.useAsModuleInput, workingDir, "services", "my_meta_value")
 
 			// 3. Add a second node to the service "api-web"
 			now = time.Now()
@@ -150,7 +150,7 @@ func TestCondition_Services(t *testing.T) {
 			eventCountExpected++
 			require.Equal(t, eventCountExpected, eventCountNow,
 				"event count did not increment once. task was not triggered as expected")
-			validateServices(t, tc.sourceIncludesVar, []string{"api-web-1", "api-web-2"}, resourcesPath)
+			validateServices(t, tc.useAsModuleInput, []string{"api-web-1", "api-web-2"}, resourcesPath)
 
 			// 4. Register a matched service "api-web" with tag_a
 			now = time.Now()

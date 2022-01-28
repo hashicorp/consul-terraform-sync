@@ -344,7 +344,7 @@ func TestE2E_FilterStatus(t *testing.T) {
 			"_default",
 			`task {
 				name = "%s"
-				source = "./test_modules/null_resource"
+				module = "./test_modules/null_resource"
 				services = ["api", "unhealthy-service"]
 			}
 			`,
@@ -362,7 +362,7 @@ func TestE2E_FilterStatus(t *testing.T) {
 			"_w_filter",
 			`task {
 				name = "%s"
-				source = "./test_modules/null_resource"
+				module = "./test_modules/null_resource"
 				services = ["api", "unhealthy-service"]
 			}
 			service {
