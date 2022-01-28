@@ -179,7 +179,13 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			expectedRequest: oapigen.Task{
 				Condition: &oapigen.Condition{
 					Services: &oapigen.ServicesCondition{
-						Regexp:           config.String("^web.*"),
+						Regexp:     config.String("^web.*"),
+						Datacenter: config.String("dc"),
+						Namespace:  config.String("ns"),
+						Filter:     config.String("filter"),
+						CtsUserDefinedMeta: &oapigen.ServicesCondition_CtsUserDefinedMeta{
+							AdditionalProperties: map[string]string{"key": "value"},
+						},
 						UseAsModuleInput: config.Bool(false),
 					},
 				},
@@ -202,7 +208,13 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			expectedRequest: oapigen.Task{
 				Condition: &oapigen.Condition{
 					Services: &oapigen.ServicesCondition{
-						Names:            &[]string{"api", "web"},
+						Names:      &[]string{"api", "web"},
+						Datacenter: config.String(""),
+						Namespace:  config.String(""),
+						Filter:     config.String(""),
+						CtsUserDefinedMeta: &oapigen.ServicesCondition_CtsUserDefinedMeta{
+							AdditionalProperties: map[string]string{},
+						},
 						UseAsModuleInput: config.Bool(false),
 					},
 				},
