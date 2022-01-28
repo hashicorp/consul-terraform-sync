@@ -59,6 +59,7 @@ func TestServer_TaskCreate(t *testing.T) {
 		require.NoError(t, err)
 
 		mockD := new(mocksD.Driver)
+		mockD.On("SetBufferPeriod").Return()
 		mockDriver(ctx, mockD, driverTask)
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
@@ -122,6 +123,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockD := new(mocksD.Driver)
+		mockD.On("SetBufferPeriod").Return()
 		task, err := driver.NewTask(driver.TaskConfig{
 			Enabled: true,
 			Name:    "task",
@@ -148,6 +150,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 
 	t.Run("disabled task", func(t *testing.T) {
 		mockD := new(mocksD.Driver)
+		mockD.On("SetBufferPeriod").Return()
 		task, err := driver.NewTask(driver.TaskConfig{
 			Enabled: false,
 			Name:    "task",
