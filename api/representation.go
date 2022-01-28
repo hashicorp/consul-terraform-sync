@@ -88,11 +88,17 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 		if tr.Task.ModuleInput.Services != nil {
 			input := &config.ServicesModuleInputConfig{
 				ServicesMonitorConfig: config.ServicesMonitorConfig{
-					Regexp: tr.Task.ModuleInput.Services.Regexp,
+					Regexp:     tr.Task.ModuleInput.Services.Regexp,
+					Datacenter: tr.Task.ModuleInput.Services.Datacenter,
+					Namespace:  tr.Task.ModuleInput.Services.Namespace,
+					Filter:     tr.Task.ModuleInput.Services.Filter,
 				},
 			}
 			if tr.Task.ModuleInput.Services.Names != nil {
 				input.Names = *tr.Task.ModuleInput.Services.Names
+			}
+			if tr.Task.ModuleInput.Services.CtsUserDefinedMeta != nil {
+				input.CTSUserDefinedMeta = tr.Task.ModuleInput.Services.CtsUserDefinedMeta.AdditionalProperties
 			}
 			inputs = append(inputs, input)
 		}
@@ -252,11 +258,23 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 			case *config.ServicesModuleInputConfig:
 				if len(input.Names) > 0 {
 					task.ModuleInput.Services = &oapigen.ServicesModuleInput{
-						Names: &input.Names,
+						Names:      &input.Names,
+						Datacenter: input.Datacenter,
+						Namespace:  input.Namespace,
+						Filter:     input.Filter,
+						CtsUserDefinedMeta: &oapigen.ServicesModuleInput_CtsUserDefinedMeta{
+							AdditionalProperties: input.CTSUserDefinedMeta,
+						},
 					}
 				} else {
 					task.ModuleInput.Services = &oapigen.ServicesModuleInput{
-						Regexp: input.Regexp,
+						Regexp:     input.Regexp,
+						Datacenter: input.Datacenter,
+						Namespace:  input.Namespace,
+						Filter:     input.Filter,
+						CtsUserDefinedMeta: &oapigen.ServicesModuleInput_CtsUserDefinedMeta{
+							AdditionalProperties: input.CTSUserDefinedMeta,
+						},
 					}
 				}
 			case *config.ConsulKVModuleInputConfig:
