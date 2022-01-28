@@ -15,7 +15,7 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 		exp  string
 	}{
 		{
-			"one name & fully configured & includes_var true",
+			"one name & fully configured & render var",
 			&ServicesTemplate{
 				Names:      []string{"api"},
 				Datacenter: "dc1",
@@ -34,7 +34,7 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 `,
 		},
 		{
-			"multi-name & fully configured & includes_var true",
+			"multi-name & fully configured & render var",
 			&ServicesTemplate{
 				Names:      []string{"api", "web"},
 				Datacenter: "dc1",
@@ -59,7 +59,7 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 {{- end}}
 `},
 		{
-			"deprecated service fully configure & includes_var true",
+			"deprecated service fully configure & render var",
 			&ServicesTemplate{
 				Names: []string{"api", "web"},
 				Services: map[string]Service{
@@ -94,7 +94,7 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 `,
 		},
 		{
-			"deprecated service some services configured & includes_var true",
+			"deprecated service some services configured & render var",
 			&ServicesTemplate{
 				Names: []string{"api", "web"},
 				Services: map[string]Service{
@@ -124,7 +124,7 @@ func TestServicesTemplate_concatServiceTemplates(t *testing.T) {
 `,
 		},
 		{
-			"multi-name & fully configured & includes_var false",
+			"multi-name & fully configured & no var",
 			&ServicesTemplate{
 				Names:      []string{"api", "web"},
 				Datacenter: "dc1",

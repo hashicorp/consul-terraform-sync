@@ -311,7 +311,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 	input.Task = tftmpl.Task{
 		Description: t.description,
 		Name:        t.name,
-		Source:      t.source,
+		Module:      t.source,
 		Version:     t.version,
 	}
 

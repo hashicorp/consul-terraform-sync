@@ -60,7 +60,7 @@ func TestInitRootModule(t *testing.T) {
 		Task: Task{
 			Description: "user description for task named 'test'",
 			Name:        "test",
-			Source:      "namespace/consul-terraform-sync/consul//modules/test",
+			Module:      "namespace/consul-terraform-sync/consul//modules/test",
 			Version:     "0.0.0",
 		},
 		Variables: hcltmpl.Variables{
@@ -126,7 +126,7 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 		{
 			"happy path (consul kv)",
 			"testdata/consul-kv/terraform.tfvars",
-			"testdata/consul-kv/terraform_includes_vars.tfvars.tmpl",
+			"testdata/consul-kv/terraform_with_var.tfvars.tmpl",
 			true,
 			true,
 			false,
@@ -168,9 +168,9 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			false,
 		},
 		{
-			"happy path (catalog-services condition - source_includes_var)",
-			"testdata/catalog-services/terraform_include.tfvars",
-			"testdata/catalog-services/terraform_include.tfvars.tmpl",
+			"happy path (catalog-services condition - render var)",
+			"testdata/catalog-services/terraform_with_var.tfvars",
+			"testdata/catalog-services/terraform_with_var.tfvars.tmpl",
 			true,
 			true,
 			false,

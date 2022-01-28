@@ -45,11 +45,10 @@ func (t ConsulKVTemplate) appendModuleAttribute(body *hclwrite.Body) {
 }
 
 // appendTemplate writes the template needed for the Consul KV condition.
-// It determines which template to use based on the values of the
-// source_includes_var and recurse options. If source_includes_var is set
-// to true, include the template as part of the variable consul_kv.
-// If recurse is set to true, then use the 'keys' template, otherwise
-// use the 'keyExists'/'key' template.
+// It determines which template to use based on the values of the RenderVar and
+// recurse options. If RenderVar is true, then set the consul_kv variable to
+// the template. If recurse is set to true, then use the 'keys' template,
+// otherwise use the 'keyExists'/'key' template.
 func (t ConsulKVTemplate) appendTemplate(w io.Writer) error {
 	logger := logging.Global().Named(logSystemName).Named(tftmplSubsystemName)
 	q := t.hcatQuery()
@@ -62,8 +61,8 @@ func (t ConsulKVTemplate) appendTemplate(w io.Writer) error {
 			baseTmpl = fmt.Sprintf(consulKVBaseTmpl, q)
 		}
 
-		if _, err := fmt.Fprintf(w, consulKVIncludesVarTmpl, baseTmpl); err != nil {
-			logger.Error("unable to write consul-kv template to include variable", "error", err)
+		if _, err := fmt.Fprintf(w, consulKVSetVarTmpl, baseTmpl); err != nil {
+			logger.Error("unable to write consul-kv template with variable", "error", err)
 			return err
 		}
 		return nil
@@ -106,7 +105,7 @@ func (t ConsulKVTemplate) hcatQuery() string {
 	return ""
 }
 
-var consulKVIncludesVarTmpl = `
+var consulKVSetVarTmpl = `
 consul_kv = {%s}
 `
 

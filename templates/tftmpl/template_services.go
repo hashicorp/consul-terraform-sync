@@ -59,7 +59,7 @@ func (t ServicesTemplate) appendTemplate(w io.Writer) error {
 	}
 
 	if t.RenderVar {
-		tmpl = fmt.Sprintf(servicesIncludesVarTmpl, tmpl)
+		tmpl = fmt.Sprintf(servicesSetVarTmpl, tmpl)
 	}
 
 	if _, err := fmt.Fprint(w, tmpl); err != nil {
@@ -146,9 +146,9 @@ func (t ServicesTemplate) hcatQuery(name, dc, ns, filter string) string {
 	return ""
 }
 
-// servicesIncludesVarTmpl expects a concatenation of serviceBaseTmpl or
+// servicesSetVarTmpl expects a concatenation of serviceBaseTmpl or
 // serviceEmptyTmpl for each monitored service at '%s'
-const servicesIncludesVarTmpl = `
+const servicesSetVarTmpl = `
 services = {%s}
 `
 

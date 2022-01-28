@@ -38,7 +38,7 @@ func (t ServicesRegexTemplate) appendTemplate(w io.Writer) error {
 
 	tmpl := ""
 	if t.RenderVar {
-		tmpl = fmt.Sprintf(servicesRegexIncludesVarTmpl, q)
+		tmpl = fmt.Sprintf(servicesRegexSetVarTmpl, q)
 	} else {
 		tmpl = fmt.Sprintf(servicesRegexEmptyTmpl, q)
 	}
@@ -85,7 +85,7 @@ func (t ServicesRegexTemplate) hcatQuery() string {
 	return ""
 }
 
-var servicesRegexIncludesVarTmpl = fmt.Sprintf(`
+var servicesRegexSetVarTmpl = fmt.Sprintf(`
 services = {%s}
 `, servicesRegexBaseTmpl)
 
