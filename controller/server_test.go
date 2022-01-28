@@ -48,7 +48,7 @@ func TestServer_TaskCreate(t *testing.T) {
 		driverTask, err := driver.NewTask(driver.TaskConfig{
 			Enabled:   true,
 			Name:      *taskConf.Name,
-			Source:    *taskConf.Module,
+			Module:    *taskConf.Module,
 			Condition: taskConf.Condition,
 			BufferPeriod: &driver.BufferPeriod{
 				Min: *ctrl.conf.BufferPeriod.Min,

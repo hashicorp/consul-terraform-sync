@@ -152,7 +152,7 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 		ev, err := event.NewEvent(taskName, &event.Config{
 			Providers: task.ProviderNames(),
 			Services:  task.ServiceNames(),
-			Module:    task.Source(),
+			Module:    task.Module(),
 		})
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("error creating task update"+
@@ -235,7 +235,7 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		Enabled:      config.Bool(t.IsEnabled()),
 		Providers:    t.ProviderNames(),
 		Services:     t.ServiceNames(),
-		Module:       config.String(t.Source()),
+		Module:       config.String(t.Module()),
 		Variables:    vars, // TODO: omit or safe to return?
 		Version:      config.String(t.Version()),
 		BufferPeriod: &bpConf,

@@ -383,17 +383,17 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 		FilePerms:        filePerms,
 	}
 
-	// convert relative paths to absolute paths for local module sources
-	moduleSource := tf.task.source
-	if strings.HasPrefix(moduleSource, "./") || strings.HasPrefix(moduleSource, "../") {
+	// convert relative paths to absolute paths for local modules
+	module := tf.task.module
+	if strings.HasPrefix(module, "./") || strings.HasPrefix(module, "../") {
 		wd, err := os.Getwd()
 		if err != nil {
 			tf.logger.Error("unable to retrieve current working directory to determine path to local module",
 				"error", err)
 			return err
 		}
-		moduleSource = filepath.Join(wd, tf.task.source)
-		tf.task.source = moduleSource
+		module = filepath.Join(wd, tf.task.module)
+		tf.task.module = module
 	}
 
 	if err := tf.task.configureRootModuleInput(&input); err != nil {
@@ -686,7 +686,7 @@ func getTerraformHandlers(taskName string, providers TerraformProviderBlocks) (h
 
 // getServicesMetaData helps retrieve metadata which can come from a number of
 // configuration sources: task.services' related service block, condition
-// "service" block, source_input "service" block.
+// "service" block, module_input "service" block.
 //
 // Currently it is only possible for a task to be configured with one of these
 // configuration sources, hence a task only has one metadata source. This is

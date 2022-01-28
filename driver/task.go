@@ -60,7 +60,7 @@ type Task struct {
 	providers    TerraformProviderBlocks // task.providers config info
 	providerInfo map[string]interface{}  // driver.required_provider config info
 	services     []Service
-	source       string
+	module       string
 	variables    hcltmpl.Variables // loaded variables from varFiles
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
@@ -78,7 +78,7 @@ type TaskConfig struct {
 	Providers    TerraformProviderBlocks
 	ProviderInfo map[string]interface{}
 	Services     []Service
-	Source       string
+	Module       string
 	VarFiles     []string
 	Variables    map[string]string
 	Version      string
@@ -123,7 +123,7 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		providers:    conf.Providers,
 		providerInfo: conf.ProviderInfo,
 		services:     conf.Services,
-		source:       conf.Source,
+		module:       conf.Module,
 		variables:    loadedVars,
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
@@ -256,11 +256,11 @@ func (t *Task) ServiceNames() []string {
 	return names
 }
 
-// Source returns the module source for the task
-func (t *Task) Source() string {
+// Module returns the task's module
+func (t *Task) Module() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.source
+	return t.module
 }
 
 // Variables returns a copy of the loaded input variables for a module
@@ -311,14 +311,14 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 	input.Task = tftmpl.Task{
 		Description: t.description,
 		Name:        t.name,
-		Module:      t.source,
+		Module:      t.module,
 		Version:     t.version,
 	}
 
 	var templates []tftmpl.Template
 
 	// Create a ServicesTemplate for task.services list. task.services is
-	// deprecated in 0.5 and is replaced by condition / source_input "services"
+	// deprecated in 0.5 and is replaced by condition / module_input "services"
 	// which is handled further below.
 	if len(t.services) > 0 {
 		// gather services query parameters
