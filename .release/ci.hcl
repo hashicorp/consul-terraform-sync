@@ -74,7 +74,8 @@ event "notarize-darwin-amd64" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
     workflow = "notarize-darwin-amd64"
-
+  }
+  
   notification {
     on = "fail"
   }
@@ -86,7 +87,6 @@ event "notarize-windows-386" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
     workflow = "notarize-windows-386"
-
   }
 
   notification {
@@ -100,7 +100,6 @@ event "notarize-windows-amd64" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
     workflow = "notarize-windows-amd64"
-
   }
 
   notification {
