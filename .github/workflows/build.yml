@@ -6,12 +6,9 @@ on:
     # Sequence of patterns matched against refs/heads
     branches:    
       # Push events on main branch
-      # - main
+      - main
       # Push events to branches matching refs/heads/release/**
-      # - 'release/**'
-
-      # Push events to clabry/RDX-272 for testing purposes
-      - clabry/RDX-272
+      - 'release/**'
 
 env:
   PKG_NAME: "consul-terraform-sync"
