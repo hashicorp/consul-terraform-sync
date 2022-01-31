@@ -158,7 +158,7 @@ components:
           type: array
           items:
             type: string
-            example: ["web", "api"]
+          example: ["web", "api"]
         module:
           type: string
           example: "org/example/module"
@@ -239,7 +239,7 @@ components:
           type: array
           items:
             type: string
-            example: ["web", "api"]
+          example: ["web", "api"]
         filter:
           type: string
           example: '\"test\" in Service.Tags'
@@ -322,7 +322,7 @@ components:
           type: array
           items:
             type: string
-            example: ["web", "api"]
+          example: ["web", "api"]
     ConsulKVModuleInput:
       type: object
       properties:
