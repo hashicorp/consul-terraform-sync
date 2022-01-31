@@ -141,7 +141,7 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "enable_cmd")
 
-			cts := ctsSetup(t, srv, tempDir, disabledTaskConfig(tempDir))
+			cts := ctsSetup(t, srv, tempDir, disabledTaskConfig())
 
 			subcmd := []string{"task", "enable",
 				fmt.Sprintf("-%s=%d", command.FlagPort, cts.Port()),

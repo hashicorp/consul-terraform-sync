@@ -28,7 +28,7 @@ func (_m *Driver) ApplyTask(ctx context.Context) error {
 	return r0
 }
 
-// DeleteTask provides a mock function with given fields: ctx
+// DestroyTask provides a mock function with given fields: ctx
 func (_m *Driver) DestroyTask(ctx context.Context) {
 	_m.Called(ctx)
 }

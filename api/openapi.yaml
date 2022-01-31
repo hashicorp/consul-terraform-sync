@@ -240,6 +240,19 @@ components:
           items:
             type: string
             example: ["web", "api"]
+        filter:
+          type: string
+          example: '\"test\" in Service.Tags'
+        datacenter:
+          type: string
+          example: "dc1"
+        namespace:
+          type: string
+          example: "default"
+        cts_user_defined_meta:
+          type: object
+          additionalProperties:
+            type: string
         use_as_module_input:
           type: boolean
           default: true

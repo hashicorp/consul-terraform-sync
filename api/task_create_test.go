@@ -244,6 +244,12 @@ func generateExpectedResponse(t *testing.T, req string) oapigen.TaskResponse {
 	err := json.Unmarshal([]byte(req), &treq)
 	require.NoError(t, err)
 
+	// Set cts_user_defined_meta to an empty map if nil
+	services := treq.Task.Condition.Services
+	if services != nil && services.CtsUserDefinedMeta == nil {
+		services.CtsUserDefinedMeta = &oapigen.ServicesCondition_CtsUserDefinedMeta{}
+	}
+
 	return oapigen.TaskResponse{
 		Task: &treq.Task,
 	}
