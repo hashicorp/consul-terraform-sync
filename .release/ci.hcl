@@ -3,13 +3,18 @@ schema = "1"
 project "consul-terraform-sync" {
   team = "consul api tooling"
   slack {
-    notification_channel = "C01A3A54G0L" // TODO: change to cts feed channel
+    notification_channel = "C01A3A54G0L"
   }
   github {
     organization = "hashicorp"
     repository = "consul-terraform-sync"
     release_branches = ["rdx-272"]
   }
+}
+
+event "merge" {
+  // "entrypoint" to use if build is not run automatically
+  // i.e. send "merge" complete signal to orchestrator to trigger build
 }
 
 event "build" {
