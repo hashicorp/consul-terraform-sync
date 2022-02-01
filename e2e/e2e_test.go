@@ -315,7 +315,7 @@ func TestE2EValidateError(t *testing.T) {
 	cmd.Stderr = &buf
 
 	err := cmd.Run()
-	require.NoError(t, err)
+	require.Error(t, err)
 
 	assert.Contains(t, buf.String(), fmt.Sprintf(`module for task "%s" is missing the "services" variable`, taskName))
 	require.Contains(t,

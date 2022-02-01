@@ -51,7 +51,7 @@ func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSC
 	for _, opt := range opts {
 		if opt == CTSOnceModeFlag || opt == CTSInspectFlag {
 			err := cmd.Run() // blocking
-			require.NoError(t, err)
+			require.NoError(t, err, buf.String())
 			return nil, func(t *testing.T) {}
 		}
 	}
