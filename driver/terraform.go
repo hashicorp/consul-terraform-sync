@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/notifier"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/tmplfunc"
 	"github.com/hashicorp/hcat"
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
@@ -576,7 +577,31 @@ func (tf *Terraform) initTaskTemplate() error {
 		return err
 	}
 
+	err = validateTemplate(tmpl, tf.watcher.Clients())
+	if err != nil {
+		tf.watcher.Deregister(tf.template)
+		tf.logger.Error("error validating template", taskNameLogKey, tf.task.Name(), "error", err)
+		return errors.Wrap(err, "unable to retrieve data from Consul")
+	}
+
 	return nil
+}
+
+// validateTemplate verifies that executing the fetch requests of
+// a template's dependencies does not error.
+func validateTemplate(t *hcat.Template, clients hcat.Looker) error {
+	var outer_err error
+	recaller := func(dep dep.Dependency) (interface{}, bool) {
+		data, _, err := dep.Fetch(clients)
+		if err != nil {
+			outer_err = err
+			return nil, false
+		}
+		return data, true
+	}
+	t.Execute(recaller)
+	t.Notify(nil)
+	return outer_err
 }
 
 // setNotifier sets a notifier on the template to ensure only the condition's
