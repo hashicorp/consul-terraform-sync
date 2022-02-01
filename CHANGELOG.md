@@ -11,6 +11,7 @@ FEATURES:
 * Support for Terraform v1.1 [[GH-588](https://github.com/hashicorp/consul-terraform-sync/pull/588)]
 
 IMPROVEMENTS:
+* Tasks will now trigger only after the `min` time of the `buffer_period` configuration has transpired. Previously tasks would trigger immediately, once, before honoring the minimum buffer period time. [[GH-642](https://github.com/hashicorp/consul-terraform-sync/pull/642)]
 * Support configuring a task's `condition "services"` and `source_input "services"` blocks with query parameters: `datacenter`, `namespace`, `filter`, and `cts_user_defined_meta`. [[GH-357](https://github.com/hashicorp/consul-terraform-sync/issues/357)]
 * Support new `names` field for configuring a task's `condition "services"` and `source_input "services"` blocks as an optional alternative to `regexp` to list monitored services by name. [[GH-561](https://github.com/hashicorp/consul-terraform-sync/issues/561)]
 * Support `source_includes_var` field for a task's `condition "services"` block. [[GH-584](https://github.com/hashicorp/consul-terraform-sync/pull/584)]
