@@ -160,7 +160,6 @@ func (t *TerraformCLI) Apply(ctx context.Context) error {
 
 // Plan executes the cli command `terraform plan` for a given workspace
 func (t *TerraformCLI) Plan(ctx context.Context) (bool, error) {
-
 	return t.tf.Plan(ctx)
 }
 

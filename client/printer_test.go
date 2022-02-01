@@ -92,7 +92,8 @@ func TestPrinterSetEnv(t *testing.T) {
 	p, err := DefaultTestPrinter(&buf)
 	assert.NoError(t, err)
 
-	p.SetEnv(make(map[string]string))
+	err = p.SetEnv(make(map[string]string))
+	assert.NoError(t, err)
 	assert.NotEmpty(t, buf.String())
 	assert.Contains(t, buf.String(), "client.printer")
 	assert.Contains(t, buf.String(), "set")
@@ -121,7 +122,8 @@ func TestPrinterInit(t *testing.T) {
 	assert.NoError(t, err)
 
 	ctx := context.Background()
-	p.Init(ctx)
+	err = p.Init(ctx)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, buf.String())
 	assert.Contains(t, buf.String(), "client.printer")
 	assert.Contains(t, buf.String(), "init")
@@ -182,7 +184,8 @@ func TestPrinterApply(t *testing.T) {
 	assert.NoError(t, err)
 
 	ctx := context.Background()
-	p.Apply(ctx)
+	err = p.Apply(ctx)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, buf.String())
 	assert.Contains(t, buf.String(), "client.printer")
 	assert.Contains(t, buf.String(), "apply")
@@ -196,7 +199,9 @@ func TestPrinterPlan(t *testing.T) {
 	assert.NoError(t, err)
 
 	ctx := context.Background()
-	p.Plan(ctx)
+	diff, err := p.Plan(ctx)
+	assert.True(t, diff)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, buf.String())
 	assert.Contains(t, buf.String(), "client.printer")
 	assert.Contains(t, buf.String(), "plan")
@@ -210,7 +215,8 @@ func TestPrinterValidate(t *testing.T) {
 	assert.NoError(t, err)
 
 	ctx := context.Background()
-	p.Validate(ctx)
+	err = p.Validate(ctx)
+	assert.NoError(t, err)
 	assert.NotEmpty(t, buf.String())
 	assert.Contains(t, buf.String(), "client.printer")
 	assert.Contains(t, buf.String(), "validating")
