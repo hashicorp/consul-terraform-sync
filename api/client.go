@@ -177,7 +177,7 @@ func (c *Client) Port() int {
 	return c.port
 }
 
-// FullAddress returns the client address including the scheme. eg. http://localhost:8558
+// FullAddress returns the client address including the scheme. E.g. http://localhost:8558
 func (c *Client) FullAddress() string {
 	return fmt.Sprintf("%s://%s", c.scheme, c.addr)
 }
@@ -310,7 +310,7 @@ type StatusClient struct {
 	*Client
 }
 
-// StatusClient returns a handle to the status endpoints
+// Status returns a handle to the status endpoints
 func (c *Client) Status() *StatusClient {
 	return &StatusClient{c}
 }

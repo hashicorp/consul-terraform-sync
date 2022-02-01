@@ -109,7 +109,9 @@ func TestCompatibility_Consul(t *testing.T) {
 					tc.testCompatibility(t, testTempDir, port)
 				})
 			}
-			cleanup()
+
+			err = cleanup()
+			require.NoError(t, err)
 		})
 	}
 }
@@ -248,7 +250,7 @@ func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
 	registerService(t, serviceInstance, port)
 
 	// 2. modify kind
-	serviceInstance.Kind = capi.ServiceKind("kind_update")
+	serviceInstance.Kind = "kind_update"
 	registerService(t, serviceInstance, port)
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "kind_update")

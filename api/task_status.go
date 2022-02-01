@@ -145,15 +145,15 @@ func makeTaskStatus(events []event.Event, task config.TaskConfig,
 	uniqProviders := make(map[string]bool)
 	uniqServices := make(map[string]bool)
 
-	for i, event := range events {
-		successes[i] = event.Success
-		if event.Config == nil {
+	for i, e := range events {
+		successes[i] = e.Success
+		if e.Config == nil {
 			continue
 		}
-		for _, p := range event.Config.Providers {
+		for _, p := range e.Config.Providers {
 			uniqProviders[p] = true
 		}
-		for _, s := range event.Config.Services {
+		for _, s := range e.Config.Services {
 			uniqServices[s] = true
 		}
 	}
@@ -230,7 +230,7 @@ func makeEventsURL(events []event.Event, version, taskName string) string {
 		version, taskStatusPath, taskName)
 }
 
-// include determines whether or not to include events in task status payload
+// include determines whether to include events in task status payload
 func include(r *http.Request) (bool, error) {
 	// `?include=events` parameter
 	const includeKey = "include"

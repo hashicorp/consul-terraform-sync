@@ -35,7 +35,7 @@ func TestE2EBasic(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "basic")
-	delete := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
@@ -59,16 +59,16 @@ func TestE2EBasic(t *testing.T) {
 	require.Equal(t, 2, len(files))
 
 	contents := testutils.CheckFile(t, true, dbResourcesPath, "api.txt")
-	require.Equal(t, "1.2.3.4", string(contents))
+	require.Equal(t, "1.2.3.4", contents)
 
 	contents = testutils.CheckFile(t, true, webResourcesPath, "api.txt")
-	require.Equal(t, "1.2.3.4", string(contents))
+	require.Equal(t, "1.2.3.4", contents)
 
 	contents = testutils.CheckFile(t, true, webResourcesPath, "web.txt")
-	require.Equal(t, "5.6.7.8", string(contents))
+	require.Equal(t, "5.6.7.8", contents)
 
 	contents = testutils.CheckFile(t, true, dbResourcesPath, "db.txt")
-	require.Equal(t, "10.10.10.10", string(contents))
+	require.Equal(t, "10.10.10.10", contents)
 
 	// check statefiles exist
 	testutils.CheckStateFile(t, srv.HTTPAddr, dbTaskName)
@@ -81,7 +81,7 @@ func TestE2EBasic(t *testing.T) {
 	api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForAPI)
 
 	contents = testutils.CheckFile(t, true, webResourcesPath, "web-1.txt")
-	assert.Equal(t, service.Address, string(contents), "web-1 should be created after registering")
+	assert.Equal(t, service.Address, contents, "web-1 should be created after registering")
 
 	now = time.Now()
 	testutils.DeregisterConsulService(t, srv, service.ID)
@@ -90,7 +90,7 @@ func TestE2EBasic(t *testing.T) {
 	// web-1 should be removed after deregistering
 	testutils.CheckFile(t, false, webResourcesPath, "web-1.txt")
 
-	delete()
+	_ = cleanup()
 }
 
 // TestE2ERestart runs the CTS binary in daemon mode and tests restarting
@@ -103,7 +103,7 @@ func TestE2ERestart(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "restart")
-	delete := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
@@ -115,7 +115,7 @@ func TestE2ERestart(t *testing.T) {
 	// rerun sync. confirm no errors e.g. recreating workspaces
 	runSyncStop(t, configPath, defaultWaitForAPI)
 
-	delete()
+	_ = cleanup()
 }
 
 // TestE2ERestartConsul tests CTS is able to reconnect to Consul after the
@@ -144,7 +144,8 @@ func TestE2ERestartConsul(t *testing.T) {
 	require.NoError(t, err)
 
 	// stop Consul
-	consul.Stop()
+	err = consul.Stop()
+	require.NoError(t, err)
 	time.Sleep(2 * time.Second)
 
 	// restart Consul
@@ -165,7 +166,7 @@ func TestE2ERestartConsul(t *testing.T) {
 	resourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
 	testutils.CheckFile(t, true, resourcesPath, "api_new.txt")
 
-	cleanup()
+	_ = cleanup()
 }
 
 // TestE2EPanosHandlerError tests that CTS stops upon an error for a task with
@@ -177,7 +178,7 @@ func TestE2EPanosHandlerError(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "panos_handler")
-	delete := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	requiredProviders := `required_providers {
@@ -193,7 +194,7 @@ func TestE2EPanosHandlerError(t *testing.T) {
 
 	api.StartCTS(t, configPath, api.CTSOnceModeFlag)
 
-	delete()
+	_ = cleanup()
 }
 
 // TestE2ELocalBackend tests CTS configured with the Terraform driver using
@@ -261,7 +262,7 @@ func TestE2ELocalBackend(t *testing.T) {
 			defer srv.Stop()
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.tempDirPrefix)
-			delete := testutils.MakeTempDir(t, tempDir)
+			cleanup := testutils.MakeTempDir(t, tempDir)
 			// no defer to delete directory: only delete at end of test if no errors
 
 			config := baseConfig(tempDir).appendConsulBlock(srv).
@@ -277,7 +278,7 @@ func TestE2ELocalBackend(t *testing.T) {
 			checkStateFileLocally(t, tc.dbStateFilePath)
 			checkStateFileLocally(t, tc.webStateFilePath)
 
-			delete()
+			_ = cleanup()
 		})
 	}
 }
@@ -289,7 +290,7 @@ func TestE2EValidateError(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "validate_errors")
-	delete := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
@@ -313,13 +314,15 @@ func TestE2EValidateError(t *testing.T) {
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 
-	cmd.Run()
+	err := cmd.Run()
+	require.NoError(t, err)
+
 	assert.Contains(t, buf.String(), fmt.Sprintf(`module for task "%s" is missing the "services" variable`, taskName))
 	require.Contains(t,
 		buf.String(),
 		fmt.Sprintf(`module for task "%s" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false`,
 			taskName))
-	delete()
+	_ = cleanup()
 }
 
 // TestE2E_FilterStatus checks the behavior of including/excluding non-passing
@@ -387,7 +390,7 @@ func TestE2E_FilterStatus(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			tempDir := fmt.Sprintf("%s%s%s", tempDirPrefix, "filter_statuses", tc.tmpDirSuffix)
-			delete := testutils.MakeTempDir(t, tempDir)
+			cleanup := testutils.MakeTempDir(t, tempDir)
 
 			taskName := "status_filter_task"
 
@@ -402,7 +405,7 @@ func TestE2E_FilterStatus(t *testing.T) {
 			contents := testutils.CheckFile(t, true, taskDir, "terraform.tfvars")
 
 			tc.checkTfvars(t, contents)
-			delete()
+			_ = cleanup()
 		})
 	}
 }
@@ -415,8 +418,8 @@ func TestE2EInspectMode(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "inspect")
-	delete := testutils.MakeTempDir(t, tempDir)
-	defer delete()
+	cleanup := testutils.MakeTempDir(t, tempDir)
+	defer cleanup()
 
 	config := baseConfig(tempDir).appendConsulBlock(srv).
 		appendTerraformBlock().appendWebTask()

@@ -88,7 +88,8 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 			// Set up Consul server
 			srv := newTestConsulServer(t)
 			t.Cleanup(func() {
-				srv.Stop()
+				err := srv.Stop()
+				require.NoError(t, err)
 			})
 
 			// Configure and start CTS
@@ -196,7 +197,8 @@ func TestConditionConsulKV_ExistingKey(t *testing.T) {
 			// Set up Consul server
 			srv := newTestConsulServer(t)
 			t.Cleanup(func() {
-				srv.Stop()
+				err := srv.Stop()
+				require.NoError(t, err)
 			})
 			path := "test-key/path"
 			value := "test-value"
@@ -322,7 +324,8 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 			// Set up Consul server
 			srv := newTestConsulServer(t)
 			t.Cleanup(func() {
-				srv.Stop()
+				err := srv.Stop()
+				require.NoError(t, err)
 			})
 			path := "test-key"
 			value := "test-value"
