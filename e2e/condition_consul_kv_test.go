@@ -88,8 +88,7 @@ func TestConditionConsulKV_NewKey(t *testing.T) {
 			// Set up Consul server
 			srv := newTestConsulServer(t)
 			t.Cleanup(func() {
-				err := srv.Stop()
-				require.NoError(t, err)
+				_ = srv.Stop()
 			})
 
 			// Configure and start CTS

@@ -145,8 +145,11 @@ func TestE2ERestartConsul(t *testing.T) {
 
 	// stop Consul
 	err = consul.Stop()
-	require.NoError(t, err)
-	time.Sleep(2 * time.Second)
+	// When Consul is killed with a SIGINT, it exists with error code 1, this error is expected
+	require.Error(t, err)
+	exitErr, ok := err.(*exec.ExitError)
+	require.True(t, ok)
+	require.Equal(t, 1, exitErr.ExitCode())
 
 	// restart Consul
 	consul = testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
@@ -165,34 +168,6 @@ func TestE2ERestartConsul(t *testing.T) {
 	// confirm that CTS reconnected with Consul and created resource for latest service
 	resourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
 	testutils.CheckFile(t, true, resourcesPath, "api_new.txt")
-
-	_ = cleanup()
-}
-
-// TestE2EPanosHandlerError tests that CTS stops upon an error for a task with
-// invalid PANOS credentials.
-func TestE2EPanosHandlerError(t *testing.T) {
-	setParallelism(t)
-
-	srv := newTestConsulServer(t)
-	defer srv.Stop()
-
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "panos_handler")
-	cleanup := testutils.MakeTempDir(t, tempDir)
-	// no defer to delete directory: only delete at end of test if no errors
-
-	requiredProviders := `required_providers {
-  panos = {
-    source = "paloaltonetworks/panos"
-  }
-}
-`
-	configPath := filepath.Join(tempDir, configFile)
-	config := panosBadCredConfig().appendConsulBlock(srv).
-		appendTerraformBlock(tempDir, requiredProviders)
-	config.write(t, configPath)
-
-	api.StartCTS(t, configPath, api.CTSOnceModeFlag)
 
 	_ = cleanup()
 }
