@@ -9,9 +9,7 @@ project "consul-terraform-sync" {
   github {
     organization = "hashicorp"
     repository = "consul-terraform-sync"
-    release_branches = [
-      "clabry-update-crt"
-    ]
+    release_branches = ["release/0.4.x"]
   }
 }
 
