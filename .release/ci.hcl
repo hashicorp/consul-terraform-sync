@@ -3,14 +3,17 @@ schema = "1"
 project "consul-terraform-sync" {
   team = "consul api tooling"
   slack {
-    # feed-rel-eng
-    notification_channel = "C01A3A54G0L"
+    # feed-consul-api-gh
+    notification_channel = "C026W707YHJ"
   }
   github {
     organization = "hashicorp"
     repository = "consul-terraform-sync"
     release_branches = [
-      "crt-update-rdx"
+      "main",
+      "release/0.2.x",
+      "release/0.3.x",
+      "release/0.4.x"
     ]
   }
 }
