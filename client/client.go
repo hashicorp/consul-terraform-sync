@@ -10,10 +10,10 @@ import (
 // Client describes the interface for a driver's client that interacts
 // with network infrastructure.
 type Client interface {
-	// Set the environment for the client
+	// SetEnv Set the environment for the client
 	SetEnv(map[string]string) error
 
-	// Set the standard out for the client
+	// SetStdout Set the standard out for the client
 	SetStdout(w io.Writer)
 
 	// Init initializes the client and environment
