@@ -30,5 +30,3 @@ if [ "$1" = '/bin/consul-terraform-sync' ]; then
 fi
 
 exec "$@"
-© 2022 GitHub, Inc.
-Terms
