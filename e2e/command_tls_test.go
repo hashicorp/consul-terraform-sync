@@ -618,8 +618,7 @@ func copyClientCerts(t *testing.T, certsToCopy []string, tempDir string) string 
 	clientCAPath := filepath.Join(tempDir, "clientCert")
 	cleanup := testutils.MakeTempDir(t, clientCAPath)
 	t.Cleanup(func() {
-		err := cleanup()
-		require.NoError(t, err)
+		_ = cleanup()
 	})
 	testutils.CopyFiles(t, certsToCopy, clientCAPath)
 

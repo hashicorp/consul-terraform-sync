@@ -174,8 +174,7 @@ func runSubCommandWithEnvVars(t *testing.T, input string, envVars []string, subc
 func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig string) *api.Client {
 	cleanup := testutils.MakeTempDir(t, tempDir)
 	t.Cleanup(func() {
-		err := cleanup()
-		require.NoError(t, err)
+		_ = cleanup()
 	})
 
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
@@ -218,8 +217,7 @@ func ctsSetupTLS(t *testing.T, srv *testutil.TestServer, tempDir string, taskCon
 
 	// add cleanup of tempDir after CAPath directory since CAPath directory will be inside temp directory
 	t.Cleanup(func() {
-		err := cleanup()
-		require.NoError(t, err)
+		_ = cleanup()
 	})
 
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().

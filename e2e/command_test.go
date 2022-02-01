@@ -245,8 +245,7 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	t.Cleanup(func() {
-		err := cleanup()
-		require.NoError(t, err)
+		_ = cleanup()
 		stop(t)
 	})
 
