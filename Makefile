@@ -55,7 +55,7 @@ test-setup-e2e: dev
 # test-e2e-cirecleci does e2e test setup and then runs the e2e tests
 test-e2e-cirecleci: test-setup-e2e
 	@echo "==> Testing ${NAME} (e2e)"
-	@go test ./e2e -count=1 -timeout=300s -tags=e2e ./... ${TESTARGS}
+	@go test ./e2e -count=1 -timeout=900s -tags=e2e ./... ${TESTARGS}
 .PHONY: test-e2e-cirecleci
 
 # test-e2e-local does e2e test setup and then runs the e2e tests
