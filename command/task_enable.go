@@ -62,7 +62,7 @@ Example:
        - Consul Terraform Sync cannot guarantee that these exact actions will be
 	     performed if monitored services have changed.
 
-      Only 'yes' will be accepted to approve.
+      Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject.
 
   Enter a value: yes
 

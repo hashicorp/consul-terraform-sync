@@ -50,7 +50,7 @@ Example:
   $ consul-terraform-sync task delete my_task
 	==> Do you want to delete 'my_task'?
 		- This action cannot be undone.
-	Only 'yes' will be accepted to approve.
+	Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject.
 
 	Enter a value: yes
 
