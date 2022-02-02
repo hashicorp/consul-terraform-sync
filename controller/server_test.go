@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
@@ -206,63 +207,26 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 
 func TestServer_TaskDelete(t *testing.T) {
 	ctx := context.Background()
-	mockD := new(mocksD.Driver)
 	ctrl := ReadWrite{
 		baseController: &baseController{
 			logger: logging.NewNullLogger(),
 		},
-		store: event.NewStore(),
+		store:    event.NewStore(),
+		deleteCh: make(chan string),
 	}
+	drivers := driver.NewDrivers()
+	taskName := "delete_task"
 
-	testCases := []struct {
-		name   string
-		setup  func(*driver.Drivers)
-		errMsg string
-	}{
-		{
-			"success",
-			func(d *driver.Drivers) {
-				mockD.On("TemplateIDs").Return(nil)
-				d.Add("success", mockD)
-				mockD.On("DestroyTask", ctx).Return()
-			},
-			"",
-		}, {
-			"does_not_exist",
-			func(*driver.Drivers) {},
-			"",
-		}, {
-			"active",
-			func(d *driver.Drivers) {
-				mockD.On("TemplateIDs").Return(nil)
-				d.Add("active", mockD)
-				d.SetActive("active")
-			},
-			"running and cannot be deleted",
-		},
+	ctrl.baseController.drivers = drivers
+	go ctrl.TaskDelete(ctx, taskName)
+	select {
+	case n := <-ctrl.deleteCh:
+		assert.Equal(t, taskName, n)
+	case <-time.After(1 * time.Second):
+		t.Log("delete channel did not receive message")
+		t.Fail()
 	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			drivers := driver.NewDrivers()
-
-			tc.setup(drivers)
-			ctrl.baseController.drivers = drivers
-
-			err := ctrl.TaskDelete(ctx, tc.name)
-
-			if tc.errMsg == "" {
-				assert.NoError(t, err)
-				_, exists := drivers.Get(tc.name)
-				assert.False(t, exists, "task should no longer exist")
-				return
-			}
-
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tc.errMsg)
-			_, exists := drivers.Get(tc.name)
-			assert.True(t, exists, "unexpected delete")
-		})
-	}
+	assert.True(t, ctrl.drivers.IsMarkedForDeletion(taskName))
 }
 
 func TestServer_TaskUpdate(t *testing.T) {

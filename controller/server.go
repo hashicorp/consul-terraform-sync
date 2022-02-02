@@ -89,25 +89,12 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 	return conf, nil
 }
 
+// TaskDelete marks a task for deletion
 func (rw *ReadWrite) TaskDelete(ctx context.Context, name string) error {
 	logger := rw.logger.With(taskNameLogKey, name)
-	logger.Trace("deleting task")
-
-	// Check if task is active
-	if rw.drivers.IsActive(name) {
-		return fmt.Errorf("task '%s' is currently running and cannot be deleted "+
-			"at this time", name)
-	}
-
-	// Delete task driver and events
-	err := rw.drivers.Delete(name)
-	if err != nil {
-		logger.Trace("unable to delete task", "error", err)
-		return err
-	}
-
-	rw.store.Delete(name)
-	logger.Trace("task deleted")
+	rw.drivers.MarkForDeletion(name)
+	rw.deleteCh <- name
+	logger.Trace("task marked for deletion")
 	return nil
 }
 

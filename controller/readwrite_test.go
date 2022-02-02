@@ -543,6 +543,102 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 	}
 }
 
+func TestReadWrite_deleteTask(t *testing.T) {
+	ctx := context.Background()
+	mockD := new(mocksD.Driver)
+
+	testCases := []struct {
+		name  string
+		setup func(*driver.Drivers)
+	}{
+		{
+			"success",
+			func(d *driver.Drivers) {
+				mockD.On("TemplateIDs").Return(nil)
+				d.Add("success", mockD)
+				mockD.On("DestroyTask", ctx).Return()
+			},
+		},
+		{
+			"does_not_exist",
+			func(*driver.Drivers) {},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			drivers := driver.NewDrivers()
+
+			tc.setup(drivers)
+			ctrl := ReadWrite{
+				baseController: &baseController{
+					logger: logging.NewNullLogger(),
+				},
+				store: event.NewStore(),
+			}
+			ctrl.baseController.drivers = drivers
+			ctrl.store.Add(event.Event{TaskName: "success"})
+
+			err := ctrl.deleteTask(ctx, tc.name)
+
+			assert.NoError(t, err)
+			_, exists := drivers.Get(tc.name)
+			assert.False(t, exists, "task should no longer exist")
+			events := ctrl.store.Read(tc.name)
+			assert.Empty(t, events, "task events should no longer exist")
+		})
+	}
+
+	t.Run("active_task", func(t *testing.T) {
+		// Set up drivers with active task
+		drivers := driver.NewDrivers()
+		taskName := "active_task"
+		mockD.On("TemplateIDs").Return(nil)
+		drivers.Add(taskName, mockD)
+		drivers.SetActive(taskName)
+
+		// Set up controller with drivers and store
+		ctrl := ReadWrite{
+			baseController: &baseController{
+				logger: logging.NewNullLogger(),
+			},
+			store: event.NewStore(),
+		}
+		ctrl.baseController.drivers = drivers
+		ctrl.store.Add(event.Event{TaskName: taskName})
+
+		// Attempt to delete the active task
+		ch := make(chan error)
+		go func() {
+			err := ctrl.deleteTask(ctx, taskName)
+			ch <- err
+		}()
+
+		// Check that the task is not deleted while active
+		time.Sleep(500 * time.Millisecond)
+		_, exists := drivers.Get(taskName)
+		assert.True(t, exists, "task deleted when active")
+		events := ctrl.store.Read(taskName)
+		assert.NotEmpty(t, events, "task events should still exist")
+
+		// Set task to inactive, wait for deletion to happen
+		drivers.SetInactive(taskName)
+		select {
+		case err := <-ch:
+			assert.NoError(t, err)
+		case <-time.After(1 * time.Second):
+			t.Log("task was not deleted after it became inactive")
+			t.Fail()
+		}
+
+		// Check that task removed from drivers and store
+		_, exists = drivers.Get(taskName)
+		assert.False(t, exists, "task should no longer exist")
+		events = ctrl.store.Read(taskName)
+		assert.Empty(t, events, "task events should no longer exist")
+	})
+
+}
+
 // singleTaskConfig returns a happy path config that has a single task
 func singleTaskConfig() *config.Config {
 	c := &config.Config{

@@ -27,9 +27,11 @@ type ReadWrite struct {
 
 	watcherCh chan string
 
-	// scheduleCh is used to coordinate scheduled tasks
-	// created via the API
+	// scheduleCh is used to coordinate scheduled tasks created via the API
 	scheduleCh chan driver.Driver
+
+	// deleteCh is used to coordinate task deletion via the API
+	deleteCh chan string
 
 	// taskNotify is only initialized if EnableTestMode() is used. It provides
 	// tests insight into which tasks were triggered and had completed
@@ -85,6 +87,10 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		// Size of channel is an arbitrarily chosen value.
 		rw.scheduleCh = make(chan driver.Driver, 10)
 	}
+	if rw.deleteCh == nil {
+		// Size of channel is an arbitrarily chosen value.
+		rw.deleteCh = make(chan string, 10)
+	}
 	go func() {
 		for {
 			rw.logger.Trace("starting template dependency monitoring")
@@ -111,6 +117,9 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		case d := <-rw.scheduleCh:
 			// Run newly created scheduled tasks
 			go rw.runScheduledTask(ctx, d)
+
+		case n := <-rw.deleteCh:
+			go rw.deleteTask(ctx, n)
 
 		case err := <-errCh:
 			return err
@@ -461,6 +470,33 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 	}
 
 	return err
+}
+
+// deleteTask deletes a task from the drivers map and deletes the task's events.
+// If a task is active and running, it will wait until the task has completed before
+// proceeding with the deletion.
+func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
+WAIT:
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			// wait for task to not be running
+			if !rw.drivers.IsActive(name) {
+				break WAIT
+			}
+		}
+	}
+
+	err := rw.drivers.Delete(name)
+	if err != nil {
+		rw.logger.Error("unable to delete task", taskNameLogKey, name, "error", err)
+		return err
+	}
+	rw.store.Delete(name)
+	rw.logger.Trace("task deleted", taskNameLogKey, name)
+	return nil
 }
 
 // EnableTestMode is a helper for testing which tasks were triggered and
