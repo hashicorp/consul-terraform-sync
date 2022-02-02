@@ -6,6 +6,11 @@ import (
 	"github.com/mitchellh/cli"
 )
 
+const (
+	errCreatingRequest = "Error: unable to create request"
+	errCreatingClient  = "Error: unable to create client"
+)
+
 // Commands returns the mapping of CLI commands for CTS. The meta
 // parameter lets you set meta options for all commands.
 func Commands() map[string]cli.CommandFactory {
