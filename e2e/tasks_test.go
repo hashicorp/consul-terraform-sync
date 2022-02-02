@@ -27,7 +27,7 @@ func TestTasksUpdate(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "multiple_tasks")
-	delete := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 
 	apiTaskName := "e2e_task_api"
 	apiTask := fmt.Sprintf(`
@@ -57,9 +57,9 @@ task {
 
 		// Verify Catalog information is reflected in terraform.tfvars
 		expectedTaskServices := map[string][]string{
-			apiTaskName: []string{"api"},
-			dbTaskName:  []string{"api", "db"},
-			webTaskName: []string{"api", "web"},
+			apiTaskName: {"api"},
+			dbTaskName:  {"api", "db"},
+			webTaskName: {"api", "web"},
 		}
 		for taskName, expected := range expectedTaskServices {
 			tfvarsFile := filepath.Join(tempDir, taskName, "terraform.tfvars")
@@ -96,9 +96,9 @@ task {
 
 		// Verify updated Catalog information is reflected in terraform.tfvars
 		expectedTaskServices := map[string][]string{
-			apiTaskName: []string{"api", "api_new"},
-			dbTaskName:  []string{"api", "api_new", "db"},
-			webTaskName: []string{"api", "api_new", "web", "web_new"},
+			apiTaskName: {"api", "api_new"},
+			dbTaskName:  {"api", "api_new", "db"},
+			webTaskName: {"api", "api_new", "web", "web_new"},
 		}
 		for taskName, expected := range expectedTaskServices {
 			tfvarsFile := filepath.Join(tempDir, taskName, "terraform.tfvars")
@@ -120,9 +120,9 @@ task {
 
 		// Verify updated Catalog information is reflected in terraform.tfvars
 		expectedTaskServices := map[string][]string{
-			apiTaskName: []string{"api"},
-			dbTaskName:  []string{"api", "db"},
-			webTaskName: []string{"api", "web", "web_new"},
+			apiTaskName: {"api"},
+			dbTaskName:  {"api", "db"},
+			webTaskName: {"api", "web", "web_new"},
 		}
 		for taskName, expected := range expectedTaskServices {
 			tfvarsFile := filepath.Join(tempDir, taskName, "terraform.tfvars")
@@ -133,7 +133,7 @@ task {
 		}
 	})
 
-	delete()
+	_ = cleanup()
 }
 
 func loadTFVarsServiceIDs(t *testing.T, file string) []string {
@@ -142,7 +142,7 @@ func loadTFVarsServiceIDs(t *testing.T, file string) []string {
 	content := testutils.CheckFile(t, true, file, "")
 
 	var ids []string
-	re := regexp.MustCompile(`\s+id\s+\= \"([^"]+)`)
+	re := regexp.MustCompile(`\s+id\s+= "([^"]+)`)
 	matches := re.FindAllSubmatch([]byte(content), -1)
 	for _, match := range matches {
 		ids = append(ids, string(match[1]))

@@ -127,7 +127,7 @@ func TestStatus(t *testing.T) {
 	port := testutils.FreePort(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	api, err := NewAPI(APIConfig{
+	api, err := NewAPI(Config{
 		Controller: ctrl,
 		Port:       port,
 	})
@@ -297,7 +297,7 @@ func TestWaitForAPI(t *testing.T) {
 		port := testutils.FreePort(t)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		api, err := NewAPI(APIConfig{
+		api, err := NewAPI(Config{
 			Controller: ctrl,
 			Port:       port,
 		})

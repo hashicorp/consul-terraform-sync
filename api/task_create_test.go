@@ -48,8 +48,7 @@ const (
 		"module": "./example-module"
 	}
 }`
-	testTaskName         = "api-task"
-	testWorkingDirectory = "sync-task"
+	testTaskName = "api-task"
 )
 
 func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
@@ -160,7 +159,7 @@ func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 	assert.Equal(t, expected, oapigen.TaskResponse(actual))
 	ctrl.AssertExpectations(t)
 
-	// Run the inspect a second time with same task, expect return 200 OK
+	// Run inspect a second time with same task, expect return 200 OK
 	runTestCreateTask(t, handler, "inspect", http.StatusOK, request)
 }
 

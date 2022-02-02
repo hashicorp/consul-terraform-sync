@@ -423,8 +423,8 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Version:     config.String("test-version"),
 				BufferPeriod: &config.BufferPeriodConfig{
 					Enabled: config.Bool(true),
-					Max:     config.TimeDuration(time.Duration(5 * time.Minute)),
-					Min:     config.TimeDuration(time.Duration(30 * time.Second)),
+					Max:     config.TimeDuration(5 * time.Minute),
+					Min:     config.TimeDuration(30 * time.Second),
 				},
 				Enabled: config.Bool(true),
 			},

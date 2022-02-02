@@ -135,7 +135,7 @@ func TestServe(t *testing.T) {
 
 			ctrl := new(mocks.Server)
 			tc.mock(ctrl)
-			api, err := NewAPI(APIConfig{
+			api, err := NewAPI(Config{
 				Controller: ctrl,
 				Port:       port,
 			})
@@ -162,7 +162,7 @@ func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	port := testutils.FreePort(t)
-	api, err := NewAPI(APIConfig{Port: port})
+	api, err := NewAPI(Config{Port: port})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -249,7 +249,7 @@ func TestServeWithTLS(t *testing.T) {
 				Cert:    config.String(tc.serverCert),
 				Key:     config.String(tc.serverKey),
 			}
-			api, err := NewAPI(APIConfig{
+			api, err := NewAPI(Config{
 				Controller: ctrl,
 				Port:       port,
 				TLS:        tlsConfig,
@@ -346,7 +346,7 @@ func TestServeWithMutualTLS(t *testing.T) {
 	ctrl := new(mocks.Server)
 	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
 		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
-	api, err := NewAPI(APIConfig{
+	api, err := NewAPI(Config{
 		Controller: ctrl,
 		Port:       port,
 		TLS:        tlsConfig,
@@ -360,9 +360,11 @@ func TestServeWithMutualTLS(t *testing.T) {
 			// Set up a client that trusts the server's self-signed certificate and
 			// uses the client certificate of the test case
 			clientTLS := &tls.Config{}
-			rootcerts.ConfigureTLS(clientTLS, &rootcerts.Config{
+			err = rootcerts.ConfigureTLS(clientTLS, &rootcerts.Config{
 				CAFile: serverCert,
 			})
+			require.NoError(t, err)
+
 			if tc.clientCert != "" {
 				clientCert, err := tls.LoadX509KeyPair(tc.clientCert, tc.clientKey)
 				require.NoError(t, err)
@@ -474,7 +476,7 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 	ctrl := new(mocks.Server)
 	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
 		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
-	api, err := NewAPI(APIConfig{
+	api, err := NewAPI(Config{
 		Controller: ctrl,
 		Port:       port,
 		TLS:        tlsConfig,
@@ -488,9 +490,11 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 			// Set up a client that trusts the server's self-signed certificate and
 			// uses the client certificate of the test case
 			clientTLS := &tls.Config{}
-			rootcerts.ConfigureTLS(clientTLS, &rootcerts.Config{
+			err = rootcerts.ConfigureTLS(clientTLS, &rootcerts.Config{
 				CAFile: serverCert,
 			})
+			require.NoError(t, err)
+
 			if tc.clientCert != "" {
 				clientCert, err := tls.LoadX509KeyPair(tc.clientCert, tc.clientKey)
 				require.NoError(t, err)

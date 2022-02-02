@@ -6,6 +6,7 @@ package e2e
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -146,8 +146,8 @@ func TestE2E_CommandTLSErrors(t *testing.T) {
 				re := regexp.MustCompile(`\r?\n`)
 				output = re.ReplaceAllString(output, " ")
 
-				assert.Contains(t, output, tc.outputContains)
-				assert.Error(t, err)
+				require.Contains(t, output, tc.outputContains)
+				require.Error(t, err)
 			})
 		}
 	}
@@ -232,10 +232,10 @@ func TestE2E_CommandTLS(t *testing.T) {
 				subcmd = append(subcmd, cmd.arg)
 
 				output, err := runSubCommandWithEnvVars(t, cmd.input, tc.envVariables, subcmd...)
-				assert.Contains(t, output, cmd.outputContains)
+				require.Contains(t, output, cmd.outputContains)
 
 				if !cmd.isErrorExpected {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 				}
 			})
 		}
@@ -316,9 +316,9 @@ func TestE2E_CommandTLS_CAPath(t *testing.T) {
 				subcmd = append(subcmd, cmd.arg)
 
 				output, err := runSubCommandWithEnvVars(t, cmd.input, tc.envVariables, subcmd...)
-				assert.Contains(t, output, cmd.outputContains)
+				require.Contains(t, output, cmd.outputContains)
 				if !cmd.isErrorExpected {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 				}
 			})
 		}
@@ -422,8 +422,8 @@ func TestE2E_CommandMTLSErrors(t *testing.T) {
 				re := regexp.MustCompile(`\r?\n`)
 				output = re.ReplaceAllString(output, " ")
 
-				assert.Contains(t, output, tc.outputContains)
-				assert.Error(t, err)
+				require.Contains(t, output, tc.outputContains)
+				require.Error(t, err)
 			})
 		}
 	}
@@ -512,9 +512,9 @@ func TestE2E_CommandMTLS(t *testing.T) {
 				subcmd = append(subcmd, cmd.arg)
 
 				output, err := runSubCommandWithEnvVars(t, cmd.input, tc.envVariables, subcmd...)
-				assert.Contains(t, output, cmd.outputContains)
+				require.Contains(t, output, cmd.outputContains)
 				if !cmd.isErrorExpected {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 				}
 			})
 		}
@@ -604,9 +604,9 @@ func TestE2E_CommandMTLS_CAPath(t *testing.T) {
 				subcmd = append(subcmd, cmd.arg)
 
 				output, err := runSubCommandWithEnvVars(t, cmd.input, tc.envVariables, subcmd...)
-				assert.Contains(t, output, cmd.outputContains)
+				require.Contains(t, output, cmd.outputContains)
 				if !cmd.isErrorExpected {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 				}
 			})
 		}
@@ -616,9 +616,9 @@ func TestE2E_CommandMTLS_CAPath(t *testing.T) {
 func copyClientCerts(t *testing.T, certsToCopy []string, tempDir string) string {
 	// Get all test certs and move them to the CA path directory
 	clientCAPath := filepath.Join(tempDir, "clientCert")
-	delClientDir := testutils.MakeTempDir(t, clientCAPath)
+	cleanup := testutils.MakeTempDir(t, clientCAPath)
 	t.Cleanup(func() {
-		delClientDir()
+		_ = cleanup()
 	})
 	testutils.CopyFiles(t, certsToCopy, clientCAPath)
 

@@ -32,7 +32,7 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "meta_errs")
-	deleteTemp := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
@@ -95,7 +95,8 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 		}
 	}
 
-	deleteTemp()
+	err = cleanup()
+	require.NoError(t, err)
 }
 
 // TestE2E_EnableTaskCommand tests the Enable CLI and confirms the expected
@@ -244,7 +245,7 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	t.Cleanup(func() {
-		cleanup()
+		_ = cleanup()
 		stop(t)
 	})
 

@@ -16,7 +16,6 @@ import (
 const (
 	updateTaskSubsystemName = "updatetask"
 	createTaskSubsystemName = "createtask"
-	deleteTaskSubsystemName = "deletetask"
 	taskPath                = "tasks"
 
 	RunOptionInspect = "inspect"
@@ -111,7 +110,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if conf.Enabled == nil {
-		err = fmt.Errorf("/v1/tasks/:task_name currently only supports the 'enabled' field. Missing 'enabled' from the request body.")
+		err = fmt.Errorf("/v1/tasks/:task_name currently only supports the 'enabled' field. Missing 'enabled' from the request body")
 		jsonErrorResponse(ctx, w, http.StatusBadRequest, err)
 		return
 	}

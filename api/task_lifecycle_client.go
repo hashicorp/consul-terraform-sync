@@ -74,7 +74,7 @@ func (c *TaskLifecycleClient) Port() int {
 	return c.port
 }
 
-// FullAddress returns the client address including the scheme. eg. http://localhost:8558
+// FullAddress returns the client address including the scheme. E.g. http://localhost:8558
 func (c *TaskLifecycleClient) FullAddress() string {
 	return fmt.Sprintf("%s://%s", c.scheme, c.addr)
 }

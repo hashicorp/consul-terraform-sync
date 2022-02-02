@@ -266,7 +266,7 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 			if isInspect {
 				return
 			}
-			s, err := api.NewAPI(api.APIConfig{
+			s, err := api.NewAPI(api.Config{
 				Controller: ctrl.(api.Server),
 				Port:       config.IntVal(conf.Port),
 				TLS:        conf.TLS,

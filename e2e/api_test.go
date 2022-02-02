@@ -38,7 +38,7 @@ const (
 }`
 )
 
-// TestE2E_StatusEndpoints tests all of the CTS status endpoints and query
+// TestE2E_StatusEndpoints tests all CTS status endpoints and query
 // parameters. This runs a Consul server and the CTS binary in daemon mode.
 //	GET	/v1/status/tasks
 // 	GET	/v1/status/tasks/:task_name
@@ -50,7 +50,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "status_endpoints")
-	delete := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
@@ -84,7 +84,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			"status/tasks",
 			http.StatusOK,
 			map[string]api.TaskStatus{
-				fakeSuccessTaskName: api.TaskStatus{
+				fakeSuccessTaskName: {
 					TaskName:  fakeSuccessTaskName,
 					Status:    api.StatusSuccessful,
 					Enabled:   true,
@@ -92,7 +92,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					Services:  []string{"api"},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
 				},
-				fakeFailureTaskName: api.TaskStatus{
+				fakeFailureTaskName: {
 					TaskName:  fakeFailureTaskName,
 					Status:    api.StatusErrored,
 					Enabled:   true,
@@ -100,7 +100,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					Services:  []string{"api"},
 					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
 				},
-				disabledTaskName: api.TaskStatus{
+				disabledTaskName: {
 					TaskName:  disabledTaskName,
 					Status:    api.StatusUnknown,
 					Enabled:   false,
@@ -115,7 +115,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			"status/tasks/" + fakeSuccessTaskName,
 			http.StatusOK,
 			map[string]api.TaskStatus{
-				fakeSuccessTaskName: api.TaskStatus{
+				fakeSuccessTaskName: {
 					TaskName:  fakeSuccessTaskName,
 					Status:    api.StatusSuccessful,
 					Enabled:   true,
@@ -250,7 +250,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	}
 
 	stopCTS(t)
-	delete()
+	_ = cleanup()
 }
 
 // TestE2E_TaskEndpoints_UpdateEnableDisable tests the tasks endpoints. This

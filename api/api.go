@@ -67,14 +67,14 @@ type API struct {
 	tls     *config.CTSTLSConfig
 }
 
-type APIConfig struct {
+type Config struct {
 	Port       int
 	TLS        *config.CTSTLSConfig
 	Controller Server
 }
 
 // NewAPI create a new API object
-func NewAPI(conf APIConfig) (*API, error) {
+func NewAPI(conf Config) (*API, error) {
 	logger := logging.Global().Named(logSystemName)
 	api := &API{
 		ctrl:    conf.Controller,

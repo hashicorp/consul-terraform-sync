@@ -18,7 +18,7 @@ const (
 // a particular category. It does this by taking the first digit
 // of a category (i.e. 4 for 400, 401, etc.) and checking if the first
 // digit of the status code matches.
-// eg. category = 4, statusCode = 401 checkStatusCodeCategory returns true
+// E.g. category = 4, statusCode = 401 checkStatusCodeCategory returns true
 func checkStatusCodeCategory(category int, statusCode int) bool {
 	var i int
 	for i = statusCode; i >= 10; i = i / 10 {

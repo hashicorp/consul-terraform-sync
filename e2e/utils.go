@@ -121,7 +121,8 @@ func newTestConsulServer(t *testing.T) *testutil.TestServer {
 
 func runSyncStop(t *testing.T, configPath string, dur time.Duration) {
 	cts, stop := api.StartCTS(t, configPath)
-	cts.WaitForAPI(dur)
+	err := cts.WaitForAPI(dur)
+	require.NoError(t, err)
 	stop(t)
 }
 
@@ -158,7 +159,8 @@ func runSubCommandWithEnvVars(t *testing.T, input string, envVars []string, subc
 
 	_, err = stdin.Write([]byte(input))
 	require.NoError(t, err)
-	stdin.Close()
+	err = stdin.Close()
+	require.NoError(t, err)
 
 	err = cmd.Wait()
 	return b.String(), err
@@ -172,7 +174,7 @@ func runSubCommandWithEnvVars(t *testing.T, input string, envVars []string, subc
 func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig string) *api.Client {
 	cleanup := testutils.MakeTempDir(t, tempDir)
 	t.Cleanup(func() {
-		cleanup()
+		_ = cleanup()
 	})
 
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
@@ -208,13 +210,14 @@ func ctsSetupTLS(t *testing.T, srv *testutil.TestServer, tempDir string, taskCon
 		}
 		testutils.CopyFiles(t, certs, tlsConfig.caPath)
 		t.Cleanup(func() {
-			cleanupCAPath()
+			err := cleanupCAPath()
+			require.NoError(t, err)
 		})
 	}
 
 	// add cleanup of tempDir after CAPath directory since CAPath directory will be inside temp directory
 	t.Cleanup(func() {
-		cleanup()
+		_ = cleanup()
 	})
 
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
