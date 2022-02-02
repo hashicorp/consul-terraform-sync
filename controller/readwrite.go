@@ -132,6 +132,10 @@ func (rw *ReadWrite) runDynamicTask(ctx context.Context, d driver.Driver) error 
 		// Schedule tasks are not dynamic and run in a different process
 		return nil
 	}
+	if rw.drivers.IsMarkedForDeletion(taskName) {
+		rw.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+		return nil
+	}
 
 	if rw.drivers.IsActive(taskName) {
 		// The driver is currently active with the task, initiated by an ad-hoc run.
@@ -185,6 +189,11 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver) erro
 		case <-time.After(waitTime):
 			if _, ok := rw.drivers.Get(taskName); !ok {
 				rw.logger.Info("stopping deleted scheduled task", taskNameLogKey, taskName)
+				return nil
+			}
+
+			if rw.drivers.IsMarkedForDeletion(taskName) {
+				rw.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
 				return nil
 			}
 
@@ -409,6 +418,11 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 	logger := rw.logger.With(taskNameLogKey, taskName)
 	if !task.IsEnabled() {
 		logger.Trace("skipping disabled task")
+		return nil
+	}
+
+	if rw.drivers.IsMarkedForDeletion(taskName) {
+		logger.Trace("task is marked for deletion, skipping")
 		return nil
 	}
 
