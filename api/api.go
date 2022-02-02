@@ -137,12 +137,11 @@ func NewAPI(conf Config) (*API, error) {
 	}
 
 	api.srv = &http.Server{
-		Addr:         fmt.Sprintf(":%d", api.port),
-		WriteTimeout: time.Second * 15,
-		ReadTimeout:  time.Second * 15,
-		IdleTimeout:  time.Second * 60,
-		Handler:      r,
-		TLSConfig:    t,
+		Addr:        fmt.Sprintf(":%d", api.port),
+		ReadTimeout: time.Second * 15,
+		IdleTimeout: time.Second * 60,
+		Handler:     r,
+		TLSConfig:   t,
 		ErrorLog: logger.StandardLogger(&hclog.StandardLoggerOptions{
 			InferLevels: false,
 			ForceLevel:  hclog.Warn,
