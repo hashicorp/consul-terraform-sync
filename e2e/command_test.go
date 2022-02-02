@@ -637,7 +637,7 @@ func TestE2E_CreateTaskCommand_NoTaskFileProvided(t *testing.T) {
 	assert.Error(t, err)
 
 	outputContains := []string{
-		"Error: no task file provided",
+		"no task file provided",
 		"For additional help try 'consul-terraform-sync task create --help'",
 	}
 
