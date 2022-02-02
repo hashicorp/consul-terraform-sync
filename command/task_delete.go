@@ -81,7 +81,8 @@ func (c *taskDeleteCommand) Run(args []string) int {
 
 	client, err := c.meta.taskLifecycleClient()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error: unable to create client for '%s'", taskName))
+		c.UI.Error(errCreatingClient)
+		c.UI.Output(fmt.Sprintf("client could not be created for '%s'", taskName))
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 
