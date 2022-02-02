@@ -113,7 +113,7 @@ func TestServe(t *testing.T) {
 				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskDelete", mock.Anything, "task_b").Return(nil)
 			},
-			http.StatusOK,
+			http.StatusAccepted,
 			"{}\n",
 		}, {
 			"update task (patch)",

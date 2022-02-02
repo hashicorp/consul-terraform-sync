@@ -63,9 +63,11 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   /v1/tasks/{name}:
     delete:
-      summary: Deletes a task by name
+      summary: Marks a task for deletion
       operationId: deleteTaskByName
-      description: Deletes a single task based on the name provided
+      description: |
+        Marks a single task for deletion based on the name provided. The task will be
+        deleted once it is not running.
       tags:
         - tasks
       parameters:
@@ -77,8 +79,8 @@ paths:
             type: string
             example: "taskA"
       responses:
-        '200':
-          description: Task deleted
+        '202':
+          description: Task marked for deletion
           content:
             application/json:
               schema:

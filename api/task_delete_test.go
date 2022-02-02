@@ -27,7 +27,7 @@ func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskDelete", mock.Anything, taskName).Return(nil)
 			},
-			http.StatusOK,
+			http.StatusAccepted,
 		},
 		{
 			"task_not_found",
@@ -37,13 +37,13 @@ func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 			http.StatusNotFound,
 		},
 		{
-			"task_is_running",
+			"task_errored",
 			func(ctrl *mocks.Server) {
-				err := fmt.Errorf("task '%s' is currently running and cannot be deleted at this time", taskName)
+				err := fmt.Errorf("task deletion error")
 				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskDelete", mock.Anything, taskName).Return(err)
 			},
-			http.StatusConflict,
+			http.StatusInternalServerError,
 		},
 	}
 
