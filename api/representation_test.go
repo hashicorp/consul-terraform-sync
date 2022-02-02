@@ -315,7 +315,13 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			expectedRequest: oapigen.Task{
 				ModuleInput: &oapigen.ModuleInput{
 					Services: &oapigen.ServicesModuleInput{
-						Regexp: config.String("^api$"),
+						Regexp:     config.String("^api$"),
+						Datacenter: config.String("dc"),
+						Namespace:  config.String("ns"),
+						Filter:     config.String("filter"),
+						CtsUserDefinedMeta: &oapigen.ServicesModuleInput_CtsUserDefinedMeta{
+							AdditionalProperties: map[string]string{"key": "value"},
+						},
 					},
 					ConsulKv: &oapigen.ConsulKVModuleInput{
 						Path:       "fake-path",
@@ -348,7 +354,13 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			expectedRequest: oapigen.Task{
 				ModuleInput: &oapigen.ModuleInput{
 					Services: &oapigen.ServicesModuleInput{
-						Names: &[]string{"api"},
+						Names:      &[]string{"api"},
+						Datacenter: config.String("dc"),
+						Namespace:  config.String("ns"),
+						Filter:     config.String("filter"),
+						CtsUserDefinedMeta: &oapigen.ServicesModuleInput_CtsUserDefinedMeta{
+							AdditionalProperties: map[string]string{"key": "value"},
+						},
 					},
 				},
 			},

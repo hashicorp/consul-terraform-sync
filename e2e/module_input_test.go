@@ -10,8 +10,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -33,6 +35,16 @@ const (
 		recurse = %t
 	}`
 )
+
+type moduleInputTest struct {
+	name        string
+	taskName    string
+	tempDir     string
+	inputConfig string
+	validation  func(string, string)
+	srv         *testutil.TestServer
+	cts         *api.Client
+}
 
 // TestModuleInput_Basic_CatalogServicesCondition exercises:
 // 1. basics of module input
@@ -109,6 +121,14 @@ func TestModuleInput_Basic_CatalogServicesCondition(t *testing.T) {
 		},
 	}
 
+	config := `task {
+		name = "%s"
+		condition "catalog-services" {
+			regexp = ["web"]
+			use_as_module_input = false
+		}
+		%s
+	}`
 	for _, tc := range testcases {
 		tc := tc // rebind tc into this lexical scope for parallel use
 		t.Run(tc.name, func(t *testing.T) {
@@ -122,54 +142,95 @@ func TestModuleInput_Basic_CatalogServicesCondition(t *testing.T) {
 
 			// set up task config with module & module_input
 			taskName := "module_input_task"
-			config := fmt.Sprintf(`task {
-				name = "%s"
-				condition "catalog-services" {
-					regexp = ["web"]
-					use_as_module_input = false
-				}
-				%s
-			}`, taskName, tc.inputConfig)
-
+			c := fmt.Sprintf(config, taskName, tc.inputConfig)
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.tempDir)
-			cts := ctsSetup(t, srv, tempDir, config)
+			cts := ctsSetup(t, srv, tempDir, c)
+			testModuleInputBasic(t, moduleInputTest{
+				name:        tc.name,
+				inputConfig: tc.inputConfig,
+				validation:  tc.validation,
+				taskName:    taskName,
+				tempDir:     tempDir,
+				srv:         srv,
+				cts:         cts})
+		})
 
-			// Test module_inputs basic behavior
-			// 0. Confirm baseline: no resources have been created
-			// 1. Confirm module_input don't trigger tasks: register a change
-			//    only affecting module inputs. Confirm no resources are created.
-			// 2. Confirm module_input templating & resources: register a change
-			//    to trigger conditions. Confirm changes for module_input
-			//    changes in step 1
+		t.Run(tc.name+"_CLI", func(t *testing.T) {
+			setParallelism(t) // In the CI environment, run table tests in parallel as they can take a lot of time
 
-			// 0. Confirm no resources have been created
-			workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
-			resourcesPath := filepath.Join(workingDir, resourcesDir)
-			testutils.CheckDir(t, false, resourcesPath)
+			// set up Consul
+			srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+				HTTPSRelPath: "../testutils",
+			})
+			defer srv.Stop()
 
-			// 1. Register stuff that the module_input monitors (for all test
-			// cases). Confirm no resources created.
-			service := testutil.TestService{ID: "api", Name: "api"}
-			testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-			service = testutil.TestService{ID: "api-filtered", Name: "api", Tags: []string{"filtered"}}
-			testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+			// set up task config with module & module_input
+			taskName := "module_input_task"
+			c := fmt.Sprintf(config, taskName, tc.inputConfig)
+			tempDir := fmt.Sprintf("%s%s_cli", tempDirPrefix, tc.tempDir)
+			cts := ctsSetup(t, srv, tempDir, disabledTaskConfig())
 
-			srv.SetKVString(t, "key", "value")
-			srv.SetKVString(t, "key/recurse", "value-recurse")
+			// Create task via the CLI
+			var taskConfig hclConfig
+			taskConfig = taskConfig.appendString(c)
+			taskFilePath := filepath.Join(tempDir, "task.hcl")
+			taskConfig.write(t, taskFilePath)
 
-			time.Sleep(defaultWaitForNoEvent)
-			testutils.CheckDir(t, false, resourcesPath)
+			subcmd := []string{"task", "create",
+				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+				fmt.Sprintf("-task-file=%s", taskFilePath),
+			}
+			out, err := runSubcommand(t, "yes\n", subcmd...)
+			require.NoError(t, err, fmt.Sprintf("command '%s' failed:\n %s", subcmd, out))
+			require.Contains(t, out, fmt.Sprintf("Task '%s' created", taskName))
 
-			// 2. Register "web" service to trigger condition. Confirm that
-			// module_input's monitored stuff from step 1 happened
-			now := time.Now()
-			service = testutil.TestService{ID: "web", Name: "web"}
-			testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-			api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
-
-			tc.validation(workingDir, resourcesPath)
+			testModuleInputBasic(t, moduleInputTest{
+				name:        tc.name,
+				inputConfig: tc.inputConfig,
+				validation:  tc.validation,
+				taskName:    taskName,
+				tempDir:     tempDir,
+				srv:         srv,
+				cts:         cts})
 		})
 	}
+}
+
+func testModuleInputBasic(t *testing.T, tc moduleInputTest) {
+	// Test module_inputs basic behavior
+	// 0. Confirm baseline: no resources have been created
+	// 1. Confirm module_input don't trigger tasks: register a change
+	//    only affecting module inputs. Confirm no resources are created.
+	// 2. Confirm module_input templating & resources: register a change
+	//    to trigger conditions. Confirm changes for module_input
+	//    changes in step 1
+
+	// 0. Confirm no resources have been created
+	workingDir := fmt.Sprintf("%s/%s", tc.tempDir, tc.taskName)
+	resourcesPath := filepath.Join(workingDir, resourcesDir)
+	testutils.CheckDir(t, false, resourcesPath)
+
+	// 1. Register stuff that the module_input monitors (for all test
+	// cases). Confirm no resources created.
+	service := testutil.TestService{ID: "api", Name: "api"}
+	testutils.RegisterConsulService(t, tc.srv, service, defaultWaitForRegistration)
+	service = testutil.TestService{ID: "api-filtered", Name: "api", Tags: []string{"filtered"}}
+	testutils.RegisterConsulService(t, tc.srv, service, defaultWaitForRegistration)
+
+	tc.srv.SetKVString(t, "key", "value")
+	tc.srv.SetKVString(t, "key/recurse", "value-recurse")
+
+	time.Sleep(defaultWaitForNoEvent)
+	testutils.CheckDir(t, false, resourcesPath)
+
+	// 2. Register "web" service to trigger condition. Confirm that
+	// module_input's monitored stuff from step 1 happened
+	now := time.Now()
+	service = testutil.TestService{ID: "web", Name: "web"}
+	testutils.RegisterConsulService(t, tc.srv, service, defaultWaitForRegistration)
+	api.WaitForEvent(t, tc.cts, tc.taskName, now, defaultWaitForEvent)
+
+	tc.validation(workingDir, resourcesPath)
 }
 
 // TestModuleInput_ServicesCondition generally exercises different variations

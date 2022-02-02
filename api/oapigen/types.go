@@ -107,8 +107,17 @@ type ServicesCondition_CtsUserDefinedMeta struct {
 
 // ServicesModuleInput defines model for ServicesModuleInput.
 type ServicesModuleInput struct {
-	Names  *[]string `json:"names,omitempty"`
-	Regexp *string   `json:"regexp,omitempty"`
+	CtsUserDefinedMeta *ServicesModuleInput_CtsUserDefinedMeta `json:"cts_user_defined_meta,omitempty"`
+	Datacenter         *string                                 `json:"datacenter,omitempty"`
+	Filter             *string                                 `json:"filter,omitempty"`
+	Names              *[]string                               `json:"names,omitempty"`
+	Namespace          *string                                 `json:"namespace,omitempty"`
+	Regexp             *string                                 `json:"regexp,omitempty"`
+}
+
+// ServicesModuleInput_CtsUserDefinedMeta defines model for ServicesModuleInput.CtsUserDefinedMeta.
+type ServicesModuleInput_CtsUserDefinedMeta struct {
+	AdditionalProperties map[string]string `json:"-"`
 }
 
 // Task defines model for Task.
@@ -261,6 +270,59 @@ func (a *ServicesCondition_CtsUserDefinedMeta) UnmarshalJSON(b []byte) error {
 
 // Override default JSON handling for ServicesCondition_CtsUserDefinedMeta to handle AdditionalProperties
 func (a ServicesCondition_CtsUserDefinedMeta) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for ServicesModuleInput_CtsUserDefinedMeta. Returns the specified
+// element and whether it was found
+func (a ServicesModuleInput_CtsUserDefinedMeta) Get(fieldName string) (value string, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for ServicesModuleInput_CtsUserDefinedMeta
+func (a *ServicesModuleInput_CtsUserDefinedMeta) Set(fieldName string, value string) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]string)
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for ServicesModuleInput_CtsUserDefinedMeta to handle AdditionalProperties
+func (a *ServicesModuleInput_CtsUserDefinedMeta) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]string)
+		for fieldName, fieldBuf := range object {
+			var fieldVal string
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for ServicesModuleInput_CtsUserDefinedMeta to handle AdditionalProperties
+func (a ServicesModuleInput_CtsUserDefinedMeta) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 
