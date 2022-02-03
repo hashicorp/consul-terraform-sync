@@ -401,6 +401,7 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 			// Once template rendering is finished, return
 			return d, nil
 		}
+		time.Sleep(250 * time.Millisecond) // waiting because cannot block on a dependency change
 	}
 }
 
