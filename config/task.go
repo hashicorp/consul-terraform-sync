@@ -298,9 +298,7 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 
 	if c.DeprecatedSourceInputs != nil {
 		if len(*c.DeprecatedSourceInputs) > 0 {
-			logger.Warn("Task's 'source_input' block was marked for " +
-				"deprecation in v0.5.0. Please update your configuration to " +
-				"use 'module_input' instead.")
+			logger.Warn(sourceInputBlockLogMsg)
 			c.ModuleInputs = c.ModuleInputs.Merge(c.DeprecatedSourceInputs)
 		}
 
@@ -587,5 +585,27 @@ Example upgrade:
 
 For more details and examples, please see:
 https://consul.io/docs/nia/release-notes/0-5-0#deprecate-source-field
+`
+
+// sourceInputBlockLogMsg is the log message for deprecating the `source_input`
+// block.
+const sourceInputBlockLogMsg = `the 'source_input' block in the task ` +
+	`block is deprecated in v0.5.0 and will be removed in v0.8.0.
+
+Please replace 'source_input' with 'module_input' in your task configuration.
+
+We will be releasing a tool to help upgrade your configuration for this deprecation.
+
+Example upgrade:
+|    task {
+|  -   source_input "<input-type>" {
+|  +   module_input "<input-type>" {
+|        ...
+|      }
+|      ...
+|    }
+
+For more details and examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-source_input-block
 `
 
