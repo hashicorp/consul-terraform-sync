@@ -236,6 +236,8 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 
 	if c.Services == nil {
 		c.Services = []string{}
+	} else {
+		logger.Warn(servicesFieldLogMsg)
 	}
 
 	if c.Module == nil {
@@ -609,3 +611,25 @@ For more details and examples, please see:
 https://consul.io/docs/nia/release-notes/0-5-0#deprecate-source_input-block
 `
 
+// servicesFieldLogMsg is the log message for deprecating the `services` field.
+const servicesFieldLogMsg = `the 'services' field in the task block is deprecated ` +
+	`in v0.5.0 and will be removed in a future major version after v0.8.0.
+
+Please replace 'services' in your task configuration with one of the options below:
+ * condition "services": if there is _no_ preexisting condition block configured in your task
+ * module_input "services": if there is a preexisting condition block configured in your task
+
+We will be releasing a tool to help upgrade your configuration for this deprecation.
+
+Example upgrade for a task with no preexisting condition block:
+|    task {
+|  -   services = ["api", "web"]
+|  +   condition "services" {
+|  +     names = ["api", "web"]
+|  +   }
+|      ...
+|    }
+
+For more details and additional examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-services-field
+`
