@@ -177,6 +177,10 @@ func (c *taskCreateCommand) Run(args []string) int {
 		}
 	}
 
+	c.UI.Info(fmt.Sprintf("Creating task %s...", taskName))
+	c.UI.Output("Note: this can take some time depending on the module size.")
+	c.UI.Output("terminating this process will not stop task creation, see CTS logs for more details\n")
+
 	// Plan approved, create new task and run now
 	taskResp, err = client.CreateTask(context.Background(), api.RunOptionNow, taskReq)
 
