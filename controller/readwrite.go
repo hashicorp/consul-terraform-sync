@@ -373,13 +373,14 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 	d, err := rw.createNewTaskDriver(taskConfig)
 	if err != nil {
 		logger.Error("error creating new task driver", "error", err)
-		return nil, fmt.Errorf("error creating new task driver: %v", err)
+		return nil, err
 	}
 
 	// Initialize the new task
 	err = d.InitTask(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error initializing new task, %s", err)
+		logger.Error("error initializing new task", "error", err)
+		return nil, err
 	}
 
 	timeout := time.After(5 * time.Minute)
@@ -394,7 +395,7 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 		ok, err := d.RenderTemplate(ctx)
 		if err != nil {
 			logger.Error("error rendering task template")
-			return nil, fmt.Errorf("error rendering template for task '%s': %s", taskName, err)
+			return nil, err
 		}
 		if ok {
 			// Once template rendering is finished, return
