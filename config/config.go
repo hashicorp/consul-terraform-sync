@@ -238,6 +238,9 @@ func (c *Config) Finalize() {
 
 	if c.Services == nil {
 		c.Services = DefaultServiceConfigs()
+	} else {
+		logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
+		logger.Warn(deprecateServiceBlockWarning)
 	}
 	c.Services.Finalize()
 
@@ -584,3 +587,34 @@ func antiboolFromEnv(list []string, def bool) *bool {
 	}
 	return Bool(def)
 }
+
+const deprecateServiceBlockWarning = `the 'service' block is deprecated ` +
+	`in v0.5.0 and will be removed in a future major version after v0.8.0.
+
+` +
+	`In order to replace the 'service' block, the associated 'services' field ` +
+	`(deprecated) should first be upgraded to 'condition "services"' or ` +
+	`'module_input "services"'. Then the configuration in the 'service' block ` +
+	`can be set in the 'condition' or 'module_input' block.` +
+	`
+
+We will be releasing a tool to help upgrade your configuration for this deprecation.
+
+Example of replacing service block information in condition block:
+|  - service {
+|  -   name       = "api"
+|  -   datacenter = "dc2"
+|  - }
+|
+|    task {
+|      condition "services" {
+|        names      = ["api"]
+|  +     datacenter = "dc2"
+|      }
+|      ...
+|    }
+
+More complex cases with 'service' blocks can require splitting a task into multiple tasks.
+For more details and additional examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-service-block
+`
