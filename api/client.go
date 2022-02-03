@@ -24,10 +24,10 @@ const (
 	DefaultAddress   = "http://localhost:8558"
 	DefaultSSLVerify = true
 
-	// Environment Variables
+	// Environment variable names
 	EnvAddress = "CTS_ADDRESS" // The address of the CTS daemon, supports http or https by specifying as part of the address (e.g. https://localhost:8558)
 
-	// TLS Environment Variables
+	// TLS environment variable names
 	EnvTLSCACert     = "CTS_CACERT"      // Path to a directory of CA certificates to use for TLS when communicating with Consul-Terraform-Sync
 	EnvTLSCAPath     = "CTS_CAPATH"      // Path to a CA file to use for TLS when communicating with Consul-Terraform-Sync
 	EnvTLSClientCert = "CTS_CLIENT_CERT" // Path to a client cert file to use for TLS when verify_incoming is enabled
@@ -51,10 +51,9 @@ type Client struct {
 
 // ClientConfig configures the client to make api requests
 type ClientConfig struct {
-	Port   int // Stay for now for backwards compatibility, but prefer Addr
-	Addr   string
-	Scheme string
-
+	Port      int // Stay for now for backwards compatibility, but prefer Addr
+	Addr      string
+	Scheme    string
 	TLSConfig TLSConfig
 }
 
@@ -82,29 +81,37 @@ func DefaultClientConfig() *ClientConfig {
 		},
 	}
 
-	// Read env vars
-	if v := os.Getenv(EnvAddress); v != "" {
-		c.Addr = v
+	// Update configs from env vars
+	if value, found := os.LookupEnv(EnvAddress); found {
+		c.Addr = value
 	}
 
-	// Read TLS env vars
-	if v := os.Getenv(EnvTLSCACert); v != "" {
-		c.TLSConfig.CACert = v
-	}
-	if v := os.Getenv(EnvTLSCAPath); v != "" {
-		c.TLSConfig.CAPath = v
-	}
-	if v := os.Getenv(EnvTLSClientCert); v != "" {
-		c.TLSConfig.ClientCert = v
+	// Update TLS configs from env vars
+	if value, found := os.LookupEnv(EnvTLSCACert); found {
+		c.TLSConfig.CACert = value
 	}
 
-	if v := os.Getenv(EnvTLSClientKey); v != "" {
-		c.TLSConfig.ClientKey = v
+	if value, found := os.LookupEnv(EnvTLSCAPath); found {
+		c.TLSConfig.CAPath = value
 	}
 
-	if v := os.Getenv(EnvTLSSSLVerify); v != "" {
-		if verify, err := strconv.ParseBool(v); err == nil {
-			c.TLSConfig.SSLVerify = verify
+	if value, found := os.LookupEnv(EnvTLSClientCert); found {
+		c.TLSConfig.ClientCert = value
+	}
+
+	if value, found := os.LookupEnv(EnvTLSClientKey); found {
+		c.TLSConfig.ClientKey = value
+	}
+
+	if value, found := os.LookupEnv(EnvTLSSSLVerify); found {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			c.TLSConfig.SSLVerify = boolValue
+		}
+	}
+
+	if value, found := os.LookupEnv(EnvTLSSSLVerify); found {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			c.TLSConfig.SSLVerify = boolValue
 		}
 	}
 
@@ -118,6 +125,7 @@ func NewClient(c *ClientConfig, httpClient httpClient) (*Client, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		httpClient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: tlsConfig,
@@ -154,6 +162,7 @@ func setupTLSConfig(c *ClientConfig) (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
 	} else if c.TLSConfig.ClientCert != "" || c.TLSConfig.ClientKey != "" {
 		return nil, fmt.Errorf("both client cert and client key must be provided")
@@ -164,6 +173,7 @@ func setupTLSConfig(c *ClientConfig) (*tls.Config, error) {
 			CAFile: c.TLSConfig.CACert,
 			CAPath: c.TLSConfig.CAPath,
 		}
+
 		if err := rootcerts.ConfigureTLS(tlsClientConfig, rootConfig); err != nil {
 			return nil, err
 		}
@@ -184,7 +194,7 @@ func (c *Client) FullAddress() string {
 
 // Scheme returns the scheme being used by the client
 func (c *Client) Scheme() string {
-	return fmt.Sprintf(c.scheme)
+	return c.scheme
 }
 
 // WaitForAPI polls the /v1/status endpoint to check when the CTS API is
@@ -296,12 +306,15 @@ func (q *QueryParam) Encode() string {
 	if q.IncludeEvents {
 		val.Set("include", "events") // refactor this out?
 	}
+
 	if q.Status != "" {
 		val.Set("status", q.Status)
 	}
+
 	if q.Run != "" {
 		val.Set("run", q.Run)
 	}
+
 	return val.Encode()
 }
 
