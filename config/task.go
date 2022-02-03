@@ -242,11 +242,10 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 		c.Module = String("")
 	}
 	if c.DeprecatedSource != nil && *c.DeprecatedSource != "" {
-		logger.Warn("Task's 'source' field was marked for deprecation in v0.5.0. " +
-			"Please update your configuration to use the 'module' field instead")
+		logger.Warn(sourceFieldLogMsg)
 		if *c.Module != "" {
-			logger.Warn("Task's 'source' and 'module' field were both "+
-				"configured. Defaulting to 'module' value", "module", c.Module)
+			logger.Warn("the task block's 'source' and 'module' field were both "+
+				"configured. Defaulting to the 'module' value", "module", *c.Module)
 		} else {
 			// Merge Source with Module and use Module onwards
 			c.Module = c.DeprecatedSource
@@ -570,3 +569,23 @@ func (c *TaskConfig) validateCondition() error {
 	}
 	return nil
 }
+
+// sourceFieldLogMsg is the log message for deprecating the `source` field.
+const sourceFieldLogMsg = `the 'source' field in the task block is deprecated ` +
+	`in v0.5.0 and will be removed in a future major version after v0.8.0.
+
+Please replace 'source' with 'module' in your task configuration.
+
+We will be releasing a tool to help upgrade your configuration for this deprecation.
+
+Example upgrade:
+|    task {
+|  -   source =  "path/to/module"
+|  +   module =  "path/to/module"
+|      ...
+|    }
+
+For more details and examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-source-field
+`
+
