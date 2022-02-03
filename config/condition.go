@@ -111,3 +111,35 @@ func decodeConditionToType(data interface{}, monitor MonitorConfig) (MonitorConf
 func isConditionNil(c ConditionConfig) bool {
 	return isMonitorNil(c)
 }
+
+// bothConditionInputConfigLogMsg is the log message to warn when the user
+// configures both `source_includes_var` and `use_as_module_input` fields.
+//
+// expected value for '%s' is the condition type
+const bothConditionInputConfigLogMsg = `%s condition block is configured ` +
+	`with both the 'source_includes_var' and the 'use_as_module_input' field. ` +
+	`Defaulting to the 'use_as_module_input' value`
+
+// sourceIncludesVarLogMsg is the log message for deprecating the
+// `source_includes_var` field.
+//
+// expected value for both '%s' is the condition type
+const sourceIncludesVarLogMsg = `the 'source_includes_var' field in ` +
+	`the task's %s condition block is deprecated in v0.5.0 and will be removed in v0.8.0.
+
+Please replace 'source_includes_var' with 'use_as_module_input' in your condition configuration.
+
+We will be releasing a tool to help upgrade your configuration for this deprecation.
+
+Example upgrade:
+|    task {
+|      condition "%s" {
+|  -     source_includes_var = false
+|  +     use_as_module_input = false
+|      }
+|      ...
+|    }
+
+For more details and examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-source_includes_var-field
+`
