@@ -73,13 +73,13 @@ func BaseClientConfig() (*ClientConfig, error) {
 	if value, found := os.LookupEnv(EnvAddress); found {
 		parsed, err := url.Parse(value)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse environment variable %q value as an address - value %q",
+			return nil, fmt.Errorf("failed to parse environment variable '%s' value as an address - value: %s",
 				EnvAddress, value)
 		} else {
 			// only use the scheme and host parts of the provided address
 			u := &url.URL{Scheme: parsed.Scheme, Host: parsed.Host}
 			if u.Host == "" {
-				return nil, fmt.Errorf("failed to parse environment variable %q value as an address - value %q",
+				return nil, fmt.Errorf("failed to parse environment variable '%s' value as an address - value: %s",
 					EnvAddress, value)
 			}
 

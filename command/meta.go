@@ -149,7 +149,7 @@ func (m *meta) clientConfig() (*api.ClientConfig, error) {
 		// only use the scheme and host parts of the provided address
 		u := &url.URL{Scheme: parsed.Scheme, Host: parsed.Host}
 		if u.Host == "" {
-			return nil, fmt.Errorf("failed to parse flag %q value as an address - value %q", FlagHTTPAddr, *m.addr)
+			return nil, fmt.Errorf("failed to parse flag '%s' value as an address - value: %s", FlagHTTPAddr, *m.addr)
 		}
 
 		// default to HTTP scheme when scheme is not set as part of the address
