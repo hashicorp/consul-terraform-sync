@@ -60,9 +60,9 @@ type TLSConfig struct {
 	SSLVerify  bool
 }
 
-// DefaultClientConfig returns a default configuration for the client
-func DefaultClientConfig() *ClientConfig {
-	u, _ := url.Parse(DefaultURL)
+// BaseClientConfig returns a base configuration for the client using defaults and env var values
+func BaseClientConfig() (*ClientConfig, error) {
+	u, _ := url.ParseRequestURI(DefaultURL)
 
 	c := &ClientConfig{
 		URL:       u,
@@ -71,9 +71,10 @@ func DefaultClientConfig() *ClientConfig {
 
 	// Update configs from env vars
 	if value, found := os.LookupEnv(EnvAddress); found {
-		u, err := url.Parse(value)
-		// Only update the URL if the value from env var is parsed successfully
+		u, err := url.ParseRequestURI(value)
 		if err != nil {
+			return nil, fmt.Errorf("failed to parse environment variable %q value as an address", EnvAddress)
+		} else {
 			c.URL = u
 		}
 	}
@@ -107,7 +108,7 @@ func DefaultClientConfig() *ClientConfig {
 		}
 	}
 
-	return c
+	return c, nil
 }
 
 // NewClient returns a client to make api requests
@@ -397,7 +398,7 @@ func (t *TaskClient) Update(name string, config UpdateTaskConfig, q *QueryParam)
 
 func validateScheme(scheme string) error {
 	if scheme != HTTPSScheme && scheme != HTTPScheme {
-		return fmt.Errorf("unknown protocol scheme: %s", scheme)
+		return fmt.Errorf("unknown protocol scheme %q", scheme)
 	}
 
 	return nil

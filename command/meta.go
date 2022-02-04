@@ -127,22 +127,26 @@ func (m *meta) oneArgCheck(name string, args []string) bool {
 // the default command line arguments and env vars.
 func (m *meta) clientConfig() (*api.ClientConfig, error) {
 	// Let the Client determine its default first, then override with command flag values
-	c := api.DefaultClientConfig()
-
-	if m.isFlagParsedAndFound(FlagHTTPAddr) {
-		u, err := url.Parse(*m.addr)
-		if err != nil {
-			return nil, err
-		}
-
-		c.URL = u
+	c, err := api.BaseClientConfig()
+	if err != nil {
+		return nil, err
 	}
 
+	// override config values from flags
 	if m.isFlagParsedAndFound(FlagPort) {
 		m.UI.Warn(fmt.Sprintf("Warning: '%s' option is deprecated and will be removed in a later version. "+
 			"It is preferred to use the '%s' option instead.\n", FlagPort, FlagHTTPAddr))
 
 		c.URL.Host = fmt.Sprintf("%s:%d", c.URL.Hostname(), *m.port)
+	}
+
+	if m.isFlagParsedAndFound(FlagHTTPAddr) {
+		u, err := url.ParseRequestURI(*m.addr)
+		if err != nil {
+			return nil, err
+		}
+
+		c.URL = u
 	}
 
 	// If we need custom TLS configuration, then set it
