@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"math/rand"
+	"github.com/stretchr/testify/assert"
 	"net/url"
 	"os"
 	"strconv"
@@ -39,15 +39,15 @@ func Test_DefaultClientConfig_WithEnvVars(t *testing.T) {
 	u, err := url.Parse(DefaultURL)
 	require.NoError(t, err)
 
-	require.Equal(t, u, clientConfig.URL)
-	require.Equal(t, caCert, clientConfig.TLSConfig.CACert)
-	require.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
-	require.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
-	require.Equal(t, clientKey, clientConfig.TLSConfig.ClientKey)
+	assert.Equal(t, u, clientConfig.URL)
+	assert.Equal(t, caCert, clientConfig.TLSConfig.CACert)
+	assert.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
+	assert.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
+	assert.Equal(t, clientKey, clientConfig.TLSConfig.ClientKey)
 
 	expectedSSLVerify, err := strconv.ParseBool(sslVerify)
-	require.NoError(t, err)
-	require.Equal(t, expectedSSLVerify, clientConfig.TLSConfig.SSLVerify)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedSSLVerify, clientConfig.TLSConfig.SSLVerify)
 }
 
 func Test_DefaultClientConfig_Defaults(t *testing.T) {
@@ -60,12 +60,12 @@ func Test_DefaultClientConfig_Defaults(t *testing.T) {
 	u, err := url.Parse(DefaultURL)
 	require.NoError(t, err)
 
-	require.Equal(t, u, clientConfig.URL)
-	require.Equal(t, caCert, clientConfig.TLSConfig.CACert)
-	require.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
-	require.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
-	require.Equal(t, clientKey, clientConfig.TLSConfig.ClientKey)
-	require.Equal(t, DefaultSSLVerify, clientConfig.TLSConfig.SSLVerify)
+	assert.Equal(t, u, clientConfig.URL)
+	assert.Equal(t, caCert, clientConfig.TLSConfig.CACert)
+	assert.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
+	assert.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
+	assert.Equal(t, clientKey, clientConfig.TLSConfig.ClientKey)
+	assert.Equal(t, DefaultSSLVerify, clientConfig.TLSConfig.SSLVerify)
 }
 
 func Test_DefaultClientConfig_InvalidAddressEnv(t *testing.T) {
@@ -74,30 +74,30 @@ func Test_DefaultClientConfig_InvalidAddressEnv(t *testing.T) {
 	})
 
 	configBeforeEnvVarSet := DefaultClientConfig()
-	require.NoError(t, os.Setenv(EnvAddress, "invalid address"))
+	assert.NoError(t, os.Setenv(EnvAddress, "invalid address"))
 	configAfterEnvVarSet := DefaultClientConfig()
 
-	require.EqualValues(t, configBeforeEnvVarSet.URL, configAfterEnvVarSet.URL)
+	assert.EqualValues(t, configBeforeEnvVarSet.URL, configAfterEnvVarSet.URL)
 }
 
 func Test_ParseDefaultURL(t *testing.T) {
 	u, err := url.Parse(DefaultURL)
-	require.NotNil(t, u)
-	require.NoError(t, err)
+	assert.NotNil(t, u)
+	assert.NoError(t, err)
 }
 
 func Test_ClientPort(t *testing.T) {
-	expectedPort := rand.Intn(10000)
+	expectedPort := 1234
 	c := &Client{url: &url.URL{Scheme: "http", Host: fmt.Sprintf("localhost:%d", expectedPort)}}
 
-	require.Equal(t, expectedPort, c.Port())
+	assert.Equal(t, expectedPort, c.Port())
 }
 
 func Test_ClientScheme(t *testing.T) {
 	expectedScheme := "foo"
 	c := &Client{url: &url.URL{Scheme: expectedScheme}}
 
-	require.Equal(t, expectedScheme, c.Scheme())
+	assert.Equal(t, expectedScheme, c.Scheme())
 }
 
 func Test_ClientFullAddress(t *testing.T) {
@@ -106,12 +106,12 @@ func Test_ClientFullAddress(t *testing.T) {
 	u := &url.URL{Scheme: scheme, Host: host}
 	c := &Client{url: u}
 
-	require.Equal(t, u.String(), c.FullAddress())
+	assert.Equal(t, u.String(), c.FullAddress())
 }
 
 func Test_ClientTask(t *testing.T) {
 	c := &Client{}
-	require.NotNil(t, c.Task())
+	assert.NotNil(t, c.Task())
 }
 
 func Test_NewClient_InvalidScheme(t *testing.T) {
@@ -119,6 +119,6 @@ func Test_NewClient_InvalidScheme(t *testing.T) {
 	clientConfig.URL.Scheme = "foo"
 	c, err := NewClient(clientConfig, nil)
 
-	require.Nil(t, c)
-	require.Error(t, err)
+	assert.Nil(t, c)
+	assert.Error(t, err)
 }
