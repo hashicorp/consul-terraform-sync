@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
@@ -57,11 +58,11 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 		fmt.Sprintf("[Deprecated] The port to use for the Consul-Terraform-Sync API server, "+
 			"it is preferred to use the %s field instead.", FlagHTTPAddr))
 
-	m.addr = m.flags.String(FlagHTTPAddr, api.DefaultAddress, fmt.Sprintf("The `address` and port of the CTS daemon. The value can be an IP "+
+	m.addr = m.flags.String(FlagHTTPAddr, api.DefaultURL, fmt.Sprintf("The `address` and port of the CTS daemon. The value can be an IP "+
 		"address or DNS address, but it must also include the port. This can "+
 		"also be specified via the %s environment variable. The "+
 		"default value is %s. The scheme can also be set to "+
-		"HTTPS by including https in the provided address (eg. https://127.0.0.1:8558)", api.EnvAddress, api.DefaultAddress))
+		"HTTPS by including https in the provided address (eg. https://127.0.0.1:8558)", api.EnvAddress, api.DefaultURL))
 
 	// Initialize TLS flags
 	m.tls.caPath = m.flags.String(FlagCAPath, "", fmt.Sprintf("Path to a directory of CA certificates to use for TLS when communicating with Consul-Terraform-Sync. "+
@@ -124,16 +125,24 @@ func (m *meta) oneArgCheck(name string, args []string) bool {
 
 // clientConfig is used to initialize and return a new API ClientConfig using
 // the default command line arguments and env vars.
-func (m *meta) clientConfig() *api.ClientConfig {
+func (m *meta) clientConfig() (*api.ClientConfig, error) {
 	// Let the Client determine its default first, then override with command flag values
 	c := api.DefaultClientConfig()
+
+	if m.isFlagParsedAndFound(FlagHTTPAddr) {
+		u, err := url.Parse(*m.addr)
+		if err != nil {
+			return nil, err
+		}
+
+		c.URL = u
+	}
+
 	if m.isFlagParsedAndFound(FlagPort) {
 		m.UI.Warn(fmt.Sprintf("Warning: '%s' option is deprecated and will be removed in a later version. "+
 			"It is preferred to use the '%s' option instead.\n", FlagPort, FlagHTTPAddr))
-		c.Port = *m.port
-	}
-	if m.isFlagParsedAndFound(FlagHTTPAddr) {
-		c.Addr = *m.addr
+
+		c.URL.Host = fmt.Sprintf("%s:%d", c.URL.Hostname(), *m.port)
 	}
 
 	// If we need custom TLS configuration, then set it
@@ -153,20 +162,30 @@ func (m *meta) clientConfig() *api.ClientConfig {
 		c.TLSConfig.SSLVerify = *m.tls.sslVerify
 	}
 
-	return c
+	return c, nil
 }
 
 func (m *meta) client() (*api.Client, error) {
-	c, err := api.NewClient(m.clientConfig(), nil)
-
+	clientConfig, err := m.clientConfig()
 	if err != nil {
 		return nil, err
 	}
+
+	c, err := api.NewClient(clientConfig, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
 func (m *meta) taskLifecycleClient() (*api.TaskLifecycleClient, error) {
-	c, err := api.NewTaskLifecycleClient(m.clientConfig(), nil)
+	clientConfig, err := m.clientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := api.NewTaskLifecycleClient(clientConfig, nil)
 
 	if err != nil {
 		return nil, err

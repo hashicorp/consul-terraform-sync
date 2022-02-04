@@ -1,7 +1,9 @@
 package api
 
 import (
+	"fmt"
 	"math/rand"
+	"net/url"
 	"os"
 	"strconv"
 	"testing"
@@ -19,14 +21,14 @@ func Test_DefaultClientConfig_WithEnvVars(t *testing.T) {
 		_ = os.Unsetenv(EnvTLSSSLVerify)
 	})
 
-	url := "https://1.2.3.4:5678"
+	urlString := "https://1.2.3.4:5678"
 	caCert := "test/path/ca.pem"
 	caPath := "test/path"
 	clientCert := "test/path/client.pem"
 	clientKey := "test/path/key.pem"
 	sslVerify := "false"
 
-	require.NoError(t, os.Setenv(EnvAddress, url))
+	require.NoError(t, os.Setenv(EnvAddress, urlString))
 	require.NoError(t, os.Setenv(EnvTLSCACert, caCert))
 	require.NoError(t, os.Setenv(EnvTLSCAPath, caPath))
 	require.NoError(t, os.Setenv(EnvTLSClientCert, clientCert))
@@ -34,8 +36,10 @@ func Test_DefaultClientConfig_WithEnvVars(t *testing.T) {
 	require.NoError(t, os.Setenv(EnvTLSSSLVerify, sslVerify))
 
 	clientConfig := DefaultClientConfig()
+	u, err := url.Parse(DefaultURL)
+	require.NoError(t, err)
 
-	require.Equal(t, url, clientConfig.Addr)
+	require.Equal(t, u, clientConfig.URL)
 	require.Equal(t, caCert, clientConfig.TLSConfig.CACert)
 	require.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
 	require.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
@@ -53,8 +57,10 @@ func Test_DefaultClientConfig_Defaults(t *testing.T) {
 	clientKey := ""
 
 	clientConfig := DefaultClientConfig()
+	u, err := url.Parse(DefaultURL)
+	require.NoError(t, err)
 
-	require.Equal(t, DefaultAddress, clientConfig.Addr)
+	require.Equal(t, u, clientConfig.URL)
 	require.Equal(t, caCert, clientConfig.TLSConfig.CACert)
 	require.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
 	require.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
@@ -62,31 +68,57 @@ func Test_DefaultClientConfig_Defaults(t *testing.T) {
 	require.Equal(t, DefaultSSLVerify, clientConfig.TLSConfig.SSLVerify)
 }
 
+func Test_DefaultClientConfig_InvalidAddressEnv(t *testing.T) {
+	t.Cleanup(func() {
+		_ = os.Unsetenv(EnvAddress)
+	})
+
+	configBeforeEnvVarSet := DefaultClientConfig()
+	require.NoError(t, os.Setenv(EnvAddress, "invalid address"))
+	configAfterEnvVarSet := DefaultClientConfig()
+
+	require.EqualValues(t, configBeforeEnvVarSet.URL, configAfterEnvVarSet.URL)
+}
+
+func Test_ParseDefaultURL(t *testing.T) {
+	u, err := url.Parse(DefaultURL)
+	require.NotNil(t, u)
+	require.NoError(t, err)
+}
+
 func Test_ClientPort(t *testing.T) {
 	expectedPort := rand.Intn(10000)
-	c := &Client{port: expectedPort}
+	c := &Client{url: &url.URL{Scheme: "http", Host: fmt.Sprintf("localhost:%d", expectedPort)}}
 
 	require.Equal(t, expectedPort, c.Port())
 }
 
 func Test_ClientScheme(t *testing.T) {
 	expectedScheme := "foo"
-	c := &Client{scheme: expectedScheme}
+	c := &Client{url: &url.URL{Scheme: expectedScheme}}
 
 	require.Equal(t, expectedScheme, c.Scheme())
 }
 
 func Test_ClientFullAddress(t *testing.T) {
 	scheme := "foo"
-	address := "bar"
-	expectedFullAddress := "foo://bar"
-	c := &Client{scheme: scheme, addr: address}
+	host := "bar"
+	u := &url.URL{Scheme: scheme, Host: host}
+	c := &Client{url: u}
 
-	require.Equal(t, expectedFullAddress, c.FullAddress())
+	require.Equal(t, u.String(), c.FullAddress())
 }
 
 func Test_ClientTask(t *testing.T) {
 	c := &Client{}
-
 	require.NotNil(t, c.Task())
+}
+
+func Test_NewClient_InvalidScheme(t *testing.T) {
+	clientConfig := DefaultClientConfig()
+	clientConfig.URL.Scheme = "foo"
+	c, err := NewClient(clientConfig, nil)
+
+	require.Nil(t, c)
+	require.Error(t, err)
 }

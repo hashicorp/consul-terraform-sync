@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/go-rootcerts"
 )
 
@@ -21,7 +20,7 @@ const (
 	HTTPScheme  = "http"
 	HTTPSScheme = "https"
 
-	DefaultAddress   = "http://localhost:8558"
+	DefaultURL       = "http://localhost:8558"
 	DefaultSSLVerify = true
 
 	// Environment variable names
@@ -42,23 +41,18 @@ type httpClient interface {
 
 // Client to make api requests
 type Client struct {
-	port    int // remain for backwards compatibility but prefer addr
-	addr    string
 	version string
-	scheme  string
+	url     *url.URL
 	http    httpClient
 }
 
 // ClientConfig configures the client to make api requests
 type ClientConfig struct {
-	Port      int // Stay for now for backwards compatibility, but prefer Addr
-	Addr      string
-	Scheme    string
+	URL       *url.URL
 	TLSConfig TLSConfig
 }
 
 type TLSConfig struct {
-	// TLS variables
 	CAPath     string
 	CACert     string
 	ClientCert string
@@ -66,16 +60,12 @@ type TLSConfig struct {
 	SSLVerify  bool
 }
 
-type addressComposite struct {
-	scheme  string
-	address string
-}
-
 // DefaultClientConfig returns a default configuration for the client
 func DefaultClientConfig() *ClientConfig {
+	u, _ := url.Parse(DefaultURL)
+
 	c := &ClientConfig{
-		Port: config.DefaultPort,
-		Addr: DefaultAddress,
+		URL: u,
 		TLSConfig: TLSConfig{
 			SSLVerify: true,
 		},
@@ -83,7 +73,10 @@ func DefaultClientConfig() *ClientConfig {
 
 	// Update configs from env vars
 	if value, found := os.LookupEnv(EnvAddress); found {
-		c.Addr = value
+		u, err := url.Parse(value)
+		if err != nil {
+			c.URL = u
+		}
 	}
 
 	// Update TLS configs from env vars
@@ -133,19 +126,18 @@ func NewClient(c *ClientConfig, httpClient httpClient) (*Client, error) {
 		}
 	}
 
-	// Determine the scheme and address without scheme based on the address passed in
-	ac, err := parseAddress(c.Addr)
+	err := validateScheme(c.URL.Scheme)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Client{
-		port:    c.Port,
-		addr:    ac.address,
+	client := &Client{
 		version: defaultAPIVersion,
-		scheme:  ac.scheme,
+		url:     c.URL,
 		http:    httpClient,
-	}, nil
+	}
+
+	return client, nil
 }
 
 // setupTLSConfig is used to generate a TLSClientConfig that's useful for talking to
@@ -184,17 +176,22 @@ func setupTLSConfig(c *ClientConfig) (*tls.Config, error) {
 
 // Port returns the port being used by the client
 func (c *Client) Port() int {
-	return c.port
+	p, err := strconv.Atoi(c.url.Port())
+	if err != nil {
+		return -1
+	}
+
+	return p
 }
 
 // FullAddress returns the client address including the scheme. E.g. http://localhost:8558
 func (c *Client) FullAddress() string {
-	return fmt.Sprintf("%s://%s", c.scheme, c.addr)
+	return c.url.String()
 }
 
 // Scheme returns the scheme being used by the client
 func (c *Client) Scheme() string {
-	return c.scheme
+	return c.url.Scheme
 }
 
 // WaitForAPI polls the /v1/status endpoint to check when the CTS API is
@@ -226,7 +223,7 @@ func (c *Client) WaitForAPI(timeout time.Duration) error {
 		return nil
 	case <-time.After(timeout):
 		close(stopPolling)
-		return fmt.Errorf("client timed out waiting for CTS API to start at %s: %v", c.addr, timeout)
+		return fmt.Errorf("client timed out waiting for CTS API to start at %s: %v", c.url.Host, timeout)
 	}
 }
 
@@ -238,25 +235,11 @@ func (c *Client) WaitForAPI(timeout time.Duration) error {
 // path: relative path with no preceding '/' e.g. "status/tasks"
 // query: URL encoded query string with no preceding '?'. See QueryParam.Encode()
 func (c *Client) request(method, path, query, body string) (*http.Response, error) {
-	var serverURL url.URL
-
-	// If port is default, use the address variable instead
-	if c.port == config.DefaultPort {
-		serverURL = url.URL{
-			Scheme:   c.scheme,
-			Host:     c.addr,
-			Path:     fmt.Sprintf("%s/%s", c.version, path),
-			RawQuery: query,
-		}
-	} else {
-		// If port is set, assume using old arguments and append port to localhost
-		// assume http scheme
-		serverURL = url.URL{
-			Scheme:   c.scheme,
-			Host:     fmt.Sprintf("localhost:%d", c.port),
-			Path:     fmt.Sprintf("%s/%s", c.version, path),
-			RawQuery: query,
-		}
+	serverURL := &url.URL{
+		Scheme:   c.url.Scheme,
+		Host:     c.url.Host,
+		Path:     fmt.Sprintf("%s/%s", c.version, path),
+		RawQuery: query,
 	}
 
 	r := strings.NewReader(body)
@@ -413,21 +396,10 @@ func (t *TaskClient) Update(name string, config UpdateTaskConfig, q *QueryParam)
 	return plan, nil
 }
 
-func parseAddress(addr string) (addressComposite, error) {
-	ac := addressComposite{}
-	ac.scheme = HTTPScheme
-	parts := strings.SplitN(addr, "://", 2)
-	if len(parts) == 2 {
-		switch parts[0] {
-		case HTTPScheme:
-			ac.scheme = HTTPScheme
-		case HTTPSScheme:
-			ac.scheme = HTTPSScheme
-		default:
-			return addressComposite{}, fmt.Errorf("unknown protocol scheme: %s", parts[0])
-		}
-		ac.address = parts[1]
+func validateScheme(scheme string) error {
+	if scheme != HTTPSScheme && scheme != HTTPScheme {
+		return fmt.Errorf("unknown protocol scheme: %s", scheme)
 	}
 
-	return ac, nil
+	return nil
 }

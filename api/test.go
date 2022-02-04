@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"testing"
@@ -69,13 +70,15 @@ func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSC
 	err = cmd.Start()
 	require.NoError(t, err)
 
-	clientConfig := ClientConfig{
-		Port:      port,
-		Addr:      fmt.Sprintf("%s://localhost:%d", scheme, port),
+	u, err := url.Parse(fmt.Sprintf("%s://localhost:%d", scheme, port))
+	require.NoError(t, err)
+
+	clientConfig := &ClientConfig{
+		URL:       u,
 		TLSConfig: tlsConfig,
 	}
 
-	ctsClient, err := NewClient(&clientConfig, nil)
+	ctsClient, err := NewClient(clientConfig, nil)
 	require.NoError(t, err)
 
 	return ctsClient, func(t *testing.T) {

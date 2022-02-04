@@ -356,8 +356,7 @@ func processEOFError(scheme string, err error) error {
 	if strings.Contains(err.Error(), "EOF") && scheme == api.HTTPScheme {
 		err = fmt.Errorf("%s. Scheme %s was used, "+
 			"client may have sent an HTTP request to an HTTPS server. This error can be caused by a client using "+
-			"HTTP to connect to a CTS server with TLS enabled, "+
-			"consider using HTTPS scheme instead", err, scheme)
+			"HTTP to connect to a CTS server with TLS enabled, consider using HTTPS scheme instead", err, scheme)
 	}
 
 	return err
