@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -366,14 +367,10 @@ func TestE2E_TaskEndpoints_Delete(t *testing.T) {
 	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", taskName)
 	resp := testutils.RequestHTTP(t, http.MethodDelete, u, "")
 	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, http.StatusAccepted, resp.StatusCode)
 
 	// Check that the task no longer exists
-	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s",
-		cts.Port(), "v1", taskName)
-	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
-	defer resp.Body.Close()
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	waitForTaskDeletion(t, cts, taskName, time.Second)
 
 	// Make a change that would have triggered the task, expect no event
 	service := testutil.TestService{
@@ -384,6 +381,8 @@ func TestE2E_TaskEndpoints_Delete(t *testing.T) {
 	}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	time.Sleep(defaultWaitForNoEvent)
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s",
+		cts.Port(), "v1", taskName)
 	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -391,17 +390,17 @@ func TestE2E_TaskEndpoints_Delete(t *testing.T) {
 	validateServices(t, false, []string{"api"}, resourcesPath)
 }
 
-// TestE2E_TaskEndpoints_Delete_Conflict tests that a running task cannot
-// be deleted. This runs a Consul server and the CTS binary in daemon mode.
+// TestE2E_TaskEndpoints_Delete_ActiveTask tests that a running task will not
+// be deleted until it is complete.
 //	DELETE/v1/tasks/:task_name
-func TestE2E_TaskEndpoints_Delete_Conflict(t *testing.T) {
+func TestE2E_TaskEndpoints_Delete_ActiveTask(t *testing.T) {
 	setParallelism(t)
 	// Test deleting a task
 	// 1. Start with a task
 	// 2. Trigger the task
 	// 3. While task is still running, delete the task
 	// 4. Check that the task and events still exist
-	// 5. Delete the task after it is complete
+	// 5. Wait until the task is complete
 	// 6. Check that the task and events no longer exist
 
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
@@ -415,7 +414,6 @@ func TestE2E_TaskEndpoints_Delete_Conflict(t *testing.T) {
 		moduleTaskConfig(taskName, "./test_modules/delayed_module"))
 
 	// Trigger the task
-	now := time.Now()
 	service := testutil.TestService{
 		ID:      "api",
 		Name:    "api",
@@ -429,23 +427,55 @@ func TestE2E_TaskEndpoints_Delete_Conflict(t *testing.T) {
 	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", taskName)
 	resp := testutils.RequestHTTP(t, http.MethodDelete, u, "")
 	defer resp.Body.Close()
-	require.Equal(t, http.StatusConflict, resp.StatusCode)
+	require.Equal(t, http.StatusAccepted, resp.StatusCode)
 
-	// Check that the task still exists, wait for it to complete
-	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+	// Check that the task still exists
+	count := eventCount(t, taskName, cts.Port())
+	assert.Equal(t, 1, count)
+
+	// Wait for task to be deleted
+	waitForTaskDeletion(t, cts, taskName, defaultWaitForEvent+5*time.Second)
+
+	// Check that task completed by checking created files
 	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
 	validateServices(t, true, []string{"api"}, resourcesPath)
+}
 
-	// Delete task now that it is completed
-	resp = testutils.RequestHTTP(t, http.MethodDelete, u, "")
-	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+func waitForTaskDeletion(t *testing.T, client *api.Client, name string, timeout time.Duration) {
+	polling := make(chan struct{})
+	stopPolling := make(chan struct{})
 
-	// Check that the task no longer exists
-	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
-	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
-	defer resp.Body.Close()
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	go func() {
+		for {
+			select {
+			case <-stopPolling:
+				return
+			default:
+				_, err := client.Status().Task(name, nil)
+				if err == nil {
+					time.Sleep(500 * time.Millisecond)
+					continue
+				}
+
+				if !strings.Contains(err.Error(), "404") {
+					// expecting only a 404 not found error
+					t.Fatalf("\nUnexpected error when waiting for task to %s be deleted", name)
+				}
+
+				polling <- struct{}{}
+				return
+			}
+		}
+	}()
+
+	select {
+	case <-polling:
+		return
+	case <-time.After(timeout):
+		close(stopPolling)
+		t.Fatalf("\nError: timed out after waiting for %v task %q to be deleted\n",
+			timeout, name)
+	}
 }
 
 // TestE2E_TaskEndpoints_Create tests the create task endpoint. This
