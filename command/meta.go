@@ -127,10 +127,7 @@ func (m *meta) oneArgCheck(name string, args []string) bool {
 // the default command line arguments and env vars.
 func (m *meta) clientConfig() (*api.ClientConfig, error) {
 	// Let the Client determine its default first, then override with command flag values
-	c, err := api.BaseClientConfig()
-	if err != nil {
-		return nil, err
-	}
+	c := api.BaseClientConfig()
 
 	// override config values from flags
 	if m.isFlagParsedAndFound(FlagPort) {

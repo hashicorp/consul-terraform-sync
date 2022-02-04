@@ -61,7 +61,7 @@ type TLSConfig struct {
 }
 
 // BaseClientConfig returns a base configuration for the client using defaults and env var values
-func BaseClientConfig() (*ClientConfig, error) {
+func BaseClientConfig() *ClientConfig {
 	c := &ClientConfig{
 		URL:       DefaultURL,
 		TLSConfig: TLSConfig{SSLVerify: true},
@@ -95,13 +95,7 @@ func BaseClientConfig() (*ClientConfig, error) {
 		}
 	}
 
-	if value, found := os.LookupEnv(EnvTLSSSLVerify); found {
-		if boolValue, err := strconv.ParseBool(value); err == nil {
-			c.TLSConfig.SSLVerify = boolValue
-		}
-	}
-
-	return c, nil
+	return c
 }
 
 // NewClient returns a client to make api requests
@@ -390,7 +384,7 @@ func (t *TaskClient) Update(name string, config UpdateTaskConfig, q *QueryParam)
 }
 
 func parseURL(urlString string) (*url.URL, error) {
-	u, err := url.Parse(urlString)
+	u, err := url.ParseRequestURI(urlString)
 	if err != nil {
 		return nil, err
 	}
