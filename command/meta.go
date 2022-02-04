@@ -141,9 +141,20 @@ func (m *meta) clientConfig() (*api.ClientConfig, error) {
 	}
 
 	if m.isFlagParsedAndFound(FlagHTTPAddr) {
-		u, err := url.ParseRequestURI(*m.addr)
+		parsed, err := url.Parse(*m.addr)
 		if err != nil {
 			return nil, err
+		}
+
+		// only use the scheme and host parts of the provided address
+		u := &url.URL{Scheme: parsed.Scheme, Host: parsed.Host}
+		if u.Host == "" {
+			return nil, fmt.Errorf("failed to parse flag %q value as an address - value %q", FlagHTTPAddr, *m.addr)
+		}
+
+		// default to HTTP scheme when scheme is not set as part of the address
+		if u.Scheme == "" {
+			u.Scheme = api.HTTPScheme
 		}
 
 		c.URL = u

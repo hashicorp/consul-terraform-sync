@@ -71,10 +71,23 @@ func BaseClientConfig() (*ClientConfig, error) {
 
 	// Update configs from env vars
 	if value, found := os.LookupEnv(EnvAddress); found {
-		u, err := url.ParseRequestURI(value)
+		parsed, err := url.Parse(value)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse environment variable %q value as an address", EnvAddress)
+			return nil, fmt.Errorf("failed to parse environment variable %q value as an address - value %q",
+				EnvAddress, value)
 		} else {
+			// only use the scheme and host parts of the provided address
+			u := &url.URL{Scheme: parsed.Scheme, Host: parsed.Host}
+			if u.Host == "" {
+				return nil, fmt.Errorf("failed to parse environment variable %q value as an address - value %q",
+					EnvAddress, value)
+			}
+
+			// default to HTTP scheme when scheme is not set as part of the address
+			if u.Scheme == "" {
+				u.Scheme = HTTPScheme
+			}
+
 			c.URL = u
 		}
 	}
