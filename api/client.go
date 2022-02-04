@@ -48,7 +48,7 @@ type Client struct {
 
 // ClientConfig configures the client to make api requests
 type ClientConfig struct {
-	URL       *url.URL
+	URL       string
 	TLSConfig TLSConfig
 }
 
@@ -62,34 +62,14 @@ type TLSConfig struct {
 
 // BaseClientConfig returns a base configuration for the client using defaults and env var values
 func BaseClientConfig() (*ClientConfig, error) {
-	u, _ := url.ParseRequestURI(DefaultURL)
-
 	c := &ClientConfig{
-		URL:       u,
+		URL:       DefaultURL,
 		TLSConfig: TLSConfig{SSLVerify: true},
 	}
 
 	// Update configs from env vars
 	if value, found := os.LookupEnv(EnvAddress); found {
-		parsed, err := url.Parse(value)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse environment variable '%s' value as an address - value: %s",
-				EnvAddress, value)
-		} else {
-			// only use the scheme and host parts of the provided address
-			u := &url.URL{Scheme: parsed.Scheme, Host: parsed.Host}
-			if u.Host == "" {
-				return nil, fmt.Errorf("failed to parse environment variable '%s' value as an address - value: %s",
-					EnvAddress, value)
-			}
-
-			// default to HTTP scheme when scheme is not set as part of the address
-			if u.Scheme == "" {
-				u.Scheme = HTTPScheme
-			}
-
-			c.URL = u
-		}
+		c.URL = value
 	}
 
 	// Update TLS configs from env vars
@@ -139,14 +119,14 @@ func NewClient(c *ClientConfig, httpClient httpClient) (*Client, error) {
 		}
 	}
 
-	err := validateScheme(c.URL.Scheme)
+	u, err := parseURL(c.URL)
 	if err != nil {
 		return nil, err
 	}
 
 	client := &Client{
 		version: defaultAPIVersion,
-		url:     c.URL,
+		url:     u,
 		http:    httpClient,
 	}
 
@@ -409,10 +389,20 @@ func (t *TaskClient) Update(name string, config UpdateTaskConfig, q *QueryParam)
 	return plan, nil
 }
 
-func validateScheme(scheme string) error {
-	if scheme != HTTPSScheme && scheme != HTTPScheme {
-		return fmt.Errorf("unknown protocol scheme %q", scheme)
+func parseURL(urlString string) (*url.URL, error) {
+	u, err := url.Parse(urlString)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	// validations
+	if u.Scheme != HTTPSScheme && u.Scheme != HTTPScheme {
+		return nil, fmt.Errorf("unknown protocol scheme: %s", u.Scheme)
+	}
+
+	if u.Host == "" {
+		return nil, fmt.Errorf("invalid address, host value is empty")
+	}
+
+	return u, nil
 }

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"testing"
 	"time"
 
@@ -315,9 +314,6 @@ func TestWaitForAPI(t *testing.T) {
 
 func createTestClientConfig(port int) *ClientConfig {
 	return &ClientConfig{
-		URL: &url.URL{
-			Scheme: "http",
-			Host:   fmt.Sprintf("localhost:%d", port),
-		},
+		URL: fmt.Sprintf("http://localhost:%d", port),
 	}
 }

@@ -38,10 +38,7 @@ func Test_DefaultClientConfig_WithEnvVars(t *testing.T) {
 	clientConfig, err := BaseClientConfig()
 	require.NoError(t, err)
 
-	u, err := url.ParseRequestURI(urlString)
-	require.NoError(t, err)
-
-	assert.Equal(t, u, clientConfig.URL)
+	assert.Equal(t, urlString, clientConfig.URL)
 	assert.Equal(t, caCert, clientConfig.TLSConfig.CACert)
 	assert.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
 	assert.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
@@ -61,27 +58,12 @@ func Test_DefaultClientConfig_Defaults(t *testing.T) {
 	clientConfig, err := BaseClientConfig()
 	require.NoError(t, err)
 
-	u, err := url.ParseRequestURI(DefaultURL)
-	require.NoError(t, err)
-
-	assert.Equal(t, u, clientConfig.URL)
+	assert.Equal(t, DefaultURL, clientConfig.URL)
 	assert.Equal(t, caCert, clientConfig.TLSConfig.CACert)
 	assert.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
 	assert.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
 	assert.Equal(t, clientKey, clientConfig.TLSConfig.ClientKey)
 	assert.Equal(t, DefaultSSLVerify, clientConfig.TLSConfig.SSLVerify)
-}
-
-func Test_DefaultClientConfig_InvalidAddressEnv(t *testing.T) {
-	t.Cleanup(func() {
-		_ = os.Unsetenv(EnvAddress)
-	})
-
-	assert.NoError(t, os.Setenv(EnvAddress, "invalid address"))
-
-	c, err := BaseClientConfig()
-	require.Nil(t, c)
-	require.Error(t, err)
 }
 
 func Test_ParseDefaultURL(t *testing.T) {
@@ -122,7 +104,7 @@ func Test_NewClient_InvalidScheme(t *testing.T) {
 	clientConfig, err := BaseClientConfig()
 	require.NoError(t, err)
 
-	clientConfig.URL.Scheme = "foo"
+	clientConfig.URL = "foo://bar"
 	c, err := NewClient(clientConfig, nil)
 
 	assert.Nil(t, c)

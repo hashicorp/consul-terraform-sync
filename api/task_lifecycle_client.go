@@ -37,12 +37,12 @@ func NewTaskLifecycleClient(c *ClientConfig, httpClient httpClient) (*TaskLifecy
 		httpClient = NewTaskLifecycleHTTPClient(httpClient)
 	}
 
-	err := validateScheme(c.URL.Scheme)
+	u, err := parseURL(c.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	gc := &TaskLifecycleClient{url: c.URL}
+	gc := &TaskLifecycleClient{url: u}
 
 	// Create the new underlying client based on generated code
 	oc, err := oapigen.NewClient(gc.url.String(), oapigen.WithHTTPClient(httpClient))

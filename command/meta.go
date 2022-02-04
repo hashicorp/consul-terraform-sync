@@ -137,27 +137,17 @@ func (m *meta) clientConfig() (*api.ClientConfig, error) {
 		m.UI.Warn(fmt.Sprintf("Warning: '%s' option is deprecated and will be removed in a later version. "+
 			"It is preferred to use the '%s' option instead.\n", FlagPort, FlagHTTPAddr))
 
-		c.URL.Host = fmt.Sprintf("%s:%d", c.URL.Hostname(), *m.port)
-	}
-
-	if m.isFlagParsedAndFound(FlagHTTPAddr) {
-		parsed, err := url.Parse(*m.addr)
+		u, err := url.ParseRequestURI(c.URL)
 		if err != nil {
 			return nil, err
 		}
 
-		// only use the scheme and host parts of the provided address
-		u := &url.URL{Scheme: parsed.Scheme, Host: parsed.Host}
-		if u.Host == "" {
-			return nil, fmt.Errorf("failed to parse flag '%s' value as an address - value: %s", FlagHTTPAddr, *m.addr)
-		}
+		u.Host = fmt.Sprintf("%s:%d", u.Hostname(), *m.port) // add port to hostname
+		c.URL = u.String()
+	}
 
-		// default to HTTP scheme when scheme is not set as part of the address
-		if u.Scheme == "" {
-			u.Scheme = api.HTTPScheme
-		}
-
-		c.URL = u
+	if m.isFlagParsedAndFound(FlagHTTPAddr) {
+		c.URL = *m.addr
 	}
 
 	// If we need custom TLS configuration, then set it
