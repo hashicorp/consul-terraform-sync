@@ -35,6 +35,14 @@ const (
 	defaultWaitForEvent = 8 * time.Second
 )
 
+// TestCompatibility_Compile confirms that the compatibility test(s) are
+// compilable. Compatibility tests are only run weekly. This test is intended
+// to run with each change (vs. weekly) to do a basic check that the tests are
+// still in a compilable state.
+func TestCompatibility_Compile(t *testing.T) {
+	// no-op
+}
+
 func TestCompatibility_Consul(t *testing.T) {
 	// Tested only OSS GA releases for the highest patch version given a
 	// major minor version. v1.4.5 starts losing compatibility, details in
