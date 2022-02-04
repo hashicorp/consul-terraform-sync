@@ -1,7 +1,8 @@
 package api
 
 import (
-	"math/rand"
+	"fmt"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"strconv"
 	"testing"
@@ -35,15 +36,15 @@ func Test_DefaultClientConfig_WithEnvVars(t *testing.T) {
 
 	clientConfig := DefaultClientConfig()
 
-	require.Equal(t, url, clientConfig.Addr)
-	require.Equal(t, caCert, clientConfig.TLSConfig.CACert)
-	require.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
-	require.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
-	require.Equal(t, clientKey, clientConfig.TLSConfig.ClientKey)
+	assert.Equal(t, url, clientConfig.Addr)
+	assert.Equal(t, caCert, clientConfig.TLSConfig.CACert)
+	assert.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
+	assert.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
+	assert.Equal(t, clientKey, clientConfig.TLSConfig.ClientKey)
 
 	expectedSSLVerify, err := strconv.ParseBool(sslVerify)
-	require.NoError(t, err)
-	require.Equal(t, expectedSSLVerify, clientConfig.TLSConfig.SSLVerify)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedSSLVerify, clientConfig.TLSConfig.SSLVerify)
 }
 
 func Test_DefaultClientConfig_Defaults(t *testing.T) {
@@ -54,39 +55,38 @@ func Test_DefaultClientConfig_Defaults(t *testing.T) {
 
 	clientConfig := DefaultClientConfig()
 
-	require.Equal(t, DefaultAddress, clientConfig.Addr)
-	require.Equal(t, caCert, clientConfig.TLSConfig.CACert)
-	require.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
-	require.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
-	require.Equal(t, clientKey, clientConfig.TLSConfig.ClientKey)
-	require.Equal(t, DefaultSSLVerify, clientConfig.TLSConfig.SSLVerify)
+	assert.Equal(t, DefaultAddress, clientConfig.Addr)
+	assert.Equal(t, caCert, clientConfig.TLSConfig.CACert)
+	assert.Equal(t, caPath, clientConfig.TLSConfig.CAPath)
+	assert.Equal(t, clientCert, clientConfig.TLSConfig.ClientCert)
+	assert.Equal(t, clientKey, clientConfig.TLSConfig.ClientKey)
+	assert.Equal(t, DefaultSSLVerify, clientConfig.TLSConfig.SSLVerify)
 }
 
 func Test_ClientPort(t *testing.T) {
-	expectedPort := rand.Intn(10000)
+	expectedPort := 1234
 	c := &Client{port: expectedPort}
 
-	require.Equal(t, expectedPort, c.Port())
+	assert.Equal(t, expectedPort, c.Port())
 }
 
 func Test_ClientScheme(t *testing.T) {
 	expectedScheme := "foo"
 	c := &Client{scheme: expectedScheme}
 
-	require.Equal(t, expectedScheme, c.Scheme())
+	assert.Equal(t, expectedScheme, c.Scheme())
 }
 
 func Test_ClientFullAddress(t *testing.T) {
 	scheme := "foo"
 	address := "bar"
-	expectedFullAddress := "foo://bar"
+	expectedFullAddress := fmt.Sprintf("%s://%s", scheme, address)
 	c := &Client{scheme: scheme, addr: address}
 
-	require.Equal(t, expectedFullAddress, c.FullAddress())
+	assert.Equal(t, expectedFullAddress, c.FullAddress())
 }
 
 func Test_ClientTask(t *testing.T) {
 	c := &Client{}
-
-	require.NotNil(t, c.Task())
+	assert.NotNil(t, c.Task())
 }
