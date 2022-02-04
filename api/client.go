@@ -65,15 +65,14 @@ func DefaultClientConfig() *ClientConfig {
 	u, _ := url.Parse(DefaultURL)
 
 	c := &ClientConfig{
-		URL: u,
-		TLSConfig: TLSConfig{
-			SSLVerify: true,
-		},
+		URL:       u,
+		TLSConfig: TLSConfig{SSLVerify: true},
 	}
 
 	// Update configs from env vars
 	if value, found := os.LookupEnv(EnvAddress); found {
 		u, err := url.Parse(value)
+		// Only update the URL if the value from env var is parsed successfully
 		if err != nil {
 			c.URL = u
 		}
