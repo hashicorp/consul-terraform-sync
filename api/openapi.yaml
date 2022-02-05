@@ -183,11 +183,6 @@ components:
           items:
             type: string
           example: []
-        services:
-          type: array
-          items:
-            type: string
-          example: ["web", "api"]
         module:
           type: string
           example: "org/example/module"
@@ -207,17 +202,15 @@ components:
         - module
       example:
         condition:
-          catalog-services:
-            regexp: ".*"
-        description: ''
+          services:
+            names: ["web", "api"]
+        description: "A basic task"
         enabled: true
         name: taskC
-        providers: [ ]
-        services:
-          - web
-          - api
+        providers: []
         module: org/example/module
-        variable_files: [ ]
+        variables:
+          var1: example.field
         version: 1.0.0
 
     BufferPeriod:
