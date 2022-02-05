@@ -78,10 +78,6 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 		tc.Providers = *tr.Task.Providers
 	}
 
-	if tr.Task.Services != nil {
-		tc.Services = *tr.Task.Services
-	}
-
 	// Convert module input
 	if tr.Task.ModuleInput != nil {
 		inputs := make(config.ModuleInputConfigs, 0)
@@ -245,10 +241,6 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 
 	if tc.Providers != nil {
 		task.Providers = &tc.Providers
-	}
-
-	if tc.Services != nil {
-		task.Services = &tc.Services
 	}
 
 	if tc.ModuleInputs != nil {
