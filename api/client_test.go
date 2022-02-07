@@ -257,87 +257,66 @@ func Test_QueryParam_Encode(t *testing.T) {
 	}
 }
 
-func Test_StatusClient_Overall_BadResponse(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := fmt.Fprint(w, "foo")
-		assert.NoError(t, err)
-	}))
+func Test_StatusClient_Overall_Failures(t *testing.T) {
+	tests := []struct {
+		name   string
+		server *httptest.Server
+	}{
+		{
+			name: "bad response",
+			server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, err := fmt.Fprint(w, "foo")
+				assert.NoError(t, err)
+			})),
+		},
+		{
+			name: "error and bad response",
+			server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			})),
+		},
+		{
+			name: "error with error message",
+			server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				e := &ErrorResponse{Error: &ErrorObject{Message: "foo"}}
+				bytes, err := json.Marshal(e)
+				assert.NotEmpty(t, bytes)
+				assert.NoError(t, err)
 
-	defer server.Close()
+				w.WriteHeader(http.StatusInternalServerError)
+				_, err = w.Write(bytes)
+				assert.NoError(t, err)
+			})),
+		},
+		{
+			name: "error with no error message",
+			server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				e := &ErrorResponse{}
+				bytes, err := json.Marshal(e)
+				assert.NotEmpty(t, bytes)
+				assert.NoError(t, err)
 
-	clientConfig := BaseClientConfig()
-	clientConfig.URL = server.URL
-	c, err := NewClient(clientConfig, nil)
-	assert.NoError(t, err)
+				w.WriteHeader(http.StatusInternalServerError)
+				_, err = w.Write(bytes)
+				assert.NoError(t, err)
+			})),
+		},
+	}
 
-	o, err := c.Status().Overall()
-	assert.Error(t, err)
-	assert.EqualValues(t, OverallStatus{}, o)
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() { tt.server.Close() })
 
-func Test_StatusClient_Overall_Error_BadResponse(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
+			clientConfig := BaseClientConfig()
+			clientConfig.URL = tt.server.URL
+			c, err := NewClient(clientConfig, nil)
+			assert.NoError(t, err)
 
-	defer server.Close()
-
-	clientConfig := BaseClientConfig()
-	clientConfig.URL = server.URL
-	c, err := NewClient(clientConfig, nil)
-	assert.NoError(t, err)
-
-	o, err := c.Status().Overall()
-	assert.Error(t, err)
-	assert.EqualValues(t, OverallStatus{}, o)
-}
-
-func Test_StatusClient_Overall_Error_WithErrorMessage(t *testing.T) {
-	e := &ErrorResponse{Error: &ErrorObject{Message: "foo"}}
-	bytes, err := json.Marshal(e)
-	assert.NotEmpty(t, bytes)
-	assert.NoError(t, err)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write(bytes)
-		assert.NoError(t, err)
-	}))
-
-	defer server.Close()
-
-	clientConfig := BaseClientConfig()
-	clientConfig.URL = server.URL
-	c, err := NewClient(clientConfig, nil)
-	assert.NoError(t, err)
-
-	o, err := c.Status().Overall()
-	assert.Error(t, err)
-	assert.EqualValues(t, OverallStatus{}, o)
-}
-
-func Test_StatusClient_Overall_Error_NoErrorMessage(t *testing.T) {
-	e := &ErrorResponse{}
-	bytes, err := json.Marshal(e)
-	assert.NotEmpty(t, bytes)
-	assert.NoError(t, err)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write(bytes)
-		assert.NoError(t, err)
-	}))
-
-	defer server.Close()
-
-	clientConfig := BaseClientConfig()
-	clientConfig.URL = server.URL
-	c, err := NewClient(clientConfig, nil)
-	assert.NoError(t, err)
-
-	o, err := c.Status().Overall()
-	assert.Error(t, err)
-	assert.EqualValues(t, OverallStatus{}, o)
+			o, err := c.Status().Overall()
+			assert.Error(t, err)
+			assert.EqualValues(t, OverallStatus{}, o)
+		})
+	}
 }
 
 func Test_StatusClient_Overall(t *testing.T) {
