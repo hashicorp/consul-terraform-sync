@@ -7,18 +7,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
-	"github.com/hashicorp/consul-terraform-sync/config"
 )
 
 // TaskLifecycleClient defines a client for task lifecycle requests
 // Currently non task lifecycle requests use the client in api/client.go, but eventually all endpoint
 // may use this new client. In that case TaskLifecycleClient should be renamed
 type TaskLifecycleClient struct {
-	port   int
-	scheme string
-	addr   string
+	url *url.URL
 	*oapigen.Client
 }
 
@@ -39,27 +37,15 @@ func NewTaskLifecycleClient(c *ClientConfig, httpClient httpClient) (*TaskLifecy
 		httpClient = NewTaskLifecycleHTTPClient(httpClient)
 	}
 
-	// Determine the scheme and address without scheme based on the address passed in
-	ac, err := parseAddress(c.Addr)
+	u, err := parseURL(c.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	gc := &TaskLifecycleClient{
-		port:   c.Port,
-		scheme: ac.scheme,
-		addr:   ac.address,
-	}
-
-	// If port is set, assume using old arguments and append port to localhost
-	// assume http scheme
-	server := gc.FullAddress()
-	if c.Port != config.DefaultPort {
-		server = fmt.Sprintf("localhost:%d", c.Port)
-	}
+	gc := &TaskLifecycleClient{url: u}
 
 	// Create the new underlying client based on generated code
-	oc, err := oapigen.NewClient(server, oapigen.WithHTTPClient(httpClient))
+	oc, err := oapigen.NewClient(gc.url.String(), oapigen.WithHTTPClient(httpClient))
 	if err != nil {
 		return nil, err
 	}
@@ -69,19 +55,9 @@ func NewTaskLifecycleClient(c *ClientConfig, httpClient httpClient) (*TaskLifecy
 	return gc, nil
 }
 
-// Port returns the port being used by the client
-func (c *TaskLifecycleClient) Port() int {
-	return c.port
-}
-
-// FullAddress returns the client address including the scheme. E.g. http://localhost:8558
-func (c *TaskLifecycleClient) FullAddress() string {
-	return fmt.Sprintf("%s://%s", c.scheme, c.addr)
-}
-
 // Scheme returns the scheme being used by the client
 func (c *TaskLifecycleClient) Scheme() string {
-	return fmt.Sprintf(c.scheme)
+	return c.url.Scheme
 }
 
 // CreateTask takes a task request and run option and sends this information to the client. It then returns
