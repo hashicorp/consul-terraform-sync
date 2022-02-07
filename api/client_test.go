@@ -154,7 +154,7 @@ func Test_NewClient_Error(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("missing cert", func(t *testing.T) {
+	t.Run("missing key", func(t *testing.T) {
 		clientConfig := BaseClientConfig()
 		clientConfig.TLSConfig.ClientCert = "../testutils/certs/localhost_cert.pem"
 
@@ -164,7 +164,7 @@ func Test_NewClient_Error(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("missing key", func(t *testing.T) {
+	t.Run("missing cert", func(t *testing.T) {
 		clientConfig := BaseClientConfig()
 		clientConfig.TLSConfig.ClientKey = "../testutils/certs/localhost_key.pem"
 
@@ -223,54 +223,43 @@ func Test_Client_Status(t *testing.T) {
 }
 
 func Test_QueryParam_Encode(t *testing.T) {
-	type fields struct {
-		IncludeEvents bool
-		Status        string
-		Run           string
-	}
-
 	tests := []struct {
-		name   string
-		fields fields
-		want   string
+		name        string
+		queryParams *QueryParam
+		want        string
 	}{
 		{
-			name:   "empty",
-			fields: fields{},
-			want:   "",
+			name:        "empty",
+			queryParams: &QueryParam{},
+			want:        "",
 		},
 		{
-			name:   "single field",
-			fields: fields{Status: "foo"},
-			want:   "status=foo",
+			name:        "single field",
+			queryParams: &QueryParam{Status: "foo"},
+			want:        "status=foo",
 		},
 		{
-			name:   "multiple fields",
-			fields: fields{Status: "foo", Run: "bar"},
-			want:   "run=bar&status=foo",
+			name:        "multiple fields",
+			queryParams: &QueryParam{Status: "foo", Run: "bar"},
+			want:        "run=bar&status=foo",
 		},
 		{
-			name:   "multiple fields with include events",
-			fields: fields{Status: "foo", Run: "bar", IncludeEvents: true},
-			want:   "include=events&run=bar&status=foo",
+			name:        "multiple fields with include events",
+			queryParams: &QueryParam{Status: "foo", Run: "bar", IncludeEvents: true},
+			want:        "include=events&run=bar&status=foo",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q := &QueryParam{
-				IncludeEvents: tt.fields.IncludeEvents,
-				Status:        tt.fields.Status,
-				Run:           tt.fields.Run,
-			}
-			assert.Equalf(t, tt.want, q.Encode(), "Encode()")
+			assert.Equalf(t, tt.want, tt.queryParams.Encode(), "Encode()")
 		})
 	}
 }
 
 func Test_StatusClient_Overall_BadResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := fmt.Fprintf(w, "foo")
+		_, err := fmt.Fprint(w, "foo")
 		assert.NoError(t, err)
 	}))
 
@@ -362,7 +351,7 @@ func Test_StatusClient_Overall(t *testing.T) {
 	assert.NoError(t, err)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err = fmt.Fprintf(w, string(bytes))
+		_, err = fmt.Fprint(w, string(bytes))
 		assert.NoError(t, err)
 	}))
 
@@ -389,7 +378,7 @@ func Test_WaitForAPI(t *testing.T) {
 	assert.NoError(t, err)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err = fmt.Fprintf(w, string(bytes))
+		_, err = fmt.Fprint(w, string(bytes))
 		assert.NoError(t, err)
 	}))
 
