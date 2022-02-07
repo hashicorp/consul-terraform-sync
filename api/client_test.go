@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -375,4 +376,46 @@ func Test_StatusClient_Overall(t *testing.T) {
 	o, err := c.Status().Overall()
 	assert.Nil(t, err)
 	assert.Equal(t, expectedOverallStatus, o)
+}
+
+func Test_WaitForAPI(t *testing.T) {
+	expectedOverallStatus := OverallStatus{TaskSummary: TaskSummary{
+		Status:  StatusSummary{Successful: 1},
+		Enabled: EnabledSummary{True: 2},
+	}}
+
+	bytes, err := json.Marshal(&expectedOverallStatus)
+	assert.NotEmpty(t, bytes)
+	assert.NoError(t, err)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err = fmt.Fprintf(w, string(bytes))
+		assert.NoError(t, err)
+	}))
+
+	defer server.Close()
+
+	clientConfig := BaseClientConfig()
+	clientConfig.URL = server.URL
+	c, err := NewClient(clientConfig, nil)
+	assert.NoError(t, err)
+
+	err = c.WaitForAPI(100 * time.Millisecond)
+	assert.NoError(t, err)
+}
+
+func Test_WaitForAPI_Timeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// do nothing
+	}))
+
+	defer server.Close()
+
+	clientConfig := BaseClientConfig()
+	clientConfig.URL = server.URL
+	c, err := NewClient(clientConfig, nil)
+	assert.NoError(t, err)
+
+	err = c.WaitForAPI(100 * time.Millisecond)
+	assert.Error(t, err)
 }
