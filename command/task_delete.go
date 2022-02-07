@@ -50,7 +50,7 @@ Example:
   $ consul-terraform-sync task delete my_task
 	==> Do you want to delete 'my_task'?
 		- This action cannot be undone.
-	Only 'yes' will be accepted to approve.
+	Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject.
 
 	Enter a value: yes
 
@@ -81,7 +81,8 @@ func (c *taskDeleteCommand) Run(args []string) int {
 
 	client, err := c.meta.taskLifecycleClient()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error: unable to create client for '%s'", taskName))
+		c.UI.Error(errCreatingClient)
+		c.UI.Output(fmt.Sprintf("client could not be created for '%s'", taskName))
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 

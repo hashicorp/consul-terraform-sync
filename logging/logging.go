@@ -87,6 +87,10 @@ func NewNullLogger() Logger {
 	return hclog.NewNullLogger()
 }
 
+func DisableLogging() {
+	hclog.Default().SetLevel(hclog.Off)
+}
+
 // WithContext stores a Logger and any provided arguments into the provided context
 // to access this logger, use the FromContext function
 func WithContext(ctx context.Context, logger Logger, args ...interface{}) context.Context {

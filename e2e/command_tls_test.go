@@ -6,11 +6,12 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/command"
@@ -651,7 +652,7 @@ func getTestCommands(taskFilePath string) []testCommand {
 		{
 			name:            "task delete",
 			subcmd:          []string{"task", "delete", "-auto-approve"},
-			outputContains:  "does not exist or has not been initialized yet",
+			outputContains:  "404 Not Found:",
 			arg:             "task-no-exist",
 			isErrorExpected: true, // Accept error since we can only delete once, just want to test a connection was successful
 		},

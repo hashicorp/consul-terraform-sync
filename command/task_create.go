@@ -61,7 +61,7 @@ Example:
        - Consul Terraform Sync cannot guarantee that these exact actions will be
 	     performed if monitored services have changed.
 
-      Only 'yes' will be accepted to approve.
+      Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject.
 
   Enter a value: yes
   
@@ -87,7 +87,8 @@ func (c *taskCreateCommand) Run(args []string) int {
 
 	// Check that a task file was provided
 	if len(taskFile) == 0 {
-		c.UI.Error("Error: no task file provided")
+		c.UI.Error(errCreatingRequest)
+		c.UI.Output("no task file provided")
 		help := fmt.Sprintf("For additional help try 'consul-terraform-sync %s --help'",
 			cmdTaskCreateName)
 		help = wordwrap.WrapString(help, width)
@@ -97,19 +98,11 @@ func (c *taskCreateCommand) Run(args []string) int {
 		return ExitCodeRequiredFlagsError
 	}
 
-	client, err := c.meta.taskLifecycleClient()
-	if err != nil {
-		c.UI.Error("Error: unable to create client")
-		msg := wordwrap.WrapString(err.Error(), uint(78))
-		c.UI.Output(msg)
-
-		return ExitCodeError
-	}
-
 	// Build a CTS config and use the config.Tasks object only
 	cfg, err := config.BuildConfig([]string{taskFile})
 	if err != nil {
-		c.UI.Error("Error: unable to read task file")
+		c.UI.Error(errCreatingRequest)
+		c.UI.Output("unable to read task file")
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 
@@ -120,13 +113,15 @@ func (c *taskCreateCommand) Run(args []string) int {
 	// Check that we have exactly 1 task in the task config return
 	l := len(taskConfigs)
 	if l > 1 {
-		c.UI.Error(fmt.Sprintf("Error: task file %s cannot contain more "+
+		c.UI.Error(errCreatingRequest)
+		c.UI.Output(fmt.Sprintf("task file %s cannot contain more "+
 			"than 1 task, contains %d tasks", taskFile, l))
 		return ExitCodeError
 	}
 
 	if l == 0 {
-		c.UI.Error(fmt.Sprintf("Error: task file %s does not contain a task, "+
+		c.UI.Error(errCreatingRequest)
+		c.UI.Output(fmt.Sprintf("task file %s does not contain a task, "+
 			"must contain at least one task", taskFile))
 		return ExitCodeError
 	}
@@ -134,18 +129,28 @@ func (c *taskCreateCommand) Run(args []string) int {
 	taskConfig := taskConfigs[0]
 	taskName := *taskConfig.Name
 
-	// First inspect the plan
-	c.UI.Info(fmt.Sprintf("Inspecting changes to resource if creating task '%s'...\n", taskName))
-	c.UI.Output("Generating plan that Consul Terraform Sync will use Terraform to execute\n")
-
 	taskReq, err := api.TaskRequestFromTaskConfig(*taskConfig)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error: unable to convert task file %s to request", taskFile))
+		c.UI.Error(errCreatingRequest)
+		c.UI.Output(fmt.Sprintf("task %s is invalid", taskFile))
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 
 		return ExitCodeError
 	}
+
+	client, err := c.meta.taskLifecycleClient()
+	if err != nil {
+		c.UI.Error(errCreatingClient)
+		msg := wordwrap.WrapString(err.Error(), uint(78))
+		c.UI.Output(msg)
+
+		return ExitCodeError
+	}
+
+	// First inspect the plan
+	c.UI.Info(fmt.Sprintf("Inspecting changes to resource if creating task '%s'...\n", taskName))
+	c.UI.Output("Generating plan that Consul Terraform Sync will use Terraform to execute\n")
 
 	taskResp, err := client.CreateTask(context.Background(), api.RunOptionInspect, taskReq)
 
@@ -158,8 +163,9 @@ func (c *taskCreateCommand) Run(args []string) int {
 	}
 
 	c.UI.Output(fmt.Sprintf("Request ID: %s", taskResp.RequestId))
-	b, _ := json.MarshalIndent(taskResp.Task, "    ", "  ")
-	c.UI.Output(fmt.Sprintf("Task: %s\n", string(b)))
+	b, _ := json.MarshalIndent(taskReq, "    ", "  ")
+	c.UI.Output("Request Payload:")
+	c.UI.Output(fmt.Sprintf("%s\n", string(b)))
 	c.UI.Output(fmt.Sprintf("Plan: \n%s", *taskResp.Run.Plan))
 	if taskResp.Run.TfcRunUrl != nil {
 		c.UI.Output(fmt.Sprintf("Terraform Cloud Run URL: %s\n", *taskResp.Run.TfcRunUrl))
@@ -171,12 +177,15 @@ func (c *taskCreateCommand) Run(args []string) int {
 		}
 	}
 
+	c.UI.Info(fmt.Sprintf("Creating task %s...", taskName))
+	c.UI.Output("Note: this can take some time depending on the module size.")
+	c.UI.Output("terminating this process will not stop task creation, see CTS logs for more details\n")
+
 	// Plan approved, create new task and run now
 	taskResp, err = client.CreateTask(context.Background(), api.RunOptionNow, taskReq)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to create '%s'", taskName))
-
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 

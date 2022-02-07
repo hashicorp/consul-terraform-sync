@@ -156,7 +156,7 @@ func (d *TaskLifecycleHTTPClient) Do(req *http.Request) (*http.Response, error) 
 			if err = decoder.Decode(&errResp); err != nil {
 				return nil, err
 			}
-			errMsg = fmt.Sprintf("%s, Request ID: %s", errResp.Error.Message, errResp.RequestId)
+			errMsg = fmt.Sprintf("%s, see logs for more details (Request ID: %s)", errResp.Error.Message, errResp.RequestId)
 		} else {
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -166,10 +166,9 @@ func (d *TaskLifecycleHTTPClient) Do(req *http.Request) (*http.Response, error) 
 		}
 
 		if errMsg == "" {
-			return nil, fmt.Errorf("request returned %d status code", resp.StatusCode)
+			return nil, errors.New(resp.Status)
 		} else {
-			return nil, fmt.Errorf("request returned %d status code with error: %s",
-				resp.StatusCode, errMsg)
+			return nil, fmt.Errorf("%s: %s", resp.Status, errMsg)
 		}
 	}
 

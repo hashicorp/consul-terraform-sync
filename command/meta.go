@@ -178,7 +178,7 @@ func (m *meta) taskLifecycleClient() (*api.TaskLifecycleClient, error) {
 // approved a given action. If the user did not approve (false is returned) or
 // if there is an error in processing the user input, an exit code is provided.
 func (m *meta) requestUserApproval(taskName, action string) (int, bool) {
-	m.UI.Output("Only 'yes' will be accepted to approve.\n")
+	m.UI.Output("Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject\n")
 	v, err := m.UI.Ask("Enter a value:")
 	m.UI.Output("")
 
@@ -198,10 +198,7 @@ func (m *meta) requestUserApproval(taskName, action string) (int, bool) {
 // if the user approved.
 func (m *meta) requestUserApprovalEnable(taskName string) (int, bool) {
 	m.UI.Info("Enabling the task will perform the actions described above.")
-	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
-	m.UI.Output(" - This action cannot be undone.")
-	m.UI.Output(" - Consul-Terraform-Sync cannot guarantee Terraform will perform")
-	m.UI.Output("   these exact actions if monitored services have changed.\n")
+	m.terraformApprovalWarning(taskName)
 	return m.requestUserApproval(taskName, "enabling")
 }
 
@@ -219,11 +216,16 @@ func (m *meta) requestUserApprovalDelete(taskName string) (int, bool) {
 // if the user approved.
 func (m *meta) requestUserApprovalCreate(taskName string) (int, bool) {
 	m.UI.Info("Creating the task will perform the actions described above.")
+	m.terraformApprovalWarning(taskName)
+	return m.requestUserApproval(taskName, "creating")
+}
+
+// terraformApprovalWarning prints out a standard warning for approving a terraform plan
+func (m *meta) terraformApprovalWarning(taskName string) {
 	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
 	m.UI.Output(" - This action cannot be undone.")
 	m.UI.Output(" - Consul-Terraform-Sync cannot guarantee Terraform will perform")
 	m.UI.Output("   these exact actions if monitored services have changed.\n")
-	return m.requestUserApproval(taskName, "creating")
 }
 
 // Returns true if the flags have been parsed

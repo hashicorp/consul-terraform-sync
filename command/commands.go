@@ -3,12 +3,21 @@ package command
 import (
 	"os"
 
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/mitchellh/cli"
+)
+
+const (
+	errCreatingRequest = "Error: unable to create request"
+	errCreatingClient  = "Error: unable to create client"
 )
 
 // Commands returns the mapping of CLI commands for CTS. The meta
 // parameter lets you set meta options for all commands.
 func Commands() map[string]cli.CommandFactory {
+	// Disable logging, we want to control what is output
+	logging.DisableLogging()
+
 	m := meta{
 		UI: &cli.PrefixedUi{
 			InfoPrefix:   "==> ",
