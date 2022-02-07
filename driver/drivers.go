@@ -179,8 +179,8 @@ func (d *Drivers) MarkForDeletion(name string) {
 }
 
 func (d *Drivers) IsMarkedForDeletion(name string) bool {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	mark, ok := d.deletion[name]
 	if !ok {
