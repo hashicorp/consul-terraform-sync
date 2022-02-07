@@ -76,6 +76,15 @@ test-benchmarks:
 	@go test -json ./e2e/benchmarks -timeout 2h -bench=. -tags e2e
 .PHONY: test-benchmarks
 
+# compile-weekly-tests is a check that our weekly-runned tests can compile. this
+# will be called on a more frequent cadence than weekly
+compile-weekly-tests:
+	@echo "==> Running compile check for weekly tests for ${NAME}"
+	@go test -run TestCompatibility_Compile ./e2e/compatibility -timeout 5m -tags '$(GOTAGS) e2e'
+	@go test -run TestBenchmarks_Compile ./e2e/benchmarks -timeout 5m -tags '$(GOTAGS) e2e'
+	@go test -run TestVaultIntegration_Compile ./... -timeout=5m -tags '$(GOTAGS) integration vault'
+.PHONY: compile-weekly-tests
+
 # delete any cruft
 clean:
 	rm -f ./e2e/terraform
