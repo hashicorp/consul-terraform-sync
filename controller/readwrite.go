@@ -383,13 +383,14 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 		return nil, err
 	}
 
-	timeout := time.After(5 * time.Minute)
+	timeout := time.After(1 * time.Minute)
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case <-timeout:
-			return nil, fmt.Errorf("timed out rendering template for task '%s'", taskName)
+			logger.Error("timed out rendering template")
+			return nil, fmt.Errorf("error initializing task")
 		default:
 		}
 		ok, err := d.RenderTemplate(ctx)
@@ -401,7 +402,7 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 			// Once template rendering is finished, return
 			return d, nil
 		}
-		time.Sleep(250 * time.Millisecond) // waiting because cannot block on a dependency change
+		time.Sleep(50 * time.Millisecond) // waiting because cannot block on a dependency change
 	}
 }
 
