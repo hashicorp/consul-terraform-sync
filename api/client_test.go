@@ -109,14 +109,27 @@ func Test_Client_Task(t *testing.T) {
 }
 
 func Test_NewClient(t *testing.T) {
-	clientConfig := BaseClientConfig()
-	c, err := NewClient(clientConfig, nil)
+	t.Run("no TLS", func(t *testing.T) {
+		clientConfig := BaseClientConfig()
+		c, err := NewClient(clientConfig, nil)
 
-	assert.NotNil(t, c)
-	assert.NoError(t, err)
+		assert.NotNil(t, c)
+		assert.NoError(t, err)
+	})
+
+	t.Run("with TLS", func(t *testing.T) {
+		clientConfig := BaseClientConfig()
+		clientConfig.TLSConfig.ClientCert = "../testutils/certs/localhost_cert.pem"
+		clientConfig.TLSConfig.ClientKey = "../testutils/certs/localhost_key.pem"
+
+		c, err := NewClient(clientConfig, nil)
+
+		assert.NotNil(t, c)
+		assert.NoError(t, err)
+	})
 }
 
-func Test_NewClient_Error_URL(t *testing.T) {
+func Test_NewClient_Error(t *testing.T) {
 	t.Run("invalid scheme", func(t *testing.T) {
 		clientConfig := &ClientConfig{URL: "foo://bar"}
 		c, err := NewClient(clientConfig, nil)
@@ -140,20 +153,7 @@ func Test_NewClient_Error_URL(t *testing.T) {
 		assert.Nil(t, c)
 		assert.Error(t, err)
 	})
-}
 
-func Test_NewClient_TLS(t *testing.T) {
-	clientConfig := BaseClientConfig()
-	clientConfig.TLSConfig.ClientCert = "../testutils/certs/localhost_cert.pem"
-	clientConfig.TLSConfig.ClientKey = "../testutils/certs/localhost_key.pem"
-
-	c, err := NewClient(clientConfig, nil)
-
-	assert.NotNil(t, c)
-	assert.NoError(t, err)
-}
-
-func Test_NewClient_Error_TLS(t *testing.T) {
 	t.Run("missing cert", func(t *testing.T) {
 		clientConfig := BaseClientConfig()
 		clientConfig.TLSConfig.ClientCert = "../testutils/certs/localhost_cert.pem"
