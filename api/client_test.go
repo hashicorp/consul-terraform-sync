@@ -115,28 +115,105 @@ func Test_NewClient(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func Test_NewClient_InvalidScheme(t *testing.T) {
-	clientConfig := &ClientConfig{URL: "foo://bar"}
-	c, err := NewClient(clientConfig, nil)
+func Test_NewClient_Error_URL(t *testing.T) {
+	t.Run("invalid scheme", func(t *testing.T) {
+		clientConfig := &ClientConfig{URL: "foo://bar"}
+		c, err := NewClient(clientConfig, nil)
 
-	assert.Nil(t, c)
-	assert.Error(t, err)
+		assert.Nil(t, c)
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid URL", func(t *testing.T) {
+		clientConfig := &ClientConfig{URL: "invalid URL"}
+		c, err := NewClient(clientConfig, nil)
+
+		assert.Nil(t, c)
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid host", func(t *testing.T) {
+		clientConfig := &ClientConfig{URL: "http://"}
+		c, err := NewClient(clientConfig, nil)
+
+		assert.Nil(t, c)
+		assert.Error(t, err)
+	})
 }
 
-func Test_NewClient_InvalidURL(t *testing.T) {
-	clientConfig := &ClientConfig{URL: "invalid URL"}
+func Test_NewClient_TLS(t *testing.T) {
+	clientConfig := BaseClientConfig()
+	clientConfig.TLSConfig.ClientCert = "../testutils/certs/localhost_cert.pem"
+	clientConfig.TLSConfig.ClientKey = "../testutils/certs/localhost_key.pem"
+
 	c, err := NewClient(clientConfig, nil)
 
-	assert.Nil(t, c)
-	assert.Error(t, err)
+	assert.NotNil(t, c)
+	assert.NoError(t, err)
 }
 
-func Test_NewClient_MissingHost(t *testing.T) {
-	clientConfig := &ClientConfig{URL: "http://"}
-	c, err := NewClient(clientConfig, nil)
+func Test_NewClient_Error_TLS(t *testing.T) {
+	t.Run("missing cert", func(t *testing.T) {
+		clientConfig := BaseClientConfig()
+		clientConfig.TLSConfig.ClientCert = "../testutils/certs/localhost_cert.pem"
 
-	assert.Nil(t, c)
-	assert.Error(t, err)
+		c, err := NewClient(clientConfig, nil)
+
+		assert.Nil(t, c)
+		assert.Error(t, err)
+	})
+
+	t.Run("missing key", func(t *testing.T) {
+		clientConfig := BaseClientConfig()
+		clientConfig.TLSConfig.ClientKey = "../testutils/certs/localhost_key.pem"
+
+		c, err := NewClient(clientConfig, nil)
+
+		assert.Nil(t, c)
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid cert", func(t *testing.T) {
+		clientConfig := BaseClientConfig()
+		clientConfig.TLSConfig.ClientCert = "foo"
+		clientConfig.TLSConfig.ClientKey = "../testutils/certs/localhost_key.pem"
+
+		c, err := NewClient(clientConfig, nil)
+
+		assert.Nil(t, c)
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid key", func(t *testing.T) {
+		clientConfig := BaseClientConfig()
+		clientConfig.TLSConfig.ClientCert = "../testutils/certs/localhost_cert.pem"
+		clientConfig.TLSConfig.ClientKey = "bar"
+
+		c, err := NewClient(clientConfig, nil)
+
+		assert.Nil(t, c)
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid CA cert", func(t *testing.T) {
+		clientConfig := BaseClientConfig()
+		clientConfig.TLSConfig.CACert = "foo"
+
+		c, err := NewClient(clientConfig, nil)
+
+		assert.Nil(t, c)
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid CA path", func(t *testing.T) {
+		clientConfig := BaseClientConfig()
+		clientConfig.TLSConfig.CAPath = "bar"
+
+		c, err := NewClient(clientConfig, nil)
+
+		assert.Nil(t, c)
+		assert.Error(t, err)
+	})
 }
 
 func Test_Client_Status(t *testing.T) {
