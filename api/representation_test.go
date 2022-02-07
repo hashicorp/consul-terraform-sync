@@ -22,9 +22,14 @@ const (
 		"providers": [
 			"local"
 		],
-		"services": [
-			"api"
-		],
+        "condition": {
+            "services": {
+                "names": [
+                    "web",
+                    "api"
+                ]
+            }
+        },
 		"module": "./example-module",
 		"variable_files": [],
 		"buffer_period": {
@@ -44,9 +49,10 @@ func TestTaskRequest_String(t *testing.T) {
 
 	actual := fmt.Sprintf("%s", req)
 	expected := `{"task":{"buffer_period":{"enabled":true,"max":"0s","min":"0s"},` +
+		`"condition":{"services":{"names":["web","api"]}},` +
 		`"description":"Writes the service name, id, and IP address to a file",` +
 		`"enabled":true,"module":"./example-module","name":"new-example-task",` +
-		`"providers":["local"],"services":["api"]}}`
+		`"providers":["local"]}}`
 	require.Equal(t, expected, actual)
 }
 
@@ -158,7 +164,6 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 				Enabled:     config.Bool(true),
 				Condition:   &oapigen.Condition{},
 				ModuleInput: &oapigen.ModuleInput{},
-				Services:    &[]string{"api", "web"},
 				Providers:   &[]string{"test-provider-1", "test-provider-2"},
 			},
 		},
@@ -385,15 +390,23 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "minimum_required_only",
 			request: &TaskRequest{
 				Task: oapigen.Task{
-					Name:     "test-name",
-					Module:   "path",
-					Services: &[]string{"api", "web"},
+					Name:   "test-name",
+					Module: "path",
+					Condition: &oapigen.Condition{
+						Services: &oapigen.ServicesCondition{
+							Names: &[]string{"api", "web"},
+						},
+					},
 				},
 			},
 			taskConfigExpected: config.TaskConfig{
-				Name:     config.String("test-name"),
-				Services: []string{"api", "web"},
-				Module:   config.String("path"),
+				Name: config.String("test-name"),
+				Condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Names: []string{"api", "web"},
+					},
+				},
+				Module: config.String("path"),
 			},
 		},
 		{
@@ -402,10 +415,14 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Task: oapigen.Task{
 					Description: config.String("test-description"),
 					Name:        "test-name",
-					Services:    &[]string{"api", "web"},
-					Providers:   &[]string{"test-provider-1", "test-provider-2"},
-					Module:      "path",
-					Version:     config.String("test-version"),
+					Condition: &oapigen.Condition{
+						Services: &oapigen.ServicesCondition{
+							Names: &[]string{"api", "web"},
+						},
+					},
+					Providers: &[]string{"test-provider-1", "test-provider-2"},
+					Module:    "path",
+					Version:   config.String("test-version"),
 					BufferPeriod: &oapigen.BufferPeriod{
 						Enabled: config.Bool(true),
 						Max:     config.String("5m"),
@@ -418,9 +435,13 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				Description: config.String("test-description"),
 				Name:        config.String("test-name"),
 				Providers:   []string{"test-provider-1", "test-provider-2"},
-				Services:    []string{"api", "web"},
-				Module:      config.String("path"),
-				Version:     config.String("test-version"),
+				Condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Names: []string{"api", "web"},
+					},
+				},
+				Module:  config.String("path"),
+				Version: config.String("test-version"),
 				BufferPeriod: &config.BufferPeriodConfig{
 					Enabled: config.Bool(true),
 					Max:     config.TimeDuration(5 * time.Minute),
@@ -526,9 +547,13 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "with_consul_kv_condition",
 			request: &TaskRequest{
 				Task: oapigen.Task{
-					Name:     "task",
-					Module:   "path",
-					Services: &[]string{"api", "web"},
+					Name:   "task",
+					Module: "path",
+					ModuleInput: &oapigen.ModuleInput{
+						Services: &oapigen.ServicesModuleInput{
+							Names: &[]string{"api", "web"},
+						},
+					},
 					Condition: &oapigen.Condition{
 						ConsulKv: &oapigen.ConsulKVCondition{
 							Path:             "key-path",
@@ -541,9 +566,15 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 				},
 			},
 			taskConfigExpected: config.TaskConfig{
-				Name:     config.String("task"),
-				Services: []string{"api", "web"},
-				Module:   config.String("path"),
+				Name: config.String("task"),
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names: []string{"api", "web"},
+						},
+					},
+				},
+				Module: config.String("path"),
 				Condition: &config.ConsulKVConditionConfig{
 					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 						Path:       config.String("key-path"),
@@ -559,17 +590,27 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 			name: "with_schedule_condition",
 			request: &TaskRequest{
 				Task: oapigen.Task{
-					Name:     "task",
-					Module:   "path",
-					Services: &[]string{"api", "web"},
+					Name:   "task",
+					Module: "path",
+					ModuleInput: &oapigen.ModuleInput{
+						Services: &oapigen.ServicesModuleInput{
+							Names: &[]string{"api", "web"},
+						},
+					},
 					Condition: &oapigen.Condition{
 						Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
 					},
 				},
 			},
 			taskConfigExpected: config.TaskConfig{
-				Name:      config.String("task"),
-				Services:  []string{"api", "web"},
+				Name: config.String("task"),
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names: []string{"api", "web"},
+						},
+					},
+				},
 				Module:    config.String("path"),
 				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
 			},
@@ -675,8 +716,13 @@ func TestTaskRequest_ToRequestTaskConfig_Error(t *testing.T) {
 			name: "invalid conversion",
 			request: &TaskRequest{
 				Task: oapigen.Task{
-					Name:     "test-name",
-					Services: &[]string{"api", "web"},
+					Name: "test-name",
+					Condition: &oapigen.Condition{
+						Services: &oapigen.ServicesCondition{
+							Names:            &[]string{"api", "web"},
+							UseAsModuleInput: config.Bool(false),
+						},
+					},
 					BufferPeriod: &oapigen.BufferPeriod{
 						Max: config.String("invalid"),
 					},

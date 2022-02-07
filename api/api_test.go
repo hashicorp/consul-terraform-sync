@@ -87,22 +87,32 @@ func TestServe(t *testing.T) {
 	"task": {
 		"name": "task_b",
 		"module": "module",
-		"services": ["api"],
+        "condition": {
+            "services": {
+                "names": [
+                    "api"
+                ]
+            }
+        },
 		"enabled": true
 	}
 }`,
 			func(ctrl *mocks.Server) {
 				taskConf := config.TaskConfig{
-					Name:     config.String("task_b"),
-					Enabled:  config.Bool(true),
-					Module:   config.String("module"),
-					Services: []string{"api"},
+					Name:    config.String("task_b"),
+					Enabled: config.Bool(true),
+					Module:  config.String("module"),
+					Condition: &config.ServicesConditionConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names: []string{"api"},
+						},
+					},
 				}
 				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
 				ctrl.On("TaskCreate", mock.Anything, taskConf).Return(taskConf, nil)
 			},
 			http.StatusCreated,
-			`{"task":{"enabled":true,"module":"module","name":"task_b","services":["api"]}}
+			`{"task":{"condition":{"services":{"cts_user_defined_meta":{},"names":["api"]}},"enabled":true,"module":"module","name":"task_b"}}
 `,
 		}, {
 			"delete task",
