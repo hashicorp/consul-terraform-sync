@@ -214,19 +214,32 @@ func TestServer_TaskDelete(t *testing.T) {
 		store:    event.NewStore(),
 		deleteCh: make(chan string),
 	}
-	drivers := driver.NewDrivers()
-	taskName := "delete_task"
 
-	ctrl.baseController.drivers = drivers
-	go ctrl.TaskDelete(ctx, taskName)
-	select {
-	case n := <-ctrl.deleteCh:
-		assert.Equal(t, taskName, n)
-	case <-time.After(1 * time.Second):
-		t.Log("delete channel did not receive message")
-		t.Fail()
-	}
-	assert.True(t, ctrl.drivers.IsMarkedForDeletion(taskName))
+	t.Run("happy path", func(t *testing.T) {
+		drivers := driver.NewDrivers()
+		taskName := "delete_task"
+
+		ctrl.baseController.drivers = drivers
+		go ctrl.TaskDelete(ctx, taskName)
+		select {
+		case n := <-ctrl.deleteCh:
+			assert.Equal(t, taskName, n)
+		case <-time.After(1 * time.Second):
+			t.Log("delete channel did not receive message")
+			t.Fail()
+		}
+		assert.True(t, ctrl.drivers.IsMarkedForDeletion(taskName))
+	})
+
+	t.Run("already marked for deletion", func(t *testing.T) {
+		drivers := driver.NewDrivers()
+		taskName := "delete_task"
+		ctrl.baseController.drivers = drivers
+		ctrl.drivers.MarkForDeletion(taskName)
+		err := ctrl.TaskDelete(ctx, taskName)
+		assert.NoError(t, err)
+		assert.True(t, ctrl.drivers.IsMarkedForDeletion(taskName))
+	})
 }
 
 func TestServer_TaskUpdate(t *testing.T) {

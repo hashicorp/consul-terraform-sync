@@ -495,7 +495,7 @@ WAIT:
 		return err
 	}
 	rw.store.Delete(name)
-	rw.logger.Trace("task deleted", taskNameLogKey, name)
+	rw.logger.Debug("task deleted", taskNameLogKey, name)
 	return nil
 }
 

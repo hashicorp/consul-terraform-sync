@@ -92,9 +92,13 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 // TaskDelete marks a task for deletion
 func (rw *ReadWrite) TaskDelete(ctx context.Context, name string) error {
 	logger := rw.logger.With(taskNameLogKey, name)
+	if rw.drivers.IsMarkedForDeletion(name) {
+		logger.Debug("task is already marked for deletion")
+		return nil
+	}
 	rw.drivers.MarkForDeletion(name)
 	rw.deleteCh <- name
-	logger.Trace("task marked for deletion")
+	logger.Debug("task marked for deletion")
 	return nil
 }
 
