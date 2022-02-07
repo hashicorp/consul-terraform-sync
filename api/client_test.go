@@ -129,31 +129,36 @@ func Test_NewClient(t *testing.T) {
 	})
 }
 
-func Test_NewClient_Error(t *testing.T) {
-	t.Run("invalid scheme", func(t *testing.T) {
-		clientConfig := &ClientConfig{URL: "foo://bar"}
-		c, err := NewClient(clientConfig, nil)
+func Test_NewClient_Error_URL(t *testing.T) {
+	tests := []struct {
+		name string
+		cc   *ClientConfig
+	}{
+		{
+			name: "invalid scheme",
+			cc:   &ClientConfig{URL: "foo://bar"},
+		},
+		{
+			name: "invalid URL",
+			cc:   &ClientConfig{URL: "invalid URL"},
+		},
+		{
+			name: "invalid host",
+			cc:   &ClientConfig{URL: "http://"},
+		},
+	}
 
-		assert.Nil(t, c)
-		assert.Error(t, err)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, err := NewClient(tt.cc, nil)
 
-	t.Run("invalid URL", func(t *testing.T) {
-		clientConfig := &ClientConfig{URL: "invalid URL"}
-		c, err := NewClient(clientConfig, nil)
+			assert.Nil(t, c)
+			assert.Error(t, err)
+		})
+	}
+}
 
-		assert.Nil(t, c)
-		assert.Error(t, err)
-	})
-
-	t.Run("invalid host", func(t *testing.T) {
-		clientConfig := &ClientConfig{URL: "http://"}
-		c, err := NewClient(clientConfig, nil)
-
-		assert.Nil(t, c)
-		assert.Error(t, err)
-	})
-
+func Test_NewClient_Error_TLS(t *testing.T) {
 	t.Run("missing key", func(t *testing.T) {
 		clientConfig := BaseClientConfig()
 		clientConfig.TLSConfig.ClientCert = "../testutils/certs/localhost_cert.pem"
