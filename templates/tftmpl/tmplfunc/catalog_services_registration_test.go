@@ -126,7 +126,7 @@ func TestCatalogServicesRegistrationQuery_String(t *testing.T) {
 		{
 			"datacenter",
 			[]string{"dc=dc1"},
-			"catalog.services.registration(@dc1)",
+			"catalog.services.registration(dc=dc1)",
 		},
 		{
 			"namespace",
@@ -141,7 +141,7 @@ func TestCatalogServicesRegistrationQuery_String(t *testing.T) {
 		{
 			"multiple",
 			[]string{"node-meta=k:v", "dc=dc1", "ns=namespace", "regexp=.*"},
-			"catalog.services.registration(@dc1&node-meta=k:v&ns=namespace&regexp=.*)",
+			"catalog.services.registration(dc=dc1&node-meta=k:v&ns=namespace&regexp=.*)",
 		},
 	}
 

@@ -315,6 +315,42 @@ task {
 	validateModuleFile(t, true, false, apiResourcesPath, "db_tags", "")
 }
 
+func TestCondition_CatalogServices_InvalidQueries(t *testing.T) {
+	setParallelism(t)
+	config := `task {
+		name = "%s"
+		module = "./test_modules/null_resource"
+		condition "catalog-services" {
+			regexp = ".*"
+			%s
+		}
+	}`
+
+	cases := []struct {
+		name        string
+		queryConfig string
+		errMsg      string
+	}{
+		{
+			"datacenter",
+			`datacenter = "foo"`,
+			"No path to datacenter",
+		},
+		{
+			"namespace_with_oss_consul",
+			`namespace = "foo"`,
+			`Invalid query parameter: "ns"`,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc // rebind tc into this lexical scope for parallel use
+		taskName := "condition_catalog_services_invalid_" + tc.name
+		taskConfig := fmt.Sprintf(config, taskName, tc.queryConfig)
+		testInvalidQueries(t, tc.name, taskName, taskConfig, tc.errMsg)
+	}
+}
+
 func testCatalogServicesRegistration(t *testing.T, taskConf, taskName,
 	tempDirName, resource string, useAsModuleInput bool) {
 

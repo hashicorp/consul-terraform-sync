@@ -54,4 +54,5 @@ type Watcher interface {
 	Recaller(hcat.Notifier) hcat.Recaller
 	Register(ns ...hcat.Notifier) error
 	Deregister(ns ...hcat.Notifier)
+	Clients() hcat.Looker
 }

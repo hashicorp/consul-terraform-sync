@@ -5,14 +5,12 @@ package e2e
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -370,69 +368,40 @@ func TestConditionConsulKV_SuppressTriggers(t *testing.T) {
 	}
 }
 
-// TestConditionConsul_namespace_oss tests conditions with configured namespace
-// meanwhile connecting with Consul OSS.
-func TestConditionConsul_namespace_oss(t *testing.T) {
+func TestConditionConsulKV_InvalidQueries(t *testing.T) {
 	setParallelism(t)
-
-	srv := newTestConsulServer(t)
-	defer srv.Stop()
-
-	testCases := []struct {
-		name string
-		task string
+	config := `task {
+		name = "%s"
+		module = "./test_modules/null_resource"
+		module_input "services" {
+			names  = ["api, web"]
+		}
+		condition "consul-kv" {
+			path = "foo"
+			%s
+		}
+	}`
+	cases := []struct {
+		name        string
+		queryConfig string
+		errMsg      string // client does not return detailed error message for Consul KV
 	}{
 		{
-			name: "catalog-services",
-			task: `
-task {
-  name = "catalog-services"
-  module = "./test_modules/null_resource"
-  condition "catalog-services" {
-    regexp = ".*"
-    namespace = "dne"
-  }
-}`,
-		}, {
-			name: "consul-kv",
-			task: `
-task {
-  name = "consul-kv"
-  module = "./test_modules/null_resource"
-  services = ["foobar"]
-  condition "consul-kv" {
-    path = "foo"
-    namespace = "dne"
-  }
-}`,
+			"datacenter",
+			`datacenter = "foo"`,
+			"Unexpected response code: 500",
+		},
+		{
+			"namespace_with_oss_consul",
+			`namespace = "foo"`,
+			"Unexpected response code: 400",
 		},
 	}
 
-	port := testutils.FreePort(t)
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tempDir := fmt.Sprintf("%snamespace_oss_%s", tempDirPrefix, tc.name)
-			cleanup := testutils.MakeTempDir(t, tempDir)
-			defer cleanup()
-
-			config := baseConfig(tempDir).appendConsulBlock(srv).appendString(tc.task).
-				appendString(fmt.Sprintf("port = %d", port))
-			configPath := filepath.Join(tempDir, configFile)
-			config.write(t, configPath)
-
-			errCh := make(chan error, 1)
-			cmd := exec.Command("consul-terraform-sync", "--once", fmt.Sprintf("--config-file=%s", configPath))
-			go func() {
-				errCh <- cmd.Run()
-			}()
-
-			timeout := time.After(defaultWaitForAPI)
-			select {
-			case err := <-errCh:
-				assert.Error(t, err, "namespace query should error and cause once-mode to not stop successfully")
-			case <-timeout:
-				t.Fatalf("expected CTS to error during once mode with first 400 API response from Consul")
-			}
-		})
+	for _, tc := range cases {
+		tc := tc // rebind tc into this lexical scope for parallel use
+		taskName := "condition_consul_kv_invalid_" + tc.name
+		taskConfig := fmt.Sprintf(config, taskName, tc.queryConfig)
+		testInvalidQueries(t, tc.name, taskName, taskConfig, tc.errMsg)
 	}
 }
