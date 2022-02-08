@@ -404,7 +404,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			input: "yes\n",
@@ -436,7 +438,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/with_tfvars_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled        = true
   variable_files = ["%s","%s"]
 }`, taskName, filenameVarsFileName, objectVarsFileName),
@@ -457,7 +461,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			outputContains: []string{
@@ -476,7 +482,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			input: "no\n",
@@ -497,7 +505,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  condition "services" {
+    names = ["api"]
+  }
   enabled = true
 }`, dbTaskName),
 			input: "no\n",
@@ -518,7 +528,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }
 task {
@@ -526,7 +538,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }
 `, taskName, taskName),
@@ -666,7 +680,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName)
 	taskConfig = taskConfig.appendString(inputTask)

@@ -30,7 +30,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  condition "services" {
+    names = ["api"]
+  }
   enabled = true
 }`
 )
