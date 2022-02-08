@@ -174,21 +174,6 @@ buffer_period {
 	enabled = false
 }
 
-service {
-  name = "api"
-  description = "backend"
-}
-
-service {
-  name = "web"
-  description = "frontend"
-}
-
-service {
-    name = "db"
-    description = "database"
-}
-
 terraform_provider "local" {}
 `, wd))
 }
