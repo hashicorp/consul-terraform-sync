@@ -78,7 +78,7 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 	// Inspect task
 	changes, plan, runUrl, err := h.ctrl.TaskInspect(ctx, taskConf)
 	if err != nil {
-		err = fmt.Errorf("error inspecting new task: %s", err)
+		logger.Error("error inspecting new task", "error", err)
 		sendError(w, r, http.StatusBadRequest, err)
 		return
 	}

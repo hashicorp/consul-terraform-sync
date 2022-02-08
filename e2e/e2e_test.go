@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
@@ -412,4 +414,68 @@ func TestE2EInspectMode(t *testing.T) {
 	assert.Contains(t, buf.String(), "Plan: 2 to add, 0 to change, 0 to destroy.")
 	resourcePath := filepath.Join(tempDir, webTaskName, resourcesDir)
 	validateServices(t, false, []string{"web", "api"}, resourcePath)
+}
+
+func testInvalidQueries(t *testing.T, testName, taskName, taskConfig, errMsg string) {
+	// Create tasks at start up
+	t.Run(testName, func(t *testing.T) {
+		setParallelism(t)
+		srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+			HTTPSRelPath: "../testutils",
+		})
+		defer srv.Stop()
+
+		tempDir := fmt.Sprintf("%s%s", tempDirPrefix, taskName)
+		cleanup := testutils.MakeTempDir(t, tempDir)
+		t.Cleanup(func() {
+			cleanup()
+		})
+
+		config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
+			appendString(taskConfig)
+		configPath := filepath.Join(tempDir, configFile)
+		config.write(t, configPath)
+
+		out, err := runSubcommand(t, "",
+			fmt.Sprintf("-config-file=%s", configPath), "--once")
+
+		require.Error(t, err)
+		assert.Contains(t, out, errMsg)
+	})
+
+	// Create tasks via the CLI
+	t.Run(testName+"_create_cli", func(t *testing.T) {
+		setParallelism(t)
+		srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+			HTTPSRelPath: "../testutils",
+		})
+		defer srv.Stop()
+
+		tempDir := fmt.Sprintf("%s%s_cli", tempDirPrefix, taskName)
+		cts := ctsSetup(t, srv, tempDir, dbTask())
+
+		var c hclConfig
+		c = c.appendString(taskConfig)
+		taskFilePath := filepath.Join(tempDir, "task.hcl")
+		c.write(t, taskFilePath)
+
+		subcmd := []string{"task", "create",
+			fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+			fmt.Sprintf("-task-file=%s", taskFilePath),
+		}
+		out, err := runSubcommand(t, "yes\n", subcmd...)
+		require.Error(t, err)
+		out = strings.ReplaceAll(out, "\n", " ") // word wrapping can cause new lines in error message
+		assert.Contains(t, out, errMsg)
+
+		// check that CTS binary is still running
+		_, err = cts.Status().Overall()
+		assert.NoError(t, err)
+
+		// check that existing tasks are still monitored
+		registerTime := time.Now()
+		services := []testutil.TestService{{ID: "api-1", Name: "api"}}
+		testutils.AddServices(t, srv, services)
+		api.WaitForEvent(t, cts, dbTaskName, registerTime, defaultWaitForEvent)
+	})
 }

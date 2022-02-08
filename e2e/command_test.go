@@ -331,7 +331,7 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 			input:    "yes\n",
 			outputContains: []string{
 				fmt.Sprintf("Error: unable to delete '%s'", "nonexistent_task"),
-				"request returned 404 status code with error:",
+				"404 Not Found:",
 			},
 			expectErr:     true,
 			expectDeleted: true, // never existed, same as deleted
@@ -503,7 +503,7 @@ task {
 			input: "no\n",
 			outputContains: []string{
 				fmt.Sprintf("Error: unable to generate plan for '%s'", dbTaskName),
-				fmt.Sprintf("error: task with name %s already exists", dbTaskName),
+				fmt.Sprintf("task with name %s already exists", dbTaskName),
 			},
 			expectErr:    true,
 			expectStatus: true,
@@ -637,7 +637,7 @@ func TestE2E_CreateTaskCommand_NoTaskFileProvided(t *testing.T) {
 	assert.Error(t, err)
 
 	outputContains := []string{
-		"Error: no task file provided",
+		"no task file provided",
 		"For additional help try 'consul-terraform-sync task create --help'",
 	}
 

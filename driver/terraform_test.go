@@ -263,6 +263,7 @@ func TestUpdateTask(t *testing.T) {
 
 			w := new(mocksTmpl.Watcher)
 			w.On("Register", mock.Anything).Return(nil).Once()
+			w.On("Clients").Return(nil).Once()
 			tf := &Terraform{
 				task: &Task{name: "test_task", enabled: tc.orig.Enabled, workingDir: tc.dirName,
 					logger: logging.NewNullLogger()},
@@ -370,6 +371,7 @@ func TestUpdateTask(t *testing.T) {
 
 			w := new(mocksTmpl.Watcher)
 			w.On("Register", mock.Anything).Return(nil).Once()
+			w.On("Clients").Return(nil).Once()
 
 			tf := &Terraform{
 				task: &Task{name: "test_task", enabled: false, workingDir: tc.dirName,
@@ -441,6 +443,7 @@ func TestUpdateTask_Inspect(t *testing.T) {
 
 			w := new(mocksTmpl.Watcher)
 			w.On("Register", mock.Anything).Return(nil)
+			w.On("Clients").Return(nil).Once()
 			w.On("Deregister", mock.Anything).Return()
 
 			tf := &Terraform{
@@ -576,6 +579,7 @@ func TestInitTaskTemplates(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			w := new(mocksTmpl.Watcher)
 			w.On("Register", mock.Anything).Return(nil).Once()
+			w.On("Clients").Return(nil).Once()
 			tf := &Terraform{
 				fileReader: tc.fileReader,
 				task:       &Task{name: "test", enabled: true},
@@ -671,6 +675,7 @@ func TestDisabledTask(t *testing.T) {
 
 		w := new(mocksTmpl.Watcher)
 		w.On("Register", mock.Anything).Return(nil).Once()
+		w.On("Clients").Return(nil).Once()
 
 		dirName := "disabled-task-test"
 		deleteTemp := testutils.MakeTempDir(t, dirName)
@@ -747,6 +752,7 @@ func TestInitTask(t *testing.T) {
 
 			w := new(mocksTmpl.Watcher)
 			w.On("Register", mock.Anything).Return(nil).Once()
+			w.On("Clients").Return(nil).Once()
 
 			tf := &Terraform{
 				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName, logger: logging.NewNullLogger()},

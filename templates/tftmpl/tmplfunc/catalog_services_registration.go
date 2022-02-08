@@ -176,7 +176,7 @@ func (d *catalogServicesRegistrationQuery) ID() string {
 		opts = append(opts, fmt.Sprintf("regexp=%s", d.regexp.String()))
 	}
 	if d.dc != "" {
-		opts = append(opts, fmt.Sprintf("@%s", d.dc))
+		opts = append(opts, fmt.Sprintf("dc=%s", d.dc))
 	}
 	if d.ns != "" {
 		opts = append(opts, fmt.Sprintf("ns=%s", d.ns))

@@ -52,8 +52,7 @@ type CLI struct {
 	signalCh chan os.Signal
 
 	// stopCh is an internal channel used to trigger a shutdown of the CLI.
-	stopCh  chan struct{}
-	stopped bool
+	stopCh chan struct{}
 }
 
 // NewCLI creates a new CLI object with the given stdout and stderr streams.

@@ -404,3 +404,84 @@ func TestModuleInput_ConsulKVCondition(t *testing.T) {
 		})
 	}
 }
+
+func TestModuleInput_Services_InvalidQueries(t *testing.T) {
+	setParallelism(t)
+	config := `task {
+		name = "%s"
+		module = "./test_modules/consul_kv_file"
+		condition "catalog-services" {
+			regexp = "api"
+		}
+		module_input "services" {
+			names = ["web", "api"]
+			%s
+		}
+	}`
+
+	cases := []struct {
+		name        string
+		queryConfig string
+		errMsg      string
+	}{
+		{
+			"datacenter",
+			`datacenter = "foo"`,
+			"No path to datacenter",
+		},
+		{
+			"namespace_with_oss_consul",
+			`namespace = "foo"`,
+			`Invalid query parameter: "ns"`,
+		},
+		{
+			"filter",
+			`filter = "\"foo\" in Service.Bar"`,
+			`Selector "Service.Bar" is not valid`,
+		},
+	}
+
+	for _, tc := range cases {
+		taskName := "module_input_services_invalid_" + tc.name
+		taskConfig := fmt.Sprintf(config, taskName, tc.queryConfig)
+		testInvalidQueries(t, tc.name, taskName, taskConfig, tc.errMsg)
+	}
+}
+
+func TestModuleInput_ConsulKV_InvalidQueries(t *testing.T) {
+	setParallelism(t)
+	config := `task {
+		name = "%s"
+		module = "./test_modules/consul_kv_file"
+		condition "services" {
+			names = ["web", "api"]
+		}
+		module_input "consul-kv" {
+			path = "foo"
+			%s
+		}
+	}`
+
+	cases := []struct {
+		name        string
+		queryConfig string
+		errMsg      string // client does not return detailed error message for Consul KV
+	}{
+		{
+			"datacenter",
+			`datacenter = "foo"`,
+			"Unexpected response code: 500",
+		},
+		{
+			"namespace_with_oss_consul",
+			`namespace = "foo"`,
+			"Unexpected response code: 400",
+		},
+	}
+
+	for _, tc := range cases {
+		taskName := "module_input_consul_kv_invalid_" + tc.name
+		taskConfig := fmt.Sprintf(config, taskName, tc.queryConfig)
+		testInvalidQueries(t, tc.name, taskName, taskConfig, tc.errMsg)
+	}
+}

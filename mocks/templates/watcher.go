@@ -35,6 +35,22 @@ func (_m *Watcher) Buffering(_a0 hcat.Notifier) bool {
 	return r0
 }
 
+// Clients provides a mock function with given fields:
+func (_m *Watcher) Clients() hcat.Looker {
+	ret := _m.Called()
+
+	var r0 hcat.Looker
+	if rf, ok := ret.Get(0).(func() hcat.Looker); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(hcat.Looker)
+		}
+	}
+
+	return r0
+}
+
 // Complete provides a mock function with given fields: _a0
 func (_m *Watcher) Complete(_a0 hcat.Notifier) bool {
 	ret := _m.Called(_a0)

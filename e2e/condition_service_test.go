@@ -214,3 +214,44 @@ func testServicesCondition(t *testing.T, tc servicesConditionTest) {
 		"change in event count. task was unexpectedly triggered")
 	validateServices(t, false, []string{"api-web-3"}, resourcesPath)
 }
+
+func TestCondition_Services_InvalidQueries(t *testing.T) {
+	setParallelism(t)
+	config := `task {
+		name = "%s"
+		module = "./test_modules/null_resource"
+		condition "services" {
+			names  = ["api, web"]
+			%s
+		}
+	}`
+
+	cases := []struct {
+		name        string
+		queryConfig string
+		errMsg      string
+	}{
+		{
+			"datacenter",
+			`datacenter = "foo"`,
+			"No path to datacenter",
+		},
+		{
+			"filter",
+			`filter = "\"foo\" in Service.Bar"`,
+			`Selector "Service.Bar" is not valid`,
+		},
+		{
+			"namespace_with_oss_consul",
+			`namespace = "foo"`,
+			`Invalid query parameter: "ns"`,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc // rebind tc into this lexical scope for parallel use
+		taskName := "condition_services_invalid_" + tc.name
+		taskConfig := fmt.Sprintf(config, taskName, tc.queryConfig)
+		testInvalidQueries(t, tc.name, taskName, taskConfig, tc.errMsg)
+	}
+}
