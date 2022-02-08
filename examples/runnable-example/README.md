@@ -33,8 +33,8 @@ Consul-Terraform-Sync will create a `sync-tasks/example-task` directory for the 
 The module executed by the task will create a file that has information about the services. It will be created as `test.txt` by default. Note that one of the services has an additional metadata value, as specified in the `config.hcl`, which is also printed out by the module.
 ```
 $ cat sync-tasks/example-task/test.txt
-api api 127.0.0.1
-web web 127.0.0.1 test_value
+api api 127.0.0.1 api_meta
+web web 127.0.0.1 web_meta
 ```
 
 Deregister one of the services in Consul. This can be done using the Consul CLI or the Consul API.
@@ -45,5 +45,5 @@ $ consul services deregister -id=api
 Consul-Terraform-Sync will automatically detect the change and rerun the task for that service, which will in turn update the `test.txt` file with the latest information about the Consul services.
 ```
 $ cat sync-tasks/example-task/test.txt
-web web 127.0.0.1 test_value
+web web 127.0.0.1 web_meta
 ```

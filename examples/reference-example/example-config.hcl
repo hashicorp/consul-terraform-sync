@@ -18,7 +18,9 @@ task {
   module = "namespace/example/module"
   version = "1.1.0"
   providers = ["myprovider"]
-  services = ["web", "api"]
+  condition "services" {
+    names = ["web", "api"]
+  }
   variable_files = ["example.module.tfvars", "/path/to/example.module.tfvars"]
 }
 
