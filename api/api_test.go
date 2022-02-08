@@ -77,7 +77,7 @@ func TestServe(t *testing.T) {
 					On("Events", mock.Anything, taskName).Return(map[string][]event.Event{}, nil)
 			},
 			http.StatusOK,
-			`{"task_b":{"task_name":"task_b","status":"unknown","enabled":true,"providers":null,"services":null,"events_url":""}}
+			`{"task_b":{"task_name":"task_b","status":"unknown","enabled":true,"events_url":"","providers":null,"services":null}}
 `,
 		}, {
 			"create task",

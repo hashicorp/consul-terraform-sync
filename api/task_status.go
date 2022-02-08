@@ -20,10 +20,18 @@ type TaskStatus struct {
 	TaskName  string        `json:"task_name"`
 	Status    string        `json:"status"`
 	Enabled   bool          `json:"enabled"`
-	Providers []string      `json:"providers"`
-	Services  []string      `json:"services"`
 	EventsURL string        `json:"events_url"`
 	Events    []event.Event `json:"events,omitempty"`
+
+	// Providers and Services are deprecated in v0.5. These are configuration
+	// details about the task rather than status information. Users should
+	// switch to using the Get Task API to request the task's provider and
+	// services (and more!) information.
+	//  - Providers should be removed in 0.8
+	//  - Services should be removed in a future major release after 0.8 to align
+	//  with the removal of CTS config task.services
+	Providers []string `json:"providers"`
+	Services  []string `json:"services"`
 }
 
 // taskStatusHandler handles the task status endpoint
