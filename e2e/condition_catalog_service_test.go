@@ -348,7 +348,7 @@ func TestCondition_CatalogServices_InvalidQueries(t *testing.T) {
 		tc := tc // rebind tc into this lexical scope for parallel use
 		taskName := "condition_catalog_services_invalid_" + tc.name
 		taskConfig := fmt.Sprintf(config, taskName, tc.queryConfig)
-		testInvalidQueries(t, tc.name, taskName, taskConfig, tc.errMsg)
+		testInvalidTaskConfig(t, tc.name, taskName, taskConfig, tc.errMsg)
 	}
 }
 

@@ -495,7 +495,9 @@ func TestE2E_ConfigStreamlining_Deprecations(t *testing.T) {
 	cleanup()
 }
 
-func testInvalidQueries(t *testing.T, testName, taskName, taskConfig, errMsg string) {
+// testInvalidTaskConfig tests that task creation fails with the given task configuration.
+// Creation is tested both at CTS startup and with the CLI create command.
+func testInvalidTaskConfig(t *testing.T, testName, taskName, taskConfig, errMsg string) {
 	// Create tasks at start up
 	t.Run(testName, func(t *testing.T) {
 		setParallelism(t)
