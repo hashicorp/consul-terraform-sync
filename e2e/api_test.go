@@ -784,7 +784,6 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 		wd, err := os.Getwd()
 		assert.NoError(t, err)
 		module := filepath.Join(wd, "./test_modules/local_instances_file")
-		assert.Equal(t, module, e.Config.Module)
 		assert.Equal(t, module, e.Config.Source)
 
 		if taskName == fakeSuccessTaskName {
