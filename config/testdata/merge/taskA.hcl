@@ -1,15 +1,10 @@
-service {
-  name = "serviceA"
-  description = "descriptionA"
-}
+terraform_provider "tf_providerA" { }
 
-service {
-  name = "serviceB"
-  namespace = "teamB"
-  description = "descriptionB"
-}
+terraform_provider "tf_providerB" { }
 
 task {
   name = "taskA"
-  services = ["serviceA", "serviceB"]
+  condition "services" {
+    names = ["serviceA", "serviceB"]
+  }
 }

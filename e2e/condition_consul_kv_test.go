@@ -32,12 +32,14 @@ func newKVTaskConfig(taskName string, opts kvTaskOpts) string {
 
 	conditionTask := fmt.Sprintf(`task {
 		name = "%s"
-		services = ["web", "api"]
 		module = "%s"
 		condition "consul-kv" {
 			path = "%s"
 			use_as_module_input = %t
 			recurse = %t
+		}
+		module_input "services" {
+			names = ["web", "api"]
 		}
 	}
 	`, taskName, module, opts.path, opts.useAsModuleInput, opts.recurse)

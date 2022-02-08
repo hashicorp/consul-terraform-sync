@@ -313,15 +313,8 @@ func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
 // Not tested: Namespace querying (Enterprise), Datacenter querying (manually
 // tested since it requires setting up at least 2 datacenters)
 func testTagQueryCompatibility(t *testing.T, tempDir string, port int) {
-	redisService := `service {
-  name = "redis"
-  description = "custom redis service config"
-  datacenter = "dc1"
-  filter = "\"v1\" in Service.Tags"
-}
-`
-	config := baseConfig(tempDir, port) + redisService +
-		basicTask("redis_task", "redis", "db")
+	config := baseConfig(tempDir, port) + basicTask("redis_task", "redis",
+		"db", `filter = "\"v1\" in Service.Tags"`)
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
@@ -567,7 +560,9 @@ func nullTask() string {
 task {
 	name = "%s"
 	description = "null task for api & db"
-	services = ["api", "db"]
+	condition "services" {
+		names = ["api", "db"]
+	}
 	providers = ["null"]
 	module = "../test_modules/null_resource"
 }
@@ -575,14 +570,22 @@ task {
 }
 
 // basicTask returns config for a task with basic task module
-func basicTask(taskName, service1, service2 string) string {
+func basicTask(taskName, service1, service2 string, conditionOpts ...string) string {
+	var opts string
+	if len(conditionOpts) > 0 {
+		opts = strings.Join(conditionOpts, "\n")
+	}
+
 	return fmt.Sprintf(`
 task {
 	name = "%s"
 	description = "basic task"
-	services = ["%s", "%s"]
+	condition "services" {
+		names = ["%s", "%s"]
+		%s
+	}
 	providers = ["local"]
 	module = "../test_modules/local_instances_file"
 }
-`, taskName, service1, service2)
+`, taskName, service1, service2, opts)
 }

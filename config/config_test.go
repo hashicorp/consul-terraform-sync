@@ -227,29 +227,35 @@ func TestFromPath(t *testing.T) {
 				},
 			},
 		}, {
-			"load dir merges tasks and services",
+			"load dir merges tasks and provider",
 			"testdata/merge",
 			&Config{
-				Services: &ServiceConfigs{
-					{
-						Name:        String("serviceA"),
-						Description: String("descriptionA"),
-					}, {
-						Name:        String("serviceB"),
-						Namespace:   String("teamB"),
-						Description: String("descriptionB"),
-					}, {
-						Name:        String("serviceC"),
-						Description: String("descriptionC"),
+				TerraformProviders: &TerraformProviderConfigs{
+					&TerraformProviderConfig{
+						"tf_providerA": map[string]interface{}{},
+					},
+					&TerraformProviderConfig{
+						"tf_providerB": map[string]interface{}{},
+					},
+					&TerraformProviderConfig{
+						"tf_providerC": map[string]interface{}{},
 					},
 				},
 				Tasks: &TaskConfigs{
 					{
-						Name:     String("taskA"),
-						Services: []string{"serviceA", "serviceB"},
+						Name: String("taskA"),
+						Condition: &ServicesConditionConfig{
+							ServicesMonitorConfig: ServicesMonitorConfig{
+								Names: []string{"serviceA", "serviceB"},
+							},
+						},
 					}, {
-						Name:     String("taskB"),
-						Services: []string{"serviceC", "serviceD"},
+						Name: String("taskB"),
+						Condition: &ServicesConditionConfig{
+							ServicesMonitorConfig: ServicesMonitorConfig{
+								Names: []string{"serviceC", "serviceD"},
+							},
+						},
 					},
 				},
 			},

@@ -36,7 +36,9 @@ working_dir = "%s"
 task {
 	name = "%s"
 	description = "basic read-write e2e task api only"
-	services = ["api"]
+	condition "services" {
+		names = ["api"]
+	}
 	providers = ["local"]
 	module = "./test_modules/local_instances_file"
 }

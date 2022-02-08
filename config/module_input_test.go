@@ -32,7 +32,6 @@ task {
 task {
 	name = "module_input_task"
 	module = "..."
-	services = ["api"]
 	condition "schedule" {
 		cron = "* * * * * * *"
 	}
@@ -63,7 +62,6 @@ task {
 task {
 	name = "module_input_task"
 	module = "..."
-	services = ["api"]
 	module_input "services" {
 		nonexistent_field = true
 	}
@@ -75,7 +73,6 @@ task {
 task {
 	name = "module_input_task"
 	module = "..."
-	services = ["api"]
 	condition "schedule" {
 		cron = "* * * * * * *"
 	}

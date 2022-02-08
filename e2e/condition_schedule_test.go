@@ -182,10 +182,12 @@ func TestCondition_Schedule_Dynamic(t *testing.T) {
 	taskSchedule := 10 * time.Second
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
-	services = ["api", "web"]
 	module = "./test_modules/local_instances_file"
 	condition "schedule" {
 		cron = "*/10 * * * * * *"
+	}
+	module_input "services" {
+		names = ["api", "web"]
 	}
 }
 `, schedTaskName)

@@ -275,7 +275,6 @@ func TestE2EValidateError(t *testing.T) {
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
 	module = "./test_modules/incompatible_w_cts"
-	services = ["api", "db"]
 	condition "catalog-services" {
 		regexp = "^api$|^db$"
 		use_as_module_input = true
@@ -325,7 +324,9 @@ func TestE2E_FilterStatus(t *testing.T) {
 			`task {
 				name = "%s"
 				module = "./test_modules/null_resource"
-				services = ["api", "unhealthy-service"]
+				condition "services" {
+					names = ["api", "unhealthy-service"]
+				}
 			}
 			`,
 			func(t *testing.T, contents string) {
@@ -343,11 +344,10 @@ func TestE2E_FilterStatus(t *testing.T) {
 			`task {
 				name = "%s"
 				module = "./test_modules/null_resource"
-				services = ["api", "unhealthy-service"]
-			}
-			service {
-				name = "unhealthy-service"
-				filter = "Checks.Status != \"\""
+				condition "services" {
+					names = ["api", "unhealthy-service"]
+					filter = "Checks.Status != \"\""
+				}
 			}
 			`,
 			func(t *testing.T, contents string) {
@@ -414,6 +414,85 @@ func TestE2EInspectMode(t *testing.T) {
 	assert.Contains(t, buf.String(), "Plan: 2 to add, 0 to change, 0 to destroy.")
 	resourcePath := filepath.Join(tempDir, webTaskName, resourcesDir)
 	validateServices(t, false, []string{"web", "api"}, resourcePath)
+}
+
+// TestE2E_ConfigStreamlining_Deprecations runs the CTS binary in once mode to test a CTS config
+// with v0.5 config streamlining deprecations. This test confirms that the old
+// deprecated fields still work in v0.5.0 until removal.
+//
+// Deprecations to remove in v0.8.0
+//  - "source_input" => "module_input"
+//  - "source_includes_var" => "use_as_module_input"
+//
+// Deprecations to remove in a future major release after v0.8.0
+//  - "source" => "module"
+//  - "services" => "condition "services"" or "module_input "services""
+//  - "service" block => "condition "services"" or "module_input "services""
+func TestE2E_ConfigStreamlining_Deprecations(t *testing.T) {
+	setParallelism(t)
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+	srv.SetKVString(t, "key", "value")
+	srv.AddAddressableService(t, "web", testutil.HealthPassing, "1.2.3.4", 8080, []string{""})
+
+	removeAfterTaskName := "remove-after-0-8"
+	removeAfterConfig := fmt.Sprintf(`
+	task {
+		name = "%s"
+		description = "source, services, service deprecation"
+		source = "./test_modules/local_instances_file"
+		services = ["web"]
+	}
+	service {
+		name = "web"
+		cts_user_defined_meta {
+			my_meta_key = "my_meta_value"
+		}
+	}
+	`, removeAfterTaskName)
+
+	removeInTaskName := "remove-in-0-8"
+	removeInConfig := fmt.Sprintf(`
+	task {
+		name = "%s"
+		description = "source_includes_var & source_input deprecation"
+		module = "./test_modules/consul_kv_file"
+
+		condition "consul-kv" {
+			path = "key"
+			source_includes_var = true
+		}
+
+		source_input "services" {
+			names = ["api"]
+		}
+	}
+	`, removeInTaskName)
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "config_streamlining")
+	cleanup := testutils.MakeTempDir(t, tempDir) // delete only if no errors
+
+	config := baseConfig(tempDir).appendConsulBlock(srv).
+		appendString(removeAfterConfig).appendString(removeInConfig)
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	// try to run once-mode successfully
+	api.StartCTS(t, configPath, api.CTSOnceModeFlag)
+
+	// check resources for deprecations to be removed after 0.8
+	workingDir := filepath.Join(tempDir, removeAfterTaskName)
+	resourcesPath := filepath.Join(workingDir, resourcesDir)
+	validateServices(t, true, []string{"web"}, resourcesPath)
+	validateVariable(t, true, workingDir, "services", "meta_value")
+
+	// check resources for deprecations to be removed in 0.8
+	resourcesPath = filepath.Join(tempDir, removeInTaskName, resourcesDir)
+	validateModuleFile(t, true, true, resourcesPath, "key", "value")
+	validateServices(t, true, []string{"api"}, resourcesPath)
+
+	cleanup()
 }
 
 func testInvalidQueries(t *testing.T, testName, taskName, taskConfig, errMsg string) {
