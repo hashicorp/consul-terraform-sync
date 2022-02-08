@@ -164,3 +164,35 @@ func TestDrivers_Delete(t *testing.T) {
 		})
 	}
 }
+
+func TestDrivers_MarkForDeletion(t *testing.T) {
+	drivers := NewDrivers()
+	name := "test_task"
+	drivers.MarkForDeletion(name)
+	assert.True(t, drivers.deletion[name])
+
+	drivers.deletion[name] = false
+	drivers.MarkForDeletion(name)
+	assert.True(t, drivers.deletion[name])
+}
+
+func TestDrivers_IsMarkedForDeletion(t *testing.T) {
+	name := "test_task"
+
+	t.Run("true", func(t *testing.T) {
+		drivers := NewDrivers()
+		drivers.deletion[name] = true
+		assert.True(t, drivers.IsMarkedForDeletion(name))
+	})
+
+	t.Run("false", func(t *testing.T) {
+		drivers := NewDrivers()
+		drivers.deletion[name] = false
+		assert.False(t, drivers.IsMarkedForDeletion(name))
+	})
+
+	t.Run("does_not_exist", func(t *testing.T) {
+		drivers := NewDrivers()
+		assert.False(t, drivers.IsMarkedForDeletion(name))
+	})
+}

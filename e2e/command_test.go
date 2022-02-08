@@ -300,7 +300,7 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 			input:    "yes\n",
 			outputContains: []string{
 				fmt.Sprintf("Do you want to delete '%s'?", dbTaskName),
-				fmt.Sprintf("Deleted task '%s'", dbTaskName)},
+				fmt.Sprintf("Task '%s' is marked for deletion", dbTaskName)},
 			expectErr:     false,
 			expectDeleted: true,
 		},
@@ -310,7 +310,7 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 			input:    "",
 			args:     []string{"-auto-approve"},
 			outputContains: []string{
-				fmt.Sprintf("Deleted task '%s'", dbTaskName)},
+				fmt.Sprintf("Task '%s' is marked for deletion", dbTaskName)},
 			expectErr:     false,
 			expectDeleted: true,
 		},

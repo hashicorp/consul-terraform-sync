@@ -39,8 +39,9 @@ func (c *taskDeleteCommand) Help() string {
 	helpText := fmt.Sprintf(`
 Usage: consul-terraform-sync task delete [options] <task name>
 
-  Task Delete is used to delete an existing task. Will not delete a task
-  if the task is currently running.
+  Task Delete is used to delete an existing task. If the task is not running,
+  then it is deleted immediately. Otherwise, it will be deleted once the task
+  is complete.
 
 Options:
 %s
@@ -54,7 +55,9 @@ Example:
 
 	Enter a value: yes
 
-	==> 'my_task' delete complete!
+	==> Marking task 'my_task' for deletion...
+
+	==> Task 'my_task' is marked for deletion and will be deleted when not running.
 `, strings.Join(c.meta.helpOptions, "\n"))
 	return strings.TrimSpace(helpText)
 }
@@ -95,7 +98,7 @@ func (c *taskDeleteCommand) Run(args []string) int {
 		}
 	}
 
-	c.UI.Info(fmt.Sprintf("Deleting task '%s'...\n", taskName))
+	c.UI.Info(fmt.Sprintf("Marking task '%s' for deletion...\n", taskName))
 	resp, err := client.DeleteTaskByName(context.Background(), taskName)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -110,7 +113,7 @@ func (c *taskDeleteCommand) Run(args []string) int {
 		return ExitCodeError
 	}
 
-	c.UI.Info(fmt.Sprintf("Deleted task '%s'", taskName))
+	c.UI.Info(fmt.Sprintf("Task '%s' is marked for deletion and will be deleted when not running.", taskName))
 
 	return ExitCodeOK
 }
