@@ -72,8 +72,6 @@ func TestRequest(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			hc := new(apiMocks.HttpClient)
-
 			// set up return response on mock
 			b, err := json.Marshal(tc.httpResponseBody)
 			require.NoError(t, err)
@@ -82,6 +80,8 @@ func TestRequest(t *testing.T) {
 				Body:       ioutil.NopCloser(bytesR),
 				StatusCode: tc.httpStatus,
 			}
+
+			hc := new(apiMocks.HttpClient)
 			hc.On("Do", mock.Anything).Return(mockResp, tc.httpError).Once()
 
 			c, err := NewClient(createTestClientConfig(8558), hc)
@@ -143,7 +143,7 @@ func TestStatus(t *testing.T) {
 	t.Run("overall-status", func(t *testing.T) {
 		actual, err := c.Status().Overall()
 		require.NoError(t, err)
-		expect := OverallStatus{
+		expect := &OverallStatus{
 			TaskSummary: TaskSummary{
 				Status: StatusSummary{
 					Successful: 1,

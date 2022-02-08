@@ -319,13 +319,13 @@ func Test_StatusClient_Overall_Failures(t *testing.T) {
 
 			o, err := c.Status().Overall()
 			assert.Error(t, err)
-			assert.EqualValues(t, OverallStatus{}, o)
+			assert.Nil(t, o)
 		})
 	}
 }
 
 func Test_StatusClient_Overall(t *testing.T) {
-	expectedOverallStatus := OverallStatus{TaskSummary: TaskSummary{
+	expectedOverallStatus := &OverallStatus{TaskSummary: TaskSummary{
 		Status:  StatusSummary{Successful: 1},
 		Enabled: EnabledSummary{True: 2},
 	}}

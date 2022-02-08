@@ -101,16 +101,12 @@ func BaseClientConfig() *ClientConfig {
 // NewClient returns a client to make api requests
 func NewClient(c *ClientConfig, httpClient httpClient) (*Client, error) {
 	if httpClient == nil {
-		tlsConfig, err := setupTLSConfig(c)
+		h, err := newHTTPClient(&c.TLSConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		httpClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-			},
-		}
+		httpClient = h
 	}
 
 	u, err := parseURL(c.URL)
@@ -127,30 +123,28 @@ func NewClient(c *ClientConfig, httpClient httpClient) (*Client, error) {
 	return client, nil
 }
 
-// setupTLSConfig is used to generate a TLSClientConfig that's useful for talking to
-// Consul using TLS.
-func setupTLSConfig(c *ClientConfig) (*tls.Config, error) {
+func newHTTPClient(tc *TLSConfig) (*http.Client, error) {
 	tlsClientConfig := &tls.Config{
 		// If verify is false, then we set skip verify to true
 		// InsecureSkipVerify will always be the opposite of SSLVerify
-		InsecureSkipVerify: !c.TLSConfig.SSLVerify,
+		InsecureSkipVerify: !tc.SSLVerify,
 	}
 
-	if c.TLSConfig.ClientCert != "" && c.TLSConfig.ClientKey != "" {
-		tlsCert, err := tls.LoadX509KeyPair(c.TLSConfig.ClientCert, c.TLSConfig.ClientKey)
+	if tc.ClientCert != "" && tc.ClientKey != "" {
+		tlsCert, err := tls.LoadX509KeyPair(tc.ClientCert, tc.ClientKey)
 		if err != nil {
 			return nil, err
 		}
 
 		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
-	} else if c.TLSConfig.ClientCert != "" || c.TLSConfig.ClientKey != "" {
+	} else if tc.ClientCert != "" || tc.ClientKey != "" {
 		return nil, fmt.Errorf("both client cert and client key must be provided")
 	}
 
-	if c.TLSConfig.CACert != "" || c.TLSConfig.CAPath != "" {
+	if tc.CACert != "" || tc.CAPath != "" {
 		rootConfig := &rootcerts.Config{
-			CAFile: c.TLSConfig.CACert,
-			CAPath: c.TLSConfig.CAPath,
+			CAFile: tc.CACert,
+			CAPath: tc.CAPath,
 		}
 
 		if err := rootcerts.ConfigureTLS(tlsClientConfig, rootConfig); err != nil {
@@ -158,7 +152,8 @@ func setupTLSConfig(c *ClientConfig) (*tls.Config, error) {
 		}
 	}
 
-	return tlsClientConfig, nil
+	h := &http.Client{Transport: &http.Transport{TLSClientConfig: tlsClientConfig}}
+	return h, nil
 }
 
 // Port returns the port being used by the client
@@ -299,21 +294,20 @@ func (c *Client) Status() *StatusClient {
 }
 
 // Overall is used to query for overall status
-func (s *StatusClient) Overall() (OverallStatus, error) {
-	var overallStatus OverallStatus
-
+func (s *StatusClient) Overall() (*OverallStatus, error) {
 	resp, err := s.request(http.MethodGet, overallStatusPath, "", "")
 	if err != nil {
-		return overallStatus, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
+	var overallStatus OverallStatus
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(&overallStatus); err != nil {
-		return overallStatus, err
+		return nil, err
 	}
 
-	return overallStatus, nil
+	return &overallStatus, nil
 }
 
 // Task is used to query for task status(es).
@@ -357,10 +351,10 @@ func (c *Client) Task() *TaskClient {
 }
 
 // Update is used to patch update task
-func (t *TaskClient) Update(name string, config UpdateTaskConfig, q *QueryParam) (UpdateTaskResponse, error) {
+func (t *TaskClient) Update(name string, config *UpdateTaskConfig, q *QueryParam) (*UpdateTaskResponse, error) {
 	b, err := json.Marshal(config)
 	if err != nil {
-		return UpdateTaskResponse{}, err
+		return nil, err
 	}
 
 	if q == nil {
@@ -370,17 +364,17 @@ func (t *TaskClient) Update(name string, config UpdateTaskConfig, q *QueryParam)
 	path := fmt.Sprintf("%s/%s", taskPath, name)
 	resp, err := t.request(http.MethodPatch, path, q.Encode(), string(b))
 	if err != nil {
-		return UpdateTaskResponse{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
 	var plan UpdateTaskResponse
 	if err = decoder.Decode(&plan); err != nil {
-		return UpdateTaskResponse{}, err
+		return nil, err
 	}
 
-	return plan, nil
+	return &plan, nil
 }
 
 func parseURL(urlString string) (*url.URL, error) {

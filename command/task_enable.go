@@ -104,9 +104,10 @@ func (c *taskEnableCommand) Run(args []string) int {
 		return ExitCodeError
 	}
 
-	resp, err := client.Task().Update(taskName, api.UpdateTaskConfig{
+	resp, err := client.Task().Update(taskName, &api.UpdateTaskConfig{
 		Enabled: config.Bool(true),
 	}, &api.QueryParam{Run: driver.RunOptionInspect})
+
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to generate plan for '%s'", taskName))
 		err = processEOFError(client.Scheme(), err)
@@ -116,6 +117,7 @@ func (c *taskEnableCommand) Run(args []string) int {
 
 		return ExitCodeError
 	}
+
 	if resp.Inspect == nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to retrieve a plan for '%s'", taskName))
 		return ExitCodeError
@@ -125,7 +127,7 @@ func (c *taskEnableCommand) Run(args []string) int {
 
 	if !resp.Inspect.ChangesPresent {
 		// enable the task but no need to run it now
-		_, err = client.Task().Update(taskName, api.UpdateTaskConfig{
+		_, err = client.Task().Update(taskName, &api.UpdateTaskConfig{
 			Enabled: config.Bool(true)}, nil)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error: unable to enable '%s'", taskName))
@@ -146,7 +148,7 @@ func (c *taskEnableCommand) Run(args []string) int {
 	}
 
 	c.UI.Info(fmt.Sprintf("Enabling and running '%s'...\n", taskName))
-	_, err = client.Task().Update(taskName, api.UpdateTaskConfig{
+	_, err = client.Task().Update(taskName, &api.UpdateTaskConfig{
 		Enabled: config.Bool(true),
 	}, &api.QueryParam{Run: driver.RunOptionNow})
 	if err != nil {

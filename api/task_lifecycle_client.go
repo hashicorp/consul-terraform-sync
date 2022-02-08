@@ -25,16 +25,12 @@ type TaskLifecycleClient struct {
 // NewTaskLifecycleClient returns a client to make api requests
 func NewTaskLifecycleClient(c *ClientConfig, httpClient httpClient) (*TaskLifecycleClient, error) {
 	if httpClient == nil {
-		tlsConfig, err := setupTLSConfig(c)
+		h, err := newHTTPClient(&c.TLSConfig)
 		if err != nil {
 			return nil, err
 		}
-		httpClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-			},
-		}
-		httpClient = NewTaskLifecycleHTTPClient(httpClient)
+
+		httpClient = NewTaskLifecycleHTTPClient(h)
 	}
 
 	u, err := parseURL(c.URL)
