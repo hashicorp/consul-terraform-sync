@@ -35,7 +35,6 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 			"api_tags.txt",
 			`task {
 	name = "catalog_task"
-	services = ["api"]
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "^api$"
@@ -49,7 +48,6 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 			"api-1.txt",
 			`task {
 	name = "catalog_task"
-	services = ["api"]
 	module = "./test_modules/local_instances_file"
 	condition "catalog-services" {
 		regexp = "^api$"
@@ -87,11 +85,13 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 			true,
 			`task {
 	name = "catalog_task"
-	services = ["api", "db"]
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "^api$|^db$"
 		use_as_module_input = true
+	}
+	module_input "services" {
+		names = ["api", "db"]
 	}
 }`,
 		},
@@ -100,11 +100,13 @@ func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 			false,
 			`task {
 	name = "catalog_task"
-	services = ["api", "db"]
 	module = "./test_modules/local_instances_file"
 	condition "catalog-services" {
 		regexp = "^api$|^db$"
 		use_as_module_input = false
+	}
+	module_input "services" {
+		names = ["api", "db"]
 	}
 }`,
 		},
@@ -136,7 +138,6 @@ func TestCondition_CatalogServices_UseAsModuleInput(t *testing.T) {
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cs_condition_use")
 	conditionTask := `task {
 	name = "catalog_task"
-	services = ["api"]
 	module = "./test_modules/local_tags_file"
 	condition "catalog-services" {
 		regexp = "db|web"

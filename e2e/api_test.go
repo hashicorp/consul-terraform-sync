@@ -89,7 +89,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					Status:    api.StatusSuccessful,
 					Enabled:   true,
 					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
+					Services:  []string{},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
 				},
 				fakeFailureTaskName: {
@@ -97,7 +97,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					Status:    api.StatusErrored,
 					Enabled:   true,
 					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
+					Services:  []string{},
 					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
 				},
 				disabledTaskName: {
@@ -105,7 +105,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					Status:    api.StatusUnknown,
 					Enabled:   false,
 					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
+					Services:  []string{},
 					EventsURL: "",
 				},
 			},
@@ -120,7 +120,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					Status:    api.StatusSuccessful,
 					Enabled:   true,
 					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
+					Services:  []string{},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
 				},
 			},
@@ -751,7 +751,6 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 
 		require.NotNil(t, e.Config)
 		assert.Equal(t, []string{"fake-sync"}, e.Config.Providers)
-		assert.Equal(t, []string{"api"}, e.Config.Services)
 		wd, err := os.Getwd()
 		assert.NoError(t, err)
 		module := filepath.Join(wd, "./test_modules/local_instances_file")

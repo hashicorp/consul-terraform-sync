@@ -275,7 +275,6 @@ func TestE2EValidateError(t *testing.T) {
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
 	module = "./test_modules/incompatible_w_cts"
-	services = ["api", "db"]
 	condition "catalog-services" {
 		regexp = "^api$|^db$"
 		use_as_module_input = true
@@ -325,7 +324,9 @@ func TestE2E_FilterStatus(t *testing.T) {
 			`task {
 				name = "%s"
 				module = "./test_modules/null_resource"
-				services = ["api", "unhealthy-service"]
+				condition "services" {
+					names = ["api", "unhealthy-service"]
+				}
 			}
 			`,
 			func(t *testing.T, contents string) {
@@ -343,11 +344,10 @@ func TestE2E_FilterStatus(t *testing.T) {
 			`task {
 				name = "%s"
 				module = "./test_modules/null_resource"
-				services = ["api", "unhealthy-service"]
-			}
-			service {
-				name = "unhealthy-service"
-				filter = "Checks.Status != \"\""
+				condition "services" {
+					names = ["api", "unhealthy-service"]
+					filter = "Checks.Status != \"\""
+				}
 			}
 			`,
 			func(t *testing.T, contents string) {

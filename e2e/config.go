@@ -118,9 +118,11 @@ func dbTask() string {
 task {
 	name = "%s"
 	description = "basic read-write e2e task for api & db"
-	services = ["api", "db"]
 	providers = ["local"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+    	names = ["api", "db"]
+	}
 }`, dbTaskName)
 }
 
@@ -133,9 +135,11 @@ func (c hclConfig) appendWebTask() hclConfig {
 task {
 	name = "%s"
 	description = "basic read-write e2e task api & web"
-	services = ["api", "web"]
 	providers = ["local"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["api", "web"]
+	}
 }
 `, webTaskName))
 }
@@ -159,8 +163,10 @@ func moduleTaskConfig(name string, module string, opts ...string) string {
 task {
 	name = "%s"
 	description = "e2e test"
-	services = ["api", "web"]
 	module = "%s"
+	condition "services" {
+		names = ["api", "web"]
+	}
 	%s
 }
 `, name, module, optsConfig)
@@ -204,26 +210,32 @@ terraform_provider "fake-sync" {
 task {
 	name = "%s"
 	description = "basic e2e task with fake handler. expected to error"
-	services = ["api"]
 	providers = ["fake-sync.failure"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["api"]
+	}
 }
 
 task {
 	name = "%s"
 	description = "basic e2e task with fake handler. expected to not error"
-	services = ["api"]
 	providers = ["fake-sync.success"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["api"]
+	}
 }
 
 task {
 	name = "%s"
 	description = "disabled task"
 	enabled = false
-	services = ["api"]
 	providers = ["fake-sync.success"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["api"]
+	}
 }
 `, dir, fakeFailureTaskName, fakeSuccessTaskName, disabledTaskName))
 }
@@ -235,27 +247,11 @@ task {
 	name = "%s"
 	description = "task is configured as disabled"
 	enabled = false
-	services = ["api", "web"]
 	providers = ["local"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["api", "web"]
+	}
 }
 `, disabledTaskName)
-}
-
-func panosBadCredConfig() hclConfig {
-	return `log_level = "trace"
-terraform_provider "panos" {
-	hostname = "10.10.10.10"
-	api_key = "badapikey_1234"
-}
-
-task {
-	name = "panos-bad-cred-e2e-test"
-	description = "panos handler should error and stop sync after once"
-	module = "findkim/ngfw/panos"
-	version = "0.0.1-beta5"
-	providers = ["panos"]
-	services = ["web"]
-}
-`
 }
