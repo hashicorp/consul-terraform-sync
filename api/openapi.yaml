@@ -93,6 +93,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: Gets a task by name
+      operationId: getTaskByName
+      description: Retrieves information for a single task based on the name provided
+      tags:
+        - tasks
+      parameters:
+        - name: name
+          in: path
+          description: Name of task to retrieve
+          required: true
+          schema:
+            type: string
+            example: "taskA"
+      responses:
+        '200':
+          description: Task retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
