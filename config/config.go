@@ -238,9 +238,10 @@ func (c *Config) Finalize() {
 
 	if c.Services == nil {
 		c.Services = DefaultServiceConfigs()
-	} else {
+	}
+	if len(*c.Services) > 0 {
 		logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
-		logger.Warn(deprecateServiceBlockWarning)
+		logger.Warn(serviceBlockLogMsg)
 	}
 	c.Services.Finalize()
 
@@ -588,7 +589,8 @@ func antiboolFromEnv(list []string, def bool) *bool {
 	return Bool(def)
 }
 
-const deprecateServiceBlockWarning = `the 'service' block is deprecated ` +
+// serviceBlockLogMsg is the log message for deprecating the `service` block
+const serviceBlockLogMsg = `the 'service' block is deprecated ` +
 	`in v0.5.0 and will be removed in a future major version after v0.8.0.
 
 ` +
