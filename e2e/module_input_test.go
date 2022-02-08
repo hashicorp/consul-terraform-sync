@@ -444,7 +444,7 @@ func TestModuleInput_Services_InvalidQueries(t *testing.T) {
 	for _, tc := range cases {
 		taskName := "module_input_services_invalid_" + tc.name
 		taskConfig := fmt.Sprintf(config, taskName, tc.queryConfig)
-		testInvalidQueries(t, tc.name, taskName, taskConfig, tc.errMsg)
+		testInvalidTaskConfig(t, tc.name, taskName, taskConfig, tc.errMsg)
 	}
 }
 
@@ -482,6 +482,6 @@ func TestModuleInput_ConsulKV_InvalidQueries(t *testing.T) {
 	for _, tc := range cases {
 		taskName := "module_input_consul_kv_invalid_" + tc.name
 		taskConfig := fmt.Sprintf(config, taskName, tc.queryConfig)
-		testInvalidQueries(t, tc.name, taskName, taskConfig, tc.errMsg)
+		testInvalidTaskConfig(t, tc.name, taskName, taskConfig, tc.errMsg)
 	}
 }

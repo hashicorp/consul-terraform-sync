@@ -589,7 +589,7 @@ func (tf *Terraform) initTaskTemplate() error {
 
 // validateTemplate verifies that executing the fetch requests of
 // a template's dependencies does not error.
-func validateTemplate(t *hcat.Template, clients hcat.Looker) error {
+func validateTemplate(t templates.Template, clients hcat.Looker) error {
 	var outer_err error
 	recaller := func(dep dep.Dependency) (interface{}, bool) {
 		data, _, err := dep.Fetch(clients)
