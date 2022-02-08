@@ -552,6 +552,27 @@ task {
 			expectStatus: false,
 			checkEvents:  false,
 		},
+		{
+			name:     "error_deprecated_non_supported_field",
+			taskName: taskName,
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["web"]
+  enabled        = true
+}
+`, taskName),
+			input: "yes\n",
+			outputContains: []string{
+				"the 'services' field in the task block is no longer supported",
+			},
+			expectErr:    true,
+			expectStatus: false,
+			checkEvents:  false,
+		},
 	}
 
 	for _, tc := range cases {
