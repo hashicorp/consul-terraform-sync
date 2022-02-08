@@ -16,6 +16,7 @@ import (
 const (
 	updateTaskSubsystemName = "updatetask"
 	createTaskSubsystemName = "createtask"
+	deleteTaskSubsystemName = "deletetask"
 	getTaskSubsystemName    = "gettask"
 
 	taskPath = "tasks"

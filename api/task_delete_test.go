@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTaskDelete_DeleteTaskByName(t *testing.T) {
+func TestTaskLifeCycleHandler_DeleteTaskByName(t *testing.T) {
 	t.Parallel()
 	taskName := "task"
 	cases := []struct {
