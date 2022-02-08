@@ -3,12 +3,14 @@ package command
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
+	mcli "github.com/mitchellh/cli"
 	"github.com/mitchellh/go-wordwrap"
 )
 
@@ -127,7 +129,12 @@ func (c *taskCreateCommand) Run(args []string) int {
 	}
 
 	taskConfig := taskConfigs[0]
-	taskName := *taskConfig.Name
+
+	if err = handleDeprecations(c.UI, taskConfig); err != nil {
+		return ExitCodeError
+	}
+
+	// Check if task config provided is using the deprecated task.services
 
 	taskReq, err := api.TaskRequestFromTaskConfig(*taskConfig)
 	if err != nil {
@@ -149,6 +156,7 @@ func (c *taskCreateCommand) Run(args []string) int {
 	}
 
 	// First inspect the plan
+	taskName := *taskConfig.Name
 	c.UI.Info(fmt.Sprintf("Inspecting changes to resource if creating task '%s'...\n", taskName))
 	c.UI.Output("Generating plan that Consul Terraform Sync will use Terraform to execute\n")
 
@@ -197,3 +205,217 @@ func (c *taskCreateCommand) Run(args []string) int {
 
 	return ExitCodeOK
 }
+
+// handleDeprecations handles fields that have been deprecated as part of the config
+// as fields are removed, the checks here will also be removed
+func handleDeprecations(ui mcli.Ui, tc *config.TaskConfig) error {
+
+	// Create an error flag, we want to accumulate and print out all the errors without returning
+	isError := false
+
+	// Handle deprecated task.source usage over task.module
+	if tc.DeprecatedSource != nil {
+		isError = true
+		ui.Error(errCreatingRequest)
+		ui.Output(generateSourceFieldMsg(*tc.DeprecatedSource))
+	}
+
+	// Handle deprecated source_input block over module_input
+	if tc.DeprecatedSourceInputs != nil {
+		isError = true
+		for _, si := range *tc.DeprecatedSourceInputs {
+			ui.Error(errCreatingRequest)
+			switch si.(type) {
+			case *config.ServicesModuleInputConfig:
+				ui.Output(generateSourceInputBlockMsg("services"))
+			case *config.ConsulKVModuleInputConfig:
+				ui.Output(generateSourceInputBlockMsg("consul-kv"))
+			}
+		}
+	}
+
+	// Handle deprecated condition source_includes_var usage over use_as_module_input
+	if tc.Condition != nil {
+		switch v := tc.Condition.(type) {
+		case *config.ServicesConditionConfig:
+			if v.DeprecatedSourceIncludesVar != nil {
+				isError = true
+				ui.Error(errCreatingRequest)
+				ui.Output(generateSourceIncludesVarMsg("services", *v.DeprecatedSourceIncludesVar))
+			}
+		case *config.CatalogServicesConditionConfig:
+			if v.DeprecatedSourceIncludesVar != nil {
+				isError = true
+				ui.Error(errCreatingRequest)
+				ui.Output(generateSourceIncludesVarMsg("catalog-services", *v.DeprecatedSourceIncludesVar))
+			}
+		case *config.ConsulKVConditionConfig:
+			if v.DeprecatedSourceIncludesVar != nil {
+				isError = true
+				ui.Error(errCreatingRequest)
+				ui.Output(generateSourceIncludesVarMsg("consul-kv", *v.DeprecatedSourceIncludesVar))
+			}
+		}
+	}
+
+	// Handle deprecated task.services
+	if len(tc.Services) != 0 {
+		isError = true
+		ui.Error(errCreatingRequest)
+		if tc.Condition != nil {
+			switch tc.Condition.(type) {
+			case *config.ServicesConditionConfig:
+				action := generateServicesConditionBlockAction(tc.Services)
+				ui.Output(generateServiceFieldMsg(action))
+			case *config.CatalogServicesConditionConfig:
+				action := generateServiceModuleInputBlockAction(tc.Services)
+				ui.Output(generateServiceFieldMsg(action))
+			case *config.ConsulKVConditionConfig:
+				action := generateServiceModuleInputBlockAction(tc.Services)
+				ui.Output(generateServiceFieldMsg(action))
+			case *config.ScheduleConditionConfig:
+				action := generateServicesAction(tc.Services)
+				ui.Output(generateServiceFieldMsg(action))
+			}
+		} else {
+			action := generateServicesAction(tc.Services)
+			ui.Output(generateServiceFieldMsg(action))
+		}
+	}
+
+	if isError {
+		return errors.New("invalid config")
+	}
+	return nil
+}
+
+func generateServicesConditionBlockAction(services []string) string {
+	list := `"` + strings.Join(services, `","`) + `"`
+	return fmt.Sprintf(servicesConditionBlockAction, list, list)
+}
+
+const servicesConditionBlockAction = `Please add the suggested names field to your current 'condition "services"' ` +
+	`block and assure that 'use_as_module_input' is true or not present
+
+Suggested replacement:
+|    task {
+|  -   services =  [%s]
+|      condition "services"{
+|  +     names = [%s]
+|  +     use_as_module_input = true
+|        ...
+|      }
+|      ...
+|    }
+`
+
+func generateServicesAction(services []string) string {
+	list := `"` + strings.Join(services, `","`) + `"`
+	return fmt.Sprintf(servicesAction, list)
+}
+
+const servicesAction = `Please replace the 'services' field with the following 'condition "services"' block
+
+task {
+  ...
+  condition "services" {
+    names=[%s]
+  }
+  ...
+}`
+
+func generateServiceModuleInputBlockAction(services []string) string {
+	list := `"` + strings.Join(services, `","`) + `"`
+	return fmt.Sprintf(servicesModuleInputBlockAction, list)
+}
+
+const servicesModuleInputBlockAction = `Please replace the 'services' field with the following 'module_input' block
+
+task {
+  ...
+  module_input "services" {
+    names=[%s]
+  }
+  ...
+}`
+
+func generateServiceFieldMsg(action string) string {
+	return fmt.Sprintf(servicesFieldMsg, action)
+}
+
+const servicesFieldMsg = `the 'services' field in the task block is no longer supported ` +
+	`
+
+'services' in a task configuration are to be replaced with the following:
+ * condition "services": if there is _no_ preexisting condition block configured in your task
+ * module_input "services": if there is a preexisting condition block configured in your task
+
+%s
+
+For more details and additional examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-services-field
+`
+
+func generateSourceFieldMsg(module string) string {
+	return fmt.Sprintf(sourceFieldMsg, module, module)
+}
+
+const sourceFieldMsg = `the 'source' field in the task block is no longer supported ` +
+	`
+
+Please replace 'source' with 'module' in your task configuration.
+
+Suggested replacement:
+|    task {
+|  -   source =  "%s"
+|  +   module =  "%s"
+|      ...
+|    }
+
+For more details and examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-source-field
+`
+
+func generateSourceInputBlockMsg(moduleInput string) string {
+	return fmt.Sprintf(sourceInputBlockMsg, moduleInput, moduleInput)
+}
+
+const sourceInputBlockMsg = `the 'source_input' block in the task is no longer supported ` +
+	`
+
+Please replace 'source_input' with 'module_input' in your task configuration.
+
+Suggested replacement:
+|    task {
+|  -   source_input "%s" {
+|  +   module_input "%s" {
+|        ...
+|      }
+|      ...
+|    }
+
+For more details and examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-source_input-block
+`
+
+func generateSourceIncludesVarMsg(condition string, useAsModuleInput bool) string {
+	return fmt.Sprintf(sourceIncludesVarMsg, condition, condition, useAsModuleInput, useAsModuleInput)
+}
+
+const sourceIncludesVarMsg = `the 'source_includes_var' field in the task's 'condition "%s"' block is no longer supported` +
+	`
+
+Please replace 'source_includes_var' with 'use_as_module_input' in your condition configuration.
+
+Suggested replacement:
+|    task {
+|      condition "%s" {
+|  -     source_includes_var = %t
+|  +     use_as_module_input = %t
+|      }
+|      ...
+|    }
+
+For more details and examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-source_includes_var-field
+`
