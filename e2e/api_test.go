@@ -758,6 +758,52 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 	validateServices(t, false, []string{serviceName}, resourcesPath)
 }
 
+// TestE2E_TaskEndpoints_Get tests the Get Task API: GET /v1/tasks/:task_name
+// It runs a Consul server and the CTS binary in daemon mode.
+func TestE2E_TaskEndpoints_Get(t *testing.T) {
+	setParallelism(t)
+
+	// 0. Start CTS with a task
+	// 1. Try retrieving the start-up task and verify response payload
+	// 2. Try retrieving a non-existent task and check status code
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "get_task_api")
+	taskName := "get_task"
+	module := "mkam/hello/cts"
+
+	cts := ctsSetup(t, srv, tempDir, moduleTaskConfig(taskName, module))
+
+	// 1. Check retrieving the existing task
+	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", taskName)
+	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Parse response body
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	var r oapigen.TaskResponse
+	err = json.Unmarshal(bodyBytes, &r)
+	require.NoError(t, err)
+	assert.NotEmpty(t, r.RequestId, "expected request ID in response")
+
+	// Verify basic task info in response
+	assert.NotNil(t, r.Task)
+	assert.Equal(t, taskName, r.Task.Name, "name not expected value")
+	assert.Equal(t, module, r.Task.Module, "module not expected value")
+
+	// 2. Check retrieving a non-existing task
+	u = fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", "non-existent-task")
+	resp = testutils.RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
 // checkEvents does some basic checks to loosely ensure returned events in
 // responses are as expected
 func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
