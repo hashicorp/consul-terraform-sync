@@ -306,7 +306,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	ev, err := event.NewEvent(taskName, &event.Config{
 		Providers: task.ProviderNames(),
 		Services:  task.ServiceNames(),
-		Module:    task.Module(),
+		Source:    task.Module(),
 	})
 	if err != nil {
 		return false, fmt.Errorf("error creating event for task %s: %s",
@@ -448,7 +448,7 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 	ev, err := event.NewEvent(taskName, &event.Config{
 		Providers: task.ProviderNames(),
 		Services:  task.ServiceNames(),
-		Module:    task.Module(),
+		Source:    task.Module(),
 	})
 	if err != nil {
 		logger.Error("error initializing run task event", "error", err)

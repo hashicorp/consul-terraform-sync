@@ -77,7 +77,7 @@ func TestServe(t *testing.T) {
 					On("Events", mock.Anything, taskName).Return(map[string][]event.Event{}, nil)
 			},
 			http.StatusOK,
-			`{"task_b":{"task_name":"task_b","status":"unknown","enabled":true,"providers":null,"services":null,"events_url":""}}
+			`{"task_b":{"task_name":"task_b","status":"unknown","enabled":true,"events_url":"","providers":null,"services":null}}
 `,
 		}, {
 			"create task",
@@ -575,7 +575,6 @@ func TestJsonResponse(t *testing.T) {
 								Providers: []string{"local", "null", "f5"},
 								Services:  []string{"api", "web", "db"},
 								Source:    "./test_modules/local_instances_file",
-								Module:    "./test_modules/local_instances_file",
 							},
 						},
 						{
@@ -591,7 +590,6 @@ func TestJsonResponse(t *testing.T) {
 								Providers: []string{"local", "null", "f5"},
 								Services:  []string{"api", "web", "db"},
 								Source:    "./test_modules/local_instances_file",
-								Module:    "./test_modules/local_instances_file",
 							},
 						},
 					},
