@@ -705,7 +705,7 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 	req := &oapigen.TaskRequest{
 		Task: oapigen.Task{
 			Name: taskName,
-			Condition: &oapigen.Condition{
+			Condition: oapigen.Condition{
 				Services: &oapigen.ServicesCondition{
 					Names: &[]string{serviceName},
 				},

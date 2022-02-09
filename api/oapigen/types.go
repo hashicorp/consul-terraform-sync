@@ -123,7 +123,7 @@ type ServicesModuleInput_CtsUserDefinedMeta struct {
 // Task defines model for Task.
 type Task struct {
 	BufferPeriod *BufferPeriod `json:"buffer_period,omitempty"`
-	Condition    *Condition    `json:"condition,omitempty"`
+	Condition    Condition     `json:"condition"`
 	Description  *string       `json:"description,omitempty"`
 	Enabled      *bool         `json:"enabled,omitempty"`
 	Module       string        `json:"module"`

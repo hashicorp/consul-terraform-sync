@@ -200,6 +200,7 @@ components:
       required:
         - name
         - module
+        - condition
       example:
         condition:
           services:
