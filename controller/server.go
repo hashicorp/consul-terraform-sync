@@ -44,12 +44,19 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 	d.SetBufferPeriod()
 
 	// Add the task driver to the driver list only after successful create
-	err = rw.drivers.Add(*taskConfig.Name, d)
+	name := *taskConfig.Name
+	err = rw.drivers.Add(name, d)
 	if err != nil {
 		return config.TaskConfig{}, err
 	}
 	conf, err := configFromDriverTask(d.Task())
 	if err != nil {
+		// Cleanup driver
+		err := rw.TaskDelete(ctx, name)
+		if err != nil {
+			rw.logger.Error("unable to cleanup task after error", "task_name", name)
+		}
+		// return top level error only
 		return config.TaskConfig{}, err
 	}
 

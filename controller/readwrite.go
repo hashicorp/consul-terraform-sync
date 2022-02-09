@@ -398,6 +398,9 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 	err = d.InitTask(ctx)
 	if err != nil {
 		logger.Error("error initializing new task", "error", err)
+		// Cleanup the task
+		d.DestroyTask(ctx)
+		logger.Debug("task destroyed", "task_name", *taskConfig.Name)
 		return nil, err
 	}
 
@@ -408,12 +411,18 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 			return nil, ctx.Err()
 		case <-timeout:
 			logger.Error("timed out rendering template")
+			// Cleanup the task
+			d.DestroyTask(ctx)
+			logger.Debug("task destroyed", "task_name", *taskConfig.Name)
 			return nil, fmt.Errorf("error initializing task")
 		default:
 		}
 		ok, err := d.RenderTemplate(ctx)
 		if err != nil {
 			logger.Error("error rendering task template")
+			// Cleanup the task
+			d.DestroyTask(ctx)
+			logger.Debug("task destroyed", "task_name", *taskConfig.Name)
 			return nil, err
 		}
 		if ok {

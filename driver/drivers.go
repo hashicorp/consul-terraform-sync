@@ -157,7 +157,7 @@ func (d *Drivers) Delete(taskName string) error {
 	if ok {
 		driver.DestroyTask(context.Background())
 	} else {
-		logging.Global().Trace("attempted to destroy a non-existent task", taskNameLogKey, taskName)
+		logging.Global().Debug("attempted to destroy a non-existent task", taskNameLogKey, taskName)
 	}
 
 	// delete driver templates associated with task
