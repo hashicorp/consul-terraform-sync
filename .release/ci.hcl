@@ -13,8 +13,7 @@ project "consul-terraform-sync" {
       "main",
       "release/0.2.x",
       "release/0.3.x",
-      "release/0.4.x",
-      "update-sec-scanner"
+      "release/0.4.x"
     ]
   }
 }
