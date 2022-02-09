@@ -20,13 +20,13 @@ func TestTaskLifeCycleHandler_GetTaskByName(t *testing.T) {
 
 	cases := []struct {
 		name          string
-		mock          func(*mocks.Server)
+		mockServer    func(*mocks.Server)
 		statusCode    int
 		checkResponse func(*httptest.ResponseRecorder)
 	}{
 		{
 			name: "happy_path",
-			mock: func(ctrl *mocks.Server) {
+			mockServer: func(ctrl *mocks.Server) {
 				ctrl.On("Task", mock.Anything, testTaskName).Return(testTaskConfig, nil)
 			},
 			statusCode: http.StatusOK,
@@ -42,7 +42,7 @@ func TestTaskLifeCycleHandler_GetTaskByName(t *testing.T) {
 		},
 		{
 			name: "not_found",
-			mock: func(ctrl *mocks.Server) {
+			mockServer: func(ctrl *mocks.Server) {
 				ctrl.On("Task", mock.Anything, testTaskName).Return(config.TaskConfig{}, fmt.Errorf("DNE"))
 			},
 			statusCode: http.StatusNotFound,
@@ -52,7 +52,7 @@ func TestTaskLifeCycleHandler_GetTaskByName(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := new(mocks.Server)
-			tc.mock(ctrl)
+			tc.mockServer(ctrl)
 			handler := NewTaskLifeCycleHandler(ctrl)
 
 			path := fmt.Sprintf("/v1/tasks/%s", testTaskName)

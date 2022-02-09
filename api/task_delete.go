@@ -32,7 +32,8 @@ func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	writeResponse(w, r, http.StatusAccepted, oapigen.TaskResponse{
-		RequestId: requestID,
-	})
+	resp := oapigen.TaskResponse{RequestId: requestID}
+	writeResponse(w, r, http.StatusAccepted, resp)
+
+	logger.Trace("task deleted", "delete_task_response", resp)
 }

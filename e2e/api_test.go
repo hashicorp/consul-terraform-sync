@@ -660,11 +660,8 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 
 	resp := testutils.RequestHTTP(t, http.MethodPost, u, badRequest)
 	defer resp.Body.Close()
-	bodyBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
 	var errorResponse oapigen.ErrorResponse
-	err = json.Unmarshal(bodyBytes, &errorResponse)
+	err := json.NewDecoder(resp.Body).Decode(&errorResponse)
 	require.NoError(t, err)
 
 	assert.Contains(t, errorResponse.Error.Message, `request body has an error: doesn't match the schema: `+
@@ -713,10 +710,8 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 
 	// Parse response body
 	defer resp.Body.Close()
-	bodyBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
 	var r oapigen.TaskResponse
-	err = json.Unmarshal(bodyBytes, &r)
+	err := json.NewDecoder(resp.Body).Decode(&r)
 	require.NoError(t, err)
 	assert.NotEmpty(t, r.RequestId, "expected request ID in response")
 
@@ -785,10 +780,8 @@ func TestE2E_TaskEndpoints_Get(t *testing.T) {
 
 	// Parse response body
 	defer resp.Body.Close()
-	bodyBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
 	var r oapigen.TaskResponse
-	err = json.Unmarshal(bodyBytes, &r)
+	err := json.NewDecoder(resp.Body).Decode(&r)
 	require.NoError(t, err)
 	assert.NotEmpty(t, r.RequestId, "expected request ID in response")
 

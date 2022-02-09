@@ -8,8 +8,8 @@ import (
 
 // GetTaskByName retrieves a task's information by the task's name
 func (h *TaskLifeCycleHandler) GetTaskByName(w http.ResponseWriter, r *http.Request, name string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	ctx := r.Context()
 	requestID := requestIDFromContext(ctx)
@@ -26,4 +26,6 @@ func (h *TaskLifeCycleHandler) GetTaskByName(w http.ResponseWriter, r *http.Requ
 
 	resp := taskResponseFromTaskConfig(taskConfig, requestID)
 	writeResponse(w, r, http.StatusOK, resp)
+
+	logger.Trace("task retrieved", "get_task_response", resp)
 }
