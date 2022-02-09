@@ -16,7 +16,10 @@ import (
 const (
 	updateTaskSubsystemName = "updatetask"
 	createTaskSubsystemName = "createtask"
-	taskPath                = "tasks"
+	deleteTaskSubsystemName = "deletetask"
+	getTaskSubsystemName    = "gettask"
+
+	taskPath = "tasks"
 
 	RunOptionInspect = "inspect"
 	RunOptionNow     = "now"

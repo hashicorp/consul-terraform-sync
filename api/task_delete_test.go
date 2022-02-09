@@ -13,12 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTaskDelete_DeleteTaskByName(t *testing.T) {
+func TestTaskLifeCycleHandler_DeleteTaskByName(t *testing.T) {
 	t.Parallel()
 	taskName := "task"
 	cases := []struct {
 		name       string
-		mock       func(*mocks.Server)
+		mockServer func(*mocks.Server)
 		statusCode int
 	}{
 		{
@@ -50,7 +50,7 @@ func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := new(mocks.Server)
-			tc.mock(ctrl)
+			tc.mockServer(ctrl)
 			handler := NewTaskLifeCycleHandler(ctrl)
 
 			path := fmt.Sprintf("/v1/tasks/%s", taskName)

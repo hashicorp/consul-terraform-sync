@@ -15,8 +15,8 @@ func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 	requestID := requestIDFromContext(ctx)
-	logger := logging.FromContext(r.Context()).Named(createTaskSubsystemName).With("task_name", name)
-	logger.Trace("delete task request", "delete_task_request", name)
+	logger := logging.FromContext(r.Context()).Named(deleteTaskSubsystemName).With("task_name", name)
+	logger.Trace("delete task request")
 
 	// Check if task exists
 	_, err := h.ctrl.Task(ctx, name)
@@ -32,7 +32,8 @@ func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	writeResponse(w, r, http.StatusAccepted, oapigen.TaskResponse{
-		RequestId: requestID,
-	})
+	resp := oapigen.TaskResponse{RequestId: requestID}
+	writeResponse(w, r, http.StatusAccepted, resp)
+
+	logger.Trace("task deleted", "delete_task_response", resp)
 }
