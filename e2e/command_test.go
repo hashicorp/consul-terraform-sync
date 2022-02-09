@@ -722,6 +722,92 @@ task {
 		"event count did not increment once. task was not triggered as expected")
 }
 
+// TestE2E_RecreateBadTask tests that after attempting to create a bad task, cleanup is performed
+// so that a subsequent creation of the same task is permissible
+func TestE2E_RecreateBadTask(t *testing.T) {
+	setParallelism(t)
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "recreate_bad_task_cmd")
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+	cts := ctsSetup(t, srv, tempDir, dbTask())
+
+	var taskConfig hclConfig
+	taskName := "new-task"
+	runs := []struct {
+		inputTask     string
+		isExpectExist bool
+	}{
+		{
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./no-exist"
+  providers      = ["local"]
+  services       = ["web"]
+  enabled = true
+}`, taskName),
+			isExpectExist: false,
+		}, {
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["web"]
+  enabled = true
+}`, taskName),
+			isExpectExist: false,
+		},
+	}
+	for i, run := range runs {
+		// Write task config file
+		taskConfig = taskConfig.appendString(run.inputTask)
+		taskFilePath := filepath.Join(tempDir, fmt.Sprintf("task_%d.hcl", i))
+		taskConfig.write(t, taskFilePath)
+
+		// Create task
+		subcmdCreate := []string{"task", "create",
+			fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+			fmt.Sprintf("--task-file=%s", taskFilePath),
+		}
+
+		input := "yes\n"
+		_, err := runSubcommand(t, input, subcmdCreate...)
+
+		if run.isExpectExist {
+			assert.NoError(t, err)
+
+			// Confirm task was re-created
+			_, err = cts.Status().Task(taskName, nil)
+			assert.NoError(t, err)
+
+			// Verify events trigger
+			// 1. get current number of events
+			eventCountBase := eventCount(t, taskName, cts.Port())
+
+			// 2. register web service. check triggers task
+			now := time.Now()
+			service := testutil.TestService{ID: "web-1", Name: "web"}
+			testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+			api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+
+			eventCountNow := eventCount(t, taskName, cts.Port())
+			require.Equal(t, eventCountBase+1, eventCountNow,
+				"event count did not increment once. task was not triggered as expected")
+		} else {
+			assert.Error(t, err)
+
+			// Confirm task was not created
+			_, err = cts.Status().Task(taskName, nil)
+			assert.Error(t, err)
+		}
+	}
+}
+
 // TestE2E_DeleteTaskCommand_Help tests that the usage is outputted
 // for the task help commands. Does not require a running CTS binary.
 func TestE2E_TaskCommand_Help(t *testing.T) {
