@@ -197,6 +197,10 @@ components:
           $ref: '#/components/schemas/Condition'
         module_input:
           $ref: '#/components/schemas/ModuleInput'
+        terraform_version:
+           type: string
+           description: Enterprise only. The Terraform version to for the Terraform Cloud driver.
+           example: "1.0.0"
       required:
         - name
         - module

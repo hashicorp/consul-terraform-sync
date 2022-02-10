@@ -130,8 +130,11 @@ type Task struct {
 	ModuleInput  *ModuleInput  `json:"module_input,omitempty"`
 	Name         string        `json:"name"`
 	Providers    *[]string     `json:"providers,omitempty"`
-	Variables    *VariableMap  `json:"variables,omitempty"`
-	Version      *string       `json:"version,omitempty"`
+
+	// Enterprise only. The Terraform version to for the Terraform Cloud driver.
+	TerraformVersion *string      `json:"terraform_version,omitempty"`
+	Variables        *VariableMap `json:"variables,omitempty"`
+	Version          *string      `json:"version,omitempty"`
 }
 
 // TaskDeleteResponse defines model for TaskDeleteResponse.
