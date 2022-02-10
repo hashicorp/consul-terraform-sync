@@ -47,16 +47,13 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 	name := *taskConfig.Name
 	err = rw.drivers.Add(name, d)
 	if err != nil {
+		rw.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
 	conf, err := configFromDriverTask(d.Task())
 	if err != nil {
 		// Cleanup driver
-		err := rw.TaskDelete(ctx, name)
-		if err != nil {
-			rw.logger.Error("unable to cleanup task after error", "task_name", name)
-		}
-		// return top level error only
+		rw.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
 
@@ -80,12 +77,15 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 	d.SetBufferPeriod()
 
 	// Add the task driver to the driver list only after successful create and run
+	name := *taskConfig.Name
 	err = rw.drivers.Add(*taskConfig.Name, d)
 	if err != nil {
+		rw.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
 	conf, err := configFromDriverTask(d.Task())
 	if err != nil {
+		rw.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
 
@@ -240,4 +240,11 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		ModuleInputs: &inputs,
 		WorkingDir:   config.String(t.WorkingDir()),
 	}, nil
+}
+
+func (rw ReadWrite) cleanupTask(ctx context.Context, name string) {
+	err := rw.TaskDelete(ctx, name)
+	if err != nil {
+		rw.logger.Error("unable to cleanup task after error", "task_name", name)
+	}
 }
