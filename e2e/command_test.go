@@ -733,7 +733,6 @@ func TestE2E_RecreateBadTask(t *testing.T) {
 	defer srv.Stop()
 	cts := ctsSetup(t, srv, tempDir, dbTask())
 
-	var taskConfig hclConfig
 	taskName := "new-task"
 	runs := []struct {
 		inputTask     string
@@ -760,11 +759,12 @@ task {
   services       = ["web"]
   enabled = true
 }`, taskName),
-			isExpectExist: false,
+			isExpectExist: true,
 		},
 	}
 	for i, run := range runs {
 		// Write task config file
+		var taskConfig hclConfig
 		taskConfig = taskConfig.appendString(run.inputTask)
 		taskFilePath := filepath.Join(tempDir, fmt.Sprintf("task_%d.hcl", i))
 		taskConfig.write(t, taskFilePath)
