@@ -692,6 +692,11 @@ func TestE2E_CreateDeleteCreateTrigger(t *testing.T) {
 	defer srv.Stop()
 	cts := ctsSetup(t, srv, tempDir, dbTask())
 
+	runCreateDeleteCreateTrigger(t, srv, cts, tempDir, defaultWaitForEvent)
+}
+
+func runCreateDeleteCreateTrigger(t *testing.T, srv *testutil.TestServer,
+	cts *api.Client, tempDir string, eventTimeout time.Duration) {
 	// Write task config file
 	var taskConfig hclConfig
 	taskName := "new-task"
@@ -752,7 +757,7 @@ task {
 	now := time.Now()
 	service := testutil.TestService{ID: "web-1", Name: "web"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+	api.WaitForEvent(t, cts, taskName, now, eventTimeout)
 
 	eventCountNow := eventCount(t, taskName, cts.Port())
 	require.Equal(t, eventCountBase+1, eventCountNow,
