@@ -90,6 +90,7 @@ func TestServer_TaskCreate(t *testing.T) {
 	t.Run("create error", func(t *testing.T) {
 		mockD := new(mocksD.Driver)
 		mockD.On("InitTask", mock.Anything).Return(fmt.Errorf("init err"))
+		mockD.On("DestroyTask", mock.Anything).Return()
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
