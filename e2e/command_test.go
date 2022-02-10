@@ -404,7 +404,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			input: "yes\n",
@@ -436,7 +438,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/with_tfvars_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled        = true
   variable_files = ["%s","%s"]
 }`, taskName, filenameVarsFileName, objectVarsFileName),
@@ -457,7 +461,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			outputContains: []string{
@@ -476,7 +482,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			input: "no\n",
@@ -497,7 +505,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  condition "services" {
+    names = ["api"]
+  }
   enabled = true
 }`, dbTaskName),
 			input: "no\n",
@@ -518,7 +528,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }
 task {
@@ -526,13 +538,36 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }
 `, taskName, taskName),
 			input: "yes\n",
 			outputContains: []string{
 				"cannot contain more than 1 task, contains 2 tasks",
+			},
+			expectErr:    true,
+			expectStatus: false,
+			checkEvents:  false,
+		},
+		{
+			name:     "error_deprecated_non_supported_field",
+			taskName: taskName,
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["web"]
+  enabled        = true
+}
+`, taskName),
+			input: "yes\n",
+			outputContains: []string{
+				"the 'services' field in the task block is no longer supported",
 			},
 			expectErr:    true,
 			expectStatus: false,
@@ -666,7 +701,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName)
 	taskConfig = taskConfig.appendString(inputTask)
@@ -745,7 +782,9 @@ task {
   description    = "Creates a new task"
   module         = "./no-exist"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			isExpectExist: false,
@@ -756,7 +795,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			isExpectExist: true,

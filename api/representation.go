@@ -78,10 +78,6 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 		tc.Providers = *tr.Task.Providers
 	}
 
-	if tr.Task.Services != nil {
-		tc.Services = *tr.Task.Services
-	}
-
 	// Convert module input
 	if tr.Task.ModuleInput != nil {
 		inputs := make(config.ModuleInputConfigs, 0)
@@ -117,50 +113,48 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	}
 
 	// Convert condition
-	if tr.Task.Condition != nil {
-		if tr.Task.Condition.Services != nil {
-			cond := &config.ServicesConditionConfig{
-				ServicesMonitorConfig: config.ServicesMonitorConfig{
-					Datacenter: tr.Task.Condition.Services.Datacenter,
-					Namespace:  tr.Task.Condition.Services.Namespace,
-					Filter:     tr.Task.Condition.Services.Filter,
-				},
-				UseAsModuleInput: tr.Task.Condition.Services.UseAsModuleInput,
-			}
-			if tr.Task.Condition.Services.Names != nil && len(*tr.Task.Condition.Services.Names) > 0 {
-				cond.Names = *tr.Task.Condition.Services.Names
-			} else {
-				cond.Regexp = tr.Task.Condition.Services.Regexp
-			}
-			if tr.Task.Condition.Services.CtsUserDefinedMeta != nil {
-				cond.ServicesMonitorConfig.CTSUserDefinedMeta =
-					tr.Task.Condition.Services.CtsUserDefinedMeta.AdditionalProperties
-			}
-			tc.Condition = cond
-		} else if tr.Task.Condition.ConsulKv != nil {
-			tc.Condition = &config.ConsulKVConditionConfig{
-				ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
-					Datacenter: tr.Task.Condition.ConsulKv.Datacenter,
-					Recurse:    tr.Task.Condition.ConsulKv.Recurse,
-					Path:       &tr.Task.Condition.ConsulKv.Path,
-					Namespace:  tr.Task.Condition.ConsulKv.Namespace,
-				},
-				UseAsModuleInput: tr.Task.Condition.ConsulKv.UseAsModuleInput,
-			}
-		} else if tr.Task.Condition.CatalogServices != nil {
-			tc.Condition = &config.CatalogServicesConditionConfig{
-				CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
-					Regexp:           config.String(tr.Task.Condition.CatalogServices.Regexp),
-					UseAsModuleInput: tr.Task.Condition.CatalogServices.UseAsModuleInput,
-					Datacenter:       tr.Task.Condition.CatalogServices.Datacenter,
-					Namespace:        tr.Task.Condition.CatalogServices.Namespace,
-					NodeMeta:         tr.Task.Condition.CatalogServices.NodeMeta.AdditionalProperties,
-				},
-			}
-		} else if tr.Task.Condition.Schedule != nil {
-			tc.Condition = &config.ScheduleConditionConfig{
-				Cron: &tr.Task.Condition.Schedule.Cron,
-			}
+	if tr.Task.Condition.Services != nil {
+		cond := &config.ServicesConditionConfig{
+			ServicesMonitorConfig: config.ServicesMonitorConfig{
+				Datacenter: tr.Task.Condition.Services.Datacenter,
+				Namespace:  tr.Task.Condition.Services.Namespace,
+				Filter:     tr.Task.Condition.Services.Filter,
+			},
+			UseAsModuleInput: tr.Task.Condition.Services.UseAsModuleInput,
+		}
+		if tr.Task.Condition.Services.Names != nil && len(*tr.Task.Condition.Services.Names) > 0 {
+			cond.Names = *tr.Task.Condition.Services.Names
+		} else {
+			cond.Regexp = tr.Task.Condition.Services.Regexp
+		}
+		if tr.Task.Condition.Services.CtsUserDefinedMeta != nil {
+			cond.ServicesMonitorConfig.CTSUserDefinedMeta =
+				tr.Task.Condition.Services.CtsUserDefinedMeta.AdditionalProperties
+		}
+		tc.Condition = cond
+	} else if tr.Task.Condition.ConsulKv != nil {
+		tc.Condition = &config.ConsulKVConditionConfig{
+			ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+				Datacenter: tr.Task.Condition.ConsulKv.Datacenter,
+				Recurse:    tr.Task.Condition.ConsulKv.Recurse,
+				Path:       &tr.Task.Condition.ConsulKv.Path,
+				Namespace:  tr.Task.Condition.ConsulKv.Namespace,
+			},
+			UseAsModuleInput: tr.Task.Condition.ConsulKv.UseAsModuleInput,
+		}
+	} else if tr.Task.Condition.CatalogServices != nil {
+		tc.Condition = &config.CatalogServicesConditionConfig{
+			CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
+				Regexp:           config.String(tr.Task.Condition.CatalogServices.Regexp),
+				UseAsModuleInput: tr.Task.Condition.CatalogServices.UseAsModuleInput,
+				Datacenter:       tr.Task.Condition.CatalogServices.Datacenter,
+				Namespace:        tr.Task.Condition.CatalogServices.Namespace,
+				NodeMeta:         tr.Task.Condition.CatalogServices.NodeMeta.AdditionalProperties,
+			},
+		}
+	} else if tr.Task.Condition.Schedule != nil {
+		tc.Condition = &config.ScheduleConditionConfig{
+			Cron: &tr.Task.Condition.Schedule.Cron,
 		}
 	}
 
@@ -247,10 +241,6 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 		task.Providers = &tc.Providers
 	}
 
-	if tc.Services != nil {
-		task.Services = &tc.Services
-	}
-
 	if tc.ModuleInputs != nil {
 		task.ModuleInput = new(oapigen.ModuleInput)
 		for _, moduleInput := range *tc.ModuleInputs {
@@ -288,47 +278,44 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 		}
 	}
 
-	if tc.Condition != nil {
-		task.Condition = new(oapigen.Condition)
-		switch cond := tc.Condition.(type) {
-		case *config.ServicesConditionConfig:
-			services := &oapigen.ServicesCondition{
-				Datacenter: cond.Datacenter,
-				Namespace:  cond.Namespace,
-				Filter:     cond.Filter,
-				CtsUserDefinedMeta: &oapigen.ServicesCondition_CtsUserDefinedMeta{
-					AdditionalProperties: cond.CTSUserDefinedMeta,
-				},
-				UseAsModuleInput: cond.UseAsModuleInput,
-			}
-			if len(cond.Names) > 0 {
-				services.Names = &cond.Names
-			} else {
-				services.Regexp = cond.Regexp
-			}
-			task.Condition.Services = services
-		case *config.CatalogServicesConditionConfig:
-			task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
-				Regexp:           *cond.Regexp,
-				UseAsModuleInput: cond.UseAsModuleInput,
-				Datacenter:       cond.Datacenter,
-				Namespace:        cond.Namespace,
-				NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
-					AdditionalProperties: cond.NodeMeta,
-				},
-			}
-		case *config.ConsulKVConditionConfig:
-			task.Condition.ConsulKv = &oapigen.ConsulKVCondition{
-				Datacenter:       cond.Datacenter,
-				Recurse:          cond.Recurse,
-				Path:             *cond.Path,
-				Namespace:        cond.Namespace,
-				UseAsModuleInput: cond.UseAsModuleInput,
-			}
-		case *config.ScheduleConditionConfig:
-			task.Condition.Schedule = &oapigen.ScheduleCondition{
-				Cron: *cond.Cron,
-			}
+	switch cond := tc.Condition.(type) {
+	case *config.ServicesConditionConfig:
+		services := &oapigen.ServicesCondition{
+			Datacenter: cond.Datacenter,
+			Namespace:  cond.Namespace,
+			Filter:     cond.Filter,
+			CtsUserDefinedMeta: &oapigen.ServicesCondition_CtsUserDefinedMeta{
+				AdditionalProperties: cond.CTSUserDefinedMeta,
+			},
+			UseAsModuleInput: cond.UseAsModuleInput,
+		}
+		if len(cond.Names) > 0 {
+			services.Names = &cond.Names
+		} else {
+			services.Regexp = cond.Regexp
+		}
+		task.Condition.Services = services
+	case *config.CatalogServicesConditionConfig:
+		task.Condition.CatalogServices = &oapigen.CatalogServicesCondition{
+			Regexp:           *cond.Regexp,
+			UseAsModuleInput: cond.UseAsModuleInput,
+			Datacenter:       cond.Datacenter,
+			Namespace:        cond.Namespace,
+			NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
+				AdditionalProperties: cond.NodeMeta,
+			},
+		}
+	case *config.ConsulKVConditionConfig:
+		task.Condition.ConsulKv = &oapigen.ConsulKVCondition{
+			Datacenter:       cond.Datacenter,
+			Recurse:          cond.Recurse,
+			Path:             *cond.Path,
+			Namespace:        cond.Namespace,
+			UseAsModuleInput: cond.UseAsModuleInput,
+		}
+	case *config.ScheduleConditionConfig:
+		task.Condition.Schedule = &oapigen.ScheduleCondition{
+			Cron: *cond.Cron,
 		}
 	}
 

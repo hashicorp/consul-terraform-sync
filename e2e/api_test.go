@@ -31,9 +31,13 @@ const (
 		"providers": [
 			"local"
 		],
-		"services": [
-			"%s"
-		],
+        "condition": {
+            "services": {
+                "names": [
+                    "%s"
+                ]
+            }
+        },
 		"module": "mkam/instance-files/local"
 	}
 }`
@@ -700,9 +704,14 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 	serviceName := "api"
 	req := &oapigen.TaskRequest{
 		Task: oapigen.Task{
-			Name:     taskName,
-			Services: &[]string{serviceName},
-			Module:   "mkam/hello/cts",
+			Name: taskName,
+			Condition: oapigen.Condition{
+				Services: &oapigen.ServicesCondition{
+					Names: &[]string{serviceName},
+				},
+			},
+
+			Module: "mkam/hello/cts",
 		},
 	}
 	resp := testutils.RequestJSON(t, http.MethodPost, u, req)
@@ -724,7 +733,7 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 	assert.NotNil(t, r.Task)
 	assert.Equal(t, req.Task.Name, r.Task.Name, "name not expected value")
 	assert.Equal(t, req.Task.Module, r.Task.Module, "module not expected value")
-	assert.ElementsMatch(t, *req.Task.Services, *r.Task.Services, "services not expected value")
+	assert.ElementsMatch(t, *req.Task.Condition.Services.Names, *r.Task.Condition.Services.Names, "services not expected value")
 
 	// Check that the task was not created
 	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
