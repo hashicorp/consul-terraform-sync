@@ -782,7 +782,9 @@ task {
   description    = "Creates a new task"
   module         = "./no-exist"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			isExpectExist: false,
@@ -793,7 +795,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["web"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			isExpectExist: true,
