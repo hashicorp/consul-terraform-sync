@@ -189,6 +189,10 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 			tc.Variables[k] = v
 		}
 	}
+
+	// Enterprise
+	tc.TFVersion = tr.Task.TerraformVersion
+
 	return tc, nil
 }
 
@@ -328,6 +332,9 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 			Min:     &min,
 		}
 	}
+
+	// Enterprise
+	task.TerraformVersion = tc.TFVersion
 
 	return task
 }

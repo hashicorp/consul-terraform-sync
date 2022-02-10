@@ -239,6 +239,9 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		Condition:    t.Condition(),
 		ModuleInputs: &inputs,
 		WorkingDir:   config.String(t.WorkingDir()),
+
+		// Enterprise
+		TFVersion: config.String(t.TFVersion()),
 	}, nil
 }
 
