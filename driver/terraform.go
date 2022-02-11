@@ -571,20 +571,19 @@ func (tf *Terraform) initTaskTemplate() error {
 
 	tf.setNotifier(tmpl)
 
+	logger.Debug("validating template")
+	err = validateTemplate(tmpl, tf.watcher.Clients())
+	if err != nil {
+		logger.Error("error validating template", "error", err)
+		return errors.Wrap(err, "unable to retrieve data from Consul")
+	}
+	logger.Debug("template validation complete")
+
 	err = tf.watcher.Register(tf.template)
 	if err != nil && err != hcat.ErrRegistry {
 		logger.Error("unable to register template", "error", err)
 		return err
 	}
-
-	logger.Debug("validating template")
-	err = validateTemplate(tmpl, tf.watcher.Clients())
-	if err != nil {
-		tf.watcher.Deregister(tf.template)
-		logger.Error("error validating template", "error", err)
-		return errors.Wrap(err, "unable to retrieve data from Consul")
-	}
-	logger.Debug("template validation complete")
 
 	return nil
 }
