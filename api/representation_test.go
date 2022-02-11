@@ -142,7 +142,7 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 				Description:  config.String("test-description"),
 				Name:         config.String("test-name"),
 				Providers:    []string{"test-provider-1", "test-provider-2"},
-				Services:     []string{"api", "web"},
+				Services:     []string{},
 				Module:       config.String("path"),
 				Version:      config.String("test-version"),
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
@@ -372,6 +372,64 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 							AdditionalProperties: map[string]string{"key": "value"},
 						},
 					},
+				},
+			},
+		},
+		{
+			name: "services_field_to_condition",
+			taskConfig: config.TaskConfig{
+				Services: []string{"api", "web"},
+			},
+			expectedRequest: oapigen.Task{
+				Condition: oapigen.Condition{
+					Services: &oapigen.ServicesCondition{
+						Names:            &[]string{"api", "web"},
+						UseAsModuleInput: config.Bool(true),
+					},
+				},
+			},
+		},
+		{
+			name: "services_field_to_module_input",
+			taskConfig: config.TaskConfig{
+				Services:  []string{"api", "web"},
+				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+			},
+			expectedRequest: oapigen.Task{
+				ModuleInput: &oapigen.ModuleInput{
+					Services: &oapigen.ServicesModuleInput{
+						Names: &[]string{"api", "web"},
+					},
+				},
+				Condition: oapigen.Condition{
+					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
+				},
+			},
+		},
+		{
+			name: "services_field_to_module_input_w_existing_module_input",
+			taskConfig: config.TaskConfig{
+				Services: []string{"api", "web"},
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+							Path: config.String("fake-path"),
+						},
+					},
+				},
+				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+			},
+			expectedRequest: oapigen.Task{
+				ModuleInput: &oapigen.ModuleInput{
+					Services: &oapigen.ServicesModuleInput{
+						Names: &[]string{"api", "web"},
+					},
+					ConsulKv: &oapigen.ConsulKVModuleInput{
+						Path: "fake-path",
+					},
+				},
+				Condition: oapigen.Condition{
+					Schedule: &oapigen.ScheduleCondition{Cron: "*/10 * * * * * *"},
 				},
 			},
 		},
