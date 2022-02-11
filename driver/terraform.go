@@ -590,19 +590,20 @@ func (tf *Terraform) initTaskTemplate() error {
 
 // validateTemplate verifies that executing the fetch requests of
 // a template's dependencies does not error.
-func validateTemplate(t templates.Template, clients hcat.Looker) error {
-	var outer_err error
+func validateTemplate(t *hcat.Template, clients hcat.Looker) error {
+	var err error
 	recaller := func(dep dep.Dependency) (interface{}, bool) {
-		data, _, err := dep.Fetch(clients)
-		if err != nil {
-			outer_err = err
+		data, _, fetchErr := dep.Fetch(clients)
+		if fetchErr != nil {
+			err = fetchErr
 			return nil, false
 		}
 		return data, true
 	}
 	t.Execute(recaller)
+	// Mark that template needs to be re-run
 	t.Notify(nil)
-	return outer_err
+	return err
 }
 
 // setNotifier sets a notifier on the template to ensure only the condition's
