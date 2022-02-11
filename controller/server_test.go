@@ -28,6 +28,51 @@ var validTaskConf = config.TaskConfig{
 	},
 }
 
+func TestServer_Task(t *testing.T) {
+	ctx := context.Background()
+	ctrl := ReadWrite{
+		baseController: &baseController{
+			drivers: driver.NewDrivers(),
+		},
+	}
+
+	t.Run("success", func(t *testing.T) {
+		taskConf := validTaskConf
+		taskConf.Finalize(config.DefaultBufferPeriodConfig(), "path")
+		driverTask, err := driver.NewTask(driver.TaskConfig{
+			Enabled:   true,
+			Name:      *taskConf.Name,
+			Module:    *taskConf.Module,
+			Condition: taskConf.Condition,
+			BufferPeriod: &driver.BufferPeriod{
+				Min: *taskConf.BufferPeriod.Min,
+				Max: *taskConf.BufferPeriod.Max,
+			},
+			WorkingDir: *taskConf.WorkingDir,
+		})
+		require.NoError(t, err)
+
+		d := new(mocksD.Driver)
+		mockDriver(ctx, d, driverTask)
+		err = ctrl.drivers.Add(*taskConf.Name, d)
+		require.NoError(t, err)
+
+		actualConf, err := ctrl.Task(ctx, *taskConf.Name)
+		require.NoError(t, err)
+
+		// VarFiles are not stored for the task. Set to empty array.
+		actualConf.VarFiles = []string{}
+		assert.Equal(t, taskConf, actualConf)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		// no driver setup because non-existent task
+
+		_, err := ctrl.Task(ctx, "non-existent-task")
+		assert.Error(t, err)
+	})
+}
+
 func TestServer_TaskCreate(t *testing.T) {
 	ctx := context.Background()
 	ctrl := ReadWrite{

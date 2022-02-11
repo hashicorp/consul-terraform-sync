@@ -160,6 +160,48 @@ func TestNewDriverTask(t *testing.T) {
 			&config.Config{Tasks: &config.TaskConfigs{}},
 			[]*driver.Task{},
 		}, {
+			"basic task fields",
+			&config.Config{Tasks: &config.TaskConfigs{
+				&config.TaskConfig{
+					Description:  config.String("description"),
+					Name:         config.String("name"),
+					Enabled:      config.Bool(true),
+					Module:       config.String("path"),
+					Version:      config.String("version"),
+					BufferPeriod: config.DefaultBufferPeriodConfig(),
+					Condition:    config.EmptyConditionConfig(),
+					ModuleInputs: config.DefaultModuleInputConfigs(),
+					WorkingDir:   config.String("working-dir/name"),
+
+					// Enterprise
+					TFVersion: config.String("1.0.0"),
+				},
+			}},
+			[]*driver.Task{newTestTask(t, driver.TaskConfig{
+				Description: "description",
+				Name:        "name",
+				Enabled:     true,
+				Module:      "path",
+				Version:     "version",
+				BufferPeriod: &driver.BufferPeriod{
+					Min: 5 * time.Second,
+					Max: 20 * time.Second,
+				},
+				Condition:    config.EmptyConditionConfig(),
+				ModuleInputs: *config.DefaultModuleInputConfigs(),
+				WorkingDir:   "working-dir/name",
+
+				// Enterprise
+				TFVersion: "1.0.0",
+
+				Env: map[string]string{
+					"CONSUL_HTTP_ADDR": "localhost:8500",
+				},
+				Providers:    driver.TerraformProviderBlocks{},
+				ProviderInfo: map[string]interface{}{},
+				Services:     []driver.Service{},
+			})},
+		}, {
 			// Fetches correct provider and required_providers blocks from config
 			"providers",
 			&config.Config{

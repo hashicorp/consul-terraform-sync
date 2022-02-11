@@ -68,6 +68,9 @@ type Task struct {
 	moduleInputs config.ModuleInputConfigs
 	workingDir   string
 	logger       logging.Logger
+
+	// Enterprise
+	tfVersion string
 }
 
 type TaskConfig struct {
@@ -86,6 +89,9 @@ type TaskConfig struct {
 	Condition    config.ConditionConfig
 	ModuleInputs config.ModuleInputConfigs
 	WorkingDir   string
+
+	// Enterprise
+	TFVersion string
 }
 
 func NewTask(conf TaskConfig) (*Task, error) {
@@ -131,6 +137,9 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		moduleInputs: conf.ModuleInputs,
 		workingDir:   conf.WorkingDir,
 		logger:       logging.Global().Named(logSystemName),
+
+		// Enterprise
+		tfVersion: conf.TFVersion,
 	}, nil
 }
 
@@ -289,6 +298,14 @@ func (t *Task) WorkingDir() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.workingDir
+}
+
+// TFVersion returns the Terraform version to use when using the Terraform Cloud
+// driver. Enterprise.
+func (t *Task) TFVersion() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.tfVersion
 }
 
 func (s Service) Copy() Service {

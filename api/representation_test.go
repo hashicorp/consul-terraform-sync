@@ -144,12 +144,14 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 				Providers:    []string{"test-provider-1", "test-provider-2"},
 				Services:     []string{"api", "web"},
 				Module:       config.String("path"),
-				TFVersion:    config.String(""),
 				Version:      config.String("test-version"),
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
 				Enabled:      config.Bool(true),
 				Condition:    config.EmptyConditionConfig(),
 				ModuleInputs: config.DefaultModuleInputConfigs(),
+
+				// Enterprise
+				TFVersion: config.String("1.0.0"),
 			},
 			expectedRequest: oapigen.Task{
 				Name:        "test-name",
@@ -165,6 +167,9 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 				Condition:   oapigen.Condition{},
 				ModuleInput: &oapigen.ModuleInput{},
 				Providers:   &[]string{"test-provider-1", "test-provider-2"},
+
+				// Enterprise
+				TerraformVersion: config.String("1.0.0"),
 			},
 		},
 		{

@@ -798,6 +798,7 @@ func TestE2E_TaskEndpoints_Get(t *testing.T) {
 	assert.NotNil(t, r.Task)
 	assert.Equal(t, taskName, r.Task.Name, "name not expected value")
 	assert.Equal(t, module, r.Task.Module, "module not expected value")
+	assert.Empty(t, r.Task.TerraformVersion, "unexpected enterprise field value")
 
 	// 2. Check retrieving a non-existing task
 	u = fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", "non-existent-task")
