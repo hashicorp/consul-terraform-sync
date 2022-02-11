@@ -527,11 +527,11 @@ func (tf *Terraform) initTaskTemplate() error {
 	wd := tf.task.WorkingDir()
 	tmplFullpath := filepath.Join(wd, tftmpl.TFVarsTmplFilename)
 	tfvarsFilepath := filepath.Join(wd, tftmpl.TFVarsFilename)
+	logger := tf.logger.With(taskNameLogKey, tf.task.Name())
 
 	content, err := tf.fileReader(tmplFullpath)
 	if err != nil {
-		tf.logger.Error(
-			"unable to read for task", taskNameLogKey, tf.task.Name(), "error", err)
+		logger.Error("unable to read for task", "error", err)
 		return err
 	}
 
@@ -573,16 +573,18 @@ func (tf *Terraform) initTaskTemplate() error {
 
 	err = tf.watcher.Register(tf.template)
 	if err != nil && err != hcat.ErrRegistry {
-		tf.logger.Error("unable to register template", taskNameLogKey, tf.task.Name(), "error", err)
+		logger.Error("unable to register template", "error", err)
 		return err
 	}
 
+	logger.Debug("validating template")
 	err = validateTemplate(tmpl, tf.watcher.Clients())
 	if err != nil {
 		tf.watcher.Deregister(tf.template)
-		tf.logger.Error("error validating template", taskNameLogKey, tf.task.Name(), "error", err)
+		logger.Error("error validating template", "error", err)
 		return errors.Wrap(err, "unable to retrieve data from Consul")
 	}
+	logger.Debug("template validation complete")
 
 	return nil
 }
