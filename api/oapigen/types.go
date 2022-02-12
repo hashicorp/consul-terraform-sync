@@ -8,11 +8,16 @@ import (
 	"fmt"
 )
 
-// BufferPeriod defines model for BufferPeriod.
+// The buffer period for triggering task execution.
 type BufferPeriod struct {
-	Enabled *bool   `json:"enabled,omitempty"`
-	Max     *string `json:"max,omitempty"`
-	Min     *string `json:"min,omitempty"`
+	// Whether the buffer period is enabled or disabled. Defaults to the global buffer period configured for CTS.
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// The maximum period of time to wait after changes are detected before triggering the task. Defaults to the global buffer period configured for CTS.
+	Max *string `json:"max,omitempty"`
+
+	// The minimum period of time to wait after changes are detected before triggering the task. Defaults to the global buffer period configured for CTS.
+	Min *string `json:"min,omitempty"`
 }
 
 // CatalogServicesCondition defines model for CatalogServicesCondition.
@@ -29,7 +34,7 @@ type CatalogServicesCondition_NodeMeta struct {
 	AdditionalProperties map[string]string `json:"-"`
 }
 
-// Condition defines model for Condition.
+// The condition on which to trigger the task to execute. If the task has the deprecated services field configured as a module input, it is represented here as condition.services.
 type Condition struct {
 	CatalogServices *CatalogServicesCondition `json:"catalog_services,omitempty"`
 	ConsulKv        *ConsulKVCondition        `json:"consul_kv,omitempty"`
@@ -65,7 +70,7 @@ type ErrorResponse struct {
 	RequestId RequestID `json:"request_id"`
 }
 
-// ModuleInput defines model for ModuleInput.
+// The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.
 type ModuleInput struct {
 	ConsulKv *ConsulKVModuleInput `json:"consul_kv,omitempty"`
 	Services *ServicesModuleInput `json:"services,omitempty"`
@@ -122,19 +127,38 @@ type ServicesModuleInput_CtsUserDefinedMeta struct {
 
 // Task defines model for Task.
 type Task struct {
+	// The buffer period for triggering task execution.
 	BufferPeriod *BufferPeriod `json:"buffer_period,omitempty"`
-	Condition    Condition     `json:"condition"`
-	Description  *string       `json:"description,omitempty"`
-	Enabled      *bool         `json:"enabled,omitempty"`
-	Module       string        `json:"module"`
-	ModuleInput  *ModuleInput  `json:"module_input,omitempty"`
-	Name         string        `json:"name"`
-	Providers    *[]string     `json:"providers,omitempty"`
 
-	// Enterprise only. The Terraform version to for the Terraform Cloud driver.
-	TerraformVersion *string      `json:"terraform_version,omitempty"`
-	Variables        *VariableMap `json:"variables,omitempty"`
-	Version          *string      `json:"version,omitempty"`
+	// The condition on which to trigger the task to execute. If the task has the deprecated services field configured as a module input, it is represented here as condition.services.
+	Condition Condition `json:"condition"`
+
+	// The human readable text to describe the task.
+	Description *string `json:"description,omitempty"`
+
+	// Whether the task is enabled or disabled from executing.
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// The location of the Terraform module.
+	Module string `json:"module"`
+
+	// The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.
+	ModuleInput *ModuleInput `json:"module_input,omitempty"`
+
+	// The unique name of the task.
+	Name string `json:"name"`
+
+	// The list of provider names that the task's module uses.
+	Providers *[]string `json:"providers,omitempty"`
+
+	// Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest version if not set.
+	TerraformVersion *string `json:"terraform_version,omitempty"`
+
+	// The map of variables that are provided to the task's module.
+	Variables *VariableMap `json:"variables,omitempty"`
+
+	// The version of the configured module that the task uses. Defaults to the latest version if not set.
+	Version *string `json:"version,omitempty"`
 }
 
 // TaskDeleteResponse defines model for TaskDeleteResponse.
@@ -156,7 +180,7 @@ type TaskResponse struct {
 	Task      *Task     `json:"task,omitempty"`
 }
 
-// VariableMap defines model for VariableMap.
+// The map of variables that are provided to the task's module.
 type VariableMap struct {
 	AdditionalProperties map[string]string `json:"-"`
 }

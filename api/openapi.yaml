@@ -169,26 +169,32 @@ components:
       type: object
       properties:
         description:
+          description: The human readable text to describe the task.
           type: string
           example: "an example task"
         enabled:
+          description: Whether the task is enabled or disabled from executing.
           type: boolean
           example: true
           default: true
         name:
+          description: The unique name of the task.
           type: string
           example: "taskA"
         providers:
+          description: The list of provider names that the task's module uses.
           type: array
           items:
             type: string
           example: []
         module:
+          description: The location of the Terraform module.
           type: string
           example: "org/example/module"
         variables:
           $ref: '#/components/schemas/VariableMap'
         version:
+          description: The version of the configured module that the task uses. Defaults to the latest version if not set.
           type: string
           example: "1.0.0"
         buffer_period:
@@ -199,7 +205,7 @@ components:
           $ref: '#/components/schemas/ModuleInput'
         terraform_version:
            type: string
-           description: Enterprise only. The Terraform version to for the Terraform Cloud driver.
+           description: Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest version if not set.
            example: "1.0.0"
       required:
         - name
@@ -220,19 +226,24 @@ components:
 
     BufferPeriod:
       type: object
+      description: The buffer period for triggering task execution.
       properties:
         enabled:
+          description: Whether the buffer period is enabled or disabled. Defaults to the global buffer period configured for CTS.
           type: boolean
           example: true
         max:
+          description: The maximum period of time to wait after changes are detected before triggering the task. Defaults to the global buffer period configured for CTS.
           type: string
           example: "5s"
         min:
+          description: 	The minimum period of time to wait after changes are detected before triggering the task. Defaults to the global buffer period configured for CTS.
           type: string
           example: "20s"
 
     Condition:
       type: object
+      description: The condition on which to trigger the task to execute. If the task has the deprecated services field configured as a module input, it is represented here as condition.services.
       properties:
         catalog_services:
           $ref: '#/components/schemas/CatalogServicesCondition'
@@ -245,6 +256,7 @@ components:
 
     ModuleInput:
       type: object
+      description: The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.
       properties:
         services:
           $ref: '#/components/schemas/ServicesModuleInput'
@@ -252,6 +264,7 @@ components:
           $ref: '#/components/schemas/ConsulKVModuleInput'
 
     VariableMap:
+      description: The map of variables that are provided to the task's module.
       type: object
       additionalProperties:
         type: string

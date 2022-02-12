@@ -20,15 +20,18 @@ const cmdTaskCreateName = "task create"
 type taskCreateCommand struct {
 	meta
 	autoApprove *bool
+	taskFile    *string
 	flags       *flag.FlagSet
 }
 
 func newTaskCreateCommand(m meta) *taskCreateCommand {
 	flags := m.defaultFlagSet(cmdTaskCreateName)
 	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of inspect plan")
+	f := flags.String("task-file", "", "[Required] A file containing the hcl or json definition of a task")
 	return &taskCreateCommand{
 		meta:        m,
 		autoApprove: a,
+		taskFile:    f,
 		flags:       flags,
 	}
 }
@@ -42,7 +45,7 @@ func (c taskCreateCommand) Name() string {
 func (c *taskCreateCommand) Help() string {
 	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
-Usage: consul-terraform-sync task create [options] --task-file=<task config>
+Usage: consul-terraform-sync task create [options] -task-file=<task config>
 
   Task Create is used to create a new task. It is not to be used for updating a task, it will not create a task if the
   task name already exists.
@@ -79,15 +82,12 @@ func (c *taskCreateCommand) Synopsis() string {
 
 // Run runs the command
 func (c *taskCreateCommand) Run(args []string) int {
-	c.meta.setFlagsUsage(c.flags, args, c.Help())
-	var taskFile string
-	c.flags.StringVar(&taskFile, "task-file", "", "A file containing the hcl or json definition of a task")
-
 	if err := c.flags.Parse(args); err != nil {
 		return ExitCodeParseFlagsError
 	}
 
 	// Check that a task file was provided
+	taskFile := *c.taskFile
 	if len(taskFile) == 0 {
 		c.UI.Error(errCreatingRequest)
 		c.UI.Output("no task file provided")
@@ -130,11 +130,10 @@ func (c *taskCreateCommand) Run(args []string) int {
 
 	taskConfig := taskConfigs[0]
 
+	// Check if task config provided is using the deprecated task.services
 	if err = handleDeprecations(c.UI, taskConfig); err != nil {
 		return ExitCodeError
 	}
-
-	// Check if task config provided is using the deprecated task.services
 
 	taskReq, err := api.TaskRequestFromTaskConfig(*taskConfig)
 	if err != nil {
