@@ -333,6 +333,28 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 		}
 	}
 
+	// Tasks created via API cannot configure the `services` field, but tasks
+	// created via CTS config file can currently configure `services` (deprecated).
+	// Handle `services` by converting to condition or module_input. There is
+	// config validation so that `services` cannot be configured when
+	// `condition "services"` or `module_input "services"` is configured.
+	// Use-case: returning tasks with `services via Get Task API
+	if tc.Services != nil && len(tc.Services) > 0 {
+		if tc.Condition == nil {
+			task.Condition.Services = &oapigen.ServicesCondition{
+				Names:            &tc.Services,
+				UseAsModuleInput: config.Bool(true),
+			}
+		} else {
+			if tc.ModuleInputs == nil {
+				task.ModuleInput = new(oapigen.ModuleInput)
+			}
+			task.ModuleInput.Services = &oapigen.ServicesModuleInput{
+				Names: &tc.Services,
+			}
+		}
+	}
+
 	// Enterprise
 	task.TerraformVersion = tc.TFVersion
 
