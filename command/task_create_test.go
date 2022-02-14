@@ -73,6 +73,33 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid_services_field_with_con_and_services_mi",
+			inputTask: config.TaskConfig{
+				Services: []string{"web"},
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp: config.String("*"),
+						},
+					},
+				},
+				Condition: &config.ServicesConditionConfig{
+					ServicesMonitorConfig: config.ServicesMonitorConfig{
+						Regexp: config.String("*"),
+					},
+				},
+			},
+			outputContains: []string{
+				"Error: unable to create request",
+				"the 'services' field in the task block is no longer supported",
+				`list of 'services' and 'condition "services"' block cannot both be configured.`,
+				`Consider using the 'names' field under 'condition "services`,
+				"the 'services' field in the task block is no longer supported",
+				`list of 'services' and 'module_input "services"' block cannot both be configured.`,
+				`Consider using the 'names' field under 'module_input "services`,
+			},
+		},
+		{
 			name: "invalid_services_field_with_schedule_con",
 			inputTask: config.TaskConfig{
 				Services:  []string{"web"},

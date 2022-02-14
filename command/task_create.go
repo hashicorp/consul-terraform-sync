@@ -82,6 +82,7 @@ func (c *taskCreateCommand) Synopsis() string {
 
 // Run runs the command
 func (c *taskCreateCommand) Run(args []string) int {
+	c.meta.setFlagsUsage(c.flags, args, c.Help())
 	if err := c.flags.Parse(args); err != nil {
 		return ExitCodeParseFlagsError
 	}
@@ -185,8 +186,8 @@ func (c *taskCreateCommand) Run(args []string) int {
 	}
 
 	c.UI.Info(fmt.Sprintf("Creating task %s...", taskName))
-	c.UI.Output("Note: this can take some time depending on the module size.")
-	c.UI.Output("terminating this process will not stop task creation, see CTS logs for more details\n")
+	c.UI.Output("Note: This can take some time depending on the module.")
+	c.UI.Output("Terminating this process will not stop task creation.\n")
 
 	// Plan approved, create new task and run now
 	taskResp, err = client.CreateTask(context.Background(), api.RunOptionNow, taskReq)
@@ -264,29 +265,27 @@ func handleDeprecations(ui mcli.Ui, tc *config.TaskConfig) error {
 		if tc.Condition != nil {
 			switch tc.Condition.(type) {
 			case *config.ServicesConditionConfig:
-				action := `"list of 'services' and 'condition "services"' block cannot both be configured. ` +
+				action := `list of 'services' and 'condition "services"' block cannot both be configured. ` +
 					`Consider using the 'names' field under 'condition "services"'`
 				ui.Output(generateServiceFieldMsg(action))
-			case *config.CatalogServicesConditionConfig:
-				action := generateServiceModuleInputBlockAction(tc.Services)
-				ui.Output(generateServiceFieldMsg(action))
-			case *config.ConsulKVConditionConfig:
-				action := generateServiceModuleInputBlockAction(tc.Services)
-				ui.Output(generateServiceFieldMsg(action))
-			case *config.ScheduleConditionConfig:
+			default:
 				action := generateServiceModuleInputBlockAction(tc.Services)
 				ui.Output(generateServiceFieldMsg(action))
 			}
-		} else if tc.ModuleInputs != nil {
+		}
+
+		if tc.ModuleInputs != nil {
 			for _, si := range *tc.ModuleInputs {
 				switch si.(type) {
 				case *config.ServicesModuleInputConfig:
-					action := `"list of 'services' and 'module_input "services"' block cannot both be configured. ` +
+					action := `list of 'services' and 'module_input "services"' block cannot both be configured. ` +
 						`Consider using the 'names' field under 'module_input "services"'`
 					ui.Output(generateServiceFieldMsg(action))
 				}
 			}
-		} else {
+		}
+
+		if tc.ModuleInputs == nil && tc.Condition == nil {
 			action := generateServicesAction(tc.Services)
 			ui.Output(generateServiceFieldMsg(action))
 		}
