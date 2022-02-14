@@ -185,7 +185,7 @@ func makeTaskStatusUnknown(task config.TaskConfig) TaskStatus {
 		Status:    StatusUnknown,
 		Enabled:   *task.Enabled,
 		Providers: task.Providers,
-		Services:  task.Services,
+		Services:  task.DeprecatedServices,
 		EventsURL: "",
 	}
 }

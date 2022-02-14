@@ -339,10 +339,10 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	// config validation so that `services` cannot be configured when
 	// `condition "services"` or `module_input "services"` is configured.
 	// Use-case: returning tasks with `services via Get Task API
-	if tc.Services != nil && len(tc.Services) > 0 {
+	if tc.DeprecatedServices != nil && len(tc.DeprecatedServices) > 0 {
 		if tc.Condition == nil {
 			task.Condition.Services = &oapigen.ServicesCondition{
-				Names:            &tc.Services,
+				Names:            &tc.DeprecatedServices,
 				UseAsModuleInput: config.Bool(true),
 			}
 		} else {
@@ -350,7 +350,7 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 				task.ModuleInput = new(oapigen.ModuleInput)
 			}
 			task.ModuleInput.Services = &oapigen.ServicesModuleInput{
-				Names: &tc.Services,
+				Names: &tc.DeprecatedServices,
 			}
 		}
 	}
