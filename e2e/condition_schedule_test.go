@@ -358,7 +358,7 @@ func TestCondition_Schedule_CreateAndDeleteCLI(t *testing.T) {
 		subcmd = append(deleteCmd, n)
 		out, err = runSubcommand(t, "", subcmd...)
 		require.NoError(t, err, fmt.Sprintf("command '%s' failed:\n %s", subcmd, out))
-		require.Contains(t, out, fmt.Sprintf("Task '%s' is marked for deletion", n))
+		require.Contains(t, out, fmt.Sprintf("Task '%s' has been marked for deletion", n))
 
 		s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", n)
 		resp := testutils.RequestHTTP(t, http.MethodGet, s, "")
