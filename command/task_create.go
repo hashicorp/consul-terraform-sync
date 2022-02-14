@@ -264,7 +264,8 @@ func handleDeprecations(ui mcli.Ui, tc *config.TaskConfig) error {
 		if tc.Condition != nil {
 			switch tc.Condition.(type) {
 			case *config.ServicesConditionConfig:
-				action := generateServicesConditionBlockAction(tc.Services)
+				action := `"list of 'services' and 'condition "services"' block cannot both be configured. ` +
+					`Consider using the 'names' field under 'condition "services"'`
 				ui.Output(generateServiceFieldMsg(action))
 			case *config.CatalogServicesConditionConfig:
 				action := generateServiceModuleInputBlockAction(tc.Services)
@@ -273,8 +274,17 @@ func handleDeprecations(ui mcli.Ui, tc *config.TaskConfig) error {
 				action := generateServiceModuleInputBlockAction(tc.Services)
 				ui.Output(generateServiceFieldMsg(action))
 			case *config.ScheduleConditionConfig:
-				action := generateServicesAction(tc.Services)
+				action := generateServiceModuleInputBlockAction(tc.Services)
 				ui.Output(generateServiceFieldMsg(action))
+			}
+		} else if tc.ModuleInputs != nil {
+			for _, si := range *tc.ModuleInputs {
+				switch si.(type) {
+				case *config.ServicesModuleInputConfig:
+					action := `"list of 'services' and 'module_input "services"' block cannot both be configured. ` +
+						`Consider using the 'names' field under 'module_input "services"'`
+					ui.Output(generateServiceFieldMsg(action))
+				}
 			}
 		} else {
 			action := generateServicesAction(tc.Services)
@@ -287,26 +297,6 @@ func handleDeprecations(ui mcli.Ui, tc *config.TaskConfig) error {
 	}
 	return nil
 }
-
-func generateServicesConditionBlockAction(services []string) string {
-	list := `"` + strings.Join(services, `","`) + `"`
-	return fmt.Sprintf(servicesConditionBlockAction, list, list)
-}
-
-const servicesConditionBlockAction = `Please add the suggested names field to your current 'condition "services"' ` +
-	`block and assure that 'use_as_module_input' is true or not present
-
-Suggested replacement:
-|    task {
-|  -   services =  [%s]
-|      condition "services"{
-|  +     names = [%s]
-|  +     use_as_module_input = true
-|        ...
-|      }
-|      ...
-|    }
-`
 
 func generateServicesAction(services []string) string {
 	list := `"` + strings.Join(services, `","`) + `"`

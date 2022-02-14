@@ -49,9 +49,27 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 			outputContains: []string{
 				"Error: unable to create request",
 				"the 'services' field in the task block is no longer supported",
-				`Please add the suggested names field to your current 'condition "services"'`,
-				`|  +     names = ["web"]`,
-				`|  +     use_as_module_input = true`,
+				`list of 'services' and 'condition "services"' block cannot both be configured.`,
+				`Consider using the 'names' field under 'condition "services`,
+			},
+		},
+		{
+			name: "invalid_services_field_with_services_mi",
+			inputTask: config.TaskConfig{
+				Services: []string{"web"},
+				ModuleInputs: &config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp: config.String("*"),
+						},
+					},
+				},
+			},
+			outputContains: []string{
+				"Error: unable to create request",
+				"the 'services' field in the task block is no longer supported",
+				`list of 'services' and 'module_input "services"' block cannot both be configured.`,
+				`Consider using the 'names' field under 'module_input "services`,
 			},
 		},
 		{
@@ -63,8 +81,8 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 			outputContains: []string{
 				"Error: unable to create request",
 				"the 'services' field in the task block is no longer supported",
-				`Please replace the 'services' field with the following 'condition "services"'`,
-				`  condition "services" {`,
+				`Please replace the 'services' field with the following 'module_input' block`,
+				`  module_input "services" {`,
 				`    names=["web"]`,
 			},
 		},
