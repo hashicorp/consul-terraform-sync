@@ -653,12 +653,12 @@ func singleTaskConfig() *config.Config {
 		},
 		Tasks: &config.TaskConfigs{
 			{
-				Description: config.String("automate services for X to do Y"),
-				Name:        config.String("task"),
-				Services:    []string{"serviceA", "serviceB", "serviceC"},
-				Providers:   []string{"X", handler.TerraformProviderFake},
-				Module:      config.String("Y"),
-				Version:     config.String("v1"),
+				Description:        config.String("automate services for X to do Y"),
+				Name:               config.String("task"),
+				DeprecatedServices: []string{"serviceA", "serviceB", "serviceC"},
+				Providers:          []string{"X", handler.TerraformProviderFake},
+				Module:             config.String("Y"),
+				Version:            config.String("v1"),
 			},
 		},
 		Services: &config.ServiceConfigs{
@@ -689,9 +689,13 @@ func multipleTaskConfig(numTasks int) *config.Config {
 	tasks := make(config.TaskConfigs, numTasks)
 	for i := 0; i < numTasks; i++ {
 		tasks[i] = &config.TaskConfig{
-			Name:     config.String(fmt.Sprintf("task_%02d", i)),
-			Services: []string{fmt.Sprintf("service_%02d", i)},
-			Module:   config.String("Y"),
+			Name: config.String(fmt.Sprintf("task_%02d", i)),
+			Condition: &config.ServicesConditionConfig{
+				ServicesMonitorConfig: config.ServicesMonitorConfig{
+					Names: []string{fmt.Sprintf("service_%02d", i)},
+				},
+			},
+			Module: config.String("Y"),
 		}
 	}
 	c := &config.Config{Tasks: &tasks}

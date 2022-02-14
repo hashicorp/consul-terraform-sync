@@ -24,13 +24,13 @@ func TestTaskConfig_Copy(t *testing.T) {
 		{
 			"same_enabled",
 			&TaskConfig{
-				Description: String("description"),
-				Name:        String("name"),
-				Providers:   []string{"provider"},
-				Services:    []string{"service"},
-				Module:      String("path"),
-				Version:     String("0.0.0"),
-				Enabled:     Bool(true),
+				Description:        String("description"),
+				Name:               String("name"),
+				Providers:          []string{"provider"},
+				DeprecatedServices: []string{"service"},
+				Module:             String("path"),
+				Version:            String("0.0.0"),
+				Enabled:            Bool(true),
 				Condition: &CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig{
 						Regexp:           String(".*"),
@@ -150,21 +150,21 @@ func TestTaskConfig_Merge(t *testing.T) {
 		},
 		{
 			"services_merges",
-			&TaskConfig{Services: []string{"a"}},
-			&TaskConfig{Services: []string{"b"}},
-			&TaskConfig{Services: []string{"a", "b"}},
+			&TaskConfig{DeprecatedServices: []string{"a"}},
+			&TaskConfig{DeprecatedServices: []string{"b"}},
+			&TaskConfig{DeprecatedServices: []string{"a", "b"}},
 		},
 		{
 			"services_empty_one",
-			&TaskConfig{Services: []string{"service"}},
+			&TaskConfig{DeprecatedServices: []string{"service"}},
 			&TaskConfig{},
-			&TaskConfig{Services: []string{"service"}},
+			&TaskConfig{DeprecatedServices: []string{"service"}},
 		},
 		{
 			"services_empty_two",
 			&TaskConfig{},
-			&TaskConfig{Services: []string{"service"}},
-			&TaskConfig{Services: []string{"service"}},
+			&TaskConfig{DeprecatedServices: []string{"service"}},
+			&TaskConfig{DeprecatedServices: []string{"service"}},
 		},
 		{
 			"providers_merges",
@@ -414,20 +414,20 @@ func TestTaskConfig_Finalize(t *testing.T) {
 			"empty",
 			&TaskConfig{},
 			&TaskConfig{
-				Description:  String(""),
-				Name:         String(""),
-				Providers:    []string{},
-				Services:     []string{},
-				Module:       String(""),
-				VarFiles:     []string{},
-				Variables:    map[string]string{},
-				Version:      String(""),
-				TFVersion:    String(""),
-				BufferPeriod: DefaultBufferPeriodConfig(),
-				Enabled:      Bool(true),
-				Condition:    EmptyConditionConfig(),
-				WorkingDir:   String("sync-tasks"),
-				ModuleInputs: DefaultModuleInputConfigs(),
+				Description:        String(""),
+				Name:               String(""),
+				Providers:          []string{},
+				DeprecatedServices: []string{},
+				Module:             String(""),
+				VarFiles:           []string{},
+				Variables:          map[string]string{},
+				Version:            String(""),
+				TFVersion:          String(""),
+				BufferPeriod:       DefaultBufferPeriodConfig(),
+				Enabled:            Bool(true),
+				Condition:          EmptyConditionConfig(),
+				WorkingDir:         String("sync-tasks"),
+				ModuleInputs:       DefaultModuleInputConfigs(),
 			},
 		},
 		{
@@ -436,20 +436,20 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Name: String("task"),
 			},
 			&TaskConfig{
-				Description:  String(""),
-				Name:         String("task"),
-				Providers:    []string{},
-				Services:     []string{},
-				Module:       String(""),
-				VarFiles:     []string{},
-				Variables:    map[string]string{},
-				Version:      String(""),
-				TFVersion:    String(""),
-				BufferPeriod: DefaultBufferPeriodConfig(),
-				Enabled:      Bool(true),
-				Condition:    EmptyConditionConfig(),
-				WorkingDir:   String("sync-tasks/task"),
-				ModuleInputs: DefaultModuleInputConfigs(),
+				Description:        String(""),
+				Name:               String("task"),
+				Providers:          []string{},
+				DeprecatedServices: []string{},
+				Module:             String(""),
+				VarFiles:           []string{},
+				Variables:          map[string]string{},
+				Version:            String(""),
+				TFVersion:          String(""),
+				BufferPeriod:       DefaultBufferPeriodConfig(),
+				Enabled:            Bool(true),
+				Condition:          EmptyConditionConfig(),
+				WorkingDir:         String("sync-tasks/task"),
+				ModuleInputs:       DefaultModuleInputConfigs(),
 			},
 		},
 		{
@@ -459,15 +459,15 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Condition: &ScheduleConditionConfig{},
 			},
 			&TaskConfig{
-				Description: String(""),
-				Name:        String("task"),
-				Providers:   []string{},
-				Services:    []string{},
-				Module:      String(""),
-				VarFiles:    []string{},
-				Variables:   map[string]string{},
-				Version:     String(""),
-				TFVersion:   String(""),
+				Description:        String(""),
+				Name:               String("task"),
+				Providers:          []string{},
+				DeprecatedServices: []string{},
+				Module:             String(""),
+				VarFiles:           []string{},
+				Variables:          map[string]string{},
+				Version:            String(""),
+				TFVersion:          String(""),
 				BufferPeriod: &BufferPeriodConfig{
 					Enabled: Bool(false),
 					Min:     TimeDuration(0 * time.Second),
@@ -490,15 +490,15 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				},
 			},
 			&TaskConfig{
-				Description: String(""),
-				Name:        String("task"),
-				Providers:   []string{},
-				Services:    []string{},
-				Module:      String(""),
-				VarFiles:    []string{},
-				Variables:   map[string]string{},
-				Version:     String(""),
-				TFVersion:   String(""),
+				Description:        String(""),
+				Name:               String("task"),
+				Providers:          []string{},
+				DeprecatedServices: []string{},
+				Module:             String(""),
+				VarFiles:           []string{},
+				Variables:          map[string]string{},
+				Version:            String(""),
+				TFVersion:          String(""),
 				BufferPeriod: &BufferPeriodConfig{
 					Enabled: Bool(false),
 					Min:     TimeDuration(0 * time.Second),
@@ -697,28 +697,50 @@ func TestTaskConfig_Validate(t *testing.T) {
 		},
 		{
 			"invalid: task name: missing",
-			&TaskConfig{Services: []string{"service"}, Module: String("path")},
+			&TaskConfig{
+				Condition: &ServicesConditionConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Names: []string{"api"},
+					},
+				},
+				Module: String("path"),
+			},
 			false,
 		},
 		{
 			"invalid: task name: invalid char",
 			&TaskConfig{
-				Name:     String("cannot contain spaces"),
-				Services: []string{"service"},
-				Module:   String("path"),
+				Name: String("cannot contain spaces"),
+				Condition: &ServicesConditionConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Names: []string{"api"},
+					},
+				},
+				Module: String("path"),
 			},
 			false,
 		},
 		{
 			"invalid: task module: missing",
-			&TaskConfig{Name: String("task"), Services: []string{"service"}},
+			&TaskConfig{
+				Name: String("task"),
+				Condition: &ServicesConditionConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Names: []string{"api"},
+					},
+				},
+			},
 			false,
 		},
 		{
 			"invalid: TF version: unsupported version",
 			&TaskConfig{
-				Name:      String("task"),
-				Services:  []string{"service"},
+				Name: String("task"),
+				Condition: &ServicesConditionConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Names: []string{"api"},
+					},
+				},
 				Module:    String("path"),
 				TFVersion: String("0.15.0"),
 			},
@@ -727,8 +749,12 @@ func TestTaskConfig_Validate(t *testing.T) {
 		{
 			"invalid: provider: duplicate",
 			&TaskConfig{
-				Name:      String("task"),
-				Services:  []string{"api"},
+				Name: String("task"),
+				Condition: &ServicesConditionConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Names: []string{"api"},
+					},
+				},
 				Module:    String("path"),
 				Providers: []string{"providerA", "providerA"},
 			},
@@ -737,8 +763,12 @@ func TestTaskConfig_Validate(t *testing.T) {
 		{
 			"invalid: provider: duplicate with alias",
 			&TaskConfig{
-				Name:      String("task"),
-				Services:  []string{"api"},
+				Name: String("task"),
+				Condition: &ServicesConditionConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Names: []string{"api"},
+					},
+				},
 				Module:    String("path"),
 				Providers: []string{"providerA", "providerA.alias"},
 			},
@@ -772,8 +802,12 @@ func TestTasksConfig_Validate(t *testing.T) {
 			name: "one task",
 			i: []*TaskConfig{
 				{
-					Name:      String("task"),
-					Services:  []string{"serviceA", "serviceB"},
+					Name: String("task"),
+					Condition: &ServicesConditionConfig{
+						ServicesMonitorConfig: ServicesMonitorConfig{
+							Names: []string{"serviceA", "serviceB"},
+						},
+					},
 					Module:    String("path"),
 					Providers: []string{"providerA", "providerB"},
 				},
@@ -783,14 +817,22 @@ func TestTasksConfig_Validate(t *testing.T) {
 			name: "two tasks",
 			i: []*TaskConfig{
 				{
-					Name:      String("task"),
-					Services:  []string{"serviceA", "serviceB"},
+					Name: String("task"),
+					Condition: &ServicesConditionConfig{
+						ServicesMonitorConfig: ServicesMonitorConfig{
+							Names: []string{"serviceA", "serviceB"},
+						},
+					},
 					Module:    String("path"),
 					Providers: []string{"providerA", "providerB"},
 				},
 				{
-					Name:      String("task2"),
-					Services:  []string{"serviceC"},
+					Name: String("task2"),
+					Condition: &ServicesConditionConfig{
+						ServicesMonitorConfig: ServicesMonitorConfig{
+							Names: []string{"serviceC"},
+						},
+					},
 					Module:    String("path"),
 					Providers: []string{"providerC"},
 				},
@@ -800,13 +842,21 @@ func TestTasksConfig_Validate(t *testing.T) {
 			name: "duplicate task names",
 			i: []*TaskConfig{
 				{
-					Name:      String("task"),
-					Services:  []string{"serviceA", "serviceB"},
+					Name: String("task"),
+					Condition: &ServicesConditionConfig{
+						ServicesMonitorConfig: ServicesMonitorConfig{
+							Names: []string{"api"},
+						},
+					},
 					Module:    String("path"),
 					Providers: []string{"providerA", "providerB"},
 				}, {
-					Name:      String("task"),
-					Services:  []string{"serviceA"},
+					Name: String("task"),
+					Condition: &ServicesConditionConfig{
+						ServicesMonitorConfig: ServicesMonitorConfig{
+							Names: []string{"api"},
+						},
+					},
 					Module:    String("path"),
 					Providers: []string{"providerA"},
 				},
@@ -816,8 +866,12 @@ func TestTasksConfig_Validate(t *testing.T) {
 			name: "one invalid",
 			i: []*TaskConfig{
 				{
-					Name:      String("task"),
-					Services:  []string{"serviceA", "serviceB"},
+					Name: String("task"),
+					Condition: &ServicesConditionConfig{
+						ServicesMonitorConfig: ServicesMonitorConfig{
+							Names: []string{"api"},
+						},
+					},
 					Module:    String("path"),
 					Providers: []string{"providerA", "providerB"},
 				}, {
@@ -838,8 +892,12 @@ func TestTasksConfig_Validate(t *testing.T) {
 			name: "unsupported TF version per task",
 			i: []*TaskConfig{
 				{
-					Name:      String("task"),
-					Services:  []string{"serviceA", "serviceB"},
+					Name: String("task"),
+					Condition: &ServicesConditionConfig{
+						ServicesMonitorConfig: ServicesMonitorConfig{
+							Names: []string{"api"},
+						},
+					},
 					Module:    String("path"),
 					TFVersion: String("0.15.0"),
 				},
@@ -871,7 +929,7 @@ func TestTaskConfig_validateCondition(t *testing.T) {
 		{
 			"valid: only services list",
 			&TaskConfig{
-				Services: []string{"api"},
+				DeprecatedServices: []string{"api"},
 			},
 			true,
 		},
@@ -885,8 +943,8 @@ func TestTaskConfig_validateCondition(t *testing.T) {
 		{
 			"valid: services list & non-service cond-block",
 			&TaskConfig{
-				Services:  []string{"api"},
-				Condition: &ConsulKVConditionConfig{},
+				DeprecatedServices: []string{"api"},
+				Condition:          &ConsulKVConditionConfig{},
 			},
 			true,
 		},
@@ -898,8 +956,8 @@ func TestTaskConfig_validateCondition(t *testing.T) {
 		{
 			"invalid: services & services cond-block configured",
 			&TaskConfig{
-				Services:  []string{"api"},
-				Condition: &ServicesConditionConfig{},
+				DeprecatedServices: []string{"api"},
+				Condition:          &ServicesConditionConfig{},
 			},
 			false,
 		},

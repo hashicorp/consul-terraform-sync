@@ -26,7 +26,7 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 		{
 			name: "invalid_services_field",
 			inputTask: config.TaskConfig{
-				Services: []string{"web"},
+				DeprecatedServices: []string{"web"},
 			},
 			outputContains: []string{
 				"Error: unable to create request",
@@ -39,7 +39,7 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 		{
 			name: "invalid_services_field_with_services_con",
 			inputTask: config.TaskConfig{
-				Services: []string{"web"},
+				DeprecatedServices: []string{"web"},
 				Condition: &config.ServicesConditionConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp: config.String("*"),
@@ -56,7 +56,7 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 		{
 			name: "invalid_services_field_with_services_mi",
 			inputTask: config.TaskConfig{
-				Services: []string{"web"},
+				DeprecatedServices: []string{"web"},
 				ModuleInputs: &config.ModuleInputConfigs{
 					&config.ServicesModuleInputConfig{
 						ServicesMonitorConfig: config.ServicesMonitorConfig{
@@ -75,7 +75,7 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 		{
 			name: "invalid_services_field_with_con_and_services_mi",
 			inputTask: config.TaskConfig{
-				Services: []string{"web"},
+				DeprecatedServices: []string{"web"},
 				ModuleInputs: &config.ModuleInputConfigs{
 					&config.ServicesModuleInputConfig{
 						ServicesMonitorConfig: config.ServicesMonitorConfig{
@@ -102,8 +102,8 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 		{
 			name: "invalid_services_field_with_schedule_con",
 			inputTask: config.TaskConfig{
-				Services:  []string{"web"},
-				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+				DeprecatedServices: []string{"web"},
+				Condition:          &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
 			},
 			outputContains: []string{
 				"Error: unable to create request",
@@ -116,7 +116,7 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 		{
 			name: "invalid_services_field_with_kv_con",
 			inputTask: config.TaskConfig{
-				Services: []string{"web"},
+				DeprecatedServices: []string{"web"},
 				Condition: &config.ConsulKVConditionConfig{
 					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 						Path: config.String("key-path"),
@@ -134,7 +134,7 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 		{
 			name: "invalid_services_field_with_catalog_con",
 			inputTask: config.TaskConfig{
-				Services: []string{"web"},
+				DeprecatedServices: []string{"web"},
 				Condition: &config.CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
 						Regexp: config.String("regex"),
@@ -257,8 +257,8 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 		{
 			name: "multiple_invalid_fields",
 			inputTask: config.TaskConfig{
-				Services:         []string{"web"},
-				DeprecatedSource: config.String("some/path"),
+				DeprecatedServices: []string{"web"},
+				DeprecatedSource:   config.String("some/path"),
 				Condition: &config.ConsulKVConditionConfig{
 					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 						Path: config.String("key-path"),
