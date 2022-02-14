@@ -23,6 +23,9 @@ const DepSizeWarning = 128
 // which implements the interfaces Templater and Renderer
 // https://github.com/hashicorp/hcat
 type Template interface {
+	// Notify has a different behavior than hcat.Template.Notify and does
+	// not mark the template as dirty unless hcat.Template.Notify is called
+	// within the implementation
 	Notify(interface{}) bool
 	Render(content []byte) (hcat.RenderResult, error)
 	Execute(hcat.Recaller) ([]byte, error)
@@ -49,10 +52,11 @@ type Watcher interface {
 	Size() int
 	Stop()
 	Sweep(notifier hcat.IDer)
-	// not used but needed to meet the hcat.Watcherer interface
-	Complete(hcat.Notifier) bool
-	Recaller(hcat.Notifier) hcat.Recaller
 	Register(ns ...hcat.Notifier) error
 	Deregister(ns ...hcat.Notifier)
 	Clients() hcat.Looker
+
+	// not used but needed to meet the hcat.Watcherer interface
+	Complete(hcat.Notifier) bool
+	Recaller(hcat.Notifier) hcat.Recaller
 }

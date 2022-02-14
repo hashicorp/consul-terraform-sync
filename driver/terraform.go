@@ -527,11 +527,11 @@ func (tf *Terraform) initTaskTemplate() error {
 	wd := tf.task.WorkingDir()
 	tmplFullpath := filepath.Join(wd, tftmpl.TFVarsTmplFilename)
 	tfvarsFilepath := filepath.Join(wd, tftmpl.TFVarsFilename)
+	logger := tf.logger.With(taskNameLogKey, tf.task.Name())
 
 	content, err := tf.fileReader(tmplFullpath)
 	if err != nil {
-		tf.logger.Error(
-			"unable to read for task", taskNameLogKey, tf.task.Name(), "error", err)
+		logger.Error("unable to read for task", "error", err)
 		return err
 	}
 
@@ -571,17 +571,18 @@ func (tf *Terraform) initTaskTemplate() error {
 
 	tf.setNotifier(tmpl)
 
-	err = tf.watcher.Register(tf.template)
-	if err != nil && err != hcat.ErrRegistry {
-		tf.logger.Error("unable to register template", taskNameLogKey, tf.task.Name(), "error", err)
-		return err
-	}
-
+	logger.Debug("validating template")
 	err = validateTemplate(tmpl, tf.watcher.Clients())
 	if err != nil {
-		tf.watcher.Deregister(tf.template)
-		tf.logger.Error("error validating template", taskNameLogKey, tf.task.Name(), "error", err)
+		logger.Error("error validating template", "error", err)
 		return errors.Wrap(err, "unable to retrieve data from Consul")
+	}
+	logger.Debug("template validation complete")
+
+	err = tf.watcher.Register(tf.template)
+	if err != nil && err != hcat.ErrRegistry {
+		logger.Error("unable to register template", "error", err)
+		return err
 	}
 
 	return nil
@@ -589,19 +590,20 @@ func (tf *Terraform) initTaskTemplate() error {
 
 // validateTemplate verifies that executing the fetch requests of
 // a template's dependencies does not error.
-func validateTemplate(t templates.Template, clients hcat.Looker) error {
-	var outer_err error
+func validateTemplate(t *hcat.Template, clients hcat.Looker) error {
+	var err error
 	recaller := func(dep dep.Dependency) (interface{}, bool) {
-		data, _, err := dep.Fetch(clients)
-		if err != nil {
-			outer_err = err
+		data, _, fetchErr := dep.Fetch(clients)
+		if fetchErr != nil {
+			err = fetchErr
 			return nil, false
 		}
 		return data, true
 	}
 	t.Execute(recaller)
+	// Mark that template needs to be re-run
 	t.Notify(nil)
-	return outer_err
+	return err
 }
 
 // setNotifier sets a notifier on the template to ensure only the condition's
