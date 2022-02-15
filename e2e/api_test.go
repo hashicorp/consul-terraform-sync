@@ -788,7 +788,6 @@ func TestE2E_TaskEndpoints_Get(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	// Parse response body
-	defer resp.Body.Close()
 	var r oapigen.TaskResponse
 	err := json.NewDecoder(resp.Body).Decode(&r)
 	require.NoError(t, err)
