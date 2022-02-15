@@ -343,7 +343,8 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	// `condition "services"` or `module_input "services"` is configured.
 	// Use-case: returning tasks with `services via Get Task API
 	if tc.DeprecatedServices != nil && len(tc.DeprecatedServices) > 0 {
-		if tc.Condition == nil {
+		_, noCondition := tc.Condition.(*config.NoConditionConfig)
+		if tc.Condition == nil || noCondition {
 			task.Condition.Services = &oapigen.ServicesCondition{
 				Names:            &tc.DeprecatedServices,
 				UseAsModuleInput: config.Bool(true),
