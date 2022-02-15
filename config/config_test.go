@@ -95,11 +95,11 @@ var (
 		},
 		Tasks: &TaskConfigs{
 			{
-				Description: String("automate services for X to do Y"),
-				Name:        String("task"),
-				Services:    []string{"serviceA", "serviceB", "serviceC"},
-				Providers:   []string{"X"},
-				Module:      String("Y"),
+				Description:        String("automate services for X to do Y"),
+				Name:               String("task"),
+				DeprecatedServices: []string{"serviceA", "serviceB", "serviceC"},
+				Providers:          []string{"X"},
+				Module:             String("Y"),
 				Condition: &CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig{
 						Regexp:           String(".*"),
@@ -371,13 +371,13 @@ func TestConfig_Validate(t *testing.T) {
 	// valid case with multiple tasks w/ different providers
 	validMultiTask := longConfig.Copy()
 	*validMultiTask.Tasks = append(*validMultiTask.Tasks, &TaskConfig{
-		Description:  String("test task1"),
-		Name:         String("task1"),
-		Services:     []string{"serviceD"},
-		Providers:    []string{"Y"},
-		Module:       String("Z"),
-		Condition:    EmptyConditionConfig(),
-		ModuleInputs: DefaultModuleInputConfigs(),
+		Description:        String("test task1"),
+		Name:               String("task1"),
+		DeprecatedServices: []string{"serviceD"},
+		Providers:          []string{"Y"},
+		Module:             String("Z"),
+		Condition:          EmptyConditionConfig(),
+		ModuleInputs:       DefaultModuleInputConfigs(),
 	})
 	*validMultiTask.TerraformProviders = append(*validMultiTask.TerraformProviders,
 		&TerraformProviderConfig{"Y": map[string]interface{}{}})
@@ -585,8 +585,12 @@ func TestConfig_BufferPeriod(t *testing.T) {
 				BufferPeriod: tc.confBp,
 				Tasks: &TaskConfigs{
 					{
-						Name:         String("test_task"),
-						Services:     []string{"api"},
+						Name: String("test_task"),
+						Condition: &ServicesConditionConfig{
+							ServicesMonitorConfig: ServicesMonitorConfig{
+								Names: []string{"api"},
+							},
+						},
 						Module:       String("/path"),
 						BufferPeriod: tc.taskBp,
 					},

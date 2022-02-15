@@ -142,7 +142,6 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 				Description:  config.String("test-description"),
 				Name:         config.String("test-name"),
 				Providers:    []string{"test-provider-1", "test-provider-2"},
-				Services:     []string{},
 				Module:       config.String("path"),
 				Version:      config.String("test-version"),
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
@@ -378,7 +377,7 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 		{
 			name: "services_field_to_condition",
 			taskConfig: config.TaskConfig{
-				Services: []string{"api", "web"},
+				DeprecatedServices: []string{"api", "web"},
 			},
 			expected: oapigen.Task{
 				Condition: oapigen.Condition{
@@ -392,8 +391,8 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 		{
 			name: "services_field_to_module_input",
 			taskConfig: config.TaskConfig{
-				Services:  []string{"api", "web"},
-				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+				DeprecatedServices: []string{"api", "web"},
+				Condition:          &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
 			},
 			expected: oapigen.Task{
 				ModuleInput: &oapigen.ModuleInput{
@@ -409,7 +408,7 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 		{
 			name: "services_field_to_module_input_w_existing_module_input",
 			taskConfig: config.TaskConfig{
-				Services: []string{"api", "web"},
+				DeprecatedServices: []string{"api", "web"},
 				ModuleInputs: &config.ModuleInputConfigs{
 					&config.ConsulKVModuleInputConfig{
 						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{

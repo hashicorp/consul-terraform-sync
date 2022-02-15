@@ -259,7 +259,7 @@ func handleDeprecations(ui mcli.Ui, tc *config.TaskConfig) error {
 	}
 
 	// Handle deprecated task.services
-	if len(tc.Services) != 0 {
+	if len(tc.DeprecatedServices) != 0 {
 		isError = true
 		ui.Error(errCreatingRequest)
 		if tc.Condition != nil {
@@ -269,7 +269,7 @@ func handleDeprecations(ui mcli.Ui, tc *config.TaskConfig) error {
 					`Consider using the 'names' field under 'condition "services"'`
 				ui.Output(generateServiceFieldMsg(action))
 			default:
-				action := generateServiceModuleInputBlockAction(tc.Services)
+				action := generateServiceModuleInputBlockAction(tc.DeprecatedServices)
 				ui.Output(generateServiceFieldMsg(action))
 			}
 		}
@@ -286,7 +286,7 @@ func handleDeprecations(ui mcli.Ui, tc *config.TaskConfig) error {
 		}
 
 		if tc.ModuleInputs == nil && tc.Condition == nil {
-			action := generateServicesAction(tc.Services)
+			action := generateServicesAction(tc.DeprecatedServices)
 			ui.Output(generateServiceFieldMsg(action))
 		}
 	}

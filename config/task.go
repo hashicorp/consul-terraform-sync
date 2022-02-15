@@ -27,12 +27,14 @@ type TaskConfig struct {
 	// used to map provider configuration to the task.
 	Providers []string `mapstructure:"providers"`
 
-	// Services is the list of service IDs or logical service names the task
+	// DeprecatedServices is the list of service IDs or logical service names the task
 	// executes on. Sync monitors the Consul Catalog for changes to these
 	// services and triggers the task to run. Any service value not explicitly
 	// defined by a `service` block with a matching ID is assumed to be a logical
 	// service name in the default namespace.
-	Services []string `mapstructure:"services"`
+	// - Deprecated in 0.5. Use names field of `condition "services"` and
+	// `module_input "services"` instead
+	DeprecatedServices []string `mapstructure:"services"`
 
 	// Module is the path to fetch the Terraform Module (local or remote).
 	// Previously named Source - Deprecated in 0.5
@@ -98,7 +100,7 @@ func (c *TaskConfig) Copy() *TaskConfig {
 
 	o.Providers = append(o.Providers, c.Providers...)
 
-	o.Services = append(o.Services, c.Services...)
+	o.DeprecatedServices = append(o.DeprecatedServices, c.DeprecatedServices...)
 
 	o.Module = StringCopy(c.Module)
 	o.DeprecatedSource = StringCopy(c.DeprecatedSource)
@@ -162,7 +164,7 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 
 	r.Providers = append(r.Providers, o.Providers...)
 
-	r.Services = append(r.Services, o.Services...)
+	r.DeprecatedServices = append(r.DeprecatedServices, o.DeprecatedServices...)
 
 	if o.Module != nil {
 		r.Module = StringCopy(o.Module)
@@ -234,8 +236,8 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 		c.Providers = []string{}
 	}
 
-	if c.Services == nil {
-		c.Services = []string{}
+	if c.DeprecatedServices == nil {
+		c.DeprecatedServices = []string{}
 	} else {
 		logger.Warn(servicesFieldLogMsg)
 	}
@@ -373,7 +375,7 @@ func (c *TaskConfig) Validate() error {
 		}
 	}
 
-	if err := c.ModuleInputs.Validate(c.Services, c.Condition); err != nil {
+	if err := c.ModuleInputs.Validate(c.DeprecatedServices, c.Condition); err != nil {
 		return err
 	}
 
@@ -391,7 +393,7 @@ func (c *TaskConfig) GoString() string {
 		"Name:%s, "+
 		"Description:%s, "+
 		"Providers:%s, "+
-		"Services:%s, "+
+		"Services (deprecated):%s, "+
 		"Module:%s, "+
 		"VarFiles:%s, "+
 		"Version:%s, "+
@@ -404,7 +406,7 @@ func (c *TaskConfig) GoString() string {
 		StringVal(c.Name),
 		StringVal(c.Description),
 		c.Providers,
-		c.Services,
+		c.DeprecatedServices,
 		StringVal(c.Module),
 		c.VarFiles,
 		StringVal(c.Version),
@@ -543,7 +545,7 @@ func FilterTasks(tasks *TaskConfigs, names []string) (*TaskConfigs, error) {
 // from module_input blocks is handled in ModuleInputConfigs.Validate()
 func (c *TaskConfig) validateCondition() error {
 	// Confirm task is configured with a condition
-	if len(c.Services) == 0 {
+	if len(c.DeprecatedServices) == 0 {
 		if isConditionNil(c.Condition) {
 			// Error message omits task.services option since it is deprecated
 			return fmt.Errorf("task should be configured with a condition block")

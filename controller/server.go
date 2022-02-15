@@ -227,18 +227,18 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 	inputs := t.ModuleInputs()
 
 	return config.TaskConfig{
-		Description:  config.String(t.Description()),
-		Name:         config.String(t.Name()),
-		Enabled:      config.Bool(t.IsEnabled()),
-		Providers:    t.ProviderNames(),
-		Services:     t.ServiceNames(),
-		Module:       config.String(t.Module()),
-		Variables:    vars, // TODO: omit or safe to return?
-		Version:      config.String(t.Version()),
-		BufferPeriod: &bpConf,
-		Condition:    t.Condition(),
-		ModuleInputs: &inputs,
-		WorkingDir:   config.String(t.WorkingDir()),
+		Description:        config.String(t.Description()),
+		Name:               config.String(t.Name()),
+		Enabled:            config.Bool(t.IsEnabled()),
+		Providers:          t.ProviderNames(),
+		DeprecatedServices: t.ServiceNames(),
+		Module:             config.String(t.Module()),
+		Variables:          vars, // TODO: omit or safe to return?
+		Version:            config.String(t.Version()),
+		BufferPeriod:       &bpConf,
+		Condition:          t.Condition(),
+		ModuleInputs:       &inputs,
+		WorkingDir:         config.String(t.WorkingDir()),
 
 		// Enterprise
 		TFVersion: config.String(t.TFVersion()),
