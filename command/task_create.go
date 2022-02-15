@@ -131,7 +131,7 @@ func (c *taskCreateCommand) Run(args []string) int {
 
 	taskConfig := taskConfigs[0]
 
-	// Check if task config provided is using the deprecated task.services
+	// Check if task config provided is using the deprecated fields
 	if err = handleDeprecations(c.UI, taskConfig); err != nil {
 		return ExitCodeError
 	}
@@ -185,9 +185,10 @@ func (c *taskCreateCommand) Run(args []string) int {
 		}
 	}
 
-	c.UI.Info(fmt.Sprintf("Creating task %s...", taskName))
-	c.UI.Output("Note: This can take some time depending on the module.")
-	c.UI.Output("Terminating this process will not stop task creation.\n")
+	c.UI.Info(fmt.Sprintf("Creating and running task %s...", taskName))
+	c.UI.Output("The task creation request has been sent to the CTS server.")
+	c.UI.Output("Please be patient as it may take some time to see a confirmation that this task has completed.")
+	c.UI.Output("Warning: Terminating this process will not stop task creation.\n")
 
 	// Plan approved, create new task and run now
 	taskResp, err = client.CreateTask(context.Background(), api.RunOptionNow, taskReq)
