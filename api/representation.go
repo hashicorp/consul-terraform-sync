@@ -143,15 +143,18 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 			UseAsModuleInput: tr.Task.Condition.ConsulKv.UseAsModuleInput,
 		}
 	} else if tr.Task.Condition.CatalogServices != nil {
-		tc.Condition = &config.CatalogServicesConditionConfig{
+		cond := &config.CatalogServicesConditionConfig{
 			CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
 				Regexp:           config.String(tr.Task.Condition.CatalogServices.Regexp),
 				UseAsModuleInput: tr.Task.Condition.CatalogServices.UseAsModuleInput,
 				Datacenter:       tr.Task.Condition.CatalogServices.Datacenter,
 				Namespace:        tr.Task.Condition.CatalogServices.Namespace,
-				NodeMeta:         tr.Task.Condition.CatalogServices.NodeMeta.AdditionalProperties,
 			},
 		}
+		if tr.Task.Condition.CatalogServices.NodeMeta != nil {
+			cond.NodeMeta = tr.Task.Condition.CatalogServices.NodeMeta.AdditionalProperties
+		}
+		tc.Condition = cond
 	} else if tr.Task.Condition.Schedule != nil {
 		tc.Condition = &config.ScheduleConditionConfig{
 			Cron: &tr.Task.Condition.Schedule.Cron,

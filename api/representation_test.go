@@ -442,7 +442,7 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 	}
 }
 
-func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
+func TestTaskRequest_ToTaskConfig(t *testing.T) {
 	cases := []struct {
 		name               string
 		request            *TaskRequest
@@ -601,6 +601,29 @@ func TestTaskRequest_ToRequestTaskConfig(t *testing.T) {
 							"key1": "value1",
 							"key2": "value2",
 						},
+					},
+				},
+			},
+		},
+		{
+			name: "with_catalog_services_condition_no_nodemeta",
+			request: &TaskRequest{
+				Task: oapigen.Task{
+					Name:   "task",
+					Module: "path",
+					Condition: oapigen.Condition{
+						CatalogServices: &oapigen.CatalogServicesCondition{
+							Regexp: ".*",
+						},
+					},
+				},
+			},
+			taskConfigExpected: config.TaskConfig{
+				Name:   config.String("task"),
+				Module: config.String("path"),
+				Condition: &config.CatalogServicesConditionConfig{
+					CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
+						Regexp: config.String(".*"),
 					},
 				},
 			},
