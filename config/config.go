@@ -43,7 +43,7 @@ type Config struct {
 	Vault              *VaultConfig              `mapstructure:"vault"`
 	Driver             *DriverConfig             `mapstructure:"driver"`
 	Tasks              *TaskConfigs              `mapstructure:"task"`
-	Services           *ServiceConfigs           `mapstructure:"service"`
+	DeprecatedServices *ServiceConfigs           `mapstructure:"service"`
 	TerraformProviders *TerraformProviderConfigs `mapstructure:"terraform_provider"`
 	BufferPeriod       *BufferPeriodConfig       `mapstructure:"buffer_period"`
 	TLS                *CTSTLSConfig             `mapstructure:"tls"`
@@ -83,7 +83,7 @@ func DefaultConfig() *Config {
 		Consul:             consul,
 		Driver:             DefaultDriverConfig(),
 		Tasks:              DefaultTaskConfigs(),
-		Services:           DefaultServiceConfigs(),
+		DeprecatedServices: DefaultServiceConfigs(),
 		TerraformProviders: DefaultTerraformProviderConfigs(),
 		BufferPeriod:       DefaultBufferPeriodConfig(),
 		TLS:                DefaultCTSTLSConfig(),
@@ -106,7 +106,7 @@ func (c *Config) Copy() *Config {
 		Vault:              c.Vault.Copy(),
 		Driver:             c.Driver.Copy(),
 		Tasks:              c.Tasks.Copy(),
-		Services:           c.Services.Copy(),
+		DeprecatedServices: c.DeprecatedServices.Copy(),
 		TerraformProviders: c.TerraformProviders.Copy(),
 		BufferPeriod:       c.BufferPeriod.Copy(),
 		TLS:                c.TLS.Copy(),
@@ -163,8 +163,8 @@ func (c *Config) Merge(o *Config) *Config {
 		r.Tasks = r.Tasks.Merge(o.Tasks)
 	}
 
-	if o.Services != nil {
-		r.Services = r.Services.Merge(o.Services)
+	if o.DeprecatedServices != nil {
+		r.DeprecatedServices = r.DeprecatedServices.Merge(o.DeprecatedServices)
 	}
 
 	if o.TerraformProviders != nil {
@@ -236,14 +236,14 @@ func (c *Config) Finalize() {
 	}
 	c.Tasks.Finalize(c.BufferPeriod, *c.WorkingDir)
 
-	if c.Services == nil {
-		c.Services = DefaultServiceConfigs()
+	if c.DeprecatedServices == nil {
+		c.DeprecatedServices = DefaultServiceConfigs()
 	}
-	if len(*c.Services) > 0 {
+	if len(*c.DeprecatedServices) > 0 {
 		logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
 		logger.Warn(serviceBlockLogMsg)
 	}
-	c.Services.Finalize()
+	c.DeprecatedServices.Finalize()
 
 	if c.TerraformProviders == nil {
 		c.TerraformProviders = DefaultTerraformProviderConfigs()
@@ -270,7 +270,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	if err := c.Services.Validate(); err != nil {
+	if err := c.DeprecatedServices.Validate(); err != nil {
 		return err
 	}
 
@@ -344,7 +344,7 @@ func (c *Config) GoString() string {
 		"Vault:%s, "+
 		"Driver:%s, "+
 		"Tasks:%s, "+
-		"Services:%s, "+
+		"Services (deprecated):%s, "+
 		"TerraformProviders:%s, "+
 		"BufferPeriod:%s,"+
 		"TLS:%s"+
@@ -357,7 +357,7 @@ func (c *Config) GoString() string {
 		c.Vault.GoString(),
 		c.Driver.GoString(),
 		c.Tasks.GoString(),
-		c.Services.GoString(),
+		c.DeprecatedServices.GoString(),
 		c.TerraformProviders.GoString(),
 		c.BufferPeriod.GoString(),
 		c.TLS.GoString(),

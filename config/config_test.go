@@ -83,7 +83,7 @@ var (
 				},
 			},
 		},
-		Services: &ServiceConfigs{
+		DeprecatedServices: &ServiceConfigs{
 			{
 				Name:        String("serviceA"),
 				Description: String("descriptionA"),
@@ -336,15 +336,15 @@ func TestConfig_Finalize(t *testing.T) {
 	(*expected.Tasks)[0].BufferPeriod.Max = TimeDuration(60 * time.Second)
 	(*expected.Tasks)[0].Variables = map[string]string{}
 	(*expected.Tasks)[0].WorkingDir = String("working/task")
-	(*expected.Services)[0].ID = String("serviceA")
-	(*expected.Services)[0].Namespace = String("")
-	(*expected.Services)[0].Datacenter = String("")
-	(*expected.Services)[0].Filter = String("")
-	(*expected.Services)[0].CTSUserDefinedMeta = map[string]string{}
-	(*expected.Services)[1].ID = String("serviceB")
-	(*expected.Services)[1].Datacenter = String("")
-	(*expected.Services)[1].Filter = String("")
-	(*expected.Services)[1].CTSUserDefinedMeta = map[string]string{}
+	(*expected.DeprecatedServices)[0].ID = String("serviceA")
+	(*expected.DeprecatedServices)[0].Namespace = String("")
+	(*expected.DeprecatedServices)[0].Datacenter = String("")
+	(*expected.DeprecatedServices)[0].Filter = String("")
+	(*expected.DeprecatedServices)[0].CTSUserDefinedMeta = map[string]string{}
+	(*expected.DeprecatedServices)[1].ID = String("serviceB")
+	(*expected.DeprecatedServices)[1].Datacenter = String("")
+	(*expected.DeprecatedServices)[1].Filter = String("")
+	(*expected.DeprecatedServices)[1].CTSUserDefinedMeta = map[string]string{}
 
 	c := longConfig.Copy()
 	c.Finalize()
