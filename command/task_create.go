@@ -117,21 +117,21 @@ func (c *taskCreateCommand) Run(args []string) int {
 	l := len(taskConfigs)
 	if l > 1 {
 		c.UI.Error(errCreatingRequest)
-		c.UI.Output(fmt.Sprintf("task file %s cannot contain more "+
+		c.UI.Output(fmt.Sprintf("task file '%s' cannot contain more "+
 			"than 1 task, contains %d tasks", taskFile, l))
 		return ExitCodeError
 	}
 
 	if l == 0 {
 		c.UI.Error(errCreatingRequest)
-		c.UI.Output(fmt.Sprintf("task file %s does not contain a task, "+
+		c.UI.Output(fmt.Sprintf("task file '%s' does not contain a task, "+
 			"must contain at least one task", taskFile))
 		return ExitCodeError
 	}
 
 	taskConfig := taskConfigs[0]
 
-	// Check if task config provided is using the deprecated task.services
+	// Check if task config provided is using the deprecated fields
 	if err = handleDeprecations(c.UI, taskConfig); err != nil {
 		return ExitCodeError
 	}
@@ -139,7 +139,7 @@ func (c *taskCreateCommand) Run(args []string) int {
 	taskReq, err := api.TaskRequestFromTaskConfig(*taskConfig)
 	if err != nil {
 		c.UI.Error(errCreatingRequest)
-		c.UI.Output(fmt.Sprintf("task %s is invalid", taskFile))
+		c.UI.Output(fmt.Sprintf("task '%s' is invalid", taskFile))
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 
@@ -185,9 +185,10 @@ func (c *taskCreateCommand) Run(args []string) int {
 		}
 	}
 
-	c.UI.Info(fmt.Sprintf("Creating task %s...", taskName))
-	c.UI.Output("Note: This can take some time depending on the module.")
-	c.UI.Output("Terminating this process will not stop task creation.\n")
+	c.UI.Info(fmt.Sprintf("Creating and running task '%s'...", taskName))
+	c.UI.Output("The task creation request has been sent to the CTS server.")
+	c.UI.Output("Please be patient as it may take some time to see a confirmation that this task has completed.")
+	c.UI.Output("Warning: Terminating this process will not stop task creation.\n")
 
 	// Plan approved, create new task and run now
 	taskResp, err = client.CreateTask(context.Background(), api.RunOptionNow, taskReq)
