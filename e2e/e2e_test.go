@@ -5,7 +5,9 @@ package e2e
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
@@ -471,15 +474,8 @@ func TestE2E_ConfigStreamlining_Deprecations(t *testing.T) {
 	`, removeInTaskName)
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "config_streamlining")
-	cleanup := testutils.MakeTempDir(t, tempDir) // delete only if no errors
 
-	config := baseConfig(tempDir).appendConsulBlock(srv).
-		appendString(removeAfterConfig).appendString(removeInConfig)
-	configPath := filepath.Join(tempDir, configFile)
-	config.write(t, configPath)
-
-	// try to run once-mode successfully
-	api.StartCTS(t, configPath, api.CTSOnceModeFlag)
+	cts := ctsSetup(t, srv, tempDir, removeAfterConfig+removeInConfig)
 
 	// check resources for deprecations to be removed after 0.8
 	workingDir := filepath.Join(tempDir, removeAfterTaskName)
@@ -487,12 +483,23 @@ func TestE2E_ConfigStreamlining_Deprecations(t *testing.T) {
 	validateServices(t, true, []string{"web"}, resourcesPath)
 	validateVariable(t, true, workingDir, "services", "meta_value")
 
+	// check services deprecation (to be removed after 0.8) handled correctly in Get API Condition
+	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", removeAfterTaskName)
+	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	var r oapigen.TaskResponse
+	err := json.NewDecoder(resp.Body).Decode(&r)
+	require.NoError(t, err)
+	require.NotNil(t, r.Task)
+	require.NotNil(t, r.Task.Condition.Services)
+	require.NotNil(t, r.Task.Condition.Services.Names)
+	assert.Contains(t, "[web]", strings.Join(*r.Task.Condition.Services.Names, ""))
+
 	// check resources for deprecations to be removed in 0.8
 	resourcesPath = filepath.Join(tempDir, removeInTaskName, resourcesDir)
 	validateModuleFile(t, true, true, resourcesPath, "key", "value")
 	validateServices(t, true, []string{"api"}, resourcesPath)
-
-	cleanup()
 }
 
 // testInvalidTaskConfig tests that task creation fails with the given task configuration.

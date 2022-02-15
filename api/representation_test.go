@@ -375,8 +375,24 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			},
 		},
 		{
-			name: "services_field_to_condition",
+			name: "services_field_to_condition_nil",
 			taskConfig: config.TaskConfig{
+				Condition:          nil,
+				DeprecatedServices: []string{"api", "web"},
+			},
+			expected: oapigen.Task{
+				Condition: oapigen.Condition{
+					Services: &oapigen.ServicesCondition{
+						Names:            &[]string{"api", "web"},
+						UseAsModuleInput: config.Bool(true),
+					},
+				},
+			},
+		},
+		{
+			name: "services_field_to_condition_empty",
+			taskConfig: config.TaskConfig{
+				Condition:          config.EmptyConditionConfig(),
 				DeprecatedServices: []string{"api", "web"},
 			},
 			expected: oapigen.Task{
