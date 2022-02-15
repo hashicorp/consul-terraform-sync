@@ -229,10 +229,10 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		return nil, nil
 	}
 
-	meta := conf.Services.CTSUserDefinedMeta(taskConfig.DeprecatedServices)
+	meta := conf.DeprecatedServices.CTSUserDefinedMeta(taskConfig.DeprecatedServices)
 	services := make([]driver.Service, len(taskConfig.DeprecatedServices))
 	for si, service := range taskConfig.DeprecatedServices {
-		services[si] = getService(conf.Services, service, meta)
+		services[si] = getService(conf.DeprecatedServices, service, meta)
 	}
 
 	providers := make(driver.TerraformProviderBlocks, len(taskConfig.Providers))

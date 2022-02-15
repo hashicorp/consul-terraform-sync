@@ -661,18 +661,6 @@ func singleTaskConfig() *config.Config {
 				Version:            config.String("v1"),
 			},
 		},
-		Services: &config.ServiceConfigs{
-			{
-				ID:          config.String("serviceA_id"),
-				Name:        config.String("serviceA"),
-				Description: config.String("descriptionA"),
-			}, {
-				ID:          config.String("serviceB_id"),
-				Name:        config.String("serviceB"),
-				Namespace:   config.String("teamB"),
-				Description: config.String("descriptionB"),
-			},
-		},
 		TerraformProviders: &config.TerraformProviderConfigs{{
 			"X": map[string]interface{}{},
 			handler.TerraformProviderFake: map[string]interface{}{
