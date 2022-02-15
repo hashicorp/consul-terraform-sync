@@ -885,7 +885,7 @@ func TestE2E_TaskCommand_Help(t *testing.T) {
 		{
 			command: "create",
 			outputContains: []string{
-				"Usage: consul-terraform-sync task create [options] --task-file=<task config>",
+				"Usage: consul-terraform-sync task create [options] -task-file=<task config>",
 				"auto-approve false",
 			},
 		},

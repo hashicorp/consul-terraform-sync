@@ -199,7 +199,7 @@ func (m *meta) taskLifecycleClient() (*api.TaskLifecycleClient, error) {
 // approved a given action. If the user did not approve (false is returned) or
 // if there is an error in processing the user input, an exit code is provided.
 func (m *meta) requestUserApproval(taskName, action string) (int, bool) {
-	m.UI.Output("Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject\n")
+	m.UI.Output("Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject.\n")
 	v, err := m.UI.Ask("Enter a value:")
 	m.UI.Output("")
 

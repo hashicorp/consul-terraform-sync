@@ -20,15 +20,18 @@ const cmdTaskCreateName = "task create"
 type taskCreateCommand struct {
 	meta
 	autoApprove *bool
+	taskFile    *string
 	flags       *flag.FlagSet
 }
 
 func newTaskCreateCommand(m meta) *taskCreateCommand {
 	flags := m.defaultFlagSet(cmdTaskCreateName)
 	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of inspect plan")
+	f := flags.String("task-file", "", "[Required] A file containing the hcl or json definition of a task")
 	return &taskCreateCommand{
 		meta:        m,
 		autoApprove: a,
+		taskFile:    f,
 		flags:       flags,
 	}
 }
@@ -42,7 +45,7 @@ func (c taskCreateCommand) Name() string {
 func (c *taskCreateCommand) Help() string {
 	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
-Usage: consul-terraform-sync task create [options] --task-file=<task config>
+Usage: consul-terraform-sync task create [options] -task-file=<task config>
 
   Task Create is used to create a new task. It is not to be used for updating a task, it will not create a task if the
   task name already exists.
@@ -80,14 +83,12 @@ func (c *taskCreateCommand) Synopsis() string {
 // Run runs the command
 func (c *taskCreateCommand) Run(args []string) int {
 	c.meta.setFlagsUsage(c.flags, args, c.Help())
-	var taskFile string
-	c.flags.StringVar(&taskFile, "task-file", "", "A file containing the hcl or json definition of a task")
-
 	if err := c.flags.Parse(args); err != nil {
 		return ExitCodeParseFlagsError
 	}
 
 	// Check that a task file was provided
+	taskFile := *c.taskFile
 	if len(taskFile) == 0 {
 		c.UI.Error(errCreatingRequest)
 		c.UI.Output("no task file provided")
@@ -130,11 +131,10 @@ func (c *taskCreateCommand) Run(args []string) int {
 
 	taskConfig := taskConfigs[0]
 
+	// Check if task config provided is using the deprecated task.services
 	if err = handleDeprecations(c.UI, taskConfig); err != nil {
 		return ExitCodeError
 	}
-
-	// Check if task config provided is using the deprecated task.services
 
 	taskReq, err := api.TaskRequestFromTaskConfig(*taskConfig)
 	if err != nil {
@@ -186,8 +186,8 @@ func (c *taskCreateCommand) Run(args []string) int {
 	}
 
 	c.UI.Info(fmt.Sprintf("Creating task %s...", taskName))
-	c.UI.Output("Note: this can take some time depending on the module size.")
-	c.UI.Output("terminating this process will not stop task creation, see CTS logs for more details\n")
+	c.UI.Output("Note: This can take some time depending on the module.")
+	c.UI.Output("Terminating this process will not stop task creation.\n")
 
 	// Plan approved, create new task and run now
 	taskResp, err = client.CreateTask(context.Background(), api.RunOptionNow, taskReq)
@@ -265,19 +265,27 @@ func handleDeprecations(ui mcli.Ui, tc *config.TaskConfig) error {
 		if tc.Condition != nil {
 			switch tc.Condition.(type) {
 			case *config.ServicesConditionConfig:
-				action := generateServicesConditionBlockAction(tc.Services)
+				action := `list of 'services' and 'condition "services"' block cannot both be configured. ` +
+					`Consider using the 'names' field under 'condition "services"'`
 				ui.Output(generateServiceFieldMsg(action))
-			case *config.CatalogServicesConditionConfig:
+			default:
 				action := generateServiceModuleInputBlockAction(tc.Services)
-				ui.Output(generateServiceFieldMsg(action))
-			case *config.ConsulKVConditionConfig:
-				action := generateServiceModuleInputBlockAction(tc.Services)
-				ui.Output(generateServiceFieldMsg(action))
-			case *config.ScheduleConditionConfig:
-				action := generateServicesAction(tc.Services)
 				ui.Output(generateServiceFieldMsg(action))
 			}
-		} else {
+		}
+
+		if tc.ModuleInputs != nil {
+			for _, si := range *tc.ModuleInputs {
+				switch si.(type) {
+				case *config.ServicesModuleInputConfig:
+					action := `list of 'services' and 'module_input "services"' block cannot both be configured. ` +
+						`Consider using the 'names' field under 'module_input "services"'`
+					ui.Output(generateServiceFieldMsg(action))
+				}
+			}
+		}
+
+		if tc.ModuleInputs == nil && tc.Condition == nil {
 			action := generateServicesAction(tc.Services)
 			ui.Output(generateServiceFieldMsg(action))
 		}
@@ -288,26 +296,6 @@ func handleDeprecations(ui mcli.Ui, tc *config.TaskConfig) error {
 	}
 	return nil
 }
-
-func generateServicesConditionBlockAction(services []string) string {
-	list := `"` + strings.Join(services, `","`) + `"`
-	return fmt.Sprintf(servicesConditionBlockAction, list, list)
-}
-
-const servicesConditionBlockAction = `Please add the suggested names field to your current 'condition "services"' ` +
-	`block and assure that 'use_as_module_input' is true or not present
-
-Suggested replacement:
-|    task {
-|  -   services =  [%s]
-|      condition "services"{
-|  +     names = [%s]
-|  +     use_as_module_input = true
-|        ...
-|      }
-|      ...
-|    }
-`
 
 func generateServicesAction(services []string) string {
 	list := `"` + strings.Join(services, `","`) + `"`
