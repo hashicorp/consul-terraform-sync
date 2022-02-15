@@ -49,15 +49,17 @@ Options:
 Example:
 
   $ consul-terraform-sync task delete my_task
-	==> Do you want to delete 'my_task'?
-		- This action cannot be undone.
-	Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject.
+  ==> Do you want to delete 'my_task'?
+       - This action cannot be undone.
+       - If the task is not running, it will be deleted immediately.
+       - If the task is running, it will be deleted once it has completed.
+      Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject.
 
-	Enter a value: yes
+  Enter a value: yes
 
-	==> Marking task 'my_task' for deletion...
+  ==> Marking task 'my_task' for deletion...
 
-	==> Task 'my_task' is marked for deletion and will be deleted when not running.
+  ==> Task 'my_task' has been marked for deletion and will be deleted when not running.
 `, strings.Join(c.meta.helpOptions, "\n"))
 	return strings.TrimSpace(helpText)
 }
@@ -113,7 +115,8 @@ func (c *taskDeleteCommand) Run(args []string) int {
 		return ExitCodeError
 	}
 
-	c.UI.Info(fmt.Sprintf("Task '%s' is marked for deletion and will be deleted when not running.", taskName))
+	c.UI.Info(fmt.Sprintf("Task '%s' has been marked for deletion "+
+		"and will be deleted when not running.", taskName))
 
 	return ExitCodeOK
 }
