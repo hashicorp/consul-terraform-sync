@@ -229,6 +229,7 @@ func (m *meta) requestUserApprovalEnable(taskName string) (int, bool) {
 func (m *meta) requestUserApprovalDelete(taskName string) (int, bool) {
 	m.UI.Info(fmt.Sprintf("Do you want to delete '%s'?", taskName))
 	m.UI.Output(" - This action cannot be undone.")
+	m.UI.Output(" - Deleting a task will not destroy the infrastructure managed by the task.")
 	m.UI.Output(" - If the task is not running, it will be deleted immediately.")
 	m.UI.Output(" - If the task is running, it will be deleted once it has completed.")
 	return m.requestUserApproval(taskName, "deleting")
