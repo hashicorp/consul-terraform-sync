@@ -125,6 +125,7 @@ components:
   schemas:
     TaskRequest:
       type: object
+      additionalProperties: false
       properties:
         task:
           $ref: '#/components/schemas/Task'
@@ -133,6 +134,7 @@ components:
 
     TaskResponse:
       type: object
+      additionalProperties: false
       properties:
         task:
           $ref: '#/components/schemas/Task'
@@ -147,6 +149,7 @@ components:
 
     TaskDeleteResponse:
       type: object
+      additionalProperties: false
       properties:
         request_id:
           $ref: '#/components/schemas/RequestID'
@@ -167,6 +170,7 @@ components:
 
     Task:
       type: object
+      additionalProperties: false
       properties:
         description:
           description: The human readable text to describe the task.
@@ -226,6 +230,7 @@ components:
 
     BufferPeriod:
       type: object
+      additionalProperties: false
       description: The buffer period for triggering task execution.
       properties:
         enabled:
@@ -243,6 +248,7 @@ components:
 
     Condition:
       type: object
+      additionalProperties: false
       description: The condition on which to trigger the task to execute. If the task has the deprecated services field configured as a module input, it is represented here as condition.services.
       properties:
         catalog_services:
@@ -256,6 +262,7 @@ components:
 
     ModuleInput:
       type: object
+      additionalProperties: false
       description: The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.
       properties:
         services:
@@ -271,6 +278,7 @@ components:
 
     ServicesCondition:
       type: object
+      additionalProperties: false
       properties:
         regexp:
           type: string
@@ -299,6 +307,7 @@ components:
           example: false
     CatalogServicesCondition:
       type: object
+      additionalProperties: false
       properties:
         datacenter:
           type: string
@@ -323,6 +332,7 @@ components:
         - regexp
     ConsulKVCondition:
       type: object
+      additionalProperties: false
       properties:
         path:
           type: string
@@ -345,6 +355,7 @@ components:
         - path
     ScheduleCondition:
       type: object
+      additionalProperties: false
       properties:
         cron:
           type: string
@@ -354,6 +365,7 @@ components:
 
     ServicesModuleInput:
       type: object
+      additionalProperties: false
       properties:
         regexp:
           type: string
@@ -378,6 +390,7 @@ components:
             type: string
     ConsulKVModuleInput:
       type: object
+      additionalProperties: false
       properties:
         path:
           type: string
@@ -397,6 +410,7 @@ components:
 
     Run:
       type: object
+      additionalProperties: false
       properties:
         plan:
           type: string
@@ -416,6 +430,7 @@ components:
 
     Error:
       type: object
+      additionalProperties: false
       properties:
         message:
           type: string
