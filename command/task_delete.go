@@ -51,6 +51,7 @@ Example:
   $ consul-terraform-sync task delete my_task
   ==> Do you want to delete 'my_task'?
        - This action cannot be undone.
+       - Deleting a task will not destroy the infrastructure managed by the task.
        - If the task is not running, it will be deleted immediately.
        - If the task is running, it will be deleted once it has completed.
       Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject.
