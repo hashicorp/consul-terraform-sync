@@ -162,7 +162,13 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 			request: fmt.Sprintf(`{
 				"task": {
 					"name": "%s",
-					"services": ["api"],
+					"condition": {
+						"services": {
+							"names": [
+								"api"
+							]
+						}
+					},
 					"module": "./example-module"
 				}
 			}`, existingTask),

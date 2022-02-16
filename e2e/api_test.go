@@ -655,9 +655,13 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 			"providers": [
 				"local"
 			],
-			"services": [
-				"api"
-			],
+			"condition": {
+				"services": {
+					"names": [
+						"api"
+					]
+				}
+			},
 			"module": true
 		}
 	}`, taskName)
