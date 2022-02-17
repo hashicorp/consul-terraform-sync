@@ -602,7 +602,7 @@ func validateTemplate(t *hcat.Template, clients hcat.Looker) error {
 	}
 	t.Execute(recaller)
 	// Mark that template needs to be re-run
-	t.Notify(nil)
+	t.Notify(notifier.NewValidationDep(t.ID()))
 	return err
 }
 
