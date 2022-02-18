@@ -22,12 +22,12 @@ type Overrider interface {
 func logDependency(logger logging.Logger, dependency interface{}) {
 	switch d := dependency.(type) {
 	case []*dep.HealthService:
-		serviceNames := make([]string, len(d))
+		serviceIDs := make([]string, len(d))
 		for ix, hs := range d {
-			serviceNames[ix] = hs.Name
+			serviceIDs[ix] = hs.ID
 		}
 		logger.Debug("received dependency",
-			"variable", "services", "names", serviceNames)
+			"variable", "services", "ids", serviceIDs)
 	case []*dep.CatalogSnippet:
 		serviceNames := make([]string, len(d))
 		for ix, hs := range d {

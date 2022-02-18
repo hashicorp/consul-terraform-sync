@@ -56,7 +56,7 @@ func (n *CatalogServicesRegistration) Override() {
 // - services-name: len(services) tmplfuncs
 // - consul-kv: 1 tmplfunc
 func NewCatalogServicesRegistration(tmpl templates.Template, tmplFuncTotal int) *CatalogServicesRegistration {
-	logger := logging.Global().Named(logSystemName).Named(servicesSubsystemName)
+	logger := logging.Global().Named(logSystemName).Named(csSubsystemName)
 	logger.Trace("creating notifier", "type", csSubsystemName,
 		"tmpl_func_total", tmplFuncTotal)
 
