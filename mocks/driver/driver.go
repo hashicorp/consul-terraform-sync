@@ -68,6 +68,11 @@ func (_m *Driver) InspectTask(ctx context.Context) (driver.InspectPlan, error) {
 	return r0, r1
 }
 
+// OverrideNotifier provides a mock function with given fields:
+func (_m *Driver) OverrideNotifier() {
+	_m.Called()
+}
+
 // RenderTemplate provides a mock function with given fields: ctx
 func (_m *Driver) RenderTemplate(ctx context.Context) (bool, error) {
 	ret := _m.Called(ctx)

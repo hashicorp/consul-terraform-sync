@@ -1,6 +1,8 @@
 package notifier
 
 import (
+	"sync"
+
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat/dep"
@@ -22,6 +24,16 @@ type Services struct {
 	once    bool
 	tfTotal int
 	counter int
+
+	mu sync.RWMutex
+}
+
+func (n *Services) Override() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	n.once = true
+	n.Template.Notify(nil)
 }
 
 // NewServices creates a new Services notifier.
@@ -53,6 +65,9 @@ func NewServices(tmpl templates.Template, tmplFuncTotal int) *Services {
 // Once-mode requires a notification when all dependencies are received in order
 // to trigger CTS. Otherwise it will hang.
 func (n *Services) Notify(d interface{}) (notify bool) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	logDependency(n.logger, d)
 	notify = false
 
