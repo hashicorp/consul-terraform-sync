@@ -1,6 +1,8 @@
 package notifier
 
 import (
+	"sync"
+
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat/dep"
@@ -28,6 +30,16 @@ type CatalogServicesRegistration struct {
 	once    bool
 	tfTotal int
 	counter int
+
+	mu sync.RWMutex
+}
+
+func (n *CatalogServicesRegistration) Override() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	n.once = true
+	n.Template.Notify(nil)
 }
 
 // NewCatalogServicesRegistration creates a new CatalogServicesRegistration
@@ -80,6 +92,9 @@ func NewCatalogServicesRegistration(tmpl templates.Template, tmplFuncTotal int) 
 // when all dependencies are received.
 // Resolved by sending a special notification for once-mode. Bullet B above.
 func (n *CatalogServicesRegistration) Notify(d interface{}) (notify bool) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	logDependency(n.logger, d)
 	notify = false
 

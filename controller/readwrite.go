@@ -404,11 +404,17 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 		return nil, err
 	}
 
+	csTimeout := time.After(30 * time.Second)
 	timeout := time.After(1 * time.Minute)
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
+		case <-csTimeout:
+			// Short-term solution to issue when Create Task API with
+			// catalog-service condition edge-case would hang
+			logger.Debug("catalog-services condition hanging needs to be overriden")
+			d.OverrideNotifier()
 		case <-timeout:
 			logger.Error("timed out rendering template")
 			// Cleanup the task
@@ -426,6 +432,11 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 			return nil, err
 		}
 		if ok {
+			// Short-term solution to issue when Create Task API with edge-case
+			// could cause an extra trigger
+			logger.Debug("once-mode extra trigger edge-case needs to be prevented")
+			d.OverrideNotifier()
+
 			// Once template rendering is finished, return
 			return d, nil
 		}
