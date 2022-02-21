@@ -8,11 +8,16 @@ import (
 	"fmt"
 )
 
-// BufferPeriod defines model for BufferPeriod.
+// The buffer period for triggering task execution.
 type BufferPeriod struct {
-	Enabled *bool   `json:"enabled,omitempty"`
-	Max     *string `json:"max,omitempty"`
-	Min     *string `json:"min,omitempty"`
+	// Whether the buffer period is enabled or disabled. Defaults to the global buffer period configured for CTS.
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// The maximum period of time to wait after changes are detected before triggering the task. Defaults to the global buffer period configured for CTS.
+	Max *string `json:"max,omitempty"`
+
+	// The minimum period of time to wait after changes are detected before triggering the task. Defaults to the global buffer period configured for CTS.
+	Min *string `json:"min,omitempty"`
 }
 
 // CatalogServicesCondition defines model for CatalogServicesCondition.
@@ -29,7 +34,7 @@ type CatalogServicesCondition_NodeMeta struct {
 	AdditionalProperties map[string]string `json:"-"`
 }
 
-// Condition defines model for Condition.
+// The condition on which to trigger the task to execute. If the task has the deprecated services field configured as a module input, it is represented here as condition.services.
 type Condition struct {
 	CatalogServices *CatalogServicesCondition `json:"catalog_services,omitempty"`
 	ConsulKv        *ConsulKVCondition        `json:"consul_kv,omitempty"`
@@ -65,7 +70,7 @@ type ErrorResponse struct {
 	RequestId RequestID `json:"request_id"`
 }
 
-// ModuleInput defines model for ModuleInput.
+// The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.
 type ModuleInput struct {
 	ConsulKv *ConsulKVModuleInput `json:"consul_kv,omitempty"`
 	Services *ServicesModuleInput `json:"services,omitempty"`
@@ -91,48 +96,91 @@ type ScheduleCondition struct {
 
 // ServicesCondition defines model for ServicesCondition.
 type ServicesCondition struct {
-	Names            *[]string `json:"names,omitempty"`
-	Regexp           *string   `json:"regexp,omitempty"`
-	UseAsModuleInput *bool     `json:"use_as_module_input,omitempty"`
+	CtsUserDefinedMeta *ServicesCondition_CtsUserDefinedMeta `json:"cts_user_defined_meta,omitempty"`
+	Datacenter         *string                               `json:"datacenter,omitempty"`
+	Filter             *string                               `json:"filter,omitempty"`
+	Names              *[]string                             `json:"names,omitempty"`
+	Namespace          *string                               `json:"namespace,omitempty"`
+	Regexp             *string                               `json:"regexp,omitempty"`
+	UseAsModuleInput   *bool                                 `json:"use_as_module_input,omitempty"`
+}
+
+// ServicesCondition_CtsUserDefinedMeta defines model for ServicesCondition.CtsUserDefinedMeta.
+type ServicesCondition_CtsUserDefinedMeta struct {
+	AdditionalProperties map[string]string `json:"-"`
 }
 
 // ServicesModuleInput defines model for ServicesModuleInput.
 type ServicesModuleInput struct {
-	Names  *[]string `json:"names,omitempty"`
-	Regexp *string   `json:"regexp,omitempty"`
+	CtsUserDefinedMeta *ServicesModuleInput_CtsUserDefinedMeta `json:"cts_user_defined_meta,omitempty"`
+	Datacenter         *string                                 `json:"datacenter,omitempty"`
+	Filter             *string                                 `json:"filter,omitempty"`
+	Names              *[]string                               `json:"names,omitempty"`
+	Namespace          *string                                 `json:"namespace,omitempty"`
+	Regexp             *string                                 `json:"regexp,omitempty"`
+}
+
+// ServicesModuleInput_CtsUserDefinedMeta defines model for ServicesModuleInput.CtsUserDefinedMeta.
+type ServicesModuleInput_CtsUserDefinedMeta struct {
+	AdditionalProperties map[string]string `json:"-"`
 }
 
 // Task defines model for Task.
 type Task struct {
+	// The buffer period for triggering task execution.
 	BufferPeriod *BufferPeriod `json:"buffer_period,omitempty"`
-	Condition    *Condition    `json:"condition,omitempty"`
-	Description  *string       `json:"description,omitempty"`
-	Enabled      *bool         `json:"enabled,omitempty"`
-	Module       string        `json:"module"`
-	ModuleInput  *ModuleInput  `json:"module_input,omitempty"`
-	Name         string        `json:"name"`
-	Providers    *[]string     `json:"providers,omitempty"`
-	Services     *[]string     `json:"services,omitempty"`
-	Variables    *VariableMap  `json:"variables,omitempty"`
-	Version      *string       `json:"version,omitempty"`
+
+	// The condition on which to trigger the task to execute. If the task has the deprecated services field configured as a module input, it is represented here as condition.services.
+	Condition Condition `json:"condition"`
+
+	// The human readable text to describe the task.
+	Description *string `json:"description,omitempty"`
+
+	// Whether the task is enabled or disabled from executing.
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// The location of the Terraform module.
+	Module string `json:"module"`
+
+	// The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.
+	ModuleInput *ModuleInput `json:"module_input,omitempty"`
+
+	// The unique name of the task.
+	Name string `json:"name"`
+
+	// The list of provider names that the task's module uses.
+	Providers *[]string `json:"providers,omitempty"`
+
+	// Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest version if not set.
+	TerraformVersion *string `json:"terraform_version,omitempty"`
+
+	// The map of variables that are provided to the task's module.
+	Variables *VariableMap `json:"variables,omitempty"`
+
+	// The version of the configured module that the task uses. Defaults to the latest version if not set.
+	Version *string `json:"version,omitempty"`
 }
 
 // TaskDeleteResponse defines model for TaskDeleteResponse.
 type TaskDeleteResponse struct {
+	Error     *Error    `json:"error,omitempty"`
 	RequestId RequestID `json:"request_id"`
 }
 
 // TaskRequest defines model for TaskRequest.
-type TaskRequest Task
+type TaskRequest struct {
+	Task Task `json:"task"`
+}
 
 // TaskResponse defines model for TaskResponse.
 type TaskResponse struct {
+	Error     *Error    `json:"error,omitempty"`
 	RequestId RequestID `json:"request_id"`
 	Run       *Run      `json:"run,omitempty"`
 	Task      *Task     `json:"task,omitempty"`
 }
 
-// VariableMap defines model for VariableMap.
+// The map of variables that are provided to the task's module.
 type VariableMap struct {
 	AdditionalProperties map[string]string `json:"-"`
 }
@@ -195,6 +243,112 @@ func (a *CatalogServicesCondition_NodeMeta) UnmarshalJSON(b []byte) error {
 
 // Override default JSON handling for CatalogServicesCondition_NodeMeta to handle AdditionalProperties
 func (a CatalogServicesCondition_NodeMeta) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for ServicesCondition_CtsUserDefinedMeta. Returns the specified
+// element and whether it was found
+func (a ServicesCondition_CtsUserDefinedMeta) Get(fieldName string) (value string, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for ServicesCondition_CtsUserDefinedMeta
+func (a *ServicesCondition_CtsUserDefinedMeta) Set(fieldName string, value string) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]string)
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for ServicesCondition_CtsUserDefinedMeta to handle AdditionalProperties
+func (a *ServicesCondition_CtsUserDefinedMeta) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]string)
+		for fieldName, fieldBuf := range object {
+			var fieldVal string
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for ServicesCondition_CtsUserDefinedMeta to handle AdditionalProperties
+func (a ServicesCondition_CtsUserDefinedMeta) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for ServicesModuleInput_CtsUserDefinedMeta. Returns the specified
+// element and whether it was found
+func (a ServicesModuleInput_CtsUserDefinedMeta) Get(fieldName string) (value string, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for ServicesModuleInput_CtsUserDefinedMeta
+func (a *ServicesModuleInput_CtsUserDefinedMeta) Set(fieldName string, value string) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]string)
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for ServicesModuleInput_CtsUserDefinedMeta to handle AdditionalProperties
+func (a *ServicesModuleInput_CtsUserDefinedMeta) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]string)
+		for fieldName, fieldBuf := range object {
+			var fieldVal string
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for ServicesModuleInput_CtsUserDefinedMeta to handle AdditionalProperties
+func (a ServicesModuleInput_CtsUserDefinedMeta) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 

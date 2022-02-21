@@ -97,6 +97,9 @@ type ClientInterface interface {
 
 	// DeleteTaskByName request
 	DeleteTaskByName(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetTaskByName request
+	GetTaskByName(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) CreateTaskWithBody(ctx context.Context, params *CreateTaskParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -125,6 +128,18 @@ func (c *Client) CreateTask(ctx context.Context, params *CreateTaskParams, body 
 
 func (c *Client) DeleteTaskByName(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteTaskByNameRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetTaskByName(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetTaskByNameRequest(c.Server, name)
 	if err != nil {
 		return nil, err
 	}
@@ -229,6 +244,40 @@ func NewDeleteTaskByNameRequest(server string, name string) (*http.Request, erro
 	return req, nil
 }
 
+// NewGetTaskByNameRequest generates requests for GetTaskByName
+func NewGetTaskByNameRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/tasks/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -279,6 +328,9 @@ type ClientWithResponsesInterface interface {
 
 	// DeleteTaskByName request
 	DeleteTaskByNameWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteTaskByNameResponse, error)
+
+	// GetTaskByName request
+	GetTaskByNameWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetTaskByNameResponse, error)
 }
 
 type CreateTaskResponse struct {
@@ -307,7 +359,7 @@ func (r CreateTaskResponse) StatusCode() int {
 type DeleteTaskByNameResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON204      *TaskDeleteResponse
+	JSON202      *TaskDeleteResponse
 	JSONDefault  *ErrorResponse
 }
 
@@ -321,6 +373,29 @@ func (r DeleteTaskByNameResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r DeleteTaskByNameResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetTaskByNameResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *TaskResponse
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetTaskByNameResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetTaskByNameResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -351,6 +426,15 @@ func (c *ClientWithResponses) DeleteTaskByNameWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseDeleteTaskByNameResponse(rsp)
+}
+
+// GetTaskByNameWithResponse request returning *GetTaskByNameResponse
+func (c *ClientWithResponses) GetTaskByNameWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetTaskByNameResponse, error) {
+	rsp, err := c.GetTaskByName(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetTaskByNameResponse(rsp)
 }
 
 // ParseCreateTaskResponse parses an HTTP response from a CreateTaskWithResponse call
@@ -400,12 +484,45 @@ func ParseDeleteTaskByNameResponse(rsp *http.Response) (*DeleteTaskByNameRespons
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 204:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest TaskDeleteResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON204 = &dest
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetTaskByNameResponse parses an HTTP response from a GetTaskByNameWithResponse call
+func ParseGetTaskByNameResponse(rsp *http.Response) (*GetTaskByNameResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetTaskByNameResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest TaskResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse

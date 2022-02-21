@@ -25,5 +25,5 @@ variable "services" {
 variable "delay" {
   description = "duration of time to delay before completing"
   type        = string
-  default     = "5s"
+  default     = "5"
 }

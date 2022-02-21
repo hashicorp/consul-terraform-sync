@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -25,6 +24,14 @@ type ReadWrite struct {
 	*baseController
 	store *event.Store
 	retry retry.Retry
+
+	watcherCh chan string
+
+	// scheduleCh is used to coordinate scheduled tasks created via the API
+	scheduleCh chan driver.Driver
+
+	// deleteCh is used to coordinate task deletion via the API
+	deleteCh chan string
 
 	// taskNotify is only initialized if EnableTestMode() is used. It provides
 	// tests insight into which tasks were triggered and had completed
@@ -69,72 +76,92 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		}
 	}
 
-	for i := int64(1); ; i++ {
-		// Blocking on Wait is first as we just ran in Once mode so we want
-		// to wait for updates before re-running. Doing it the other way is
-		// basically a noop as it checks if templates have been changed but
-		// the logs read weird. Revisit after async work is done.
-		select {
-		case err := <-rw.watcher.WaitCh(ctx):
-			if err != nil {
-				rw.logger.Error("error watching template dependencies", "error", err)
-				return err
+	errCh := make(chan error)
+	if rw.watcherCh == nil {
+		// Size of channel is larger than just current number of drivers
+		// to account for additional tasks created via the API. Adding 10
+		// is an arbitrarily chosen value.
+		rw.watcherCh = make(chan string, rw.drivers.Len()+10)
+	}
+	if rw.scheduleCh == nil {
+		// Size of channel is an arbitrarily chosen value.
+		rw.scheduleCh = make(chan driver.Driver, 10)
+	}
+	if rw.deleteCh == nil {
+		// Size of channel is an arbitrarily chosen value.
+		rw.deleteCh = make(chan string, 10)
+	}
+	go func() {
+		for {
+			rw.logger.Trace("starting template dependency monitoring")
+			err := rw.watcher.Watch(ctx, rw.watcherCh)
+			if err == nil || err == context.Canceled {
+				rw.logger.Info("stopping dependency monitoring")
+				return
 			}
+			rw.logger.Error("error monitoring template dependencies", "error", err)
+		}
+	}()
+
+	for i := int64(1); ; i++ {
+		select {
+		case tmplID := <-rw.watcherCh:
+			d, ok := rw.drivers.GetTaskByTemplate(tmplID)
+			if !ok {
+				rw.logger.Debug("template was notified for update but the template ID does not match any task", "template_id", tmplID)
+				continue
+			}
+
+			go rw.runDynamicTask(ctx, d) // errors are logged for now
+
+		case d := <-rw.scheduleCh:
+			// Run newly created scheduled tasks
+			go rw.runScheduledTask(ctx, d)
+
+		case n := <-rw.deleteCh:
+			go rw.deleteTask(ctx, n)
+
+		case err := <-errCh:
+			return err
 
 		case <-ctx.Done():
 			rw.logger.Info("stopping controller")
 			return ctx.Err()
 		}
 
-		for err := range rw.runDynamicTasks(ctx) {
-			// aggregate collected errors and just log everything for now
-			rw.logger.Error("error running tasks", "error", err)
-		}
-
 		rw.logDepSize(50, i)
 	}
 }
 
-// runDynamicTasks runs through all the dynamic tasks/drivers. For each dynamic
-// task, it will try to render the template and apply the task if necessary.
-//
-// Returned error channel closes when done with all tasks
-func (rw *ReadWrite) runDynamicTasks(ctx context.Context) chan error {
-	// keep error chan and waitgroup here to keep runDynamicTask simple (on task)
-	errCh := make(chan error, 1)
-	wg := sync.WaitGroup{}
-	for taskName, d := range rw.drivers.Map() {
-		if d.Task().IsScheduled() {
-			// Schedule tasks are not dynamic and run in a different process
-			continue
-		}
-
-		if rw.drivers.IsActive(taskName) {
-			// The driver is currently active with the task, initiated by an ad-hoc run.
-			// There may be updates for other tasks, so we'll continue checking
-			rw.logger.Trace("task is active", taskNameLogKey, taskName)
-			continue
-		}
-		wg.Add(1)
-		go func(taskName string, d driver.Driver) {
-			complete, err := rw.checkApply(ctx, d, true, false)
-			if err != nil {
-				errCh <- err
-			}
-
-			if rw.taskNotify != nil && complete {
-				rw.taskNotify <- taskName
-			}
-			wg.Done()
-		}(taskName, d)
+// runDynamicTask will try to render the template and apply the task if necessary.
+func (rw *ReadWrite) runDynamicTask(ctx context.Context, d driver.Driver) error {
+	task := d.Task()
+	taskName := task.Name()
+	if task.IsScheduled() {
+		// Schedule tasks are not dynamic and run in a different process
+		return nil
+	}
+	if rw.drivers.IsMarkedForDeletion(taskName) {
+		rw.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+		return nil
 	}
 
-	go func() {
-		wg.Wait()
-		close(errCh)
-	}()
+	if rw.drivers.IsActive(taskName) {
+		// The driver is currently active with the task, initiated by an ad-hoc run.
+		// There may be updates for other tasks, so we'll continue checking
+		rw.logger.Trace("task is active", taskNameLogKey, taskName)
+		return nil
+	}
 
-	return errCh
+	complete, err := rw.checkApply(ctx, d, true, false)
+	if err != nil {
+		return err
+	}
+
+	if rw.taskNotify != nil && complete {
+		rw.taskNotify <- taskName
+	}
+	return nil
 }
 
 // runScheduledTask starts up a go-routine for a given scheduled task/driver.
@@ -169,6 +196,16 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver) erro
 	for {
 		select {
 		case <-time.After(waitTime):
+			if _, ok := rw.drivers.Get(taskName); !ok {
+				rw.logger.Info("stopping deleted scheduled task", taskNameLogKey, taskName)
+				return nil
+			}
+
+			if rw.drivers.IsMarkedForDeletion(taskName) {
+				rw.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+				return nil
+			}
+
 			rw.logger.Info("time for scheduled task", taskNameLogKey, taskName)
 			if rw.drivers.IsActive(taskName) {
 				// The driver is currently active with the task, initiated by an ad-hoc run.
@@ -269,7 +306,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	ev, err := event.NewEvent(taskName, &event.Config{
 		Providers: task.ProviderNames(),
 		Services:  task.ServiceNames(),
-		Source:    task.Source(),
+		Source:    task.Module(),
 	})
 	if err != nil {
 		return false, fmt.Errorf("error creating event for task %s: %s",
@@ -354,34 +391,49 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 	d, err := rw.createNewTaskDriver(taskConfig)
 	if err != nil {
 		logger.Error("error creating new task driver", "error", err)
-		return nil, fmt.Errorf("error creating new task driver: %v", err)
+		return nil, err
 	}
 
 	// Initialize the new task
 	err = d.InitTask(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error initializing new task, %s", err)
+		logger.Error("error initializing new task", "error", err)
+		// Cleanup the task
+		d.DestroyTask(ctx)
+		logger.Debug("task destroyed", "task_name", *taskConfig.Name)
+		return nil, err
 	}
 
+	timeout := time.After(1 * time.Minute)
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
+		case <-timeout:
+			logger.Error("timed out rendering template")
+			// Cleanup the task
+			d.DestroyTask(ctx)
+			logger.Debug("task destroyed", "task_name", *taskConfig.Name)
+			return nil, fmt.Errorf("error initializing task")
 		default:
 		}
 		ok, err := d.RenderTemplate(ctx)
 		if err != nil {
 			logger.Error("error rendering task template")
-			return nil, fmt.Errorf("error rendering template for task '%s': %s", taskName, err)
+			// Cleanup the task
+			d.DestroyTask(ctx)
+			logger.Debug("task destroyed", "task_name", *taskConfig.Name)
+			return nil, err
 		}
 		if ok {
 			// Once template rendering is finished, return
 			return d, nil
 		}
+		time.Sleep(50 * time.Millisecond) // waiting because cannot block on a dependency change
 	}
 }
 
-// Run task will set the driver to active, apply it, and store a run event.
+// runTask will set the driver to active, apply it, and store a run event.
 // This method will run the task as-is with current values of templates that
 // have already been resolved and rendered. This does not handle any templating.
 func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
@@ -392,6 +444,12 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 		logger.Trace("skipping disabled task")
 		return nil
 	}
+
+	if rw.drivers.IsMarkedForDeletion(taskName) {
+		logger.Trace("task is marked for deletion, skipping")
+		return nil
+	}
+
 	rw.drivers.SetActive(taskName)
 	defer rw.drivers.SetInactive(taskName)
 
@@ -399,7 +457,7 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 	ev, err := event.NewEvent(taskName, &event.Config{
 		Providers: task.ProviderNames(),
 		Services:  task.ServiceNames(),
-		Source:    task.Source(),
+		Source:    task.Module(),
 	})
 	if err != nil {
 		logger.Error("error initializing run task event", "error", err)
@@ -422,7 +480,38 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 		logger.Error("error storing event", "event", ev.GoString(), "error", err)
 	}
 
+	if rw.taskNotify != nil {
+		rw.taskNotify <- taskName
+	}
+
 	return err
+}
+
+// deleteTask deletes a task from the drivers map and deletes the task's events.
+// If a task is active and running, it will wait until the task has completed before
+// proceeding with the deletion.
+func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
+WAIT:
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			// wait for task to not be running
+			if !rw.drivers.IsActive(name) {
+				break WAIT
+			}
+		}
+	}
+
+	err := rw.drivers.Delete(name)
+	if err != nil {
+		rw.logger.Error("unable to delete task", taskNameLogKey, name, "error", err)
+		return err
+	}
+	rw.store.Delete(name)
+	rw.logger.Debug("task deleted", taskNameLogKey, name)
+	return nil
 }
 
 // EnableTestMode is a helper for testing which tasks were triggered and

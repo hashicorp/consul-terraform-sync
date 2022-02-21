@@ -47,24 +47,26 @@ test-integration:
 	@go test -count=1 -timeout=80s -tags=integration -cover ./... ${TESTARGS}
 .PHONY: test-all
 
-# test-e2e runs e2e tests
-test-e2e: dev
-	@echo "==> Testing ${NAME} (e2e)"
-	@go test ./e2e -count=1 -timeout=300s -tags=e2e ./... ${TESTARGS}
-.PHONY: test-e2e
-
 # test-setup-e2e sets up the sync binary and permissions to run in circle
 test-setup-e2e: dev
 	sudo mv ${GOPATH}/bin/consul-terraform-sync /usr/local/bin/consul-terraform-sync
 .PHONY: test-setup-e2e
 
-# test-e2e-cirecleci does circleci setup and then runs the e2e tests
-test-e2e-cirecleci: test-setup-e2e test-e2e
+# test-e2e-cirecleci does e2e test setup and then runs the e2e tests
+test-e2e-cirecleci: test-setup-e2e
+	@echo "==> Testing ${NAME} (e2e)"
+	@go test ./e2e -count=1 -timeout=900s -tags=e2e ./... ${TESTARGS}
 .PHONY: test-e2e-cirecleci
+
+# test-e2e-local does e2e test setup and then runs the e2e tests
+test-e2e-local: test-setup-e2e
+	@echo "==> Testing ${NAME} (e2e)"
+	@go test ./e2e -count=1 -v -timeout=45m -tags=e2e -local ./... ${TESTARGS}
+.PHONY: test-e2e-local
 
 # test-compat sets up the CTS binary and then runs the compatibility tests
 test-compat: test-setup-e2e
-	@echo "==> Testing ${NAME} compatiblity with Consul"
+	@echo "==> Testing ${NAME} compatibility with Consul"
 	@go test ./e2e/compatibility -timeout 30m -tags=e2e -v -run TestCompatibility_Consul
 .PHONY: test-compat
 
@@ -73,6 +75,15 @@ test-benchmarks:
 	@echo "==> Running benchmarks for ${NAME}"
 	@go test -json ./e2e/benchmarks -timeout 2h -bench=. -tags e2e
 .PHONY: test-benchmarks
+
+# compile-weekly-tests is a check that our weekly-runned tests can compile. this
+# will be called on a more frequent cadence than weekly
+compile-weekly-tests:
+	@echo "==> Running compile check for weekly tests for ${NAME}"
+	@go test -run TestCompatibility_Compile ./e2e/compatibility -timeout 5m -tags '$(GOTAGS) e2e'
+	@go test -run TestBenchmarks_Compile ./e2e/benchmarks -timeout 5m -tags '$(GOTAGS) e2e'
+	@go test -run TestVaultIntegration_Compile ./... -timeout=5m -tags '$(GOTAGS) integration vault'
+.PHONY: compile-weekly-tests
 
 # delete any cruft
 clean:

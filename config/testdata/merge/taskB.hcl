@@ -1,9 +1,8 @@
-service {
-  name = "serviceC"
-  description = "descriptionC"
-}
+terraform_provider "tf_providerC" { }
 
 task {
   name = "taskB"
-  services = ["serviceC", "serviceD"]
+  condition "services" {
+    names = ["serviceC", "serviceD"]
+  }
 }

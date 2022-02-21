@@ -27,23 +27,25 @@ type TaskConfig struct {
 	// used to map provider configuration to the task.
 	Providers []string `mapstructure:"providers"`
 
-	// Services is the list of service IDs or logical service names the task
+	// DeprecatedServices is the list of service IDs or logical service names the task
 	// executes on. Sync monitors the Consul Catalog for changes to these
 	// services and triggers the task to run. Any service value not explicitly
 	// defined by a `service` block with a matching ID is assumed to be a logical
 	// service name in the default namespace.
-	Services []string `mapstructure:"services"`
+	// - Deprecated in 0.5. Use names field of `condition "services"` and
+	// `module_input "services"` instead
+	DeprecatedServices []string `mapstructure:"services"`
 
 	// Module is the path to fetch the Terraform Module (local or remote).
 	// Previously named Source - Deprecated in 0.5
 	Module           *string `mapstructure:"module"`
 	DeprecatedSource *string `mapstructure:"source"`
 
-	// ModuleInput defines the Consul objects (e.g. services, kv) whose values are
-	// provided as the task module’s input variables.
+	// ModuleInputs defines the Consul objects (e.g. services, kv) whose values
+	// are provided as the task module's input variables.
 	// Previously named SourceInput - Deprecated in 0.5
-	ModuleInput           ModuleInputConfig `mapstructure:"module_input"`
-	DeprecatedSourceInput ModuleInputConfig `mapstructure:"source_input"`
+	ModuleInputs           *ModuleInputConfigs `mapstructure:"module_input"`
+	DeprecatedSourceInputs *ModuleInputConfigs `mapstructure:"source_input"`
 
 	// VarFiles is a list of paths to files containing variables for the
 	// task. For the Terraform driver, these are files ending in `.tfvars` and
@@ -56,9 +58,8 @@ type TaskConfig struct {
 	// TODO: Add validation
 	Variables map[string]string
 
-	// Version is the version of source the task will use. For the Terraform
-	// driver, this is the module version. The latest version will be used as
-	// the default if omitted.
+	// Version is the module version for the task to use. The latest version
+	// will be used as the default if omitted.
 	Version *string `mapstructure:"version"`
 
 	// The Terraform client version to use for the task when configured with CTS
@@ -99,17 +100,13 @@ func (c *TaskConfig) Copy() *TaskConfig {
 
 	o.Providers = append(o.Providers, c.Providers...)
 
-	o.Services = append(o.Services, c.Services...)
+	o.DeprecatedServices = append(o.DeprecatedServices, c.DeprecatedServices...)
 
 	o.Module = StringCopy(c.Module)
 	o.DeprecatedSource = StringCopy(c.DeprecatedSource)
 
-	if !isModuleInputNil(c.ModuleInput) {
-		o.ModuleInput = c.ModuleInput.Copy()
-	}
-	if !isModuleInputNil(c.DeprecatedSourceInput) {
-		o.DeprecatedSourceInput = c.DeprecatedSourceInput.Copy()
-	}
+	o.ModuleInputs = c.ModuleInputs.Copy()
+	o.DeprecatedSourceInputs = c.DeprecatedSourceInputs.Copy()
 
 	o.VarFiles = append(o.VarFiles, c.VarFiles...)
 
@@ -167,7 +164,7 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 
 	r.Providers = append(r.Providers, o.Providers...)
 
-	r.Services = append(r.Services, o.Services...)
+	r.DeprecatedServices = append(r.DeprecatedServices, o.DeprecatedServices...)
 
 	if o.Module != nil {
 		r.Module = StringCopy(o.Module)
@@ -176,19 +173,11 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.DeprecatedSource = StringCopy(o.DeprecatedSource)
 	}
 
-	if !isModuleInputNil(o.ModuleInput) {
-		if isModuleInputNil(r.ModuleInput) {
-			r.ModuleInput = o.ModuleInput.Copy()
-		} else {
-			r.ModuleInput = r.ModuleInput.Merge(o.ModuleInput)
-		}
+	if o.ModuleInputs != nil {
+		r.ModuleInputs = r.ModuleInputs.Merge(o.ModuleInputs)
 	}
-	if !isModuleInputNil(o.DeprecatedSourceInput) {
-		if isModuleInputNil(r.DeprecatedSourceInput) {
-			r.DeprecatedSourceInput = o.DeprecatedSourceInput.Copy()
-		} else {
-			r.DeprecatedSourceInput = r.DeprecatedSourceInput.Merge(o.DeprecatedSourceInput)
-		}
+	if o.DeprecatedSourceInputs != nil {
+		r.DeprecatedSourceInputs = r.DeprecatedSourceInputs.Merge(o.DeprecatedSourceInputs)
 	}
 
 	r.VarFiles = append(r.VarFiles, o.VarFiles...)
@@ -247,19 +236,20 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 		c.Providers = []string{}
 	}
 
-	if c.Services == nil {
-		c.Services = []string{}
+	if c.DeprecatedServices == nil {
+		c.DeprecatedServices = []string{}
+	} else {
+		logger.Warn(servicesFieldLogMsg)
 	}
 
 	if c.Module == nil {
 		c.Module = String("")
 	}
 	if c.DeprecatedSource != nil && *c.DeprecatedSource != "" {
-		logger.Warn("Task's 'source' field was marked for deprecation in v0.5.0. " +
-			"Please update your configuration to use the 'module' field instead")
+		logger.Warn(sourceFieldLogMsg)
 		if *c.Module != "" {
-			logger.Warn("Task's 'source' and 'module' field were both "+
-				"configured. Defaulting to 'module' value", "module", c.Module)
+			logger.Warn("the task block's 'source' and 'module' field were both "+
+				"configured. Defaulting to the 'module' value", "module", *c.Module)
 		} else {
 			// Merge Source with Module and use Module onwards
 			c.Module = c.DeprecatedSource
@@ -310,25 +300,18 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	}
 	c.Condition.Finalize()
 
-	if !isModuleInputNil(c.DeprecatedSourceInput) {
-		logger.Warn("Task's 'source_input' block was marked for deprecation " +
-			"in v0.5.0. Please update your configuration to use 'module_input'" +
-			" instead.")
-
-		if !isModuleInputNil(c.ModuleInput) {
-			logger.Warn("Task is configured with both 'source_input' block and "+
-				"'module_input' block. Defaulting to 'module_input' block's value",
-				"module_input", c.ModuleInput)
-		} else {
-			// Merge SourceInput with ModuleInput. Use ModuleInput onwards
-			c.ModuleInput = c.DeprecatedSourceInput
+	if c.DeprecatedSourceInputs != nil {
+		if len(*c.DeprecatedSourceInputs) > 0 {
+			logger.Warn(sourceInputBlockLogMsg)
+			c.ModuleInputs = c.ModuleInputs.Merge(c.DeprecatedSourceInputs)
 		}
 
+		c.DeprecatedSourceInputs = nil
 	}
-	if isModuleInputNil(c.ModuleInput) {
-		c.ModuleInput = EmptyModuleInputConfig()
+	if c.ModuleInputs == nil {
+		c.ModuleInputs = DefaultModuleInputConfigs()
 	}
-	c.ModuleInput.Finalize()
+	c.ModuleInputs.Finalize()
 
 	if c.WorkingDir == nil {
 		c.WorkingDir = String(filepath.Join(wd, *c.Name))
@@ -363,11 +346,6 @@ func (c *TaskConfig) Validate() error {
 		return fmt.Errorf("module for the task is required")
 	}
 
-	err = c.validateSourceInput()
-	if err != nil {
-		return err
-	}
-
 	if c.TFVersion != nil && *c.TFVersion != "" {
 		return fmt.Errorf("unsupported configuration 'terraform_version' for "+
 			"task %q. This option is available for Consul-Terraform-Sync Enterprise "+
@@ -397,10 +375,8 @@ func (c *TaskConfig) Validate() error {
 		}
 	}
 
-	if !isModuleInputNil(c.ModuleInput) {
-		if err := c.ModuleInput.Validate(); err != nil {
-			return err
-		}
+	if err := c.ModuleInputs.Validate(c.DeprecatedServices, c.Condition); err != nil {
+		return err
 	}
 
 	return nil
@@ -417,7 +393,7 @@ func (c *TaskConfig) GoString() string {
 		"Name:%s, "+
 		"Description:%s, "+
 		"Providers:%s, "+
-		"Services:%s, "+
+		"Services (deprecated):%s, "+
 		"Module:%s, "+
 		"VarFiles:%s, "+
 		"Version:%s, "+
@@ -430,7 +406,7 @@ func (c *TaskConfig) GoString() string {
 		StringVal(c.Name),
 		StringVal(c.Description),
 		c.Providers,
-		c.Services,
+		c.DeprecatedServices,
 		StringVal(c.Module),
 		c.VarFiles,
 		StringVal(c.Version),
@@ -438,7 +414,7 @@ func (c *TaskConfig) GoString() string {
 		c.BufferPeriod.GoString(),
 		BoolVal(c.Enabled),
 		c.Condition.GoString(),
-		c.ModuleInput.GoString(),
+		c.ModuleInputs.GoString(),
 	)
 }
 
@@ -559,76 +535,103 @@ func FilterTasks(tasks *TaskConfigs, names []string) (*TaskConfigs, error) {
 	return &filtered, nil
 }
 
+// validateCondition validates condition block taking into account services list
+// - ensure task is configured with a condition (condition block or services
+//   list)
+// - if services list is configured, condition block's monitored variable type
+// cannot be services
+//
+// Note: checking that a condition block's monitored variable type is different
+// from module_input blocks is handled in ModuleInputConfigs.Validate()
 func (c *TaskConfig) validateCondition() error {
-	if len(c.Services) == 0 {
+	// Confirm task is configured with a condition
+	if len(c.DeprecatedServices) == 0 {
 		if isConditionNil(c.Condition) {
-			return fmt.Errorf("at least one service or a condition must be " +
-				"configured")
+			// Error message omits task.services option since it is deprecated
+			return fmt.Errorf("task should be configured with a condition block")
 		}
-		switch cond := c.Condition.(type) {
-		case *CatalogServicesConditionConfig:
-			if cond.Regexp == nil {
-				return fmt.Errorf("catalog-services condition requires either" +
-					"task.condition.regexp or at least one service in " +
-					"task.services to be configured")
-			}
-		case *ConsulKVConditionConfig:
-			return fmt.Errorf("consul-kv condition requires at least one service to " +
-				"be configured in task.services")
-		case *ScheduleConditionConfig:
-			if isModuleInputNil(c.ModuleInput) || isModuleInputEmpty(c.ModuleInput) {
-				return fmt.Errorf("schedule condition requires at least one service to " +
-					"be configured in task.services or a module_input must be provided")
-			}
-		}
-	} else {
-		switch c.Condition.(type) {
-		case *ServicesConditionConfig:
-			err := fmt.Errorf("a task cannot be configured with both " +
-				"`services` field and `module_input` block. only one can be " +
-				"configured per task")
-			logging.Global().Named(logSystemName).Named(taskSubsystemName).
-				Error("list of services and service condition block both "+
-					"provided. If both are needed, consider combining the "+
-					"list into the condition block or creating separate tasks",
-					"task_name", StringVal(c.Name), "error", err)
-			return err
-		}
+
+		// task.services not configured. No need to worry about condition's
+		// variable type
+		return nil
 	}
 
+	// Confirm that condition's variable type is not services since task.services
+	// is configured
+	if _, ok := c.Condition.(*ServicesConditionConfig); ok {
+		err := fmt.Errorf("task's `services` field and `condition " +
+			"'services'` block both monitor \"services\" variable type. only " +
+			"one of these can be configured per task")
+		logging.Global().Named(logSystemName).Named(taskSubsystemName).
+			Error("list of `services` and `condition 'services'` block cannot "+
+				"both be configured. Consider combining the list into the "+
+				"condition block or creating separate tasks",
+				"task_name", StringVal(c.Name), "error", err)
+		return err
+	}
 	return nil
 }
 
-func (c *TaskConfig) validateSourceInput() error {
-	// For now only schedule condition allows for module_input, so a condition
-	// of type ScheduleConditionConfig is the only supported type
-	switch c.Condition.(type) {
-	case *ScheduleConditionConfig:
-		if len(c.Services) == 0 {
-			switch c.ModuleInput.(type) {
-			case *ConsulKVModuleInputConfig:
-				return fmt.Errorf("consul-kv module_input requires at least one service to " +
-					"be configured in task.services")
-			}
-		} else {
-			switch c.ModuleInput.(type) {
-			case *ServicesModuleInputConfig:
-				err := fmt.Errorf("a task cannot be configured with both " +
-					"`services` field and `condition` block. only one can be " +
-					"configured per task")
-				logging.Global().Named(logSystemName).Named(taskSubsystemName).
-					Error("list of services and service condition block both "+
-						"provided. If both are needed, consider combining the "+
-						"list into the condition block or creating separate tasks",
-						"task_name", StringVal(c.Name), "error", err)
-				return err
-			}
-		}
-	default:
-		if !isModuleInputNil(c.ModuleInput) && !isModuleInputEmpty(c.ModuleInput) {
-			return fmt.Errorf("module_input is only supported when a schedule condition is configured")
-		}
-	}
+// sourceFieldLogMsg is the log message for deprecating the `source` field.
+const sourceFieldLogMsg = `the 'source' field in the task block is deprecated ` +
+	`in v0.5.0 and will be removed in a future major version after v0.8.0.
 
-	return nil
-}
+Please replace 'source' with 'module' in your task configuration.
+
+We will be releasing a tool to help upgrade your configuration for this deprecation.
+
+Example upgrade:
+|    task {
+|  -   source =  "path/to/module"
+|  +   module =  "path/to/module"
+|      ...
+|    }
+
+For more details and examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-source-field
+`
+
+// sourceInputBlockLogMsg is the log message for deprecating the `source_input`
+// block.
+const sourceInputBlockLogMsg = `the 'source_input' block in the task ` +
+	`block is deprecated in v0.5.0 and will be removed in v0.8.0.
+
+Please replace 'source_input' with 'module_input' in your task configuration.
+
+We will be releasing a tool to help upgrade your configuration for this deprecation.
+
+Example upgrade:
+|    task {
+|  -   source_input "<input-type>" {
+|  +   module_input "<input-type>" {
+|        ...
+|      }
+|      ...
+|    }
+
+For more details and examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-source_input-block
+`
+
+// servicesFieldLogMsg is the log message for deprecating the `services` field.
+const servicesFieldLogMsg = `the 'services' field in the task block is deprecated ` +
+	`in v0.5.0 and will be removed in a future major version after v0.8.0.
+
+Please replace 'services' in your task configuration with one of the options below:
+ * condition "services": if there is _no_ preexisting condition block configured in your task
+ * module_input "services": if there is a preexisting condition block configured in your task
+
+We will be releasing a tool to help upgrade your configuration for this deprecation.
+
+Example upgrade for a task with no preexisting condition block:
+|    task {
+|  -   services = ["api", "web"]
+|  +   condition "services" {
+|  +     names = ["api", "web"]
+|  +   }
+|      ...
+|    }
+
+For more details and additional examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-services-field
+`

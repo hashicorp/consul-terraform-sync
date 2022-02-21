@@ -26,13 +26,13 @@ import (
 // the command meta object. This starts up a local Consul server and runs
 // CTS in dev mode.
 func TestE2E_MetaCommandErrors(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "meta_errs")
-	deleteTemp := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
@@ -71,12 +71,12 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 		},
 		{
 			"non-existing task",
-			[]string{fmt.Sprintf("-port=%d", cts.Port()), "non-existent-task"},
+			[]string{fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()), "non-existent-task"},
 			"does not exist or has not been initialized yet",
 		},
 		{
 			"out of order arguments",
-			[]string{fakeFailureTaskName, fmt.Sprintf("-port %d", cts.Port())},
+			[]string{fakeFailureTaskName, fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress())},
 			"All flags are required to appear before positional arguments",
 		},
 	}
@@ -95,14 +95,15 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 		}
 	}
 
-	deleteTemp()
+	err = cleanup()
+	require.NoError(t, err)
 }
 
 // TestE2E_EnableTaskCommand tests the Enable CLI and confirms the expected
 // output and state given different paths. This starts up a local Consul server
 // and runs CTS with a disabled task.
 func TestE2E_EnableTaskCommand(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	cases := []struct {
 		name           string
@@ -141,7 +142,7 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "enable_cmd")
 
-			cts := ctsSetup(t, srv, tempDir, disabledTaskConfig(tempDir))
+			cts := ctsSetup(t, srv, tempDir, disabledTaskConfig())
 
 			subcmd := []string{"task", "enable",
 				fmt.Sprintf("-%s=%d", command.FlagPort, cts.Port()),
@@ -159,6 +160,28 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			status, ok := taskStatuses[disabledTaskName]
 			require.True(t, ok)
 			assert.Equal(t, tc.expectEnabled, status.Enabled)
+
+			if !tc.expectEnabled {
+				// only check for events if we expect the task to be enabled
+				return
+			}
+
+			// check that there was an initial event
+			eventCountBase := 1
+			eventCountNow := eventCount(t, disabledTaskName, cts.Port())
+			require.Equal(t, eventCountBase, eventCountNow,
+				"event count did not increment once. task was not triggered as expected")
+
+			// make a change in Consul and confirm a new event is triggered
+			now := time.Now()
+			service := testutil.TestService{ID: "api-1", Name: "api"}
+			testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+			api.WaitForEvent(t, cts, disabledTaskName, now, defaultWaitForEvent)
+			eventCountNow = eventCount(t, disabledTaskName, cts.Port())
+			require.Equal(t, eventCountBase+1, eventCountNow,
+				"event count did not increment once. task was not triggered as expected")
+			resourcesPath := filepath.Join(tempDir, disabledTaskName, resourcesDir)
+			validateServices(t, true, []string{"api", "api-1", "web"}, resourcesPath)
 		})
 	}
 }
@@ -166,7 +189,7 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 // TestE2E_DisableTaskCommand tests the CLI to disable an enabled task. This test
 // starts up a local Consul server and runs CTS in dev mode.
 func TestE2E_DisableTaskCommand(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -181,7 +204,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 	}{
 		{
 			"happy path",
-			[]string{fmt.Sprintf("-port=%d", cts.Port()), dbTaskName},
+			[]string{fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()), dbTaskName},
 			"disable complete!",
 		},
 	}
@@ -203,7 +226,7 @@ func TestE2E_DisableTaskCommand(t *testing.T) {
 // expected once re-enabled.
 // See https://github.com/hashicorp/consul-terraform-sync/issues/320
 func TestE2E_ReenableTaskTriggers(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
@@ -222,7 +245,7 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	t.Cleanup(func() {
-		cleanup()
+		_ = cleanup()
 		stop(t)
 	})
 
@@ -237,11 +260,11 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 	//    (one new event)
 
 	// 0. disable then re-enable the task
-	subcmd := []string{"task", "disable", fmt.Sprintf("-port=%d", cts.Port()), dbTaskName}
+	subcmd := []string{"task", "disable", fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()), dbTaskName}
 	output, err := runSubcommand(t, "", subcmd...)
 	assert.NoError(t, err, output)
 
-	subcmd = []string{"task", "enable", fmt.Sprintf("-port=%d", cts.Port()), dbTaskName}
+	subcmd = []string{"task", "enable", fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()), dbTaskName}
 	output, err = runSubcommand(t, "yes\n", subcmd...)
 	assert.NoError(t, err, output)
 
@@ -261,7 +284,7 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 
 // TestE2E_DeleteTaskCommand tests deleting a task with the CTS CLI
 func TestE2E_DeleteTaskCommand(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	cases := []struct {
 		name           string
 		taskName       string
@@ -277,7 +300,7 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 			input:    "yes\n",
 			outputContains: []string{
 				fmt.Sprintf("Do you want to delete '%s'?", dbTaskName),
-				fmt.Sprintf("Deleted task '%s'", dbTaskName)},
+				fmt.Sprintf("Task '%s' has been marked for deletion", dbTaskName)},
 			expectErr:     false,
 			expectDeleted: true,
 		},
@@ -287,7 +310,7 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 			input:    "",
 			args:     []string{"-auto-approve"},
 			outputContains: []string{
-				fmt.Sprintf("Deleted task '%s'", dbTaskName)},
+				fmt.Sprintf("Task '%s' has been marked for deletion", dbTaskName)},
 			expectErr:     false,
 			expectDeleted: true,
 		},
@@ -308,7 +331,7 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 			input:    "yes\n",
 			outputContains: []string{
 				fmt.Sprintf("Error: unable to delete '%s'", "nonexistent_task"),
-				"request returned 404 status code with error:",
+				"404 Not Found:",
 			},
 			expectErr:     true,
 			expectDeleted: true, // never existed, same as deleted
@@ -353,7 +376,7 @@ func TestE2E_DeleteTaskCommand(t *testing.T) {
 
 // TestE2E_CreateTaskCommand tests creating a task with the CTS CLI
 func TestE2E_CreateTaskCommand(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_cmd")
 	objectVarsFileName := filepath.Join(tempDir, "object.tfvars")
@@ -370,6 +393,7 @@ func TestE2E_CreateTaskCommand(t *testing.T) {
 		outputContains []string
 		expectErr      bool
 		expectStatus   bool
+		checkEvents    bool
 	}{
 		{
 			name:     "happy_path",
@@ -380,7 +404,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			input: "yes\n",
@@ -389,6 +415,7 @@ task {
 				fmt.Sprintf("Task '%s' created", taskName)},
 			expectErr:    false,
 			expectStatus: true,
+			checkEvents:  true,
 		},
 		{
 			name:     "with_tf_vars_files",
@@ -411,7 +438,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/with_tfvars_file"
   providers      = ["local"]
-  services       = ["api"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled        = true
   variable_files = ["%s","%s"]
 }`, taskName, filenameVarsFileName, objectVarsFileName),
@@ -421,6 +450,7 @@ task {
 				fmt.Sprintf("Task '%s' created", taskName)},
 			expectErr:    false,
 			expectStatus: true,
+			checkEvents:  true,
 		},
 		{
 			name:     "auto_approve",
@@ -431,13 +461,16 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			outputContains: []string{
 				fmt.Sprintf("Task '%s' created", taskName)},
 			expectErr:    false,
 			expectStatus: true,
+			checkEvents:  true,
 			args:         []string{"-auto-approve"},
 		},
 		{
@@ -449,7 +482,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }`, taskName),
 			input: "no\n",
@@ -459,6 +494,7 @@ task {
 			},
 			expectErr:    false,
 			expectStatus: false,
+			checkEvents:  true,
 		},
 		{
 			name:     "error_task_already_exists",
@@ -469,16 +505,19 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  condition "services" {
+    names = ["api"]
+  }
   enabled = true
 }`, dbTaskName),
 			input: "no\n",
 			outputContains: []string{
 				fmt.Sprintf("Error: unable to generate plan for '%s'", dbTaskName),
-				fmt.Sprintf("error: task with name %s already exists", dbTaskName),
+				fmt.Sprintf("task with name %s already exists", dbTaskName),
 			},
 			expectErr:    true,
 			expectStatus: true,
+			checkEvents:  false,
 		},
 		{
 			name:     "error_more_than_one_task",
@@ -489,7 +528,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }
 task {
@@ -497,7 +538,9 @@ task {
   description    = "Creates a new task"
   module         = "./test_modules/local_instances_file"
   providers      = ["local"]
-  services       = ["api"]
+  condition "services" {
+    names = ["web"]
+  }
   enabled = true
 }
 `, taskName, taskName),
@@ -507,6 +550,28 @@ task {
 			},
 			expectErr:    true,
 			expectStatus: false,
+			checkEvents:  false,
+		},
+		{
+			name:     "error_deprecated_non_supported_field",
+			taskName: taskName,
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  services       = ["web"]
+  enabled        = true
+}
+`, taskName),
+			input: "yes\n",
+			outputContains: []string{
+				"the 'services' field in the task block is no longer supported",
+			},
+			expectErr:    true,
+			expectStatus: false,
+			checkEvents:  false,
 		},
 	}
 
@@ -569,6 +634,23 @@ task {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
+				return
+			}
+
+			// Check events if we expect events to be triggered
+			if tc.checkEvents {
+				// 1. get current number of events
+				eventCountBase := eventCount(t, tc.taskName, cts.Port())
+
+				// 2. register web service. check triggers task
+				now := time.Now()
+				service := testutil.TestService{ID: "web-1", Name: "web"}
+				testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+				api.WaitForEvent(t, cts, tc.taskName, now, defaultWaitForEvent)
+
+				eventCountNow := eventCount(t, tc.taskName, cts.Port())
+				require.Equal(t, eventCountBase+1, eventCountNow,
+					"event count did not increment once. task was not triggered as expected")
 			}
 		})
 	}
@@ -590,7 +672,7 @@ func TestE2E_CreateTaskCommand_NoTaskFileProvided(t *testing.T) {
 	assert.Error(t, err)
 
 	outputContains := []string{
-		"Error: no task file provided",
+		"no task file provided",
 		"For additional help try 'consul-terraform-sync task create --help'",
 	}
 
@@ -599,10 +681,183 @@ func TestE2E_CreateTaskCommand_NoTaskFileProvided(t *testing.T) {
 	}
 }
 
+// TestE2E_CreateDeleteCreateTrigger tests that after creating a task, then deleting
+// the task, and then finally re-creating the task, the task will trigger
+func TestE2E_CreateDeleteCreateTrigger(t *testing.T) {
+	setParallelism(t)
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_delete_create_cmd")
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+	cts := ctsSetup(t, srv, tempDir, dbTask())
+
+	runCreateDeleteCreateTrigger(t, srv, cts, tempDir, defaultWaitForEvent)
+}
+
+func runCreateDeleteCreateTrigger(t *testing.T, srv *testutil.TestServer,
+	cts *api.Client, tempDir string, eventTimeout time.Duration) {
+	// Write task config file
+	var taskConfig hclConfig
+	taskName := "new-task"
+	inputTask := fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  condition "services" {
+    names = ["web"]
+  }
+  enabled = true
+}`, taskName)
+	taskConfig = taskConfig.appendString(inputTask)
+	taskFilePath := filepath.Join(tempDir, "task.hcl")
+	taskConfig.write(t, taskFilePath)
+
+	// Create task
+	subcmdCreate := []string{"task", "create",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+		fmt.Sprintf("--task-file=%s", taskFilePath),
+	}
+
+	input := "yes\n"
+	_, err := runSubcommand(t, input, subcmdCreate...)
+	assert.NoError(t, err)
+
+	// Confirm task was created
+	_, err = cts.Status().Task(taskName, nil)
+	assert.NoError(t, err)
+
+	// Delete task
+	subcmdDelete := []string{"task", "delete",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+		taskName,
+	}
+	_, err = runSubcommand(t, input, subcmdDelete...)
+	require.NoError(t, err)
+
+	// Confirm task was deleted
+	_, err = cts.Status().Task(taskName, nil)
+	assert.Error(t, err)
+
+	// Re-create task
+	_, err = runSubcommand(t, input, subcmdCreate...)
+	assert.NoError(t, err)
+
+	// Confirm task was re-created
+	_, err = cts.Status().Task(taskName, nil)
+	require.NoError(t, err)
+
+	// Verify events trigger
+	// 1. get current number of events
+	eventCountBase := eventCount(t, taskName, cts.Port())
+
+	// 2. register web service. check triggers task
+	now := time.Now()
+	service := testutil.TestService{ID: "web-1", Name: "web"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, taskName, now, eventTimeout)
+
+	eventCountNow := eventCount(t, taskName, cts.Port())
+	require.Equal(t, eventCountBase+1, eventCountNow,
+		"event count did not increment once. task was not triggered as expected")
+}
+
+// TestE2E_RecreateBadTask tests that after attempting to create a bad task, cleanup is performed
+// so that a subsequent creation of the same task is permissible
+func TestE2E_RecreateBadTask(t *testing.T) {
+	setParallelism(t)
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "recreate_bad_task_cmd")
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+	cts := ctsSetup(t, srv, tempDir, dbTask())
+
+	taskName := "new-task"
+	runs := []struct {
+		inputTask     string
+		isExpectExist bool
+	}{
+		{
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./no-exist"
+  providers      = ["local"]
+  condition "services" {
+    names = ["web"]
+  }
+  enabled = true
+}`, taskName),
+			isExpectExist: false,
+		}, {
+			inputTask: fmt.Sprintf(`
+task {
+  name           = "%s"
+  description    = "Creates a new task"
+  module         = "./test_modules/local_instances_file"
+  providers      = ["local"]
+  condition "services" {
+    names = ["web"]
+  }
+  enabled = true
+}`, taskName),
+			isExpectExist: true,
+		},
+	}
+	for i, run := range runs {
+		// Write task config file
+		var taskConfig hclConfig
+		taskConfig = taskConfig.appendString(run.inputTask)
+		taskFilePath := filepath.Join(tempDir, fmt.Sprintf("task_%d.hcl", i))
+		taskConfig.write(t, taskFilePath)
+
+		// Create task
+		subcmdCreate := []string{"task", "create",
+			fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+			fmt.Sprintf("--task-file=%s", taskFilePath),
+		}
+
+		input := "yes\n"
+		_, err := runSubcommand(t, input, subcmdCreate...)
+
+		if run.isExpectExist {
+			assert.NoError(t, err)
+
+			// Confirm task was re-created
+			_, err = cts.Status().Task(taskName, nil)
+			assert.NoError(t, err)
+
+			// Verify events trigger
+			// 1. get current number of events
+			eventCountBase := eventCount(t, taskName, cts.Port())
+
+			// 2. register web service. check triggers task
+			now := time.Now()
+			service := testutil.TestService{ID: "web-1", Name: "web"}
+			testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+			api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+
+			eventCountNow := eventCount(t, taskName, cts.Port())
+			require.Equal(t, eventCountBase+1, eventCountNow,
+				"event count did not increment once. task was not triggered as expected")
+		} else {
+			assert.Error(t, err)
+
+			// Confirm task was not created
+			_, err = cts.Status().Task(taskName, nil)
+			assert.Error(t, err)
+		}
+	}
+}
+
 // TestE2E_DeleteTaskCommand_Help tests that the usage is outputted
 // for the task help commands. Does not require a running CTS binary.
 func TestE2E_TaskCommand_Help(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	cases := []struct {
 		command        string
 		outputContains []string
@@ -630,7 +885,7 @@ func TestE2E_TaskCommand_Help(t *testing.T) {
 		{
 			command: "create",
 			outputContains: []string{
-				"Usage: consul-terraform-sync task create [options] --task-file=<task config>",
+				"Usage: consul-terraform-sync task create [options] -task-file=<task config>",
 				"auto-approve false",
 			},
 		},

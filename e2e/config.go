@@ -118,9 +118,11 @@ func dbTask() string {
 task {
 	name = "%s"
 	description = "basic read-write e2e task for api & db"
-	services = ["api", "db"]
 	providers = ["local"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+    	names = ["api", "db"]
+	}
 }`, dbTaskName)
 }
 
@@ -133,22 +135,25 @@ func (c hclConfig) appendWebTask() hclConfig {
 task {
 	name = "%s"
 	description = "basic read-write e2e task api & web"
-	services = ["api", "web"]
 	providers = ["local"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["api", "web"]
+	}
 }
 `, webTaskName))
 }
 
-// appendModuleTask adds a task configuration with the given name and source, along with any additional
+// appendModuleTask adds a task configuration with the given name and module, along with any additional
 // task configurations (e.g., condition, providers) provided with the opts parameter
-func (c hclConfig) appendModuleTask(name string, source string, opts ...string) hclConfig {
-	return c.appendString(moduleTaskConfig(name, source, opts...))
+func (c hclConfig) appendModuleTask(name string, module string, opts ...string) hclConfig {
+	return c.appendString(moduleTaskConfig(name, module, opts...))
 }
 
-// moduleTaskConfig generates a task configuration string with the given name and source, along with any
-// additional task configurations (e.g., condition, providers) provided with the opts parameter
-func moduleTaskConfig(name string, source string, opts ...string) string {
+// moduleTaskConfig generates a task configuration string with the given name
+// and module, along with any additional task configurations (e.g., condition,
+// providers) provided with the opts parameter
+func moduleTaskConfig(name string, module string, opts ...string) string {
 	var optsConfig string
 	if len(opts) > 0 {
 		optsConfig = "\n" + strings.Join(opts, "\n")
@@ -158,11 +163,13 @@ func moduleTaskConfig(name string, source string, opts ...string) string {
 task {
 	name = "%s"
 	description = "e2e test"
-	services = ["api", "web"]
 	module = "%s"
+	condition "services" {
+		names = ["api", "web"]
+	}
 	%s
 }
-`, name, source, optsConfig)
+`, name, module, optsConfig)
 }
 
 func baseConfig(wd string) hclConfig {
@@ -171,21 +178,6 @@ working_dir = "%s"
 
 buffer_period {
 	enabled = false
-}
-
-service {
-  name = "api"
-  description = "backend"
-}
-
-service {
-  name = "web"
-  description = "frontend"
-}
-
-service {
-    name = "db"
-    description = "database"
 }
 
 terraform_provider "local" {}
@@ -197,6 +189,10 @@ terraform_provider "local" {}
 func fakeHandlerConfig(dir string) hclConfig {
 	return hclConfig(fmt.Sprintf(`
 working_dir = "%s"
+
+buffer_period {
+	enabled = false
+}
 
 terraform_provider "fake-sync" {
 	alias = "failure"
@@ -214,58 +210,48 @@ terraform_provider "fake-sync" {
 task {
 	name = "%s"
 	description = "basic e2e task with fake handler. expected to error"
-	services = ["api"]
 	providers = ["fake-sync.failure"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["api"]
+	}
 }
 
 task {
 	name = "%s"
 	description = "basic e2e task with fake handler. expected to not error"
-	services = ["api"]
 	providers = ["fake-sync.success"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["api"]
+	}
 }
 
 task {
 	name = "%s"
 	description = "disabled task"
 	enabled = false
-	services = ["api"]
 	providers = ["fake-sync.success"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["api"]
+	}
 }
 `, dir, fakeFailureTaskName, fakeSuccessTaskName, disabledTaskName))
 }
 
 // disabledTaskConfig returns a config file with a task that is disabled
-func disabledTaskConfig(dir string) string {
+func disabledTaskConfig() string {
 	return fmt.Sprintf(`
 task {
 	name = "%s"
 	description = "task is configured as disabled"
 	enabled = false
-	services = ["api", "web"]
 	providers = ["local"]
 	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["api", "web"]
+	}
 }
 `, disabledTaskName)
-}
-
-func panosBadCredConfig() hclConfig {
-	return `log_level = "trace"
-terraform_provider "panos" {
-	hostname = "10.10.10.10"
-	api_key = "badapikey_1234"
-}
-
-task {
-	name = "panos-bad-cred-e2e-test"
-	description = "panos handler should error and stop sync after once"
-	module = "findkim/ngfw/panos"
-	version = "0.0.1-beta5"
-	providers = ["panos"]
-	services = ["web"]
-}
-`
 }

@@ -52,8 +52,7 @@ type CLI struct {
 	signalCh chan os.Signal
 
 	// stopCh is an internal channel used to trigger a shutdown of the CLI.
-	stopCh  chan struct{}
-	stopped bool
+	stopCh chan struct{}
 }
 
 // NewCLI creates a new CLI object with the given stdout and stderr streams.
@@ -266,7 +265,7 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 			if isInspect {
 				return
 			}
-			s, err := api.NewAPI(api.APIConfig{
+			s, err := api.NewAPI(api.Config{
 				Controller: ctrl.(api.Server),
 				Port:       config.IntVal(conf.Port),
 				TLS:        conf.TLS,
@@ -350,4 +349,14 @@ func printFlags(f *flag.FlagSet) {
 		fmt.Printf("  -%s %s\n", f.Name, f.Value)
 		fmt.Printf("        %s\n", f.Usage)
 	})
+}
+
+func processEOFError(scheme string, err error) error {
+	if strings.Contains(err.Error(), "EOF") && scheme == api.HTTPScheme {
+		err = fmt.Errorf("%s. Scheme %s was used, "+
+			"client may have sent an HTTP request to an HTTPS server. This error can be caused by a client using "+
+			"HTTP to connect to a CTS server with TLS enabled, consider using HTTPS scheme instead", err, scheme)
+	}
+
+	return err
 }

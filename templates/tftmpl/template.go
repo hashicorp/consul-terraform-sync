@@ -18,9 +18,9 @@ type Template interface {
 	// variable of type services
 	IsServicesVar() bool
 
-	// SourceIncludesVariable returns if the module source expects to
-	// include the monitored variable.
-	SourceIncludesVariable() bool
+	// RendersVar returns whether or not the template renders the monitored
+	// variable
+	RendersVar() bool
 
 	// appendModuleAttribute writes to an HCL module body the monitored variable
 	// as a module argument in main.tf file.
@@ -30,8 +30,8 @@ type Template interface {
 	appendModuleAttribute(*hclwrite.Body)
 
 	// appendTemplate writes the generated variable template to the
-	// terrafort.tfvars.tmpl file based on whether the source includes the
-	// monitored variable.
+	// terrafort.tfvars.tmpl file based on whether the template should render
+	// the monitored variable.
 	appendTemplate(io.Writer) error
 
 	// appendVariable writes the corresponding Terraform variable block to

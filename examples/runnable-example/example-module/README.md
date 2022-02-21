@@ -17,7 +17,7 @@ This module writes to a file the name, id, and IP address for all the Consul ser
 ## Usage
 | User-defined service meta | Required | Description |
 |-------------------|----------|-------------|
-| test_key | false | Test metadata that is printed out per service |
+| test_key | false | Test metadata that is printed out for the service |
 
 **User Config for Consul Terraform Sync**
 
@@ -26,9 +26,15 @@ example.hcl
 task {
   name = "example-task"
   description = "Writes the service name, id, and IP address to a file"
-  source = "../../example-module"
+  module = "../../example-module"
   providers = ["local"]
-  services = ["web", "api"]
+  condition "services" {
+    names = ["web", "api"]
+    cts_user_defined_meta = {
+      "api" = "api_meta"
+      "web" = "web_meta"
+    }
+  }
   variable_files = [/path/to/task-example.tfvars]
 }
 
@@ -44,12 +50,6 @@ driver "terraform" {
 terraform_provider "local" {
 }
 
-service {
-  name = "web"
-  cts_user_defined_meta = {
-    "test_key" = "test_value"
-  }
-}
 ```
 
 **Variable file**

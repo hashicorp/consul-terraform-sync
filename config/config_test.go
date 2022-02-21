@@ -83,7 +83,7 @@ var (
 				},
 			},
 		},
-		Services: &ServiceConfigs{
+		DeprecatedServices: &ServiceConfigs{
 			{
 				Name:        String("serviceA"),
 				Description: String("descriptionA"),
@@ -95,11 +95,11 @@ var (
 		},
 		Tasks: &TaskConfigs{
 			{
-				Description: String("automate services for X to do Y"),
-				Name:        String("task"),
-				Services:    []string{"serviceA", "serviceB", "serviceC"},
-				Providers:   []string{"X"},
-				Module:      String("Y"),
+				Description:        String("automate services for X to do Y"),
+				Name:               String("task"),
+				DeprecatedServices: []string{"serviceA", "serviceB", "serviceC"},
+				Providers:          []string{"X"},
+				Module:             String("Y"),
 				Condition: &CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig{
 						Regexp:           String(".*"),
@@ -109,6 +109,16 @@ var (
 						NodeMeta: map[string]string{
 							"key1": "value1",
 							"key2": "value2",
+						},
+					},
+				},
+				ModuleInputs: &ModuleInputConfigs{
+					&ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig{
+							Path:       String("key-path"),
+							Recurse:    Bool(true),
+							Datacenter: String("dc2"),
+							Namespace:  String("ns2"),
 						},
 					},
 				},
@@ -217,29 +227,35 @@ func TestFromPath(t *testing.T) {
 				},
 			},
 		}, {
-			"load dir merges tasks and services",
+			"load dir merges tasks and provider",
 			"testdata/merge",
 			&Config{
-				Services: &ServiceConfigs{
-					{
-						Name:        String("serviceA"),
-						Description: String("descriptionA"),
-					}, {
-						Name:        String("serviceB"),
-						Namespace:   String("teamB"),
-						Description: String("descriptionB"),
-					}, {
-						Name:        String("serviceC"),
-						Description: String("descriptionC"),
+				TerraformProviders: &TerraformProviderConfigs{
+					&TerraformProviderConfig{
+						"tf_providerA": map[string]interface{}{},
+					},
+					&TerraformProviderConfig{
+						"tf_providerB": map[string]interface{}{},
+					},
+					&TerraformProviderConfig{
+						"tf_providerC": map[string]interface{}{},
 					},
 				},
 				Tasks: &TaskConfigs{
 					{
-						Name:     String("taskA"),
-						Services: []string{"serviceA", "serviceB"},
+						Name: String("taskA"),
+						Condition: &ServicesConditionConfig{
+							ServicesMonitorConfig: ServicesMonitorConfig{
+								Names: []string{"serviceA", "serviceB"},
+							},
+						},
 					}, {
-						Name:     String("taskB"),
-						Services: []string{"serviceC", "serviceD"},
+						Name: String("taskB"),
+						Condition: &ServicesConditionConfig{
+							ServicesMonitorConfig: ServicesMonitorConfig{
+								Names: []string{"serviceC", "serviceD"},
+							},
+						},
 					},
 				},
 			},
@@ -320,16 +336,15 @@ func TestConfig_Finalize(t *testing.T) {
 	(*expected.Tasks)[0].BufferPeriod.Max = TimeDuration(60 * time.Second)
 	(*expected.Tasks)[0].Variables = map[string]string{}
 	(*expected.Tasks)[0].WorkingDir = String("working/task")
-	(*expected.Tasks)[0].ModuleInput = EmptyModuleInputConfig()
-	(*expected.Services)[0].ID = String("serviceA")
-	(*expected.Services)[0].Namespace = String("")
-	(*expected.Services)[0].Datacenter = String("")
-	(*expected.Services)[0].Filter = String("")
-	(*expected.Services)[0].CTSUserDefinedMeta = map[string]string{}
-	(*expected.Services)[1].ID = String("serviceB")
-	(*expected.Services)[1].Datacenter = String("")
-	(*expected.Services)[1].Filter = String("")
-	(*expected.Services)[1].CTSUserDefinedMeta = map[string]string{}
+	(*expected.DeprecatedServices)[0].ID = String("serviceA")
+	(*expected.DeprecatedServices)[0].Namespace = String("")
+	(*expected.DeprecatedServices)[0].Datacenter = String("")
+	(*expected.DeprecatedServices)[0].Filter = String("")
+	(*expected.DeprecatedServices)[0].CTSUserDefinedMeta = map[string]string{}
+	(*expected.DeprecatedServices)[1].ID = String("serviceB")
+	(*expected.DeprecatedServices)[1].Datacenter = String("")
+	(*expected.DeprecatedServices)[1].Filter = String("")
+	(*expected.DeprecatedServices)[1].CTSUserDefinedMeta = map[string]string{}
 
 	c := longConfig.Copy()
 	c.Finalize()
@@ -338,7 +353,6 @@ func TestConfig_Finalize(t *testing.T) {
 
 func TestConfig_Validate(t *testing.T) {
 	valid := longConfig.Copy()
-	(*valid.Tasks)[0].ModuleInput = EmptyModuleInputConfig() // Finalize()
 
 	// 2 tasks using same provider w/ auto_commit enabled (should err)
 	autoCommit := valid.Copy()
@@ -356,15 +370,14 @@ func TestConfig_Validate(t *testing.T) {
 
 	// valid case with multiple tasks w/ different providers
 	validMultiTask := longConfig.Copy()
-	(*validMultiTask.Tasks)[0].ModuleInput = EmptyModuleInputConfig() // Finalize()
 	*validMultiTask.Tasks = append(*validMultiTask.Tasks, &TaskConfig{
-		Description: String("test task1"),
-		Name:        String("task1"),
-		Services:    []string{"serviceD"},
-		Providers:   []string{"Y"},
-		Module:      String("Z"),
-		Condition:   EmptyConditionConfig(),
-		ModuleInput: EmptyModuleInputConfig(),
+		Description:        String("test task1"),
+		Name:               String("task1"),
+		DeprecatedServices: []string{"serviceD"},
+		Providers:          []string{"Y"},
+		Module:             String("Z"),
+		Condition:          EmptyConditionConfig(),
+		ModuleInputs:       DefaultModuleInputConfigs(),
 	})
 	*validMultiTask.TerraformProviders = append(*validMultiTask.TerraformProviders,
 		&TerraformProviderConfig{"Y": map[string]interface{}{}})
@@ -572,8 +585,12 @@ func TestConfig_BufferPeriod(t *testing.T) {
 				BufferPeriod: tc.confBp,
 				Tasks: &TaskConfigs{
 					{
-						Name:         String("test_task"),
-						Services:     []string{"api"},
+						Name: String("test_task"),
+						Condition: &ServicesConditionConfig{
+							ServicesMonitorConfig: ServicesMonitorConfig{
+								Names: []string{"api"},
+							},
+						},
 						Module:       String("/path"),
 						BufferPeriod: tc.taskBp,
 					},

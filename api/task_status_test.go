@@ -58,7 +58,6 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 		Enabled:   config.Bool(false),
 		Module:    config.String("module"),
 		Providers: []string{"null"},
-		Services:  []string{"web"},
 	}
 	configs := map[string]config.TaskConfig{
 		"task_a": createTaskConf("task_a", true),
@@ -94,7 +93,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_a": TaskStatus{
+				"task_a": {
 					TaskName:  "task_a",
 					Status:    StatusSuccessful,
 					Enabled:   true,
@@ -102,7 +101,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_a?include=events",
 				},
-				"task_b": TaskStatus{
+				"task_b": {
 					TaskName:  "task_b",
 					Status:    StatusCritical,
 					Enabled:   true,
@@ -110,7 +109,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_b?include=events",
 				},
-				"task_c": TaskStatus{
+				"task_c": {
 					TaskName:  "task_c",
 					Status:    StatusErrored,
 					Enabled:   true,
@@ -118,12 +117,11 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_c?include=events",
 				},
-				"task_d": TaskStatus{
+				"task_d": {
 					TaskName:  "task_d",
 					Status:    StatusUnknown,
 					Enabled:   false,
 					Providers: []string{"null"},
-					Services:  []string{"web"},
 					EventsURL: "",
 				},
 			},
@@ -134,7 +132,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_a": TaskStatus{
+				"task_a": {
 					TaskName:  "task_a",
 					Status:    StatusSuccessful,
 					Enabled:   true,
@@ -143,7 +141,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					EventsURL: "/v1/status/tasks/task_a?include=events",
 					Events:    eventsA,
 				},
-				"task_b": TaskStatus{
+				"task_b": {
 					TaskName:  "task_b",
 					Status:    StatusCritical,
 					Enabled:   true,
@@ -152,7 +150,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					EventsURL: "/v1/status/tasks/task_b?include=events",
 					Events:    eventsB,
 				},
-				"task_c": TaskStatus{
+				"task_c": {
 					TaskName:  "task_c",
 					Status:    StatusErrored,
 					Enabled:   true,
@@ -161,12 +159,11 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					EventsURL: "/v1/status/tasks/task_c?include=events",
 					Events:    eventsC,
 				},
-				"task_d": TaskStatus{
+				"task_d": {
 					TaskName:  "task_d",
 					Status:    StatusUnknown,
 					Enabled:   false,
 					Providers: []string{"null"},
-					Services:  []string{"web"},
 					EventsURL: "",
 					Events:    nil,
 				},
@@ -178,7 +175,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_b": TaskStatus{
+				"task_b": {
 					TaskName:  "task_b",
 					Status:    StatusCritical,
 					Enabled:   true,
@@ -194,12 +191,11 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_d": TaskStatus{
+				"task_d": {
 					TaskName:  "task_d",
 					Status:    StatusUnknown,
 					Enabled:   false,
 					Providers: []string{"null"},
-					Services:  []string{"web"},
 					EventsURL: "",
 				},
 			},
@@ -210,7 +206,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_b": TaskStatus{
+				"task_b": {
 					TaskName:  "task_b",
 					Status:    StatusCritical,
 					Enabled:   true,
@@ -226,7 +222,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_b": TaskStatus{
+				"task_b": {
 					TaskName:  "task_b",
 					Status:    StatusCritical,
 					Enabled:   true,
@@ -243,12 +239,11 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 			http.MethodGet,
 			http.StatusOK,
 			map[string]TaskStatus{
-				"task_d": TaskStatus{
+				"task_d": {
 					TaskName:  "task_d",
 					Status:    StatusUnknown,
 					Enabled:   false,
 					Providers: []string{"null"},
-					Services:  []string{"web"},
 					EventsURL: "",
 				},
 			},
@@ -334,20 +329,20 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 		{
 			"happy path",
 			[]event.Event{
-				event.Event{
+				{
 					Success: true,
 					Config: &event.Config{
 						Providers: []string{"local", "null"},
 						Services:  []string{"api", "web"},
 					},
 				},
-				event.Event{
+				{
 					Success: false,
 					Config: &event.Config{
 						Providers: []string{"local"},
 					},
 				},
-				event.Event{
+				{
 					Success: false,
 					Config: &event.Config{
 						Providers: []string{"f5"},
@@ -381,11 +376,11 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 		{
 			"no config",
 			[]event.Event{
-				event.Event{
+				{
 					Success: false,
 					Config:  nil,
 				},
-				event.Event{
+				{
 					Success: false,
 					Config:  nil,
 				},
@@ -403,7 +398,7 @@ func TestTaskStatus_MakeStatus(t *testing.T) {
 		{
 			"disabled task",
 			[]event.Event{
-				event.Event{
+				{
 					Success: true,
 					Config: &event.Config{
 						Providers: []string{"local"},
@@ -526,7 +521,7 @@ func TestTaskStatus_MakeEventsURL(t *testing.T) {
 		},
 		{
 			"events",
-			[]event.Event{event.Event{}},
+			[]event.Event{{}},
 			"/v1/status/tasks/my_task?include=events",
 		},
 	}
@@ -676,7 +671,7 @@ func createTaskEvents(taskName string, successes []bool) []event.Event {
 // order from a list of events sorted by latest first.
 func addEvents(store *event.Store, events []event.Event) {
 	for i := len(events) - 1; i >= 0; i-- {
-		store.Add(events[i])
+		_ = store.Add(events[i])
 	}
 }
 

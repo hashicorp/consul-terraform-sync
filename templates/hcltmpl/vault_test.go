@@ -14,6 +14,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestVault_Compile confirms that the Vault integration tests are compilable.
+// Vault integration tests are only run weekly. This test is intended to run
+// with each change (vs. weekly) to do a basic check that the tests are still
+// in a compilable state.
+func TestVaultIntegration_Compile(t *testing.T) {
+	// no-op
+}
+
 func TestLoadDynamicConfig_Vault(t *testing.T) {
 	vClient, stopVault := testutils.NewTestVaultServer(t, testutils.TestVaultServerConfig{})
 	defer stopVault(t)

@@ -27,7 +27,7 @@ jobs:
         run: |
           make version
           echo "::set-output name=product-version::$(make version)"
-
+  
   generate-metadata-file:
     needs: get-product-version
     runs-on: ubuntu-latest
@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Generate metadata file
         id: generate-metadata-file
-        uses: hashicorp/actions-generate-metadata@main
+        uses: hashicorp/actions-generate-metadata@v1
         with:
           version: ${{ needs.get-product-version.outputs.product-version }}
           product: ${{ env.PKG_NAME }}
@@ -63,31 +63,37 @@ jobs:
           echo "::set-output name=ldflags::"-s -w -X \'$project/version.Name=${{ env.PKG_NAME }}\' \
           -X \'$project/version.GitCommit=$sha\' \
           -X \'$project/version.GitDescribe=v$(make version base=1)\'""
-    
-  build-386:
+  build:
     needs: [get-product-version, set-ld-flags]
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [ linux, freebsd, windows ]
-        goarch: [ "386" ]
-        go: [ "1.16" ]
+        include:
+          - {go: "1.16", goos: "linux", goarch: "386"}
+          - {go: "1.16", goos: "linux", goarch: "amd64"}
+          - {go: "1.16", goos: "linux", goarch: "arm"}
+          - {go: "1.16", goos: "linux", goarch: "arm64"}
+          - {go: "1.16", goos: "freebsd", goarch: "386"}
+          - {go: "1.16", goos: "freebsd", goarch: "amd64"}
+          - {go: "1.16", goos: "windows", goarch: "386"}
+          - {go: "1.16", goos: "windows", goarch: "amd64"}
+          - {go: "1.16", goos: "solaris", goarch: "amd64"}
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-    env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
-      DOCKER_CLI_EXPERIMENTAL: enabled
-      LD_FLAGS: ${{ needs.set-ld-flags.outputs.ldflags }}
 
     steps:
       - uses: actions/checkout@v2
+
       - name: Setup go
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
+
       - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
           mkdir dist out
           go build -o dist/ \
@@ -101,7 +107,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
+        uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
           description: "Consul Terraform Sync is a service-oriented tool for managing network infrastructure near real-time."
@@ -114,24 +120,29 @@ jobs:
           deb_depends: "openssl"
           rpm_depends: "openssl"
 
+      - name: Set Package Names
+        if: ${{ matrix.goos == 'linux' }}
+        run: |
+          echo "RPM_PACKAGE=$(basename out/*.rpm)" >> $GITHUB_ENV
+          echo "DEB_PACKAGE=$(basename out/*.deb)" >> $GITHUB_ENV
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
+          name: ${{ env.RPM_PACKAGE }}
+          path: out/${{ env.RPM_PACKAGE }}
 
       - uses: actions/upload-artifact@v2
         if: ${{ matrix.goos == 'linux' }}
         with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
+          name: ${{ env.DEB_PACKAGE }}
+          path: out/${{ env.DEB_PACKAGE }}
 
-  build-amd64:
+  build-darwin:
     needs: [get-product-version, set-ld-flags]
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     strategy:
       matrix:
-        goos: [linux, freebsd, solaris, windows]
+        goos: [darwin]
         goarch: ["amd64"]
         go: ["1.16"]
       fail-fast: true
@@ -141,7 +152,6 @@ jobs:
     env:
       GOOS: ${{ matrix.goos }}
       GOARCH: ${{ matrix.goarch }}
-      DOCKER_CLI_EXPERIMENTAL: enabled
       LD_FLAGS: ${{ needs.set-ld-flags.outputs.ldflags }}
 
     steps:
@@ -153,200 +163,8 @@ jobs:
           go-version: ${{ matrix.go }}
 
       - name: Build
-        run: |
-          mkdir dist out
-          go build -o dist/ \
-            -ldflags "${{ env.LD_FLAGS }}" \
-            -tags "${{ env.GO_TAGS }}"
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-
-      - name: Package
-        if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
-        with:
-          name: ${{ github.event.repository.name }}
-          description: "Consul Terraform Sync is a service-oriented tool for managing network infrastructure near real-time."
-          arch: ${{ matrix.goarch }}
-          version: ${{ needs.get-product-version.outputs.product-version }}
-          maintainer: "HashiCorp"
-          homepage: "https://github.com/hashicorp/consul-terraform-sync"
-          license: "MPL-2.0"
-          binary: "dist/${{ env.PKG_NAME }}"
-          deb_depends: "openssl"
-          rpm_depends: "openssl"
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
-        with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
-        with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
-
-  build-arm:
-    needs: [get-product-version, set-ld-flags]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [arm]
-        go: ["1.16"]
-      fail-fast: true
-
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
-      DOCKER_CLI_EXPERIMENTAL: enabled
-      LD_FLAGS: ${{ needs.set-ld-flags.outputs.ldflags }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go }}
-
-      - name: Build
-        run: |
-          mkdir dist out
-          go build -o dist/ \
-            -ldflags "${{ env.LD_FLAGS }}" \
-            -tags "${{ env.GO_TAGS }}"
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-
-      - name: Package
-        if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
-        with:
-          name: ${{ github.event.repository.name }}
-          description: "Consul Terraform Sync is a service-oriented tool for managing network infrastructure near real-time."
-          arch: ${{ matrix.goarch }}
-          version: ${{ needs.get-product-version.outputs.product-version }}
-          maintainer: "HashiCorp"
-          homepage: "https://github.com/hashicorp/consul-terraform-sync"
-          license: "MPL-2.0"
-          binary: "dist/${{ env.PKG_NAME }}"
-          deb_depends: "openssl"
-          rpm_depends: "openssl"
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_armhf.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_armhf.deb
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
-
-  build-arm64:
-    needs: [get-product-version, set-ld-flags]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [arm64]
-        go: ["1.16"]
-      fail-fast: true
-
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
-      DOCKER_CLI_EXPERIMENTAL: enabled
-      LD_FLAGS: ${{ needs.set-ld-flags.outputs.ldflags }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go }}
-
-      - name: Build
-        run: |
-          mkdir dist out
-          go build -o dist/ \
-            -ldflags "${{ env.LD_FLAGS }}" \
-            -tags "${{ env.GO_TAGS }}"
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-
-      - name: Package
-        if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
-        with:
-          name: ${{ github.event.repository.name }}
-          description: "Consul Terraform Sync is a service-oriented tool for managing network infrastructure near real-time."
-          arch: ${{ matrix.goarch }}
-          version: ${{ needs.get-product-version.outputs.product-version }}
-          maintainer: "HashiCorp"
-          homepage: "https://github.com/hashicorp/consul-terraform-sync"
-          license: "MPL-2.0"
-          binary: "dist/${{ env.PKG_NAME }}"
-          deb_depends: "openssl"
-          rpm_depends: "openssl"
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
-        with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_arm*.deb
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
-        with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm
-
-  build-darwin:
-    needs: [get-product-version, set-ld-flags]
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        goos: [ darwin ]
-        goarch: [ "amd64" ]
-        go: [ "1.16" ]
-      fail-fast: true
-
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
-      LD_FLAGS: ${{ needs.set-ld-flags.outputs.ldflags }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go }}
-
-      - name: Build
+        env: 
+          GO_TAGS: "${{ env.GO_TAGS }} netcgo"
         run: |
           mkdir dist out
           go build -o dist/ \
@@ -359,31 +177,21 @@ jobs:
           path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
   build-docker:
+    name: Docker ${{ matrix.arch }} build
     needs:
       - get-product-version
-      - build-arm64
-      - build-386
-      - build-amd64
-      - build-arm
+      - build
     runs-on: ubuntu-latest
     strategy:
       matrix:
         arch: ["arm", "arm64", "386", "amd64"]
-    name: Docker ${{ matrix.arch }} build
     env:
       repo: ${{github.event.repository.name}}
       version: ${{needs.get-product-version.outputs.product-version}}
 
     steps:
       - uses: actions/checkout@v2
-
-      # download arm/arm64/386/amd64 binaries from build jobs
-      - uses: actions/download-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
-
-      # build docker image
-      - name: Docker build (Action)
+      - name: Docker Build (Action)
         uses: hashicorp/actions-docker-build@v1
         with:
           version: ${{env.version}}

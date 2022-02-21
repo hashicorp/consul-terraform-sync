@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -83,7 +84,7 @@ func TestRequest(t *testing.T) {
 			}
 			hc.On("Do", mock.Anything).Return(mockResp, tc.httpError).Once()
 
-			c, err := NewClient(&ClientConfig{Port: 8558}, hc)
+			c, err := NewClient(createTestClientConfig(8558), hc)
 			require.NoError(t, err)
 			resp, err := c.request("GET", "v1/some/endpoint", "test=true", "body")
 			if tc.expectError {
@@ -127,14 +128,14 @@ func TestStatus(t *testing.T) {
 	port := testutils.FreePort(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	api, err := NewAPI(APIConfig{
+	api, err := NewAPI(Config{
 		Controller: ctrl,
 		Port:       port,
 	})
 	require.NoError(t, err)
 	go api.Serve(ctx)
 
-	c, err := NewClient(&ClientConfig{Port: port}, nil)
+	c, err := NewClient(createTestClientConfig(port), nil)
 	require.NoError(t, err)
 	err = c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
 	require.NoError(t, err)
@@ -282,7 +283,7 @@ func TestWaitForAPI(t *testing.T) {
 	t.Parallel()
 
 	t.Run("timeout", func(t *testing.T) {
-		cts, err := NewClient(&ClientConfig{Port: 0}, nil)
+		cts, err := NewClient(createTestClientConfig(0), nil)
 		require.NoError(t, err)
 		err = cts.WaitForAPI(time.Second)
 		assert.Error(t, err, "No CTS API server running, test is expected to timeout")
@@ -297,16 +298,22 @@ func TestWaitForAPI(t *testing.T) {
 		port := testutils.FreePort(t)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		api, err := NewAPI(APIConfig{
+		api, err := NewAPI(Config{
 			Controller: ctrl,
 			Port:       port,
 		})
 		require.NoError(t, err)
 		go api.Serve(ctx)
 
-		cts, err := NewClient(&ClientConfig{Port: port}, nil)
+		cts, err := NewClient(createTestClientConfig(port), nil)
 		require.NoError(t, err)
 		err = cts.WaitForAPI(3 * time.Second)
 		assert.NoError(t, err, "CTS API server should be available")
 	})
+}
+
+func createTestClientConfig(port int) *ClientConfig {
+	return &ClientConfig{
+		URL: fmt.Sprintf("http://localhost:%d", port),
+	}
 }

@@ -15,13 +15,13 @@ func TestServicesRegexTemplate_appendTemplate(t *testing.T) {
 		exp  string
 	}{
 		{
-			"fully configured & includes_var true",
+			"fully configured & render var",
 			&ServicesRegexTemplate{
-				Regexp:            ".*",
-				Datacenter:        "dc1",
-				Namespace:         "ns1",
-				Filter:            "filter",
-				SourceIncludesVar: true,
+				Regexp:     ".*",
+				Datacenter: "dc1",
+				Namespace:  "ns1",
+				Filter:     "filter",
+				RenderVar:  true,
 			},
 			`
 services = {
@@ -36,13 +36,13 @@ services = {
 `,
 		},
 		{
-			"fully configured & includes_var false",
+			"fully configured & no var",
 			&ServicesRegexTemplate{
-				Regexp:            ".*",
-				Datacenter:        "dc1",
-				Namespace:         "ns1",
-				Filter:            "filter",
-				SourceIncludesVar: false,
+				Regexp:     ".*",
+				Datacenter: "dc1",
+				Namespace:  "ns1",
+				Filter:     "filter",
+				RenderVar:  false,
 			},
 			`
 {{- with $srv := servicesRegex "regexp=.*" "dc=dc1" "ns=ns1" "filter" }}
@@ -55,8 +55,8 @@ services = {
 		{
 			"regexp empty string",
 			&ServicesRegexTemplate{
-				Regexp:            "",
-				SourceIncludesVar: false,
+				Regexp:    "",
+				RenderVar: false,
 			},
 			`
 {{- with $srv := servicesRegex "regexp=" }}

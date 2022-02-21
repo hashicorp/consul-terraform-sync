@@ -20,10 +20,18 @@ type TaskStatus struct {
 	TaskName  string        `json:"task_name"`
 	Status    string        `json:"status"`
 	Enabled   bool          `json:"enabled"`
-	Providers []string      `json:"providers"`
-	Services  []string      `json:"services"`
 	EventsURL string        `json:"events_url"`
 	Events    []event.Event `json:"events,omitempty"`
+
+	// Providers and Services are deprecated in v0.5. These are configuration
+	// details about the task rather than status information. Users should
+	// switch to using the Get Task API to request the task's provider and
+	// services (and more!) information.
+	//  - Providers should be removed in 0.8
+	//  - Services should be removed in a future major release after 0.8 to align
+	//  with the removal of CTS config task.services
+	Providers []string `json:"providers"`
+	Services  []string `json:"services"`
 }
 
 // taskStatusHandler handles the task status endpoint
@@ -145,15 +153,15 @@ func makeTaskStatus(events []event.Event, task config.TaskConfig,
 	uniqProviders := make(map[string]bool)
 	uniqServices := make(map[string]bool)
 
-	for i, event := range events {
-		successes[i] = event.Success
-		if event.Config == nil {
+	for i, e := range events {
+		successes[i] = e.Success
+		if e.Config == nil {
 			continue
 		}
-		for _, p := range event.Config.Providers {
+		for _, p := range e.Config.Providers {
 			uniqProviders[p] = true
 		}
-		for _, s := range event.Config.Services {
+		for _, s := range e.Config.Services {
 			uniqServices[s] = true
 		}
 	}
@@ -177,7 +185,7 @@ func makeTaskStatusUnknown(task config.TaskConfig) TaskStatus {
 		Status:    StatusUnknown,
 		Enabled:   *task.Enabled,
 		Providers: task.Providers,
-		Services:  task.Services,
+		Services:  task.DeprecatedServices,
 		EventsURL: "",
 	}
 }
@@ -230,7 +238,7 @@ func makeEventsURL(events []event.Event, version, taskName string) string {
 		version, taskStatusPath, taskName)
 }
 
-// include determines whether or not to include events in task status payload
+// include determines whether to include events in task status payload
 func include(r *http.Request) (bool, error) {
 	// `?include=events` parameter
 	const includeKey = "include"

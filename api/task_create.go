@@ -11,7 +11,6 @@ import (
 )
 
 // CreateTask creates a task
-// TODO: handle setting the bufferPeriod of the driver
 func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request, params oapigen.CreateTaskParams) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -24,16 +23,18 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	requestID := requestIDFromContext(ctx)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("bad request", "error", err, "create_task_request", r.Body)
-		sendError(w, r, http.StatusBadRequest, fmt.Errorf("error decoding the request: %v", err))
+		sendError(w, r, http.StatusBadRequest,
+			fmt.Errorf("error decoding the request: %v", err))
 		return
 	}
-	logger = logger.With("task_name", req.Name)
+	logger = logger.With("task_name", req.Task.Name)
 	logger.Trace("create task request", "create_task_request", req)
 
 	// Check if task exists, if it does, do not create again
-	if _, err := h.ctrl.Task(ctx, req.Name); err == nil {
+	if _, err := h.ctrl.Task(ctx, req.Task.Name); err == nil {
 		logger.Trace("task already exists")
-		sendError(w, r, http.StatusBadRequest, fmt.Errorf("task with name %s already exists", req.Name))
+		sendError(w, r, http.StatusBadRequest,
+			fmt.Errorf("task with name %s already exists", req.Task.Name))
 		return
 	}
 
@@ -64,13 +65,8 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 
 	// Return the task response
 	resp := taskResponseFromTaskConfig(tc, requestID)
+	writeResponse(w, r, http.StatusCreated, resp)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		logger.Error("error encoding json", "error", err, "create_task_response", resp)
-	}
 	logger.Trace("task created", "create_task_response", resp)
 }
 
@@ -82,13 +78,11 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 	// Inspect task
 	changes, plan, runUrl, err := h.ctrl.TaskInspect(ctx, taskConf)
 	if err != nil {
-		err = fmt.Errorf("error inspecting new task: %s", err)
+		logger.Error("error inspecting new task", "error", err)
 		sendError(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	requestID := requestIDFromContext(ctx)
 	resp := taskResponseFromTaskConfig(taskConf, requestID)
 	resp.Run = &oapigen.Run{
@@ -98,9 +92,6 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 	if runUrl != "" {
 		resp.Run.TfcRunUrl = &runUrl
 	}
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		logger.Error("error encoding json", "error", err, "create_task_response", resp)
-	}
+	writeResponse(w, r, http.StatusOK, resp)
 	logger.Trace("task inspection complete", "create_task_response", resp)
 }

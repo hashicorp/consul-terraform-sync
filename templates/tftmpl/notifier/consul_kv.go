@@ -1,8 +1,6 @@
 package notifier
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat/dep"
@@ -15,22 +13,34 @@ import (
 // It suppresses notifications for changes to other tmplfuncs.
 type ConsulKV struct {
 	templates.Template
+	logger logging.Logger
 
-	// count all dependencies needed to complete once-mode
-	once     bool
-	depTotal int
-	counter  int
-	logger   logging.Logger
+	// count all tmplfuncs needed to complete once-mode
+	once    bool
+	tfTotal int
+	counter int
 }
 
 // NewConsulKV creates a new ConsulKVNotifier.
-// serviceCount parameter: the number of services the task is configured with
-func NewConsulKV(tmpl templates.Template, serviceCount int) *ConsulKV {
+//
+// tmplFuncTotal param: the total number of monitored tmplFuncs in the template.
+// This is the number of monitored tmplfuncs needed for both the consul-kv
+// condition and any module inputs. This number is equivalent to the number of
+// hashicat dependencies.
+//
+// Examples:
+// - consul-kv: 1 tmplfunc
+// - services-regex: 1 tmplfunc
+// - services-name: len(services) tmplfuncs
+func NewConsulKV(tmpl templates.Template, tmplFuncTotal int) *ConsulKV {
+	logger := logging.Global().Named(logSystemName).Named(kvSubsystemName)
+	logger.Trace("creating notifier", "type", kvSubsystemName,
+		"tmpl_func_total", tmplFuncTotal)
+
 	return &ConsulKV{
 		Template: tmpl,
-		// expect services and either []*dep.KeyPair or *dep.KeyPair
-		depTotal: serviceCount + 1,
-		logger:   logging.Global().Named(logSystemName).Named(kvSubsystemName),
+		tfTotal:  tmplFuncTotal,
+		logger:   logger,
 	}
 }
 
@@ -49,24 +59,27 @@ func NewConsulKV(tmpl templates.Template, serviceCount int) *ConsulKV {
 //  - Other types of dependencies that are not Consul KV. For example,
 //    Services ([]*dep.HealthService).
 func (n *ConsulKV) Notify(d interface{}) (notify bool) {
-	n.logger.Debug("received dependency change", "dependency_type", fmt.Sprintf("%T", d))
+	logDependency(n.logger, d)
 	notify = false
 
 	if !n.once {
 		n.counter++
-		// after all dependencies are received, notify so once-mode can complete
-		if n.counter >= n.depTotal {
+		// after a dependency is received for each tmplfunc, send notification
+		// so that once-mode can complete
+		if n.counter >= n.tfTotal {
 			n.logger.Debug("notify once-mode complete")
 			n.once = true
 			notify = true
 		}
 	}
 
+	// dependency for {{ keyExistsGet }} i.e. recurse=false
 	if _, ok := d.(*dep.KeyPair); ok {
 		n.logger.Debug("notify Consul KV pair change")
 		notify = true
 	}
 
+	// dependency for {{ keys }} i.e. recurse=true
 	if _, ok := d.([]*dep.KeyPair); ok {
 		n.logger.Debug("notify Consul KV pair list change")
 		notify = true

@@ -31,10 +31,16 @@ jobs:
           sudo cp consul /usr/local/bin/
       - run: |
           make test-integration
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
-          branch_pattern: main,release/.+
+      - when:
+          condition:
+            or:
+              - equal: [ main, <<pipeline.git.branch>> ]
+              - matches: { pattern: "release/.+", value: <<pipeline.git.branch>> }
+          steps:
+            - slack/notify:
+                event: fail
+                template: basic_fail_1
+                branch_pattern: main,release/.+
       - save_cache:
           key: ct-modcache-v2-{{ checksum "go.mod" }}
           paths:
@@ -77,10 +83,16 @@ jobs:
           sudo cp consul /usr/local/bin/
       - run: |
           make test-e2e-cirecleci
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
-          branch_pattern: main,release/.+
+      - when:
+          condition:
+            or:
+              - equal: [ main, <<pipeline.git.branch>> ]
+              - matches: { pattern: "release/.+", value: <<pipeline.git.branch>> }
+          steps:
+            - slack/notify:
+                event: fail
+                template: basic_fail_1
+                branch_pattern: main,release/.+
       - save_cache:
           key: ct-modcache-v2-{{ checksum "go.mod" }}
           paths:
@@ -157,6 +169,33 @@ jobs:
           path: /tmp/benchmark_results
           destination: benchmark_results
 
+  compile_weekly_tests:
+    executor:
+      name: go
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - ct-modcache-v2-{{ checksum "go.mod" }}
+      - run:
+          name: Check that weekly tests can compile
+          command:
+            make compile-weekly-tests
+      - when:
+          condition:
+            or:
+              - equal: [ main, <<pipeline.git.branch>> ]
+              - matches: { pattern: "release/.+", value: <<pipeline.git.branch>> }
+          steps:
+            - slack/notify:
+                event: fail
+                template: basic_fail_1
+                branch_pattern: main,release/.+
+      - save_cache:
+          key: ct-modcache-v2-{{ checksum "go.mod" }}
+          paths:
+            - /go/pkg/mod
+
   go-checks:
     executor:
       name: go
@@ -190,6 +229,7 @@ workflows:
     jobs:
       - go-checks
       - terraform-checks
+      - compile_weekly_tests
       - unit_integration_tests
       - e2e_tests
   weekly-benchmarks:

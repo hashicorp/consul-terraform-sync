@@ -93,15 +93,10 @@ func TestReadWrite_CheckApply(t *testing.T) {
 				task = disabledTestTask(t, tc.taskName)
 			}
 			d.On("Task").Return(task)
+			d.On("TemplateIDs").Return(nil)
 			drivers.Add(tc.taskName, d)
 
-			controller := ReadWrite{
-				baseController: &baseController{
-					drivers: drivers,
-					logger:  logging.NewNullLogger(),
-				},
-				store: event.NewStore(),
-			}
+			controller := newTestController()
 			ctx := context.Background()
 
 			_, err := controller.checkApply(ctx, d, false, false)
@@ -140,17 +135,12 @@ func TestReadWrite_CheckApply(t *testing.T) {
 		// Test the behavior for once-mode and daemon-mode for the situation
 		// where a scheduled task's template did not render
 
-		controller := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
+		controller := newTestController()
 
 		d := new(mocksD.Driver)
 		taskName := "scheduled_task"
 		d.On("Task").Return(scheduledTestTask(t, taskName))
+		d.On("TemplateIDs").Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(false, nil)
 		controller.drivers.Add(taskName, d)
 
@@ -175,19 +165,15 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 	t.Run("mult-checkapply-store", func(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, "task_a"))
+		d.On("TemplateIDs").Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(nil)
 
 		disabledD := new(mocksD.Driver)
 		disabledD.On("Task").Return(disabledTestTask(t, "task_b"))
+		disabledD.On("TemplateIDs").Return(nil)
 
-		controller := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
+		controller := newTestController()
 
 		controller.drivers.Add("task_a", d)
 		controller.drivers.Add("task_b", disabledD)
@@ -243,6 +229,7 @@ func TestOnce(t *testing.T) {
 					taskName := task.Name()
 					d := new(mocksD.Driver)
 					d.On("Task").Return(enabledTestTask(t, taskName)).Twice()
+					d.On("TemplateIDs").Return(nil)
 					d.On("RenderTemplate", mock.Anything).Return(false, nil).Once()
 					d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 					d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
@@ -295,6 +282,7 @@ func TestReadWrite_Once_error(t *testing.T) {
 			taskName := task.Name()
 			d := new(mocksD.Driver)
 			d.On("Task").Return(enabledTestTask(t, taskName))
+			d.On("TemplateIDs").Return(nil)
 			d.On("RenderTemplate", mock.Anything).Return(true, nil)
 			d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
 			if taskName == "task_03" {
@@ -328,96 +316,61 @@ func TestReadWrite_Once_error(t *testing.T) {
 	}
 }
 
-func TestReadWrite_runDynamicTasks(t *testing.T) {
+func TestReadWrite_runDynamicTask(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
-		controller := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
-
-		d := new(mocksD.Driver)
-		d.On("Task").Return(enabledTestTask(t, "task"))
-		d.On("InitWork", mock.Anything).Return(nil)
-		d.On("RenderTemplate", mock.Anything).Return(true, nil)
-		d.On("ApplyTask", mock.Anything).Return(nil)
-		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
-		controller.drivers.Add("task", d)
+		controller := newTestController()
 
 		ctx := context.Background()
-		errCh := controller.runDynamicTasks(ctx)
-		err := <-errCh
-		if err != nil {
-			t.Error(err)
-		}
+		d := new(mocksD.Driver)
+		mockDriver(ctx, d, enabledTestTask(t, "task"))
+		controller.drivers.Add("task", d)
+
+		err := controller.runDynamicTask(ctx, d)
+		assert.NoError(t, err)
 	})
 
 	t.Run("apply-error", func(t *testing.T) {
-		controller := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
+		controller := newTestController()
 
+		testErr := fmt.Errorf("could not apply: %s", "test")
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, "task"))
+		d.On("TemplateIDs").Return(nil)
 		d.On("InitWork", mock.Anything).Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
-		d.On("ApplyTask", mock.Anything).Return(fmt.Errorf("test"))
+		d.On("ApplyTask", mock.Anything).Return(testErr)
 		controller.drivers.Add("task", d)
 
-		ctx := context.Background()
-		errCh := controller.runDynamicTasks(ctx)
-		err := <-errCh
-		testErr := fmt.Errorf("could not apply: %s", "test")
-		if errors.Is(err, testErr) {
-			t.Error(
-				fmt.Sprintf("bad error, expected '%v', got '%v'", testErr, err))
-		}
+		err := controller.runDynamicTask(context.Background(), d)
+		assert.Contains(t, err.Error(), testErr.Error())
 	})
 
 	t.Run("skip-scheduled-tasks", func(t *testing.T) {
-		controller := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-			},
-			store: event.NewStore(),
-		}
+		controller := newTestController()
 
 		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
 		d.On("Task").Return(scheduledTestTask(t, taskName))
+		d.On("TemplateIDs").Return(nil)
 		// no other methods should be called (or mocked)
 		controller.drivers.Add(taskName, d)
 
-		ctx := context.Background()
-		errCh := controller.runDynamicTasks(ctx)
-		err := <-errCh
-		if err != nil {
-			t.Error(err)
-		}
+		err := controller.runDynamicTask(context.Background(), d)
+		assert.NoError(t, err)
 	})
 }
 
 func TestReadWrite_runScheduledTask(t *testing.T) {
 	t.Run("happy-path", func(t *testing.T) {
-		ctrl := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
+		ctrl := newTestController()
 
 		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
 		d.On("Task").Return(scheduledTestTask(t, taskName)).Twice()
 		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
+		d.On("TemplateIDs").Return(nil)
+		ctrl.drivers.Add(taskName, d)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
@@ -441,13 +394,7 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 	})
 
 	t.Run("dynamic-task-errors", func(t *testing.T) {
-		ctrl := ReadWrite{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			},
-			store: event.NewStore(),
-		}
+		ctrl := newTestController()
 
 		taskName := "dynamic_task"
 		d := new(mocksD.Driver)
@@ -473,11 +420,41 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 
 		d.AssertExpectations(t)
 	})
+
+	t.Run("deleted-scheduled-task", func(t *testing.T) {
+		ctrl := newTestController()
+
+		taskName := "scheduled_task"
+		d := new(mocksD.Driver)
+		d.On("Task").Return(scheduledTestTask(t, taskName)).Once()
+		// driver is not added to drivers map
+
+		ctx := context.Background()
+		errCh := make(chan error)
+		done := make(chan bool)
+		go func() {
+			err := ctrl.runScheduledTask(ctx, d)
+			if err != nil {
+				errCh <- err
+			}
+			done <- true
+		}()
+
+		select {
+		case <-errCh:
+			t.Fatal("runScheduledTask did not exit properly when task is not in map of drivers")
+		case <-done:
+			// runScheduledTask exited as expected
+			d.AssertExpectations(t)
+		case <-time.After(time.Second * 5):
+			t.Fatal("runScheduledTask did not exit as expected")
+		}
+	})
 }
 
 func TestReadWriteRun_context_cancel(t *testing.T) {
 	w := new(mocks.Watcher)
-	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil).
+	w.On("Watch", mock.Anything, mock.Anything).Return(nil).
 		On("Size").Return(5).
 		On("Stop").Return()
 
@@ -514,6 +491,7 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 	// Tests Run behaviors as expected with triggers after Once completes
 	d := new(mocksD.Driver)
 	d.On("Task").Return(enabledTestTask(t, "task_a")).
+		On("TemplateIDs").Return([]string{"tmpl_a"}).
 		On("RenderTemplate", mock.Anything).Return(true, nil).
 		On("ApplyTask", mock.Anything).Return(nil).
 		On("SetBufferPeriod")
@@ -523,20 +501,20 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
 		},
-		store: event.NewStore(),
+		watcherCh: make(chan string, 5),
+		store:     event.NewStore(),
 	}
 	ctrl.drivers.Add("task_a", d)
-
-	watcherCh := make(chan error, 5)
-	var watcherChRc <-chan error = watcherCh
-	w := new(mocks.Watcher)
-	w.On("Size").Return(5)
-	ctrl.watcher = w
 
 	completedTasksCh := ctrl.EnableTestMode()
 	errCh := make(chan error)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+
+	w := new(mocks.Watcher)
+	w.On("Size").Return(5)
+	w.On("Watch", ctx, ctrl.watcherCh).Return(nil)
+	ctrl.watcher = w
 
 	go func() {
 		err := ctrl.Once(ctx)
@@ -544,11 +522,6 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 			errCh <- err
 			return
 		}
-
-		// Once is expected to complete during first iteration with the
-		// mocked values, so we don't initialize Wait until after. Otherwise,
-		// the test would panic on missing mock method.
-		w.On("WaitCh", mock.Anything, mock.Anything).Return(watcherChRc)
 
 		err = ctrl.Run(ctx)
 		if err != nil {
@@ -558,7 +531,7 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 
 	// Emulate triggers to evaluate task completion
 	for i := 0; i < 5; i++ {
-		watcherCh <- nil
+		ctrl.watcherCh <- "tmpl_a"
 		select {
 		case taskName := <-completedTasksCh:
 			assert.Equal(t, "task_a", taskName)
@@ -568,6 +541,102 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 			assert.NoError(t, ctx.Err(), "Context should not timeout. Once and Run usage of Watcher does not match the expected triggers.")
 		}
 	}
+}
+
+func TestReadWrite_deleteTask(t *testing.T) {
+	ctx := context.Background()
+	mockD := new(mocksD.Driver)
+
+	testCases := []struct {
+		name  string
+		setup func(*driver.Drivers)
+	}{
+		{
+			"success",
+			func(d *driver.Drivers) {
+				mockD.On("TemplateIDs").Return(nil)
+				d.Add("success", mockD)
+				mockD.On("DestroyTask", ctx).Return()
+			},
+		},
+		{
+			"does_not_exist",
+			func(*driver.Drivers) {},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			drivers := driver.NewDrivers()
+
+			tc.setup(drivers)
+			ctrl := ReadWrite{
+				baseController: &baseController{
+					logger: logging.NewNullLogger(),
+				},
+				store: event.NewStore(),
+			}
+			ctrl.baseController.drivers = drivers
+			ctrl.store.Add(event.Event{TaskName: "success"})
+
+			err := ctrl.deleteTask(ctx, tc.name)
+
+			assert.NoError(t, err)
+			_, exists := drivers.Get(tc.name)
+			assert.False(t, exists, "task should no longer exist")
+			events := ctrl.store.Read(tc.name)
+			assert.Empty(t, events, "task events should no longer exist")
+		})
+	}
+
+	t.Run("active_task", func(t *testing.T) {
+		// Set up drivers with active task
+		drivers := driver.NewDrivers()
+		taskName := "active_task"
+		mockD.On("TemplateIDs").Return(nil)
+		drivers.Add(taskName, mockD)
+		drivers.SetActive(taskName)
+
+		// Set up controller with drivers and store
+		ctrl := ReadWrite{
+			baseController: &baseController{
+				logger: logging.NewNullLogger(),
+			},
+			store: event.NewStore(),
+		}
+		ctrl.baseController.drivers = drivers
+		ctrl.store.Add(event.Event{TaskName: taskName})
+
+		// Attempt to delete the active task
+		ch := make(chan error)
+		go func() {
+			err := ctrl.deleteTask(ctx, taskName)
+			ch <- err
+		}()
+
+		// Check that the task is not deleted while active
+		time.Sleep(500 * time.Millisecond)
+		_, exists := drivers.Get(taskName)
+		assert.True(t, exists, "task deleted when active")
+		events := ctrl.store.Read(taskName)
+		assert.NotEmpty(t, events, "task events should still exist")
+
+		// Set task to inactive, wait for deletion to happen
+		drivers.SetInactive(taskName)
+		select {
+		case err := <-ch:
+			assert.NoError(t, err)
+		case <-time.After(1 * time.Second):
+			t.Log("task was not deleted after it became inactive")
+			t.Fail()
+		}
+
+		// Check that task removed from drivers and store
+		_, exists = drivers.Get(taskName)
+		assert.False(t, exists, "task should no longer exist")
+		events = ctrl.store.Read(taskName)
+		assert.Empty(t, events, "task events should no longer exist")
+	})
+
 }
 
 // singleTaskConfig returns a happy path config that has a single task
@@ -584,24 +653,12 @@ func singleTaskConfig() *config.Config {
 		},
 		Tasks: &config.TaskConfigs{
 			{
-				Description: config.String("automate services for X to do Y"),
-				Name:        config.String("task"),
-				Services:    []string{"serviceA", "serviceB", "serviceC"},
-				Providers:   []string{"X", handler.TerraformProviderFake},
-				Module:      config.String("Y"),
-				Version:     config.String("v1"),
-			},
-		},
-		Services: &config.ServiceConfigs{
-			{
-				ID:          config.String("serviceA_id"),
-				Name:        config.String("serviceA"),
-				Description: config.String("descriptionA"),
-			}, {
-				ID:          config.String("serviceB_id"),
-				Name:        config.String("serviceB"),
-				Namespace:   config.String("teamB"),
-				Description: config.String("descriptionB"),
+				Description:        config.String("automate services for X to do Y"),
+				Name:               config.String("task"),
+				DeprecatedServices: []string{"serviceA", "serviceB", "serviceC"},
+				Providers:          []string{"X", handler.TerraformProviderFake},
+				Module:             config.String("Y"),
+				Version:            config.String("v1"),
 			},
 		},
 		TerraformProviders: &config.TerraformProviderConfigs{{
@@ -620,9 +677,13 @@ func multipleTaskConfig(numTasks int) *config.Config {
 	tasks := make(config.TaskConfigs, numTasks)
 	for i := 0; i < numTasks; i++ {
 		tasks[i] = &config.TaskConfig{
-			Name:     config.String(fmt.Sprintf("task_%02d", i)),
-			Services: []string{fmt.Sprintf("service_%02d", i)},
-			Module:   config.String("Y"),
+			Name: config.String(fmt.Sprintf("task_%02d", i)),
+			Condition: &config.ServicesConditionConfig{
+				ServicesMonitorConfig: config.ServicesMonitorConfig{
+					Names: []string{fmt.Sprintf("service_%02d", i)},
+				},
+			},
+			Module: config.String("Y"),
 		}
 	}
 	c := &config.Config{Tasks: &tasks}
@@ -659,4 +720,14 @@ func scheduledTestTask(tb testing.TB, name string) *driver.Task {
 	})
 	require.NoError(tb, err)
 	return task
+}
+
+func newTestController() ReadWrite {
+	return ReadWrite{
+		baseController: &baseController{
+			drivers: driver.NewDrivers(),
+			logger:  logging.NewNullLogger(),
+		},
+		store: event.NewStore(),
+	}
 }

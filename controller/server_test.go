@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates"
@@ -22,8 +24,53 @@ var validTaskConf = config.TaskConfig{
 	Name:    config.String("task"),
 	Module:  config.String("module"),
 	Condition: &config.CatalogServicesConditionConfig{
-		config.CatalogServicesMonitorConfig{Regexp: config.String("regex")},
+		CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{Regexp: config.String("regex")},
 	},
+}
+
+func TestServer_Task(t *testing.T) {
+	ctx := context.Background()
+	ctrl := ReadWrite{
+		baseController: &baseController{
+			drivers: driver.NewDrivers(),
+		},
+	}
+
+	t.Run("success", func(t *testing.T) {
+		taskConf := validTaskConf
+		taskConf.Finalize(config.DefaultBufferPeriodConfig(), "path")
+		driverTask, err := driver.NewTask(driver.TaskConfig{
+			Enabled:   true,
+			Name:      *taskConf.Name,
+			Module:    *taskConf.Module,
+			Condition: taskConf.Condition,
+			BufferPeriod: &driver.BufferPeriod{
+				Min: *taskConf.BufferPeriod.Min,
+				Max: *taskConf.BufferPeriod.Max,
+			},
+			WorkingDir: *taskConf.WorkingDir,
+		})
+		require.NoError(t, err)
+
+		d := new(mocksD.Driver)
+		mockDriver(ctx, d, driverTask)
+		err = ctrl.drivers.Add(*taskConf.Name, d)
+		require.NoError(t, err)
+
+		actualConf, err := ctrl.Task(ctx, *taskConf.Name)
+		require.NoError(t, err)
+
+		// VarFiles are not stored for the task. Set to empty array.
+		actualConf.VarFiles = []string{}
+		assert.Equal(t, taskConf, actualConf)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		// no driver setup because non-existent task
+
+		_, err := ctrl.Task(ctx, "non-existent-task")
+		assert.Error(t, err)
+	})
 }
 
 func TestServer_TaskCreate(t *testing.T) {
@@ -47,7 +94,7 @@ func TestServer_TaskCreate(t *testing.T) {
 		driverTask, err := driver.NewTask(driver.TaskConfig{
 			Enabled:   true,
 			Name:      *taskConf.Name,
-			Source:    *taskConf.Module,
+			Module:    *taskConf.Module,
 			Condition: taskConf.Condition,
 			BufferPeriod: &driver.BufferPeriod{
 				Min: *ctrl.conf.BufferPeriod.Min,
@@ -58,9 +105,8 @@ func TestServer_TaskCreate(t *testing.T) {
 		require.NoError(t, err)
 
 		mockD := new(mocksD.Driver)
-		mockD.On("Task").Return(driverTask).
-			On("InitTask", mock.Anything).Return(nil).
-			On("RenderTemplate", mock.Anything).Return(true, nil)
+		mockD.On("SetBufferPeriod").Return()
+		mockDriver(ctx, mockD, driverTask)
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
@@ -89,6 +135,7 @@ func TestServer_TaskCreate(t *testing.T) {
 	t.Run("create error", func(t *testing.T) {
 		mockD := new(mocksD.Driver)
 		mockD.On("InitTask", mock.Anything).Return(fmt.Errorf("init err"))
+		mockD.On("DestroyTask", mock.Anything).Return()
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
@@ -123,15 +170,13 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockD := new(mocksD.Driver)
+		mockD.On("SetBufferPeriod").Return()
 		task, err := driver.NewTask(driver.TaskConfig{
 			Enabled: true,
 			Name:    "task",
 		})
 		require.NoError(t, err)
-		mockD.On("Task").Return(task).
-			On("InitTask", ctx).Return(nil).
-			On("RenderTemplate", mock.Anything).Return(true, nil).
-			On("ApplyTask", ctx).Return(nil)
+		mockDriver(ctx, mockD, task)
 		ctrl.store = event.NewStore()
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
@@ -152,14 +197,13 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 
 	t.Run("disabled task", func(t *testing.T) {
 		mockD := new(mocksD.Driver)
+		mockD.On("SetBufferPeriod").Return()
 		task, err := driver.NewTask(driver.TaskConfig{
 			Enabled: false,
 			Name:    "task",
 		})
 		require.NoError(t, err)
-		mockD.On("Task").Return(task).
-			On("InitTask", ctx).Return(nil).
-			On("RenderTemplate", mock.Anything).Return(true, nil)
+		mockDriver(ctx, mockD, task)
 		ctrl.store = event.NewStore()
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
@@ -209,59 +253,39 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 
 func TestServer_TaskDelete(t *testing.T) {
 	ctx := context.Background()
-	mockD := new(mocksD.Driver)
 	ctrl := ReadWrite{
 		baseController: &baseController{
 			logger: logging.NewNullLogger(),
 		},
-		store: event.NewStore(),
+		store:    event.NewStore(),
+		deleteCh: make(chan string),
 	}
 
-	testCases := []struct {
-		name   string
-		setup  func(*driver.Drivers)
-		errMsg string
-	}{
-		{
-			"success",
-			func(d *driver.Drivers) {
-				d.Add("success", mockD)
-			},
-			"",
-		}, {
-			"does_not_exist",
-			func(*driver.Drivers) {},
-			"",
-		}, {
-			"active",
-			func(d *driver.Drivers) {
-				d.Add("active", mockD)
-				d.SetActive("active")
-			},
-			"running and cannot be deleted",
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			drivers := driver.NewDrivers()
-			tc.setup(drivers)
-			ctrl.baseController.drivers = drivers
+	t.Run("happy path", func(t *testing.T) {
+		drivers := driver.NewDrivers()
+		taskName := "delete_task"
 
-			err := ctrl.TaskDelete(ctx, tc.name)
+		ctrl.baseController.drivers = drivers
+		go ctrl.TaskDelete(ctx, taskName)
+		select {
+		case n := <-ctrl.deleteCh:
+			assert.Equal(t, taskName, n)
+		case <-time.After(1 * time.Second):
+			t.Log("delete channel did not receive message")
+			t.Fail()
+		}
+		assert.True(t, ctrl.drivers.IsMarkedForDeletion(taskName))
+	})
 
-			if tc.errMsg == "" {
-				assert.NoError(t, err)
-				_, exists := drivers.Get(tc.name)
-				assert.False(t, exists, "task should no longer exist")
-				return
-			}
-
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tc.errMsg)
-			_, exists := drivers.Get(tc.name)
-			assert.True(t, exists, "unexpected delete")
-		})
-	}
+	t.Run("already marked for deletion", func(t *testing.T) {
+		drivers := driver.NewDrivers()
+		taskName := "delete_task"
+		ctrl.baseController.drivers = drivers
+		ctrl.drivers.MarkForDeletion(taskName)
+		err := ctrl.TaskDelete(ctx, taskName)
+		assert.NoError(t, err)
+		assert.True(t, ctrl.drivers.IsMarkedForDeletion(taskName))
+	})
 }
 
 func TestServer_TaskUpdate(t *testing.T) {
@@ -294,8 +318,8 @@ func TestServer_TaskUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		d := new(mocksD.Driver)
-		d.On("Task").Return(task).
-			On("UpdateTask", mock.Anything, driver.PatchTask{Enabled: false}).
+		mockDriver(ctx, d, task)
+		d.On("UpdateTask", mock.Anything, driver.PatchTask{Enabled: false}).
 			Return(driver.InspectPlan{ChangesPresent: false, Plan: ""}, nil)
 		err = ctrl.drivers.Add(taskName, d)
 		require.NoError(t, err)
@@ -341,8 +365,8 @@ func TestServer_TaskUpdate(t *testing.T) {
 		}
 		// add a driver
 		d := new(mocksD.Driver)
-		d.On("Task").Return(&driver.Task{}, nil).
-			On("UpdateTask", mock.Anything, mock.Anything).Return(expectedPlan, nil).Once()
+		mockDriver(ctx, d, &driver.Task{})
+		d.On("UpdateTask", mock.Anything, mock.Anything).Return(expectedPlan, nil).Once()
 		err := ctrl.drivers.Add("task_b", d)
 		require.NoError(t, err)
 
@@ -367,8 +391,8 @@ func TestServer_TaskUpdate(t *testing.T) {
 
 		// add a driver
 		d := new(mocksD.Driver)
-		d.On("Task").Return(&driver.Task{}, nil).
-			On("UpdateTask", mock.Anything, mock.Anything).Return(driver.InspectPlan{}, nil).Once()
+		mockDriver(ctx, d, &driver.Task{})
+		d.On("UpdateTask", mock.Anything, mock.Anything).Return(driver.InspectPlan{}, nil).Once()
 		err := ctrl.drivers.Add(taskName, d)
 		require.NoError(t, err)
 
@@ -386,4 +410,13 @@ func TestServer_TaskUpdate(t *testing.T) {
 		events := ctrl.store.Read(taskName)
 		assert.Len(t, events, 1)
 	})
+}
+
+// mockDriver sets up a mock driver with the happy path for all methods
+func mockDriver(ctx context.Context, d *mocks.Driver, task *driver.Task) {
+	d.On("Task").Return(task).
+		On("InitTask", ctx).Return(nil).
+		On("TemplateIDs").Return(nil).
+		On("RenderTemplate", mock.Anything).Return(true, nil).
+		On("ApplyTask", ctx).Return(nil)
 }

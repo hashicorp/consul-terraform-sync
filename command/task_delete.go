@@ -39,8 +39,9 @@ func (c *taskDeleteCommand) Help() string {
 	helpText := fmt.Sprintf(`
 Usage: consul-terraform-sync task delete [options] <task name>
 
-  Task Delete is used to delete an existing task. Will not delete a task
-  if the task is currently running.
+  Task Delete is used to delete an existing task. If the task is not running,
+  then it is deleted immediately. Otherwise, it will be deleted once the task
+  is complete.
 
 Options:
 %s
@@ -48,13 +49,18 @@ Options:
 Example:
 
   $ consul-terraform-sync task delete my_task
-	==> Do you want to delete 'my_task'?
-		- This action cannot be undone.
-	Only 'yes' will be accepted to approve.
+  ==> Do you want to delete 'my_task'?
+       - This action cannot be undone.
+       - Deleting a task will not destroy the infrastructure managed by the task.
+       - If the task is not running, it will be deleted immediately.
+       - If the task is running, it will be deleted once it has completed.
+      Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject.
 
-	Enter a value: yes
+  Enter a value: yes
 
-	==> 'my_task' delete complete!
+  ==> Marking task 'my_task' for deletion...
+
+  ==> Task 'my_task' has been marked for deletion and will be deleted when not running.
 `, strings.Join(c.meta.helpOptions, "\n"))
 	return strings.TrimSpace(helpText)
 }
@@ -81,7 +87,8 @@ func (c *taskDeleteCommand) Run(args []string) int {
 
 	client, err := c.meta.taskLifecycleClient()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error: unable to create client for '%s'", taskName))
+		c.UI.Error(errCreatingClient)
+		c.UI.Output(fmt.Sprintf("client could not be created for '%s'", taskName))
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 
@@ -94,7 +101,7 @@ func (c *taskDeleteCommand) Run(args []string) int {
 		}
 	}
 
-	c.UI.Info(fmt.Sprintf("Deleting task '%s'...\n", taskName))
+	c.UI.Info(fmt.Sprintf("Marking task '%s' for deletion...\n", taskName))
 	resp, err := client.DeleteTaskByName(context.Background(), taskName)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -109,7 +116,8 @@ func (c *taskDeleteCommand) Run(args []string) int {
 		return ExitCodeError
 	}
 
-	c.UI.Info(fmt.Sprintf("Deleted task '%s'", taskName))
+	c.UI.Info(fmt.Sprintf("Task '%s' has been marked for deletion "+
+		"and will be deleted when not running.", taskName))
 
 	return ExitCodeOK
 }

@@ -40,6 +40,10 @@ type ServicesMonitorConfig struct {
 	CTSUserDefinedMeta map[string]string `mapstructure:"cts_user_defined_meta"`
 }
 
+func (c *ServicesMonitorConfig) VariableType() string {
+	return "services"
+}
+
 // Copy returns a deep copy of this configuration.
 func (c *ServicesMonitorConfig) Copy() MonitorConfig {
 	if c == nil {

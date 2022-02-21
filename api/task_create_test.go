@@ -16,42 +16,38 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	testCreateTaskRequest = `{
-    "description": "Writes the service name, id, and IP address to a file",
-    "enabled": true,
-    "name": "api-task",
-    "providers": [
-        "local"
-    ],
-    "condition": {
-			"services": {"names": ["api"]}
-		},
-    "module": "./example-module"
-}`
-	testCreateTaskRequestVariables = `{
-    "description": "Writes the service name, id, and IP address to a file",
-    "enabled": true,
-    "name": "api-task",
-    "providers": [
-        "local"
-    ],
-    "condition": {
-			"services": {"names": ["api"]}
-		},
-    "variables":{
-        "filename": "test.txt"
-    },
-    "module": "./example-module"
-}`
-	testTaskName         = "api-task"
-	testWorkingDirectory = "sync-task"
-)
+const testTaskName = "api-task"
 
-func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
-	t.Parallel()
+var (
+	// testTaskJSON and testTaskConfig are a set of json and config for the
+	// same task "api-task"
+	testTaskJSON = fmt.Sprintf(`{
+		"task": {
+			"description": "Writes the service name, id, and IP address to a file",
+			"enabled": true,
+			"name": "%s",
+			"providers": [
+				"local"
+			],
+			"condition": {
+				"services": {"names": ["api"]}
+			},
+			"module_input": {
+				"consul_kv": {
+					"path": "key-path",
+					"recurse": true,
+					"datacenter": "dc2",
+					"namespace": "ns2"
+				}
+			},
+			"variables":{
+				"filename": "test.txt"
+			},
+			"module": "./example-module"
+		}
+	}`, testTaskName)
 
-	taskConf := config.TaskConfig{
+	testTaskConfig = config.TaskConfig{
 		Name:        config.String(testTaskName),
 		Enabled:     config.Bool(true),
 		Description: config.String("Writes the service name, id, and IP address to a file"),
@@ -59,10 +55,24 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 		Condition: &config.ServicesConditionConfig{
 			ServicesMonitorConfig: config.ServicesMonitorConfig{Names: []string{"api"}},
 		},
+		ModuleInputs: &config.ModuleInputConfigs{
+			&config.ConsulKVModuleInputConfig{
+				ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+					Path:       config.String("key-path"),
+					Recurse:    config.Bool(true),
+					Datacenter: config.String("dc2"),
+					Namespace:  config.String("ns2"),
+				},
+			},
+		},
 		Providers: []string{"local"},
+		Variables: map[string]string{"filename": "test.txt"},
 	}
-	taskConfVars := *taskConf.Copy()
-	taskConfVars.Variables = map[string]string{"filename": "test.txt"}
+)
+
+func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name       string
 		taskName   string
@@ -73,23 +83,16 @@ func TestTaskLifeCycleHandler_CreateTask(t *testing.T) {
 	}{
 		{
 			name:       "happy_path",
-			request:    testCreateTaskRequest,
+			request:    testTaskJSON,
 			run:        "",
-			mockReturn: taskConf,
+			mockReturn: testTaskConfig,
 			statusCode: http.StatusCreated,
 		},
 		{
 			name:       "happy_path_run_now",
-			request:    testCreateTaskRequest,
+			request:    testTaskJSON,
 			run:        "now",
-			mockReturn: taskConf,
-			statusCode: http.StatusCreated,
-		},
-		{
-			name:       "happy_path_with_variables",
-			request:    testCreateTaskRequestVariables,
-			run:        "now",
-			mockReturn: taskConfVars,
+			mockReturn: testTaskConfig,
 			statusCode: http.StatusCreated,
 		},
 	}
@@ -119,34 +122,18 @@ func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 	t.Parallel()
 
 	// Expected ctrl mock calls and returns
-	taskName := "inspected_task"
-	request := fmt.Sprintf(`{
-		"name": "%s",
-		"enabled": true,
-		"condition": {"services": {"names": ["api"]}},
-		"module": "mkam/hello/cts"
-	}`, taskName)
-	taskConf := config.TaskConfig{
-		Name:    config.String(taskName),
-		Enabled: config.Bool(true),
-		Module:  config.String("mkam/hello/cts"),
-		Condition: &config.ServicesConditionConfig{
-			ServicesMonitorConfig: config.ServicesMonitorConfig{Names: []string{"api"}},
-		},
-	}
-
 	ctrl := new(mocks.Server)
-	ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
-		On("TaskInspect", mock.Anything, taskConf).Return(true, "foobar-plan", "", nil)
+	ctrl.On("Task", mock.Anything, testTaskName).Return(config.TaskConfig{}, fmt.Errorf("DNE")).
+		On("TaskInspect", mock.Anything, testTaskConfig).Return(true, "foobar-plan", "", nil)
 	handler := NewTaskLifeCycleHandler(ctrl)
 
-	resp := runTestCreateTask(t, handler, "inspect", http.StatusOK, request)
+	resp := runTestCreateTask(t, handler, "inspect", http.StatusOK, testTaskJSON)
 
 	// Check response, expect task and run
 	decoder := json.NewDecoder(resp.Body)
 	var actual TaskResponse
 	require.NoError(t, decoder.Decode(&actual))
-	expected := generateExpectedResponse(t, request)
+	expected := generateExpectedResponse(t, testTaskJSON)
 	expected.Run = &oapigen.Run{
 		Plan:           config.String("foobar-plan"),
 		ChangesPresent: config.Bool(true),
@@ -154,8 +141,8 @@ func TestTaskLifeCycleHandler_CreateTask_RunInspect(t *testing.T) {
 	assert.Equal(t, expected, oapigen.TaskResponse(actual))
 	ctrl.AssertExpectations(t)
 
-	// Run the inspect a second time with same task, expect return 200 OK
-	runTestCreateTask(t, handler, "inspect", http.StatusOK, request)
+	// Run inspect a second time with same task, expect return 200 OK
+	runTestCreateTask(t, handler, "inspect", http.StatusOK, testTaskJSON)
 }
 
 func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
@@ -173,10 +160,18 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 			name:     "task already exists",
 			taskName: existingTask,
 			request: fmt.Sprintf(`{
-				"name": "%s",
-				"services": ["api"],
-				"module": "./example-module"
-		}`, existingTask),
+				"task": {
+					"name": "%s",
+					"condition": {
+						"services": {
+							"names": [
+								"api"
+							]
+						}
+					},
+					"module": "./example-module"
+				}
+			}`, existingTask),
 			message:    fmt.Sprintf("task with name %s already exists", existingTask),
 			statusCode: http.StatusBadRequest,
 		},
@@ -219,7 +214,7 @@ func TestTaskLifeCycleHandler_CreateTask_InternalError(t *testing.T) {
 	ctrl.On("TaskCreate", mock.Anything, mock.Anything).Return(config.TaskConfig{}, fmt.Errorf(errMsg))
 	handler := NewTaskLifeCycleHandler(ctrl)
 
-	resp := runTestCreateTask(t, handler, "", http.StatusInternalServerError, testCreateTaskRequest)
+	resp := runTestCreateTask(t, handler, "", http.StatusInternalServerError, testTaskJSON)
 
 	// Check response
 	decoder := json.NewDecoder(resp.Body)
@@ -236,9 +231,14 @@ func generateExpectedResponse(t *testing.T, req string) oapigen.TaskResponse {
 	err := json.Unmarshal([]byte(req), &treq)
 	require.NoError(t, err)
 
-	task := oapigen.Task(treq)
+	// Set cts_user_defined_meta to an empty map if nil
+	services := treq.Task.Condition.Services
+	if services != nil && services.CtsUserDefinedMeta == nil {
+		services.CtsUserDefinedMeta = &oapigen.ServicesCondition_CtsUserDefinedMeta{}
+	}
+
 	return oapigen.TaskResponse{
-		Task: &task,
+		Task: &treq.Task,
 	}
 }
 

@@ -229,10 +229,10 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		return nil, nil
 	}
 
-	meta := conf.Services.CTSUserDefinedMeta(taskConfig.Services)
-	services := make([]driver.Service, len(taskConfig.Services))
-	for si, service := range taskConfig.Services {
-		services[si] = getService(conf.Services, service, meta)
+	meta := conf.DeprecatedServices.CTSUserDefinedMeta(taskConfig.DeprecatedServices)
+	services := make([]driver.Service, len(taskConfig.DeprecatedServices))
+	for si, service := range taskConfig.DeprecatedServices {
+		services[si] = getService(conf.DeprecatedServices, service, meta)
 	}
 
 	providers := make(driver.TerraformProviderBlocks, len(taskConfig.Providers))
@@ -266,14 +266,17 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		Providers:    providers,
 		ProviderInfo: providerInfo,
 		Services:     services,
-		Source:       *taskConfig.Module,
+		Module:       *taskConfig.Module,
 		VarFiles:     taskConfig.VarFiles,
 		Version:      *taskConfig.Version,
 		Variables:    taskConfig.Variables,
 		BufferPeriod: bp,
 		Condition:    taskConfig.Condition,
-		SourceInput:  taskConfig.ModuleInput,
+		ModuleInputs: *taskConfig.ModuleInputs,
 		WorkingDir:   *taskConfig.WorkingDir,
+
+		// Enterprise
+		TFVersion: *taskConfig.TFVersion,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error initializing task %s: %s", *taskConfig.Name, err)

@@ -7,9 +7,15 @@ consul {
 task {
   name = "example-task"
   description = "Writes the service name, id, and IP address to a file"
-  source = "./example-module"
+  module = "./example-module"
   providers = ["local"]
-  services = ["web", "api"]
+  condition "services" {
+    names = ["web", "api"]
+    cts_user_defined_meta = {
+      "api" = "api_meta"
+      "web" = "web_meta"
+    }
+  }
   variable_files = []
 }
 
@@ -23,13 +29,4 @@ driver "terraform" {
 }
 
 terraform_provider "local" {
-}
-
-# Optional service block for defining configuration specific
-# to a service.
-service {
-  name = "web"
-  cts_user_defined_meta = {
-    "test_key" = "test_value"
-  }
 }

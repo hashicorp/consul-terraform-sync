@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/internal/decode"
 	"github.com/hashicorp/consul-terraform-sync/logging"
-	"github.com/hashicorp/consul/lib/decode"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -18,17 +18,11 @@ type ModuleInputConfig interface {
 	MonitorConfig
 }
 
-// EmptyModuleInputConfig sets un-configured module inputs with a non-null
-// value
-func EmptyModuleInputConfig() ModuleInputConfig {
-	return &NoMonitorConfig{}
-}
+// ModuleInputConfigs is a collection of ModuleInputConfig
+type ModuleInputConfigs []ModuleInputConfig
 
-// isModuleInputEmpty returns true if the provided ModuleInputConfig `c` is
-// of type NoMonitorConfig
-func isModuleInputEmpty(c ModuleInputConfig) bool {
-	_, ok := c.(*NoMonitorConfig)
-	return ok
+func DefaultModuleInputConfigs() *ModuleInputConfigs {
+	return &ModuleInputConfigs{}
 }
 
 // moduleInputToTypeFunc is a decode hook function to decode a ModuleInputConfig
@@ -112,4 +106,134 @@ func decodeModuleInputToType(data interface{}, moduleInput ModuleInputConfig) (M
 // isModuleInputNil returns true if the module input is nil and false otherwise
 func isModuleInputNil(si ModuleInputConfig) bool {
 	return isMonitorNil(si)
+}
+
+// Len is a helper method to get the length of the underlying config list
+func (c *ModuleInputConfigs) Len() int {
+	if c == nil {
+		return 0
+	}
+
+	return len(*c)
+}
+
+// Copy returns a deep copy of this configuration.
+func (c *ModuleInputConfigs) Copy() *ModuleInputConfigs {
+	if c == nil {
+		return nil
+	}
+
+	o := make(ModuleInputConfigs, c.Len())
+	for i, t := range *c {
+		o[i] = t.Copy()
+	}
+	return &o
+}
+
+// Merge combines all values in this configuration with the values in the other
+// configuration, with values in the other configuration taking precedence.
+// Maps and slices are merged, most other values are overwritten. Complex
+// structs define their own merge functionality.
+func (c *ModuleInputConfigs) Merge(o *ModuleInputConfigs) *ModuleInputConfigs {
+	if c == nil {
+		if o == nil {
+			return nil
+		}
+		return o.Copy()
+	}
+
+	if o == nil {
+		return c.Copy()
+	}
+
+	r := c.Copy()
+
+	*r = append(*r, *o...)
+
+	return r
+}
+
+// Finalize ensures the configuration has no nil pointers and sets default
+// values.
+func (c *ModuleInputConfigs) Finalize() {
+	if c == nil {
+		return
+	}
+
+	for _, t := range *c {
+		t.Finalize()
+	}
+}
+
+// Validate validates the values and nested values of the configuration struct.
+// It validates a task's module inputs while taking into account the task's
+// services and condition
+func (c *ModuleInputConfigs) Validate(services []string, condition ConditionConfig) error {
+	if c == nil || c.Len() == 0 {
+		// config is not required, return early
+		return nil
+	}
+
+	logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
+
+	// Confirm module_inputs's type is unique across module_inputs
+	varTypes := make(map[string]bool)
+	for _, input := range *c {
+		varType := input.VariableType()
+		if ok := varTypes[varType]; ok {
+			return fmt.Errorf("more than one 'module_input' block for the %q "+
+				"variable. variable types must be unique", varType)
+		}
+		varTypes[varType] = true
+	}
+
+	// Confirm module_input types are different from task.services variable type
+	if len(services) > 0 {
+
+		// ServicesModuleInput is the only module_input with the same variable
+		// type as task.services
+		servicesType := &ServicesModuleInputConfig{}
+
+		if ok := varTypes[servicesType.VariableType()]; ok {
+			err := fmt.Errorf("task's `services` field and `module_input "+
+				"'services'` block both monitor %q variable type. only one of "+
+				"these can be configured per task", servicesType.VariableType())
+			logger.Error("list of `services` and `module_input 'services'` "+
+				"block cannot both be configured. Consider combining the list "+
+				"into the module_input block or creating separate tasks",
+				"error", err)
+			return err
+		}
+	}
+
+	// Confirm module_input's type is different from condition
+	if condition == nil {
+		return nil
+	}
+	if ok := varTypes[condition.VariableType()]; ok {
+		err := fmt.Errorf("task's condition block and module_input block "+
+			"both monitor %q variable type. condition and module_input "+
+			"variable type must be unique", condition.VariableType())
+		logger.Error("condition and module_input block cannot monitor same "+
+			"variable type. If both are needed, consider combining the "+
+			"module_input with the condition block or creating separate tasks",
+			"error", err)
+		return err
+	}
+
+	return nil
+}
+
+// GoString defines the printable version of this struct.
+func (c *ModuleInputConfigs) GoString() string {
+	if c == nil {
+		return "(*ModuleInputConfigs)(nil)"
+	}
+
+	s := make([]string, len(*c))
+	for i, t := range *c {
+		s[i] = t.GoString()
+	}
+
+	return "{" + strings.Join(s, ", ") + "}"
 }

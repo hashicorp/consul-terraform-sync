@@ -1,8 +1,6 @@
 package notifier
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat/dep"
@@ -24,22 +22,36 @@ const (
 type CatalogServicesRegistration struct {
 	templates.Template
 	services []string
-
-	// count all dependencies needed to complete once-mode
-	once     bool
-	depTotal int
-	counter  int
 	logger   logging.Logger
+
+	// count all tmplfuncs needed to complete once-mode
+	once    bool
+	tfTotal int
+	counter int
 }
 
 // NewCatalogServicesRegistration creates a new CatalogServicesRegistration
 // notifier.
-// serviceCount parameter: the number of services the task is configured with
-func NewCatalogServicesRegistration(tmpl templates.Template, serviceCount int) *CatalogServicesRegistration {
+//
+// tmplFuncTotal param: the total number of monitored tmplFuncs in the template.
+// This is the number of monitored tmplfuncs needed for both the catalog-services
+// condition and any module inputs. This number is equivalent to the number of
+// hashicat dependencies.
+//
+// Examples:
+// - catalog-services: 1 tmplfunc
+// - services-regex: 1 tmplfunc
+// - services-name: len(services) tmplfuncs
+// - consul-kv: 1 tmplfunc
+func NewCatalogServicesRegistration(tmpl templates.Template, tmplFuncTotal int) *CatalogServicesRegistration {
+	logger := logging.Global().Named(logSystemName).Named(servicesSubsystemName)
+	logger.Trace("creating notifier", "type", csSubsystemName,
+		"tmpl_func_total", tmplFuncTotal)
+
 	return &CatalogServicesRegistration{
 		Template: tmpl,
-		depTotal: serviceCount + 1, // for additional catalog-services dep
-		logger:   logging.Global().Named(logSystemName).Named(csSubsystemName),
+		tfTotal:  tmplFuncTotal,
+		logger:   logger,
 	}
 }
 
@@ -68,19 +80,21 @@ func NewCatalogServicesRegistration(tmpl templates.Template, serviceCount int) *
 // when all dependencies are received.
 // Resolved by sending a special notification for once-mode. Bullet B above.
 func (n *CatalogServicesRegistration) Notify(d interface{}) (notify bool) {
-	n.logger.Debug("received dependency change", "dependency_type", fmt.Sprintf("%T", d))
+	logDependency(n.logger, d)
 	notify = false
 
 	if !n.once {
 		n.counter++
-		// after all dependencies are received, notify so once-mode can complete
-		if n.counter >= n.depTotal {
+		// after a dependency is received for each tmplfunc, send notification
+		// so that once-mode can complete
+		if n.counter >= n.tfTotal {
 			n.logger.Debug("notify once-mode complete")
 			n.once = true
 			notify = true
 		}
 	}
 
+	// dependency for {{ catalogServicesRegistration}}
 	if v, ok := d.([]*dep.CatalogSnippet); ok {
 		if n.registrationChange(v) {
 			n.logger.Debug("notify registration change")

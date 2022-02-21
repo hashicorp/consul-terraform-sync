@@ -24,19 +24,22 @@ type Handlers struct {
 //go:generate oapi-codegen  -package oapigen -generate types -o oapigen/types.go openapi.yaml
 //go:generate oapi-codegen  -package oapigen -generate chi-server,spec -o oapigen/server.go openapi.yaml
 
+// writeResponse sets headers and JSON encodes the response body in the response writer
+func writeResponse(w http.ResponseWriter, r *http.Request, code int, resp interface{}) {
+	logger := logging.FromContext(r.Context()).Named(handlerSubsystemName)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		logger.Error("error encoding json", "error", err, "response", resp)
+	}
+}
+
 // sendError wraps sending of an error in the Error format
 func sendError(w http.ResponseWriter, r *http.Request, code int, err error) {
-	logger := logging.FromContext(r.Context()).Named(handlerSubsystemName)
-	taskErr := oapigen.ErrorResponse{
+	writeResponse(w, r, code, oapigen.ErrorResponse{
 		Error: oapigen.Error{
 			Message: err.Error(),
 		},
 		RequestId: requestIDFromContext(r.Context()),
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	if err := json.NewEncoder(w).Encode(taskErr); err != nil {
-		logger.Error("error encoding json", "error", err, "error_response", taskErr)
-	}
+	})
 }

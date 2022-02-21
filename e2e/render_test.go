@@ -48,9 +48,13 @@ func TestServicesRenderRace(t *testing.T) {
 	}
 	conf.Tasks = &config.TaskConfigs{
 		&config.TaskConfig{
-			Name:       config.String("serv_rend_race_task"),
-			Module:     config.String("./test_modules/null_resource"),
-			Services:   serviceNames,
+			Name:   config.String("serv_rend_race_task"),
+			Module: config.String("./test_modules/null_resource"),
+			Condition: &config.ServicesConditionConfig{
+				ServicesMonitorConfig: config.ServicesMonitorConfig{
+					Names: serviceNames,
+				},
+			},
 			WorkingDir: config.String(tempDir),
 		}}
 	conf.Consul.Address = config.String(srv.HTTPAddr)

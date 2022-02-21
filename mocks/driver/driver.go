@@ -28,6 +28,11 @@ func (_m *Driver) ApplyTask(ctx context.Context) error {
 	return r0
 }
 
+// DestroyTask provides a mock function with given fields: ctx
+func (_m *Driver) DestroyTask(ctx context.Context) {
+	_m.Called(ctx)
+}
+
 // InitTask provides a mock function with given fields: ctx
 func (_m *Driver) InitTask(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -99,6 +104,22 @@ func (_m *Driver) Task() *driver.Task {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*driver.Task)
+		}
+	}
+
+	return r0
+}
+
+// TemplateIDs provides a mock function with given fields:
+func (_m *Driver) TemplateIDs() []string {
+	ret := _m.Called()
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func() []string); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
 		}
 	}
 

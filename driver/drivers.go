@@ -1,9 +1,12 @@
 package driver
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
 // Drivers wraps the map of task-name to associated driver so that the map
@@ -11,15 +14,26 @@ import (
 type Drivers struct {
 	mu *sync.RWMutex
 
+	// Map of task name to driver
 	drivers map[string]Driver
-	active  sync.Map
+
+	// Map of template ID to task name
+	driverTemplates map[string]string
+
+	// Tracks which driver is currently active
+	active sync.Map
+
+	// Tracks if a driver is marked for deletion
+	deletion map[string]bool
 }
 
 // NewDrivers returns a new drivers object
 func NewDrivers() *Drivers {
 	return &Drivers{
-		mu:      &sync.RWMutex{},
-		drivers: make(map[string]Driver),
+		mu:              &sync.RWMutex{},
+		drivers:         make(map[string]Driver),
+		driverTemplates: make(map[string]string),
+		deletion:        make(map[string]bool),
 	}
 }
 
@@ -41,10 +55,13 @@ func (d *Drivers) Add(taskName string, driver Driver) error {
 	}
 
 	d.drivers[taskName] = driver
+	for _, id := range driver.TemplateIDs() {
+		d.driverTemplates[id] = taskName
+	}
 	return nil
 }
 
-// Get retrieves the driver for a task
+// Get retrieves the driver for a task by task name
 func (d *Drivers) Get(taskName string) (Driver, bool) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -55,6 +72,20 @@ func (d *Drivers) Get(taskName string) (Driver, bool) {
 	}
 
 	return driver, true
+}
+
+// GetTaskByTemplate retrieves the driver for a task by template ID
+func (d *Drivers) GetTaskByTemplate(tmplID string) (Driver, bool) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	taskName, ok := d.driverTemplates[tmplID]
+	if !ok {
+		return nil, false
+	}
+
+	driver, ok := d.drivers[taskName]
+	return driver, ok
 }
 
 func (d *Drivers) Reset() {
@@ -121,6 +152,39 @@ func (d *Drivers) Delete(taskName string) error {
 		return errors.New("task name cannot be empty")
 	}
 
+	driver, ok := d.drivers[taskName]
+
+	if ok {
+		driver.DestroyTask(context.Background())
+	} else {
+		logging.Global().Debug("attempted to destroy a non-existent task", taskNameLogKey, taskName)
+	}
+
+	// delete driver templates associated with task
+	for val, id := range d.driverTemplates {
+		if val == taskName {
+			delete(d.driverTemplates, id)
+		}
+	}
+
 	delete(d.drivers, taskName)
+	delete(d.deletion, taskName)
 	return nil
+}
+
+func (d *Drivers) MarkForDeletion(name string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.deletion[name] = true
+}
+
+func (d *Drivers) IsMarkedForDeletion(name string) bool {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	mark, ok := d.deletion[name]
+	if !ok {
+		return false
+	}
+	return mark
 }

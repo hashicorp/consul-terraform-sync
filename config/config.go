@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/internal/decode"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
-	"github.com/hashicorp/consul/lib/decode"
 	"github.com/hashicorp/hcl"
 	"github.com/mitchellh/mapstructure"
 )
@@ -43,7 +43,7 @@ type Config struct {
 	Vault              *VaultConfig              `mapstructure:"vault"`
 	Driver             *DriverConfig             `mapstructure:"driver"`
 	Tasks              *TaskConfigs              `mapstructure:"task"`
-	Services           *ServiceConfigs           `mapstructure:"service"`
+	DeprecatedServices *ServiceConfigs           `mapstructure:"service"`
 	TerraformProviders *TerraformProviderConfigs `mapstructure:"terraform_provider"`
 	BufferPeriod       *BufferPeriodConfig       `mapstructure:"buffer_period"`
 	TLS                *CTSTLSConfig             `mapstructure:"tls"`
@@ -83,7 +83,7 @@ func DefaultConfig() *Config {
 		Consul:             consul,
 		Driver:             DefaultDriverConfig(),
 		Tasks:              DefaultTaskConfigs(),
-		Services:           DefaultServiceConfigs(),
+		DeprecatedServices: DefaultServiceConfigs(),
 		TerraformProviders: DefaultTerraformProviderConfigs(),
 		BufferPeriod:       DefaultBufferPeriodConfig(),
 		TLS:                DefaultCTSTLSConfig(),
@@ -106,7 +106,7 @@ func (c *Config) Copy() *Config {
 		Vault:              c.Vault.Copy(),
 		Driver:             c.Driver.Copy(),
 		Tasks:              c.Tasks.Copy(),
-		Services:           c.Services.Copy(),
+		DeprecatedServices: c.DeprecatedServices.Copy(),
 		TerraformProviders: c.TerraformProviders.Copy(),
 		BufferPeriod:       c.BufferPeriod.Copy(),
 		TLS:                c.TLS.Copy(),
@@ -163,8 +163,8 @@ func (c *Config) Merge(o *Config) *Config {
 		r.Tasks = r.Tasks.Merge(o.Tasks)
 	}
 
-	if o.Services != nil {
-		r.Services = r.Services.Merge(o.Services)
+	if o.DeprecatedServices != nil {
+		r.DeprecatedServices = r.DeprecatedServices.Merge(o.DeprecatedServices)
 	}
 
 	if o.TerraformProviders != nil {
@@ -236,10 +236,14 @@ func (c *Config) Finalize() {
 	}
 	c.Tasks.Finalize(c.BufferPeriod, *c.WorkingDir)
 
-	if c.Services == nil {
-		c.Services = DefaultServiceConfigs()
+	if c.DeprecatedServices == nil {
+		c.DeprecatedServices = DefaultServiceConfigs()
 	}
-	c.Services.Finalize()
+	if len(*c.DeprecatedServices) > 0 {
+		logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
+		logger.Warn(serviceBlockLogMsg)
+	}
+	c.DeprecatedServices.Finalize()
 
 	if c.TerraformProviders == nil {
 		c.TerraformProviders = DefaultTerraformProviderConfigs()
@@ -266,7 +270,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	if err := c.Services.Validate(); err != nil {
+	if err := c.DeprecatedServices.Validate(); err != nil {
 		return err
 	}
 
@@ -340,7 +344,7 @@ func (c *Config) GoString() string {
 		"Vault:%s, "+
 		"Driver:%s, "+
 		"Tasks:%s, "+
-		"Services:%s, "+
+		"Services (deprecated):%s, "+
 		"TerraformProviders:%s, "+
 		"BufferPeriod:%s,"+
 		"TLS:%s"+
@@ -353,7 +357,7 @@ func (c *Config) GoString() string {
 		c.Vault.GoString(),
 		c.Driver.GoString(),
 		c.Tasks.GoString(),
-		c.Services.GoString(),
+		c.DeprecatedServices.GoString(),
 		c.TerraformProviders.GoString(),
 		c.BufferPeriod.GoString(),
 		c.TLS.GoString(),
@@ -584,3 +588,35 @@ func antiboolFromEnv(list []string, def bool) *bool {
 	}
 	return Bool(def)
 }
+
+// serviceBlockLogMsg is the log message for deprecating the `service` block
+const serviceBlockLogMsg = `the 'service' block is deprecated ` +
+	`in v0.5.0 and will be removed in a future major version after v0.8.0.
+
+` +
+	`In order to replace the 'service' block, the associated 'services' field ` +
+	`(deprecated) should first be upgraded to 'condition "services"' or ` +
+	`'module_input "services"'. Then the configuration in the 'service' block ` +
+	`can be set in the 'condition' or 'module_input' block.` +
+	`
+
+We will be releasing a tool to help upgrade your configuration for this deprecation.
+
+Example of replacing service block information in condition block:
+|  - service {
+|  -   name       = "api"
+|  -   datacenter = "dc2"
+|  - }
+|
+|    task {
+|      condition "services" {
+|        names      = ["api"]
+|  +     datacenter = "dc2"
+|      }
+|      ...
+|    }
+
+More complex cases with 'service' blocks can require splitting a task into multiple tasks.
+For more details and additional examples, please see:
+https://consul.io/docs/nia/release-notes/0-5-0#deprecate-service-block
+`

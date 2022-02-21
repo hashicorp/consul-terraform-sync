@@ -216,7 +216,7 @@ func TestEvent_GoString(t *testing.T) {
 			"&Event{ID:123, TaskName:happy, Success:false, " +
 				"StartTime:0001-01-01 00:00:00 +0000 UTC, " +
 				"EndTime:0001-01-01 00:00:00 +0000 UTC, EventError:&{error!}, " +
-				"Config:&{[local] [web api] /my-module}}",
+				"Config:&Config{Providers:[local], Services:[web api], Source:/my-module}}",
 		},
 	}
 

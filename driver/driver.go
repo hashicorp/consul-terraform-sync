@@ -15,6 +15,9 @@ type Driver interface {
 	// SetBufferPeriod sets the task's buffer period on the watcher
 	SetBufferPeriod()
 
+	// TemplateIDs returns the list of template IDs for the driver
+	TemplateIDs() []string
+
 	// RenderTemplate renders a template. Returns if template rendering
 	// completed or not
 	RenderTemplate(ctx context.Context) (bool, error)
@@ -28,6 +31,9 @@ type Driver interface {
 
 	// UpdateTask supports updating certain fields of a task
 	UpdateTask(ctx context.Context, task PatchTask) (InspectPlan, error)
+
+	// DestroyTask destroys task dependencies so that it can be safely deleted
+	DestroyTask(ctx context.Context)
 
 	// Task returns the task information of the driver
 	Task() *Task

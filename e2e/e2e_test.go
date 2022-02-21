@@ -5,13 +5,18 @@ package e2e
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
+	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
@@ -29,12 +34,13 @@ func TestE2EBasic(t *testing.T) {
 	// Note: no t.Parallel() for this particular test. Choosing this test to run 'first'
 	// since e2e test running simultaneously will download Terraform into shared
 	// directory causes some flakiness. All other e2e tests, should have t.Parallel()
+	// when run in the CI environment
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "basic")
-	delete := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
@@ -58,16 +64,16 @@ func TestE2EBasic(t *testing.T) {
 	require.Equal(t, 2, len(files))
 
 	contents := testutils.CheckFile(t, true, dbResourcesPath, "api.txt")
-	require.Equal(t, "1.2.3.4", string(contents))
+	require.Equal(t, "1.2.3.4", contents)
 
 	contents = testutils.CheckFile(t, true, webResourcesPath, "api.txt")
-	require.Equal(t, "1.2.3.4", string(contents))
+	require.Equal(t, "1.2.3.4", contents)
 
 	contents = testutils.CheckFile(t, true, webResourcesPath, "web.txt")
-	require.Equal(t, "5.6.7.8", string(contents))
+	require.Equal(t, "5.6.7.8", contents)
 
 	contents = testutils.CheckFile(t, true, dbResourcesPath, "db.txt")
-	require.Equal(t, "10.10.10.10", string(contents))
+	require.Equal(t, "10.10.10.10", contents)
 
 	// check statefiles exist
 	testutils.CheckStateFile(t, srv.HTTPAddr, dbTaskName)
@@ -80,7 +86,7 @@ func TestE2EBasic(t *testing.T) {
 	api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForAPI)
 
 	contents = testutils.CheckFile(t, true, webResourcesPath, "web-1.txt")
-	assert.Equal(t, service.Address, string(contents), "web-1 should be created after registering")
+	assert.Equal(t, service.Address, contents, "web-1 should be created after registering")
 
 	now = time.Now()
 	testutils.DeregisterConsulService(t, srv, service.ID)
@@ -89,20 +95,20 @@ func TestE2EBasic(t *testing.T) {
 	// web-1 should be removed after deregistering
 	testutils.CheckFile(t, false, webResourcesPath, "web-1.txt")
 
-	delete()
+	_ = cleanup()
 }
 
 // TestE2ERestart runs the CTS binary in daemon mode and tests restarting
 // CTS results in no errors and can continue running based on the same config
 // and Consul storing state.
 func TestE2ERestart(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "restart")
-	delete := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
@@ -114,14 +120,14 @@ func TestE2ERestart(t *testing.T) {
 	// rerun sync. confirm no errors e.g. recreating workspaces
 	runSyncStop(t, configPath, defaultWaitForAPI)
 
-	delete()
+	_ = cleanup()
 }
 
 // TestE2ERestartConsul tests CTS is able to reconnect to Consul after the
 // Consul agent had restarted, and CTS resumes monitoring changes to the
 // Consul catalog.
 func TestE2ERestartConsul(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	consul := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
 		HTTPSRelPath: "../testutils",
@@ -143,8 +149,12 @@ func TestE2ERestartConsul(t *testing.T) {
 	require.NoError(t, err)
 
 	// stop Consul
-	consul.Stop()
-	time.Sleep(2 * time.Second)
+	err = consul.Stop()
+	// When Consul is killed with a SIGINT, it exists with error code 1, this error is expected
+	require.Error(t, err)
+	exitErr, ok := err.(*exec.ExitError)
+	require.True(t, ok)
+	require.Equal(t, 1, exitErr.ExitCode())
 
 	// restart Consul
 	consul = testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
@@ -164,41 +174,13 @@ func TestE2ERestartConsul(t *testing.T) {
 	resourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
 	testutils.CheckFile(t, true, resourcesPath, "api_new.txt")
 
-	cleanup()
-}
-
-// TestE2EPanosHandlerError tests that CTS stops upon an error for a task with
-// invalid PANOS credentials.
-func TestE2EPanosHandlerError(t *testing.T) {
-	t.Parallel()
-
-	srv := newTestConsulServer(t)
-	defer srv.Stop()
-
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "panos_handler")
-	delete := testutils.MakeTempDir(t, tempDir)
-	// no defer to delete directory: only delete at end of test if no errors
-
-	requiredProviders := `required_providers {
-  panos = {
-    source = "paloaltonetworks/panos"
-  }
-}
-`
-	configPath := filepath.Join(tempDir, configFile)
-	config := panosBadCredConfig().appendConsulBlock(srv).
-		appendTerraformBlock(tempDir, requiredProviders)
-	config.write(t, configPath)
-
-	api.StartCTS(t, configPath, api.CTSOnceModeFlag)
-
-	delete()
+	_ = cleanup()
 }
 
 // TestE2ELocalBackend tests CTS configured with the Terraform driver using
 // the local backend.
 func TestE2ELocalBackend(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	cases := []struct {
 		name             string
@@ -260,7 +242,7 @@ func TestE2ELocalBackend(t *testing.T) {
 			defer srv.Stop()
 
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, tc.tempDirPrefix)
-			delete := testutils.MakeTempDir(t, tempDir)
+			cleanup := testutils.MakeTempDir(t, tempDir)
 			// no defer to delete directory: only delete at end of test if no errors
 
 			config := baseConfig(tempDir).appendConsulBlock(srv).
@@ -276,19 +258,19 @@ func TestE2ELocalBackend(t *testing.T) {
 			checkStateFileLocally(t, tc.dbStateFilePath)
 			checkStateFileLocally(t, tc.webStateFilePath)
 
-			delete()
+			_ = cleanup()
 		})
 	}
 }
 
 func TestE2EValidateError(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "validate_errors")
-	delete := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
@@ -296,7 +278,6 @@ func TestE2EValidateError(t *testing.T) {
 	conditionTask := fmt.Sprintf(`task {
 	name = "%s"
 	module = "./test_modules/incompatible_w_cts"
-	services = ["api", "db"]
 	condition "catalog-services" {
 		regexp = "^api$|^db$"
 		use_as_module_input = true
@@ -312,13 +293,15 @@ func TestE2EValidateError(t *testing.T) {
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 
-	cmd.Run()
+	err := cmd.Run()
+	require.Error(t, err)
+
 	assert.Contains(t, buf.String(), fmt.Sprintf(`module for task "%s" is missing the "services" variable`, taskName))
 	require.Contains(t,
 		buf.String(),
 		fmt.Sprintf(`module for task "%s" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false`,
 			taskName))
-	delete()
+	_ = cleanup()
 }
 
 // TestE2E_FilterStatus checks the behavior of including/excluding non-passing
@@ -330,7 +313,7 @@ func TestE2EValidateError(t *testing.T) {
 // 2. CTS can include non-passing service instances through additional
 //    configuration
 func TestE2E_FilterStatus(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	cases := []struct {
 		name         string
@@ -343,8 +326,10 @@ func TestE2E_FilterStatus(t *testing.T) {
 			"_default",
 			`task {
 				name = "%s"
-				source = "./test_modules/null_resource"
-				services = ["api", "unhealthy-service"]
+				module = "./test_modules/null_resource"
+				condition "services" {
+					names = ["api", "unhealthy-service"]
+				}
 			}
 			`,
 			func(t *testing.T, contents string) {
@@ -361,12 +346,11 @@ func TestE2E_FilterStatus(t *testing.T) {
 			"_w_filter",
 			`task {
 				name = "%s"
-				source = "./test_modules/null_resource"
-				services = ["api", "unhealthy-service"]
-			}
-			service {
-				name = "unhealthy-service"
-				filter = "Checks.Status != \"\""
+				module = "./test_modules/null_resource"
+				condition "services" {
+					names = ["api", "unhealthy-service"]
+					filter = "Checks.Status != \"\""
+				}
 			}
 			`,
 			func(t *testing.T, contents string) {
@@ -386,7 +370,7 @@ func TestE2E_FilterStatus(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			tempDir := fmt.Sprintf("%s%s%s", tempDirPrefix, "filter_statuses", tc.tmpDirSuffix)
-			delete := testutils.MakeTempDir(t, tempDir)
+			cleanup := testutils.MakeTempDir(t, tempDir)
 
 			taskName := "status_filter_task"
 
@@ -401,7 +385,7 @@ func TestE2E_FilterStatus(t *testing.T) {
 			contents := testutils.CheckFile(t, true, taskDir, "terraform.tfvars")
 
 			tc.checkTfvars(t, contents)
-			delete()
+			_ = cleanup()
 		})
 	}
 }
@@ -409,13 +393,13 @@ func TestE2E_FilterStatus(t *testing.T) {
 // TestE2EInspectMode tests running CTS in inspect mode and verifies that
 // the plan is outputted and no changes are actually applied.
 func TestE2EInspectMode(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "inspect")
-	delete := testutils.MakeTempDir(t, tempDir)
-	defer delete()
+	cleanup := testutils.MakeTempDir(t, tempDir)
+	defer cleanup()
 
 	config := baseConfig(tempDir).appendConsulBlock(srv).
 		appendTerraformBlock().appendWebTask()
@@ -433,4 +417,153 @@ func TestE2EInspectMode(t *testing.T) {
 	assert.Contains(t, buf.String(), "Plan: 2 to add, 0 to change, 0 to destroy.")
 	resourcePath := filepath.Join(tempDir, webTaskName, resourcesDir)
 	validateServices(t, false, []string{"web", "api"}, resourcePath)
+}
+
+// TestE2E_ConfigStreamlining_Deprecations runs the CTS binary in once mode to test a CTS config
+// with v0.5 config streamlining deprecations. This test confirms that the old
+// deprecated fields still work in v0.5.0 until removal.
+//
+// Deprecations to remove in v0.8.0
+//  - "source_input" => "module_input"
+//  - "source_includes_var" => "use_as_module_input"
+//
+// Deprecations to remove in a future major release after v0.8.0
+//  - "source" => "module"
+//  - "services" => "condition "services"" or "module_input "services""
+//  - "service" block => "condition "services"" or "module_input "services""
+func TestE2E_ConfigStreamlining_Deprecations(t *testing.T) {
+	setParallelism(t)
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+	srv.SetKVString(t, "key", "value")
+	srv.AddAddressableService(t, "web", testutil.HealthPassing, "1.2.3.4", 8080, []string{""})
+
+	removeAfterTaskName := "remove-after-0-8"
+	removeAfterConfig := fmt.Sprintf(`
+	task {
+		name = "%s"
+		description = "source, services, service deprecation"
+		source = "./test_modules/local_instances_file"
+		services = ["web"]
+	}
+	service {
+		name = "web"
+		cts_user_defined_meta {
+			my_meta_key = "my_meta_value"
+		}
+	}
+	`, removeAfterTaskName)
+
+	removeInTaskName := "remove-in-0-8"
+	removeInConfig := fmt.Sprintf(`
+	task {
+		name = "%s"
+		description = "source_includes_var & source_input deprecation"
+		module = "./test_modules/consul_kv_file"
+
+		condition "consul-kv" {
+			path = "key"
+			source_includes_var = true
+		}
+
+		source_input "services" {
+			names = ["api"]
+		}
+	}
+	`, removeInTaskName)
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "config_streamlining")
+
+	cts := ctsSetup(t, srv, tempDir, removeAfterConfig+removeInConfig)
+
+	// check resources for deprecations to be removed after 0.8
+	workingDir := filepath.Join(tempDir, removeAfterTaskName)
+	resourcesPath := filepath.Join(workingDir, resourcesDir)
+	validateServices(t, true, []string{"web"}, resourcesPath)
+	validateVariable(t, true, workingDir, "services", "meta_value")
+
+	// check services deprecation (to be removed after 0.8) handled correctly in Get API Condition
+	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", removeAfterTaskName)
+	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	var r oapigen.TaskResponse
+	err := json.NewDecoder(resp.Body).Decode(&r)
+	require.NoError(t, err)
+	require.NotNil(t, r.Task)
+	require.NotNil(t, r.Task.Condition.Services)
+	require.NotNil(t, r.Task.Condition.Services.Names)
+	assert.Contains(t, "[web]", strings.Join(*r.Task.Condition.Services.Names, ""))
+
+	// check resources for deprecations to be removed in 0.8
+	resourcesPath = filepath.Join(tempDir, removeInTaskName, resourcesDir)
+	validateModuleFile(t, true, true, resourcesPath, "key", "value")
+	validateServices(t, true, []string{"api"}, resourcesPath)
+}
+
+// testInvalidTaskConfig tests that task creation fails with the given task configuration.
+// Creation is tested both at CTS startup and with the CLI create command.
+func testInvalidTaskConfig(t *testing.T, testName, taskName, taskConfig, errMsg string) {
+	// Create tasks at start up
+	t.Run(testName, func(t *testing.T) {
+		setParallelism(t)
+		srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+			HTTPSRelPath: "../testutils",
+		})
+		defer srv.Stop()
+
+		tempDir := fmt.Sprintf("%s%s", tempDirPrefix, taskName)
+		cleanup := testutils.MakeTempDir(t, tempDir)
+		t.Cleanup(func() {
+			cleanup()
+		})
+
+		config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
+			appendString(taskConfig)
+		configPath := filepath.Join(tempDir, configFile)
+		config.write(t, configPath)
+
+		out, err := runSubcommand(t, "",
+			fmt.Sprintf("-config-file=%s", configPath), "--once")
+
+		require.Error(t, err)
+		assert.Contains(t, out, errMsg)
+	})
+
+	// Create tasks via the CLI
+	t.Run(testName+"_create_cli", func(t *testing.T) {
+		setParallelism(t)
+		srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+			HTTPSRelPath: "../testutils",
+		})
+		defer srv.Stop()
+
+		tempDir := fmt.Sprintf("%s%s_cli", tempDirPrefix, taskName)
+		cts := ctsSetup(t, srv, tempDir, dbTask())
+
+		var c hclConfig
+		c = c.appendString(taskConfig)
+		taskFilePath := filepath.Join(tempDir, "task.hcl")
+		c.write(t, taskFilePath)
+
+		subcmd := []string{"task", "create",
+			fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+			fmt.Sprintf("-task-file=%s", taskFilePath),
+		}
+		out, err := runSubcommand(t, "yes\n", subcmd...)
+		require.Error(t, err)
+		out = strings.ReplaceAll(out, "\n", " ") // word wrapping can cause new lines in error message
+		assert.Contains(t, out, errMsg)
+
+		// check that CTS binary is still running
+		_, err = cts.Status().Overall()
+		assert.NoError(t, err)
+
+		// check that existing tasks are still monitored
+		registerTime := time.Now()
+		services := []testutil.TestService{{ID: "api-1", Name: "api"}}
+		testutils.AddServices(t, srv, services)
+		api.WaitForEvent(t, cts, dbTaskName, registerTime, defaultWaitForEvent)
+	})
 }

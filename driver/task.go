@@ -3,6 +3,7 @@ package driver
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -59,14 +60,17 @@ type Task struct {
 	providers    TerraformProviderBlocks // task.providers config info
 	providerInfo map[string]interface{}  // driver.required_provider config info
 	services     []Service
-	source       string
+	module       string
 	variables    hcltmpl.Variables // loaded variables from varFiles
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
 	condition    config.ConditionConfig
-	sourceInput  config.ModuleInputConfig
+	moduleInputs config.ModuleInputConfigs
 	workingDir   string
 	logger       logging.Logger
+
+	// Enterprise
+	tfVersion string
 }
 
 type TaskConfig struct {
@@ -77,14 +81,17 @@ type TaskConfig struct {
 	Providers    TerraformProviderBlocks
 	ProviderInfo map[string]interface{}
 	Services     []Service
-	Source       string
+	Module       string
 	VarFiles     []string
 	Variables    map[string]string
 	Version      string
 	BufferPeriod *BufferPeriod
 	Condition    config.ConditionConfig
-	SourceInput  config.ModuleInputConfig
+	ModuleInputs config.ModuleInputConfigs
 	WorkingDir   string
+
+	// Enterprise
+	TFVersion string
 }
 
 func NewTask(conf TaskConfig) (*Task, error) {
@@ -122,14 +129,17 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		providers:    conf.Providers,
 		providerInfo: conf.ProviderInfo,
 		services:     conf.Services,
-		source:       conf.Source,
+		module:       conf.Module,
 		variables:    loadedVars,
 		version:      conf.Version,
 		bufferPeriod: conf.BufferPeriod,
 		condition:    conf.Condition,
-		sourceInput:  conf.SourceInput,
+		moduleInputs: conf.ModuleInputs,
 		workingDir:   conf.WorkingDir,
 		logger:       logging.Global().Named(logSystemName),
+
+		// Enterprise
+		tfVersion: conf.TFVersion,
 	}, nil
 }
 
@@ -151,11 +161,11 @@ func (t *Task) Condition() config.ConditionConfig {
 	return t.condition
 }
 
-// SourceInput returns the type of sourceInput for the task to run
-func (t *Task) SourceInput() config.ModuleInputConfig {
+// ModuleInputs returns the type of module input for the task to run
+func (t *Task) ModuleInputs() config.ModuleInputConfigs {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.sourceInput
+	return *t.moduleInputs.Copy()
 }
 
 // IsScheduled returns if the task is a scheduled task or not (a dynamic task)
@@ -255,11 +265,11 @@ func (t *Task) ServiceNames() []string {
 	return names
 }
 
-// Source returns the module source for the task
-func (t *Task) Source() string {
+// Module returns the task's module
+func (t *Task) Module() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.source
+	return t.module
 }
 
 // Variables returns a copy of the loaded input variables for a module
@@ -290,6 +300,14 @@ func (t *Task) WorkingDir() string {
 	return t.workingDir
 }
 
+// TFVersion returns the Terraform version to use when using the Terraform Cloud
+// driver. Enterprise.
+func (t *Task) TFVersion() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.tfVersion
+}
+
 func (s Service) Copy() Service {
 	// All other Service attributes are simple types, this sets the meta to a new
 	// copy of the map
@@ -303,21 +321,21 @@ func (s Service) Copy() Service {
 }
 
 // configureRootModuleInput sets task values for the module input.
-func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
+func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
 	input.Task = tftmpl.Task{
 		Description: t.description,
 		Name:        t.name,
-		Source:      t.source,
+		Module:      t.module,
 		Version:     t.version,
 	}
 
 	var templates []tftmpl.Template
 
 	// Create a ServicesTemplate for task.services list. task.services is
-	// deprecated in 0.5 and is replaced by condition / source_input "services"
+	// deprecated in 0.5 and is replaced by condition / module_input "services"
 	// which is handled further below.
 	if len(t.services) > 0 {
 		// gather services query parameters
@@ -334,8 +352,8 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 		template := &tftmpl.ServicesTemplate{
 			Names:    t.ServiceNames(),
 			Services: services,
-			// services list does not support SourceIncludesVar=false
-			SourceIncludesVar: true,
+			// services list must always render the variable
+			RenderVar: true,
 		}
 		templates = append(templates, template)
 
@@ -347,37 +365,37 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	switch v := t.condition.(type) {
 	case *config.CatalogServicesConditionConfig:
 		condition = &tftmpl.CatalogServicesTemplate{
-			Regexp:            *v.Regexp,
-			Datacenter:        *v.Datacenter,
-			Namespace:         *v.Namespace,
-			NodeMeta:          v.NodeMeta,
-			SourceIncludesVar: *v.UseAsModuleInput,
+			Regexp:     *v.Regexp,
+			Datacenter: *v.Datacenter,
+			Namespace:  *v.Namespace,
+			NodeMeta:   v.NodeMeta,
+			RenderVar:  *v.UseAsModuleInput,
 		}
 	case *config.ServicesConditionConfig:
 		if v.Regexp != nil {
 			condition = &tftmpl.ServicesRegexTemplate{
-				Regexp:            *v.Regexp,
-				Datacenter:        *v.Datacenter,
-				Namespace:         *v.Namespace,
-				Filter:            *v.Filter,
-				SourceIncludesVar: *v.UseAsModuleInput,
+				Regexp:     *v.Regexp,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				RenderVar:  *v.UseAsModuleInput,
 			}
 		} else {
 			condition = &tftmpl.ServicesTemplate{
-				Names:             v.Names,
-				Datacenter:        *v.Datacenter,
-				Namespace:         *v.Namespace,
-				Filter:            *v.Filter,
-				SourceIncludesVar: *v.UseAsModuleInput,
+				Names:      v.Names,
+				Datacenter: *v.Datacenter,
+				Namespace:  *v.Namespace,
+				Filter:     *v.Filter,
+				RenderVar:  *v.UseAsModuleInput,
 			}
 		}
 	case *config.ConsulKVConditionConfig:
 		condition = &tftmpl.ConsulKVTemplate{
-			Path:              *v.Path,
-			Datacenter:        *v.Datacenter,
-			Recurse:           *v.Recurse,
-			Namespace:         *v.Namespace,
-			SourceIncludesVar: *v.UseAsModuleInput,
+			Path:       *v.Path,
+			Datacenter: *v.Datacenter,
+			Recurse:    *v.Recurse,
+			Namespace:  *v.Namespace,
+			RenderVar:  *v.UseAsModuleInput,
 		}
 	default:
 		// no-op: condition block currently not required since services.list
@@ -390,45 +408,51 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 			fmt.Sprintf("%T", condition))
 	}
 
-	var sourceInput tftmpl.Template
-	switch v := t.sourceInput.(type) {
-	case *config.ServicesModuleInputConfig:
-		if v.Regexp != nil {
-			sourceInput = &tftmpl.ServicesRegexTemplate{
-				Regexp:     *v.Regexp,
-				Datacenter: *v.Datacenter,
-				Namespace:  *v.Namespace,
-				Filter:     *v.Filter,
-				// always include for source_input config
-				SourceIncludesVar: true,
+	tmplTypes := make([]string, len(t.moduleInputs))
+	moduleInputs := make([]tftmpl.Template, len(t.moduleInputs))
+	for ix, moduleInput := range t.moduleInputs {
+		switch v := moduleInput.(type) {
+		case *config.ServicesModuleInputConfig:
+			if v.Regexp != nil {
+				moduleInputs[ix] = &tftmpl.ServicesRegexTemplate{
+					Regexp:     *v.Regexp,
+					Datacenter: *v.Datacenter,
+					Namespace:  *v.Namespace,
+					Filter:     *v.Filter,
+					// always render var for module_input config
+					RenderVar: true,
+				}
+			} else {
+				moduleInputs[ix] = &tftmpl.ServicesTemplate{
+					Names:      v.Names,
+					Datacenter: *v.Datacenter,
+					Namespace:  *v.Namespace,
+					Filter:     *v.Filter,
+					// always render var for module_input config
+					RenderVar: true,
+				}
 			}
-		} else {
-			sourceInput = &tftmpl.ServicesTemplate{
-				Names:      v.Names,
+		case *config.ConsulKVModuleInputConfig:
+			moduleInputs[ix] = &tftmpl.ConsulKVTemplate{
+				Path:       *v.Path,
 				Datacenter: *v.Datacenter,
+				Recurse:    *v.Recurse,
 				Namespace:  *v.Namespace,
-				Filter:     *v.Filter,
-				// always include for source_input config
-				SourceIncludesVar: true,
+				// always render var for module_input config
+				RenderVar: true,
 			}
+		default:
+			return fmt.Errorf("task %q has unsupported type of module_input "+
+				" block configuration %T", t.name, v)
 		}
-	case *config.ConsulKVModuleInputConfig:
-		sourceInput = &tftmpl.ConsulKVTemplate{
-			Path:       *v.Path,
-			Datacenter: *v.Datacenter,
-			Recurse:    *v.Recurse,
-			Namespace:  *v.Namespace,
-			// always include for source_input config
-			SourceIncludesVar: true,
-		}
-	default:
-		// no-op: source_input block config not required
-	}
 
-	if sourceInput != nil {
-		templates = append(templates, sourceInput)
-		t.logger.Trace("source_input block template configured", "template_type",
-			fmt.Sprintf("%T", sourceInput))
+		// store the newly created template's type for logging
+		tmplTypes[ix] = fmt.Sprintf("%T", moduleInputs[ix])
+	}
+	if len(moduleInputs) > 0 {
+		templates = append(templates, moduleInputs...)
+		t.logger.Trace("module_input block(s) template configured",
+			"template_types", strings.Join(tmplTypes, ", "))
 	}
 
 	input.Templates = templates
@@ -443,6 +467,8 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) {
 	for k, v := range t.variables {
 		input.Variables[k] = v
 	}
+
+	return nil
 }
 
 // clientConfig configures a driver client for a task

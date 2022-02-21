@@ -35,7 +35,6 @@ func TestCondition_DecodeConfig(t *testing.T) {
 task {
 	name = "condition_task"
 	module = "..."
-	services = ["api"]
 	condition "catalog-services" {
 		regexp = ".*"
 		use_as_module_input = true
@@ -49,7 +48,7 @@ task {
 }`,
 		},
 		{
-			"no condition",
+			"no condition - deprecated",
 			false,
 			EmptyConditionConfig(),
 			"config.hcl",
@@ -101,7 +100,6 @@ task {
 task {
 	name = "condition_task"
 	module = "..."
-	services = ["api"]
 	condition "services" {
 		nonexistent_field = true
 	}
@@ -118,7 +116,6 @@ task {
 task {
 	name = "schedule_condition_task"
 	module = "..."
-	services = ["api"]
 	condition "schedule" {
 		cron = "* * * * * * *"
 	}
@@ -133,7 +130,6 @@ task {
 task {
 	name = "condition_task"
 	module = "..."
-	services = ["api"]
 	condition "catalog-services" {
 		nonexistent_field = true
 	}
@@ -148,7 +144,6 @@ task {
 task {
 	name = "condition_task"
 	module = "..."
-	services = ["api"]
 	condition "catalog-services" {
 	}
 	condition "catalog-services" {
@@ -174,7 +169,6 @@ task {
 task {
 	name = "condition_task"
 	module = "..."
-	services = ["api"]
 	condition "consul-kv" {
 		path = "key-path"
 		use_as_module_input = true
@@ -192,7 +186,6 @@ task {
 			`
 task {
 	name = "condition_task"
-	services = ["api"]
 	module = "..."
 	condition "nonexistent-condition" {
 	}

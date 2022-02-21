@@ -35,6 +35,14 @@ const (
 	defaultWaitForEvent = 8 * time.Second
 )
 
+// TestCompatibility_Compile confirms that the compatibility test(s) are
+// compilable. Compatibility tests are only run weekly. This test is intended
+// to run with each change (vs. weekly) to do a basic check that the tests are
+// still in a compilable state.
+func TestCompatibility_Compile(t *testing.T) {
+	// no-op
+}
+
 func TestCompatibility_Consul(t *testing.T) {
 	// Tested only OSS GA releases for the highest patch version given a
 	// major minor version. v1.4.5 starts losing compatibility, details in
@@ -109,7 +117,9 @@ func TestCompatibility_Consul(t *testing.T) {
 					tc.testCompatibility(t, testTempDir, port)
 				})
 			}
-			cleanup()
+
+			err = cleanup()
+			require.NoError(t, err)
 		})
 	}
 }
@@ -248,7 +258,7 @@ func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
 	registerService(t, serviceInstance, port)
 
 	// 2. modify kind
-	serviceInstance.Kind = capi.ServiceKind("kind_update")
+	serviceInstance.Kind = "kind_update"
 	registerService(t, serviceInstance, port)
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "kind_update")
@@ -303,15 +313,8 @@ func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
 // Not tested: Namespace querying (Enterprise), Datacenter querying (manually
 // tested since it requires setting up at least 2 datacenters)
 func testTagQueryCompatibility(t *testing.T, tempDir string, port int) {
-	redisService := `service {
-  name = "redis"
-  description = "custom redis service config"
-  datacenter = "dc1"
-  filter = "\"v1\" in Service.Tags"
-}
-`
-	config := baseConfig(tempDir, port) + redisService +
-		basicTask("redis_task", "redis", "db")
+	config := baseConfig(tempDir, port) + basicTask("redis_task", "redis",
+		"db", `filter = "\"v1\" in Service.Tags"`)
 	configPath := filepath.Join(tempDir, configFile)
 	testutils.WriteFile(t, configPath, config)
 
@@ -557,7 +560,9 @@ func nullTask() string {
 task {
 	name = "%s"
 	description = "null task for api & db"
-	services = ["api", "db"]
+	condition "services" {
+		names = ["api", "db"]
+	}
 	providers = ["null"]
 	module = "../test_modules/null_resource"
 }
@@ -565,14 +570,22 @@ task {
 }
 
 // basicTask returns config for a task with basic task module
-func basicTask(taskName, service1, service2 string) string {
+func basicTask(taskName, service1, service2 string, conditionOpts ...string) string {
+	var opts string
+	if len(conditionOpts) > 0 {
+		opts = strings.Join(conditionOpts, "\n")
+	}
+
 	return fmt.Sprintf(`
 task {
 	name = "%s"
 	description = "basic task"
-	services = ["%s", "%s"]
+	condition "services" {
+		names = ["%s", "%s"]
+		%s
+	}
 	providers = ["local"]
 	module = "../test_modules/local_instances_file"
 }
-`, taskName, service1, service2)
+`, taskName, service1, service2, opts)
 }

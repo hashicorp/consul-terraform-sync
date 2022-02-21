@@ -67,14 +67,14 @@ type API struct {
 	tls     *config.CTSTLSConfig
 }
 
-type APIConfig struct {
+type Config struct {
 	Port       int
 	TLS        *config.CTSTLSConfig
 	Controller Server
 }
 
 // NewAPI create a new API object
-func NewAPI(conf APIConfig) (*API, error) {
+func NewAPI(conf Config) (*API, error) {
 	logger := logging.Global().Named(logSystemName)
 	api := &API{
 		ctrl:    conf.Controller,
@@ -137,12 +137,11 @@ func NewAPI(conf APIConfig) (*API, error) {
 	}
 
 	api.srv = &http.Server{
-		Addr:         fmt.Sprintf(":%d", api.port),
-		WriteTimeout: time.Second * 15,
-		ReadTimeout:  time.Second * 15,
-		IdleTimeout:  time.Second * 60,
-		Handler:      r,
-		TLSConfig:    t,
+		Addr:        fmt.Sprintf(":%d", api.port),
+		ReadTimeout: time.Second * 15,
+		IdleTimeout: time.Second * 60,
+		Handler:     r,
+		TLSConfig:   t,
 		ErrorLog: logger.StandardLogger(&hclog.StandardLoggerOptions{
 			InferLevels: false,
 			ForceLevel:  hclog.Warn,

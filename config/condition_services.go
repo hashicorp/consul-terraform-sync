@@ -86,15 +86,11 @@ func (c *ServicesConditionConfig) Finalize() {
 
 	logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
 	if c.DeprecatedSourceIncludesVar != nil {
-		logger.Warn("Services condition block's 'source_includes_var' " +
-			"field was marked for deprecation in v0.5.0. Please update your " +
-			"configuration to use the 'use_as_module_input' field instead")
+		logger.Warn(fmt.Sprintf(sourceIncludesVarLogMsg, servicesType, servicesType))
 
 		if c.UseAsModuleInput != nil {
-			logger.Warn("Services condition block is configured with "+
-				"both 'source_includes_var' and 'use_as_module_input' field. "+
-				"Defaulting to 'use_as_module_input' value",
-				"use_as_module_input", c.UseAsModuleInput)
+			logger.Warn(fmt.Sprintf(bothConditionInputConfigLogMsg, servicesType),
+				"use_as_module_input", *c.UseAsModuleInput)
 		} else {
 			// Merge SourceIncludesVar with UseAsModuleInput. Use UseAsModuleInput onwards
 			c.UseAsModuleInput = c.DeprecatedSourceIncludesVar

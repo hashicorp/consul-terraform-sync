@@ -5,19 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
-	"github.com/hashicorp/consul-terraform-sync/config"
 )
 
 // TaskLifecycleClient defines a client for task lifecycle requests
 // Currently non task lifecycle requests use the client in api/client.go, but eventually all endpoint
 // may use this new client. In that case TaskLifecycleClient should be renamed
 type TaskLifecycleClient struct {
-	port   int
-	scheme string
-	addr   string
+	url *url.URL
 	*oapigen.Client
 }
 
@@ -26,39 +25,23 @@ type TaskLifecycleClient struct {
 // NewTaskLifecycleClient returns a client to make api requests
 func NewTaskLifecycleClient(c *ClientConfig, httpClient httpClient) (*TaskLifecycleClient, error) {
 	if httpClient == nil {
-		tlsConfig, err := setupTLSConfig(c)
+		h, err := newHTTPClient(&c.TLSConfig)
 		if err != nil {
 			return nil, err
 		}
-		httpClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-			},
-		}
-		httpClient = NewTaskLifecycleHTTPClient(httpClient)
+
+		httpClient = NewTaskLifecycleHTTPClient(h)
 	}
 
-	// Determine the scheme and address without scheme based on the address passed in
-	ac, err := parseAddress(c.Addr)
+	u, err := parseURL(c.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	gc := &TaskLifecycleClient{
-		port:   c.Port,
-		scheme: ac.scheme,
-		addr:   ac.address,
-	}
-
-	// If port is set, assume using old arguments and append port to localhost
-	// assume http scheme
-	server := gc.FullAddress()
-	if c.Port != config.DefaultPort {
-		server = fmt.Sprintf("localhost:%d", c.Port)
-	}
+	gc := &TaskLifecycleClient{url: u}
 
 	// Create the new underlying client based on generated code
-	oc, err := oapigen.NewClient(server, oapigen.WithHTTPClient(httpClient))
+	oc, err := oapigen.NewClient(gc.url.String(), oapigen.WithHTTPClient(httpClient))
 	if err != nil {
 		return nil, err
 	}
@@ -68,19 +51,9 @@ func NewTaskLifecycleClient(c *ClientConfig, httpClient httpClient) (*TaskLifecy
 	return gc, nil
 }
 
-// Port returns the port being used by the client
-func (c *TaskLifecycleClient) Port() int {
-	return c.port
-}
-
-// FullAddress returns the client address including the scheme. eg. http://localhost:8558
-func (c *TaskLifecycleClient) FullAddress() string {
-	return fmt.Sprintf("%s://%s", c.scheme, c.addr)
-}
-
 // Scheme returns the scheme being used by the client
 func (c *TaskLifecycleClient) Scheme() string {
-	return fmt.Sprintf(c.scheme)
+	return c.url.Scheme
 }
 
 // CreateTask takes a task request and run option and sends this information to the client. It then returns
@@ -109,7 +82,7 @@ func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&taskResp)
 	if err != nil {
-		err = fmt.Errorf("invalid response for task %s, %w", req.Name, err)
+		err = fmt.Errorf("invalid response for task %s, %w", req.Task.Name, err)
 
 		return TaskResponse{}, err
 	}
@@ -146,18 +119,29 @@ func (d *TaskLifecycleHTTPClient) Do(req *http.Request) (*http.Response, error) 
 		checkStatusCodeCategory(ServerErrorResponseCategory, resp.StatusCode) {
 		defer resp.Body.Close()
 
-		var errResp ErrorResponse
-		decoder := json.NewDecoder(resp.Body)
-		if err = decoder.Decode(&errResp); err != nil {
-			return nil, err
+		// Nominal scenario is an error will be application/json type, if not application/json assume that the error
+		// is plaintext
+		var errMsg string
+		if resp.Header.Get("Content-Type") == "application/json" {
+			var errResp oapigen.ErrorResponse
+			decoder := json.NewDecoder(resp.Body)
+			if err = decoder.Decode(&errResp); err != nil {
+				return nil, err
+			}
+			errMsg = fmt.Sprintf("%s, see logs for more details (Request ID: %s)", errResp.Error.Message, errResp.RequestId)
+		} else {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			errMsg = string(b)
 		}
 
-		if msg, ok := errResp.ErrorMessage(); ok && msg != "" {
-			return nil, fmt.Errorf("request returned %d status code with error: %s",
-				resp.StatusCode, msg)
+		if errMsg == "" {
+			return nil, errors.New(resp.Status)
+		} else {
+			return nil, fmt.Errorf("%s: %s", resp.Status, errMsg)
 		}
-
-		return nil, fmt.Errorf("request returned %d status code", resp.StatusCode)
 	}
 
 	return resp, nil

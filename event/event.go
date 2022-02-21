@@ -24,7 +24,12 @@ type Event struct {
 	EndTime    time.Time `json:"end_time"`
 	TaskName   string    `json:"task_name"`
 	EventError *Error    `json:"error"`
-	Config     *Config   `json:"config"`
+
+	// Config is deprecated in v0.5. This is configuration details about the
+	// task rather than status information. Users should switch to using the
+	// Get Task API to request the task's config information.
+	//  - Config should be removed in 0.8
+	Config *Config `json:"config"`
 }
 
 // Error captures an event's error information
@@ -33,7 +38,8 @@ type Error struct {
 	Message string `json:"message"`
 }
 
-// Config provides details on an event's task configuration
+// Config provides details on an event's task configuration. It is deprecated
+// in v0.5 and should be removed in 0.8
 type Config struct {
 	Providers []string `json:"providers"`
 	Services  []string `json:"services"`
@@ -50,6 +56,7 @@ func NewEvent(taskName string, config *Config) (*Event, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Event{
 		ID:       uuid,
 		TaskName: taskName,
@@ -88,6 +95,23 @@ func (e *Event) End(err error) {
 }
 
 // GoString defines the printable version of this struct.
+func (c *Config) GoString() string {
+	if c == nil {
+		return "(*Config)(nil)"
+	}
+
+	return fmt.Sprintf("&Config{"+
+		"Providers:%s, "+
+		"Services:%s, "+
+		"Source:%s"+
+		"}",
+		c.Providers,
+		c.Services,
+		c.Source,
+	)
+}
+
+// GoString defines the printable version of this struct.
 func (e *Event) GoString() string {
 	if e == nil {
 		return "(*Event)(nil)"
@@ -108,6 +132,6 @@ func (e *Event) GoString() string {
 		e.StartTime,
 		e.EndTime,
 		e.EventError,
-		e.Config,
+		e.Config.GoString(),
 	)
 }

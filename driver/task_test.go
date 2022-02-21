@@ -160,7 +160,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 							Filter:     "filter",
 						},
 					},
-					SourceIncludesVar: true,
+					RenderVar: true,
 				},
 			},
 		},
@@ -179,11 +179,11 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 			},
 			expectedTemplates: []tftmpl.Template{
 				&tftmpl.ServicesRegexTemplate{
-					Regexp:            "^web.*",
-					Datacenter:        "dc1",
-					Namespace:         "ns1",
-					Filter:            "filter",
-					SourceIncludesVar: false,
+					Regexp:     "^web.*",
+					Datacenter: "dc1",
+					Namespace:  "ns1",
+					Filter:     "filter",
+					RenderVar:  false,
 				},
 			},
 		},
@@ -202,55 +202,97 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 			},
 			expectedTemplates: []tftmpl.Template{
 				&tftmpl.ServicesTemplate{
-					Names:             []string{"api"},
-					Datacenter:        "dc1",
-					Namespace:         "ns1",
-					Filter:            "filter",
-					SourceIncludesVar: false,
+					Names:      []string{"api"},
+					Datacenter: "dc1",
+					Namespace:  "ns1",
+					Filter:     "filter",
+					RenderVar:  false,
 				},
 			},
 		},
 		{
 			name: "templates: services module_input regex",
 			task: Task{
-				sourceInput: &config.ServicesModuleInputConfig{
-					ServicesMonitorConfig: config.ServicesMonitorConfig{
-						Regexp:     config.String("^web.*"),
-						Datacenter: config.String("dc1"),
-						Namespace:  config.String("ns1"),
-						Filter:     config.String("filter"),
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp:     config.String("^web.*"),
+							Datacenter: config.String("dc1"),
+							Namespace:  config.String("ns1"),
+							Filter:     config.String("filter"),
+						},
 					},
 				},
 			},
 			expectedTemplates: []tftmpl.Template{
 				&tftmpl.ServicesRegexTemplate{
-					Regexp:            "^web.*",
-					Datacenter:        "dc1",
-					Namespace:         "ns1",
-					Filter:            "filter",
-					SourceIncludesVar: true,
+					Regexp:     "^web.*",
+					Datacenter: "dc1",
+					Namespace:  "ns1",
+					Filter:     "filter",
+					RenderVar:  true,
 				},
 			},
 		},
 		{
 			name: "templates: services module_input names",
 			task: Task{
-				sourceInput: &config.ServicesModuleInputConfig{
-					ServicesMonitorConfig: config.ServicesMonitorConfig{
-						Names:      []string{"api"},
-						Datacenter: config.String("dc1"),
-						Namespace:  config.String("ns1"),
-						Filter:     config.String("filter"),
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names:      []string{"api"},
+							Datacenter: config.String("dc1"),
+							Namespace:  config.String("ns1"),
+							Filter:     config.String("filter")},
 					},
 				},
 			},
 			expectedTemplates: []tftmpl.Template{
 				&tftmpl.ServicesTemplate{
-					Names:             []string{"api"},
-					Datacenter:        "dc1",
-					Namespace:         "ns1",
-					Filter:            "filter",
-					SourceIncludesVar: true,
+					Names:      []string{"api"},
+					Datacenter: "dc1",
+					Namespace:  "ns1",
+					Filter:     "filter",
+					RenderVar:  true,
+				},
+			},
+		},
+		{
+			name: "templates: multiple module_inputs",
+			task: Task{
+				moduleInputs: config.ModuleInputConfigs{
+					&config.ServicesModuleInputConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Regexp:     config.String(".*"),
+							Datacenter: config.String("dc1"),
+							Namespace:  config.String("ns1"),
+							Filter:     config.String("filter"),
+						},
+					},
+					&config.ConsulKVModuleInputConfig{
+						ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
+							Path:       config.String("path"),
+							Recurse:    config.Bool(true),
+							Datacenter: config.String("dc1"),
+							Namespace:  config.String("ns1"),
+						},
+					},
+				},
+			},
+			expectedTemplates: []tftmpl.Template{
+				&tftmpl.ServicesRegexTemplate{
+					Regexp:     ".*",
+					Datacenter: "dc1",
+					Namespace:  "ns1",
+					Filter:     "filter",
+					RenderVar:  true,
+				},
+				&tftmpl.ConsulKVTemplate{
+					Path:       "path",
+					Recurse:    true,
+					Datacenter: "dc1",
+					Namespace:  "ns1",
+					RenderVar:  true,
 				},
 			},
 		},
@@ -261,7 +303,8 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 			tc.task.logger = logging.NewNullLogger()
 
 			input := &tftmpl.RootModuleInputData{}
-			tc.task.configureRootModuleInput(input)
+			err := tc.task.configureRootModuleInput(input)
+			assert.NoError(t, err)
 
 			if len(tc.expectedTemplates) > 0 {
 				assert.Equal(t, tc.expectedTemplates, input.Templates)

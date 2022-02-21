@@ -13,12 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTaskDelete_DeleteTaskByName(t *testing.T) {
+func TestTaskLifeCycleHandler_DeleteTaskByName(t *testing.T) {
 	t.Parallel()
 	taskName := "task"
 	cases := []struct {
 		name       string
-		mock       func(*mocks.Server)
+		mockServer func(*mocks.Server)
 		statusCode int
 	}{
 		{
@@ -27,7 +27,7 @@ func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskDelete", mock.Anything, taskName).Return(nil)
 			},
-			http.StatusOK,
+			http.StatusAccepted,
 		},
 		{
 			"task_not_found",
@@ -37,20 +37,20 @@ func TestTaskDelete_DeleteTaskByName(t *testing.T) {
 			http.StatusNotFound,
 		},
 		{
-			"task_is_running",
+			"task_errored",
 			func(ctrl *mocks.Server) {
-				err := fmt.Errorf("task '%s' is currently running and cannot be deleted at this time", taskName)
+				err := fmt.Errorf("task deletion error")
 				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskDelete", mock.Anything, taskName).Return(err)
 			},
-			http.StatusConflict,
+			http.StatusInternalServerError,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := new(mocks.Server)
-			tc.mock(ctrl)
+			tc.mockServer(ctrl)
 			handler := NewTaskLifeCycleHandler(ctrl)
 
 			path := fmt.Sprintf("/v1/tasks/%s", taskName)

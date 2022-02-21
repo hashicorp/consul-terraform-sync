@@ -77,30 +77,42 @@ func TestServe(t *testing.T) {
 					On("Events", mock.Anything, taskName).Return(map[string][]event.Event{}, nil)
 			},
 			http.StatusOK,
-			`{"task_b":{"task_name":"task_b","status":"unknown","enabled":true,"providers":null,"services":null,"events_url":""}}
+			`{"task_b":{"task_name":"task_b","status":"unknown","enabled":true,"events_url":"","providers":null,"services":null}}
 `,
 		}, {
 			"create task",
 			"tasks",
 			http.MethodPost,
 			`{
-	"name": "task_b",
-	"module": "module",
-	"services": ["api"],
-	"enabled": true
+	"task": {
+		"name": "task_b",
+		"module": "module",
+        "condition": {
+            "services": {
+                "names": [
+                    "api"
+                ]
+            }
+        },
+		"enabled": true
+	}
 }`,
 			func(ctrl *mocks.Server) {
 				taskConf := config.TaskConfig{
-					Name:     config.String("task_b"),
-					Enabled:  config.Bool(true),
-					Module:   config.String("module"),
-					Services: []string{"api"},
+					Name:    config.String("task_b"),
+					Enabled: config.Bool(true),
+					Module:  config.String("module"),
+					Condition: &config.ServicesConditionConfig{
+						ServicesMonitorConfig: config.ServicesMonitorConfig{
+							Names: []string{"api"},
+						},
+					},
 				}
 				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
 				ctrl.On("TaskCreate", mock.Anything, taskConf).Return(taskConf, nil)
 			},
 			http.StatusCreated,
-			`{"task":{"enabled":true,"module":"module","name":"task_b","services":["api"]}}
+			`{"task":{"condition":{"services":{"cts_user_defined_meta":{},"names":["api"]}},"enabled":true,"module":"module","name":"task_b"}}
 `,
 		}, {
 			"delete task",
@@ -111,7 +123,7 @@ func TestServe(t *testing.T) {
 				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskDelete", mock.Anything, "task_b").Return(nil)
 			},
-			http.StatusOK,
+			http.StatusAccepted,
 			"{}\n",
 		}, {
 			"update task (patch)",
@@ -133,13 +145,13 @@ func TestServe(t *testing.T) {
 
 			ctrl := new(mocks.Server)
 			tc.mock(ctrl)
-			api, err := NewAPI(APIConfig{
+			api, err := NewAPI(Config{
 				Controller: ctrl,
 				Port:       port,
 			})
 			require.NoError(t, err)
 			go api.Serve(ctx)
-			time.Sleep(time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 
 			u := fmt.Sprintf("http://localhost:%d/%s/%s",
 				port, defaultAPIVersion, tc.path)
@@ -160,7 +172,7 @@ func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	port := testutils.FreePort(t)
-	api, err := NewAPI(APIConfig{Port: port})
+	api, err := NewAPI(Config{Port: port})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -247,7 +259,7 @@ func TestServeWithTLS(t *testing.T) {
 				Cert:    config.String(tc.serverCert),
 				Key:     config.String(tc.serverKey),
 			}
-			api, err := NewAPI(APIConfig{
+			api, err := NewAPI(Config{
 				Controller: ctrl,
 				Port:       port,
 				TLS:        tlsConfig,
@@ -344,7 +356,7 @@ func TestServeWithMutualTLS(t *testing.T) {
 	ctrl := new(mocks.Server)
 	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
 		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
-	api, err := NewAPI(APIConfig{
+	api, err := NewAPI(Config{
 		Controller: ctrl,
 		Port:       port,
 		TLS:        tlsConfig,
@@ -358,9 +370,11 @@ func TestServeWithMutualTLS(t *testing.T) {
 			// Set up a client that trusts the server's self-signed certificate and
 			// uses the client certificate of the test case
 			clientTLS := &tls.Config{}
-			rootcerts.ConfigureTLS(clientTLS, &rootcerts.Config{
+			err = rootcerts.ConfigureTLS(clientTLS, &rootcerts.Config{
 				CAFile: serverCert,
 			})
+			require.NoError(t, err)
+
 			if tc.clientCert != "" {
 				clientCert, err := tls.LoadX509KeyPair(tc.clientCert, tc.clientKey)
 				require.NoError(t, err)
@@ -472,7 +486,7 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 	ctrl := new(mocks.Server)
 	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
 		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
-	api, err := NewAPI(APIConfig{
+	api, err := NewAPI(Config{
 		Controller: ctrl,
 		Port:       port,
 		TLS:        tlsConfig,
@@ -486,9 +500,11 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 			// Set up a client that trusts the server's self-signed certificate and
 			// uses the client certificate of the test case
 			clientTLS := &tls.Config{}
-			rootcerts.ConfigureTLS(clientTLS, &rootcerts.Config{
+			err = rootcerts.ConfigureTLS(clientTLS, &rootcerts.Config{
 				CAFile: serverCert,
 			})
+			require.NoError(t, err)
+
 			if tc.clientCert != "" {
 				clientCert, err := tls.LoadX509KeyPair(tc.clientCert, tc.clientKey)
 				require.NoError(t, err)

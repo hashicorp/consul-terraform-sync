@@ -63,9 +63,11 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   /v1/tasks/{name}:
     delete:
-      summary: Deletes a task by name
+      summary: Marks a task for deletion
       operationId: deleteTaskByName
-      description: Deletes a single task based on the name provided
+      description: |
+        Marks a single task for deletion based on the name provided. The task will be
+        deleted once it is not running.
       tags:
         - tasks
       parameters:
@@ -77,12 +79,41 @@ paths:
             type: string
             example: "taskA"
       responses:
-        '204':
-          description: Task deleted
+        '202':
+          description: Task marked for deletion
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaskDeleteResponse'
+              example:
+                request_id: "bb63cd70-8f45-4f42-b27b-bc2a6f4931e6"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: Gets a task by name
+      operationId: getTaskByName
+      description: Retrieves information for a single task based on the name provided
+      tags:
+        - tasks
+      parameters:
+        - name: name
+          in: path
+          description: Name of task to retrieve
+          required: true
+          schema:
+            type: string
+            example: "taskA"
+      responses:
+        '200':
+          description: Task retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
         default:
           description: Unexpected error
           content:
@@ -93,10 +124,17 @@ paths:
 components:
   schemas:
     TaskRequest:
-      $ref: '#/components/schemas/Task'
+      type: object
+      additionalProperties: false
+      properties:
+        task:
+          $ref: '#/components/schemas/Task'
+      required:
+        - task
 
     TaskResponse:
       type: object
+      additionalProperties: false
       properties:
         task:
           $ref: '#/components/schemas/Task'
@@ -104,14 +142,19 @@ components:
           $ref: '#/components/schemas/RequestID'
         run:
           $ref: '#/components/schemas/Run'
+        error:
+          $ref: '#/components/schemas/Error'
       required:
         - request_id
 
     TaskDeleteResponse:
       type: object
+      additionalProperties: false
       properties:
         request_id:
           $ref: '#/components/schemas/RequestID'
+        error:
+          $ref: '#/components/schemas/Error'
       required:
         - request_id
 
@@ -127,33 +170,35 @@ components:
 
     Task:
       type: object
+      additionalProperties: false
       properties:
         description:
+          description: The human readable text to describe the task.
           type: string
           example: "an example task"
         enabled:
+          description: Whether the task is enabled or disabled from executing.
           type: boolean
           example: true
           default: true
         name:
+          description: The unique name of the task.
           type: string
           example: "taskA"
         providers:
+          description: The list of provider names that the task's module uses.
           type: array
           items:
             type: string
           example: []
-        services:
-          type: array
-          items:
-            type: string
-            example: ["web", "api"]
         module:
+          description: The location of the Terraform module.
           type: string
           example: "org/example/module"
         variables:
           $ref: '#/components/schemas/VariableMap'
         version:
+          description: The version of the configured module that the task uses. Defaults to the latest version if not set.
           type: string
           example: "1.0.0"
         buffer_period:
@@ -162,39 +207,49 @@ components:
           $ref: '#/components/schemas/Condition'
         module_input:
           $ref: '#/components/schemas/ModuleInput'
+        terraform_version:
+           type: string
+           description: Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest version if not set.
+           example: "1.0.0"
       required:
         - name
         - module
+        - condition
       example:
         condition:
-          catalog-services:
-            regexp: ".*"
-        description: ''
+          services:
+            names: ["web", "api"]
+        description: "A basic task"
         enabled: true
         name: taskC
-        providers: [ ]
-        services:
-          - web
-          - api
+        providers: []
         module: org/example/module
-        variable_files: [ ]
+        variables:
+          var1: example.field
         version: 1.0.0
 
     BufferPeriod:
       type: object
+      additionalProperties: false
+      description: The buffer period for triggering task execution.
       properties:
         enabled:
+          description: Whether the buffer period is enabled or disabled. Defaults to the global buffer period configured for CTS.
           type: boolean
           example: true
         max:
+          description: The maximum period of time to wait after changes are detected before triggering the task. Defaults to the global buffer period configured for CTS.
           type: string
           example: "5s"
         min:
+          description: 	The minimum period of time to wait after changes are detected before triggering the task. Defaults to the global buffer period configured for CTS.
           type: string
           example: "20s"
 
     Condition:
       type: object
+      additionalProperties: false
+      description: The condition on which to trigger the task to execute. If the task has the deprecated services field configured as a module input, it is represented here as condition.services.
       properties:
         catalog_services:
           $ref: '#/components/schemas/CatalogServicesCondition'
@@ -207,6 +262,8 @@ components:
 
     ModuleInput:
       type: object
+      additionalProperties: false
+      description: The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.
       properties:
         services:
           $ref: '#/components/schemas/ServicesModuleInput'
@@ -214,12 +271,14 @@ components:
           $ref: '#/components/schemas/ConsulKVModuleInput'
 
     VariableMap:
+      description: The map of variables that are provided to the task's module.
       type: object
       additionalProperties:
         type: string
 
     ServicesCondition:
       type: object
+      additionalProperties: false
       properties:
         regexp:
           type: string
@@ -228,13 +287,27 @@ components:
           type: array
           items:
             type: string
-            example: ["web", "api"]
+          example: ["web", "api"]
+        filter:
+          type: string
+          example: '\"test\" in Service.Tags'
+        datacenter:
+          type: string
+          example: "dc1"
+        namespace:
+          type: string
+          example: "default"
+        cts_user_defined_meta:
+          type: object
+          additionalProperties:
+            type: string
         use_as_module_input:
           type: boolean
           default: true
           example: false
     CatalogServicesCondition:
       type: object
+      additionalProperties: false
       properties:
         datacenter:
           type: string
@@ -259,6 +332,7 @@ components:
         - regexp
     ConsulKVCondition:
       type: object
+      additionalProperties: false
       properties:
         path:
           type: string
@@ -281,6 +355,7 @@ components:
         - path
     ScheduleCondition:
       type: object
+      additionalProperties: false
       properties:
         cron:
           type: string
@@ -290,6 +365,7 @@ components:
 
     ServicesModuleInput:
       type: object
+      additionalProperties: false
       properties:
         regexp:
           type: string
@@ -298,9 +374,23 @@ components:
           type: array
           items:
             type: string
-            example: ["web", "api"]
+          example: ["web", "api"]
+        filter:
+          type: string
+          example: '\"test\" in Service.Tags'
+        datacenter:
+          type: string
+          example: "dc1"
+        namespace:
+          type: string
+          example: "default"
+        cts_user_defined_meta:
+          type: object
+          additionalProperties:
+            type: string
     ConsulKVModuleInput:
       type: object
+      additionalProperties: false
       properties:
         path:
           type: string
@@ -320,6 +410,7 @@ components:
 
     Run:
       type: object
+      additionalProperties: false
       properties:
         plan:
           type: string
@@ -339,6 +430,7 @@ components:
 
     Error:
       type: object
+      additionalProperties: false
       properties:
         message:
           type: string

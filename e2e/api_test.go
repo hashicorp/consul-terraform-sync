@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,31 +25,37 @@ import (
 
 const (
 	createTestTaskTemplate = `{
-	   "description": "Writes the service name, id, and IP address to a file",
-	   "name": "%s",
-	   "providers": [
-	       "local"
-	   ],
-	   "services": [
-	       "%s"
-	   ],
-	   "module": "mkam/instance-files/local"
-	}`
+	"task": {
+		"description": "Writes the service name, id, and IP address to a file",
+		"name": "%s",
+		"providers": [
+			"local"
+		],
+        "condition": {
+            "services": {
+                "names": [
+                    "%s"
+                ]
+            }
+        },
+		"module": "mkam/instance-files/local"
+	}
+}`
 )
 
-// TestE2E_StatusEndpoints tests all of the CTS status endpoints and query
+// TestE2E_StatusEndpoints tests all CTS status endpoints and query
 // parameters. This runs a Consul server and the CTS binary in daemon mode.
 //	GET	/v1/status/tasks
 // 	GET	/v1/status/tasks/:task_name
 //	GET	/v1/status
 func TestE2E_StatusEndpoints(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "status_endpoints")
-	delete := testutils.MakeTempDir(t, tempDir)
+	cleanup := testutils.MakeTempDir(t, tempDir)
 	// no defer to delete directory: only delete at end of test if no errors
 
 	configPath := filepath.Join(tempDir, configFile)
@@ -82,28 +89,28 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			"status/tasks",
 			http.StatusOK,
 			map[string]api.TaskStatus{
-				fakeSuccessTaskName: api.TaskStatus{
+				fakeSuccessTaskName: {
 					TaskName:  fakeSuccessTaskName,
 					Status:    api.StatusSuccessful,
 					Enabled:   true,
 					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
+					Services:  []string{},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
 				},
-				fakeFailureTaskName: api.TaskStatus{
+				fakeFailureTaskName: {
 					TaskName:  fakeFailureTaskName,
 					Status:    api.StatusErrored,
 					Enabled:   true,
 					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
+					Services:  []string{},
 					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
 				},
-				disabledTaskName: api.TaskStatus{
+				disabledTaskName: {
 					TaskName:  disabledTaskName,
 					Status:    api.StatusUnknown,
 					Enabled:   false,
 					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
+					Services:  []string{},
 					EventsURL: "",
 				},
 			},
@@ -113,12 +120,12 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 			"status/tasks/" + fakeSuccessTaskName,
 			http.StatusOK,
 			map[string]api.TaskStatus{
-				fakeSuccessTaskName: api.TaskStatus{
+				fakeSuccessTaskName: {
 					TaskName:  fakeSuccessTaskName,
 					Status:    api.StatusSuccessful,
 					Enabled:   true,
 					Providers: []string{"fake-sync"},
-					Services:  []string{"api"},
+					Services:  []string{},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
 				},
 			},
@@ -248,17 +255,17 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	}
 
 	stopCTS(t)
-	delete()
+	_ = cleanup()
 }
 
 // TestE2E_TaskEndpoints_UpdateEnableDisable tests the tasks endpoints. This
 // runs a Consul server and the CTS binary in daemon mode.
 //	PATCH	/v1/tasks/:task_name
 func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test enabling and disabling a task
-	// 1. Start with disabled task. Confirm task not initialized, resources not
-	//    created
+	// 1. Start with disabled task. Confirm task is initialized, but
+	//    not run (resources not created)
 	// 2. API to inspect enabling task. Confirm plan looks good, resources not
 	//    created, and task not actually enabled.
 	// 3. API to actually enable task. Confirm resources are created
@@ -270,14 +277,16 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "disabled_task")
 
-	cts := ctsSetup(t, srv, tempDir, disabledTaskConfig(tempDir))
+	cts := ctsSetup(t, srv, tempDir, disabledTaskConfig())
 
-	// Confirm that terraform files were not generated for a disabled task
-	files := testutils.CheckDir(t, true, fmt.Sprintf("%s/%s", tempDir, "disabled_task"))
-	require.Equal(t, len(files), 0)
+	// Confirm that terraform files were generated for a disabled task
+	taskPath := filepath.Join(tempDir, disabledTaskName)
+	files := testutils.CheckDir(t, true, taskPath)
+	require.Greater(t, len(files), 0)
+	testutils.CheckFile(t, true, taskPath, "terraform.tfvars.tmpl")
 
 	// Confirm that resources were not created
-	resourcesPath := filepath.Join(tempDir, disabledTaskName, resourcesDir)
+	resourcesPath := filepath.Join(taskPath, resourcesDir)
 	testutils.CheckDir(t, false, resourcesPath)
 
 	// Update Task API: enable task with inspect run option
@@ -342,7 +351,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 // runs a Consul server and the CTS binary in daemon mode.
 //	DELETE/v1/tasks/:task_name
 func TestE2E_TaskEndpoints_Delete(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test deleting a task
 	// 1. Start with a task
 	// 2. Delete the task
@@ -362,14 +371,10 @@ func TestE2E_TaskEndpoints_Delete(t *testing.T) {
 	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", taskName)
 	resp := testutils.RequestHTTP(t, http.MethodDelete, u, "")
 	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, http.StatusAccepted, resp.StatusCode)
 
 	// Check that the task no longer exists
-	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s",
-		cts.Port(), "v1", taskName)
-	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
-	defer resp.Body.Close()
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	waitForTaskDeletion(t, cts, taskName, time.Second)
 
 	// Make a change that would have triggered the task, expect no event
 	service := testutil.TestService{
@@ -380,6 +385,8 @@ func TestE2E_TaskEndpoints_Delete(t *testing.T) {
 	}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	time.Sleep(defaultWaitForNoEvent)
+	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s",
+		cts.Port(), "v1", taskName)
 	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -387,17 +394,17 @@ func TestE2E_TaskEndpoints_Delete(t *testing.T) {
 	validateServices(t, false, []string{"api"}, resourcesPath)
 }
 
-// TestE2E_TaskEndpoints_Delete_Conflict tests that a running task cannot
-// be deleted. This runs a Consul server and the CTS binary in daemon mode.
+// TestE2E_TaskEndpoints_Delete_ActiveTask tests that a running task will not
+// be deleted until it is complete.
 //	DELETE/v1/tasks/:task_name
-func TestE2E_TaskEndpoints_Delete_Conflict(t *testing.T) {
-	t.Parallel()
+func TestE2E_TaskEndpoints_Delete_ActiveTask(t *testing.T) {
+	setParallelism(t)
 	// Test deleting a task
 	// 1. Start with a task
 	// 2. Trigger the task
 	// 3. While task is still running, delete the task
 	// 4. Check that the task and events still exist
-	// 5. Delete the task after it is complete
+	// 5. Wait until the task is complete
 	// 6. Check that the task and events no longer exist
 
 	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
@@ -411,7 +418,6 @@ func TestE2E_TaskEndpoints_Delete_Conflict(t *testing.T) {
 		moduleTaskConfig(taskName, "./test_modules/delayed_module"))
 
 	// Trigger the task
-	now := time.Now()
 	service := testutil.TestService{
 		ID:      "api",
 		Name:    "api",
@@ -425,30 +431,62 @@ func TestE2E_TaskEndpoints_Delete_Conflict(t *testing.T) {
 	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", taskName)
 	resp := testutils.RequestHTTP(t, http.MethodDelete, u, "")
 	defer resp.Body.Close()
-	require.Equal(t, http.StatusConflict, resp.StatusCode)
+	require.Equal(t, http.StatusAccepted, resp.StatusCode)
 
-	// Check that the task still exists, wait for it to complete
-	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+	// Check that the task still exists
+	count := eventCount(t, taskName, cts.Port())
+	assert.Equal(t, 1, count)
+
+	// Wait for task to be deleted
+	waitForTaskDeletion(t, cts, taskName, defaultWaitForEvent+5*time.Second)
+
+	// Check that task completed by checking created files
 	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
 	validateServices(t, true, []string{"api"}, resourcesPath)
+}
 
-	// Delete task now that it is completed
-	resp = testutils.RequestHTTP(t, http.MethodDelete, u, "")
-	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+func waitForTaskDeletion(t *testing.T, client *api.Client, name string, timeout time.Duration) {
+	polling := make(chan struct{})
+	stopPolling := make(chan struct{})
 
-	// Check that the task no longer exists
-	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
-	resp = testutils.RequestHTTP(t, http.MethodGet, s, "")
-	defer resp.Body.Close()
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	go func() {
+		for {
+			select {
+			case <-stopPolling:
+				return
+			default:
+				_, err := client.Status().Task(name, nil)
+				if err == nil {
+					time.Sleep(500 * time.Millisecond)
+					continue
+				}
+
+				if !strings.Contains(err.Error(), "404") {
+					// expecting only a 404 not found error
+					t.Fatalf("\nUnexpected error when waiting for task to %s be deleted", name)
+				}
+
+				polling <- struct{}{}
+				return
+			}
+		}
+	}()
+
+	select {
+	case <-polling:
+		return
+	case <-time.After(timeout):
+		close(stopPolling)
+		t.Fatalf("\nError: timed out after waiting for %v task %q to be deleted\n",
+			timeout, name)
+	}
 }
 
 // TestE2E_TaskEndpoints_Create tests the create task endpoint. This
 // runs a Consul server and the CTS binary in daemon mode.
 //	POST /v1/tasks
 func TestE2E_TaskEndpoints_Create(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test creating a task
 	// 1. Start with a task
 	// 2. Create infrastructure change that would trigger new task
@@ -533,7 +571,7 @@ func TestE2E_TaskEndpoints_Create(t *testing.T) {
 // This runs a Consul server and the CTS binary in daemon mode.
 // POST /v1/tasks
 func TestE2E_TaskEndpoints_Create_Run_Now(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test creating a task
 	// 1. Start with a task
 	// 2. Create infrastructure change that would trigger new task
@@ -590,7 +628,7 @@ func TestE2E_TaskEndpoints_Create_Run_Now(t *testing.T) {
 // should be created. This runs a Consul server and the CTS binary in daemon mode.
 //	POST /v1/tasks
 func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Test deleting a task
 	// 1. Start with a task
 	// 2. Attempt to create a new task with an invalid schema
@@ -605,34 +643,37 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 	cts := ctsSetup(t, srv, tempDir,
 		moduleTaskConfig(initialTaskName, "./test_modules/local_instances_file"))
 
-	// Create a task with invalid source field (boolean instead of string)
+	// Create a task with invalid module field (boolean instead of string)
 	u := fmt.Sprintf("http://localhost:%d/v1/tasks", cts.Port())
 
 	taskName := "created-task"
 	badRequest := fmt.Sprintf(`{
-	   "description": "Writes the service name, id, and IP address to a file",
-	   "enabled": true,
-	   "name": "%s",
-	   "providers": [
-	       "local"
-	   ],
-	   "services": [
-	       "api"
-	   ],
-	   "module": true
+		"task": {
+			"description": "Writes the service name, id, and IP address to a file",
+			"enabled": true,
+			"name": "%s",
+			"providers": [
+				"local"
+			],
+			"condition": {
+				"services": {
+					"names": [
+						"api"
+					]
+				}
+			},
+			"module": true
+		}
 	}`, taskName)
 
 	resp := testutils.RequestHTTP(t, http.MethodPost, u, badRequest)
 	defer resp.Body.Close()
-	bodyBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
 	var errorResponse oapigen.ErrorResponse
-	err = json.Unmarshal(bodyBytes, &errorResponse)
+	err := json.NewDecoder(resp.Body).Decode(&errorResponse)
 	require.NoError(t, err)
 
 	assert.Contains(t, errorResponse.Error.Message, `request body has an error: doesn't match the schema: `+
-		`Error at "/module": Field must be set to string or not be present`)
+		`Error at "/task/module": Field must be set to string or not be present`)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	// Check that the task has not been created
@@ -652,7 +693,7 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 // 5. Making a change that would trigger the task if it had been created
 // 6. Verifying again that no events or resources are created
 func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 	// Start Consul and CTS
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
@@ -666,19 +707,24 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 	taskName := "dryrun_task"
 	serviceName := "api"
 	req := &oapigen.TaskRequest{
-		Name:     taskName,
-		Services: &[]string{serviceName},
-		Module:   "mkam/hello/cts",
+		Task: oapigen.Task{
+			Name: taskName,
+			Condition: oapigen.Condition{
+				Services: &oapigen.ServicesCondition{
+					Names: &[]string{serviceName},
+				},
+			},
+
+			Module: "mkam/hello/cts",
+		},
 	}
 	resp := testutils.RequestJSON(t, http.MethodPost, u, req)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	// Parse response body
 	defer resp.Body.Close()
-	bodyBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
 	var r oapigen.TaskResponse
-	err = json.Unmarshal(bodyBytes, &r)
+	err := json.NewDecoder(resp.Body).Decode(&r)
 	require.NoError(t, err)
 	assert.NotEmpty(t, r.RequestId, "expected request ID in response")
 
@@ -689,9 +735,9 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 
 	// Verify task in response
 	assert.NotNil(t, r.Task)
-	assert.Equal(t, req.Name, r.Task.Name, "name not expected value")
-	assert.Equal(t, req.Module, r.Task.Module, "module not expected value")
-	assert.ElementsMatch(t, *req.Services, *r.Task.Services, "services not expected value")
+	assert.Equal(t, req.Task.Name, r.Task.Name, "name not expected value")
+	assert.Equal(t, req.Task.Module, r.Task.Module, "module not expected value")
+	assert.ElementsMatch(t, *req.Task.Condition.Services.Names, *r.Task.Condition.Services.Names, "services not expected value")
 
 	// Check that the task was not created
 	s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", taskName)
@@ -720,6 +766,50 @@ func TestE2E_TaskEndpoints_DryRunTaskCreate(t *testing.T) {
 	validateServices(t, false, []string{serviceName}, resourcesPath)
 }
 
+// TestE2E_TaskEndpoints_Get tests the Get Task API: GET /v1/tasks/:task_name
+// It runs a Consul server and the CTS binary in daemon mode.
+func TestE2E_TaskEndpoints_Get(t *testing.T) {
+	setParallelism(t)
+
+	// 0. Start CTS with a task
+	// 1. Try retrieving the start-up task and verify response payload
+	// 2. Try retrieving a non-existent task and check status code
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "get_task_api")
+	taskName := "get_task"
+	module := "mkam/hello/cts"
+
+	cts := ctsSetup(t, srv, tempDir, moduleTaskConfig(taskName, module))
+
+	// 1. Check retrieving the existing task
+	u := fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", taskName)
+	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Parse response body
+	var r oapigen.TaskResponse
+	err := json.NewDecoder(resp.Body).Decode(&r)
+	require.NoError(t, err)
+	assert.NotEmpty(t, r.RequestId, "expected request ID in response")
+
+	// Verify basic task info in response
+	assert.NotNil(t, r.Task)
+	assert.Equal(t, taskName, r.Task.Name, "name not expected value")
+	assert.Equal(t, module, r.Task.Module, "module not expected value")
+	assert.Empty(t, r.Task.TerraformVersion, "unexpected enterprise field value")
+
+	// 2. Check retrieving a non-existing task
+	u = fmt.Sprintf("http://localhost:%d/%s/tasks/%s", cts.Port(), "v1", "non-existent-task")
+	resp = testutils.RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
 // checkEvents does some basic checks to loosely ensure returned events in
 // responses are as expected
 func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
@@ -743,11 +833,10 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 
 		require.NotNil(t, e.Config)
 		assert.Equal(t, []string{"fake-sync"}, e.Config.Providers)
-		assert.Equal(t, []string{"api"}, e.Config.Services)
 		wd, err := os.Getwd()
 		assert.NoError(t, err)
-		source := filepath.Join(wd, "./test_modules/local_instances_file")
-		assert.Equal(t, source, e.Config.Source)
+		module := filepath.Join(wd, "./test_modules/local_instances_file")
+		assert.Equal(t, module, e.Config.Source)
 
 		if taskName == fakeSuccessTaskName {
 			assert.True(t, e.Success)

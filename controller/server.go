@@ -40,18 +40,27 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 		return config.TaskConfig{}, err
 	}
 
-	// TODO: Set the buffer period
-	// d.SetBufferPeriod()
+	// Set the buffer period
+	d.SetBufferPeriod()
 
 	// Add the task driver to the driver list only after successful create
-	err = rw.drivers.Add(*taskConfig.Name, d)
+	name := *taskConfig.Name
+	err = rw.drivers.Add(name, d)
 	if err != nil {
+		rw.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
 	conf, err := configFromDriverTask(d.Task())
 	if err != nil {
+		// Cleanup driver
+		rw.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
+
+	if d.Task().IsScheduled() {
+		rw.scheduleCh <- d
+	}
+
 	return conf, nil
 }
 
@@ -65,40 +74,38 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 		return config.TaskConfig{}, err
 	}
 
-	// TODO: Set the buffer period
-	// d.SetBufferPeriod()
+	d.SetBufferPeriod()
 
 	// Add the task driver to the driver list only after successful create and run
+	name := *taskConfig.Name
 	err = rw.drivers.Add(*taskConfig.Name, d)
 	if err != nil {
+		rw.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
 	conf, err := configFromDriverTask(d.Task())
 	if err != nil {
+		rw.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
+
+	if d.Task().IsScheduled() {
+		rw.scheduleCh <- d
+	}
+
 	return conf, nil
 }
 
+// TaskDelete marks a task for deletion
 func (rw *ReadWrite) TaskDelete(ctx context.Context, name string) error {
 	logger := rw.logger.With(taskNameLogKey, name)
-	logger.Trace("deleting task")
-
-	// Check if task is active
-	if rw.drivers.IsActive(name) {
-		return fmt.Errorf("task '%s' is currently running and cannot be deleted "+
-			"at this time", name)
+	if rw.drivers.IsMarkedForDeletion(name) {
+		logger.Debug("task is already marked for deletion")
+		return nil
 	}
-
-	// Delete task driver and events
-	err := rw.drivers.Delete(name)
-	if err != nil {
-		logger.Trace("unable to delete task", "error", err)
-		return err
-	}
-
-	rw.store.Delete(name)
-	logger.Trace("task deleted")
+	rw.drivers.MarkForDeletion(name)
+	rw.deleteCh <- name
+	logger.Debug("task marked for deletion")
 	return nil
 }
 
@@ -142,7 +149,7 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 		ev, err := event.NewEvent(taskName, &event.Config{
 			Providers: task.ProviderNames(),
 			Services:  task.ServiceNames(),
-			Source:    task.Source(),
+			Source:    task.Module(),
 		})
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("error creating task update"+
@@ -217,18 +224,30 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		}
 	}
 
+	inputs := t.ModuleInputs()
+
 	return config.TaskConfig{
-		Description:  config.String(t.Description()),
-		Name:         config.String(t.Name()),
-		Enabled:      config.Bool(t.IsEnabled()),
-		Providers:    t.ProviderNames(),
-		Services:     t.ServiceNames(),
-		Module:       config.String(t.Source()),
-		Variables:    vars, // TODO: omit or safe to return?
-		Version:      config.String(t.Version()),
-		BufferPeriod: &bpConf,
-		Condition:    t.Condition(),
-		ModuleInput:  t.SourceInput(),
-		WorkingDir:   config.String(t.WorkingDir()),
+		Description:        config.String(t.Description()),
+		Name:               config.String(t.Name()),
+		Enabled:            config.Bool(t.IsEnabled()),
+		Providers:          t.ProviderNames(),
+		DeprecatedServices: t.ServiceNames(),
+		Module:             config.String(t.Module()),
+		Variables:          vars, // TODO: omit or safe to return?
+		Version:            config.String(t.Version()),
+		BufferPeriod:       &bpConf,
+		Condition:          t.Condition(),
+		ModuleInputs:       &inputs,
+		WorkingDir:         config.String(t.WorkingDir()),
+
+		// Enterprise
+		TFVersion: config.String(t.TFVersion()),
 	}, nil
+}
+
+func (rw ReadWrite) cleanupTask(ctx context.Context, name string) {
+	err := rw.TaskDelete(ctx, name)
+	if err != nil {
+		rw.logger.Error("unable to cleanup task after error", "task_name", name)
+	}
 }

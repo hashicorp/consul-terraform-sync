@@ -6,6 +6,7 @@ package e2e
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"os/exec"
@@ -38,7 +39,7 @@ const (
 
 	// liberal default times to wait
 	defaultWaitForRegistration = 8 * time.Second
-	defaultWaitForEvent        = 8 * time.Second
+	defaultWaitForEvent        = 15 * time.Second
 	defaultWaitForAPI          = 30 * time.Second
 
 	// liberal wait time to ensure event doesn't happen
@@ -54,6 +55,8 @@ const (
 	alternateCert   = "../testutils/certs/localhost_cert3.pem"
 	alternateKey    = "../testutils/certs/localhost_key3.pem"
 )
+
+var localFlag = flag.Bool("local", false, "flag for running E2E tests locally")
 
 type tlsConfig struct {
 	clientCert     string
@@ -118,7 +121,8 @@ func newTestConsulServer(t *testing.T) *testutil.TestServer {
 
 func runSyncStop(t *testing.T, configPath string, dur time.Duration) {
 	cts, stop := api.StartCTS(t, configPath)
-	cts.WaitForAPI(dur)
+	err := cts.WaitForAPI(dur)
+	require.NoError(t, err)
 	stop(t)
 }
 
@@ -155,7 +159,8 @@ func runSubCommandWithEnvVars(t *testing.T, input string, envVars []string, subc
 
 	_, err = stdin.Write([]byte(input))
 	require.NoError(t, err)
-	stdin.Close()
+	err = stdin.Close()
+	require.NoError(t, err)
 
 	err = cmd.Wait()
 	return b.String(), err
@@ -169,7 +174,7 @@ func runSubCommandWithEnvVars(t *testing.T, input string, envVars []string, subc
 func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig string) *api.Client {
 	cleanup := testutils.MakeTempDir(t, tempDir)
 	t.Cleanup(func() {
-		cleanup()
+		_ = cleanup()
 	})
 
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
@@ -205,13 +210,14 @@ func ctsSetupTLS(t *testing.T, srv *testutil.TestServer, tempDir string, taskCon
 		}
 		testutils.CopyFiles(t, certs, tlsConfig.caPath)
 		t.Cleanup(func() {
-			cleanupCAPath()
+			err := cleanupCAPath()
+			require.NoError(t, err)
 		})
 	}
 
 	// add cleanup of tempDir after CAPath directory since CAPath directory will be inside temp directory
 	t.Cleanup(func() {
-		cleanup()
+		_ = cleanup()
 	})
 
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
@@ -269,15 +275,15 @@ func validateServices(t *testing.T, expected bool, services []string, servicesPa
 	}
 }
 
-// validateModuleFile checks whether a file dependent on a source input variable was created or not by the module.
-// If the file exists, then the content of the file is checked as well. If source_includes_var is set to false,
+// validateModuleFile checks whether a file dependent on a module input variable was created or not by the module.
+// If the file exists, then the content of the file is checked as well. If use_as_module_input is set to false,
 // then no file is expected to be created so no checks will be made. Assumes the file has a .txt extension.
 //
 // e.g., checking that the module created a file for a Consul KV entry where the filename is the key and the
 // content is the value
-func validateModuleFile(t *testing.T, srcIncludesVar, expected bool, resourcesPath, name, expectedContent string) {
-	if !srcIncludesVar {
-		// module will not generate files based on the source input variables,
+func validateModuleFile(t *testing.T, useAsModuleInput, expected bool, resourcesPath, name, expectedContent string) {
+	if !useAsModuleInput {
+		// module will not generate files based on the module input variables,
 		// nothing to validate
 		return
 	}
@@ -309,4 +315,10 @@ func validateVariable(t *testing.T, contains bool, workingDir, name, value strin
 		}
 	}
 	assert.Fail(t, fmt.Sprintf("variable '%s' not found in terraform.tfvars", name))
+}
+
+func setParallelism(t *testing.T) {
+	if !*localFlag {
+		t.Parallel()
+	}
 }

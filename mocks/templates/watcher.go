@@ -16,8 +16,13 @@ type Watcher struct {
 	mock.Mock
 }
 
-// Buffer provides a mock function with given fields: _a0
-func (_m *Watcher) Buffer(_a0 hcat.Notifier) bool {
+// BufferReset provides a mock function with given fields: _a0
+func (_m *Watcher) BufferReset(_a0 hcat.Notifier) {
+	_m.Called(_a0)
+}
+
+// Buffering provides a mock function with given fields: _a0
+func (_m *Watcher) Buffering(_a0 hcat.Notifier) bool {
 	ret := _m.Called(_a0)
 
 	var r0 bool
@@ -30,9 +35,20 @@ func (_m *Watcher) Buffer(_a0 hcat.Notifier) bool {
 	return r0
 }
 
-// BufferReset provides a mock function with given fields: _a0
-func (_m *Watcher) BufferReset(_a0 hcat.Notifier) {
-	_m.Called(_a0)
+// Clients provides a mock function with given fields:
+func (_m *Watcher) Clients() hcat.Looker {
+	ret := _m.Called()
+
+	var r0 hcat.Looker
+	if rf, ok := ret.Get(0).(func() hcat.Looker); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(hcat.Looker)
+		}
+	}
+
+	return r0
 }
 
 // Complete provides a mock function with given fields: _a0
@@ -49,8 +65,19 @@ func (_m *Watcher) Complete(_a0 hcat.Notifier) bool {
 	return r0
 }
 
-// Mark provides a mock function with given fields: notifier
-func (_m *Watcher) Mark(notifier hcat.IDer) {
+// Deregister provides a mock function with given fields: ns
+func (_m *Watcher) Deregister(ns ...hcat.Notifier) {
+	_va := make([]interface{}, len(ns))
+	for _i := range ns {
+		_va[_i] = ns[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _va...)
+	_m.Called(_ca...)
+}
+
+// MarkForSweep provides a mock function with given fields: notifier
+func (_m *Watcher) MarkForSweep(notifier hcat.IDer) {
 	_m.Called(notifier)
 }
 
@@ -142,15 +169,15 @@ func (_m *Watcher) WaitCh(_a0 context.Context) <-chan error {
 	return r0
 }
 
-// Watching provides a mock function with given fields: _a0
-func (_m *Watcher) Watching(_a0 string) bool {
-	ret := _m.Called(_a0)
+// Watch provides a mock function with given fields: _a0, _a1
+func (_m *Watcher) Watch(_a0 context.Context, _a1 chan string) error {
+	ret := _m.Called(_a0, _a1)
 
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(string) bool); ok {
-		r0 = rf(_a0)
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, chan string) error); ok {
+		r0 = rf(_a0, _a1)
 	} else {
-		r0 = ret.Get(0).(bool)
+		r0 = ret.Error(0)
 	}
 
 	return r0

@@ -50,7 +50,8 @@ func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSC
 	// run CTS in once-mode
 	for _, opt := range opts {
 		if opt == CTSOnceModeFlag || opt == CTSInspectFlag {
-			cmd.Run() // blocking
+			err := cmd.Run() // blocking
+			require.NoError(t, err, buf.String())
 			return nil, func(t *testing.T) {}
 		}
 	}
@@ -60,20 +61,22 @@ func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSC
 	f, err := os.OpenFile(configPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	require.NoError(t, err)
 	_, err = f.WriteString(fmt.Sprintf("port = %d\n", port))
-	f.Close()
+	require.NoError(t, err)
+	err = f.Close()
 	require.NoError(t, err)
 
 	// start CTS regularly
 	err = cmd.Start()
 	require.NoError(t, err)
 
-	clientConfig := ClientConfig{
-		Port:      port,
-		Addr:      fmt.Sprintf("%s://localhost:%d", scheme, port),
+	require.NoError(t, err)
+
+	clientConfig := &ClientConfig{
+		URL:       fmt.Sprintf("%s://localhost:%d", scheme, port),
 		TLSConfig: tlsConfig,
 	}
 
-	ctsClient, err := NewClient(&clientConfig, nil)
+	ctsClient, err := NewClient(clientConfig, nil)
 	require.NoError(t, err)
 
 	return ctsClient, func(t *testing.T) {
@@ -91,7 +94,9 @@ func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSC
 			}
 		}()
 
-		cmd.Process.Signal(os.Interrupt)
+		err = cmd.Process.Signal(os.Interrupt)
+		require.NoError(t, err)
+
 		sigintErr := errors.New("signal: interrupt")
 		if err := cmd.Wait(); err != nil {
 			require.Equal(t, sigintErr, err)

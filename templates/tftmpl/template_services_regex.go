@@ -21,7 +21,9 @@ type ServicesRegexTemplate struct {
 	Namespace  string
 	Filter     string
 
-	SourceIncludesVar bool
+	// RenderVar informs whether the template should render the variable or not.
+	// Aligns with the task condition configuration `UseAsModuleInput``
+	RenderVar bool
 }
 
 // IsServicesVar returns true because the template is for the services variable
@@ -35,16 +37,15 @@ func (t ServicesRegexTemplate) appendTemplate(w io.Writer) error {
 	q := t.hcatQuery()
 
 	tmpl := ""
-	if t.SourceIncludesVar {
-		tmpl = fmt.Sprintf(servicesRegexIncludesVarTmpl, q)
+	if t.RenderVar {
+		tmpl = fmt.Sprintf(servicesRegexSetVarTmpl, q)
 	} else {
 		tmpl = fmt.Sprintf(servicesRegexEmptyTmpl, q)
 	}
 
 	if _, err := fmt.Fprint(w, tmpl); err != nil {
 		logging.Global().Named(logSystemName).Named(tftmplSubsystemName).Error(
-			"unable to write services regex template", "error", err,
-			"source_includes_var", t.SourceIncludesVar)
+			"unable to write services regex template", "error", err)
 		return err
 	}
 	return nil
@@ -54,11 +55,8 @@ func (t ServicesRegexTemplate) appendVariable(io.Writer) error {
 	return nil
 }
 
-// SourceIncludesVariable returns true if the source variables are to be included in the template.
-// For the case of a service monitor, this always returns true and must be overridden to
-// return based on other conditions.
-func (t ServicesRegexTemplate) SourceIncludesVariable() bool {
-	return t.SourceIncludesVar
+func (t ServicesRegexTemplate) RendersVar() bool {
+	return t.RenderVar
 }
 
 func (t ServicesRegexTemplate) hcatQuery() string {
@@ -87,7 +85,7 @@ func (t ServicesRegexTemplate) hcatQuery() string {
 	return ""
 }
 
-var servicesRegexIncludesVarTmpl = fmt.Sprintf(`
+var servicesRegexSetVarTmpl = fmt.Sprintf(`
 services = {%s}
 `, servicesRegexBaseTmpl)
 

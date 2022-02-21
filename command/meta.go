@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
@@ -54,12 +55,14 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 
 	// Values provide both default values, and documentation for the default value when -help is used
 	m.port = m.flags.Int(FlagPort, config.DefaultPort,
-		fmt.Sprintf("The port to use for the Consul-Terraform-Sync API server, it is preferred to use the %s field instead", FlagHTTPAddr))
-	m.addr = m.flags.String(FlagHTTPAddr, api.DefaultAddress, fmt.Sprintf("The `address` and port of the CTS daemon. The value can be an IP "+
+		fmt.Sprintf("[Deprecated] The port to use for the Consul-Terraform-Sync API server, "+
+			"it is preferred to use the %s field instead.", FlagHTTPAddr))
+
+	m.addr = m.flags.String(FlagHTTPAddr, api.DefaultURL, fmt.Sprintf("The `address` and port of the CTS daemon. The value can be an IP "+
 		"address or DNS address, but it must also include the port. This can "+
 		"also be specified via the %s environment variable. The "+
 		"default value is %s. The scheme can also be set to "+
-		"HTTPS by including https in the provided address (eg. https://127.0.0.1:8558)", api.EnvAddress, api.DefaultAddress))
+		"HTTPS by including https in the provided address (eg. https://127.0.0.1:8558)", api.EnvAddress, api.DefaultURL))
 
 	// Initialize TLS flags
 	m.tls.caPath = m.flags.String(FlagCAPath, "", fmt.Sprintf("Path to a directory of CA certificates to use for TLS when communicating with Consul-Terraform-Sync. "+
@@ -122,14 +125,26 @@ func (m *meta) oneArgCheck(name string, args []string) bool {
 
 // clientConfig is used to initialize and return a new API ClientConfig using
 // the default command line arguments and env vars.
-func (m *meta) clientConfig() *api.ClientConfig {
+func (m *meta) clientConfig() (*api.ClientConfig, error) {
 	// Let the Client determine its default first, then override with command flag values
-	c := api.DefaultClientConfig()
+	c := api.BaseClientConfig()
+
+	// override config values from flags
 	if m.isFlagParsedAndFound(FlagPort) {
-		c.Port = *m.port
+		m.UI.Warn(fmt.Sprintf("Warning: '%s' option is deprecated and will be removed in a later version. "+
+			"It is preferred to use the '%s' option instead.\n", FlagPort, FlagHTTPAddr))
+
+		u, err := url.ParseRequestURI(c.URL)
+		if err != nil {
+			return nil, err
+		}
+
+		u.Host = fmt.Sprintf("%s:%d", u.Hostname(), *m.port) // add port to hostname
+		c.URL = u.String()
 	}
+
 	if m.isFlagParsedAndFound(FlagHTTPAddr) {
-		c.Addr = *m.addr
+		c.URL = *m.addr
 	}
 
 	// If we need custom TLS configuration, then set it
@@ -149,20 +164,30 @@ func (m *meta) clientConfig() *api.ClientConfig {
 		c.TLSConfig.SSLVerify = *m.tls.sslVerify
 	}
 
-	return c
+	return c, nil
 }
 
 func (m *meta) client() (*api.Client, error) {
-	c, err := api.NewClient(m.clientConfig(), nil)
-
+	clientConfig, err := m.clientConfig()
 	if err != nil {
 		return nil, err
 	}
+
+	c, err := api.NewClient(clientConfig, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
 func (m *meta) taskLifecycleClient() (*api.TaskLifecycleClient, error) {
-	c, err := api.NewTaskLifecycleClient(m.clientConfig(), nil)
+	clientConfig, err := m.clientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := api.NewTaskLifecycleClient(clientConfig, nil)
 
 	if err != nil {
 		return nil, err
@@ -174,7 +199,7 @@ func (m *meta) taskLifecycleClient() (*api.TaskLifecycleClient, error) {
 // approved a given action. If the user did not approve (false is returned) or
 // if there is an error in processing the user input, an exit code is provided.
 func (m *meta) requestUserApproval(taskName, action string) (int, bool) {
-	m.UI.Output("Only 'yes' will be accepted to approve.\n")
+	m.UI.Output("Only 'yes' will be accepted to approve, enter 'no' or leave blank to reject.\n")
 	v, err := m.UI.Ask("Enter a value:")
 	m.UI.Output("")
 
@@ -194,10 +219,7 @@ func (m *meta) requestUserApproval(taskName, action string) (int, bool) {
 // if the user approved.
 func (m *meta) requestUserApprovalEnable(taskName string) (int, bool) {
 	m.UI.Info("Enabling the task will perform the actions described above.")
-	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
-	m.UI.Output(" - This action cannot be undone.")
-	m.UI.Output(" - Consul-Terraform-Sync cannot guarantee Terraform will perform")
-	m.UI.Output("   these exact actions if monitored services have changed.\n")
+	m.terraformApprovalWarning(taskName)
 	return m.requestUserApproval(taskName, "enabling")
 }
 
@@ -207,6 +229,9 @@ func (m *meta) requestUserApprovalEnable(taskName string) (int, bool) {
 func (m *meta) requestUserApprovalDelete(taskName string) (int, bool) {
 	m.UI.Info(fmt.Sprintf("Do you want to delete '%s'?", taskName))
 	m.UI.Output(" - This action cannot be undone.")
+	m.UI.Output(" - Deleting a task will not destroy the infrastructure managed by the task.")
+	m.UI.Output(" - If the task is not running, it will be deleted immediately.")
+	m.UI.Output(" - If the task is running, it will be deleted once it has completed.")
 	return m.requestUserApproval(taskName, "deleting")
 }
 
@@ -215,11 +240,16 @@ func (m *meta) requestUserApprovalDelete(taskName string) (int, bool) {
 // if the user approved.
 func (m *meta) requestUserApprovalCreate(taskName string) (int, bool) {
 	m.UI.Info("Creating the task will perform the actions described above.")
+	m.terraformApprovalWarning(taskName)
+	return m.requestUserApproval(taskName, "creating")
+}
+
+// terraformApprovalWarning prints out a standard warning for approving a terraform plan
+func (m *meta) terraformApprovalWarning(taskName string) {
 	m.UI.Output(fmt.Sprintf("Do you want to perform these actions for '%s'?", taskName))
 	m.UI.Output(" - This action cannot be undone.")
 	m.UI.Output(" - Consul-Terraform-Sync cannot guarantee Terraform will perform")
 	m.UI.Output("   these exact actions if monitored services have changed.\n")
-	return m.requestUserApproval(taskName, "creating")
 }
 
 // Returns true if the flags have been parsed
