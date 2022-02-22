@@ -505,8 +505,8 @@ func TestCondition_Schedule_SuppressTriggers_SharedDependencies(t *testing.T) {
 
 	// Make a change to the shared dependency
 	registrationTime := time.Now()
-	services := []testutil.TestService{{ID: "web", Name: "web"}}
-	testutils.AddServices(t, srv, services)
+	service := testutil.TestService{ID: "web", Name: "web"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 
 	// Check scheduled task didn't trigger immediately and ran on schedule
 	api.WaitForEvent(t, cts, taskName, registrationTime, scheduledWait)
@@ -514,6 +514,11 @@ func TestCondition_Schedule_SuppressTriggers_SharedDependencies(t *testing.T) {
 	checkScheduledRun(t, taskName, registrationTime, taskSchedule, port)
 	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
 	validateServices(t, true, []string{"web"}, resourcesPath)
+
+	// Also check that the initial task triggered as expected
+	api.WaitForEvent(t, cts, taskName, registrationTime, defaultWaitForEvent)
+	initResources := filepath.Join(tempDir, initTaskName, resourcesDir)
+	validateServices(t, true, []string{"web"}, initResources)
 }
 
 // checkScheduledRun checks that a scheduled task's most recent task run

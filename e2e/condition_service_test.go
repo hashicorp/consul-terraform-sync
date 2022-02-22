@@ -333,14 +333,25 @@ func TestConditionServices_SuppressTriggers_SharedDependencies(t *testing.T) {
 	resourcesPath := filepath.Join(workingDir, resourcesDir)
 	validateModuleFile(t, true, false, resourcesPath, path, value)
 
-	// Make a services change, confirm that task runs
+	// Make a services change to trigger created task
 	now := time.Now()
-	services := []testutil.TestService{{ID: "api-test", Name: "api-test"}}
-	testutils.AddServices(t, srv, services)
+	service := testutil.TestService{ID: "api-test", Name: "api-test"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
 	count = eventCount(t, taskName, cts.Port())
 	expectedCount++
 	assert.Equal(t, expectedCount, count, "unexpected event count")
 	validateServices(t, true, []string{"api-test"}, resourcesPath)
+	validateModuleFile(t, true, true, resourcesPath, path, value)
+
+	// Make a services change to trigger initial task
+	now = time.Now()
+	service = testutil.TestService{ID: "web", Name: "web"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, initTaskName, now, defaultWaitForEvent)
+	initCount := eventCount(t, initTaskName, cts.Port())
+	assert.Equal(t, 2, initCount, "unexpected event count")
+	initResources := filepath.Join(tempDir, initTaskName, resourcesDir)
+	validateServices(t, true, []string{"web"}, initResources)
 	validateModuleFile(t, true, true, resourcesPath, path, value)
 }
