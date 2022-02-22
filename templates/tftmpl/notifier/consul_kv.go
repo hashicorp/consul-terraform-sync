@@ -1,6 +1,8 @@
 package notifier
 
 import (
+	"sync"
+
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat/dep"
@@ -19,6 +21,18 @@ type ConsulKV struct {
 	once    bool
 	tfTotal int
 	counter int
+
+	mu sync.RWMutex
+}
+
+func (n *ConsulKV) Override() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	if !n.once {
+		n.once = true
+		n.Template.Notify(nil)
+	}
 }
 
 // NewConsulKV creates a new ConsulKVNotifier.
@@ -59,6 +73,9 @@ func NewConsulKV(tmpl templates.Template, tmplFuncTotal int) *ConsulKV {
 //  - Other types of dependencies that are not Consul KV. For example,
 //    Services ([]*dep.HealthService).
 func (n *ConsulKV) Notify(d interface{}) (notify bool) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	logDependency(n.logger, d)
 	notify = false
 

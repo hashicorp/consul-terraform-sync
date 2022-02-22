@@ -1,6 +1,8 @@
 package notifier
 
 import (
+	"sync"
+
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 )
@@ -27,6 +29,18 @@ type SuppressNotification struct {
 	once    bool
 	tfTotal int
 	counter int
+
+	mu sync.RWMutex
+}
+
+func (n *SuppressNotification) Override() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	if !n.once {
+		n.once = true
+		n.Template.Notify(nil)
+	}
 }
 
 // NewSuppressNotification creates a new SuppressNotification notifier.
@@ -58,6 +72,9 @@ func NewSuppressNotification(tmpl templates.Template, tmplFuncTotal int) *Suppre
 // Once-mode requires a notification when all dependencies are received in order
 // to trigger CTS. Otherwise it will hang.
 func (n *SuppressNotification) Notify(d interface{}) (notify bool) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	logDependency(n.logger, d)
 	notify = false
 

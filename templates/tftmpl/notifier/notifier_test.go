@@ -20,10 +20,11 @@ func TestNotifier_logDependency(t *testing.T) {
 		{
 			"services",
 			[]*dep.HealthService{
-				{Name: "api"},
-				{Name: "web"},
+				{Name: "api", ID: "api-1"},
+				{Name: "api", ID: "api-2"},
+				{Name: "web", ID: "web-1"},
 			},
-			`received dependency: variable=services names=["api", "web"]`,
+			`received dependency: variable=services ids=["api-1", "api-2", "web-1"]`,
 		},
 		{
 			"catalog-services",

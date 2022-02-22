@@ -7,17 +7,28 @@ import (
 	"github.com/hashicorp/hcat/dep"
 )
 
+// Overrider is short-term solution to override the notifier's once value and
+// send a notification if once is not complete (i.e. true)
+//
+// This handles an edge-case with the Create Task API where pre-existing
+// dependencies don't cause Notify() for newly created tasks which causes
+// hanging or potentially an extra trigger depending on the condition type.
+// https://github.com/hashicorp/consul-terraform-sync/issues/704
+type Overrider interface {
+	Override()
+}
+
 // logDependency logs details about the dependencies that the notifiers
 // receive
 func logDependency(logger logging.Logger, dependency interface{}) {
 	switch d := dependency.(type) {
 	case []*dep.HealthService:
-		serviceNames := make([]string, len(d))
+		serviceIDs := make([]string, len(d))
 		for ix, hs := range d {
-			serviceNames[ix] = hs.Name
+			serviceIDs[ix] = hs.ID
 		}
 		logger.Debug("received dependency",
-			"variable", "services", "names", serviceNames)
+			"variable", "services", "ids", serviceIDs)
 	case []*dep.CatalogSnippet:
 		serviceNames := make([]string, len(d))
 		for ix, hs := range d {

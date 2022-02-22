@@ -67,6 +67,8 @@ type Terraform struct {
 	renderedOnce bool
 
 	logger logging.Logger
+
+	overrider notifier.Overrider
 }
 
 // TerraformConfig configures the Terraform driver
@@ -208,6 +210,17 @@ func (tf *Terraform) TemplateIDs() []string {
 		return nil
 	}
 	return []string{tf.template.ID()}
+}
+
+func (tf *Terraform) OverrideNotifier() {
+	tf.mu.RLock()
+	defer tf.mu.RUnlock()
+
+	if tf.overrider == nil {
+		return
+	}
+
+	tf.overrider.Override()
 }
 
 // RenderTemplate fetches data for the template. If the data is complete fetched,
@@ -616,16 +629,26 @@ func (tf *Terraform) setNotifier(tmpl templates.Template) error {
 
 	switch tf.task.Condition().(type) {
 	case *config.ServicesConditionConfig:
-		tf.template = notifier.NewServices(tmpl, tmplFuncTotal)
+		tmpl := notifier.NewServices(tmpl, tmplFuncTotal)
+		tf.template = tmpl
+		tf.overrider = tmpl
 	case *config.CatalogServicesConditionConfig:
-		tf.template = notifier.NewCatalogServicesRegistration(tmpl, tmplFuncTotal)
+		tmpl := notifier.NewCatalogServicesRegistration(tmpl, tmplFuncTotal)
+		tf.template = tmpl
+		tf.overrider = tmpl
 	case *config.ConsulKVConditionConfig:
-		tf.template = notifier.NewConsulKV(tmpl, tmplFuncTotal)
+		tmpl := notifier.NewConsulKV(tmpl, tmplFuncTotal)
+		tf.template = tmpl
+		tf.overrider = tmpl
 	case *config.ScheduleConditionConfig:
-		tf.template = notifier.NewSuppressNotification(tmpl, tmplFuncTotal)
+		tmpl := notifier.NewSuppressNotification(tmpl, tmplFuncTotal)
+		tf.template = tmpl
+		tf.overrider = tmpl
 	default:
 		// services list
-		tf.template = notifier.NewServices(tmpl, tmplFuncTotal)
+		tmpl := notifier.NewServices(tmpl, tmplFuncTotal)
+		tf.template = tmpl
+		tf.overrider = tmpl
 	}
 	return nil
 }
