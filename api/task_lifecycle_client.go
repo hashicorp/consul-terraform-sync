@@ -65,6 +65,8 @@ func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, 
 		run = RunOptionInspect
 	case RunOptionNow:
 		run = RunOptionNow
+	case "":
+		run = ""
 	default:
 		err := errors.New("invalid run option provided")
 		return TaskResponse{}, err
