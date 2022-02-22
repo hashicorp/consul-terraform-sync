@@ -431,6 +431,7 @@ task {
 				},
 			}
 
+			// Create task, check that API request is successful and does not hang
 			_, err = client.CreateTask(context.Background(), tc.runMode, createReq)
 			require.NoError(t, err)
 		})
