@@ -39,7 +39,6 @@ func (n *SuppressNotification) Override() {
 
 	if !n.once {
 		n.once = true
-		n.Template.Notify(nil)
 	}
 }
 
