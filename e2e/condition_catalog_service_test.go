@@ -4,12 +4,14 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
@@ -349,6 +351,89 @@ func TestCondition_CatalogServices_InvalidQueries(t *testing.T) {
 		taskName := "condition_catalog_services_invalid_" + tc.name
 		taskConfig := fmt.Sprintf(config, taskName, tc.queryConfig)
 		testInvalidTaskConfig(t, tc.name, taskName, taskConfig, tc.errMsg)
+	}
+}
+
+// TestCondition_CatalogServices_SharedDependency_NoServices tests that a
+// task with a catalog-service condition and a dependency that's the same
+// as an existing task is created successfully via the API and the request
+// does not hang. Tests the scenario where there are no services registered
+// that satisfy the catalog-service regex.
+//
+// https://github.com/hashicorp/consul-terraform-sync/issues/704
+func TestCondition_CatalogServices_SharedDependency_NoServices(t *testing.T) {
+	setParallelism(t)
+	cases := []struct {
+		name    string
+		runMode string
+	}{
+		{
+			"create",
+			"",
+		},
+		{
+			"inspect",
+			"inspect",
+		},
+		{
+			"create_and_run",
+			"now",
+		},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			setParallelism(t)
+			// Start Consul without any registered services
+			srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+				HTTPSRelPath: "../testutils",
+			})
+			defer srv.Stop()
+
+			// Initialize CTS with a task that has API service as a module_input
+			initTask := "init_task"
+			sharedService := "api"
+			initConfig := fmt.Sprintf(`
+task {
+	name = "%s"
+	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["%s"]
+		use_as_module_input = true
+	}
+}
+`, initTask, sharedService)
+			tempDir := fmt.Sprintf("%scs_shared_dep_%s", tempDirPrefix, tc.name)
+			cts := ctsSetup(t, srv, tempDir, initConfig)
+
+			// Create a task that has a catalog-services condition and also has
+			// the API service as a module_input
+			client, err := api.NewTaskLifecycleClient(&api.ClientConfig{
+				URL:       cts.FullAddress(),
+				TLSConfig: api.TLSConfig{SSLVerify: false}}, nil)
+			require.NoError(t, err)
+
+			taskName := "created_task"
+			createReq := api.TaskRequest{
+				Task: oapigen.Task{
+					Name:   taskName,
+					Module: "./test_modules/local_tags_file",
+					Condition: oapigen.Condition{
+						CatalogServices: &oapigen.CatalogServicesCondition{
+							Regexp: "web",
+						},
+					},
+					ModuleInput: &oapigen.ModuleInput{
+						Services: &oapigen.ServicesModuleInput{
+							Names: &[]string{sharedService}, // shared dependency
+						},
+					},
+				},
+			}
+
+			_, err = client.CreateTask(context.Background(), tc.runMode, createReq)
+			require.NoError(t, err)
+		})
 	}
 }
 
