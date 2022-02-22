@@ -40,4 +40,9 @@ type Driver interface {
 
 	// Version returns the version of the driver.
 	Version() string
+
+	// OverrideNotifier is a short-term solution to handle Create Task API
+	// edge-cases cause potential hanging and an extra trigger.
+	// https://github.com/hashicorp/consul-terraform-sync/issues/704
+	OverrideNotifier()
 }
