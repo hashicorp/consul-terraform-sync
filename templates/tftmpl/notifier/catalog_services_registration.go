@@ -37,9 +37,10 @@ type CatalogServicesRegistration struct {
 func (n *CatalogServicesRegistration) Override() {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-
-	n.once = true
-	n.Template.Notify(nil)
+	if !n.once {
+		n.once = true
+		n.Template.Notify(nil)
+	}
 }
 
 // NewCatalogServicesRegistration creates a new CatalogServicesRegistration
