@@ -130,8 +130,8 @@ func (c hclConfig) appendDBTask() hclConfig {
 	return c.appendString(dbTask())
 }
 
-func (c hclConfig) appendWebTask() hclConfig {
-	return c.appendString(fmt.Sprintf(`
+func webAPITask() string {
+	return fmt.Sprintf(`
 task {
 	name = "%s"
 	description = "basic read-write e2e task api & web"
@@ -141,7 +141,11 @@ task {
 		names = ["api", "web"]
 	}
 }
-`, webTaskName))
+`, webTaskName)
+}
+
+func (c hclConfig) appendWebTask() hclConfig {
+	return c.appendString(webAPITask())
 }
 
 // appendModuleTask adds a task configuration with the given name and module, along with any additional
