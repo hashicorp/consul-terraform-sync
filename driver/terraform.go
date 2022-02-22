@@ -213,8 +213,8 @@ func (tf *Terraform) TemplateIDs() []string {
 }
 
 func (tf *Terraform) OverrideNotifier() {
-	tf.mu.RLock()
-	defer tf.mu.RUnlock()
+	tf.mu.Lock()
+	defer tf.mu.Unlock()
 
 	if tf.overrider == nil {
 		return
