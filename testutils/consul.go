@@ -128,7 +128,7 @@ func serviceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string
 // Bulk add test data for seeding consul
 func AddServices(t testing.TB, srv *testutil.TestServer, svcs []testutil.TestService) {
 	for _, s := range svcs {
-		RegisterConsulServiceHealth(t, srv, s, 0, testutil.HealthPassing)
+		RegisterConsulService(t, srv, s, 0)
 	}
 }
 
