@@ -94,6 +94,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          LD_FLAGS: ${{ needs.set-ld-flags.outputs.ldflags }}
         run: |
           mkdir dist out
           go build -o dist/ \
