@@ -437,6 +437,90 @@ func TestCondition_Schedule_CreateCLICanceled(t *testing.T) {
 	validateModuleFile(t, true, false, resourcesPath, "key-path", "")
 }
 
+// TestConditionServices_SuppressTriggers_SharedDependencies tests that a
+// task created with a schedule condition that shares a dependencies with
+// an existing task only triggers on the schedule.
+//
+// https://github.com/hashicorp/consul-terraform-sync/issues/704
+func TestCondition_Schedule_SuppressTriggers_SharedDependencies(t *testing.T) {
+	setParallelism(t)
+
+	// Set up Consul server with no services or KV pairs
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	// Configure and start CTS with an existing task
+	taskName := "scheduled_cli_w_shared_dep"
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, taskName)
+
+	initTaskName := "initial_task"
+	sharedService := "web"
+	initTask := fmt.Sprintf(`task {
+	name = "%s"
+	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["%s"]
+		use_as_module_input = true
+	}
+}`, initTaskName, sharedService)
+	cts := ctsSetup(t, srv, tempDir, initTask)
+
+	// Create a task via the CLI that has a services condition and
+	// shares a dependency with the existing task (consul-kv pair)
+	config := fmt.Sprintf(`task {
+	name = "%s"
+	module = "./test_modules/local_instances_file"
+	condition "schedule" {
+		cron = "*/10 * * * * * *"
+	}
+	module_input "services" {
+		names = ["%s"]
+	}
+}`, taskName, sharedService)
+
+	var taskConfig hclConfig
+	taskConfig = taskConfig.appendString(config)
+	taskFilePath := filepath.Join(tempDir, "task.hcl")
+	taskConfig.write(t, taskFilePath)
+
+	subcmd := []string{"task", "create",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+		fmt.Sprintf("-task-file=%s", taskFilePath),
+	}
+	out, err := runSubcommand(t, "yes\n", subcmd...)
+	require.NoError(t, err, fmt.Sprintf("command '%s' failed:\n %s", subcmd, out))
+	require.Contains(t, out, fmt.Sprintf("Task '%s' created", taskName))
+
+	// Confirm one event at creation, no services or KV registered yet
+	count := eventCount(t, taskName, cts.Port())
+	expectedCount := 1
+	require.Equal(t, expectedCount, count)
+
+	// Wait for scheduled task to have just ran
+	taskSchedule := 10 * time.Second
+	scheduledWait := taskSchedule + 7*time.Second // buffer for task to execute
+	api.WaitForEvent(t, cts, taskName, time.Now(), scheduledWait)
+
+	// Make a change to the shared dependency
+	registrationTime := time.Now()
+	service := testutil.TestService{ID: "web", Name: "web"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+
+	// Check scheduled task didn't trigger immediately and ran on schedule
+	api.WaitForEvent(t, cts, taskName, registrationTime, scheduledWait)
+	port := cts.Port()
+	checkScheduledRun(t, taskName, registrationTime, taskSchedule, port)
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, true, []string{"web"}, resourcesPath)
+
+	// Also check that the initial task triggered as expected
+	api.WaitForEvent(t, cts, taskName, registrationTime, defaultWaitForEvent)
+	initResources := filepath.Join(tempDir, initTaskName, resourcesDir)
+	validateServices(t, true, []string{"web"}, initResources)
+}
+
 // checkScheduledRun checks that a scheduled task's most recent task run
 // occurred at approximately the expected scheduled time by checking events
 func checkScheduledRun(t *testing.T, taskName string, depChangeTime time.Time,

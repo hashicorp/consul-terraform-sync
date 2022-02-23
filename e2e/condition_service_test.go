@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -254,4 +255,103 @@ func TestCondition_Services_InvalidQueries(t *testing.T) {
 		taskConfig := fmt.Sprintf(config, taskName, tc.queryConfig)
 		testInvalidTaskConfig(t, tc.name, taskName, taskConfig, tc.errMsg)
 	}
+}
+
+// TestConditionServices_SuppressTriggers_SharedDependencies tests that a
+// task created with a services condition that shares a dependencies with
+// an existing task only triggers on an expected services change.
+//
+// https://github.com/hashicorp/consul-terraform-sync/issues/704
+func TestConditionServices_SuppressTriggers_SharedDependencies(t *testing.T) {
+	setParallelism(t)
+
+	// Set up Consul server with no services or KV pairs
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+
+	// Configure and start CTS with an existing task
+	taskName := "services_cond_cli_w_shared_dep"
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, taskName)
+
+	initTaskName := "initial_task"
+	path := "test/path"
+	initTask := fmt.Sprintf(`task {
+	name = "%s"
+	module = "lornasong/cts_kv_file/local"
+	condition "services" {
+		names = ["web"]
+	}
+	module_input  "consul-kv" {
+		path = "%s"
+	}
+}`, initTaskName, path)
+	cts := ctsSetup(t, srv, tempDir, initTask)
+
+	// Create a task via the CLI that has a services condition and
+	// shares a dependency with the existing task (consul-kv pair)
+	config := fmt.Sprintf(`task {
+	name = "%s"
+	module = "lornasong/cts_kv_file/local"
+	condition "services" {
+		regexp = "api"
+	}
+	module_input  "consul-kv" {
+		path = "%s"
+	}
+}`, taskName, path)
+
+	var taskConfig hclConfig
+	taskConfig = taskConfig.appendString(config)
+	taskFilePath := filepath.Join(tempDir, "task.hcl")
+	taskConfig.write(t, taskFilePath)
+
+	subcmd := []string{"task", "create",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+		fmt.Sprintf("-task-file=%s", taskFilePath),
+	}
+	out, err := runSubcommand(t, "yes\n", subcmd...)
+	require.NoError(t, err, fmt.Sprintf("command '%s' failed:\n %s", subcmd, out))
+	require.Contains(t, out, fmt.Sprintf("Task '%s' created", taskName))
+
+	// Confirm one event at creation, no services or KV registered yet
+	count := eventCount(t, taskName, cts.Port())
+	expectedCount := 1
+	require.Equal(t, expectedCount, count)
+
+	// Make a change to the shared dependency
+	value := "test-value"
+	srv.SetKVString(t, path, value)
+	time.Sleep(defaultWaitForNoEvent)
+
+	// Confirm that created task was not triggered, once-mode should
+	// be complete
+	count = eventCount(t, taskName, cts.Port())
+	assert.Equal(t, expectedCount, count)
+	workingDir := fmt.Sprintf("%s/%s", tempDir, taskName)
+	resourcesPath := filepath.Join(workingDir, resourcesDir)
+	validateModuleFile(t, true, false, resourcesPath, path, value)
+
+	// Make a services change to trigger created task
+	now := time.Now()
+	service := testutil.TestService{ID: "api-test", Name: "api-test"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+	count = eventCount(t, taskName, cts.Port())
+	expectedCount++
+	assert.Equal(t, expectedCount, count, "unexpected event count")
+	validateServices(t, true, []string{"api-test"}, resourcesPath)
+	validateModuleFile(t, true, true, resourcesPath, path, value)
+
+	// Make a services change to trigger initial task
+	now = time.Now()
+	service = testutil.TestService{ID: "web", Name: "web"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, initTaskName, now, defaultWaitForEvent)
+	initCount := eventCount(t, initTaskName, cts.Port())
+	assert.Equal(t, 2, initCount, "unexpected event count")
+	initResources := filepath.Join(tempDir, initTaskName, resourcesDir)
+	validateServices(t, true, []string{"web"}, initResources)
+	validateModuleFile(t, true, true, resourcesPath, path, value)
 }
