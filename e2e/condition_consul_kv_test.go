@@ -443,9 +443,21 @@ func TestConditionConsulKV_SuppressTriggers_SharedDependencies(t *testing.T) {
 			defer srv.Stop()
 
 			// Configure and start CTS with an existing task
-			taskName := "consul_kv_condition_cli_once_" + tc.name
+			taskName := "consul_kv_condition_cli_shared_dep_" + tc.name
 			tempDir := fmt.Sprintf("%s%s", tempDirPrefix, taskName)
-			cts := ctsSetup(t, srv, tempDir, webAPITask())
+			initTaskName := "initial_task"
+			sharedService := "web"
+			initConfig := fmt.Sprintf(`
+			task {
+				name = "%s"
+				module = "./test_modules/local_instances_file"
+				condition "services" {
+					names = ["%s"]
+					use_as_module_input = true
+				}
+			}
+			`, initTaskName, sharedService)
+			cts := ctsSetup(t, srv, tempDir, initConfig)
 
 			// Create a task via the CLI that has a consul-kv condition and
 			// shares a dependency with the existing task (web service)
@@ -459,9 +471,9 @@ func TestConditionConsulKV_SuppressTriggers_SharedDependencies(t *testing.T) {
 					use_as_module_input = true
 				}
 				module_input "services" {
-					names = ["web"]
+					names = ["%s"]
 				}
-			}`, taskName, path, tc.recurse)
+			}`, taskName, path, tc.recurse, sharedService)
 
 			var taskConfig hclConfig
 			taskConfig = taskConfig.appendString(config)
@@ -485,18 +497,26 @@ func TestConditionConsulKV_SuppressTriggers_SharedDependencies(t *testing.T) {
 			validateServices(t, false, []string{"api", "web"}, resourcesPath)
 
 			// Make a change to the shared dependency
-			services := []testutil.TestService{{ID: "web", Name: "web"}}
-			testutils.AddServices(t, srv, services)
+			now := time.Now()
+			service := testutil.TestService{ID: sharedService, Name: sharedService}
+			testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 			time.Sleep(defaultWaitForNoEvent)
 
 			// Confirm that created task was not triggered, once-mode should
 			// be complete
 			count = eventCount(t, taskName, cts.Port())
 			assert.Equal(t, expectedCount, count)
-			validateServices(t, false, []string{"web"}, resourcesPath)
+			validateServices(t, false, []string{sharedService}, resourcesPath)
+
+			// Check that the initial task triggered as expected
+			api.WaitForEvent(t, cts, initTaskName, now, defaultWaitForEvent)
+			initCount := eventCount(t, initTaskName, cts.Port())
+			assert.Equal(t, 2, initCount)
+			initResources := filepath.Join(tempDir, initTaskName, resourcesDir)
+			validateServices(t, true, []string{sharedService}, initResources)
 
 			// Make a Consul KV change, confirm that task runs
-			now := time.Now()
+			now = time.Now()
 			value := "test-value"
 			srv.SetKVString(t, path, value)
 			api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
