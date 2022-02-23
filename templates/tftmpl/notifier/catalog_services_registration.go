@@ -39,6 +39,7 @@ func (n *CatalogServicesRegistration) Override() {
 	defer n.mu.Unlock()
 	if !n.once {
 		n.once = true
+		// prevents hanging
 		n.Template.Notify(nil)
 	}
 }
