@@ -1,3 +1,46 @@
+## 0.5.0 (February 23, 2022)
+
+KNOWN ISSUES:
+* Re-creating a task using the task creation API/CLI after Consul restart can result in an error. [[GH-701](https://github.com/hashicorp/consul-terraform-sync/issues/701)]
+* Creating a task with the same name as a deleted task, where the deleted task includes a `condition "schedule"`, can leave CTS in a bad state [[GH-715](https://github.com/hashicorp/consul-terraform-sync/issues/715)]
+* Creating a task with multiple module inputs using JSON requires specific JSON format. [[GH-714](https://github.com/hashicorp/consul-terraform-sync/issues/714)]
+
+BREAKING CHANGES:
+* Stop monitoring and including non-passing service instances in `terraform.tfvars` by default. CTS should only monitor passing service instances unless configured otherwise. [[GH-430](https://github.com/hashicorp/consul-terraform-sync/issues/430)]
+* Removed `driver.terraform.working_dir` configuration option that was deprecated in v0.3.0. Use top-level `working_dir` to configure parent directory for all tasks or `task.working_dir` to configure per task. [[GH-548](https://github.com/hashicorp/consul-terraform-sync/pull/548)]
+* Require that `condition "catalog-services"` block's `regexp` field be configured instead of relying on previous default behavior. [[GH-574](https://github.com/hashicorp/consul-terraform-sync/pull/574)]
+* Change default value of `source_includes_var` field from false to true for all types of `condition` blocks. [[GH-578](https://github.com/hashicorp/consul-terraform-sync/pull/578)]
+
+FEATURES:
+* Support for deleting an existing task through the API and CLI. [[GH-522](https://github.com/hashicorp/consul-terraform-sync/issues/522)]
+* Support for creating a task through the API and CLI. [[GH-522](https://github.com/hashicorp/consul-terraform-sync/issues/522)]
+* Support for retrieving information about an existing task through the API. [[GH-681](https://github.com/hashicorp/consul-terraform-sync/pull/681)]
+* Support for `-auto-approve` option to skip interactive approval prompts in the CLI. [[GH-576](https://github.com/hashicorp/consul-terraform-sync/pull/576)]
+
+IMPROVEMENTS:
+* Tasks will now trigger only after the `min` time of the `buffer_period` configuration has transpired. Previously tasks would trigger immediately, once, before honoring the minimum buffer period time. [[GH-642](https://github.com/hashicorp/consul-terraform-sync/pull/642)]
+* Support configuring a task's `condition "services"` and `source_input "services"` blocks with query parameters: `datacenter`, `namespace`, `filter`, and `cts_user_defined_meta`. [[GH-357](https://github.com/hashicorp/consul-terraform-sync/issues/357)]
+* Support new `names` field for configuring a task's `condition "services"` and `source_input "services"` blocks as an optional alternative to `regexp` to list monitored services by name. [[GH-561](https://github.com/hashicorp/consul-terraform-sync/issues/561)]
+* Support `source_includes_var` field for a task's `condition "services"` block. [[GH-584](https://github.com/hashicorp/consul-terraform-sync/pull/584)]
+* Expand `source_input` block usage to dynamic tasks and support multiple `source_input` blocks per task. [[GH-607](https://github.com/hashicorp/consul-terraform-sync/issues/607)]
+* Initialize disabled tasks, which allows for earlier validation of a task. [[GH-625](https://github.com/hashicorp/consul-terraform-sync/pull/625)]
+
+DEPRECATIONS:
+* **(Enterprise Only)** Deprecate `workspace_prefix` for the Terraform Cloud driver that adds unexpected `-` character added between the prefix and task name. Use the new `workspaces.prefix` option instead. [[GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442)]
+  * If the `workspace_prefix` option is in use by CTS v0.3.x or v0.4.x for the Terraform Cloud driver, visit [GH-442](https://github.com/hashicorp/consul-terraform-sync/issues/442) for upgrade guidelines.
+* Deprecate `port` CLI option. Use `http-addr` option instead. [[GH-617](https://github.com/hashicorp/consul-terraform-sync/pull/617)]
+* Deprecate `services` field in task configuration. Use `condition "services"` or `source_input "services"` instead. [[GH-669](https://github.com/hashicorp/consul-terraform-sync/issues/669)]
+* Deprecate `service` block in configuration. To replace usage, first upgrade the associated task config `services` field to a `condition "services"` or `source_input "services"`. Then move the `service` block fields into the new `condition` or `source_input` block. [[GH-670](https://github.com/hashicorp/consul-terraform-sync/issues/670)]
+* Deprecate `source` field in task configuration. Rename `source` to `module` in configuration. [[GH-566](https://github.com/hashicorp/consul-terraform-sync/issues/566)]
+* Deprecate `source_input` block in task configuration. Rename `source_input` to `module_input` in configuration. [[GH-567](https://github.com/hashicorp/consul-terraform-sync/issues/567)]
+* Deprecate `source_includes_var` field in task configuration's `condition` block. Rename `source_includes_var` to `use_as_module_input` in configuration. [[GH-568](https://github.com/hashicorp/consul-terraform-sync/issues/568)]
+* Deprecate non-status, config-related information from the Task Status API's response payload. Use the Get Task API instead to retrieve the deprecated information. [[GH-569](https://github.com/hashicorp/consul-terraform-sync/issues/569)]
+
+BUG FIXES:
+* Fix CLI client enable task command timing out when buffer period is enabled [[GH-516](https://github.com/hashicorp/consul-terraform-sync/issues/516)]
+* Fix Services condition when configured with regex and Catalog Services condition to use cached indexes for Consul API blocking queries. [[GH-529](https://github.com/hashicorp/consul-terraform-sync/issues/529)]
+* **(Enterprise Only)** Fix task not triggering after re-enabled when running with the TFC driver.
+
 ## 0.4.3 (January 14, 2022)
 SECURITY:
 * Upgrade Go to address [CVE-2021-44716](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44716) and [CVE-2021-44717](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44717)
