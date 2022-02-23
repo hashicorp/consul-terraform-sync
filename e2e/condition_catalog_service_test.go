@@ -12,8 +12,10 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
+	"github.com/hashicorp/consul-terraform-sync/command"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -436,6 +438,97 @@ task {
 			require.NoError(t, err)
 		})
 	}
+}
+
+// TestCondition_CatalogServices_SuppressTriggers_SharedDependencies tests that a
+// task created with a catalog-services condition that shares a dependencies with
+// an existing task only triggers on an expected services change.
+//
+// https://github.com/hashicorp/consul-terraform-sync/issues/704
+func TestCondition_CatalogServices_SuppressTriggers_SharedDependencies(t *testing.T) {
+	setParallelism(t)
+
+	// Set up Consul server with a service that the catalog-service condition monitors
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	service := testutil.TestService{ID: "web-1", Name: "web-test"}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+
+	// Configure and start CTS with an existing task
+	taskName := "cs_cond_cli_w_shared_dep"
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, taskName)
+	initTask := "init_task"
+	sharedService := "api"
+	initConfig := fmt.Sprintf(`
+task {
+	name = "%s"
+	module = "./test_modules/local_instances_file"
+	condition "services" {
+		names = ["%s"]
+		use_as_module_input = true
+	}
+}
+`, initTask, sharedService)
+	cts := ctsSetup(t, srv, tempDir, initConfig)
+
+	// Create a task via the CLI that has a services condition and
+	// shares a dependency with the existing task (consul-kv pair)
+	config := fmt.Sprintf(`task {
+	name = "%s"
+	module = "lornasong/cts_cs_file/local"
+	condition "catalog-services" {
+		regexp = "web"
+	}
+	module_input  "services" {
+		names = ["%s"]
+	}
+}`, taskName, sharedService)
+
+	var taskConfig hclConfig
+	taskConfig = taskConfig.appendString(config)
+	taskFilePath := filepath.Join(tempDir, "task.hcl")
+	taskConfig.write(t, taskFilePath)
+
+	subcmd := []string{"task", "create",
+		fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),
+		fmt.Sprintf("-task-file=%s", taskFilePath),
+	}
+	out, err := runSubcommand(t, "yes\n", subcmd...)
+	require.NoError(t, err, fmt.Sprintf("command '%s' failed:\n %s", subcmd, out))
+	require.Contains(t, out, fmt.Sprintf("Task '%s' created", taskName))
+
+	// Confirm one event at creation
+	count := eventCount(t, taskName, cts.Port())
+	expectedCount := 1
+	require.Equal(t, expectedCount, count, "unexpected number of events for created task")
+
+	// Register an instance to the existing service with a tag change
+	service = testutil.TestService{ID: "web-2", Name: "web-test", Tags: []string{"tag_a"}}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+
+	// Check that created task does not trigger
+	time.Sleep(defaultWaitForNoEvent)
+	count = eventCount(t, taskName, cts.Port())
+	assert.Equal(t, expectedCount, count, "unexpected number of events for created task")
+
+	// Register service that only the initial task will trigger on
+	registrationTime := time.Now()
+	service = testutil.TestService{ID: sharedService, Name: sharedService}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+
+	// Check that created event is not triggered
+	time.Sleep(defaultWaitForNoEvent)
+	count = eventCount(t, taskName, cts.Port())
+	assert.Equal(t, 1, count, "unexpected number of events for created task")
+
+	// Check that initial task does trigger
+	api.WaitForEvent(t, cts, initTask, registrationTime, defaultWaitForEvent)
+	initCount := eventCount(t, initTask, cts.Port())
+	assert.Equal(t, 2, initCount)
+	initResources := filepath.Join(tempDir, initTask, resourcesDir)
+	validateServices(t, true, []string{sharedService}, initResources)
 }
 
 func testCatalogServicesRegistration(t *testing.T, taskConf, taskName,
