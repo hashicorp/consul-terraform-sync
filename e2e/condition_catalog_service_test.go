@@ -529,6 +529,21 @@ task {
 	assert.Equal(t, 2, initCount)
 	initResources := filepath.Join(tempDir, initTask, resourcesDir)
 	validateServices(t, true, []string{sharedService}, initResources)
+
+	// Register a new service that will trigger the created task
+	service = testutil.TestService{ID: "web-test-new", Name: "web-test-new", Tags: []string{"tag_b"}}
+	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+
+	// Check that created task does trigger
+	api.WaitForEvent(t, cts, taskName, registrationTime, defaultWaitForEvent)
+	count = eventCount(t, taskName, cts.Port())
+	expectedCount++
+	assert.Equal(t, expectedCount, count)
+	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
+	validateServices(t, true, []string{"services_" + sharedService}, // module prepends 'services_' to filenames
+		resourcesPath)
+	validateModuleFile(t, true, true, resourcesPath, "tags_web-test-new", "tag_b")
+	validateModuleFile(t, true, true, resourcesPath, "tags_web-test", "tag_a")
 }
 
 func testCatalogServicesRegistration(t *testing.T, taskConf, taskName,
