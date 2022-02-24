@@ -1,9 +1,15 @@
+## 0.5.1 (February 24, 2022)
+
+BUG FIXES:
+* **(Enterprise Only)** Regression with Terraform Cloud driver's `required_providers` configuration which leads the driver to potentially attempt to retrieve an incorrect provider source and version [[GH-728](https://github.com/hashicorp/consul-terraform-sync/issues/728)]
+
 ## 0.5.0 (February 23, 2022)
 
 KNOWN ISSUES:
 * Re-creating a task using the task creation API/CLI after Consul restart can result in an error. [[GH-701](https://github.com/hashicorp/consul-terraform-sync/issues/701)]
 * Creating a task with the same name as a deleted task, where the deleted task includes a `condition "schedule"`, can leave CTS in a bad state [[GH-715](https://github.com/hashicorp/consul-terraform-sync/issues/715)]
 * Creating a task with multiple module inputs using JSON requires specific JSON format. [[GH-714](https://github.com/hashicorp/consul-terraform-sync/issues/714)]
+* **(Enterprise Only)** Regression with Terraform Cloud driver's `required_providers` configuration which leads the driver to potentially attempt to retrieve an incorrect provider source and version [[GH-728](https://github.com/hashicorp/consul-terraform-sync/issues/728)]
 
 BREAKING CHANGES:
 * Stop monitoring and including non-passing service instances in `terraform.tfvars` by default. CTS should only monitor passing service instances unless configured otherwise. [[GH-430](https://github.com/hashicorp/consul-terraform-sync/issues/430)]
