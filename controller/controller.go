@@ -225,7 +225,8 @@ func newTerraformDriver(conf *config.Config, task *driver.Task, w templates.Watc
 
 func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 	providerConfigs driver.TerraformProviderBlocks) (*driver.Task, error) {
-	if conf == nil {
+	if conf == nil || conf.Driver == nil {
+		// only expected for testing
 		return nil, nil
 	}
 
@@ -235,6 +236,8 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		services[si] = getService(conf.DeprecatedServices, service, meta)
 	}
 
+	tfConf := conf.Driver.Terraform
+
 	providers := make(driver.TerraformProviderBlocks, len(taskConfig.Providers))
 	providerInfo := make(map[string]interface{})
 	for pi, providerID := range taskConfig.Providers {
@@ -243,7 +246,7 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		// This is Terraform specific to pass version and source info for
 		// providers from the required_provider block
 		name, _ := splitProviderID(providerID)
-		if tfConf := conf.Driver.Terraform; tfConf != nil {
+		if tfConf != nil {
 			if pInfo, ok := tfConf.RequiredProviders[name]; ok {
 				providerInfo[name] = pInfo
 			}
