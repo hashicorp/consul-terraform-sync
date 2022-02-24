@@ -163,6 +163,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 			conf: &config.Config{
 				BufferPeriod: config.DefaultBufferPeriodConfig(),
 				WorkingDir:   config.String(config.DefaultWorkingDir),
+				Driver:       config.DefaultDriverConfig(),
 			},
 			logger:  logging.NewNullLogger(),
 			watcher: new(mocksTmpl.Watcher),
