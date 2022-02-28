@@ -33,8 +33,8 @@ func withLogging(next http.Handler) http.Handler {
 		logger = logger.With("request_id", reqID)
 		ts := time.Now()
 
-		// Log info before calling the next handler
-		logger.Info("received request",
+		// Log request info before calling the next handler
+		logger.Debug("received request",
 			"time", ts.Format(timeFormat),
 			"remote_ip", r.RemoteAddr,
 			"uri", r.RequestURI,
@@ -51,8 +51,8 @@ func withLogging(next http.Handler) http.Handler {
 
 		next.ServeHTTP(rw, r)
 
-		// Log info on exit
-		logger.Info("request complete",
+		// Log request info on exit
+		logger.Debug("request complete",
 			"duration", fmt.Sprintf("%dus", time.Since(ts).Microseconds()),
 			"status_code", rw.statusCode)
 	})
