@@ -5,7 +5,7 @@ BUG FIXES:
 
 ## 0.5.0 (February 23, 2022)
 
-KNOWN ISSUES:
+KNOWN ISSUES: _See the linked GitHub issues for details on any workarounds_
 * Re-creating a task using the task creation API/CLI after Consul restart can result in an error. [[GH-701](https://github.com/hashicorp/consul-terraform-sync/issues/701)]
 * Creating a task with the same name as a deleted task, where the deleted task includes a `condition "schedule"`, can leave CTS in a bad state [[GH-715](https://github.com/hashicorp/consul-terraform-sync/issues/715)]
 * Creating a task with multiple module inputs using JSON requires specific JSON format. [[GH-714](https://github.com/hashicorp/consul-terraform-sync/issues/714)]
