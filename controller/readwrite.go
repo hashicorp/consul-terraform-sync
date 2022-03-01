@@ -534,6 +534,7 @@ func (rw *ReadWrite) waitForTaskInactive(ctx context.Context, name string) error
 			if !rw.drivers.IsActive(name) {
 				return nil
 			}
+			time.Sleep(100 * time.Microsecond)
 		}
 	}
 }
