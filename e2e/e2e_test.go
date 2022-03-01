@@ -511,6 +511,7 @@ func TestE2E_ConfigStreamlining_Deprecations(t *testing.T) {
 //
 // https://github.com/hashicorp/consul-terraform-sync/issues/732
 func TestE2E_TriggerTaskWhenActive(t *testing.T) {
+	setParallelism(t)
 	// Start CTS with multiple tasks
 	activeTaskName := "active_task"
 	activeTaskConfig := fmt.Sprintf(`
@@ -587,6 +588,76 @@ func TestE2E_TriggerTaskWhenActive(t *testing.T) {
 	count = eventCount(t, activeTaskName, cts.Port())
 	assert.Equal(t, 4, count, "unexpected number of events")
 	validateServices(t, true, []string{"api-1", "api-2", "api-3"}, resourcesPath)
+}
+
+// TestE2E_TriggerTaskWhenActiveMultipleTimes tests that after triggering
+// an active task multiple times, the next run will render with the latest
+// information from Consul. It also checks that there will only be one event
+// even though there were multiple changes, as the template has already
+// rendered with the latest information so there are no subsequent changes.
+//
+// Note: This does not use buffer period.
+//
+// https://github.com/hashicorp/consul-terraform-sync/issues/732
+func TestE2E_TriggerTaskWhenActiveMultipleTimes(t *testing.T) {
+	setParallelism(t)
+
+	activeTaskName := "active_task"
+	activeTaskConfig := fmt.Sprintf(`
+	task {
+		name = "%s"
+		providers = ["local"]
+		module = "./test_modules/delayed_module"
+		condition "services" {
+			names = ["api"]
+		}
+	}
+	`, activeTaskName)
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "trigger_when_active_multiple")
+	cts := ctsSetup(t, srv, tempDir, activeTaskConfig)
+
+	// Trigger the task with the long-running module so that it becomes active
+	firstRegister := time.Now()
+	testutils.RegisterConsulService(t, srv,
+		testutil.TestService{Name: "api", ID: "api-1"}, defaultWaitForRegistration)
+
+	// Register a new instance while the task is still running
+	time.Sleep(1 * time.Second) // waiting for task to start, module sleeps for 5 seconds
+	activeRegister := time.Now()
+	testutils.RegisterConsulService(t, srv,
+		testutil.TestService{Name: "api", ID: "api-2"}, defaultWaitForRegistration)
+
+	// Deregister the newly added instance
+	testutils.DeregisterConsulService(t, srv, "api-2")
+
+	// Register a different instance
+	testutils.RegisterConsulService(t, srv,
+		testutil.TestService{Name: "api", ID: "api-3"}, defaultWaitForRegistration)
+
+	// First run of task should eventually complete
+	api.WaitForEvent(t, cts, activeTaskName, firstRegister, defaultWaitForEvent)
+	count := eventCount(t, activeTaskName, cts.Port())
+	assert.Equal(t, 2, count, "unexpected number of events")
+	resourcesPath := filepath.Join(tempDir, activeTaskName, resourcesDir)
+	validateServices(t, true, []string{"api-1"}, resourcesPath)
+	validateServices(t, false, []string{"api-2", "api-3"}, resourcesPath)
+
+	// Second run of task completes with latest services info
+	api.WaitForEvent(t, cts, activeTaskName, activeRegister, defaultWaitForEvent)
+	count = eventCount(t, activeTaskName, cts.Port())
+	assert.Equal(t, 3, count, "unexpected number of events")
+	validateServices(t, true, []string{"api-1", "api-3"}, resourcesPath)
+	validateServices(t, false, []string{"api-2"}, resourcesPath)
+
+	// Subsequent triggers should not create an event
+	time.Sleep(defaultWaitForNoEvent + (5 * time.Second)) // accounting for 5s delay in module
+	count = eventCount(t, activeTaskName, cts.Port())
+	assert.Equal(t, 3, count, "unexpected number of events")
 }
 
 // testInvalidTaskConfig tests that task creation fails with the given task configuration.
