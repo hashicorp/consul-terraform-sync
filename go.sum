@@ -360,8 +360,8 @@ github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ
 github.com/hashicorp/golang-lru v0.5.3/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
 github.com/hashicorp/golang-lru v0.5.4 h1:YDjusn29QI/Das2iO9M0BHnIbxPeyuCHsjMW+lJfyTc=
 github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
-github.com/hashicorp/hcat v0.2.1-0.20220203193115-e49c6b7ee2f9 h1:C25VUacP9hzMWPh8QvQKGS4UdiCxhNdJU2XjC55+krQ=
-github.com/hashicorp/hcat v0.2.1-0.20220203193115-e49c6b7ee2f9/go.mod h1:8whVXKNd9s0/dmuQZI/tfanG+sudN3H5NaqT3qZZZ0s=
+github.com/hashicorp/hcat v0.2.1-0.20220301192914-b8acc0524d4e h1:tjXdYhUZSCWtQDC3xPwxeDFtx2r7RVeCd2RX7SJdwKU=
+github.com/hashicorp/hcat v0.2.1-0.20220301192914-b8acc0524d4e/go.mod h1:8whVXKNd9s0/dmuQZI/tfanG+sudN3H5NaqT3qZZZ0s=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
 github.com/hashicorp/hcl v1.0.1-vault-2 h1:j0lTHGBdaU13Pc3GaTCdWjmsT22X98bsHnA+ShzIOtg=
 github.com/hashicorp/hcl v1.0.1-vault-2/go.mod h1:XYhtn6ijBSAj6n4YqAaf7RBPS4I06AItNorpy+MoQNM=
