@@ -563,16 +563,21 @@ func TestE2E_TriggerTaskWhenActive(t *testing.T) {
 	api.WaitForEvent(t, cts, inactiveTaskName, inactiveRegister, defaultWaitForEvent)
 	count := eventCount(t, inactiveTaskName, cts.Port())
 	assert.Equal(t, 2, count, "unexpected number of events")
+	inactivePath := filepath.Join(tempDir, inactiveTaskName, resourcesDir)
+	validateServices(t, true, []string{"web-1"}, inactivePath)
 
 	// First run of task should eventually complete
 	api.WaitForEvent(t, cts, activeTaskName, firstRegister, defaultWaitForEvent)
 	count = eventCount(t, activeTaskName, cts.Port())
 	assert.Equal(t, 2, count, "unexpected number of events")
+	resourcesPath := filepath.Join(tempDir, activeTaskName, resourcesDir)
+	validateServices(t, true, []string{"api-1"}, resourcesPath)
 
 	// Second run of task should occur after first one completes
 	api.WaitForEvent(t, cts, activeTaskName, activeRegister, defaultWaitForEvent)
 	count = eventCount(t, activeTaskName, cts.Port())
 	assert.Equal(t, 3, count, "unexpected number of events")
+	validateServices(t, true, []string{"api-1", "api-2"}, resourcesPath)
 
 	// Trigger first task again, check for event
 	now := time.Now()
@@ -581,6 +586,7 @@ func TestE2E_TriggerTaskWhenActive(t *testing.T) {
 	api.WaitForEvent(t, cts, activeTaskName, now, defaultWaitForEvent)
 	count = eventCount(t, activeTaskName, cts.Port())
 	assert.Equal(t, 4, count, "unexpected number of events")
+	validateServices(t, true, []string{"api-1", "api-2", "api-3"}, resourcesPath)
 }
 
 // testInvalidTaskConfig tests that task creation fails with the given task configuration.
