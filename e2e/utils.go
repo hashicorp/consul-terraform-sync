@@ -171,14 +171,16 @@ func runSubCommandWithEnvVars(t *testing.T, input string, envVars []string, subc
 // 2. Creates a CTS configuration file with the provided task
 // 3. Starts CTS
 // 4. Waits for the CTS API to start without error, indicating that all initialization is complete
-func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig string) *api.Client {
+func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig ...string) *api.Client {
 	cleanup := testutils.MakeTempDir(t, tempDir)
 	t.Cleanup(func() {
 		_ = cleanup()
 	})
 
-	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
-		appendString(taskConfig)
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock()
+	for _, c := range taskConfig {
+		config = config.appendString(c)
+	}
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
 
@@ -187,7 +189,7 @@ func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig
 		stop(t)
 	})
 
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForAPI(defaultWaitForAPI * time.Duration(len(taskConfig)))
 	require.NoError(t, err)
 
 	return cts
