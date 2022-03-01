@@ -146,13 +146,10 @@ func (rw *ReadWrite) runDynamicTask(ctx context.Context, d driver.Driver) error 
 		return nil
 	}
 
-	if rw.drivers.IsActive(taskName) {
-		// The driver is currently active with the task, initiated by an ad-hoc run.
-		// There may be updates for other tasks, so we'll continue checking
-		rw.logger.Trace("task is active", taskNameLogKey, taskName)
-		return nil
+	err := rw.waitForTaskInactive(ctx, taskName)
+	if err != nil {
+		return err
 	}
-
 	complete, err := rw.checkApply(ctx, d, true, false)
 	if err != nil {
 		return err
@@ -461,6 +458,11 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 		return nil
 	}
 
+	err := rw.waitForTaskInactive(ctx, taskName)
+	if err != nil {
+		return err
+	}
+
 	rw.drivers.SetActive(taskName)
 	defer rw.drivers.SetInactive(taskName)
 
@@ -502,20 +504,12 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 // If a task is active and running, it will wait until the task has completed before
 // proceeding with the deletion.
 func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
-WAIT:
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			// wait for task to not be running
-			if !rw.drivers.IsActive(name) {
-				break WAIT
-			}
-		}
+	err := rw.waitForTaskInactive(ctx, name)
+	if err != nil {
+		return err
 	}
 
-	err := rw.drivers.Delete(name)
+	err = rw.drivers.Delete(name)
 	if err != nil {
 		rw.logger.Error("unable to delete task", taskNameLogKey, name, "error", err)
 		return err
@@ -523,6 +517,26 @@ WAIT:
 	rw.store.Delete(name)
 	rw.logger.Debug("task deleted", taskNameLogKey, name)
 	return nil
+}
+
+func (rw *ReadWrite) waitForTaskInactive(ctx context.Context, name string) error {
+	// Check first if inactive, return early and don't log
+	if !rw.drivers.IsActive(name) {
+		return nil
+	}
+	// Check continuously in a loop until inactive
+	rw.logger.Debug("waiting for task to become inactive", taskNameLogKey, name)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			if !rw.drivers.IsActive(name) {
+				return nil
+			}
+			time.Sleep(100 * time.Microsecond)
+		}
+	}
 }
 
 // EnableTestMode is a helper for testing which tasks were triggered and
