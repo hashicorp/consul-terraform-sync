@@ -155,39 +155,6 @@ func TestTerraformCLIInit(t *testing.T) {
 			m.AssertExpectations(t)
 		})
 	}
-
-	t.Run("workspace artifact with empty state", func(t *testing.T) {
-		// Edge case to handle https://github.com/hashicorp/terraform/issues/21393
-		initErr := errors.New(`Initializing the backend...
-
-The currently selected workspace (test-workspace) does not exist.
-This is expected behavior when the selected workspace did not have an
-existing non-empty state. Please enter a number to select a workspace:
-
-1. default
-
-Enter a value:
-
-Error: Failed to select workspace: input not a valid number`)
-
-		m := new(mocks.TerraformExec)
-		var initCount int
-		m.On("Init", mock.Anything).Return(func(context.Context, ...tfexec.InitOption) error {
-			initCount++
-			if initCount == 1 {
-				return initErr
-			}
-			return nil
-		}).Twice()
-		m.On("WorkspaceNew", mock.Anything, mock.Anything).Return(nil)
-		m.On("WorkspaceSelect", mock.Anything, mock.Anything).Return(nil)
-
-		client := NewTestTerraformCLI(&TerraformCLIConfig{}, m)
-		ctx := context.Background()
-		err := client.Init(ctx)
-		assert.NoError(t, err)
-		m.AssertExpectations(t)
-	})
 }
 
 func TestTerraformCLIApply(t *testing.T) {
