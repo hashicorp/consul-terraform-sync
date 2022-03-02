@@ -627,7 +627,7 @@ func TestE2E_TriggerTaskWhenActiveMultipleTimes(t *testing.T) {
 		testutil.TestService{Name: "api", ID: "api-1"}, defaultWaitForRegistration)
 
 	// Register a new instance while the task is still running
-	time.Sleep(1 * time.Second) // waiting for task to start, module sleeps for 5 seconds
+	time.Sleep(2 * time.Second) // waiting for task to start, module sleeps for 5 seconds
 	activeRegister := time.Now()
 	testutils.RegisterConsulService(t, srv,
 		testutil.TestService{Name: "api", ID: "api-2"}, defaultWaitForRegistration)
@@ -642,7 +642,8 @@ func TestE2E_TriggerTaskWhenActiveMultipleTimes(t *testing.T) {
 	// First run of task should eventually complete
 	api.WaitForEvent(t, cts, activeTaskName, firstRegister, defaultWaitForEvent)
 	count := eventCount(t, activeTaskName, cts.Port())
-	assert.Equal(t, 2, count, "unexpected number of events")
+	expectedCount := 2
+	assert.Equal(t, expectedCount, count, "unexpected number of events")
 	resourcesPath := filepath.Join(tempDir, activeTaskName, resourcesDir)
 	validateServices(t, true, []string{"api-1"}, resourcesPath)
 	validateServices(t, false, []string{"api-2", "api-3"}, resourcesPath)
@@ -650,14 +651,15 @@ func TestE2E_TriggerTaskWhenActiveMultipleTimes(t *testing.T) {
 	// Second run of task completes with latest services info
 	api.WaitForEvent(t, cts, activeTaskName, activeRegister, defaultWaitForEvent)
 	count = eventCount(t, activeTaskName, cts.Port())
-	assert.Equal(t, 3, count, "unexpected number of events")
+	expectedCount++
+	assert.Equal(t, expectedCount, count, "unexpected number of events")
 	validateServices(t, true, []string{"api-1", "api-3"}, resourcesPath)
 	validateServices(t, false, []string{"api-2"}, resourcesPath)
 
 	// Subsequent triggers should not create an event
 	time.Sleep(defaultWaitForNoEvent + (5 * time.Second)) // accounting for 5s delay in module
 	count = eventCount(t, activeTaskName, cts.Port())
-	assert.Equal(t, 3, count, "unexpected number of events")
+	assert.Equal(t, expectedCount, count, "unexpected number of events")
 }
 
 // testInvalidTaskConfig tests that task creation fails with the given task configuration.
