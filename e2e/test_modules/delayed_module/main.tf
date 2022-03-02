@@ -1,7 +1,8 @@
 resource "local_file" "address" {
-  for_each = var.services
-  content  = each.value.address
-  filename = "resources/${each.value.id}.txt"
+  depends_on = [local_file.greeting_services]
+  for_each   = var.services
+  content    = each.value.address
+  filename   = "resources/${each.value.id}.txt"
 }
 
 resource "local_file" "greeting_services" {
