@@ -27,8 +27,10 @@ type ReadWrite struct {
 
 	watcherCh chan string
 
-	// scheduleCh is used to coordinate scheduled tasks created via the API
-	scheduleCh chan driver.Driver
+	// scheduleStartCh is used to coordinate scheduled tasks created via the API
+	scheduleStartCh chan driver.Driver
+	// scheduleStopChs is a map of channels used to stop scheduled tasks
+	scheduleStopChs map[string](chan struct{})
 
 	// deleteCh is used to coordinate task deletion via the API
 	deleteCh chan string
@@ -46,9 +48,10 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 	}
 
 	return &ReadWrite{
-		baseController: baseCtrl,
-		store:          event.NewStore(),
-		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		baseController:  baseCtrl,
+		store:           event.NewStore(),
+		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		scheduleStopChs: make(map[string](chan struct{})),
 	}, nil
 }
 
@@ -83,9 +86,9 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		// is an arbitrarily chosen value.
 		rw.watcherCh = make(chan string, rw.drivers.Len()+10)
 	}
-	if rw.scheduleCh == nil {
+	if rw.scheduleStartCh == nil {
 		// Size of channel is an arbitrarily chosen value.
-		rw.scheduleCh = make(chan driver.Driver, 10)
+		rw.scheduleStartCh = make(chan driver.Driver, 10)
 	}
 	if rw.deleteCh == nil {
 		// Size of channel is an arbitrarily chosen value.
@@ -114,7 +117,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 			go rw.runDynamicTask(ctx, d) // errors are logged for now
 
-		case d := <-rw.scheduleCh:
+		case d := <-rw.scheduleStartCh:
 			// Run newly created scheduled tasks
 			go rw.runScheduledTask(ctx, d)
 
