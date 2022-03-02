@@ -18,6 +18,7 @@ var (
 	_ Client = (*TerraformCLI)(nil)
 
 	wsFailedToSelectRegexp = regexp.MustCompile(`Failed to select workspace`)
+	wsDoesNotExistRegexp   = regexp.MustCompile(`workspace ".*" does not exist`)
 )
 
 const (
@@ -114,8 +115,9 @@ func (t *TerraformCLI) Init(ctx context.Context) error {
 TF_INIT_AGAIN:
 	if err := t.tf.Init(ctx); err != nil {
 		var wsErr *tfexec.ErrNoWorkspace
-		matched := wsFailedToSelectRegexp.MatchString(err.Error())
-		if matched || errors.As(err, &wsErr) {
+		matchedFailedToSelect := wsFailedToSelectRegexp.MatchString(err.Error())
+		matchedDoesNotExist := wsDoesNotExistRegexp.MatchString(err.Error())
+		if matchedFailedToSelect || matchedDoesNotExist || errors.As(err, &wsErr) {
 			t.logger.Info("workspace was detected without state, " +
 				"creating new workspace and attempting Terraform init again")
 			if err := t.tf.WorkspaceNew(ctx, t.workspace); err != nil {
