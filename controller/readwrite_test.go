@@ -412,8 +412,9 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
+		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := ctrl.runScheduledTask(ctx, d)
+			err := ctrl.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -440,8 +441,9 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
+		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := ctrl.runScheduledTask(ctx, d)
+			err := ctrl.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -459,7 +461,36 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 		d.AssertExpectations(t)
 	})
 
+	t.Run("stop-scheduled-task", func(t *testing.T) {
+		// Tests that signaling to the stop channel stops the function
+		ctrl := newTestController()
+
+		taskName := "scheduled_task"
+		d := new(mocksD.Driver)
+		d.On("Task").Return(scheduledTestTask(t, taskName)).Once()
+		d.On("TemplateIDs").Return(nil)
+		ctrl.drivers.Add(taskName, d)
+
+		ctx := context.Background()
+		errCh := make(chan error)
+		stopCh := make(chan struct{}, 1)
+		go func() {
+			err := ctrl.runScheduledTask(ctx, d, stopCh)
+			errCh <- err
+		}()
+		stopCh <- struct{}{}
+
+		select {
+		case err := <-errCh:
+			assert.NoError(t, err)
+		case <-time.After(time.Second * 5):
+			t.Fatal("runScheduledTask did not exit as expected")
+		}
+	})
+
 	t.Run("deleted-scheduled-task", func(t *testing.T) {
+		// Tests that a scheduled task stops if it no longer is in the
+		// list of drivers
 		ctrl := newTestController()
 
 		taskName := "scheduled_task"
@@ -469,9 +500,10 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 
 		ctx := context.Background()
 		errCh := make(chan error)
+		stopCh := make(chan struct{}, 1)
 		done := make(chan bool)
 		go func() {
-			err := ctrl.runScheduledTask(ctx, d)
+			err := ctrl.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}

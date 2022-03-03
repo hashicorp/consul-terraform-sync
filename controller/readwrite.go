@@ -75,7 +75,9 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 	for _, d := range rw.drivers.Map() {
 		if d.Task().IsScheduled() {
-			go rw.runScheduledTask(ctx, d)
+			stopCh := make(chan struct{}, 1)
+			go rw.runScheduledTask(ctx, d, stopCh)
+			rw.scheduleStopChs[d.Task().Name()] = stopCh
 		}
 	}
 
@@ -119,7 +121,9 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 		case d := <-rw.scheduleStartCh:
 			// Run newly created scheduled tasks
-			go rw.runScheduledTask(ctx, d)
+			stopCh := make(chan struct{}, 1)
+			go rw.runScheduledTask(ctx, d, stopCh)
+			rw.scheduleStopChs[d.Task().Name()] = stopCh
 
 		case n := <-rw.deleteCh:
 			go rw.deleteTask(ctx, n)
@@ -168,7 +172,7 @@ func (rw *ReadWrite) runDynamicTask(ctx context.Context, d driver.Driver) error 
 // The go-routine will manage the task's schedule and trigger the task on time.
 // If there are dependency changes since the task's last run time, then the task
 // will also apply.
-func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver) error {
+func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver, stopCh chan struct{}) error {
 	task := d.Task()
 	taskName := task.Name()
 
@@ -228,6 +232,9 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver) erro
 			waitTime = time.Until(nextTime)
 			rw.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
 				"wait_time", waitTime, "next_runtime", nextTime)
+		case <-stopCh:
+			rw.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
+			return nil
 		case <-ctx.Done():
 			rw.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
 			return ctx.Err()
