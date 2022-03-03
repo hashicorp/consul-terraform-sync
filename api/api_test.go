@@ -266,7 +266,7 @@ func TestServeWithTLS(t *testing.T) {
 			})
 			require.NoError(t, err)
 			go api.Serve(ctx)
-			time.Sleep(time.Microsecond)
+			time.Sleep(500 * time.Millisecond)
 
 			// Set up a client with the CA for the test case
 			tlsConf := &tls.Config{}
@@ -363,7 +363,7 @@ func TestServeWithMutualTLS(t *testing.T) {
 	})
 	require.NoError(t, err)
 	go api.Serve(ctx)
-	time.Sleep(time.Microsecond)
+	time.Sleep(500 * time.Millisecond)
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -493,7 +493,7 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 	})
 	require.NoError(t, err)
 	go api.Serve(ctx)
-	time.Sleep(time.Microsecond)
+	time.Sleep(500 * time.Millisecond)
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
