@@ -201,7 +201,10 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver, stop
 		select {
 		case <-time.After(waitTime):
 			if _, ok := rw.drivers.Get(taskName); !ok {
+				// Should not happen in the typical workflow, but stopping if in this state
+				rw.logger.Debug("scheduled task no longer exists", taskNameLogKey, taskName)
 				rw.logger.Info("stopping deleted scheduled task", taskNameLogKey, taskName)
+				delete(rw.scheduleStopChs, taskName)
 				return nil
 			}
 
@@ -514,18 +517,37 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 // If a task is active and running, it will wait until the task has completed before
 // proceeding with the deletion.
 func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
+	logger := rw.logger.With(taskNameLogKey, name)
+
+	// Check if task exists
+	driver, ok := rw.drivers.Get(name)
+	if !ok {
+		logger.Debug("task does not exist")
+		return nil
+	}
+
 	err := rw.waitForTaskInactive(ctx, name)
 	if err != nil {
 		return err
 	}
 
+	if driver.Task().IsScheduled() {
+		// Notify the scheduled task to stop
+		stopCh := rw.scheduleStopChs[name]
+		if stopCh != nil {
+			stopCh <- struct{}{}
+		}
+		delete(rw.scheduleStopChs, name)
+	}
+
+	// Delete task from drivers and event store
 	err = rw.drivers.Delete(name)
 	if err != nil {
-		rw.logger.Error("unable to delete task", taskNameLogKey, name, "error", err)
+		logger.Error("unable to delete task", "error", err)
 		return err
 	}
 	rw.store.Delete(name)
-	rw.logger.Debug("task deleted", taskNameLogKey, name)
+	logger.Debug("task deleted")
 	return nil
 }
 
