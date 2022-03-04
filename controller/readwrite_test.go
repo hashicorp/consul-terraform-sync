@@ -412,8 +412,9 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
+		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := ctrl.runScheduledTask(ctx, d)
+			err := ctrl.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -440,8 +441,9 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
+		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := ctrl.runScheduledTask(ctx, d)
+			err := ctrl.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -459,7 +461,36 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 		d.AssertExpectations(t)
 	})
 
+	t.Run("stop-scheduled-task", func(t *testing.T) {
+		// Tests that signaling to the stop channel stops the function
+		ctrl := newTestController()
+
+		taskName := "scheduled_task"
+		d := new(mocksD.Driver)
+		d.On("Task").Return(scheduledTestTask(t, taskName)).Once()
+		d.On("TemplateIDs").Return(nil)
+		ctrl.drivers.Add(taskName, d)
+
+		ctx := context.Background()
+		errCh := make(chan error)
+		stopCh := make(chan struct{}, 1)
+		go func() {
+			err := ctrl.runScheduledTask(ctx, d, stopCh)
+			errCh <- err
+		}()
+		stopCh <- struct{}{}
+
+		select {
+		case err := <-errCh:
+			assert.NoError(t, err)
+		case <-time.After(time.Second * 5):
+			t.Fatal("runScheduledTask did not exit as expected")
+		}
+	})
+
 	t.Run("deleted-scheduled-task", func(t *testing.T) {
+		// Tests that a scheduled task stops if it no longer is in the
+		// list of drivers
 		ctrl := newTestController()
 
 		taskName := "scheduled_task"
@@ -469,9 +500,11 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 
 		ctx := context.Background()
 		errCh := make(chan error)
+		stopCh := make(chan struct{}, 1)
+		ctrl.scheduleStopChs[taskName] = stopCh
 		done := make(chan bool)
 		go func() {
-			err := ctrl.runScheduledTask(ctx, d)
+			err := ctrl.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -484,6 +517,8 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 		case <-done:
 			// runScheduledTask exited as expected
 			d.AssertExpectations(t)
+			_, ok := ctrl.scheduleStopChs[taskName]
+			assert.False(t, ok, "expected scheduled task stop channel to be removed")
 		case <-time.After(time.Second * 5):
 			t.Fatal("runScheduledTask did not exit as expected")
 		}
@@ -662,6 +697,95 @@ func TestReadWrite_Run_ActiveTask(t *testing.T) {
 	}
 }
 
+func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
+	t.Run("startup_task", func(t *testing.T) {
+		ctrl := ReadWrite{
+			baseController: &baseController{
+				drivers: driver.NewDrivers(),
+				logger:  logging.NewNullLogger(),
+			},
+			watcherCh:       make(chan string, 5),
+			store:           event.NewStore(),
+			scheduleStopChs: make(map[string](chan struct{})),
+		}
+		ctrl.EnableTestMode()
+
+		// Add initial task
+		taskName := "scheduled_task"
+		d := new(mocksD.Driver)
+		d.On("Task").Return(scheduledTestTask(t, taskName)).
+			On("TemplateIDs").Return([]string{"tmpl_a"}).
+			On("RenderTemplate", mock.Anything).Return(true, nil).
+			On("ApplyTask", mock.Anything).Return(nil).
+			On("SetBufferPeriod")
+		ctrl.drivers.Add(taskName, d)
+
+		// Set up watcher for controller
+		ctx := context.Background()
+		w := new(mocks.Watcher)
+		w.On("Size").Return(5)
+		w.On("Watch", ctx, ctrl.watcherCh).Return(nil)
+		ctrl.watcher = w
+
+		go ctrl.Run(context.Background())
+
+		// Check that the task ran
+		select {
+		case n := <-ctrl.taskNotify:
+			assert.Equal(t, taskName, n)
+		case <-time.After(5 * time.Second):
+			t.Fatal("scheduled task did not run")
+		}
+
+		stopCh, ok := ctrl.scheduleStopChs[taskName]
+		assert.True(t, ok, "scheduled task stop channel not added to map")
+		assert.NotNil(t, stopCh, "expected stop channel not to be nil")
+	})
+
+	t.Run("created_task", func(t *testing.T) {
+		ctrl := ReadWrite{
+			baseController: &baseController{
+				drivers: driver.NewDrivers(),
+				logger:  logging.NewNullLogger(),
+			},
+			watcherCh:       make(chan string, 5),
+			store:           event.NewStore(),
+			scheduleStartCh: make(chan driver.Driver, 1),
+			scheduleStopChs: make(map[string](chan struct{})),
+		}
+		ctrl.EnableTestMode()
+
+		// Set up watcher for controller
+		ctx := context.Background()
+		w := new(mocks.Watcher)
+		w.On("Size").Return(5)
+		w.On("Watch", ctx, ctrl.watcherCh).Return(nil)
+		ctrl.watcher = w
+
+		go ctrl.Run(context.Background())
+
+		createdTaskName := "created_scheduled_task"
+		createdDriver := new(mocksD.Driver)
+		createdDriver.On("Task").Return(scheduledTestTask(t, createdTaskName)).
+			On("TemplateIDs").Return([]string{"tmpl_b"}).
+			On("RenderTemplate", mock.Anything).Return(true, nil).
+			On("ApplyTask", mock.Anything).Return(nil).
+			On("SetBufferPeriod")
+		ctrl.drivers.Add(createdTaskName, createdDriver)
+		ctrl.scheduleStartCh <- createdDriver
+
+		select {
+		case n := <-ctrl.taskNotify:
+			assert.Equal(t, createdTaskName, n)
+		case <-time.After(5 * time.Second):
+			t.Fatal("scheduled task did not run")
+		}
+		stopCh, ok := ctrl.scheduleStopChs[createdTaskName]
+		assert.True(t, ok, "scheduled task stop channel not added to map")
+		assert.NotNil(t, stopCh, "expected stop channel not to be nil")
+	})
+}
+
 func TestReadWrite_deleteTask(t *testing.T) {
 	ctx := context.Background()
 	mockD := new(mocksD.Driver)
@@ -675,6 +799,7 @@ func TestReadWrite_deleteTask(t *testing.T) {
 			func(d *driver.Drivers) {
 				mockD.On("TemplateIDs").Return(nil)
 				d.Add("success", mockD)
+				mockD.On("Task").Return(enabledTestTask(t, "success"))
 				mockD.On("DestroyTask", ctx).Return()
 			},
 		},
@@ -707,12 +832,44 @@ func TestReadWrite_deleteTask(t *testing.T) {
 		})
 	}
 
+	t.Run("scheduled_task", func(t *testing.T) {
+		// Tests that deleting a scheduled task sends a stop notification
+
+		// Setup controller and drivers
+		taskName := "scheduled_task"
+		scheduledDriver := new(mocksD.Driver)
+		scheduledDriver.On("Task").Return(scheduledTestTask(t, taskName))
+		scheduledDriver.On("DestroyTask", ctx).Return()
+		scheduledDriver.On("TemplateIDs").Return(nil)
+		ctrl := newTestController()
+		ctrl.drivers.Add(taskName, scheduledDriver)
+		stopCh := make(chan struct{}, 1)
+		ctrl.scheduleStopChs[taskName] = stopCh
+
+		// Delete task
+		err := ctrl.deleteTask(ctx, taskName)
+		assert.NoError(t, err)
+
+		// Verify the stop channel received message
+		select {
+		case <-time.After(1 * time.Second):
+			t.Fatal("scheduled task was not notified to stop")
+		case <-stopCh:
+			break // expected case
+		}
+		_, ok := ctrl.scheduleStopChs[taskName]
+		assert.False(t, ok, "scheduled task stop channel still in map")
+	})
+
 	t.Run("active_task", func(t *testing.T) {
 		// Set up drivers with active task
 		drivers := driver.NewDrivers()
 		taskName := "active_task"
-		mockD.On("TemplateIDs").Return(nil)
-		drivers.Add(taskName, mockD)
+		activeDriver := new(mocksD.Driver)
+		activeDriver.On("Task").Return(enabledTestTask(t, taskName))
+		activeDriver.On("DestroyTask", ctx).Return()
+		activeDriver.On("TemplateIDs").Return(nil)
+		drivers.Add(taskName, activeDriver)
 		drivers.SetActive(taskName)
 
 		// Set up controller with drivers and store
@@ -896,6 +1053,7 @@ func newTestController() ReadWrite {
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
 		},
-		store: event.NewStore(),
+		store:           event.NewStore(),
+		scheduleStopChs: make(map[string](chan struct{})),
 	}
 }

@@ -58,7 +58,7 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 	}
 
 	if d.Task().IsScheduled() {
-		rw.scheduleCh <- d
+		rw.scheduleStartCh <- d
 	}
 
 	return conf, nil
@@ -90,7 +90,7 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 	}
 
 	if d.Task().IsScheduled() {
-		rw.scheduleCh <- d
+		rw.scheduleStartCh <- d
 	}
 
 	return conf, nil
