@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/hcat/dep"
 )
 
+//go:generate mockery --name=Overrider --filename=overrider.go --output=../../../mocks/notifier
+
 // Overrider is short-term solution to override the notifier's once value and
 // send a notification (depending on the condition) if once is not complete
 // (i.e. true)
