@@ -248,7 +248,7 @@ func (t *Task) Services() []Service {
 
 	services := make([]Service, len(t.services))
 	for i, s := range t.services {
-		services[i] = s.Copy()
+		services[i] = s.copy()
 	}
 	return services
 }
@@ -308,7 +308,7 @@ func (t *Task) TFVersion() string {
 	return t.tfVersion
 }
 
-func (s Service) Copy() Service {
+func (s Service) copy() Service {
 	// All other Service attributes are simple types, this sets the meta to a new
 	// copy of the map
 	meta := make(map[string]string)
