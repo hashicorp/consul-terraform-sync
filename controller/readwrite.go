@@ -27,8 +27,10 @@ type ReadWrite struct {
 
 	watcherCh chan string
 
-	// scheduleCh is used to coordinate scheduled tasks created via the API
-	scheduleCh chan driver.Driver
+	// scheduleStartCh is used to coordinate scheduled tasks created via the API
+	scheduleStartCh chan driver.Driver
+	// scheduleStopChs is a map of channels used to stop scheduled tasks
+	scheduleStopChs map[string](chan struct{})
 
 	// deleteCh is used to coordinate task deletion via the API
 	deleteCh chan string
@@ -46,9 +48,12 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 	}
 
 	return &ReadWrite{
-		baseController: baseCtrl,
-		store:          event.NewStore(),
-		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		baseController:  baseCtrl,
+		store:           event.NewStore(),
+		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
+		deleteCh:        make(chan string, 10),        // arbitrarily chosen size
+		scheduleStopChs: make(map[string](chan struct{})),
 	}, nil
 }
 
@@ -72,7 +77,9 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 	for _, d := range rw.drivers.Map() {
 		if d.Task().IsScheduled() {
-			go rw.runScheduledTask(ctx, d)
+			stopCh := make(chan struct{}, 1)
+			rw.scheduleStopChs[d.Task().Name()] = stopCh
+			go rw.runScheduledTask(ctx, d, stopCh)
 		}
 	}
 
@@ -83,13 +90,16 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		// is an arbitrarily chosen value.
 		rw.watcherCh = make(chan string, rw.drivers.Len()+10)
 	}
-	if rw.scheduleCh == nil {
+	if rw.scheduleStartCh == nil {
 		// Size of channel is an arbitrarily chosen value.
-		rw.scheduleCh = make(chan driver.Driver, 10)
+		rw.scheduleStartCh = make(chan driver.Driver, 10)
 	}
 	if rw.deleteCh == nil {
 		// Size of channel is an arbitrarily chosen value.
 		rw.deleteCh = make(chan string, 10)
+	}
+	if rw.scheduleStopChs == nil {
+		rw.scheduleStopChs = make(map[string](chan struct{}))
 	}
 	go func() {
 		for {
@@ -114,9 +124,11 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 			go rw.runDynamicTask(ctx, d) // errors are logged for now
 
-		case d := <-rw.scheduleCh:
+		case d := <-rw.scheduleStartCh:
 			// Run newly created scheduled tasks
-			go rw.runScheduledTask(ctx, d)
+			stopCh := make(chan struct{}, 1)
+			rw.scheduleStopChs[d.Task().Name()] = stopCh
+			go rw.runScheduledTask(ctx, d, stopCh)
 
 		case n := <-rw.deleteCh:
 			go rw.deleteTask(ctx, n)
@@ -165,7 +177,7 @@ func (rw *ReadWrite) runDynamicTask(ctx context.Context, d driver.Driver) error 
 // The go-routine will manage the task's schedule and trigger the task on time.
 // If there are dependency changes since the task's last run time, then the task
 // will also apply.
-func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver) error {
+func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver, stopCh chan struct{}) error {
 	task := d.Task()
 	taskName := task.Name()
 
@@ -194,7 +206,10 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver) erro
 		select {
 		case <-time.After(waitTime):
 			if _, ok := rw.drivers.Get(taskName); !ok {
+				// Should not happen in the typical workflow, but stopping if in this state
+				rw.logger.Debug("scheduled task no longer exists", taskNameLogKey, taskName)
 				rw.logger.Info("stopping deleted scheduled task", taskNameLogKey, taskName)
+				delete(rw.scheduleStopChs, taskName)
 				return nil
 			}
 
@@ -225,6 +240,9 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver) erro
 			waitTime = time.Until(nextTime)
 			rw.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
 				"wait_time", waitTime, "next_runtime", nextTime)
+		case <-stopCh:
+			rw.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
+			return nil
 		case <-ctx.Done():
 			rw.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
 			return ctx.Err()
@@ -504,18 +522,37 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 // If a task is active and running, it will wait until the task has completed before
 // proceeding with the deletion.
 func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
+	logger := rw.logger.With(taskNameLogKey, name)
+
+	// Check if task exists
+	driver, ok := rw.drivers.Get(name)
+	if !ok {
+		logger.Debug("task does not exist")
+		return nil
+	}
+
 	err := rw.waitForTaskInactive(ctx, name)
 	if err != nil {
 		return err
 	}
 
+	if driver.Task().IsScheduled() {
+		// Notify the scheduled task to stop
+		stopCh := rw.scheduleStopChs[name]
+		if stopCh != nil {
+			stopCh <- struct{}{}
+		}
+		delete(rw.scheduleStopChs, name)
+	}
+
+	// Delete task from drivers and event store
 	err = rw.drivers.Delete(name)
 	if err != nil {
-		rw.logger.Error("unable to delete task", taskNameLogKey, name, "error", err)
+		logger.Error("unable to delete task", "error", err)
 		return err
 	}
 	rw.store.Delete(name)
-	rw.logger.Debug("task deleted", taskNameLogKey, name)
+	logger.Debug("task deleted")
 	return nil
 }
 
