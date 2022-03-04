@@ -109,11 +109,11 @@ func (d *Drivers) Map() map[string]Driver {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	copy := make(map[string]Driver, len(d.drivers))
+	cp := make(map[string]Driver, len(d.drivers))
 	for k, v := range d.drivers {
-		copy[k] = v
+		cp[k] = v
 	}
-	return copy
+	return cp
 }
 
 func (d *Drivers) SetBufferPeriod() {
@@ -161,9 +161,9 @@ func (d *Drivers) Delete(taskName string) error {
 	}
 
 	// delete driver templates associated with task
-	for val, id := range d.driverTemplates {
-		if val == taskName {
-			delete(d.driverTemplates, id)
+	for k, v := range d.driverTemplates {
+		if v == taskName {
+			delete(d.driverTemplates, k)
 		}
 	}
 
