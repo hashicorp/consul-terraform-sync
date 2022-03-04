@@ -750,6 +750,7 @@ func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
 			},
 			watcherCh:       make(chan string, 5),
 			store:           event.NewStore(),
+			scheduleStartCh: make(chan driver.Driver, 1),
 			scheduleStopChs: make(map[string](chan struct{})),
 		}
 		ctrl.EnableTestMode()

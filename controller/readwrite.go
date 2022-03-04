@@ -51,6 +51,8 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 		baseController:  baseCtrl,
 		store:           event.NewStore(),
 		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
+		deleteCh:        make(chan string, 10),        // arbitrarily chosen size
 		scheduleStopChs: make(map[string](chan struct{})),
 	}, nil
 }
