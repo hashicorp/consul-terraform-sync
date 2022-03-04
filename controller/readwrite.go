@@ -76,8 +76,8 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	for _, d := range rw.drivers.Map() {
 		if d.Task().IsScheduled() {
 			stopCh := make(chan struct{}, 1)
-			go rw.runScheduledTask(ctx, d, stopCh)
 			rw.scheduleStopChs[d.Task().Name()] = stopCh
+			go rw.runScheduledTask(ctx, d, stopCh)
 		}
 	}
 
@@ -95,6 +95,9 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	if rw.deleteCh == nil {
 		// Size of channel is an arbitrarily chosen value.
 		rw.deleteCh = make(chan string, 10)
+	}
+	if rw.scheduleStopChs == nil {
+		rw.scheduleStopChs = make(map[string](chan struct{}))
 	}
 	go func() {
 		for {
@@ -122,8 +125,8 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		case d := <-rw.scheduleStartCh:
 			// Run newly created scheduled tasks
 			stopCh := make(chan struct{}, 1)
-			go rw.runScheduledTask(ctx, d, stopCh)
 			rw.scheduleStopChs[d.Task().Name()] = stopCh
+			go rw.runScheduledTask(ctx, d, stopCh)
 
 		case n := <-rw.deleteCh:
 			go rw.deleteTask(ctx, n)
