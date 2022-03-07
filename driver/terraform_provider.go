@@ -28,19 +28,19 @@ func NewTerraformProviderBlocks(blocks []hcltmpl.NamedBlock) TerraformProviderBl
 func NewTerraformProviderBlock(b hcltmpl.NamedBlock) TerraformProviderBlock {
 	env := make(map[string]string)
 
-	copy := b.Copy()
-	for k, v := range copy.Variables {
+	cp := b.Copy()
+	for k, v := range cp.Variables {
 		if k == "task_env" && v.Type().IsObjectType() {
 			for envKey, envVal := range v.AsValueMap() {
 				env[envKey] = envVal.AsString()
 			}
-			delete(copy.Variables, k)
+			delete(cp.Variables, k)
 			break
 		}
 	}
 
 	return TerraformProviderBlock{
-		block: copy,
+		block: cp,
 		env:   env,
 	}
 }
@@ -95,9 +95,9 @@ func (p TerraformProviderBlocks) Env() map[string]string {
 }
 
 func (p TerraformProviderBlocks) Copy() TerraformProviderBlocks {
-	copy := make(TerraformProviderBlocks, len(p))
+	cp := make(TerraformProviderBlocks, len(p))
 	for k, v := range p {
-		copy[k] = v.Copy()
+		cp[k] = v.Copy()
 	}
-	return copy
+	return cp
 }
