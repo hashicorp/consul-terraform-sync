@@ -111,10 +111,12 @@ func TestRenderTemplate(t *testing.T) {
 }
 
 func TestTerraform_Version(t *testing.T) {
-	TerraformVersion = &goVersion.Version{}
+	var err error
+	TerraformVersion, err = goVersion.NewVersion("1.2")
+	require.NoError(t, err)
 	var tf Terraform
 	s := tf.Version()
-	assert.Equal(t, "", s)
+	assert.Equal(t, "1.2.0", s)
 }
 
 func TestInspectTask(t *testing.T) {
@@ -154,7 +156,6 @@ func TestInspectTask(t *testing.T) {
 		assert.NoError(t, err)
 		require.Equal(t, "", plan.Plan)
 	})
-
 }
 
 func TestApplyTask(t *testing.T) {
@@ -846,6 +847,7 @@ func TestTerraform_DestroyTask(t *testing.T) {
 	}
 	ctx := context.Background()
 
+	w.AssertExpectations(t)
 	w.On("Deregister", mock.Anything).Return().Once()
 	tf.DestroyTask(ctx)
 }
@@ -863,7 +865,6 @@ func TestTerraform_TemplateIDs(t *testing.T) {
 		tmpl.On("ID").Return(ts).Once()
 		s := tf.TemplateIDs()
 		require.Equal(t, s, []string{ts})
-
 	})
 
 	// Template is nil
