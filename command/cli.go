@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"text/tabwriter"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
@@ -53,7 +55,16 @@ type CLI struct {
 
 	// stopCh is an internal channel used to trigger a shutdown of the CLI.
 	stopCh chan struct{}
+
+	flags *flag.FlagSet
 }
+
+var (
+	// Common commands are grouped separately to call them out to operators.
+	commonCommands = []string{
+		"task",
+	}
+)
 
 // NewCLI creates a new CLI object with the given stdout and stderr streams.
 func NewCLI(out, err io.Writer) *CLI {
@@ -70,45 +81,72 @@ func NewCLI(out, err io.Writer) *CLI {
 func (cli *CLI) Run(args []string) int {
 	// Handle parsing the CLI flags.
 	var configFiles, inspectTasks config.FlagAppendSliceValue
-	var isVersion, isInspect, isOnce bool
+	var isVersion, v, isInspect, isOnce, autocompleteInstall, autocompleteUninstall bool
 	var clientType string
 	var help, h bool
 
 	// Parse the flags
-	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	f.Var(&configFiles, "config-dir", "A directory to load files for "+
-		"configuring Sync. Configuration files require an .hcl or .json "+
-		"file extention in order to specify their format. This option can be "+
-		"specified multiple times to load different directories.")
-	f.Var(&configFiles, "config-file", "A file to load for configuring Sync. "+
-		"Configuration file requires an .hcl or .json extension in order to "+
-		"specify their format. This option can be specified multiple times to "+
-		"load different configuration files.")
-	f.BoolVar(&isInspect, "inspect", false, "Run Sync in Inspect mode to "+
-		"print the proposed state changes for all tasks, and then exits. No changes "+
-		"are applied in this mode.")
-	f.Var(&inspectTasks, "inspect-task", "Run Sync in Inspect mode to "+
-		"print the proposed state changes for the task, and then exits. No "+
-		"changes are applied in this mode.")
-	f.BoolVar(&isOnce, "once", false, "Render templates and run tasks once. "+
-		"Does not run the process as a daemon and disables buffer periods.")
-	f.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
+	cli.flags = flag.NewFlagSet(args[0], flag.ContinueOnError)
+	cli.flags.Var(&configFiles, "config-dir", "A directory to load files for configuring Sync."+
+		"\n\t\tConfiguration files require an .hcl or .json "+
+		"\n\t\tfile extention in order to specify their format. This option can be "+
+		"\n\t\tspecified multiple times to load different directories.")
+	cli.flags.Var(&configFiles, "config-file", "A file to load for configuring Sync. "+
+		"\n\t\tConfiguration file requires an .hcl or .json extension in order to "+
+		"\n\t\tspecify their format. This option can be specified multiple times to "+
+		"\n\t\tload different configuration files.")
+	cli.flags.BoolVar(&isInspect, "inspect", false,
+		"Run Sync in Inspect mode to print the proposed state changes for all tasks, "+
+			"\n\t\tand then exits. No changes "+
+			"\n\t\tare applied in this mode.")
+	cli.flags.Var(&inspectTasks, "inspect-task", "Run Sync in Inspect mode to "+
+		"\n\t\tprint the proposed state changes for the task, and then exits. No "+
+		"\n\t\tchanges are applied in this mode.")
+	cli.flags.BoolVar(&isOnce, "once", false, "Render templates and run tasks once. "+
+		"\n\t\tDoes not run the process as a daemon and disables buffer periods.")
+
+	// Setup version flag
+	cli.flags.BoolVar(&isVersion, "version", false, "Print the version of this daemon.")
+	cli.flags.BoolVar(&v, "v", false, "Print the version of this daemon.")
 
 	// Setup help flags for custom output
-	f.BoolVar(&help, "help", false, "Print the flag options and descriptions.")
-	f.BoolVar(&h, "h", false, "Print the flag options and descriptions.")
+	cli.flags.BoolVar(&help, "help", false, "Print the flag options and descriptions.")
+	cli.flags.BoolVar(&h, "h", false, "Print the flag options and descriptions.")
+
+	// Flags for installing the shell autocomplete
+	cli.flags.BoolVar(&autocompleteInstall, "autocomplete-install", false, "Install the autocomplete")
+	cli.flags.BoolVar(&autocompleteUninstall, "autocomplete-uninstall", false, "Uninstall the autocomplete")
 
 	// Development only flags. Not printed with -h, -help
-	f.StringVar(&clientType, "client-type", "", "Use only when developing"+
-		" consul-terraform-sync binary. Defaults to Terraform client if empty or"+
-		" unknown value. Values can also be 'development' or 'test'.")
+	cli.flags.StringVar(&clientType, "client-type", "", "Use only when developing"+
+		"\n\t\tconsul-terraform-sync binary. Defaults to Terraform client if empty or"+
+		"\n\t\tunknown value. Values can also be 'development' or 'test'.")
 
-	err := f.Parse(args[1:])
+	// Run the CLI for help message if the flags error
+	cli.flags.Usage = func() {
+		subcommands := &mcli.CLI{
+			Name:                       "consul-terraform-sync",
+			Args:                       args[1:],
+			Commands:                   Commands(),
+			Autocomplete:               true,
+			AutocompleteNoDefaultFlags: true,
+			HelpFunc: cli.groupedHelpFunc(
+				mcli.BasicHelpFunc("cts"),
+			),
+			HelpWriter: tabwriter.NewWriter(os.Stdout, 0, 2, 4, ' ', tabwriter.AlignRight),
+		}
+		_, err := subcommands.Run()
+		if err != nil {
+			panic("failed to write help information")
+		}
+	}
+
+	err := cli.flags.Parse(args[1:])
 	if err != nil {
 		return ExitCodeParseFlagsError
 	}
 
-	if isVersion {
+	if isVersion || v {
 		fmt.Fprintf(cli.outStream, "%s %s\n", version.Name, version.GetHumanVersion())
 		fmt.Fprintf(cli.outStream, "Compatible with Terraform %s\n", version.CompatibleTerraformVersionConstraint)
 		return ExitCodeOK
@@ -116,12 +154,19 @@ func (cli *CLI) Run(args []string) int {
 
 	// Are we running the binary or a CLI command?
 	// If the first unused argument isn't a flag, then assume subcommand
-	unused := f.Args()
-	if len(unused) > 0 && !strings.HasPrefix(unused[0], "-") {
+	// If help (or h), or config files are empty, assume subcommand
+	unused := cli.flags.Args()
+	if h || help || len(unused) > 0 || len(configFiles) == 0 {
 		subcommands := &mcli.CLI{
-			Name:     "consul-terraform-sync",
-			Args:     args[1:],
-			Commands: Commands(),
+			Name:                       "consul-terraform-sync",
+			Args:                       args[1:],
+			Commands:                   Commands(),
+			Autocomplete:               true,
+			AutocompleteNoDefaultFlags: true,
+			HelpFunc: cli.groupedHelpFunc(
+				mcli.BasicHelpFunc("cts"),
+			),
+			HelpWriter: tabwriter.NewWriter(os.Stdout, 0, 2, 4, ' ', tabwriter.AlignRight),
 		}
 
 		exitCode, err := subcommands.Run()
@@ -133,20 +178,6 @@ func (cli *CLI) Run(args []string) int {
 	}
 
 	// running the binary!
-
-	// Print out binary's help info
-	if help || h {
-		fmt.Fprintf(cli.outStream, "Usage of %s:\n", args[0])
-		printFlags(f)
-		return ExitCodeOK
-	}
-
-	// Validate required flags
-	if len(configFiles) == 0 {
-		fmt.Fprintf(cli.errStream, "Error: config file(s) required, use --config-dir or --config-file flag options")
-		printFlags(f)
-		return ExitCodeRequiredFlagsError
-	}
 	return cli.runBinary(configFiles, inspectTasks, isInspect, isOnce, clientType)
 }
 
@@ -335,8 +366,40 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 	}
 }
 
+func (cli *CLI) groupedHelpFunc(f mcli.HelpFunc) mcli.HelpFunc {
+	return func(commands map[string]mcli.CommandFactory) string {
+		var b bytes.Buffer
+		tw := tabwriter.NewWriter(&b, 0, 2, 4, ' ', tabwriter.AlignRight)
+
+		fmt.Fprintf(tw, "Usage CLI: consul-terraform-sync [-help] <command> [args]\n")
+		fmt.Fprintf(tw, "Usage Daemon: consul-terraform-sync [-help] [options]\n\n")
+		fmt.Fprintf(tw, "Example:              consul-terraform-sync -config-file=\"config.hcl\"\n")
+		fmt.Fprintf(tw, "Example With Command: consul-terraform-sync task delete <task_name>\n\n")
+		fmt.Fprintf(tw, "Commands:\n")
+		for _, v := range commonCommands {
+			printCommand(tw, v, commands[v])
+		}
+		fmt.Fprintf(tw, "\n")
+
+		printFlags(tw, cli.flags)
+
+		tw.Flush()
+
+		return strings.TrimSpace(b.String())
+	}
+}
+
+func printCommand(w io.Writer, name string, cmdFn mcli.CommandFactory) {
+	cmd, err := cmdFn()
+	if err != nil {
+		panic(fmt.Sprintf("failed to load %q command: %s", name, err))
+	}
+	fmt.Fprintf(w, "%s\t%s\n", name, cmd.Synopsis())
+}
+
 // printFlags prints out select flags
-func printFlags(f *flag.FlagSet) {
+func printFlags(w io.Writer, f *flag.FlagSet) {
+	fmt.Fprintf(w, "Options:\n\n")
 	f.VisitAll(func(f *flag.Flag) {
 		switch f.Name {
 		case "h", "help":
@@ -346,8 +409,9 @@ func printFlags(f *flag.FlagSet) {
 			// don't print out development-only flags
 			return
 		}
-		fmt.Printf("  -%s %s\n", f.Name, f.Value)
-		fmt.Printf("        %s\n", f.Usage)
+
+		fmt.Fprintf(w, "\t-%s %s\n", f.Name, f.Value)
+		fmt.Fprintf(w, "\t\t%s\n", f.Usage)
 	})
 }
 
