@@ -11,12 +11,15 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
+	mocksNoti "github.com/hashicorp/consul-terraform-sync/mocks/notifier"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/notifier"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl/tmplfunc"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
+	"github.com/hashicorp/go-uuid"
+	goVersion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -105,6 +108,54 @@ func TestRenderTemplate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTerraform_Version(t *testing.T) {
+	var err error
+	TerraformVersion, err = goVersion.NewVersion("1.2")
+	require.NoError(t, err)
+	var tf Terraform
+	s := tf.Version()
+	assert.Equal(t, "1.2.0", s)
+}
+
+func TestInspectTask(t *testing.T) {
+	// Task Disabled
+	t.Run("task disabled", func(t *testing.T) {
+		tf := Terraform{
+			task:   &Task{},
+			logger: logging.NewNullLogger(),
+		}
+		ctx := context.Background()
+		plan, err := tf.InspectTask(ctx)
+		assert.NoError(t, err)
+		require.Contains(t, plan.Plan, "Task is disabled, inspection was skipped.")
+	})
+
+	// Task Enabled
+	t.Run("task enabled", func(t *testing.T) {
+		// Task Enabled
+		var w mocksTmpl.Watcher
+		var c mocks.Client
+		tf := Terraform{
+			task: &Task{
+				enabled: true,
+			},
+			logger:  logging.NewNullLogger(),
+			watcher: &w,
+			client:  &c,
+		}
+
+		ctx := context.Background()
+		w.On("Deregister", mock.Anything).Return()
+		c.On("Plan", ctx).Return(true, nil).Once()
+		c.On("SetStdout", mock.Anything).Twice()
+
+		ctx = context.Background()
+		plan, err := tf.InspectTask(ctx)
+		assert.NoError(t, err)
+		require.Equal(t, "", plan.Plan)
+	})
 }
 
 func TestApplyTask(t *testing.T) {
@@ -718,24 +769,32 @@ func TestInitTask(t *testing.T) {
 		expectError bool
 		initErr     error
 		validateErr error
+		module      string
 	}{
 		{
-			"happy path",
-			false,
-			nil,
-			nil,
+			name: "happy path",
 		},
 		{
-			"init workspace error",
-			true,
-			errors.New("error on init()"),
-			nil,
+			name:        "init workspace error",
+			expectError: true,
+			initErr:     errors.New("error on init()"),
 		},
 		{
-			"validate error",
-			true,
-			nil,
-			errors.New("error on validate()"),
+			name:        "validate error",
+			expectError: true,
+			validateErr: errors.New("error on validate()"),
+		},
+		{
+			name:        "relative path module",
+			expectError: true,
+			validateErr: errors.New("error on validate()"),
+			module:      "./",
+		},
+		{
+			name:        "relative path module one back",
+			expectError: true,
+			validateErr: errors.New("error on validate()"),
+			module:      "../",
 		},
 	}
 
@@ -750,16 +809,22 @@ func TestInitTask(t *testing.T) {
 			c.On("Init", ctx).Return(tc.initErr).Once()
 			c.On("Validate", ctx).Return(tc.validateErr)
 
+			tmpl := new(mocksTmpl.Template)
+			tmpl.On("ID").Return(uuid.GenerateUUID())
+
 			w := new(mocksTmpl.Watcher)
-			w.On("Register", mock.Anything).Return(nil).Once()
 			w.On("Clients").Return(nil).Once()
+			w.On("MarkForSweep", tmpl).Return().Once()
+			w.On("Sweep", tmpl).Return().Once()
+			w.On("Register", mock.Anything).Return(nil).Once()
 
 			tf := &Terraform{
-				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName, logger: logging.NewNullLogger()},
+				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName, logger: logging.NewNullLogger(), module: tc.module},
 				client:     c,
 				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
 				watcher:    w,
 				logger:     logging.NewNullLogger(),
+				template:   tmpl,
 			}
 
 			err := tf.initTask(ctx)
@@ -768,8 +833,65 @@ func TestInitTask(t *testing.T) {
 			} else {
 				assert.Error(t, err)
 			}
+
+			assert.NotEqual(t, tf.task.module, "./")
+			assert.NotEqual(t, tf.task.module, "../")
 		})
 	}
+}
+
+func TestTerraform_DestroyTask(t *testing.T) {
+	var w mocksTmpl.Watcher
+	tf := Terraform{
+		watcher: &w,
+	}
+	ctx := context.Background()
+
+	w.AssertExpectations(t)
+	w.On("Deregister", mock.Anything).Return().Once()
+	tf.DestroyTask(ctx)
+}
+
+func TestTerraform_TemplateIDs(t *testing.T) {
+	var tmpl mocksTmpl.Template
+	tf := Terraform{
+		template: &tmpl,
+	}
+
+	// Return string ID
+	t.Run("return string", func(t *testing.T) {
+		// Return a string
+		ts := "as12!@#$%^&*()"
+		tmpl.On("ID").Return(ts).Once()
+		s := tf.TemplateIDs()
+		require.Equal(t, s, []string{ts})
+	})
+
+	// Template is nil
+	t.Run("nil template", func(t *testing.T) {
+		tf.template = nil
+		s := tf.TemplateIDs()
+		require.Nil(t, s)
+	})
+}
+
+func TestTerraform_OverrideNotifier(t *testing.T) {
+	var o mocksNoti.Overrider
+	tf := Terraform{
+		overrider: &o,
+	}
+
+	// Call override method
+	t.Run("call override method", func(t *testing.T) {
+		o.On("Override").Once()
+		tf.OverrideNotifier()
+	})
+
+	// Nil overrider
+	t.Run("nil overrider", func(t *testing.T) {
+		tf.overrider = nil
+		tf.OverrideNotifier()
+	})
 }
 
 func TestTerraform_countTmplFunc(t *testing.T) {
