@@ -55,6 +55,7 @@ func TestDrivers_Add(t *testing.T) {
 				require.True(t, ok)
 				assert.Equal(t, tc.driver, actual)
 
+				// Check that the templateIDs map contains the taskName added
 				for _, val := range md.templateIDs {
 					assert.Equal(t, drivers.driverTemplates[val], tc.taskName)
 				}
@@ -141,7 +142,7 @@ func TestDrivers_GetTaskByTemplate(t *testing.T) {
 			ok:     false,
 		},
 		{
-			name:   "driver does not exist",
+			name:   "template ID does not exist",
 			tmplID: badTmplID,
 			driver: nil,
 			ok:     false,
