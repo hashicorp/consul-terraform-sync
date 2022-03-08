@@ -21,27 +21,26 @@ func TestTerraformProviderBlocks_NewTerraformProviderBlocks(t *testing.T) {
 		}},
 	})
 
-	expectedProviders1 := TerraformProviderBlock{
-		block: namedBlock[0],
-		env:   make(map[string]string),
-	}
-	expectedProviders2 := TerraformProviderBlock{
-		block: namedBlock[1],
-		env:   make(map[string]string),
-	}
-	expectedProviders3 := TerraformProviderBlock{
-		block: namedBlock[2].Copy(), // Use a copy because we are going to delete a variable
-		env: map[string]string{
-			"PROVIDER_TOKEN": "TEST_PROVIDER_TOKEN",
+	expectedTerraformProviderBlocks := TerraformProviderBlocks{
+		{
+			block: namedBlock[0],
+			env:   make(map[string]string),
+		},
+		{
+			block: namedBlock[1],
+			env:   make(map[string]string),
+		},
+		{
+			block: namedBlock[2].Copy(), // Use a copy because we are going to delete a variable
+			env: map[string]string{
+				"PROVIDER_TOKEN": "TEST_PROVIDER_TOKEN",
+			},
 		},
 	}
-	delete(expectedProviders3.block.Variables, "task_env")
+	delete(expectedTerraformProviderBlocks[2].block.Variables, "task_env")
 
-	providers := NewTerraformProviderBlocks(namedBlock)
-
-	assert.Equal(t, expectedProviders1, providers[0])
-	assert.Equal(t, expectedProviders2, providers[1])
-	assert.Equal(t, expectedProviders3, providers[2])
+	providerBlocks := NewTerraformProviderBlocks(namedBlock)
+	assert.ElementsMatch(t, expectedTerraformProviderBlocks, providerBlocks)
 }
 
 func TestTerraformProviderBlock_Copy(t *testing.T) {
@@ -267,8 +266,7 @@ func TestTerraformProviderBlocks_Copy(t *testing.T) {
 			cp := tc.providerBlocks.Copy()
 
 			// Test copies is equal to original
-			assert.Equal(t, tc.providerBlocks[0], cp[0])
-			assert.Equal(t, tc.providerBlocks[1], cp[1])
+			assert.ElementsMatch(t, tc.providerBlocks, cp)
 
 			// Modify copy and assert that the original is now not equal
 			delete(cp[0].block.Variables, "attr")
