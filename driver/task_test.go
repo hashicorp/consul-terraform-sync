@@ -169,11 +169,11 @@ func TestTask_IsEnabled(t *testing.T) {
 		isEnabled bool
 	}{
 		{
-			name:      "schedule condition",
+			name:      "enabled",
 			isEnabled: true,
 		},
 		{
-			name:      "schedule condition",
+			name:      "disabled",
 			isEnabled: false,
 		},
 	}
