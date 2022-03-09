@@ -45,7 +45,7 @@ func (c taskCreateCommand) Name() string {
 func (c *taskCreateCommand) Help() string {
 	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
-Usage: consul-terraform-sync task create [options] -task-file=<task config>
+Usage: consul-terraform-sync task create [-help] [options] -task-file=<task config>
 
   Task Create is used to create a new task. It is not to be used for updating a task, it will not create a task if the
   task name already exists.
@@ -82,7 +82,7 @@ func (c *taskCreateCommand) Synopsis() string {
 
 // Run runs the command
 func (c *taskCreateCommand) Run(args []string) int {
-	c.meta.setFlagsUsage(c.flags, args, c.Help())
+	c.flags.Usage = func() { c.meta.UI.Output(c.Help()) }
 	if err := c.flags.Parse(args); err != nil {
 		return ExitCodeParseFlagsError
 	}

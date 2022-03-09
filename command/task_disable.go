@@ -36,7 +36,7 @@ func (c taskDisableCommand) Name() string {
 func (c *taskDisableCommand) Help() string {
 	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
-Usage: consul-terraform-sync task disable [options] <task name>
+Usage: consul-terraform-sync task disable [-help] [options] <task name>
 
   Task Disable is used to disable existing tasks. Once disabled, a task will no
   longer run and make changes to your network infrastructure resources.

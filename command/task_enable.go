@@ -39,7 +39,7 @@ func (c *taskEnableCommand) Name() string {
 func (c *taskEnableCommand) Help() string {
 	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
-Usage: consul-terraform-sync task enable [options] <task name>
+Usage: consul-terraform-sync task enable [-help] [options] <task name>
 
   Task Enable is used to enable existing tasks. Once enabled, a task will
   run and make changes to your network infrastructure resources. Before

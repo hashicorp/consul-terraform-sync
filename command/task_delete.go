@@ -37,7 +37,7 @@ func (c taskDeleteCommand) Name() string {
 func (c *taskDeleteCommand) Help() string {
 	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
-Usage: consul-terraform-sync task delete [options] <task name>
+Usage: consul-terraform-sync task delete [-help] [options] <task name>
 
   Task Delete is used to delete an existing task. If the task is not running,
   then it is deleted immediately. Otherwise, it will be deleted once the task
