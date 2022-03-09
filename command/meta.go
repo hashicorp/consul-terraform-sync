@@ -56,25 +56,25 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 	// Values provide both default values, and documentation for the default value when -help is used
 	m.port = m.flags.Int(FlagPort, config.DefaultPort,
 		fmt.Sprintf("[Deprecated] The port to use for the Consul-Terraform-Sync API server, "+
-			"it is preferred to use the %s field instead.", FlagHTTPAddr))
+			"\n\t\tit is preferred to use the %s field instead.", FlagHTTPAddr))
 
 	m.addr = m.flags.String(FlagHTTPAddr, api.DefaultURL, fmt.Sprintf("The `address` and port of the CTS daemon. The value can be an IP "+
-		"address or DNS address, but it must also include the port. This can "+
-		"also be specified via the %s environment variable. The "+
-		"default value is %s. The scheme can also be set to "+
-		"HTTPS by including https in the provided address (eg. https://127.0.0.1:8558)", api.EnvAddress, api.DefaultURL))
+		"\n\t\taddress or DNS address, but it must also include the port. This can "+
+		"\n\t\talso be specified via the %s environment variable. The "+
+		"\n\t\tdefault value is %s. The scheme can also be set to "+
+		"\n\t\tHTTPS by including https in the provided address (eg. https://127.0.0.1:8558)", api.EnvAddress, api.DefaultURL))
 
 	// Initialize TLS flags
 	m.tls.caPath = m.flags.String(FlagCAPath, "", fmt.Sprintf("Path to a directory of CA certificates to use for TLS when communicating with Consul-Terraform-Sync. "+
-		"This can also be specified using the %s environment variable.", api.EnvTLSCAPath))
+		"\n\t\tThis can also be specified using the %s environment variable.", api.EnvTLSCAPath))
 	m.tls.caCert = m.flags.String(FlagCACert, "", fmt.Sprintf("Path to a CA file to use for TLS when communicating with Consul-Terraform-Sync. "+
-		"This can also be specified using the %s environment variable.", api.EnvTLSCACert))
+		"\n\t\tThis can also be specified using the %s environment variable.", api.EnvTLSCACert))
 	m.tls.clientCert = m.flags.String(FlagClientCert, "", fmt.Sprintf("Path to a client cert file to use for TLS when verify_incoming is enabled. "+
-		"This can also be specified using the %s environment variable.", api.EnvTLSClientCert))
+		"\n\t\tThis can also be specified using the %s environment variable.", api.EnvTLSClientCert))
 	m.tls.clientKey = m.flags.String(FlagClientKey, "", fmt.Sprintf("Path to a client key file to use for TLS when verify_incoming is enabled. "+
-		"This can also be specified using the %s environment variable.", api.EnvTLSClientKey))
+		"\n\t\tThis can also be specified using the %s environment variable.", api.EnvTLSClientKey))
 	m.tls.sslVerify = m.flags.Bool(FlagSSLVerify, true, fmt.Sprintf("Boolean to verify SSL or not. Set to true to verify SSL. "+
-		"This can also be specified using the %s environment variable.", api.EnvTLSSSLVerify))
+		"\n\t\tThis can also be specified using the %s environment variable.", api.EnvTLSSSLVerify))
 
 	m.flags.SetOutput(ioutil.Discard)
 
@@ -83,7 +83,7 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 
 func (m *meta) setHelpOptions() {
 	m.flags.VisitAll(func(f *flag.Flag) {
-		option := fmt.Sprintf("  %s %s\n    %s\n", f.Name, f.Value, f.Usage)
+		option := fmt.Sprintf("\t-%s %s\n  \t\t%s\n", f.Name, f.Value, f.Usage)
 		m.helpOptions = append(m.helpOptions, option)
 	})
 	if len(m.helpOptions) == 0 {
