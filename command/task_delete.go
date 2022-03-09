@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mitchellh/go-wordwrap"
+	"github.com/posener/complete"
 )
 
 const cmdTaskDeleteName = "task delete"
@@ -68,6 +69,17 @@ Example:
 // Synopsis is a short one-line synopsis of the command
 func (c *taskDeleteCommand) Synopsis() string {
 	return "Deletes an existing task."
+}
+
+func (c *taskDeleteCommand) AutocompleteFlags() complete.Flags {
+	return mergeAutocompleteFlags(c.meta.autoCompleteFlags(),
+		complete.Flags{
+			fmt.Sprintf("-%s", FlagAutoApprove): complete.PredictNothing,
+		})
+}
+
+func (c *taskDeleteCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
 }
 
 // Run runs the command

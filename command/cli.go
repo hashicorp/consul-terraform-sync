@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/version"
 	mcli "github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
 // Exit codes are int values that represent an exit code for a particular error.
@@ -366,7 +367,7 @@ func (cli *CLI) runBinary(configFiles, inspectTasks config.FlagAppendSliceValue,
 	}
 }
 
-func (cli *CLI) groupedHelpFunc(f mcli.HelpFunc) mcli.HelpFunc {
+func (cli *CLI) groupedHelpFunc(mcli.HelpFunc) mcli.HelpFunc {
 	return func(commands map[string]mcli.CommandFactory) string {
 		var b bytes.Buffer
 		tw := tabwriter.NewWriter(&b, 0, 2, 4, ' ', tabwriter.AlignRight)
@@ -423,4 +424,15 @@ func processEOFError(scheme string, err error) error {
 	}
 
 	return err
+}
+
+// mergeAutocompleteFlags is used to join multiple flag completion sets.
+func mergeAutocompleteFlags(flags ...complete.Flags) complete.Flags {
+	merged := make(map[string]complete.Predictor, len(flags))
+	for _, f := range flags {
+		for k, v := range f {
+			merged[k] = v
+		}
+	}
+	return merged
 }

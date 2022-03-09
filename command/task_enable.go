@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/mitchellh/go-wordwrap"
+	"github.com/posener/complete"
 )
 
 const cmdTaskEnableName = "task enable"
@@ -74,6 +75,14 @@ Example:
 // Synopsis is a short one-line synopsis of the command
 func (c *taskEnableCommand) Synopsis() string {
 	return "Enables existing tasks to run."
+}
+
+func (c *taskEnableCommand) AutocompleteFlags() complete.Flags {
+	return c.meta.autoCompleteFlags()
+}
+
+func (c *taskEnableCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
 }
 
 // Run runs the command

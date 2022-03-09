@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-wordwrap"
+	"github.com/posener/complete"
 )
 
 // terminal width. use for word-wrapping
@@ -262,4 +263,17 @@ func (m meta) isFlagParsedAndFound(name string) bool {
 		}
 	})
 	return found
+}
+
+// autoCompleteFlags returns a set of flag completions for the given flag set.
+func (m *meta) autoCompleteFlags() complete.Flags {
+	return complete.Flags{
+		fmt.Sprintf("-%s", FlagPort):       complete.PredictAnything,
+		fmt.Sprintf("-%s", FlagHTTPAddr):   complete.PredictAnything,
+		fmt.Sprintf("-%s", FlagCAPath):     complete.PredictDirs("*"),
+		fmt.Sprintf("-%s", FlagCACert):     complete.PredictFiles("*"),
+		fmt.Sprintf("-%s", FlagClientCert): complete.PredictFiles("*"),
+		fmt.Sprintf("-%s", FlagClientKey):  complete.PredictFiles("*"),
+		fmt.Sprintf("-%s", FlagSSLVerify):  complete.PredictNothing,
+	}
 }

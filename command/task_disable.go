@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/mitchellh/go-wordwrap"
+	"github.com/posener/complete"
 )
 
 const cmdTaskDisableName = "task disable"
@@ -57,6 +58,14 @@ Example:
 // Synopsis is a short one-line synopsis of the command
 func (c *taskDisableCommand) Synopsis() string {
 	return "Disables existing tasks from running."
+}
+
+func (c *taskDisableCommand) AutocompleteFlags() complete.Flags {
+	return c.meta.autoCompleteFlags()
+}
+
+func (c *taskDisableCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
 }
 
 // Run runs the command

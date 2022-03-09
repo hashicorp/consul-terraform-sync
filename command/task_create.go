@@ -12,9 +12,13 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	mcli "github.com/mitchellh/cli"
 	"github.com/mitchellh/go-wordwrap"
+	"github.com/posener/complete"
 )
 
-const cmdTaskCreateName = "task create"
+const (
+	cmdTaskCreateName = "task create"
+	flagTaskFile      = "task-file"
+)
 
 // TaskCreateCommand handles the `task create` command
 type taskCreateCommand struct {
@@ -27,7 +31,7 @@ type taskCreateCommand struct {
 func newTaskCreateCommand(m meta) *taskCreateCommand {
 	flags := m.defaultFlagSet(cmdTaskCreateName)
 	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of inspect plan")
-	f := flags.String("task-file", "", "[Required] A file containing the hcl or json definition of a task")
+	f := flags.String(flagTaskFile, "", "[Required] A file containing the hcl or json definition of a task")
 	return &taskCreateCommand{
 		meta:        m,
 		autoApprove: a,
@@ -78,6 +82,21 @@ Example:
 // Synopsis is a short one-line synopsis of the command
 func (c *taskCreateCommand) Synopsis() string {
 	return "Creates a new task."
+}
+
+func (c *taskCreateCommand) AutocompleteFlags() complete.Flags {
+	return mergeAutocompleteFlags(c.meta.autoCompleteFlags(),
+		complete.Flags{
+			fmt.Sprintf("-%s", flagTaskFile): complete.PredictOr(
+				complete.PredictFiles("*.hcl"),
+				complete.PredictFiles("*.json"),
+			),
+			fmt.Sprintf("-%s", FlagAutoApprove): complete.PredictNothing,
+		})
+}
+
+func (c *taskCreateCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
 }
 
 // Run runs the command
