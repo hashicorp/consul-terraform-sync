@@ -1,6 +1,5 @@
-[![CircleCI](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/main.svg?style=svg&circle-token=a88491ffa8b02149fc483c29c6b8b91ed771f5a5)](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/main)
+# Consul-Terraform-Sync [![Build Status](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/build.yml/badge.svg)](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/build.yml)
 
-# Consul-Terraform-Sync
 
 Consul-Terraform-Sync (just Sync from here on) is a service-oriented tool for managing network infrastructure near real-time. Sync runs as a daemon and integrates the network topology maintained by your Consul cluster with your network infrastructure to dynamically secure and connect services.
 
