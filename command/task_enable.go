@@ -77,10 +77,16 @@ func (c *taskEnableCommand) Synopsis() string {
 	return "Enables existing tasks to run."
 }
 
+// AutocompleteFlags returns a mapping of supported flags and autocomplete
+// options for this command.The map key for the Flags map should be the
+// complete flag such as "-foo" or "--foo".
 func (c *taskEnableCommand) AutocompleteFlags() complete.Flags {
 	return c.meta.autoCompleteFlags()
 }
 
+// AutocompleteArgs returns the argument predictor for this command.
+// Since argument completion is not supported,this returns
+// complete.PredictNothing.
 func (c *taskEnableCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictNothing
 }

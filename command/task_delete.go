@@ -71,6 +71,9 @@ func (c *taskDeleteCommand) Synopsis() string {
 	return "Deletes an existing task."
 }
 
+// AutocompleteFlags returns a mapping of supported flags and autocomplete
+// options for this command.The map key for the Flags map should be the
+// complete flag such as "-foo" or "--foo".
 func (c *taskDeleteCommand) AutocompleteFlags() complete.Flags {
 	return mergeAutocompleteFlags(c.meta.autoCompleteFlags(),
 		complete.Flags{
@@ -78,6 +81,9 @@ func (c *taskDeleteCommand) AutocompleteFlags() complete.Flags {
 		})
 }
 
+// AutocompleteArgs returns the argument predictor for this command.
+// Since argument completion is not supported,this returns
+// complete.PredictNothing.
 func (c *taskDeleteCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictNothing
 }

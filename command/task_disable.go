@@ -60,10 +60,16 @@ func (c *taskDisableCommand) Synopsis() string {
 	return "Disables existing tasks from running."
 }
 
+// AutocompleteFlags returns a mapping of supported flags and autocomplete
+// options for this command.The map key for the Flags map should be the
+// complete flag such as "-foo" or "--foo".
 func (c *taskDisableCommand) AutocompleteFlags() complete.Flags {
 	return c.meta.autoCompleteFlags()
 }
 
+// AutocompleteArgs returns the argument predictor for this command.
+// Since argument completion is not supported,this returns
+// complete.PredictNothing.
 func (c *taskDisableCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictNothing
 }
