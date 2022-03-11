@@ -1,4 +1,5 @@
-## UNRELEASED
+## 0.5.2 (March 14, 2022)
+
 BUG FIXES:
 
 * Fix issue where triggering a task while task is running is ignored and can cause locked state [[GH-732](https://github.com/hashicorp/consul-terraform-sync/issues/732)]
