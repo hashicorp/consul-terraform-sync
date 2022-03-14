@@ -1,10 +1,10 @@
-## UNRELEASED
+## 0.5.2 (March 14, 2022)
+
 BUG FIXES:
 
 * Fix issue where triggering a task while task is running is ignored and can cause locked state [[GH-732](https://github.com/hashicorp/consul-terraform-sync/issues/732)]
 * Fix issue where re-creating a task using the task creation API/CLI after Consul restart can result in an error [[GH-701](https://github.com/hashicorp/consul-terraform-sync/issues/701)]
 * Fix issue where creating a task with the same name as a deleted task, where the deleted task includes a `condition "schedule"`, can leave CTS in a bad state [[GH-715](https://github.com/hashicorp/consul-terraform-sync/issues/715)]
-
 
 ## 0.5.1 (February 24, 2022)
 
