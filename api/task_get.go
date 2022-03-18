@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
+// GetAllTasks retrieves all tasks currently managed by CTS, and returns their information
 func (h *TaskLifeCycleHandler) GetAllTasks(w http.ResponseWriter, r *http.Request) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -13,13 +14,13 @@ func (h *TaskLifeCycleHandler) GetAllTasks(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 	requestID := requestIDFromContext(ctx)
 	logger := logging.FromContext(r.Context()).Named(getTaskSubsystemName)
-	logger.Trace("get task request")
+	logger.Trace("get all tasks request")
 
-	// Retrieve task if it exists
+	// Retrieve all tasks
 	taskConfigs, err := h.ctrl.Tasks(ctx)
 	if err != nil {
-		logger.Trace("tasks not found", "error", err)
-		sendError(w, r, http.StatusNotFound, err)
+		logger.Trace("error parsing tasks", "error", err)
+		sendError(w, r, http.StatusInternalServerError, err)
 		return
 	}
 

@@ -70,7 +70,7 @@ func TestTaskLifeCycleHandler_GetTaskByName(t *testing.T) {
 	}
 }
 
-func TestTaskLifeCycleHandler_GetTasks(t *testing.T) {
+func TestTaskLifeCycleHandler_GetAllTasks(t *testing.T) {
 	t.Parallel()
 
 	taskConfigs := []config.TaskConfig{
