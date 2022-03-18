@@ -2,11 +2,14 @@ package command
 
 import (
 	"bytes"
+	"flag"
+	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -308,4 +311,32 @@ func TestHandleDeprecations_NoError(t *testing.T) {
 
 	err := handleDeprecations(ui, &inputTask)
 	assert.NoError(t, err)
+}
+
+func TestTaskCreateCommand_AutocompleteFlags(t *testing.T) {
+	t.Parallel()
+	cmd := newTaskCreateCommand(meta{UI: cli.NewMockUi()})
+
+	predictor := cmd.AutocompleteFlags()
+
+	// Test that we get the expected number of predictions
+	args := complete.Args{Last: "-"}
+	res := predictor.Predict(args)
+
+	// Grab the list of flags from the Flag object
+	flags := make([]string, 0)
+	cmd.flags.VisitAll(func(flag *flag.Flag) {
+		flags = append(flags, fmt.Sprintf("-%s", flag.Name))
+	})
+
+	// Verify that there is a prediction for each flag associated with the command
+	assert.Equal(t, len(flags), len(res))
+	assert.ElementsMatch(t, flags, res, "flags and predictions didn't match, make sure to add "+
+		"new flags to the command AutoCompleteFlags function")
+}
+
+func TestTaskCreateCommand_AutocompleteArgs(t *testing.T) {
+	cmd := newTaskCreateCommand(meta{UI: cli.NewMockUi()})
+	c := cmd.AutocompleteArgs()
+	assert.Equal(t, complete.PredictNothing, c)
 }
