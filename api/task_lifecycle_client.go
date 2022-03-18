@@ -20,6 +20,9 @@ type TaskLifecycleClient struct {
 	*oapigen.Client
 }
 
+var _ oapigen.ClientInterface = (*TaskLifecycleClient)(nil)
+
+//go:generate mockery --recursive --name=ClientInterface --filename=oapigen_client.go --output=../mocks/api
 //go:generate oapi-codegen  -package oapigen -generate client -o oapigen/client.go openapi.yaml
 
 // NewTaskLifecycleClient returns a client to make api requests
@@ -56,9 +59,10 @@ func (c *TaskLifecycleClient) Scheme() string {
 	return c.url.Scheme
 }
 
-// CreateTask takes a task request and run option and sends this information to the client. It then returns
+// CreateTaskSimple takes a task request and run option and sends this information to the client. It then returns
 // a task response object and any errors to the caller.
-func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, req TaskRequest) (TaskResponse, error) {
+// TODO: remove this to conform to interface
+func (c *TaskLifecycleClient) CreateTaskSimple(ctx context.Context, runOption string, req TaskRequest) (TaskResponse, error) {
 	var run oapigen.CreateTaskParamsRun
 	switch runOption {
 	case RunOptionInspect:
