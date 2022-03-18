@@ -865,27 +865,27 @@ func TestE2E_TaskCommand_Help(t *testing.T) {
 		{
 			command: "enable",
 			outputContains: []string{
-				"Usage: consul-terraform-sync task enable [options] <task name>",
+				"Usage: consul-terraform-sync task enable [-help] [options] <task name>",
 				"auto-approve false",
 			},
 		},
 		{
 			command: "disable",
 			outputContains: []string{
-				"Usage: consul-terraform-sync task disable [options] <task name>",
+				"Usage: consul-terraform-sync task disable [-help] [options] <task name>",
 			},
 		},
 		{
 			command: "delete",
 			outputContains: []string{
-				"Usage: consul-terraform-sync task delete [options] <task name>",
+				"Usage: consul-terraform-sync task delete [-help] [options] <task name>",
 				"auto-approve false",
 			},
 		},
 		{
 			command: "create",
 			outputContains: []string{
-				"Usage: consul-terraform-sync task create [options] -task-file=<task config>",
+				"Usage: consul-terraform-sync task create [-help] [options] -task-file=<task config>",
 				"auto-approve false",
 			},
 		},
