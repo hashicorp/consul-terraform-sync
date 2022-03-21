@@ -52,6 +52,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2
 	github.com/pierrec/lz4 v2.6.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1
+	github.com/posener/complete v1.2.3
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/ulikunitz/xz v0.5.10 // indirect
