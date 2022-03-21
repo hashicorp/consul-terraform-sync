@@ -103,11 +103,11 @@ func TestTaskLifeCycleHandler_GetAllTasks(t *testing.T) {
 			},
 		},
 		{
-			name: "not_found",
+			name: "parsing_error",
 			mockServer: func(ctrl *mocks.Server) {
 				ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, fmt.Errorf("DNE"))
 			},
-			statusCode: http.StatusNotFound,
+			statusCode: http.StatusInternalServerError,
 		},
 	}
 
@@ -129,21 +129,5 @@ func TestTaskLifeCycleHandler_GetAllTasks(t *testing.T) {
 				tc.checkResponse(resp)
 			}
 		})
-	}
-}
-
-func generateExpectedGetTasksResponse(t *testing.T, req string) oapigen.TaskResponse {
-	var treq oapigen.TaskRequest
-	err := json.Unmarshal([]byte(req), &treq)
-	require.NoError(t, err)
-
-	// Set cts_user_defined_meta to an empty map if nil
-	services := treq.Task.Condition.Services
-	if services != nil && services.CtsUserDefinedMeta == nil {
-		services.CtsUserDefinedMeta = &oapigen.ServicesCondition_CtsUserDefinedMeta{}
-	}
-
-	return oapigen.TaskResponse{
-		Task: &treq.Task,
 	}
 }
