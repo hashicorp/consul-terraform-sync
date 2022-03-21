@@ -160,7 +160,7 @@ func (c *taskCreateCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("Inspecting changes to resource if creating task '%s'...\n", taskName))
 	c.UI.Output("Generating plan that Consul-Terraform-Sync will use Terraform to execute\n")
 
-	taskResp, err := client.CreateTask(context.Background(), api.RunOptionInspect, taskReq)
+	resp, err := client.CreateTask(context.Background(), api.RunOptionInspect, taskReq)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to generate plan for '%s'", taskName))
@@ -170,6 +170,7 @@ func (c *taskCreateCommand) Run(args []string) int {
 		return ExitCodeError
 	}
 
+	taskResp := resp.JSON201
 	c.UI.Output(fmt.Sprintf("Request ID: %s", taskResp.RequestId))
 	b, _ := json.MarshalIndent(taskReq, "    ", "  ")
 	c.UI.Output("Request Payload:")
@@ -191,7 +192,7 @@ func (c *taskCreateCommand) Run(args []string) int {
 	c.UI.Output("Warning: Terminating this process will not stop task creation.\n")
 
 	// Plan approved, create new task and run now
-	taskResp, err = client.CreateTask(context.Background(), api.RunOptionNow, taskReq)
+	resp, err = client.CreateTask(context.Background(), api.RunOptionNow, taskReq)
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to create '%s'", taskName))
@@ -200,6 +201,7 @@ func (c *taskCreateCommand) Run(args []string) int {
 
 		return ExitCodeError
 	}
+	taskResp = resp.JSON201
 
 	c.UI.Info(fmt.Sprintf("Task '%s' created", taskResp.Task.Name))
 	c.UI.Output(fmt.Sprintf("Request ID: '%s'", taskResp.RequestId))

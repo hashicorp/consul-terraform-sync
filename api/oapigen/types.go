@@ -180,6 +180,12 @@ type TaskResponse struct {
 	Task      *Task     `json:"task,omitempty"`
 }
 
+// TasksResponse defines model for TasksResponse.
+type TasksResponse struct {
+	RequestId RequestID `json:"request_id"`
+	Tasks     *[]Task   `json:"tasks,omitempty"`
+}
+
 // The map of variables that are provided to the task's module.
 type VariableMap struct {
 	AdditionalProperties map[string]string `json:"-"`
