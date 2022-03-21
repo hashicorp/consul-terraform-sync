@@ -10,17 +10,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRunCommand_Name(t *testing.T) {
-	cmd := newRunCommand(meta{UI: cli.NewMockUi()}, false)
-	assert.Equal(t, cmdRunName, cmd.Name())
+func TestStartCommand_Name(t *testing.T) {
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
+	assert.Equal(t, cmdStartName, cmd.Name())
 }
 
-func TestRunCommand_Help(t *testing.T) {
-	cmd := newRunCommand(meta{UI: cli.NewMockUi()}, false)
-	fmt.Println(cmd.Help())
+func TestStartCommand_Help(t *testing.T) {
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
 
 	contains := []string{
-		"Usage CLI: consul-terraform-sync run [-help] [options]",
+		"Usage CLI: consul-terraform-sync start [-help] [options]",
 		"Options:",
 	}
 
@@ -30,8 +29,8 @@ func TestRunCommand_Help(t *testing.T) {
 	}
 }
 
-func TestRunCommand_HelpDefault(t *testing.T) {
-	cmd := newRunCommand(meta{UI: cli.NewMockUi()}, false)
+func TestStartCommand_HelpDefault(t *testing.T) {
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
 
 	contains := []string{
 		"Usage CLI: consul-terraform-sync <command> [-help] [options]",
@@ -44,14 +43,14 @@ func TestRunCommand_HelpDefault(t *testing.T) {
 	}
 }
 
-func TestRunCommand_Synopsis(t *testing.T) {
-	cmd := newRunCommand(meta{UI: cli.NewMockUi()}, false)
+func TestStartCommand_Synopsis(t *testing.T) {
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
 	assert.Equal(t, "", cmd.Synopsis())
 }
 
-func TestRunCommand_AutocompleteFlags(t *testing.T) {
+func TestStartCommand_AutocompleteFlags(t *testing.T) {
 	t.Parallel()
-	cmd := newRunCommand(meta{UI: cli.NewMockUi()}, false)
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
 
 	predictor := cmd.AutocompleteFlags()
 
@@ -71,8 +70,8 @@ func TestRunCommand_AutocompleteFlags(t *testing.T) {
 		"new flags to the command AutoCompleteFlags function")
 }
 
-func TestRunCommand_AutocompleteArgs(t *testing.T) {
-	cmd := newRunCommand(meta{UI: cli.NewMockUi()}, false)
+func TestStartCommand_AutocompleteArgs(t *testing.T) {
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
 	c := cmd.AutocompleteArgs()
 	assert.Equal(t, complete.PredictNothing, c)
 }

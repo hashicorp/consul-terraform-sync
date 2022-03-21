@@ -16,8 +16,8 @@ func Test_Commands(t *testing.T) {
 		cmdTaskEnableName:  &taskEnableCommand{},
 		cmdTaskDisableName: &taskDisableCommand{},
 		cmdTaskDeleteName:  &taskDeleteCommand{},
-		cmdRunName:         &runCommand{},
-		"":                 &runCommand{},
+		cmdStartName:       &startCommand{},
+		"":                 &startCommand{},
 	}
 
 	assert.Equal(t, len(expectedCommands), len(cf))

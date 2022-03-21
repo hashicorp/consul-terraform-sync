@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	cmdRunName = "run"
+	cmdStartName = "start"
 
 	flagConfigDir             = "config-dir"
 	flagConfigFiles           = "config-file"
@@ -31,8 +31,8 @@ const (
 	flagClientType            = "client-type"
 )
 
-// runCommand handles the `run` command
-type runCommand struct {
+// startCommand handles the `start` command
+type startCommand struct {
 	meta
 	flags *flag.FlagSet
 
@@ -53,8 +53,8 @@ type runCommand struct {
 	help *bool
 }
 
-func (c *runCommand) runFlags() *flag.FlagSet {
-	flags := flag.NewFlagSet(cmdRunName, flag.ContinueOnError)
+func (c *startCommand) startFlags() *flag.FlagSet {
+	flags := flag.NewFlagSet(cmdStartName, flag.ContinueOnError)
 
 	var configFiles, inspectTasks config.FlagAppendSliceValue
 	var isInspect, isOnce, autocompleteInstall, autocompleteUninstall bool
@@ -101,11 +101,11 @@ func (c *runCommand) runFlags() *flag.FlagSet {
 	return flags
 }
 
-func newRunCommand(m meta, isDefault bool) *runCommand {
-	c := &runCommand{
+func newStartCommand(m meta, isDefault bool) *startCommand {
+	c := &startCommand{
 		meta: m,
 	}
-	f := c.runFlags()
+	f := c.startFlags()
 	c.meta.flags = f
 	c.flags = f
 	c.isDefault = isDefault
@@ -113,18 +113,18 @@ func newRunCommand(m meta, isDefault bool) *runCommand {
 }
 
 // Name returns the subcommand
-func (c runCommand) Name() string {
-	return cmdRunName
+func (c startCommand) Name() string {
+	return cmdStartName
 }
 
 // Help returns the command's usage, list of flags, and examples
-func (c *runCommand) Help() string {
-	return helpFunc(nil, "Usage CLI: consul-terraform-sync run [-help] [options]\n")
+func (c *startCommand) Help() string {
+	return helpFunc(nil, "Usage CLI: consul-terraform-sync start [-help] [options]\n")
 }
 
 // HelpDefault returns the usage when this command is used as the default command,
-// without explicitly selecting the `Run` command
-func (c *runCommand) HelpDefault() string {
+// without explicitly selecting the `Start` command
+func (c *startCommand) HelpDefault() string {
 
 	// Create a command factor for common commands
 	commands := make(map[string]string)
@@ -136,14 +136,14 @@ func (c *runCommand) HelpDefault() string {
 
 // Synopsis is a short one-line synopsis of the command
 // For base commands don't provide a synopsis
-func (c *runCommand) Synopsis() string {
+func (c *startCommand) Synopsis() string {
 	return ""
 }
 
 // AutocompleteFlags returns a mapping of supported flags and autocomplete
 // options for this command. The map key for the Flags map should be the
 // complete flag such as "-foo" or "--foo".
-func (c *runCommand) AutocompleteFlags() complete.Flags {
+func (c *startCommand) AutocompleteFlags() complete.Flags {
 	return complete.Flags{
 		fmt.Sprintf("-%s", flagConfigDir): complete.PredictDirs("*"),
 		fmt.Sprintf("-%s", flagConfigFiles): complete.PredictOr(
@@ -162,12 +162,12 @@ func (c *runCommand) AutocompleteFlags() complete.Flags {
 // AutocompleteArgs returns the argument predictorClient for this command.
 // Since argument completion is not supported, this returns
 // complete.PredictNothing.
-func (c *runCommand) AutocompleteArgs() complete.Predictor {
+func (c *startCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictNothing
 }
 
-// Run runs the command
-func (c *runCommand) Run(args []string) int {
+// Run starts the command
+func (c *startCommand) Run(args []string) int {
 	c.flags.Usage = func() { c.meta.UI.Output(c.Help()) }
 	if err := c.flags.Parse(args); err != nil {
 		return ExitCodeParseFlagsError
@@ -181,7 +181,7 @@ func (c *runCommand) Run(args []string) int {
 		c.UI.Error("unable to start consul-terraform-sync")
 		c.UI.Output("no config file provided")
 		help := fmt.Sprintf("For additional help try 'consul-terraform-sync %s --help'",
-			cmdRunName)
+			cmdStartName)
 		help = wordwrap.WrapString(help, width)
 
 		c.UI.Output(help)
