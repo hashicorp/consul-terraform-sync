@@ -151,7 +151,7 @@ func TestTerraformCloudWorkspaceConfig_Finalize(t *testing.T) {
 			"empty",
 			&TerraformCloudWorkspaceConfig{},
 			&TerraformCloudWorkspaceConfig{
-				ExecutionMode: String("remote"),
+				ExecutionMode: String(""),
 				AgentPoolID:   String(""),
 				AgentPoolName: String(""),
 			},
@@ -224,8 +224,8 @@ func TestTerraformCloudWorkspaceConfig_Validate(t *testing.T) {
 			},
 		},
 		{
-			"no_execution_mode",
-			true,
+			"empty",
+			false, // shouldn't error because optional
 			&TerraformCloudWorkspaceConfig{},
 		},
 		{
@@ -310,6 +310,55 @@ func TestTerraformCloudWorkspaceConfig_GoString(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := tc.c.GoString()
+			assert.Equal(t, tc.expected, r)
+		})
+	}
+}
+
+func TestTerraformCloudWorkspaceConfig_DefaultTerraformCloudWorkspaceConfig(t *testing.T) {
+	r := DefaultTerraformCloudWorkspaceConfig()
+	expected := &TerraformCloudWorkspaceConfig{
+		ExecutionMode: String(""),
+		AgentPoolID:   String(""),
+		AgentPoolName: String(""),
+	}
+	assert.Equal(t, expected, r)
+}
+
+func TestTerraformCloudWorkspaceConfig_isEmpty(t *testing.T) {
+	cases := []struct {
+		name     string
+		c        *TerraformCloudWorkspaceConfig
+		expected bool
+	}{
+		{
+			"configured",
+			&TerraformCloudWorkspaceConfig{
+				ExecutionMode: String("agent"),
+				AgentPoolID:   String("apool-1"),
+				AgentPoolName: String("test_agent_pool"),
+			},
+			false,
+		},
+		{
+			"empty_nil_values",
+			&TerraformCloudWorkspaceConfig{},
+			true,
+		},
+		{
+			"empty_default_values",
+			&TerraformCloudWorkspaceConfig{
+				ExecutionMode: String(""),
+				AgentPoolID:   String(""),
+				AgentPoolName: String(""),
+			},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := tc.c.isEmpty()
 			assert.Equal(t, tc.expected, r)
 		})
 	}

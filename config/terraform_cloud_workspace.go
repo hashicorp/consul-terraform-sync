@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
@@ -13,6 +14,19 @@ type TerraformCloudWorkspaceConfig struct {
 	ExecutionMode *string `mapstructure:"execution_mode"`
 	AgentPoolID   *string `mapstructure:"agent_pool_id"`
 	AgentPoolName *string `mapstructure:"agent_pool_name"`
+}
+
+func DefaultTerraformCloudWorkspaceConfig() *TerraformCloudWorkspaceConfig {
+	return &TerraformCloudWorkspaceConfig{
+		ExecutionMode: String(""),
+		AgentPoolID:   String(""),
+		AgentPoolName: String(""),
+	}
+}
+
+func (c *TerraformCloudWorkspaceConfig) isEmpty() bool {
+	return (*c == TerraformCloudWorkspaceConfig{}) ||
+		(reflect.DeepEqual(*c, *DefaultTerraformCloudWorkspaceConfig()))
 }
 
 // Copy returns a deep copy of this configuration.
@@ -67,7 +81,7 @@ func (c *TerraformCloudWorkspaceConfig) Finalize() {
 	}
 
 	if c.ExecutionMode == nil {
-		c.ExecutionMode = String("remote")
+		c.ExecutionMode = String("")
 	}
 
 	if c.AgentPoolID == nil {
@@ -81,15 +95,11 @@ func (c *TerraformCloudWorkspaceConfig) Finalize() {
 
 // Validate validates the values of the configuration struct
 func (c *TerraformCloudWorkspaceConfig) Validate() error {
-	if c == nil { // config not required, return early
+	if c == nil || c.isEmpty() { // config not required, return early
 		return nil
 	}
 
-	if StringVal(c.ExecutionMode) == "" {
-		return errors.New("execution mode is required for Terraform Cloud workspace")
-	}
-
-	if StringVal(c.ExecutionMode) != "remote" && StringVal(c.ExecutionMode) != "agent" {
+	if StringVal(c.ExecutionMode) != "remote" && StringVal(c.ExecutionMode) != "agent" && StringVal(c.ExecutionMode) != "" {
 		return fmt.Errorf("execution mode '%s' not supported for CTS, use 'remote' or 'agent' instead", *c.ExecutionMode)
 	}
 
