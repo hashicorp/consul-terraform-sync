@@ -115,7 +115,7 @@ func (c *taskEnableCommand) AutocompleteArgs() complete.Predictor {
 
 		if tasksResp.Tasks != nil {
 			for _, tasks := range *tasksResp.Tasks {
-				if tasks.Enabled != nil && *tasks.Enabled != true {
+				if tasks.Enabled != nil && !*tasks.Enabled {
 					taskNames = append(taskNames, tasks.Name)
 				}
 			}

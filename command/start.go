@@ -39,8 +39,6 @@ type startCommand struct {
 	configFiles  *config.FlagAppendSliceValue
 	inspectTasks *config.FlagAppendSliceValue
 
-	isVersion *bool
-
 	isInspect             *bool
 	isOnce                *bool
 	autocompleteInstall   *bool
@@ -49,8 +47,6 @@ type startCommand struct {
 	isDefault bool
 
 	clientType *string
-
-	help *bool
 }
 
 func (c *startCommand) startFlags() *flag.FlagSet {
@@ -61,29 +57,31 @@ func (c *startCommand) startFlags() *flag.FlagSet {
 	var clientType string
 
 	// Parse the flags
-	flags.Var(&configFiles, flagConfigDir, "A directory to load files for configuring Sync."+
-		"\n\t\tConfiguration files require an .hcl or .json "+
-		"\n\t\tfile extention in order to specify their format. This option can be "+
-		"\n\t\tspecified multiple times to load different directories.")
-	flags.Var(&configFiles, flagConfigFiles, "A file to load for configuring Sync. "+
-		"\n\t\tConfiguration file requires an .hcl or .json extension in order to "+
-		"\n\t\tspecify their format. This option can be specified multiple times to "+
-		"\n\t\tload different configuration files.")
+	flags.Var(&configFiles, flagConfigDir,
+		"A directory to load files for configuring Consul-Terraform-Sync. "+
+			"\n\t\tConfiguration files require an .hcl or .json file extension in order "+
+			"\n\t\tto specify their format. This option can be specified multiple times to "+
+			"\n\t\tload different directories.")
+	flags.Var(&configFiles, flagConfigFiles,
+		"A file to load for configuring Consul-Terraform-Sync. Configuration "+
+			"\n\t\tfile requires an .hcl or .json extension in order to specify their format. "+
+			"\n\t\tThis option can be specified multiple times to load different "+
+			"\n\t\tconfiguration files.")
 	c.configFiles = &configFiles
 
 	flags.BoolVar(&isInspect, flagInspect, false,
-		"Run Sync in Inspect mode to print the proposed state changes for all tasks, "+
-			"\n\t\tand then exits. No changes "+
-			"\n\t\tare applied in this mode.")
+		"Run Consul-Terraform-Sync in Inspect mode to print the proposed state "+
+			"\n\t\tchanges for all tasks, and then exit. No changes are applied "+
+			"\n\t\tin this mode.")
 	c.isInspect = &isInspect
 
-	flags.Var(&inspectTasks, flagInspectTask, "Run Sync in Inspect mode to "+
-		"\n\t\tprint the proposed state changes for the task, and then exits. No "+
-		"\n\t\tchanges are applied in this mode.")
+	flags.Var(&inspectTasks, flagInspectTask, "Run Consul-Terraform-Sync in Inspect mode to print the proposed "+
+		"\n\t\tstate changes for the task, and then exit. No changes are applied"+
+		"\n\t\tin this mode.")
 	c.inspectTasks = &inspectTasks
 
-	flags.BoolVar(&isOnce, flagOnce, false, "Render templates and run tasks once. "+
-		"\n\t\tDoes not run the process as a daemon and disables buffer periods.")
+	flags.BoolVar(&isOnce, flagOnce, false, "Render templates and run tasks once. Does not run the process "+
+		"\n\t\tas a daemon and disables buffer periods.")
 	c.isOnce = &isOnce
 
 	// Flags for installing the shell autocomplete
@@ -93,9 +91,10 @@ func (c *startCommand) startFlags() *flag.FlagSet {
 	c.autocompleteUninstall = &autocompleteUninstall
 
 	// Development only flags. Not printed with -h, -help
-	flags.StringVar(&clientType, flagClientType, "", "Use only when developing"+
-		"\n\t\tconsul-terraform-sync binary. Defaults to Terraform client if empty or"+
-		"\n\t\tunknown value. Values can also be 'development' or 'test'.")
+	flags.StringVar(&clientType, flagClientType, "",
+		"Use only when developing Consul-Terraform-Sync binary. "+
+			"\n\t\tDefaults to Terraform client if empty or unknown value. "+
+			"\n\t\tValues can also be 'development' or 'test'.")
 	c.clientType = &clientType
 
 	return flags

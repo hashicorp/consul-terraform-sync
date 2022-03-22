@@ -49,8 +49,6 @@ type CLI struct {
 
 	// stopCh is an internal channel used to trigger a shutdown of the CLI.
 	stopCh chan struct{}
-
-	flags *flag.FlagSet
 }
 
 var (
@@ -115,7 +113,7 @@ func helpFunc(commands map[string]string, usage string) string {
 	var b bytes.Buffer
 	tw := tabwriter.NewWriter(&b, 0, 2, 4, ' ', tabwriter.AlignRight)
 
-	fmt.Fprintf(tw, usage)
+	fmt.Fprint(tw, usage)
 
 	if len(commands) > 0 {
 		fmt.Fprintf(tw, "\nCommands:\n")
@@ -157,6 +155,6 @@ func printFlags(w io.Writer, f *flag.FlagSet) {
 		}
 
 		fmt.Fprintf(w, "\t-%s %s\n", f.Name, f.Value)
-		fmt.Fprintf(w, "\t\t%s\n", f.Usage)
+		fmt.Fprintf(w, "\t\t%s\n\n", f.Usage)
 	})
 }

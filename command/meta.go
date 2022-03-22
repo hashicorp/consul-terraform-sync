@@ -66,8 +66,9 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 		"\n\t\tHTTPS by including https in the provided address (eg. https://127.0.0.1:8558)", api.EnvAddress, api.DefaultURL))
 
 	// Initialize TLS flags
-	m.tls.caPath = m.flags.String(FlagCAPath, "", fmt.Sprintf("Path to a directory of CA certificates to use for TLS when communicating with Consul-Terraform-Sync. "+
-		"\n\t\tThis can also be specified using the %s environment variable.", api.EnvTLSCAPath))
+	m.tls.caPath = m.flags.String(FlagCAPath, "", fmt.Sprintf("Path to a directory of CA certificates to use for TLS when communicating "+
+		"\n\t\twith Consul-Terraform-Sync. This can also be specified using the "+
+		"\n\t\t%s environment variable.", api.EnvTLSCAPath))
 	m.tls.caCert = m.flags.String(FlagCACert, "", fmt.Sprintf("Path to a CA file to use for TLS when communicating with Consul-Terraform-Sync. "+
 		"\n\t\tThis can also be specified using the %s environment variable.", api.EnvTLSCACert))
 	m.tls.clientCert = m.flags.String(FlagClientCert, "", fmt.Sprintf("Path to a client cert file to use for TLS when verify_incoming is enabled. "+
