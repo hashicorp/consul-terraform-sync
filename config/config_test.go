@@ -328,6 +328,7 @@ func TestConfig_Finalize(t *testing.T) {
 	backend["key_file"] = "key"
 	(*expected.Tasks)[0].Enabled = Bool(true)
 	(*expected.Tasks)[0].TFVersion = String("")
+	(*expected.Tasks)[0].TFCWorkspace = DefaultTerraformCloudWorkspaceConfig()
 	(*expected.Tasks)[0].VarFiles = []string{}
 	(*expected.Tasks)[0].Version = String("")
 	(*expected.Tasks)[0].BufferPeriod = &BufferPeriodConfig{}

@@ -57,6 +57,12 @@ func TestTaskConfig_Copy(t *testing.T) {
 					},
 				},
 				WorkingDir: String("cts-dir"),
+				TFVersion:  String("1.0.0"),
+				TFCWorkspace: &TerraformCloudWorkspaceConfig{
+					ExecutionMode: String("agent"),
+					AgentPoolID:   String("apool-1"),
+					AgentPoolName: String("test"),
+				},
 			},
 		},
 	}
@@ -394,6 +400,52 @@ func TestTaskConfig_Merge(t *testing.T) {
 			&TaskConfig{ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}}},
 			&TaskConfig{ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{ServicesMonitorConfig{Regexp: String(".*")}}}},
 		},
+		{
+			"tfc_workspace_merges",
+			&TaskConfig{TFCWorkspace: &TerraformCloudWorkspaceConfig{
+				ExecutionMode: String("remote"),
+				AgentPoolID:   String(""),
+				AgentPoolName: String(""),
+			}},
+			&TaskConfig{TFCWorkspace: &TerraformCloudWorkspaceConfig{
+				ExecutionMode: String("agent"),
+				AgentPoolID:   String("apool-1"),
+				AgentPoolName: String("test"),
+			}},
+			&TaskConfig{TFCWorkspace: &TerraformCloudWorkspaceConfig{
+				ExecutionMode: String("agent"),
+				AgentPoolID:   String("apool-1"),
+				AgentPoolName: String("test"),
+			}},
+		},
+		{
+			"tfc_workspace_empty_one",
+			&TaskConfig{TFCWorkspace: &TerraformCloudWorkspaceConfig{
+				ExecutionMode: String("agent"),
+				AgentPoolID:   String("apool-1"),
+				AgentPoolName: String("test"),
+			}},
+			&TaskConfig{TFCWorkspace: &TerraformCloudWorkspaceConfig{}},
+			&TaskConfig{TFCWorkspace: &TerraformCloudWorkspaceConfig{
+				ExecutionMode: String("agent"),
+				AgentPoolID:   String("apool-1"),
+				AgentPoolName: String("test"),
+			}},
+		},
+		{
+			"tfc_workspace_empty_two",
+			&TaskConfig{TFCWorkspace: &TerraformCloudWorkspaceConfig{}},
+			&TaskConfig{TFCWorkspace: &TerraformCloudWorkspaceConfig{
+				ExecutionMode: String("agent"),
+				AgentPoolID:   String("apool-1"),
+				AgentPoolName: String("test"),
+			}},
+			&TaskConfig{TFCWorkspace: &TerraformCloudWorkspaceConfig{
+				ExecutionMode: String("agent"),
+				AgentPoolID:   String("apool-1"),
+				AgentPoolName: String("test"),
+			}},
+		},
 	}
 
 	for i, tc := range cases {
@@ -423,6 +475,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Variables:          map[string]string{},
 				Version:            String(""),
 				TFVersion:          String(""),
+				TFCWorkspace:       DefaultTerraformCloudWorkspaceConfig(),
 				BufferPeriod:       DefaultBufferPeriodConfig(),
 				Enabled:            Bool(true),
 				Condition:          EmptyConditionConfig(),
@@ -445,6 +498,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Variables:          map[string]string{},
 				Version:            String(""),
 				TFVersion:          String(""),
+				TFCWorkspace:       DefaultTerraformCloudWorkspaceConfig(),
 				BufferPeriod:       DefaultBufferPeriodConfig(),
 				Enabled:            Bool(true),
 				Condition:          EmptyConditionConfig(),
@@ -468,6 +522,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Variables:          map[string]string{},
 				Version:            String(""),
 				TFVersion:          String(""),
+				TFCWorkspace:       DefaultTerraformCloudWorkspaceConfig(),
 				BufferPeriod: &BufferPeriodConfig{
 					Enabled: Bool(false),
 					Min:     TimeDuration(0 * time.Second),
@@ -499,6 +554,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Variables:          map[string]string{},
 				Version:            String(""),
 				TFVersion:          String(""),
+				TFCWorkspace:       DefaultTerraformCloudWorkspaceConfig(),
 				BufferPeriod: &BufferPeriodConfig{
 					Enabled: Bool(false),
 					Min:     TimeDuration(0 * time.Second),
@@ -745,6 +801,36 @@ func TestTaskConfig_Validate(t *testing.T) {
 				TFVersion: String("0.15.0"),
 			},
 			false,
+		},
+		{
+			"invalid: TFC workspace unsupported",
+			&TaskConfig{
+				Name: String("task"),
+				Condition: &ServicesConditionConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Names: []string{"api"},
+					},
+				},
+				Module: String("path"),
+				TFCWorkspace: &TerraformCloudWorkspaceConfig{
+					ExecutionMode: String("remote"),
+				},
+			},
+			false,
+		},
+		{
+			"valid: empty TFC workspace",
+			&TaskConfig{
+				Name: String("task"),
+				Condition: &ServicesConditionConfig{
+					ServicesMonitorConfig: ServicesMonitorConfig{
+						Names: []string{"api"},
+					},
+				},
+				Module:       String("path"),
+				TFCWorkspace: DefaultTerraformCloudWorkspaceConfig(),
+			},
+			true,
 		},
 		{
 			"invalid: provider: duplicate",

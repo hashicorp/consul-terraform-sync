@@ -67,6 +67,11 @@ type TaskConfig struct {
 	// when using CTS OSS or the Terraform driver.
 	TFVersion *string `mapstructure:"terraform_version"`
 
+	// The workspace configurations to use for the task when configured with CTS
+	// enterprise and the Terraform Cloud driver. This option is not supported
+	// when using CTS OSS or the Terraform driver.
+	TFCWorkspace *TerraformCloudWorkspaceConfig `mapstructure:"terraform_cloud_workspace"`
+
 	// BufferPeriod configures per-task buffer timers.
 	BufferPeriod *BufferPeriodConfig `mapstructure:"buffer_period"`
 
@@ -120,6 +125,10 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.Version = StringCopy(c.Version)
 
 	o.TFVersion = StringCopy(c.TFVersion)
+
+	if c.TFCWorkspace != nil {
+		o.TFCWorkspace = c.TFCWorkspace.Copy()
+	}
 
 	o.BufferPeriod = c.BufferPeriod.Copy()
 
@@ -192,6 +201,10 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 
 	if o.TFVersion != nil {
 		r.TFVersion = StringCopy(o.TFVersion)
+	}
+
+	if o.TFCWorkspace != nil {
+		r.TFCWorkspace = r.TFCWorkspace.Merge(o.TFCWorkspace)
 	}
 
 	if o.BufferPeriod != nil {
@@ -267,6 +280,11 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if c.Version == nil {
 		c.Version = String("")
 	}
+
+	if c.TFCWorkspace == nil {
+		c.TFCWorkspace = &TerraformCloudWorkspaceConfig{}
+	}
+	c.TFCWorkspace.Finalize()
 
 	if c.TFVersion == nil {
 		c.TFVersion = String("")
@@ -351,6 +369,12 @@ func (c *TaskConfig) Validate() error {
 			"task %q. This option is available for Consul-Terraform-Sync Enterprise "+
 			"when using the Terraform Cloud driver, or configure the Terraform client "+
 			"version within the Terraform driver block", *c.Name)
+	}
+
+	if c.TFCWorkspace != nil && !c.TFCWorkspace.isEmpty() {
+		return fmt.Errorf("unsupported configuration 'terraform_cloud_workspace' for "+
+			"task %q. This option is available for Consul-Terraform-Sync Enterprise "+
+			"when using the Terraform Cloud driver", *c.Name)
 	}
 
 	// Restrict only one provider instance per task
