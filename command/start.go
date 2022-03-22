@@ -118,7 +118,8 @@ func (c startCommand) Name() string {
 
 // Help returns the command's usage, list of flags, and examples
 func (c *startCommand) Help() string {
-	return helpFunc(nil, "Usage CLI: consul-terraform-sync start [-help] [options]\n")
+	omitFlags := []string{flagAutocompleteInstall, flagAutocompleteUninstall}
+	return helpFunc(nil, "Usage CLI: consul-terraform-sync start [-help] [options]\n", omitFlags)
 }
 
 // HelpDefault returns the usage when this command is used as the default command,
@@ -130,7 +131,7 @@ func (c *startCommand) HelpDefault() string {
 	for _, v := range commonCommands {
 		commands[v] = fmt.Sprintf("%s\t\n", v)
 	}
-	return helpFunc(commands, "Usage CLI: consul-terraform-sync <command> [-help] [options]\n")
+	return helpFunc(commands, "Usage CLI: consul-terraform-sync <command> [-help] [options]\n", nil)
 }
 
 // Synopsis is a short one-line synopsis of the command

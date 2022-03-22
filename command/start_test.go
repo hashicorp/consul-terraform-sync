@@ -21,11 +21,25 @@ func TestStartCommand_Help(t *testing.T) {
 	contains := []string{
 		"Usage CLI: consul-terraform-sync start [-help] [options]",
 		"Options:",
+		"-config-dir",
+		"-config-file",
+		"-inspect",
+		"-inspect-task",
+		"-once",
+	}
+
+	doesNotContain := []string{
+		"-autocomplete-install",
+		"-autocomplete-uninstall",
 	}
 
 	s := cmd.Help()
 	for _, c := range contains {
 		assert.Contains(t, s, c)
+	}
+
+	for _, c := range doesNotContain {
+		assert.NotContains(t, s, c)
 	}
 }
 
@@ -35,6 +49,13 @@ func TestStartCommand_HelpDefault(t *testing.T) {
 	contains := []string{
 		"Usage CLI: consul-terraform-sync <command> [-help] [options]",
 		"Options:",
+		"-autocomplete-install",
+		"-autocomplete-uninstall",
+		"-config-dir",
+		"-config-file",
+		"-inspect",
+		"-inspect-task",
+		"-once",
 	}
 
 	s := cmd.HelpDefault()

@@ -105,11 +105,11 @@ func (cli *CLI) groupedHelpFunc(mcli.HelpFunc) mcli.HelpFunc {
 			c[v] = printCommand(v, commands[v])
 		}
 
-		return helpFunc(c, "Usage CLI: consul-terraform-sync <command> [-help] [options]\n")
+		return helpFunc(c, "Usage CLI: consul-terraform-sync <command> [-help] [options]\n", nil)
 	}
 }
 
-func helpFunc(commands map[string]string, usage string) string {
+func helpFunc(commands map[string]string, usage string, omitFlags []string) string {
 	var b bytes.Buffer
 	tw := tabwriter.NewWriter(&b, 0, 2, 4, ' ', tabwriter.AlignRight)
 
@@ -126,7 +126,7 @@ func helpFunc(commands map[string]string, usage string) string {
 	fmt.Fprintf(tw, "\n")
 
 	rc := startCommand{}
-	printFlags(tw, rc.startFlags())
+	printFlags(tw, rc.startFlags(), omitFlags)
 
 	tw.Flush()
 
@@ -142,7 +142,7 @@ func printCommand(name string, cmdFn mcli.CommandFactory) string {
 }
 
 // printFlags prints out select flags
-func printFlags(w io.Writer, f *flag.FlagSet) {
+func printFlags(w io.Writer, f *flag.FlagSet, omitName []string) {
 	fmt.Fprintf(w, "Options:\n\n")
 	f.VisitAll(func(f *flag.Flag) {
 		switch f.Name {
@@ -154,7 +154,16 @@ func printFlags(w io.Writer, f *flag.FlagSet) {
 			return
 		}
 
-		fmt.Fprintf(w, "\t-%s %s\n", f.Name, f.Value)
-		fmt.Fprintf(w, "\t\t%s\n\n", f.Usage)
+		isOmitName := false
+		for _, n := range omitName {
+			if n == f.Name {
+				isOmitName = true
+			}
+		}
+
+		if !isOmitName {
+			fmt.Fprintf(w, "\t-%s %s\n", f.Name, f.Value)
+			fmt.Fprintf(w, "\t\t%s\n\n", f.Usage)
+		}
 	})
 }
