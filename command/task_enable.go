@@ -1,14 +1,18 @@
 package command
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/mitchellh/go-wordwrap"
+	"github.com/posener/complete"
 )
 
 const cmdTaskEnableName = "task enable"
@@ -18,9 +22,12 @@ type taskEnableCommand struct {
 	meta
 	autoApprove *bool
 	flags       *flag.FlagSet
+
+	predictorClient oapigen.ClientWithResponsesInterface
 }
 
 func newTaskEnableCommand(m meta) *taskEnableCommand {
+	logging.DisableLogging()
 	flags := m.defaultFlagSet(cmdTaskEnableName)
 	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of inspect plan")
 	return &taskEnableCommand{
@@ -39,7 +46,7 @@ func (c *taskEnableCommand) Name() string {
 func (c *taskEnableCommand) Help() string {
 	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
-Usage: consul-terraform-sync task enable [options] <task name>
+Usage: consul-terraform-sync task enable [-help] [options] <task name>
 
   Task Enable is used to enable existing tasks. Once enabled, a task will
   run and make changes to your network infrastructure resources. Before
@@ -74,6 +81,47 @@ Example:
 // Synopsis is a short one-line synopsis of the command
 func (c *taskEnableCommand) Synopsis() string {
 	return "Enables existing tasks to run."
+}
+
+// AutocompleteFlags returns a mapping of supported flags and autocomplete
+// options for this command. The map key for the Flags map should be the
+// complete flag such as "-foo" or "--foo".
+func (c *taskEnableCommand) AutocompleteFlags() complete.Flags {
+	return c.meta.autoCompleteFlags()
+}
+
+// AutocompleteArgs returns the argument predictor for this command.
+// This commands uses a client to fetch a list of existing tasks
+// to predict the correct enable argument
+func (c *taskEnableCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictFunc(func(a complete.Args) []string {
+		var client oapigen.ClientWithResponsesInterface
+		var err error
+		if c.predictorClient == nil {
+			client, err = c.meta.taskLifecycleClient()
+			if err != nil {
+				return nil
+			}
+		} else {
+			client = c.predictorClient
+		}
+
+		tasksResp, err := getTasks(context.Background(), client)
+		if err != nil {
+			return nil
+		}
+
+		taskNames := make([]string, 0)
+
+		if tasksResp.Tasks != nil {
+			for _, tasks := range *tasksResp.Tasks {
+				if tasks.Enabled != nil && !*tasks.Enabled {
+					taskNames = append(taskNames, tasks.Name)
+				}
+			}
+		}
+		return taskNames
+	})
 }
 
 // Run runs the command

@@ -10,11 +10,16 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mcli "github.com/mitchellh/cli"
 	"github.com/mitchellh/go-wordwrap"
+	"github.com/posener/complete"
 )
 
-const cmdTaskCreateName = "task create"
+const (
+	cmdTaskCreateName = "task create"
+	flagTaskFile      = "task-file"
+)
 
 // TaskCreateCommand handles the `task create` command
 type taskCreateCommand struct {
@@ -25,9 +30,10 @@ type taskCreateCommand struct {
 }
 
 func newTaskCreateCommand(m meta) *taskCreateCommand {
+	logging.DisableLogging()
 	flags := m.defaultFlagSet(cmdTaskCreateName)
 	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of inspect plan")
-	f := flags.String("task-file", "", "[Required] A file containing the hcl or json definition of a task")
+	f := flags.String(flagTaskFile, "", "[Required] A file containing the hcl or json definition of a task")
 	return &taskCreateCommand{
 		meta:        m,
 		autoApprove: a,
@@ -45,7 +51,7 @@ func (c taskCreateCommand) Name() string {
 func (c *taskCreateCommand) Help() string {
 	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
-Usage: consul-terraform-sync task create [options] -task-file=<task config>
+Usage: consul-terraform-sync task create [-help] [options] -task-file=<task config>
 
   Task Create is used to create a new task. It is not to be used for updating a task, it will not create a task if the
   task name already exists.
@@ -80,9 +86,30 @@ func (c *taskCreateCommand) Synopsis() string {
 	return "Creates a new task."
 }
 
+// AutocompleteFlags returns a mapping of supported flags and autocomplete
+// options for this command. The map key for the Flags map should be the
+// complete flag such as "-foo" or "--foo".
+func (c *taskCreateCommand) AutocompleteFlags() complete.Flags {
+	return mergeAutocompleteFlags(c.meta.autoCompleteFlags(),
+		complete.Flags{
+			fmt.Sprintf("-%s", flagTaskFile): complete.PredictOr(
+				complete.PredictFiles("*.hcl"),
+				complete.PredictFiles("*.json"),
+			),
+			fmt.Sprintf("-%s", FlagAutoApprove): complete.PredictNothing,
+		})
+}
+
+// AutocompleteArgs returns the argument predictor for this command.
+// Since argument completion is not supported, this will return
+// complete.PredictNothing.
+func (c *taskCreateCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
 // Run runs the command
 func (c *taskCreateCommand) Run(args []string) int {
-	c.meta.setFlagsUsage(c.flags, args, c.Help())
+	c.flags.Usage = func() { c.meta.UI.Output(c.Help()) }
 	if err := c.flags.Parse(args); err != nil {
 		return ExitCodeParseFlagsError
 	}
@@ -170,7 +197,11 @@ func (c *taskCreateCommand) Run(args []string) int {
 		return ExitCodeError
 	}
 
-	taskResp := resp.JSON201
+	if resp.JSON200 == nil {
+		c.UI.Error(fmt.Sprintf("Error: received nil response with status %s", resp.Status()))
+		return ExitCodeError
+	}
+	taskResp := resp.JSON200
 	c.UI.Output(fmt.Sprintf("Request ID: %s", taskResp.RequestId))
 	b, _ := json.MarshalIndent(taskReq, "    ", "  ")
 	c.UI.Output("Request Payload:")
@@ -199,6 +230,11 @@ func (c *taskCreateCommand) Run(args []string) int {
 		msg := wordwrap.WrapString(err.Error(), uint(78))
 		c.UI.Output(msg)
 
+		return ExitCodeError
+	}
+
+	if resp.JSON201 == nil {
+		c.UI.Error(fmt.Sprintf("Error: received nil response with status %s", resp.Status()))
 		return ExitCodeError
 	}
 	taskResp = resp.JSON201

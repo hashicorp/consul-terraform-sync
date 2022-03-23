@@ -90,8 +90,8 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// GetTasks request
-	GetTasks(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// GetAllTasks request
+	GetAllTasks(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateTask request with any body
 	CreateTaskWithBody(ctx context.Context, params *CreateTaskParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -105,8 +105,8 @@ type ClientInterface interface {
 	GetTaskByName(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) GetTasks(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetTasksRequest(c.Server)
+func (c *Client) GetAllTasks(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAllTasksRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -165,8 +165,8 @@ func (c *Client) GetTaskByName(ctx context.Context, name string, reqEditors ...R
 	return c.Client.Do(req)
 }
 
-// NewGetTasksRequest generates requests for GetTasks
-func NewGetTasksRequest(server string) (*http.Request, error) {
+// NewGetAllTasksRequest generates requests for GetAllTasks
+func NewGetAllTasksRequest(server string) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -363,8 +363,8 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// GetTasks request
-	GetTasksWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetTasksResponse, error)
+	// GetAllTasks request
+	GetAllTasksWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAllTasksResponse, error)
 
 	// CreateTask request with any body
 	CreateTaskWithBodyWithResponse(ctx context.Context, params *CreateTaskParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTaskResponse, error)
@@ -378,7 +378,7 @@ type ClientWithResponsesInterface interface {
 	GetTaskByNameWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetTaskByNameResponse, error)
 }
 
-type GetTasksResponse struct {
+type GetAllTasksResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *TasksResponse
@@ -386,7 +386,7 @@ type GetTasksResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r GetTasksResponse) Status() string {
+func (r GetAllTasksResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -394,7 +394,7 @@ func (r GetTasksResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetTasksResponse) StatusCode() int {
+func (r GetAllTasksResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -404,6 +404,7 @@ func (r GetTasksResponse) StatusCode() int {
 type CreateTaskResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *TaskResponse
 	JSON201      *TaskResponse
 	JSONDefault  *ErrorResponse
 }
@@ -470,13 +471,13 @@ func (r GetTaskByNameResponse) StatusCode() int {
 	return 0
 }
 
-// GetTasksWithResponse request returning *GetTasksResponse
-func (c *ClientWithResponses) GetTasksWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetTasksResponse, error) {
-	rsp, err := c.GetTasks(ctx, reqEditors...)
+// GetAllTasksWithResponse request returning *GetAllTasksResponse
+func (c *ClientWithResponses) GetAllTasksWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAllTasksResponse, error) {
+	rsp, err := c.GetAllTasks(ctx, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetTasksResponse(rsp)
+	return ParseGetAllTasksResponse(rsp)
 }
 
 // CreateTaskWithBodyWithResponse request with arbitrary body returning *CreateTaskResponse
@@ -514,15 +515,15 @@ func (c *ClientWithResponses) GetTaskByNameWithResponse(ctx context.Context, nam
 	return ParseGetTaskByNameResponse(rsp)
 }
 
-// ParseGetTasksResponse parses an HTTP response from a GetTasksWithResponse call
-func ParseGetTasksResponse(rsp *http.Response) (*GetTasksResponse, error) {
+// ParseGetAllTasksResponse parses an HTTP response from a GetAllTasksWithResponse call
+func ParseGetAllTasksResponse(rsp *http.Response) (*GetAllTasksResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetTasksResponse{
+	response := &GetAllTasksResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -561,6 +562,13 @@ func ParseCreateTaskResponse(rsp *http.Response) (*CreateTaskResponse, error) {
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest TaskResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest TaskResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {

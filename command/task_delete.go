@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/mitchellh/go-wordwrap"
+	"github.com/posener/complete"
 )
 
 const cmdTaskDeleteName = "task delete"
@@ -16,9 +19,12 @@ type taskDeleteCommand struct {
 	meta
 	autoApprove *bool
 	flags       *flag.FlagSet
+
+	predictorClient oapigen.ClientWithResponsesInterface
 }
 
 func newTaskDeleteCommand(m meta) *taskDeleteCommand {
+	logging.DisableLogging()
 	flags := m.defaultFlagSet(cmdTaskDeleteName)
 	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of deleting a task")
 	return &taskDeleteCommand{
@@ -37,7 +43,7 @@ func (c taskDeleteCommand) Name() string {
 func (c *taskDeleteCommand) Help() string {
 	c.meta.setHelpOptions()
 	helpText := fmt.Sprintf(`
-Usage: consul-terraform-sync task delete [options] <task name>
+Usage: consul-terraform-sync task delete [-help] [options] <task name>
 
   Task Delete is used to delete an existing task. If the task is not running,
   then it is deleted immediately. Otherwise, it will be deleted once the task
@@ -68,6 +74,48 @@ Example:
 // Synopsis is a short one-line synopsis of the command
 func (c *taskDeleteCommand) Synopsis() string {
 	return "Deletes an existing task."
+}
+
+// AutocompleteFlags returns a mapping of supported flags and autocomplete
+// options for this command. The map key for the Flags map should be the
+// complete flag such as "-foo" or "--foo".
+func (c *taskDeleteCommand) AutocompleteFlags() complete.Flags {
+	return mergeAutocompleteFlags(c.meta.autoCompleteFlags(),
+		complete.Flags{
+			fmt.Sprintf("-%s", FlagAutoApprove): complete.PredictNothing,
+		})
+}
+
+// AutocompleteArgs returns the argument predictor for this command.
+// This commands uses a client to fetch a list of existing tasks
+// to predict the correct delete argument
+func (c *taskDeleteCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictFunc(func(a complete.Args) []string {
+		var client oapigen.ClientWithResponsesInterface
+		var err error
+		if c.predictorClient == nil {
+			client, err = c.meta.taskLifecycleClient()
+			if err != nil {
+				return nil
+			}
+		} else {
+			client = c.predictorClient
+		}
+
+		tasksResp, err := getTasks(context.Background(), client)
+		if err != nil {
+			return nil
+		}
+
+		taskNames := make([]string, 0)
+
+		if tasksResp.Tasks != nil {
+			for _, tasks := range *tasksResp.Tasks {
+				taskNames = append(taskNames, tasks.Name)
+			}
+		}
+		return taskNames
+	})
 }
 
 // Run runs the command

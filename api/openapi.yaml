@@ -49,8 +49,14 @@ paths:
             schema:
               $ref: '#/components/schemas/TaskRequest'
       responses:
+        '200':
+          description: Task response with inspection, task not created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
         '201':
-          description: Task response
+          description: Task response, task is created
           content:
             application/json:
               schema:

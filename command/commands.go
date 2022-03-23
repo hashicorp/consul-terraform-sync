@@ -46,11 +46,11 @@ func Commands() map[string]cli.CommandFactory {
 		cmdTaskCreateName: func() (cli.Command, error) {
 			return newTaskCreateCommand(m), nil
 		},
-		cmdRunName: func() (cli.Command, error) {
-			return newRunCommand(m, false), nil
+		cmdStartName: func() (cli.Command, error) {
+			return newStartCommand(m, false), nil
 		},
 		"": func() (cli.Command, error) {
-			return newRunCommand(m, true), nil
+			return newStartCommand(m, true), nil
 		},
 	}
 

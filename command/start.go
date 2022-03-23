@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	cmdRunName = "run"
+	cmdStartName = "start"
 
 	flagConfigDir             = "config-dir"
 	flagConfigFiles           = "config-file"
@@ -31,15 +31,13 @@ const (
 	flagClientType            = "client-type"
 )
 
-// runCommand handles the `run` command
-type runCommand struct {
+// startCommand handles the `start` command
+type startCommand struct {
 	meta
 	flags *flag.FlagSet
 
 	configFiles  *config.FlagAppendSliceValue
 	inspectTasks *config.FlagAppendSliceValue
-
-	isVersion *bool
 
 	isInspect             *bool
 	isOnce                *bool
@@ -49,41 +47,41 @@ type runCommand struct {
 	isDefault bool
 
 	clientType *string
-
-	help *bool
 }
 
-func (c *runCommand) runFlags() *flag.FlagSet {
-	flags := flag.NewFlagSet(cmdRunName, flag.ContinueOnError)
+func (c *startCommand) startFlags() *flag.FlagSet {
+	flags := flag.NewFlagSet(cmdStartName, flag.ContinueOnError)
 
 	var configFiles, inspectTasks config.FlagAppendSliceValue
 	var isInspect, isOnce, autocompleteInstall, autocompleteUninstall bool
 	var clientType string
 
 	// Parse the flags
-	flags.Var(&configFiles, flagConfigDir, "A directory to load files for configuring Sync."+
-		"\n\t\tConfiguration files require an .hcl or .json "+
-		"\n\t\tfile extention in order to specify their format. This option can be "+
-		"\n\t\tspecified multiple times to load different directories.")
-	flags.Var(&configFiles, flagConfigFiles, "A file to load for configuring Sync. "+
-		"\n\t\tConfiguration file requires an .hcl or .json extension in order to "+
-		"\n\t\tspecify their format. This option can be specified multiple times to "+
-		"\n\t\tload different configuration files.")
+	flags.Var(&configFiles, flagConfigDir,
+		"A directory to load files for configuring Consul-Terraform-Sync. "+
+			"\n\t\tConfiguration files require an .hcl or .json file extension in order "+
+			"\n\t\tto specify their format. This option can be specified multiple times to "+
+			"\n\t\tload different directories.")
+	flags.Var(&configFiles, flagConfigFiles,
+		"A file to load for configuring Consul-Terraform-Sync. Configuration "+
+			"\n\t\tfile requires an .hcl or .json extension in order to specify their format. "+
+			"\n\t\tThis option can be specified multiple times to load different "+
+			"\n\t\tconfiguration files.")
 	c.configFiles = &configFiles
 
 	flags.BoolVar(&isInspect, flagInspect, false,
-		"Run Sync in Inspect mode to print the proposed state changes for all tasks, "+
-			"\n\t\tand then exits. No changes "+
-			"\n\t\tare applied in this mode.")
+		"Run Consul-Terraform-Sync in Inspect mode to print the proposed state "+
+			"\n\t\tchanges for all tasks, and then exit. No changes are applied "+
+			"\n\t\tin this mode.")
 	c.isInspect = &isInspect
 
-	flags.Var(&inspectTasks, flagInspectTask, "Run Sync in Inspect mode to "+
-		"\n\t\tprint the proposed state changes for the task, and then exits. No "+
-		"\n\t\tchanges are applied in this mode.")
+	flags.Var(&inspectTasks, flagInspectTask, "Run Consul-Terraform-Sync in Inspect mode to print the proposed "+
+		"\n\t\tstate changes for the task, and then exit. No changes are applied"+
+		"\n\t\tin this mode.")
 	c.inspectTasks = &inspectTasks
 
-	flags.BoolVar(&isOnce, flagOnce, false, "Render templates and run tasks once. "+
-		"\n\t\tDoes not run the process as a daemon and disables buffer periods.")
+	flags.BoolVar(&isOnce, flagOnce, false, "Render templates and run tasks once. Does not run the process "+
+		"\n\t\tas a daemon and disables buffer periods.")
 	c.isOnce = &isOnce
 
 	// Flags for installing the shell autocomplete
@@ -93,19 +91,20 @@ func (c *runCommand) runFlags() *flag.FlagSet {
 	c.autocompleteUninstall = &autocompleteUninstall
 
 	// Development only flags. Not printed with -h, -help
-	flags.StringVar(&clientType, flagClientType, "", "Use only when developing"+
-		"\n\t\tconsul-terraform-sync binary. Defaults to Terraform client if empty or"+
-		"\n\t\tunknown value. Values can also be 'development' or 'test'.")
+	flags.StringVar(&clientType, flagClientType, "",
+		"Use only when developing Consul-Terraform-Sync binary. "+
+			"\n\t\tDefaults to Terraform client if empty or unknown value. "+
+			"\n\t\tValues can also be 'development' or 'test'.")
 	c.clientType = &clientType
 
 	return flags
 }
 
-func newRunCommand(m meta, isDefault bool) *runCommand {
-	c := &runCommand{
+func newStartCommand(m meta, isDefault bool) *startCommand {
+	c := &startCommand{
 		meta: m,
 	}
-	f := c.runFlags()
+	f := c.startFlags()
 	c.meta.flags = f
 	c.flags = f
 	c.isDefault = isDefault
@@ -113,37 +112,38 @@ func newRunCommand(m meta, isDefault bool) *runCommand {
 }
 
 // Name returns the subcommand
-func (c runCommand) Name() string {
-	return cmdRunName
+func (c startCommand) Name() string {
+	return cmdStartName
 }
 
 // Help returns the command's usage, list of flags, and examples
-func (c *runCommand) Help() string {
-	return helpFunc(nil, "Usage CLI: consul-terraform-sync run [-help] [options]\n")
+func (c *startCommand) Help() string {
+	omitFlags := []string{flagAutocompleteInstall, flagAutocompleteUninstall}
+	return helpFunc(nil, "Usage CLI: consul-terraform-sync start [-help] [options]\n", omitFlags)
 }
 
 // HelpDefault returns the usage when this command is used as the default command,
-// without explicitly selecting the `Run` command
-func (c *runCommand) HelpDefault() string {
+// without explicitly selecting the `Start` command
+func (c *startCommand) HelpDefault() string {
 
 	// Create a command factor for common commands
 	commands := make(map[string]string)
 	for _, v := range commonCommands {
 		commands[v] = fmt.Sprintf("%s\t\n", v)
 	}
-	return helpFunc(commands, "Usage CLI: consul-terraform-sync <command> [-help] [options]\n")
+	return helpFunc(commands, "Usage CLI: consul-terraform-sync <command> [-help] [options]\n", nil)
 }
 
 // Synopsis is a short one-line synopsis of the command
 // For base commands don't provide a synopsis
-func (c *runCommand) Synopsis() string {
+func (c *startCommand) Synopsis() string {
 	return ""
 }
 
 // AutocompleteFlags returns a mapping of supported flags and autocomplete
 // options for this command. The map key for the Flags map should be the
 // complete flag such as "-foo" or "--foo".
-func (c *runCommand) AutocompleteFlags() complete.Flags {
+func (c *startCommand) AutocompleteFlags() complete.Flags {
 	return complete.Flags{
 		fmt.Sprintf("-%s", flagConfigDir): complete.PredictDirs("*"),
 		fmt.Sprintf("-%s", flagConfigFiles): complete.PredictOr(
@@ -162,12 +162,12 @@ func (c *runCommand) AutocompleteFlags() complete.Flags {
 // AutocompleteArgs returns the argument predictorClient for this command.
 // Since argument completion is not supported, this returns
 // complete.PredictNothing.
-func (c *runCommand) AutocompleteArgs() complete.Predictor {
+func (c *startCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictNothing
 }
 
-// Run runs the command
-func (c *runCommand) Run(args []string) int {
+// Run starts the command
+func (c *startCommand) Run(args []string) int {
 	c.flags.Usage = func() { c.meta.UI.Output(c.Help()) }
 	if err := c.flags.Parse(args); err != nil {
 		return ExitCodeParseFlagsError
@@ -181,7 +181,7 @@ func (c *runCommand) Run(args []string) int {
 		c.UI.Error("unable to start consul-terraform-sync")
 		c.UI.Output("no config file provided")
 		help := fmt.Sprintf("For additional help try 'consul-terraform-sync %s --help'",
-			cmdRunName)
+			cmdStartName)
 		help = wordwrap.WrapString(help, width)
 
 		c.UI.Output(help)
