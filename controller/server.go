@@ -225,6 +225,7 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 	}
 
 	inputs := t.ModuleInputs()
+	tfcWs := t.TFCWorkspace()
 
 	return config.TaskConfig{
 		Description:        config.String(t.Description()),
@@ -241,7 +242,8 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		WorkingDir:         config.String(t.WorkingDir()),
 
 		// Enterprise
-		TFVersion: config.String(t.TFVersion()),
+		TFVersion:    config.String(t.TFVersion()),
+		TFCWorkspace: &tfcWs,
 	}, nil
 }
 

@@ -174,7 +174,8 @@ func TestNewDriverTask(t *testing.T) {
 					WorkingDir:   config.String("working-dir/name"),
 
 					// Enterprise
-					TFVersion: config.String("1.0.0"),
+					TFVersion:    config.String("1.0.0"),
+					TFCWorkspace: config.DefaultTerraformCloudWorkspaceConfig(),
 				},
 			}},
 			[]*driver.Task{newTestTask(t, driver.TaskConfig{
@@ -192,7 +193,8 @@ func TestNewDriverTask(t *testing.T) {
 				WorkingDir:   "working-dir/name",
 
 				// Enterprise
-				TFVersion: "1.0.0",
+				TFVersion:    "1.0.0",
+				TFCWorkspace: *config.DefaultTerraformCloudWorkspaceConfig(),
 
 				Env: map[string]string{
 					"CONSUL_HTTP_ADDR": "localhost:8500",
@@ -255,6 +257,9 @@ func TestNewDriverTask(t *testing.T) {
 					Max: 20 * time.Second,
 				},
 				WorkingDir: "sync-tasks/name",
+
+				// Enterprise
+				TFCWorkspace: *config.DefaultTerraformCloudWorkspaceConfig(),
 			})},
 		}, {
 			// Fetches correct provider and required_providers blocks from config
@@ -322,6 +327,9 @@ func TestNewDriverTask(t *testing.T) {
 					Max: 20 * time.Second,
 				},
 				WorkingDir: "sync-tasks/name",
+
+				// Enterprise
+				TFCWorkspace: *config.DefaultTerraformCloudWorkspaceConfig(),
 			})},
 		}, {
 			// Task env is fetched from providers and Consul config when using
@@ -374,6 +382,8 @@ func TestNewDriverTask(t *testing.T) {
 					Max: 20 * time.Second,
 				},
 				WorkingDir: "sync-tasks/name",
+				// Enterprise
+				TFCWorkspace: *config.DefaultTerraformCloudWorkspaceConfig(),
 			})},
 		},
 	}

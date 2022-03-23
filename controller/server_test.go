@@ -48,7 +48,8 @@ func TestServer_Task(t *testing.T) {
 				Min: *taskConf.BufferPeriod.Min,
 				Max: *taskConf.BufferPeriod.Max,
 			},
-			WorkingDir: *taskConf.WorkingDir,
+			WorkingDir:   *taskConf.WorkingDir,
+			TFCWorkspace: *taskConf.TFCWorkspace,
 		})
 		require.NoError(t, err)
 
