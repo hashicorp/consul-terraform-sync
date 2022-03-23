@@ -49,12 +49,37 @@ paths:
             schema:
               $ref: '#/components/schemas/TaskRequest'
       responses:
-        '201':
-          description: Task response
+        '200':
+          description: Task response with inspection, task not created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaskResponse'
+        '201':
+          description: Task response, task is created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: Gets all tasks
+      operationId: getAllTasks
+      description: Retrieves information for all tasks
+      tags:
+        - tasks
+      responses:
+        '200':
+          description: Tasks retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TasksResponse'
         default:
           description: Unexpected error
           content:
@@ -131,6 +156,19 @@ components:
           $ref: '#/components/schemas/Task'
       required:
         - task
+
+    TasksResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        request_id:
+          $ref: '#/components/schemas/RequestID'
+      required:
+        - request_id
 
     TaskResponse:
       type: object

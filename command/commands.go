@@ -3,7 +3,6 @@ package command
 import (
 	"os"
 
-	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/mitchellh/cli"
 )
 
@@ -12,13 +11,8 @@ const (
 	errCreatingClient  = "Error: unable to create client"
 )
 
-// Commands returns the mapping of CLI commands for CTS. The meta
-// parameter lets you set meta options for all commands.
-func Commands() map[string]cli.CommandFactory {
-	// Disable logging, we want to control what is output
-	logging.DisableLogging()
-
-	m := meta{
+func configureMeta() meta {
+	return meta{
 		UI: &cli.PrefixedUi{
 			InfoPrefix:   "==> ",
 			OutputPrefix: "    ",
@@ -29,7 +23,16 @@ func Commands() map[string]cli.CommandFactory {
 			},
 		},
 	}
+}
 
+// Commands returns the mapping of CLI commands for CTS. The meta
+// parameter lets you set meta options for all commands.
+func Commands() map[string]cli.CommandFactory {
+	// Disable logging, we want to control what is output
+	m := configureMeta()
+
+	// The command factory will use the run command as the default
+	// an empty string key ("") is interpreted as the default command
 	all := map[string]cli.CommandFactory{
 		cmdTaskDisableName: func() (cli.Command, error) {
 			return newTaskDisableCommand(m), nil
@@ -42,6 +45,12 @@ func Commands() map[string]cli.CommandFactory {
 		},
 		cmdTaskCreateName: func() (cli.Command, error) {
 			return newTaskCreateCommand(m), nil
+		},
+		cmdStartName: func() (cli.Command, error) {
+			return newStartCommand(m, false), nil
+		},
+		"": func() (cli.Command, error) {
+			return newStartCommand(m, true), nil
 		},
 	}
 

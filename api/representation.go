@@ -206,6 +206,20 @@ func (tr TaskRequest) String() string {
 	return string(data)
 }
 
+type TasksResponse oapigen.TasksResponse
+
+func tasksResponseFromTaskConfigs(tcs []config.TaskConfig, requestID oapigen.RequestID) TasksResponse {
+	tasks := make([]oapigen.Task, len(tcs))
+	for i, tc := range tcs {
+		tasks[i] = oapigenTaskFromConfigTask(tc)
+	}
+
+	return TasksResponse{
+		Tasks:     &tasks,
+		RequestId: requestID,
+	}
+}
+
 type TaskResponse oapigen.TaskResponse
 
 func taskResponseFromTaskConfig(tc config.TaskConfig, requestID oapigen.RequestID) TaskResponse {

@@ -17,9 +17,12 @@ import (
 // may use this new client. In that case TaskLifecycleClient should be renamed
 type TaskLifecycleClient struct {
 	url *url.URL
-	*oapigen.Client
+	*oapigen.ClientWithResponses
 }
 
+var _ oapigen.ClientWithResponsesInterface = (*TaskLifecycleClient)(nil)
+
+//go:generate mockery --recursive --name=ClientWithResponsesInterface --filename=oapigen_client.go --output=../mocks/api
 //go:generate oapi-codegen  -package oapigen -generate client -o oapigen/client.go openapi.yaml
 
 // NewTaskLifecycleClient returns a client to make api requests
@@ -41,12 +44,12 @@ func NewTaskLifecycleClient(c *ClientConfig, httpClient httpClient) (*TaskLifecy
 	gc := &TaskLifecycleClient{url: u}
 
 	// Create the new underlying client based on generated code
-	oc, err := oapigen.NewClient(gc.url.String(), oapigen.WithHTTPClient(httpClient))
+	oc, err := oapigen.NewClientWithResponses(gc.url.String(), oapigen.WithHTTPClient(httpClient))
 	if err != nil {
 		return nil, err
 	}
 
-	gc.Client = oc
+	gc.ClientWithResponses = oc
 
 	return gc, nil
 }
@@ -56,9 +59,10 @@ func (c *TaskLifecycleClient) Scheme() string {
 	return c.url.Scheme
 }
 
-// CreateTask takes a task request and run option and sends this information to the client. It then returns
+// CreateTaskSimple takes a task request and run option and sends this information to the client. It then returns
 // a task response object and any errors to the caller.
-func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, req TaskRequest) (TaskResponse, error) {
+// TODO: remove this to conform to interface
+func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, req TaskRequest) (*oapigen.CreateTaskResponse, error) {
 	var run oapigen.CreateTaskParamsRun
 	switch runOption {
 	case RunOptionInspect:
@@ -69,27 +73,15 @@ func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, 
 		run = ""
 	default:
 		err := errors.New("invalid run option provided")
-		return TaskResponse{}, err
+		return nil, err
 	}
 
-	resp, err := c.Client.CreateTask(ctx, &oapigen.CreateTaskParams{Run: &run}, oapigen.CreateTaskJSONRequestBody(req))
-	if resp != nil {
-		defer resp.Body.Close()
-	}
+	resp, err := c.CreateTaskWithResponse(ctx, &oapigen.CreateTaskParams{Run: &run}, oapigen.CreateTaskJSONRequestBody(req))
 	if err != nil {
-		return TaskResponse{}, err
+		return nil, err
 	}
 
-	var taskResp TaskResponse
-	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(&taskResp)
-	if err != nil {
-		err = fmt.Errorf("invalid response for task %s, %w", req.Task.Name, err)
-
-		return TaskResponse{}, err
-	}
-
-	return taskResp, nil
+	return resp, nil
 }
 
 var _ httpClient = (*TaskLifecycleHTTPClient)(nil)

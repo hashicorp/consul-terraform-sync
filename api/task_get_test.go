@@ -69,3 +69,65 @@ func TestTaskLifeCycleHandler_GetTaskByName(t *testing.T) {
 		})
 	}
 }
+
+func TestTaskLifeCycleHandler_GetAllTasks(t *testing.T) {
+	t.Parallel()
+
+	taskConfigs := []config.TaskConfig{
+		testTaskConfig,
+		testTaskConfig,
+	}
+
+	cases := []struct {
+		name          string
+		mockServer    func(*mocks.Server)
+		statusCode    int
+		checkResponse func(*httptest.ResponseRecorder)
+	}{
+		{
+			name: "happy_path",
+			mockServer: func(ctrl *mocks.Server) {
+				ctrl.On("Tasks", mock.Anything).Return(taskConfigs, nil)
+			},
+			statusCode: http.StatusOK,
+			checkResponse: func(resp *httptest.ResponseRecorder) {
+				decoder := json.NewDecoder(resp.Body)
+				var actual oapigen.TasksResponse
+				err := decoder.Decode(&actual)
+				require.NoError(t, err)
+				expectedTasksResponse := tasksResponseFromTaskConfigs(taskConfigs, "")
+
+				assert.Equal(t, expectedTasksResponse.RequestId, actual.RequestId)
+				assert.ElementsMatch(t, *expectedTasksResponse.Tasks, *actual.Tasks)
+
+			},
+		},
+		{
+			name: "parsing_error",
+			mockServer: func(ctrl *mocks.Server) {
+				ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, fmt.Errorf("DNE"))
+			},
+			statusCode: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := new(mocks.Server)
+			tc.mockServer(ctrl)
+			handler := NewTaskLifeCycleHandler(ctrl)
+
+			path := fmt.Sprintf("/v1/tasks")
+			req, err := http.NewRequest(http.MethodGet, path, nil)
+			require.NoError(t, err)
+			resp := httptest.NewRecorder()
+
+			handler.GetAllTasks(resp, req)
+			assert.Equal(t, tc.statusCode, resp.Code)
+
+			if tc.checkResponse != nil {
+				tc.checkResponse(resp)
+			}
+		})
+	}
+}
