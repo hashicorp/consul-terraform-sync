@@ -39,6 +39,7 @@ func TestTerraformCloudWorkspaceConfig_Copy(t *testing.T) {
 		})
 	}
 }
+
 func TestTerraformCloudWorkspaceConfig_Merge(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -159,11 +160,11 @@ func TestTerraformCloudWorkspaceConfig_Finalize(t *testing.T) {
 		{
 			"fully_configured",
 			&TerraformCloudWorkspaceConfig{
-				ExecutionMode: String("remote"),
+				ExecutionMode: String("test_mode"),
 				AgentPoolID:   String("apool-1"),
 				AgentPoolName: String("test")},
 			&TerraformCloudWorkspaceConfig{
-				ExecutionMode: String("remote"),
+				ExecutionMode: String("test_mode"),
 				AgentPoolID:   String("apool-1"),
 				AgentPoolName: String("test"),
 			},

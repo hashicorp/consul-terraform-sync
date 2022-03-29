@@ -26,7 +26,11 @@ func DefaultTerraformCloudWorkspaceConfig() *TerraformCloudWorkspaceConfig {
 
 func (c *TerraformCloudWorkspaceConfig) isEmpty() bool {
 	return (*c == TerraformCloudWorkspaceConfig{}) ||
-		(reflect.DeepEqual(*c, *DefaultTerraformCloudWorkspaceConfig()))
+		(reflect.DeepEqual(c, &TerraformCloudWorkspaceConfig{
+			ExecutionMode: String(""),
+			AgentPoolID:   String(""),
+			AgentPoolName: String(""),
+		}))
 }
 
 // Copy returns a deep copy of this configuration.
