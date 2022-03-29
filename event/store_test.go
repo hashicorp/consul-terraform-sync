@@ -83,47 +83,33 @@ func TestStore_Read(t *testing.T) {
 			"read all - happy path",
 			"",
 			[]Event{
-				Event{TaskName: "1"},
-				Event{TaskName: "2"},
-				Event{TaskName: "2"},
-				Event{TaskName: "3"},
-				Event{TaskName: "3"},
-				Event{TaskName: "3"},
+				{TaskName: "1"},
+				{TaskName: "2"},
+				{TaskName: "2"},
+				{TaskName: "3"},
+				{TaskName: "3"},
+				{TaskName: "3"},
 			},
 			map[string][]Event{
-				"1": []Event{
-					Event{TaskName: "1"},
-				},
-				"2": []Event{
-					Event{TaskName: "2"},
-					Event{TaskName: "2"},
-				},
-				"3": []Event{
-					Event{TaskName: "3"},
-					Event{TaskName: "3"},
-					Event{TaskName: "3"},
-				},
+				"1": {{TaskName: "1"}},
+				"2": {{TaskName: "2"}, {TaskName: "2"}},
+				"3": {{TaskName: "3"}, {TaskName: "3"}, {TaskName: "3"}},
 			},
 		},
 		{
 			"read task - happy path",
 			"4",
 			[]Event{
-				Event{TaskName: "4"},
-				Event{TaskName: "4"},
-				Event{TaskName: "5"},
-				Event{TaskName: "5"},
-				Event{TaskName: "4"},
-				Event{TaskName: "4"},
-				Event{TaskName: "5"},
+				{TaskName: "4"},
+				{TaskName: "4"},
+				{TaskName: "5"},
+				{TaskName: "5"},
+				{TaskName: "4"},
+				{TaskName: "4"},
+				{TaskName: "5"},
 			},
 			map[string][]Event{
-				"4": []Event{
-					Event{TaskName: "4"},
-					Event{TaskName: "4"},
-					Event{TaskName: "4"},
-					Event{TaskName: "4"},
-				},
+				"4": {{TaskName: "4"}, {TaskName: "4"}, {TaskName: "4"}, {TaskName: "4"}},
 			},
 		},
 		{
@@ -159,14 +145,12 @@ func TestStore_Delete(t *testing.T) {
 			"delete - happy path",
 			"2",
 			[]Event{
-				Event{TaskName: "1"},
-				Event{TaskName: "2"},
-				Event{TaskName: "2"},
+				{TaskName: "1"},
+				{TaskName: "2"},
+				{TaskName: "2"},
 			},
 			map[string][]Event{
-				"1": []Event{
-					Event{TaskName: "1"},
-				},
+				"1": {{TaskName: "1"}},
 			},
 		},
 		{
