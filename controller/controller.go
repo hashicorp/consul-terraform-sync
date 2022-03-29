@@ -279,7 +279,8 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		WorkingDir:   *taskConfig.WorkingDir,
 
 		// Enterprise
-		TFVersion: *taskConfig.TFVersion,
+		TFVersion:    *taskConfig.TFVersion,
+		TFCWorkspace: *taskConfig.TFCWorkspace,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error initializing task %s: %s", *taskConfig.Name, err)

@@ -348,6 +348,17 @@ func TestTask_TFVersion(t *testing.T) {
 	assert.Equal(t, task.tfVersion, tfVersion)
 }
 
+func TestTask_TFCWorkspace(t *testing.T) {
+	var task Task
+	task.tfcWorkspace = config.TerraformCloudWorkspaceConfig{
+		ExecutionMode: config.String("agent"),
+		AgentPoolID:   config.String("apool-1"),
+		AgentPoolName: config.String("test-agent-pool"),
+	}
+	tfcWorkspace := task.TFCWorkspace()
+	assert.Equal(t, task.tfcWorkspace, tfcWorkspace)
+}
+
 func TestTask_configureRootModuleInput(t *testing.T) {
 	t.Parallel()
 

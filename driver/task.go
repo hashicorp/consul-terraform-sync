@@ -70,7 +70,8 @@ type Task struct {
 	logger       logging.Logger
 
 	// Enterprise
-	tfVersion string
+	tfVersion    string
+	tfcWorkspace config.TerraformCloudWorkspaceConfig
 }
 
 type TaskConfig struct {
@@ -91,7 +92,8 @@ type TaskConfig struct {
 	WorkingDir   string
 
 	// Enterprise
-	TFVersion string
+	TFVersion    string
+	TFCWorkspace config.TerraformCloudWorkspaceConfig
 }
 
 func NewTask(conf TaskConfig) (*Task, error) {
@@ -139,7 +141,8 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		logger:       logging.Global().Named(logSystemName),
 
 		// Enterprise
-		tfVersion: conf.TFVersion,
+		tfVersion:    conf.TFVersion,
+		tfcWorkspace: conf.TFCWorkspace,
 	}, nil
 }
 
@@ -306,6 +309,12 @@ func (t *Task) TFVersion() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.tfVersion
+}
+
+func (t *Task) TFCWorkspace() config.TerraformCloudWorkspaceConfig {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.tfcWorkspace
 }
 
 func (s Service) copy() Service {
