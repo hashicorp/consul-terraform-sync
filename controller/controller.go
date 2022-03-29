@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcat"
@@ -41,6 +42,7 @@ type Oncer interface {
 }
 
 type baseController struct {
+	state     state.Store
 	conf      *config.Config
 	newDriver func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error)
 	drivers   *driver.Drivers
@@ -64,6 +66,7 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 	}
 
 	return &baseController{
+		state:     state.NewInMemoryStore(conf),
 		conf:      conf,
 		newDriver: nd,
 		drivers:   driver.NewDrivers(),

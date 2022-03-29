@@ -8,11 +8,10 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/logging"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
+	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -85,8 +84,8 @@ func TestServer_TaskCreate(t *testing.T) {
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
 			watcher: new(mocksTmpl.Watcher),
+			state:   state.NewInMemoryStore(nil),
 		},
-		store: event.NewStore(),
 	}
 	ctrl.conf.Finalize()
 
@@ -122,7 +121,7 @@ func TestServer_TaskCreate(t *testing.T) {
 		_, ok := ctrl.drivers.Get("task")
 		assert.True(t, ok, "task should have a driver")
 
-		events := ctrl.store.Read("task")
+		events := ctrl.state.GetTaskEvents("task")
 		assert.Len(t, events, 0, "no events stored on creation")
 	})
 
@@ -149,7 +148,7 @@ func TestServer_TaskCreate(t *testing.T) {
 		_, ok := ctrl.drivers.Get("task")
 		assert.False(t, ok, "errored task should not have a driver added")
 
-		events := ctrl.store.Read("task")
+		events := ctrl.state.GetTaskEvents("task")
 		assert.Len(t, events, 0, "no events stored on creation")
 	})
 }
@@ -181,7 +180,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 		})
 		require.NoError(t, err)
 		mockDriver(ctx, mockD, task)
-		ctrl.store = event.NewStore()
+		ctrl.state = state.NewInMemoryStore(nil)
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
@@ -193,7 +192,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 		_, ok := ctrl.drivers.Get("task")
 		assert.True(t, ok)
 
-		events := ctrl.store.Read("task")
+		events := ctrl.state.GetTaskEvents("task")
 		assert.Len(t, events, 1)
 		require.Len(t, events["task"], 1)
 		assert.Nil(t, events["task"][0].EventError, "unexpected error event")
@@ -209,7 +208,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 		})
 		require.NoError(t, err)
 		mockDriver(ctx, mockD, task)
-		ctrl.store = event.NewStore()
+		ctrl.state = state.NewInMemoryStore(nil)
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
@@ -224,7 +223,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 		_, ok := ctrl.drivers.Get("task")
 		assert.True(t, ok, "driver is created for task even if it's disabled")
 
-		events := ctrl.store.Read("task")
+		events := ctrl.state.GetTaskEvents("task")
 		assert.Len(t, events, 0, "task is disabled, no run should occur")
 	})
 
@@ -240,7 +239,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 			On("OverrideNotifier").Return().
 			On("RenderTemplate", mock.Anything).Return(true, nil).
 			On("ApplyTask", ctx).Return(fmt.Errorf("apply err"))
-		ctrl.store = event.NewStore()
+		ctrl.state = state.NewInMemoryStore(nil)
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
@@ -252,7 +251,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 		_, ok := ctrl.drivers.Get("task")
 		assert.False(t, ok, "driver is only added if the run is successful")
 
-		events := ctrl.store.Read("task")
+		events := ctrl.state.GetTaskEvents("task")
 		assert.Len(t, events, 0, "event is only stored on successful creation and run")
 	})
 }
@@ -262,8 +261,8 @@ func TestServer_TaskDelete(t *testing.T) {
 	ctrl := ReadWrite{
 		baseController: &baseController{
 			logger: logging.NewNullLogger(),
+			state:  state.NewInMemoryStore(nil),
 		},
-		store:    event.NewStore(),
 		deleteCh: make(chan string),
 	}
 
@@ -303,8 +302,8 @@ func TestServer_TaskUpdate(t *testing.T) {
 			conf:    &config.Config{},
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
+			state:   state.NewInMemoryStore(nil),
 		},
-		store: event.NewStore(),
 	}
 	ctrl.conf.Finalize()
 
@@ -350,7 +349,7 @@ func TestServer_TaskUpdate(t *testing.T) {
 		assert.Empty(t, plan)
 
 		// No events since the task did not run
-		events := ctrl.store.Read(taskName)
+		events := ctrl.state.GetTaskEvents(taskName)
 		assert.Empty(t, events)
 	})
 
@@ -388,7 +387,7 @@ func TestServer_TaskUpdate(t *testing.T) {
 		assert.Equal(t, expectedPlan.ChangesPresent, changed)
 
 		// No events since the task did not run
-		events := ctrl.store.Read("task_b")
+		events := ctrl.state.GetTaskEvents("task_b")
 		assert.Empty(t, events)
 	})
 
@@ -413,13 +412,13 @@ func TestServer_TaskUpdate(t *testing.T) {
 		assert.Equal(t, "", plan, "run now does not return plan info")
 		assert.False(t, changed, "run now does not return plan info")
 
-		events := ctrl.store.Read(taskName)
+		events := ctrl.state.GetTaskEvents(taskName)
 		assert.Len(t, events, 1)
 	})
 }
 
 // mockDriver sets up a mock driver with the happy path for all methods
-func mockDriver(ctx context.Context, d *mocks.Driver, task *driver.Task) {
+func mockDriver(ctx context.Context, d *mocksD.Driver, task *driver.Task) {
 	d.On("Task").Return(task).
 		On("InitTask", ctx).Return(nil).
 		On("TemplateIDs").Return(nil).

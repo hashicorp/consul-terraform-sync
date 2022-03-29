@@ -22,7 +22,6 @@ var (
 // ReadWrite is the controller to run in read-write mode
 type ReadWrite struct {
 	*baseController
-	store *event.Store
 	retry retry.Retry
 
 	watcherCh chan string
@@ -49,7 +48,6 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 
 	return &ReadWrite{
 		baseController:  baseCtrl,
-		store:           event.NewStore(),
 		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
 		deleteCh:        make(chan string, 10),        // arbitrarily chosen size
@@ -331,7 +329,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	storeEvent := func() {
 		ev.End(storedErr)
 		rw.logger.Trace("adding event", "event", ev.GoString())
-		if err := rw.store.Add(*ev); err != nil {
+		if err := rw.state.AddTaskEvent(*ev); err != nil {
 			rw.logger.Error("error storing event", "event", ev.GoString())
 		}
 	}
@@ -506,7 +504,7 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 	// Store event if apply was successful and task will be created
 	ev.End(err)
 	logger.Trace("adding event", "event", ev.GoString())
-	if err := rw.store.Add(*ev); err != nil {
+	if err := rw.state.AddTaskEvent(*ev); err != nil {
 		// only log error since creating a task occurred successfully by now
 		logger.Error("error storing event", "event", ev.GoString(), "error", err)
 	}
@@ -551,7 +549,7 @@ func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
 		logger.Error("unable to delete task", "error", err)
 		return err
 	}
-	rw.store.Delete(name)
+	rw.state.DeleteTaskEvents(name)
 	logger.Debug("task deleted")
 	return nil
 }

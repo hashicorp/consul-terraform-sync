@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
+	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -100,7 +101,7 @@ func TestReadWrite_CheckApply(t *testing.T) {
 			ctx := context.Background()
 
 			_, err := controller.checkApply(ctx, d, false, false)
-			data := controller.store.Read(tc.taskName)
+			data := controller.state.GetTaskEvents(tc.taskName)
 			events := data[tc.taskName]
 
 			if !tc.addToStore {
@@ -148,14 +149,14 @@ func TestReadWrite_CheckApply(t *testing.T) {
 		ctx := context.Background()
 		_, err := controller.checkApply(ctx, d, false, true)
 		assert.NoError(t, err)
-		data := controller.store.Read(taskName)
+		data := controller.state.GetTaskEvents(taskName)
 		events := data[taskName]
 		assert.Equal(t, 0, len(events))
 
 		// Daemon-mode - confirm an event is stored
 		_, err = controller.checkApply(ctx, d, false, false)
 		assert.NoError(t, err)
-		data = controller.store.Read(taskName)
+		data = controller.state.GetTaskEvents(taskName)
 		events = data[taskName]
 		assert.Equal(t, 1, len(events))
 	})
@@ -186,7 +187,7 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 		controller.checkApply(ctx, d, false, false)
 		controller.checkApply(ctx, disabledD, false, false)
 
-		taskStatuses := controller.store.Read("")
+		taskStatuses := controller.state.GetTaskEvents("")
 
 		assert.Equal(t, 4, len(taskStatuses["task_a"]))
 		assert.Equal(t, 0, len(taskStatuses["task_b"]))
@@ -194,9 +195,7 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 }
 
 func TestOnce(t *testing.T) {
-	rw := &ReadWrite{
-		store: event.NewStore(),
-	}
+	rw := &ReadWrite{}
 
 	testCases := []struct {
 		name     string
@@ -223,6 +222,7 @@ func TestOnce(t *testing.T) {
 			w.On("Size").Return(tc.numTasks)
 
 			rw.baseController = &baseController{
+				state:   state.NewInMemoryStore(nil),
 				watcher: w,
 				drivers: driver.NewDrivers(),
 				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
@@ -266,16 +266,15 @@ func TestOnce(t *testing.T) {
 
 func TestReadWrite_Once_error(t *testing.T) {
 	// Test once mode error handling when a driver returns an error
-	rw := &ReadWrite{
-		store: event.NewStore(),
-	}
 	numTasks := 5
 	w := new(mocks.Watcher)
 	w.On("WaitCh", mock.Anything).Return(nil)
 	w.On("Size").Return(numTasks)
 
+	rw := &ReadWrite{}
 	expectedErr := fmt.Errorf("test error")
 	rw.baseController = &baseController{
+		state:   state.NewInMemoryStore(nil),
 		watcher: w,
 		drivers: driver.NewDrivers(),
 		newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
@@ -536,8 +535,8 @@ func TestReadWriteRun_context_cancel(t *testing.T) {
 			drivers: driver.NewDrivers(),
 			watcher: w,
 			logger:  logging.NewNullLogger(),
+			state:   state.NewInMemoryStore(nil),
 		},
-		store: event.NewStore(),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -573,9 +572,9 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
+			state:   state.NewInMemoryStore(nil),
 		},
 		watcherCh: make(chan string, 5),
-		store:     event.NewStore(),
 	}
 	ctrl.drivers.Add("task_a", d)
 
@@ -622,9 +621,9 @@ func TestReadWrite_Run_ActiveTask(t *testing.T) {
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
+			state:   state.NewInMemoryStore(nil),
 		},
 		watcherCh: make(chan string, 5),
-		store:     event.NewStore(),
 	}
 	for _, n := range []string{"task_a", "task_b"} {
 		d := new(mocksD.Driver)
@@ -703,9 +702,9 @@ func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
 				logger:  logging.NewNullLogger(),
+				state:   state.NewInMemoryStore(nil),
 			},
 			watcherCh:       make(chan string, 5),
-			store:           event.NewStore(),
 			scheduleStopChs: make(map[string](chan struct{})),
 		}
 		ctrl.EnableTestMode()
@@ -747,9 +746,9 @@ func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
 				logger:  logging.NewNullLogger(),
+				state:   state.NewInMemoryStore(nil),
 			},
 			watcherCh:       make(chan string, 5),
-			store:           event.NewStore(),
 			scheduleStartCh: make(chan driver.Driver, 1),
 			scheduleStopChs: make(map[string](chan struct{})),
 		}
@@ -816,18 +815,18 @@ func TestReadWrite_deleteTask(t *testing.T) {
 			ctrl := ReadWrite{
 				baseController: &baseController{
 					logger: logging.NewNullLogger(),
+					state:  state.NewInMemoryStore(nil),
 				},
-				store: event.NewStore(),
 			}
 			ctrl.baseController.drivers = drivers
-			ctrl.store.Add(event.Event{TaskName: "success"})
+			ctrl.state.AddTaskEvent(event.Event{TaskName: "success"})
 
 			err := ctrl.deleteTask(ctx, tc.name)
 
 			assert.NoError(t, err)
 			_, exists := drivers.Get(tc.name)
 			assert.False(t, exists, "task should no longer exist")
-			events := ctrl.store.Read(tc.name)
+			events := ctrl.state.GetTaskEvents(tc.name)
 			assert.Empty(t, events, "task events should no longer exist")
 		})
 	}
@@ -876,11 +875,11 @@ func TestReadWrite_deleteTask(t *testing.T) {
 		ctrl := ReadWrite{
 			baseController: &baseController{
 				logger: logging.NewNullLogger(),
+				state:  state.NewInMemoryStore(nil),
 			},
-			store: event.NewStore(),
 		}
 		ctrl.baseController.drivers = drivers
-		ctrl.store.Add(event.Event{TaskName: taskName})
+		ctrl.state.AddTaskEvent(event.Event{TaskName: taskName})
 
 		// Attempt to delete the active task
 		ch := make(chan error)
@@ -893,7 +892,7 @@ func TestReadWrite_deleteTask(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 		_, exists := drivers.Get(taskName)
 		assert.True(t, exists, "task deleted when active")
-		events := ctrl.store.Read(taskName)
+		events := ctrl.state.GetTaskEvents(taskName)
 		assert.NotEmpty(t, events, "task events should still exist")
 
 		// Set task to inactive, wait for deletion to happen
@@ -908,7 +907,7 @@ func TestReadWrite_deleteTask(t *testing.T) {
 		// Check that task removed from drivers and store
 		_, exists = drivers.Get(taskName)
 		assert.False(t, exists, "task should no longer exist")
-		events = ctrl.store.Read(taskName)
+		events = ctrl.state.GetTaskEvents(taskName)
 		assert.Empty(t, events, "task events should no longer exist")
 	})
 
@@ -1052,8 +1051,8 @@ func newTestController() ReadWrite {
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
+			state:   state.NewInMemoryStore(nil),
 		},
-		store:           event.NewStore(),
 		scheduleStopChs: make(map[string](chan struct{})),
 	}
 }
