@@ -9,12 +9,12 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

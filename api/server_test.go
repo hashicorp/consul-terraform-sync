@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	apiMocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

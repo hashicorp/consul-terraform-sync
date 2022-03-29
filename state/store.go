@@ -1,6 +1,6 @@
 package state
 
-import "github.com/hashicorp/consul-terraform-sync/event"
+import "github.com/hashicorp/consul-terraform-sync/state/event"
 
 // Store stores the CTS state
 type Store interface {

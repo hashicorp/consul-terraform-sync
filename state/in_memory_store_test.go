@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/stretchr/testify/assert"
 )
 

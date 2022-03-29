@@ -7,7 +7,7 @@ import (
 
 	config "github.com/hashicorp/consul-terraform-sync/config"
 
-	event "github.com/hashicorp/consul-terraform-sync/event"
+	event "github.com/hashicorp/consul-terraform-sync/state/event"
 
 	mock "github.com/stretchr/testify/mock"
 )

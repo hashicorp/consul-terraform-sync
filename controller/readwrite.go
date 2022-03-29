@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	"github.com/hashicorp/consul-terraform-sync/retry"
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/hashicorp/cronexpr"
 )
 

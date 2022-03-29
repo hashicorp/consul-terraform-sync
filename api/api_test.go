@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/go-rootcerts"
 	"github.com/stretchr/testify/assert"

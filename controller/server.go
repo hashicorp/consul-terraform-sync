@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/pkg/errors"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
