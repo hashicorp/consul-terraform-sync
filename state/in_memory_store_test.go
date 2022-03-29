@@ -21,7 +21,7 @@ func Test_NewInMemoryStore(t *testing.T) {
 			nil,
 			InMemoryStore{
 				conf:   *config.DefaultConfig(),
-				events: event.NewStore(),
+				events: newEventStore(),
 			},
 		},
 		{
@@ -33,7 +33,7 @@ func Test_NewInMemoryStore(t *testing.T) {
 				conf: config.Config{
 					Port: config.Int(1234),
 				},
-				events: event.NewStore(),
+				events: newEventStore(),
 			},
 		},
 	}
@@ -65,7 +65,7 @@ func Test_InMemoryStore_GetTaskEvents(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			events := event.NewStore()
+			events := newEventStore()
 			events.Add(event.Event{TaskName: "existing_task"})
 
 			store := InMemoryStore{
@@ -92,7 +92,7 @@ func Test_InMemoryStore_DeleteTaskEvents(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			events := event.NewStore()
+			events := newEventStore()
 			events.Add(event.Event{TaskName: "existing_task"})
 
 			store := InMemoryStore{
@@ -122,7 +122,7 @@ func Test_InMemoryStore_AddTaskEvent(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			events := event.NewStore()
+			events := newEventStore()
 			events.Add(event.Event{TaskName: "existing_task"})
 
 			store := InMemoryStore{

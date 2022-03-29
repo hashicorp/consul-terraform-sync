@@ -12,7 +12,7 @@ var (
 // InMemoryStore implements the CTS state Store interface.
 type InMemoryStore struct {
 	conf   config.Config
-	events *event.Store
+	events *eventStore
 }
 
 func NewInMemoryStore(conf *config.Config) *InMemoryStore {
@@ -23,7 +23,7 @@ func NewInMemoryStore(conf *config.Config) *InMemoryStore {
 
 	return &InMemoryStore{
 		conf:   *conf,
-		events: event.NewStore(),
+		events: newEventStore(),
 	}
 }
 

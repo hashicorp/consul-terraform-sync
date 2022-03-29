@@ -72,17 +72,6 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 		},
 	}
 
-	// set up store and handler
-	store := event.NewStore()
-	eventsA := createTaskEvents("success_a", []bool{true})
-	addEvents(store, eventsA)
-	eventsB := createTaskEvents("success_b", []bool{true, true})
-	addEvents(store, eventsB)
-	eventsC := createTaskEvents("errored_c", []bool{false, true})
-	addEvents(store, eventsC)
-	eventsD := createTaskEvents("critical_d", []bool{false, false, true})
-	addEvents(store, eventsD)
-
 	ctrl := new(mocks.Server)
 	taskSetup := map[string]bool{
 		"success_a":  true,
@@ -96,7 +85,14 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 		conf := createTaskConf(taskName, enabled)
 		confs = append(confs, conf)
 	}
-	ctrl.On("Events", mock.Anything, "").Return(store.Read(""), nil).
+
+	events := map[string][]event.Event{
+		"success_a":  {{Success: true}},
+		"success_b":  {{Success: true}, {Success: true}},
+		"errored_c":  {{Success: false}, {Success: true}},
+		"critical_d": {{Success: false}, {Success: false}, {Success: true}},
+	}
+	ctrl.On("Events", mock.Anything, "").Return(events, nil).
 		On("Tasks", mock.Anything).Return(confs, nil)
 
 	handler := newOverallStatusHandler(ctrl, "v1")

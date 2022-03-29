@@ -38,20 +38,11 @@ func TestTaskStatus_New(t *testing.T) {
 func TestTaskStatus_ServeHTTP(t *testing.T) {
 	t.Parallel()
 
-	// set up store and handler
-	store := event.NewStore()
-
-	// task A is in successful state
-	eventsA := createTaskEvents("task_a", []bool{true})
-	addEvents(store, eventsA)
-
-	// task B is in critical state
-	eventsB := createTaskEvents("task_b", []bool{false, false, true})
-	addEvents(store, eventsB)
-
-	// task C is in errored state
-	eventsC := createTaskEvents("task_c", []bool{false, true, true})
-	addEvents(store, eventsC)
+	events := map[string][]event.Event{
+		"task_a": {{Success: true}},                                     // successful
+		"task_b": {{Success: false}, {Success: false}, {Success: true}}, // critical
+		"task_c": {{Success: false}, {Success: true}, {Success: true}},  // errored
+	}
 
 	disabledTask := config.TaskConfig{
 		Name:      config.String("task_d"),
@@ -70,12 +61,16 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	confs := make([]config.TaskConfig, 0, len(configs))
 	for taskName, conf := range configs {
 		confs = append(confs, conf)
-		ctrl.On("Events", mock.Anything, taskName).Return(store.Read(taskName), nil).
+		eventResp := make(map[string][]event.Event)
+		if es, ok := events[taskName]; ok {
+			eventResp[taskName] = es
+		}
+		ctrl.On("Events", mock.Anything, taskName).Return(eventResp, nil).
 			On("Task", mock.Anything, taskName).Return(conf, nil)
 	}
 	ctrl.On("Events", mock.Anything, "task_nonexistent").Return(nil, nil).
 		On("Task", mock.Anything, "task_nonexistent").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
-	ctrl.On("Events", mock.Anything, "").Return(store.Read(""), nil)
+	ctrl.On("Events", mock.Anything, "").Return(events, nil)
 	ctrl.On("Tasks", mock.Anything).Return(confs, nil)
 
 	handler := newTaskStatusHandler(ctrl, "v1")
@@ -139,7 +134,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_a?include=events",
-					Events:    eventsA,
+					Events:    events["task_a"],
 				},
 				"task_b": {
 					TaskName:  "task_b",
@@ -148,7 +143,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_b?include=events",
-					Events:    eventsB,
+					Events:    events["task_b"],
 				},
 				"task_c": {
 					TaskName:  "task_c",
@@ -157,7 +152,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_c?include=events",
-					Events:    eventsC,
+					Events:    events["task_c"],
 				},
 				"task_d": {
 					TaskName:  "task_d",
@@ -229,7 +224,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 					Providers: []string{},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/task_b?include=events",
-					Events:    eventsB,
+					Events:    events["task_b"],
 				},
 			},
 		},
@@ -653,25 +648,6 @@ func TestTaskStatus_StatusFilter(t *testing.T) {
 				assert.Equal(t, tc.status, actual)
 			}
 		})
-	}
-}
-
-// createTaskEvents is a test helper function to create a list of events for a
-// task in reverse chronological order, resembling what is returned from
-// store.Read().
-func createTaskEvents(taskName string, successes []bool) []event.Event {
-	events := make([]event.Event, len(successes))
-	for i, s := range successes {
-		events[i] = event.Event{TaskName: taskName, Success: s}
-	}
-	return events
-}
-
-// addEvents is a test helper function to add events in chronological
-// order from a list of events sorted by latest first.
-func addEvents(store *event.Store, events []event.Event) {
-	for i := len(events) - 1; i >= 0; i-- {
-		_ = store.Add(events[i])
 	}
 }
 

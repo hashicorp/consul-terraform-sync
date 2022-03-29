@@ -1,8 +1,9 @@
-package event
+package state
 
 import (
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -10,23 +11,23 @@ import (
 func TestStore_Add(t *testing.T) {
 	cases := []struct {
 		name      string
-		event     Event
+		event     event.Event
 		expectErr bool
 	}{
 		{
 			"happy path",
-			Event{TaskName: "happy"},
+			event.Event{TaskName: "happy"},
 			false,
 		},
 		{
 			"error: no taskname",
-			Event{},
+			event.Event{},
 			true,
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			store := NewStore()
+			store := newEventStore()
 			err := store.Add(tc.event)
 			if tc.expectErr {
 				assert.Error(t, err)
@@ -41,20 +42,20 @@ func TestStore_Add(t *testing.T) {
 	}
 
 	t.Run("limit-and-order", func(t *testing.T) {
-		store := NewStore()
+		store := newEventStore()
 		store.limit = 2
 
 		// fill store
-		err := store.Add(Event{ID: "1", TaskName: "task"})
+		err := store.Add(event.Event{ID: "1", TaskName: "task"})
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(store.events["task"]))
 
-		err = store.Add(Event{ID: "2", TaskName: "task"})
+		err = store.Add(event.Event{ID: "2", TaskName: "task"})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(store.events["task"]))
 
 		// check store did not grow beyond limit
-		err = store.Add(Event{ID: "3", TaskName: "task"})
+		err = store.Add(event.Event{ID: "3", TaskName: "task"})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(store.events["task"]))
 
@@ -70,19 +71,19 @@ func TestStore_Read(t *testing.T) {
 	cases := []struct {
 		name     string
 		input    string
-		values   []Event
-		expected map[string][]Event
+		values   []event.Event
+		expected map[string][]event.Event
 	}{
 		{
 			"read all - no events",
 			"",
-			[]Event{},
-			map[string][]Event{},
+			[]event.Event{},
+			map[string][]event.Event{},
 		},
 		{
 			"read all - happy path",
 			"",
-			[]Event{
+			[]event.Event{
 				{TaskName: "1"},
 				{TaskName: "2"},
 				{TaskName: "2"},
@@ -90,7 +91,7 @@ func TestStore_Read(t *testing.T) {
 				{TaskName: "3"},
 				{TaskName: "3"},
 			},
-			map[string][]Event{
+			map[string][]event.Event{
 				"1": {{TaskName: "1"}},
 				"2": {{TaskName: "2"}, {TaskName: "2"}},
 				"3": {{TaskName: "3"}, {TaskName: "3"}, {TaskName: "3"}},
@@ -99,7 +100,7 @@ func TestStore_Read(t *testing.T) {
 		{
 			"read task - happy path",
 			"4",
-			[]Event{
+			[]event.Event{
 				{TaskName: "4"},
 				{TaskName: "4"},
 				{TaskName: "5"},
@@ -108,21 +109,21 @@ func TestStore_Read(t *testing.T) {
 				{TaskName: "4"},
 				{TaskName: "5"},
 			},
-			map[string][]Event{
+			map[string][]event.Event{
 				"4": {{TaskName: "4"}, {TaskName: "4"}, {TaskName: "4"}, {TaskName: "4"}},
 			},
 		},
 		{
 			"read task - no event",
 			"4",
-			[]Event{},
-			map[string][]Event{},
+			[]event.Event{},
+			map[string][]event.Event{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			store := NewStore()
+			store := newEventStore()
 			for _, event := range tc.values {
 				err := store.Add(event)
 				require.NoError(t, err)
@@ -138,32 +139,32 @@ func TestStore_Delete(t *testing.T) {
 	cases := []struct {
 		name     string
 		input    string
-		values   []Event
-		expected map[string][]Event
+		values   []event.Event
+		expected map[string][]event.Event
 	}{
 		{
 			"delete - happy path",
 			"2",
-			[]Event{
+			[]event.Event{
 				{TaskName: "1"},
 				{TaskName: "2"},
 				{TaskName: "2"},
 			},
-			map[string][]Event{
+			map[string][]event.Event{
 				"1": {{TaskName: "1"}},
 			},
 		},
 		{
 			"delete task - no event",
 			"4",
-			[]Event{},
-			map[string][]Event{},
+			[]event.Event{},
+			map[string][]event.Event{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			store := NewStore()
+			store := newEventStore()
 			for _, event := range tc.values {
 				err := store.Add(event)
 				require.NoError(t, err)
