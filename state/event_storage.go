@@ -1,31 +1,33 @@
-package event
+package state
 
 import (
 	"fmt"
 	"sync"
+
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 )
 
 const defaultEventCountLimit = 5
 
-// Store stores events
-type Store struct {
+// eventStorage is the storage for events
+type eventStorage struct {
 	mu *sync.RWMutex
 
-	events map[string][]*Event // taskname => events
+	events map[string][]*event.Event // taskname => events
 	limit  int
 }
 
-// NewStore returns a new store
-func NewStore() *Store {
-	return &Store{
+// newEventStorage returns a new storage for event
+func newEventStorage() *eventStorage {
+	return &eventStorage{
 		mu:     &sync.RWMutex{},
-		events: make(map[string][]*Event),
+		events: make(map[string][]*event.Event),
 		limit:  defaultEventCountLimit,
 	}
 }
 
 // Add adds an event and manages the limit of number of events stored per task.
-func (s *Store) Add(e Event) error {
+func (s *eventStorage) Add(e event.Event) error {
 	if e.TaskName == "" {
 		return fmt.Errorf("error adding event: taskname cannot be empty %s", e.GoString())
 	}
@@ -34,7 +36,7 @@ func (s *Store) Add(e Event) error {
 	defer s.mu.Unlock()
 
 	events := s.events[e.TaskName]
-	events = append([]*Event{&e}, events...) // prepend
+	events = append([]*event.Event{&e}, events...) // prepend
 	if len(events) > s.limit {
 		events = events[:len(events)-1]
 	}
@@ -45,11 +47,11 @@ func (s *Store) Add(e Event) error {
 // Read returns events for a task name. If no task name is specified, return
 // events for all tasks. Returned events are sorted in reverse chronological
 // order based on the end time.
-func (s *Store) Read(taskName string) map[string][]Event {
+func (s *eventStorage) Read(taskName string) map[string][]event.Event {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	data := make(map[string][]*Event)
+	data := make(map[string][]*event.Event)
 	if taskName != "" {
 		if e, ok := s.events[taskName]; ok {
 			data[taskName] = e
@@ -58,9 +60,9 @@ func (s *Store) Read(taskName string) map[string][]Event {
 		data = s.events
 	}
 
-	ret := make(map[string][]Event)
+	ret := make(map[string][]event.Event)
 	for k, v := range data {
-		events := make([]Event, len(v))
+		events := make([]event.Event, len(v))
 		for ix, event := range v {
 			events[ix] = *event
 		}
@@ -70,7 +72,7 @@ func (s *Store) Read(taskName string) map[string][]Event {
 }
 
 // Delete removes all events for a task name.
-func (s *Store) Delete(taskName string) {
+func (s *eventStorage) Delete(taskName string) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

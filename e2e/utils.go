@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
-	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"

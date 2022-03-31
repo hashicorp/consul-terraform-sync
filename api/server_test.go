@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/event"
 	apiMocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -102,27 +102,25 @@ func TestRequest(t *testing.T) {
 func TestStatus(t *testing.T) {
 	t.Parallel()
 
-	// setup store + events
-	store := event.NewStore()
-	// successful
-	eventsA := createTaskEvents("task_a", []bool{true})
-	addEvents(store, eventsA)
-	// critical
-	eventsB := createTaskEvents("task_b", []bool{false, false, true})
-	addEvents(store, eventsB)
-	eventsC := createTaskEvents("task_c", []bool{false, false, true})
-	addEvents(store, eventsC)
+	events := map[string][]event.Event{
+		"task_a": {{Success: true}},                                     // successful
+		"task_b": {{Success: false}, {Success: false}, {Success: true}}, // critical
+		"task_c": {{Success: false}, {Success: false}, {Success: true}}, // critical
+	}
 
 	ctrl := new(mocks.Server)
 	var confs []config.TaskConfig
-	for _, taskName := range []string{"task_a", "task_b", "task_c"} {
+	for taskName, es := range events {
 		conf := createTaskConf(taskName, true)
 		confs = append(confs, conf)
+		eventResp := map[string][]event.Event{
+			taskName: es,
+		}
 		ctrl.On("Task", mock.Anything, taskName).Return(conf, nil).
-			On("Events", mock.Anything, taskName).Return(store.Read(taskName), nil)
+			On("Events", mock.Anything, taskName).Return(eventResp, nil)
 	}
 	ctrl.On("Tasks", mock.Anything).Return(confs, nil)
-	ctrl.On("Events", mock.Anything, "").Return(store.Read(""), nil)
+	ctrl.On("Events", mock.Anything, "").Return(events, nil)
 
 	// start up server
 	port := testutils.FreePort(t)
@@ -228,7 +226,7 @@ func TestStatus(t *testing.T) {
 						Providers: []string{},
 						Services:  []string{},
 						EventsURL: "/v1/status/tasks/task_b?include=events",
-						Events:    eventsB,
+						Events:    events["task_b"],
 					},
 				},
 			},

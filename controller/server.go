@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/pkg/errors"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -16,7 +16,7 @@ func (rw *ReadWrite) Config() config.Config {
 }
 
 func (rw *ReadWrite) Events(ctx context.Context, taskName string) (map[string][]event.Event, error) {
-	return rw.store.Read(taskName), nil
+	return rw.state.GetTaskEvents(taskName), nil
 }
 
 func (rw *ReadWrite) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
@@ -160,7 +160,7 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 		defer func() {
 			ev.End(storedErr)
 			logger.Trace("adding event", "event", ev.GoString())
-			if err := rw.store.Add(*ev); err != nil {
+			if err := rw.state.AddTaskEvent(*ev); err != nil {
 				// only log error since update task occurred successfully by now
 				logger.Error("error storing event", "event", ev.GoString(), "error", err)
 			}

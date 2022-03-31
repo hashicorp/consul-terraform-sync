@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/event"
+	"github.com/hashicorp/consul-terraform-sync/state/event"
 )
 
 //go:generate mockery --name=Server --filename=server.go --output=../mocks/server
