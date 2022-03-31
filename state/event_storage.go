@@ -9,17 +9,17 @@ import (
 
 const defaultEventCountLimit = 5
 
-// eventStore stores events
-type eventStore struct {
+// eventStorage is the storage for events
+type eventStorage struct {
 	mu *sync.RWMutex
 
 	events map[string][]*event.Event // taskname => events
 	limit  int
 }
 
-// newEventStore returns a new store for event
-func newEventStore() *eventStore {
-	return &eventStore{
+// newEventStorage returns a new storage for event
+func newEventStorage() *eventStorage {
+	return &eventStorage{
 		mu:     &sync.RWMutex{},
 		events: make(map[string][]*event.Event),
 		limit:  defaultEventCountLimit,
@@ -27,7 +27,7 @@ func newEventStore() *eventStore {
 }
 
 // Add adds an event and manages the limit of number of events stored per task.
-func (s *eventStore) Add(e event.Event) error {
+func (s *eventStorage) Add(e event.Event) error {
 	if e.TaskName == "" {
 		return fmt.Errorf("error adding event: taskname cannot be empty %s", e.GoString())
 	}
@@ -47,7 +47,7 @@ func (s *eventStore) Add(e event.Event) error {
 // Read returns events for a task name. If no task name is specified, return
 // events for all tasks. Returned events are sorted in reverse chronological
 // order based on the end time.
-func (s *eventStore) Read(taskName string) map[string][]event.Event {
+func (s *eventStorage) Read(taskName string) map[string][]event.Event {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -72,7 +72,7 @@ func (s *eventStore) Read(taskName string) map[string][]event.Event {
 }
 
 // Delete removes all events for a task name.
-func (s *eventStore) Delete(taskName string) {
+func (s *eventStorage) Delete(taskName string) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

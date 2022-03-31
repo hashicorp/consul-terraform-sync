@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStore_Add(t *testing.T) {
+func Test_eventStorage_Add(t *testing.T) {
 	cases := []struct {
 		name      string
 		event     event.Event
@@ -27,13 +27,13 @@ func TestStore_Add(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			store := newEventStore()
-			err := store.Add(tc.event)
+			storage := newEventStorage()
+			err := storage.Add(tc.event)
 			if tc.expectErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				events := store.events[tc.event.TaskName]
+				events := storage.events[tc.event.TaskName]
 				assert.Equal(t, 1, len(events))
 				event := events[0]
 				assert.Equal(t, tc.event, *event)
@@ -42,32 +42,32 @@ func TestStore_Add(t *testing.T) {
 	}
 
 	t.Run("limit-and-order", func(t *testing.T) {
-		store := newEventStore()
-		store.limit = 2
+		storage := newEventStorage()
+		storage.limit = 2
 
-		// fill store
-		err := store.Add(event.Event{ID: "1", TaskName: "task"})
+		// fill storage
+		err := storage.Add(event.Event{ID: "1", TaskName: "task"})
 		require.NoError(t, err)
-		assert.Equal(t, 1, len(store.events["task"]))
+		assert.Equal(t, 1, len(storage.events["task"]))
 
-		err = store.Add(event.Event{ID: "2", TaskName: "task"})
+		err = storage.Add(event.Event{ID: "2", TaskName: "task"})
 		require.NoError(t, err)
-		assert.Equal(t, 2, len(store.events["task"]))
+		assert.Equal(t, 2, len(storage.events["task"]))
 
-		// check store did not grow beyond limit
-		err = store.Add(event.Event{ID: "3", TaskName: "task"})
+		// check storage did not grow beyond limit
+		err = storage.Add(event.Event{ID: "3", TaskName: "task"})
 		require.NoError(t, err)
-		assert.Equal(t, 2, len(store.events["task"]))
+		assert.Equal(t, 2, len(storage.events["task"]))
 
-		// confirm events in store
-		event3 := store.events["task"][0]
+		// confirm events in storage
+		event3 := storage.events["task"][0]
 		assert.Equal(t, "3", event3.ID)
-		event2 := store.events["task"][1]
+		event2 := storage.events["task"][1]
 		assert.Equal(t, "2", event2.ID)
 	})
 }
 
-func TestStore_Read(t *testing.T) {
+func Test_eventStorage_Read(t *testing.T) {
 	cases := []struct {
 		name     string
 		input    string
@@ -123,19 +123,19 @@ func TestStore_Read(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			store := newEventStore()
+			storage := newEventStorage()
 			for _, event := range tc.values {
-				err := store.Add(event)
+				err := storage.Add(event)
 				require.NoError(t, err)
 			}
 
-			actual := store.Read(tc.input)
+			actual := storage.Read(tc.input)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }
 
-func TestStore_Delete(t *testing.T) {
+func Test_eventStorage_Delete(t *testing.T) {
 	cases := []struct {
 		name     string
 		input    string
@@ -164,14 +164,14 @@ func TestStore_Delete(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			store := newEventStore()
+			storage := newEventStorage()
 			for _, event := range tc.values {
-				err := store.Add(event)
+				err := storage.Add(event)
 				require.NoError(t, err)
 			}
-			store.Delete(tc.input)
+			storage.Delete(tc.input)
 
-			after := store.Read("")
+			after := storage.Read("")
 			assert.Equal(t, tc.expected, after)
 		})
 	}
