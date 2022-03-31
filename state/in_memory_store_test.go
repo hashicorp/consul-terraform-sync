@@ -20,7 +20,9 @@ func Test_NewInMemoryStore(t *testing.T) {
 			"nil config",
 			nil,
 			InMemoryStore{
-				conf:   *config.DefaultConfig(),
+				conf: &configStorage{
+					conf: *config.DefaultConfig(),
+				},
 				events: newEventStorage(),
 			},
 		},
@@ -30,8 +32,10 @@ func Test_NewInMemoryStore(t *testing.T) {
 				Port: config.Int(1234),
 			},
 			InMemoryStore{
-				conf: config.Config{
-					Port: config.Int(1234),
+				conf: &configStorage{
+					conf: config.Config{
+						Port: config.Int(1234),
+					},
 				},
 				events: newEventStorage(),
 			},
@@ -42,6 +46,31 @@ func Test_NewInMemoryStore(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := NewInMemoryStore(tc.conf)
 			assert.Equal(t, tc.expected, *actual)
+		})
+	}
+}
+
+func Test_InMemoryStore_GetConfig(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		expected config.Config
+	}{
+		{
+			"happy path",
+			config.Config{
+				Port: config.Int(1234),
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			store := NewInMemoryStore(&tc.expected)
+
+			actual := store.GetConfig()
+			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }
@@ -77,6 +106,7 @@ func Test_InMemoryStore_GetTaskEvents(t *testing.T) {
 		})
 	}
 }
+
 func Test_InMemoryStore_DeleteTaskEvents(t *testing.T) {
 	t.Parallel()
 
@@ -107,6 +137,7 @@ func Test_InMemoryStore_DeleteTaskEvents(t *testing.T) {
 		})
 	}
 }
+
 func Test_InMemoryStore_AddTaskEvent(t *testing.T) {
 	t.Parallel()
 
