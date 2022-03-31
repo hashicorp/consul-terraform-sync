@@ -204,11 +204,12 @@ func TestOnce(t *testing.T) {
 	}{
 		{
 			"consecutive one task",
-			rw.Once,
+			rw.onceConsecutive,
 			1,
-		}, {
+		},
+		{
 			"consecutive multiple tasks",
-			rw.Once,
+			rw.onceConsecutive,
 			10,
 		},
 	}
@@ -272,46 +273,61 @@ func TestReadWrite_Once_error(t *testing.T) {
 	w.On("Size").Return(numTasks)
 
 	rw := &ReadWrite{}
-	expectedErr := fmt.Errorf("test error")
-	rw.baseController = &baseController{
-		state:   state.NewInMemoryStore(nil),
-		watcher: w,
-		drivers: driver.NewDrivers(),
-		newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
-			taskName := task.Name()
-			d := new(mocksD.Driver)
-			d.On("Task").Return(enabledTestTask(t, taskName))
-			d.On("TemplateIDs").Return(nil)
-			d.On("RenderTemplate", mock.Anything).Return(true, nil)
-			d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
-			if taskName == "task_03" {
-				// Mock an error during apply for a task
-				d.On("ApplyTask", mock.Anything).Return(expectedErr)
-			} else {
-				d.On("ApplyTask", mock.Anything).Return(nil)
-			}
-			return d, nil
+
+	testCases := []struct {
+		name string
+		once func(context.Context) error
+	}{
+		{
+			"onceConsecutive",
+			rw.onceConsecutive,
 		},
-		conf:   multipleTaskConfig(numTasks),
-		logger: logging.NewNullLogger(),
 	}
 
-	ctx := context.Background()
-	err := rw.Init(ctx)
-	assert.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			expectedErr := fmt.Errorf("test error")
+			rw.baseController = &baseController{
+				state:   state.NewInMemoryStore(nil),
+				watcher: w,
+				drivers: driver.NewDrivers(),
+				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+					taskName := task.Name()
+					d := new(mocksD.Driver)
+					d.On("Task").Return(enabledTestTask(t, taskName))
+					d.On("TemplateIDs").Return(nil)
+					d.On("RenderTemplate", mock.Anything).Return(true, nil)
+					d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
+					if taskName == "task_03" {
+						// Mock an error during apply for a task
+						d.On("ApplyTask", mock.Anything).Return(expectedErr)
+					} else {
+						d.On("ApplyTask", mock.Anything).Return(nil)
+					}
+					return d, nil
+				},
+				conf:   multipleTaskConfig(numTasks),
+				logger: logging.NewNullLogger(),
+			}
 
-	// testing really starts here...
-	done := make(chan error)
-	// running in goroutine so I can timeout
-	go func() {
-		done <- rw.Once(ctx)
-	}()
-	select {
-	case err := <-done:
-		assert.Error(t, err, "task_03 driver error should bubble up")
-		assert.Contains(t, err.Error(), expectedErr.Error(), "unexpected error in Once")
-	case <-time.After(time.Second):
-		t.Fatal("Once didn't return in expected time")
+			ctx := context.Background()
+			err := rw.Init(ctx)
+			assert.NoError(t, err)
+
+			// testing really starts here...
+			done := make(chan error)
+			// running in goroutine so I can timeout
+			go func() {
+				done <- tc.once(ctx)
+			}()
+			select {
+			case err := <-done:
+				assert.Error(t, err, "task_03 driver error should bubble up")
+				assert.Contains(t, err.Error(), expectedErr.Error(), "unexpected error in Once")
+			case <-time.After(time.Second):
+				t.Fatal("Once didn't return in expected time")
+			}
+		})
 	}
 }
 
@@ -578,40 +594,53 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 	}
 	ctrl.drivers.Add("task_a", d)
 
-	completedTasksCh := ctrl.EnableTestMode()
-	errCh := make(chan error)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	testCases := []struct {
+		name string
+		once func(context.Context) error
+	}{
+		{
+			"onceConsecutive",
+			ctrl.onceConsecutive,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			completedTasksCh := ctrl.EnableTestMode()
+			errCh := make(chan error)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
 
-	w := new(mocks.Watcher)
-	w.On("Size").Return(5)
-	w.On("Watch", ctx, ctrl.watcherCh).Return(nil)
-	ctrl.watcher = w
+			w := new(mocks.Watcher)
+			w.On("Size").Return(5)
+			w.On("Watch", ctx, ctrl.watcherCh).Return(nil)
+			ctrl.watcher = w
 
-	go func() {
-		err := ctrl.Once(ctx)
-		if err != nil {
-			errCh <- err
-			return
-		}
+			go func() {
+				err := tc.once(ctx)
+				if err != nil {
+					errCh <- err
+					return
+				}
 
-		err = ctrl.Run(ctx)
-		if err != nil {
-			errCh <- err
-		}
-	}()
+				err = ctrl.Run(ctx)
+				if err != nil {
+					errCh <- err
+				}
+			}()
 
-	// Emulate triggers to evaluate task completion
-	for i := 0; i < 5; i++ {
-		ctrl.watcherCh <- "tmpl_a"
-		select {
-		case taskName := <-completedTasksCh:
-			assert.Equal(t, "task_a", taskName)
-		case err := <-errCh:
-			require.NoError(t, err)
-		case <-ctx.Done():
-			assert.NoError(t, ctx.Err(), "Context should not timeout. Once and Run usage of Watcher does not match the expected triggers.")
-		}
+			// Emulate triggers to evaluate task completion
+			for i := 0; i < 5; i++ {
+				ctrl.watcherCh <- "tmpl_a"
+				select {
+				case taskName := <-completedTasksCh:
+					assert.Equal(t, "task_a", taskName)
+				case err := <-errCh:
+					require.NoError(t, err)
+				case <-ctx.Done():
+					assert.NoError(t, ctx.Err(), "Context should not timeout. Once and Run usage of Watcher does not match the expected triggers.")
+				}
+			}
+		})
 	}
 }
 
