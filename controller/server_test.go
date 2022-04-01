@@ -75,19 +75,19 @@ func TestServer_Task(t *testing.T) {
 
 func TestServer_TaskCreate(t *testing.T) {
 	ctx := context.Background()
+	conf := &config.Config{
+		BufferPeriod: config.DefaultBufferPeriodConfig(),
+		WorkingDir:   config.String(config.DefaultWorkingDir),
+	}
+	conf.Finalize()
 	ctrl := ReadWrite{
 		baseController: &baseController{
-			conf: &config.Config{
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				WorkingDir:   config.String(config.DefaultWorkingDir),
-			},
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
 			watcher: new(mocksTmpl.Watcher),
-			state:   state.NewInMemoryStore(nil),
+			state:   state.NewInMemoryStore(conf),
 		},
 	}
-	ctrl.conf.Finalize()
 
 	t.Run("success", func(t *testing.T) {
 		taskConf := validTaskConf
@@ -97,10 +97,10 @@ func TestServer_TaskCreate(t *testing.T) {
 			Module:    *taskConf.Module,
 			Condition: taskConf.Condition,
 			BufferPeriod: &driver.BufferPeriod{
-				Min: *ctrl.conf.BufferPeriod.Min,
-				Max: *ctrl.conf.BufferPeriod.Max,
+				Min: *conf.BufferPeriod.Min,
+				Max: *conf.BufferPeriod.Max,
 			},
-			WorkingDir: *ctrl.conf.WorkingDir,
+			WorkingDir: *conf.WorkingDir,
 		})
 		require.NoError(t, err)
 
@@ -160,14 +160,15 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 
 	ctrl := ReadWrite{
 		baseController: &baseController{
-			conf: &config.Config{
-				BufferPeriod: config.DefaultBufferPeriodConfig(),
-				WorkingDir:   config.String(config.DefaultWorkingDir),
-				Driver:       config.DefaultDriverConfig(),
-			},
 			logger:  logging.NewNullLogger(),
 			watcher: new(mocksTmpl.Watcher),
 		},
+	}
+
+	conf := &config.Config{
+		BufferPeriod: config.DefaultBufferPeriodConfig(),
+		WorkingDir:   config.String(config.DefaultWorkingDir),
+		Driver:       config.DefaultDriverConfig(),
 	}
 
 	t.Run("success", func(t *testing.T) {
@@ -180,7 +181,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 		})
 		require.NoError(t, err)
 		mockDriver(ctx, mockD, task)
-		ctrl.state = state.NewInMemoryStore(nil)
+		ctrl.state = state.NewInMemoryStore(conf)
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
@@ -208,7 +209,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 		})
 		require.NoError(t, err)
 		mockDriver(ctx, mockD, task)
-		ctrl.state = state.NewInMemoryStore(nil)
+		ctrl.state = state.NewInMemoryStore(conf)
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
@@ -239,7 +240,7 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 			On("OverrideNotifier").Return().
 			On("RenderTemplate", mock.Anything).Return(true, nil).
 			On("ApplyTask", ctx).Return(fmt.Errorf("apply err"))
-		ctrl.state = state.NewInMemoryStore(nil)
+		ctrl.state = state.NewInMemoryStore(conf)
 		ctrl.drivers = driver.NewDrivers()
 		ctrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
@@ -296,16 +297,16 @@ func TestServer_TaskDelete(t *testing.T) {
 func TestServer_TaskUpdate(t *testing.T) {
 	t.Parallel()
 
+	conf := &config.Config{}
+	conf.Finalize()
 	ctx := context.Background()
 	ctrl := ReadWrite{
 		baseController: &baseController{
-			conf:    &config.Config{},
+			state:   state.NewInMemoryStore(conf),
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
-			state:   state.NewInMemoryStore(nil),
 		},
 	}
-	ctrl.conf.Finalize()
 
 	t.Run("disable-then-enable", func(t *testing.T) {
 		taskName := "task_a"
@@ -318,8 +319,8 @@ func TestServer_TaskUpdate(t *testing.T) {
 				},
 			},
 		}
-		taskConf.Finalize(ctrl.conf.BufferPeriod, *ctrl.conf.WorkingDir)
-		task, err := newDriverTask(ctrl.conf, &taskConf, nil)
+		taskConf.Finalize(conf.BufferPeriod, *conf.WorkingDir)
+		task, err := newDriverTask(conf, &taskConf, nil)
 		require.NoError(t, err)
 
 		d := new(mocksD.Driver)

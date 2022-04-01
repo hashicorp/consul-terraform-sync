@@ -12,7 +12,7 @@ import (
 )
 
 func (rw *ReadWrite) Config() config.Config {
-	return *rw.baseController.conf
+	return rw.state.GetConfig()
 }
 
 func (rw *ReadWrite) Events(ctx context.Context, taskName string) (map[string][]event.Event, error) {
