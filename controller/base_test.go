@@ -53,9 +53,9 @@ func TestBaseControllerInit(t *testing.T) {
 				newDriver: func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 					return d, nil
 				},
-				drivers: driver.NewDrivers(),
-				conf:    tc.config,
-				logger:  logging.NewNullLogger(),
+				drivers:  driver.NewDrivers(),
+				initConf: tc.config,
+				logger:   logging.NewNullLogger(),
 			}
 			err := baseCtrl.drivers.Add("task", d)
 			require.NoError(t, err)

@@ -222,8 +222,10 @@ func TestOnce(t *testing.T) {
 			w.On("WaitCh", mock.Anything).Return(errChRc)
 			w.On("Size").Return(tc.numTasks)
 
+			// Set up read-write controller with mocks
+			conf := multipleTaskConfig(tc.numTasks)
 			rw.baseController = &baseController{
-				state:   state.NewInMemoryStore(nil),
+				state:   state.NewInMemoryStore(conf),
 				watcher: w,
 				drivers: driver.NewDrivers(),
 				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
@@ -237,8 +239,8 @@ func TestOnce(t *testing.T) {
 					d.On("ApplyTask", mock.Anything).Return(nil).Once()
 					return d, nil
 				},
-				conf:   multipleTaskConfig(tc.numTasks),
-				logger: logging.NewNullLogger(),
+				initConf: conf,
+				logger:   logging.NewNullLogger(),
 			}
 
 			ctx := context.Background()
@@ -287,8 +289,11 @@ func TestReadWrite_Once_error(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			expectedErr := fmt.Errorf("test error")
+
+			// Set up read-write controller with mocks
+			conf := multipleTaskConfig(numTasks)
 			rw.baseController = &baseController{
-				state:   state.NewInMemoryStore(nil),
+				state:   state.NewInMemoryStore(conf),
 				watcher: w,
 				drivers: driver.NewDrivers(),
 				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
@@ -306,8 +311,8 @@ func TestReadWrite_Once_error(t *testing.T) {
 					}
 					return d, nil
 				},
-				conf:   multipleTaskConfig(numTasks),
-				logger: logging.NewNullLogger(),
+				initConf: conf,
+				logger:   logging.NewNullLogger(),
 			}
 
 			ctx := context.Background()

@@ -19,13 +19,16 @@ import (
 
 type baseController struct {
 	state     state.Store
-	conf      *config.Config
 	newDriver func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error)
 	drivers   *driver.Drivers
 	watcher   templates.Watcher
 	resolver  templates.Resolver
 	logger    logging.Logger
 	providers []driver.TerraformProviderBlock
+
+	// config that CTS is initialized with i.e. only used by base controller.
+	// subsequent access to the configs should be through the state store.
+	initConf *config.Config
 }
 
 func newBaseController(conf *config.Config) (*baseController, error) {
@@ -43,12 +46,12 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 
 	return &baseController{
 		state:     state.NewInMemoryStore(conf),
-		conf:      conf,
 		newDriver: nd,
 		drivers:   driver.NewDrivers(),
 		watcher:   watcher,
 		resolver:  hcat.NewResolver(),
 		logger:    logger,
+		initConf:  conf,
 	}, nil
 }
 
@@ -71,7 +74,7 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	ctrl.drivers.Reset()
 
 	// Create and initialize task drivers
-	for _, t := range *ctrl.conf.Tasks {
+	for _, t := range *ctrl.initConf.Tasks {
 		select {
 		case <-ctx.Done():
 			// Stop initializing remaining tasks if context has stopped.
@@ -109,12 +112,12 @@ func (ctrl *baseController) init(ctx context.Context) error {
 func (ctrl *baseController) createNewTaskDriver(taskConfig config.TaskConfig) (driver.Driver, error) {
 	logger := ctrl.logger.With("task_name", *taskConfig.Name)
 	logger.Trace("creating new task driver")
-	task, err := newDriverTask(ctrl.conf, &taskConfig, ctrl.providers)
+	task, err := newDriverTask(ctrl.initConf, &taskConfig, ctrl.providers)
 	if err != nil {
 		return nil, err
 	}
 
-	d, err := ctrl.newDriver(ctrl.conf, task, ctrl.watcher)
+	d, err := ctrl.newDriver(ctrl.initConf, task, ctrl.watcher)
 	if err != nil {
 		return nil, err
 	}
@@ -126,19 +129,19 @@ func (ctrl *baseController) createNewTaskDriver(taskConfig config.TaskConfig) (d
 // loadProviderConfigs loads provider configs and evaluates provider blocks
 // for dynamic values in parallel.
 func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]driver.TerraformProviderBlock, error) {
-	numBlocks := len(*ctrl.conf.TerraformProviders)
+	numBlocks := len(*ctrl.initConf.TerraformProviders)
 	var wg sync.WaitGroup
 	wg.Add(numBlocks)
 
 	var lastErr error
 	providerConfigs := make([]driver.TerraformProviderBlock, numBlocks)
-	for i, providerConf := range *ctrl.conf.TerraformProviders {
-		go func(i int, conf map[string]interface{}) {
+	for i, providerConf := range *ctrl.initConf.TerraformProviders {
+		go func(i int, initConf map[string]interface{}) {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 			defer wg.Done()
 
-			block, err := hcltmpl.LoadDynamicConfig(ctxTimeout, ctrl.watcher, ctrl.resolver, conf)
+			block, err := hcltmpl.LoadDynamicConfig(ctxTimeout, ctrl.watcher, ctrl.resolver, initConf)
 			if err != nil {
 				ctrl.logger.Error("error loading dynamic configuration for provider",
 					"provider", block.Name, "error", err)
