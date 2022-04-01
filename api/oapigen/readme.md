@@ -1,7 +1,7 @@
 # API Code Generation
 
 ## Code Generation Library
-[oapi-codegen](https://github.com/deepmap/oapi-codegen) is a library which contains a set of utilties for generating 
+[oapi-codegen](https://github.com/deepmap/oapi-codegen) is a library which contains a set of utilities for generating 
 Go boilerplate code based on an [OpenAPI 3.0.0](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.0.md) specification.
 
 ## Code Generation
