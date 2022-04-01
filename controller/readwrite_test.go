@@ -194,12 +194,12 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 	})
 }
 
-func TestOnce(t *testing.T) {
+func Test_once(t *testing.T) {
 	rw := &ReadWrite{}
 
 	testCases := []struct {
 		name     string
-		once     func(context.Context) error
+		onceFxn  func(context.Context) error
 		numTasks int
 	}{
 		{
@@ -245,13 +245,13 @@ func TestOnce(t *testing.T) {
 
 			ctx := context.Background()
 			err := rw.Init(ctx)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// testing really starts here...
 			done := make(chan error)
 			// running in goroutine so I can timeout
 			go func() {
-				done <- tc.once(ctx)
+				done <- tc.onceFxn(ctx)
 			}()
 			select {
 			case err := <-done:
@@ -267,7 +267,7 @@ func TestOnce(t *testing.T) {
 	}
 }
 
-func TestReadWrite_Once_error(t *testing.T) {
+func TestReadWrite_once_error(t *testing.T) {
 	// Test once mode error handling when a driver returns an error
 	numTasks := 5
 	w := new(mocks.Watcher)
@@ -277,8 +277,8 @@ func TestReadWrite_Once_error(t *testing.T) {
 	rw := &ReadWrite{}
 
 	testCases := []struct {
-		name string
-		once func(context.Context) error
+		name    string
+		onceFxn func(context.Context) error
 	}{
 		{
 			"onceConsecutive",
@@ -317,13 +317,13 @@ func TestReadWrite_Once_error(t *testing.T) {
 
 			ctx := context.Background()
 			err := rw.Init(ctx)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// testing really starts here...
 			done := make(chan error)
 			// running in goroutine so I can timeout
 			go func() {
-				done <- tc.once(ctx)
+				done <- tc.onceFxn(ctx)
 			}()
 			select {
 			case err := <-done:
@@ -580,8 +580,9 @@ func TestReadWriteRun_context_cancel(t *testing.T) {
 	}
 }
 
-func TestReadWrite_OnceAndRun(t *testing.T) {
-	// Tests Run behaviors as expected with triggers after Once completes
+func TestReadWrite_once_then_Run(t *testing.T) {
+	// Tests Run behaviors as expected with triggers after once completes
+
 	d := new(mocksD.Driver)
 	d.On("Task").Return(enabledTestTask(t, "task_a")).
 		On("TemplateIDs").Return([]string{"tmpl_a"}).
@@ -600,8 +601,8 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 	ctrl.drivers.Add("task_a", d)
 
 	testCases := []struct {
-		name string
-		once func(context.Context) error
+		name    string
+		onceFxn func(context.Context) error
 	}{
 		{
 			"onceConsecutive",
@@ -621,7 +622,7 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 			ctrl.watcher = w
 
 			go func() {
-				err := tc.once(ctx)
+				err := tc.onceFxn(ctx)
 				if err != nil {
 					errCh <- err
 					return
