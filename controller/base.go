@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -39,7 +40,7 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 
 	logger := logging.Global().Named(ctrlSystemName)
 	logger.Info("initializing Consul client and testing connection")
-	watcher, err := newWatcher(conf)
+	watcher, err := newWatcher(conf, client.ConsulDefaultMaxRetry)
 	if err != nil {
 		return nil, err
 	}

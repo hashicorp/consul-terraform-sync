@@ -16,7 +16,7 @@ const (
 
 // newWatcher initializes a new hcat Watcher with a Consul client and optional
 // Vault client if configured.
-func newWatcher(conf *config.Config) (*hcat.Watcher, error) {
+func newWatcher(conf *config.Config, maxRetries int) (*hcat.Watcher, error) {
 	consulConf := conf.Consul
 	transport := hcat.TransportInput{
 		SSLEnabled: *consulConf.TLS.Enabled,
@@ -54,11 +54,21 @@ func newWatcher(conf *config.Config) (*hcat.Watcher, error) {
 		return nil, err
 	}
 
+	wr := watcherRetry{
+		maxRetries: maxRetries,
+		waitFunc:   retry.WaitTimeInNs,
+	}
+
 	return hcat.NewWatcher(hcat.WatcherInput{
 		Clients:         clients,
 		Cache:           hcat.NewStore(),
-		ConsulRetryFunc: retryConsul,
+		ConsulRetryFunc: wr.retryConsul,
 	}), nil
+}
+
+type watcherRetry struct {
+	maxRetries int
+	waitFunc   func(attempt int, random *rand.Rand) int
 }
 
 // retryConsul will be used by hashicat watcher to retry polling Consul for
@@ -67,16 +77,16 @@ func newWatcher(conf *config.Config) (*hcat.Watcher, error) {
 //
 // retryCount parameter is passed in by hcat. It starts at 0 (there have been
 // zero retries).
-func retryConsul(retryCount int) (bool, time.Duration) {
-	max := 8 // 8+1 retries. total wait of 8.5-12.8 min
+func (wr watcherRetry) retryConsul(retryCount int) (bool, time.Duration) {
+	max := wr.maxRetries
 	logger := logging.Global().Named(hcatLogSystemName)
-	if retryCount > max {
+	if max >= 0 && retryCount > max {
 		logger.Error("error connecting with Consul even after retries", "retries", retryCount)
 		return false, 0 * time.Second
 	}
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	wait := retry.WaitTime(uint(retryCount), random)
+	wait := wr.waitFunc(retryCount, random) // max wait time of retry.maxWaitTime minutes
 	dur := time.Duration(wait)
 	logger.Debug("couldn't connect with Consul. Waiting to retry",
 		"wait_duration", dur, "attempt_number", retryCount+1)
