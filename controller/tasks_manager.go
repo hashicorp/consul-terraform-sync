@@ -17,17 +17,17 @@ import (
 type TasksManager struct {
 }
 
-func (rw *ReadWrite) Config() config.Config {
-	return rw.state.GetConfig()
+func (tm *TasksManager) Config() config.Config {
+	return tm.state.GetConfig()
 }
 
-func (rw *ReadWrite) Events(ctx context.Context, taskName string) (map[string][]event.Event, error) {
-	return rw.state.GetTaskEvents(taskName), nil
+func (tm *TasksManager) Events(ctx context.Context, taskName string) (map[string][]event.Event, error) {
+	return tm.state.GetTaskEvents(taskName), nil
 }
 
-func (rw *ReadWrite) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
+func (tm *TasksManager) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
 	// TODO handle ctx while waiting for driver lock if it is currently active
-	d, ok := rw.drivers.Get(taskName)
+	d, ok := tm.drivers.Get(taskName)
 	if !ok {
 		return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
 	}
@@ -40,8 +40,8 @@ func (rw *ReadWrite) Task(ctx context.Context, taskName string) (config.TaskConf
 	return conf, nil
 }
 
-func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
-	d, err := rw.createTask(ctx, taskConfig)
+func (tm *TasksManager) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
+	d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
 		return config.TaskConfig{}, err
 	}
@@ -51,32 +51,32 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 
 	// Add the task driver to the driver list only after successful create
 	name := *taskConfig.Name
-	err = rw.drivers.Add(name, d)
+	err = tm.drivers.Add(name, d)
 	if err != nil {
-		rw.cleanupTask(ctx, name)
+		tm.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
 	conf, err := configFromDriverTask(d.Task())
 	if err != nil {
 		// Cleanup driver
-		rw.cleanupTask(ctx, name)
+		tm.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
 
 	if d.Task().IsScheduled() {
-		rw.scheduleStartCh <- d
+		tm.scheduleStartCh <- d
 	}
 
 	return conf, nil
 }
 
-func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
-	d, err := rw.createTask(ctx, taskConfig)
+func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
+	d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
 		return config.TaskConfig{}, err
 	}
 
-	if err := rw.runTask(ctx, d); err != nil {
+	if err := tm.runTask(ctx, d); err != nil {
 		return config.TaskConfig{}, err
 	}
 
@@ -84,40 +84,40 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 
 	// Add the task driver to the driver list only after successful create and run
 	name := *taskConfig.Name
-	err = rw.drivers.Add(*taskConfig.Name, d)
+	err = tm.drivers.Add(*taskConfig.Name, d)
 	if err != nil {
-		rw.cleanupTask(ctx, name)
+		tm.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
 	conf, err := configFromDriverTask(d.Task())
 	if err != nil {
-		rw.cleanupTask(ctx, name)
+		tm.cleanupTask(ctx, name)
 		return config.TaskConfig{}, err
 	}
 
 	if d.Task().IsScheduled() {
-		rw.scheduleStartCh <- d
+		tm.scheduleStartCh <- d
 	}
 
 	return conf, nil
 }
 
 // TaskDelete marks a task for deletion
-func (rw *ReadWrite) TaskDelete(ctx context.Context, name string) error {
-	logger := rw.logger.With(taskNameLogKey, name)
-	if rw.drivers.IsMarkedForDeletion(name) {
+func (tm *TasksManager) TaskDelete(ctx context.Context, name string) error {
+	logger := tm.logger.With(taskNameLogKey, name)
+	if tm.drivers.IsMarkedForDeletion(name) {
 		logger.Debug("task is already marked for deletion")
 		return nil
 	}
-	rw.drivers.MarkForDeletion(name)
-	rw.deleteCh <- name
+	tm.drivers.MarkForDeletion(name)
+	tm.deleteCh <- name
 	logger.Debug("task marked for deletion")
 	return nil
 }
 
 // TaskInspect creates and inspects a temporary task that is not added to the drivers list.
-func (rw *ReadWrite) TaskInspect(ctx context.Context, taskConfig config.TaskConfig) (bool, string, string, error) {
-	d, err := rw.createTask(ctx, taskConfig)
+func (tm *TasksManager) TaskInspect(ctx context.Context, taskConfig config.TaskConfig) (bool, string, string, error) {
+	d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
 		return false, "", "", err
 	}
@@ -126,7 +126,7 @@ func (rw *ReadWrite) TaskInspect(ctx context.Context, taskConfig config.TaskConf
 	return plan.ChangesPresent, plan.Plan, plan.URL, err
 }
 
-func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfig, runOp string) (bool, string, string, error) {
+func (tm *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskConfig, runOp string) (bool, string, string, error) {
 	// Only enabled changes are supported at this time
 	if updateConf.Enabled == nil {
 		return false, "", "", nil
@@ -136,15 +136,15 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 	}
 
 	taskName := *updateConf.Name
-	logger := rw.logger.With(taskNameLogKey, taskName)
+	logger := tm.logger.With(taskNameLogKey, taskName)
 	logger.Trace("updating task")
-	if rw.drivers.IsActive(taskName) {
+	if tm.drivers.IsActive(taskName) {
 		return false, "", "", fmt.Errorf("task '%s' is active and cannot be updated at this time", taskName)
 	}
-	rw.drivers.SetActive(taskName)
-	defer rw.drivers.SetInactive(taskName)
+	tm.drivers.SetActive(taskName)
+	defer tm.drivers.SetInactive(taskName)
 
-	d, ok := rw.drivers.Get(taskName)
+	d, ok := tm.drivers.Get(taskName)
 	if !ok {
 		return false, "", "", fmt.Errorf("task %s does not exist to run", taskName)
 	}
@@ -166,7 +166,7 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 		defer func() {
 			ev.End(storedErr)
 			logger.Trace("adding event", "event", ev.GoString())
-			if err := rw.state.AddTaskEvent(*ev); err != nil {
+			if err := tm.state.AddTaskEvent(*ev); err != nil {
 				// only log error since update task occurred successfully by now
 				logger.Error("error storing event", "event", ev.GoString(), "error", err)
 			}
@@ -188,10 +188,10 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 	return plan.ChangesPresent, plan.Plan, "", nil
 }
 
-func (rw *ReadWrite) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
-	drivers := rw.drivers.Map()
+func (tm *TasksManager) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
+	drivers := tm.drivers.Map()
 	confs := make([]config.TaskConfig, 0, len(drivers))
-	for _, d := range rw.drivers.Map() {
+	for _, d := range tm.drivers.Map() {
 		conf, err := configFromDriverTask(d.Task())
 		if err != nil {
 			return nil, err
@@ -253,10 +253,10 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 	}, nil
 }
 
-func (rw ReadWrite) cleanupTask(ctx context.Context, name string) {
-	err := rw.TaskDelete(ctx, name)
+func (tm TasksManager) cleanupTask(ctx context.Context, name string) {
+	err := tm.TaskDelete(ctx, name)
 	if err != nil {
-		rw.logger.Error("unable to cleanup task after error", "task_name", name)
+		tm.logger.Error("unable to cleanup task after error", "task_name", name)
 	}
 }
 
@@ -267,105 +267,105 @@ func (rw ReadWrite) cleanupTask(ctx context.Context, name string) {
 // Blocking call runs the main consul monitoring loop, which identifies triggers
 // for dynamic tasks. Scheduled tasks use their own go routine to trigger on
 // schedule.
-func (rw *ReadWrite) Run(ctx context.Context) error {
+func (tm *TasksManager) Run(ctx context.Context) error {
 	// Only initialize buffer periods for running the full loop and not for Once
 	// mode so it can immediately render the first time.
-	rw.drivers.SetBufferPeriod()
+	tm.drivers.SetBufferPeriod()
 
-	for _, d := range rw.drivers.Map() {
+	for _, d := range tm.drivers.Map() {
 		if d.Task().IsScheduled() {
 			stopCh := make(chan struct{}, 1)
-			rw.scheduleStopChs[d.Task().Name()] = stopCh
-			go rw.runScheduledTask(ctx, d, stopCh)
+			tm.scheduleStopChs[d.Task().Name()] = stopCh
+			go tm.runScheduledTask(ctx, d, stopCh)
 		}
 	}
 
 	errCh := make(chan error)
-	if rw.watcherCh == nil {
+	if tm.watcherCh == nil {
 		// Size of channel is larger than just current number of drivers
 		// to account for additional tasks created via the API. Adding 10
 		// is an arbitrarily chosen value.
-		rw.watcherCh = make(chan string, rw.drivers.Len()+10)
+		tm.watcherCh = make(chan string, tm.drivers.Len()+10)
 	}
-	if rw.scheduleStartCh == nil {
+	if tm.scheduleStartCh == nil {
 		// Size of channel is an arbitrarily chosen value.
-		rw.scheduleStartCh = make(chan driver.Driver, 10)
+		tm.scheduleStartCh = make(chan driver.Driver, 10)
 	}
-	if rw.deleteCh == nil {
+	if tm.deleteCh == nil {
 		// Size of channel is an arbitrarily chosen value.
-		rw.deleteCh = make(chan string, 10)
+		tm.deleteCh = make(chan string, 10)
 	}
-	if rw.scheduleStopChs == nil {
-		rw.scheduleStopChs = make(map[string](chan struct{}))
+	if tm.scheduleStopChs == nil {
+		tm.scheduleStopChs = make(map[string](chan struct{}))
 	}
 	go func() {
 		for {
-			rw.logger.Trace("starting template dependency monitoring")
-			err := rw.watcher.Watch(ctx, rw.watcherCh)
+			tm.logger.Trace("starting template dependency monitoring")
+			err := tm.watcher.Watch(ctx, tm.watcherCh)
 			if err == nil || err == context.Canceled {
-				rw.logger.Info("stopping dependency monitoring")
+				tm.logger.Info("stopping dependency monitoring")
 				return
 			}
-			rw.logger.Error("error monitoring template dependencies", "error", err)
+			tm.logger.Error("error monitoring template dependencies", "error", err)
 		}
 	}()
 
 	for i := int64(1); ; i++ {
 		select {
-		case tmplID := <-rw.watcherCh:
-			d, ok := rw.drivers.GetTaskByTemplate(tmplID)
+		case tmplID := <-tm.watcherCh:
+			d, ok := tm.drivers.GetTaskByTemplate(tmplID)
 			if !ok {
-				rw.logger.Debug("template was notified for update but the template ID does not match any task", "template_id", tmplID)
+				tm.logger.Debug("template was notified for update but the template ID does not match any task", "template_id", tmplID)
 				continue
 			}
 
-			go rw.runDynamicTask(ctx, d) // errors are logged for now
+			go tm.runDynamicTask(ctx, d) // errors are logged for now
 
-		case d := <-rw.scheduleStartCh:
+		case d := <-tm.scheduleStartCh:
 			// Run newly created scheduled tasks
 			stopCh := make(chan struct{}, 1)
-			rw.scheduleStopChs[d.Task().Name()] = stopCh
-			go rw.runScheduledTask(ctx, d, stopCh)
+			tm.scheduleStopChs[d.Task().Name()] = stopCh
+			go tm.runScheduledTask(ctx, d, stopCh)
 
-		case n := <-rw.deleteCh:
-			go rw.deleteTask(ctx, n)
+		case n := <-tm.deleteCh:
+			go tm.deleteTask(ctx, n)
 
 		case err := <-errCh:
 			return err
 
 		case <-ctx.Done():
-			rw.logger.Info("stopping controller")
+			tm.logger.Info("stopping controller")
 			return ctx.Err()
 		}
 
-		rw.logDepSize(50, i)
+		tm.logDepSize(50, i)
 	}
 }
 
 // runDynamicTask will try to render the template and apply the task if necessary.
-func (rw *ReadWrite) runDynamicTask(ctx context.Context, d driver.Driver) error {
+func (tm *TasksManager) runDynamicTask(ctx context.Context, d driver.Driver) error {
 	task := d.Task()
 	taskName := task.Name()
 	if task.IsScheduled() {
 		// Schedule tasks are not dynamic and run in a different process
 		return nil
 	}
-	if rw.drivers.IsMarkedForDeletion(taskName) {
-		rw.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+	if tm.drivers.IsMarkedForDeletion(taskName) {
+		tm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
 		return nil
 	}
 
-	err := rw.waitForTaskInactive(ctx, taskName)
+	err := tm.waitForTaskInactive(ctx, taskName)
 	if err != nil {
 		return err
 	}
-	complete, err := rw.checkApply(ctx, d, true, false)
+	complete, err := tm.checkApply(ctx, d, true, false)
 	if err != nil {
 		return err
 	}
 
-	if rw.taskNotify != nil && complete {
-		rw.taskNotify <- taskName
+	if tm.taskNotify != nil && complete {
+		tm.taskNotify <- taskName
 	}
 	return nil
 }
@@ -374,13 +374,13 @@ func (rw *ReadWrite) runDynamicTask(ctx context.Context, d driver.Driver) error 
 // The go-routine will manage the task's schedule and trigger the task on time.
 // If there are dependency changes since the task's last run time, then the task
 // will also apply.
-func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver, stopCh chan struct{}) error {
+func (tm *TasksManager) runScheduledTask(ctx context.Context, d driver.Driver, stopCh chan struct{}) error {
 	task := d.Task()
 	taskName := task.Name()
 
 	cond, ok := task.Condition().(*config.ScheduleConditionConfig)
 	if !ok {
-		rw.logger.Error("unexpected condition while running a scheduled "+
+		tm.logger.Error("unexpected condition while running a scheduled "+
 			"condition", taskNameLogKey, taskName, "condition_type",
 			fmt.Sprintf("%T", task.Condition()))
 		return fmt.Errorf("error: expected a schedule condition but got "+
@@ -389,59 +389,59 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver, stop
 
 	expr, err := cronexpr.Parse(*cond.Cron)
 	if err != nil {
-		rw.logger.Error("error parsing task cron", taskNameLogKey, taskName,
+		tm.logger.Error("error parsing task cron", taskNameLogKey, taskName,
 			"cron", *cond.Cron, "error", err)
 		return err
 	}
 
 	nextTime := expr.Next(time.Now())
 	waitTime := time.Until(nextTime)
-	rw.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
+	tm.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
 		"wait_time", waitTime, "next_runtime", nextTime)
 
 	for {
 		select {
 		case <-time.After(waitTime):
-			if _, ok := rw.drivers.Get(taskName); !ok {
+			if _, ok := tm.drivers.Get(taskName); !ok {
 				// Should not happen in the typical workflow, but stopping if in this state
-				rw.logger.Debug("scheduled task no longer exists", taskNameLogKey, taskName)
-				rw.logger.Info("stopping deleted scheduled task", taskNameLogKey, taskName)
-				delete(rw.scheduleStopChs, taskName)
+				tm.logger.Debug("scheduled task no longer exists", taskNameLogKey, taskName)
+				tm.logger.Info("stopping deleted scheduled task", taskNameLogKey, taskName)
+				delete(tm.scheduleStopChs, taskName)
 				return nil
 			}
 
-			if rw.drivers.IsMarkedForDeletion(taskName) {
-				rw.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+			if tm.drivers.IsMarkedForDeletion(taskName) {
+				tm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
 				return nil
 			}
 
-			rw.logger.Info("time for scheduled task", taskNameLogKey, taskName)
-			if rw.drivers.IsActive(taskName) {
+			tm.logger.Info("time for scheduled task", taskNameLogKey, taskName)
+			if tm.drivers.IsActive(taskName) {
 				// The driver is currently active with the task, initiated by an ad-hoc run.
-				rw.logger.Trace("task is active", taskNameLogKey, taskName)
+				tm.logger.Trace("task is active", taskNameLogKey, taskName)
 				continue
 			}
 
-			complete, err := rw.checkApply(ctx, d, true, false)
+			complete, err := tm.checkApply(ctx, d, true, false)
 			if err != nil {
 				// print error but continue
-				rw.logger.Error("error applying task %q: %s",
+				tm.logger.Error("error applying task %q: %s",
 					taskNameLogKey, taskName, "error", err)
 			}
 
-			if rw.taskNotify != nil && complete {
-				rw.taskNotify <- taskName
+			if tm.taskNotify != nil && complete {
+				tm.taskNotify <- taskName
 			}
 
 			nextTime := expr.Next(time.Now())
 			waitTime = time.Until(nextTime)
-			rw.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
+			tm.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
 				"wait_time", waitTime, "next_runtime", nextTime)
 		case <-stopCh:
-			rw.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
+			tm.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
 			return nil
 		case <-ctx.Done():
-			rw.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
+			tm.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
 			return ctx.Err()
 		}
 	}
@@ -449,22 +449,22 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver, stop
 
 // Once runs the controller in read-write mode making sure each template has
 // been fully rendered and the task run, then it returns.
-func (rw *ReadWrite) Once(ctx context.Context) error {
-	rw.logger.Info("executing all tasks once through")
+func (tm *TasksManager) Once(ctx context.Context) error {
+	tm.logger.Info("executing all tasks once through")
 
 	// run consecutively to keep logs in order
-	return rw.onceConsecutive(ctx)
+	return tm.onceConsecutive(ctx)
 }
 
 // onceConsecutive runs all tasks consecutively until each task has completed once
-func (rw *ReadWrite) onceConsecutive(ctx context.Context) error {
-	driversCopy := rw.drivers.Map()
+func (tm *TasksManager) onceConsecutive(ctx context.Context) error {
+	driversCopy := tm.drivers.Map()
 	completed := make(map[string]bool, len(driversCopy))
 	for i := int64(0); ; i++ {
 		done := true
 		for taskName, d := range driversCopy {
 			if !completed[taskName] {
-				complete, err := rw.checkApply(ctx, d, false, true)
+				complete, err := tm.checkApply(ctx, d, false, true)
 				if err != nil {
 					return err
 				}
@@ -474,16 +474,16 @@ func (rw *ReadWrite) onceConsecutive(ctx context.Context) error {
 				}
 			}
 		}
-		rw.logDepSize(50, i)
+		tm.logDepSize(50, i)
 		if done {
-			rw.logger.Info("all tasks completed once")
+			tm.logger.Info("all tasks completed once")
 			return nil
 		}
 
 		select {
-		case err := <-rw.watcher.WaitCh(ctx):
+		case err := <-tm.watcher.WaitCh(ctx):
 			if err != nil {
-				rw.logger.Error("error watching template dependencies", "error", err)
+				tm.logger.Error("error watching template dependencies", "error", err)
 				return err
 			}
 		case <-ctx.Done():
@@ -504,18 +504,18 @@ func (rw *ReadWrite) onceConsecutive(ctx context.Context) error {
 // Note on #2: no event is stored when a dynamic task renders but does not apply.
 // This can occur because driver.RenderTemplate() may need to be called multiple
 // times before a template is ready to be applied.
-func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, once bool) (bool, error) {
+func (tm *TasksManager) checkApply(ctx context.Context, d driver.Driver, retry, once bool) (bool, error) {
 	task := d.Task()
 	taskName := task.Name()
 	if !task.IsEnabled() {
 		if task.IsScheduled() {
 			// Schedule tasks are specifically triggered and logged at INFO.
 			// Accompanying disabled log should be at same level
-			rw.logger.Info("skipping disabled scheduled task", taskNameLogKey, taskName)
+			tm.logger.Info("skipping disabled scheduled task", taskNameLogKey, taskName)
 		} else {
 			// Dynamic tasks are all triggered together on any dependency
 			// change so logs can be noisy
-			rw.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
+			tm.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
 		}
 		return true, nil
 	}
@@ -533,9 +533,9 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	var storedErr error
 	storeEvent := func() {
 		ev.End(storedErr)
-		rw.logger.Trace("adding event", "event", ev.GoString())
-		if err := rw.state.AddTaskEvent(*ev); err != nil {
-			rw.logger.Error("error storing event", "event", ev.GoString())
+		tm.logger.Trace("adding event", "event", ev.GoString())
+		if err := tm.state.AddTaskEvent(*ev); err != nil {
+			tm.logger.Error("error storing event", "event", ev.GoString())
 		}
 	}
 	ev.Start()
@@ -557,7 +557,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 			// During once-mode though, a task may not have rendered because it
 			// may take multiple calls to fully render. check for once-mode to
 			// avoid extra logs/events while the template is finishing rendering.
-			rw.logger.Info("scheduled task triggered but had no changes",
+			tm.logger.Info("scheduled task triggered but had no changes",
 				taskNameLogKey, taskName)
 			defer storeEvent()
 		}
@@ -567,14 +567,14 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 	// rendering a template may take several cycles in order to completely fetch
 	// new data
 	if rendered {
-		rw.logger.Info("executing task", taskNameLogKey, taskName)
-		rw.drivers.SetActive(taskName)
-		defer rw.drivers.SetInactive(taskName)
+		tm.logger.Info("executing task", taskNameLogKey, taskName)
+		tm.drivers.SetActive(taskName)
+		defer tm.drivers.SetInactive(taskName)
 		defer storeEvent()
 
 		if retry {
 			desc := fmt.Sprintf("ApplyTask %s", taskName)
-			storedErr = rw.retry.Do(ctx, d.ApplyTask, desc)
+			storedErr = tm.retry.Do(ctx, d.ApplyTask, desc)
 		} else {
 			storedErr = d.ApplyTask(ctx)
 		}
@@ -583,31 +583,31 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 				taskName, storedErr)
 		}
 
-		rw.logger.Info("task completed", taskNameLogKey, taskName)
+		tm.logger.Info("task completed", taskNameLogKey, taskName)
 	}
 
 	return rendered, nil
 }
 
 // createTask creates and initializes a singular task from configuration
-func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfig) (driver.Driver, error) {
-	conf := rw.state.GetConfig()
+func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskConfig) (driver.Driver, error) {
+	conf := tm.state.GetConfig()
 	taskConfig.Finalize(conf.BufferPeriod, *conf.WorkingDir)
 	if err := taskConfig.Validate(); err != nil {
-		rw.logger.Trace("invalid config to create task", "error", err)
+		tm.logger.Trace("invalid config to create task", "error", err)
 		return nil, err
 	}
 
 	taskName := *taskConfig.Name
-	logger := rw.logger.With(taskNameLogKey, taskName)
+	logger := tm.logger.With(taskNameLogKey, taskName)
 
 	// Check if task exists, if it does, do not create again
-	if _, ok := rw.drivers.Get(taskName); ok {
+	if _, ok := tm.drivers.Get(taskName); ok {
 		logger.Trace("task already exists")
 		return nil, fmt.Errorf("task with name %s already exists", taskName)
 	}
 
-	d, err := rw.createNewTaskDriver(taskConfig)
+	d, err := tm.createNewTaskDriver(taskConfig)
 	if err != nil {
 		logger.Error("error creating new task driver", "error", err)
 		return nil, err
@@ -666,27 +666,27 @@ func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfi
 // runTask will set the driver to active, apply it, and store a run event.
 // This method will run the task as-is with current values of templates that
 // have already been resolved and rendered. This does not handle any templating.
-func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
+func (tm *TasksManager) runTask(ctx context.Context, d driver.Driver) error {
 	task := d.Task()
 	taskName := task.Name()
-	logger := rw.logger.With(taskNameLogKey, taskName)
+	logger := tm.logger.With(taskNameLogKey, taskName)
 	if !task.IsEnabled() {
 		logger.Trace("skipping disabled task")
 		return nil
 	}
 
-	if rw.drivers.IsMarkedForDeletion(taskName) {
+	if tm.drivers.IsMarkedForDeletion(taskName) {
 		logger.Trace("task is marked for deletion, skipping")
 		return nil
 	}
 
-	err := rw.waitForTaskInactive(ctx, taskName)
+	err := tm.waitForTaskInactive(ctx, taskName)
 	if err != nil {
 		return err
 	}
 
-	rw.drivers.SetActive(taskName)
-	defer rw.drivers.SetInactive(taskName)
+	tm.drivers.SetActive(taskName)
+	defer tm.drivers.SetInactive(taskName)
 
 	// Create new event for task run
 	ev, err := event.NewEvent(taskName, &event.Config{
@@ -710,13 +710,13 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 	// Store event if apply was successful and task will be created
 	ev.End(err)
 	logger.Trace("adding event", "event", ev.GoString())
-	if err := rw.state.AddTaskEvent(*ev); err != nil {
+	if err := tm.state.AddTaskEvent(*ev); err != nil {
 		// only log error since creating a task occurred successfully by now
 		logger.Error("error storing event", "event", ev.GoString(), "error", err)
 	}
 
-	if rw.taskNotify != nil {
-		rw.taskNotify <- taskName
+	if tm.taskNotify != nil {
+		tm.taskNotify <- taskName
 	}
 
 	return err
@@ -725,54 +725,54 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 // deleteTask deletes a task from the drivers map and deletes the task's events.
 // If a task is active and running, it will wait until the task has completed before
 // proceeding with the deletion.
-func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
-	logger := rw.logger.With(taskNameLogKey, name)
+func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
+	logger := tm.logger.With(taskNameLogKey, name)
 
 	// Check if task exists
-	driver, ok := rw.drivers.Get(name)
+	driver, ok := tm.drivers.Get(name)
 	if !ok {
 		logger.Debug("task does not exist")
 		return nil
 	}
 
-	err := rw.waitForTaskInactive(ctx, name)
+	err := tm.waitForTaskInactive(ctx, name)
 	if err != nil {
 		return err
 	}
 
 	if driver.Task().IsScheduled() {
 		// Notify the scheduled task to stop
-		stopCh := rw.scheduleStopChs[name]
+		stopCh := tm.scheduleStopChs[name]
 		if stopCh != nil {
 			stopCh <- struct{}{}
 		}
-		delete(rw.scheduleStopChs, name)
+		delete(tm.scheduleStopChs, name)
 	}
 
 	// Delete task from drivers and event store
-	err = rw.drivers.Delete(name)
+	err = tm.drivers.Delete(name)
 	if err != nil {
 		logger.Error("unable to delete task", "error", err)
 		return err
 	}
-	rw.state.DeleteTaskEvents(name)
+	tm.state.DeleteTaskEvents(name)
 	logger.Debug("task deleted")
 	return nil
 }
 
-func (rw *ReadWrite) waitForTaskInactive(ctx context.Context, name string) error {
+func (tm *TasksManager) waitForTaskInactive(ctx context.Context, name string) error {
 	// Check first if inactive, return early and don't log
-	if !rw.drivers.IsActive(name) {
+	if !tm.drivers.IsActive(name) {
 		return nil
 	}
 	// Check continuously in a loop until inactive
-	rw.logger.Debug("waiting for task to become inactive", taskNameLogKey, name)
+	tm.logger.Debug("waiting for task to become inactive", taskNameLogKey, name)
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			if !rw.drivers.IsActive(name) {
+			if !tm.drivers.IsActive(name) {
 				return nil
 			}
 			time.Sleep(100 * time.Microsecond)
@@ -782,16 +782,16 @@ func (rw *ReadWrite) waitForTaskInactive(ctx context.Context, name string) error
 
 // Run runs the controller in read-only mode by checking Consul catalog once for
 // latest and using the driver to plan network infrastructure changes
-func (ctrl *ReadOnly) Run(ctx context.Context) error {
-	ctrl.logger.Info("inspecting all tasks")
+func (tm *TasksManager) Run(ctx context.Context) error {
+	tm.logger.Info("inspecting all tasks")
 
-	driversCopy := ctrl.drivers.Map()
+	driversCopy := tm.drivers.Map()
 	completed := make(map[string]bool, len(driversCopy))
 	for i := int64(0); ; i++ {
 		done := true
 		for taskName, d := range driversCopy {
 			if !completed[taskName] {
-				complete, err := ctrl.checkInspect(ctx, d)
+				complete, err := tm.checkInspect(ctx, d)
 				if err != nil {
 					return err
 				}
@@ -801,16 +801,16 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 				}
 			}
 		}
-		ctrl.logDepSize(50, i)
+		tm.logDepSize(50, i)
 		if done {
-			ctrl.logger.Info("completed task inspections")
+			tm.logger.Info("completed task inspections")
 			return nil
 		}
 
 		select {
-		case err := <-ctrl.watcher.WaitCh(ctx):
+		case err := <-tm.watcher.WaitCh(ctx):
 			if err != nil {
-				ctrl.logger.Error("error watching template dependencies", "error", err)
+				tm.logger.Error("error watching template dependencies", "error", err)
 				return err
 			}
 		case <-ctx.Done():
@@ -819,11 +819,11 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 	}
 }
 
-func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, error) {
+func (tm *TasksManager) checkInspect(ctx context.Context, d driver.Driver) (bool, error) {
 	task := d.Task()
 	taskName := task.Name()
 
-	ctrl.logger.Trace("checking dependencies changes for task", taskNameLogKey, taskName)
+	tm.logger.Trace("checking dependencies changes for task", taskNameLogKey, taskName)
 
 	rendered, err := d.RenderTemplate(ctx)
 	if err != nil {
@@ -834,21 +834,21 @@ func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, 
 	// rendering a template may take several cycles in order to completely fetch
 	// new data
 	if rendered {
-		ctrl.logger.Trace("template for task rendered", taskNameLogKey, taskName)
+		tm.logger.Trace("template for task rendered", taskNameLogKey, taskName)
 
-		ctrl.logger.Info("inspecting task", taskNameLogKey, taskName)
+		tm.logger.Info("inspecting task", taskNameLogKey, taskName)
 		p, err := d.InspectTask(ctx)
 		if err != nil {
 			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
 		}
 
 		if p.URL != "" {
-			ctrl.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan, "url", p.URL)
+			tm.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan, "url", p.URL)
 		} else {
-			ctrl.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan)
+			tm.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan)
 		}
 
-		ctrl.logger.Info("inspected task", taskNameLogKey, taskName)
+		tm.logger.Info("inspected task", taskNameLogKey, taskName)
 	}
 
 	return rendered, nil
