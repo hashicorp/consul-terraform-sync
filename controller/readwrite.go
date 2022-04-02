@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 )
 
@@ -37,7 +38,43 @@ func (rw *ReadWrite) Init(ctx context.Context) error {
 }
 
 func (rw *ReadWrite) Run(ctx context.Context) error {
-	return rw.tasksManager.Run(ctx)
+	// Serve API
+	conf := rw.tasksManager.state.GetConfig()
+	s, err := api.NewAPI(api.Config{
+		Controller: rw.tasksManager,
+		Port:       config.IntVal(conf.Port),
+		TLS:        conf.TLS,
+	})
+	if err != nil {
+		return err
+	}
+
+	exitBufLen := 2 // api & run tasks exit
+	exitCh := make(chan error, exitBufLen)
+	go func() {
+		err := s.Serve(ctx)
+		exitCh <- err
+	}()
+
+	// Run tasks
+	go func() {
+		err := rw.tasksManager.Run(ctx)
+		exitCh <- err
+	}()
+
+	counter := 0
+	for {
+		err := <-exitCh
+		counter++
+		if err != context.Canceled {
+			// Exit if error is returned
+			return err
+		}
+		if counter >= exitBufLen {
+			// Wait for all contexts to cancel
+			return nil
+		}
+	}
 }
 
 func (rw *ReadWrite) Once(ctx context.Context) error {

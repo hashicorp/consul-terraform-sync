@@ -34,7 +34,7 @@ const (
 	logSystemName = "cli"
 )
 
-var _ api.Server = (*controller.ReadWrite)(nil)
+var _ api.Server = (*controller.TasksManager)(nil)
 
 // CLI is the main entry point.
 type CLI struct {
