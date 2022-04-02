@@ -43,8 +43,11 @@ func NewTasksManager(conf *config.Config) (*TasksManager, error) {
 	}
 
 	return &TasksManager{
-		baseController: baseCtrl,
-		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		baseController:  baseCtrl,
+		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
+		deleteCh:        make(chan string, 10),        // arbitrarily chosen size
+		scheduleStopChs: make(map[string](chan struct{})),
 	}, nil
 }
 
