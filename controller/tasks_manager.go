@@ -889,3 +889,11 @@ func (tm *TasksManager) checkInspect(ctx context.Context, d driver.Driver) (bool
 
 	return rendered, nil
 }
+
+// EnableTestMode is a helper for testing which tasks were triggered and
+// executed. Callers of this method must consume from TaskNotify channel to
+// prevent the buffered channel from filling and causing a dead lock.
+func (tm *TasksManager) EnableTestMode() <-chan string {
+	tm.taskNotify = make(chan string, tm.drivers.Len())
+	return tm.taskNotify
+}
