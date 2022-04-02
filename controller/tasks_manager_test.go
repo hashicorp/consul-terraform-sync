@@ -956,7 +956,7 @@ func TestTasksManager_runScheduledTask(t *testing.T) {
 	})
 }
 
-func TestTasksManagerRun_context_cancel(t *testing.T) {
+func TestTasksManager_Run_context_cancel(t *testing.T) {
 	w := new(mocks.Watcher)
 	w.On("Watch", mock.Anything, mock.Anything).Return(nil).
 		On("Size").Return(5).
@@ -1503,7 +1503,7 @@ func newTestController() TasksManager {
 	}
 }
 
-func TestTasksManagerRun(t *testing.T) {
+func TestTasksManager_InspectOnce(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -1557,7 +1557,7 @@ func TestTasksManagerRun(t *testing.T) {
 			err := tm.drivers.Add("task", d)
 			require.NoError(t, err)
 
-			err = tm.Run(context.Background())
+			err = tm.InspectOnce(context.Background())
 			if tc.expectError {
 				if assert.Error(t, err) {
 					assert.Contains(t, err.Error(), tc.name)
@@ -1569,7 +1569,7 @@ func TestTasksManagerRun(t *testing.T) {
 	}
 }
 
-func TestTasksManagerRun_context_cancel(t *testing.T) {
+func TestTasksManager_InspectOnce_context_cancel(t *testing.T) {
 	r := new(mocks.Resolver)
 	r.On("Run", mock.Anything, mock.Anything).
 		Return(hcat.ResolveEvent{Complete: false}, nil)
@@ -1597,7 +1597,7 @@ func TestTasksManagerRun_context_cancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		err := tm.Run(ctx)
+		err := tm.InspectOnce(ctx)
 		if err != nil {
 			errCh <- err
 		}
