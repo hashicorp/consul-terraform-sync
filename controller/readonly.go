@@ -16,7 +16,7 @@ var (
 
 // ReadOnly is the controller to run in read-only mode
 type ReadOnly struct {
-	*baseController
+	tasksManager *TasksManager
 }
 
 // NewReadOnly configures and initializes a new ReadOnly controller

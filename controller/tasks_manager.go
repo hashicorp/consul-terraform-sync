@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/hashicorp/cronexpr"
 	"github.com/pkg/errors"
@@ -15,6 +16,23 @@ import (
 
 // TasksManager manages tasks
 type TasksManager struct {
+	*baseController
+
+	retry retry.Retry
+
+	watcherCh chan string
+
+	// scheduleStartCh is used to coordinate scheduled tasks created via the API
+	scheduleStartCh chan driver.Driver
+	// scheduleStopChs is a map of channels used to stop scheduled tasks
+	scheduleStopChs map[string](chan struct{})
+
+	// deleteCh is used to coordinate task deletion via the API
+	deleteCh chan string
+
+	// taskNotify is only initialized if EnableTestMode() is used. It provides
+	// tests insight into which tasks were triggered and had completed
+	taskNotify chan string
 }
 
 func (tm *TasksManager) Config() config.Config {

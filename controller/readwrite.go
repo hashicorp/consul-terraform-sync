@@ -18,22 +18,7 @@ var (
 
 // ReadWrite is the controller to run in read-write mode
 type ReadWrite struct {
-	*baseController
-	retry retry.Retry
-
-	watcherCh chan string
-
-	// scheduleStartCh is used to coordinate scheduled tasks created via the API
-	scheduleStartCh chan driver.Driver
-	// scheduleStopChs is a map of channels used to stop scheduled tasks
-	scheduleStopChs map[string](chan struct{})
-
-	// deleteCh is used to coordinate task deletion via the API
-	deleteCh chan string
-
-	// taskNotify is only initialized if EnableTestMode() is used. It provides
-	// tests insight into which tasks were triggered and had completed
-	taskNotify chan string
+	tasksManager *TasksManager
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
