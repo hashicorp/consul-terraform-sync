@@ -11,6 +11,10 @@ import (
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
+// TasksManager manages tasks
+type TasksManager struct {
+}
+
 func (rw *ReadWrite) Config() config.Config {
 	return rw.state.GetConfig()
 }
