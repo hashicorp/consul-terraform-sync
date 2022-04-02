@@ -52,6 +52,5 @@ func (rw *ReadWrite) Stop() {
 // executed. Callers of this method must consume from TaskNotify channel to
 // prevent the buffered channel from filling and causing a dead lock.
 func (rw *ReadWrite) EnableTestMode() <-chan string {
-	rw.taskNotify = make(chan string, rw.drivers.Len())
-	return rw.taskNotify
+	return rw.tasksManager.EnableTestMode()
 }
