@@ -26,15 +26,25 @@ func NewReadOnly(conf *config.Config) (*ReadOnly, error) {
 		tfConfig.Log = config.Bool(true)
 	}
 
-	baseCtrl, err := newBaseController(conf)
+	tm, err := NewTasksManager(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ReadOnly{baseController: baseCtrl}, nil
+	return &ReadOnly{
+		tasksManager: tm,
+	}, nil
 }
 
 // Init initializes the controller before it can be run
-func (ctrl *ReadOnly) Init(ctx context.Context) error {
-	return ctrl.init(ctx)
+func (ro *ReadOnly) Init(ctx context.Context) error {
+	return ro.tasksManager.Init(ctx)
+}
+
+func (ro *ReadOnly) Run(ctx context.Context) error {
+	return ro.tasksManager.InspectOnce(ctx)
+}
+
+func (ro *ReadOnly) Stop() {
+	ro.tasksManager.Stop()
 }

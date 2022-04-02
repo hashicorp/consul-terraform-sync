@@ -35,6 +35,24 @@ type TasksManager struct {
 	taskNotify chan string
 }
 
+// NewTasksManager configures a new tasks manager
+func NewTasksManager(conf *config.Config) (*TasksManager, error) {
+	baseCtrl, err := newBaseController(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TasksManager{
+		baseController: baseCtrl,
+		retry:          retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+	}, nil
+}
+
+// Init initializes a tasks manager
+func (tm *TasksManager) Init(ctx context.Context) error {
+	return tm.init(ctx)
+}
+
 func (tm *TasksManager) Config() config.Config {
 	return tm.state.GetConfig()
 }
@@ -467,7 +485,7 @@ func (tm *TasksManager) runScheduledTask(ctx context.Context, d driver.Driver, s
 
 // Once runs the controller in read-write mode making sure each template has
 // been fully rendered and the task run, then it returns.
-func (tm *TasksManager) Once(ctx context.Context) error {
+func (tm *TasksManager) RunOnce(ctx context.Context) error {
 	tm.logger.Info("executing all tasks once through")
 
 	// run consecutively to keep logs in order
@@ -798,9 +816,9 @@ func (tm *TasksManager) waitForTaskInactive(ctx context.Context, name string) er
 	}
 }
 
-// Run runs the controller in read-only mode by checking Consul catalog once for
+// InspectOnce runs the controller in read-only mode by checking Consul catalog once for
 // latest and using the driver to plan network infrastructure changes
-func (tm *TasksManager) Run(ctx context.Context) error {
+func (tm *TasksManager) InspectOnce(ctx context.Context) error {
 	tm.logger.Info("inspecting all tasks")
 
 	driversCopy := tm.drivers.Map()
