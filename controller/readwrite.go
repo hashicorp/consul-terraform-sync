@@ -253,6 +253,12 @@ func (rw *ReadWrite) runScheduledTask(ctx context.Context, d driver.Driver, stop
 func (rw *ReadWrite) Once(ctx context.Context) error {
 	rw.logger.Info("executing all tasks once through")
 
+	// run consecutively to keep logs in order
+	return rw.onceConsecutive(ctx)
+}
+
+// onceConsecutive runs all tasks consecutively until each task has completed once
+func (rw *ReadWrite) onceConsecutive(ctx context.Context) error {
 	driversCopy := rw.drivers.Map()
 	completed := make(map[string]bool, len(driversCopy))
 	for i := int64(0); ; i++ {
