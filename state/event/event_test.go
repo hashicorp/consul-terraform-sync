@@ -29,7 +29,7 @@ func ExampleEvent() {
 	for _, ex := range examples {
 		fmt.Println("\nExample:", ex.name)
 
-		func() (string, error) {
+		_, _ = func() (string, error) {
 			// setup capturing event
 			event, err := NewEvent(ex.taskName, nil)
 			if err != nil {
@@ -65,6 +65,13 @@ func ExampleEvent() {
 	// Task Name: task_success
 	// Success: true
 	// Error: <nil>
+}
+
+func businessLogic(expectError bool) (string, error) {
+	if expectError {
+		return "", errors.New("error")
+	}
+	return "mock", nil
 }
 
 func TestNewEvent(t *testing.T) {
@@ -178,13 +185,6 @@ func TestEvent_End(t *testing.T) {
 			assert.Equal(t, firstEndTime, event.EndTime)
 		})
 	}
-}
-
-func businessLogic(expectError bool) (string, error) {
-	if expectError {
-		return "", errors.New("error")
-	}
-	return "mock", nil
 }
 
 func TestEvent_GoString(t *testing.T) {

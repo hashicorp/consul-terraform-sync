@@ -63,8 +63,8 @@ func (s *eventStorage) Read(taskName string) map[string][]event.Event {
 	ret := make(map[string][]event.Event)
 	for k, v := range data {
 		events := make([]event.Event, len(v))
-		for ix, event := range v {
-			events[ix] = *event
+		for ix, e := range v {
+			events[ix] = *e
 		}
 		ret[k] = events
 	}
@@ -73,8 +73,8 @@ func (s *eventStorage) Read(taskName string) map[string][]event.Event {
 
 // Delete removes all events for a task name.
 func (s *eventStorage) Delete(taskName string) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if taskName != "" {
 		delete(s.events, taskName)

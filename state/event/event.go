@@ -52,13 +52,13 @@ func NewEvent(taskName string, config *Config) (*Event, error) {
 	if taskName == "" {
 		return nil, errors.New("error creating new event: taskname cannot be empty")
 	}
-	uuid, err := uuid.GenerateUUID()
+	id, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Event{
-		ID:       uuid,
+		ID:       id,
 		TaskName: taskName,
 		Config:   config,
 	}, nil
@@ -82,7 +82,6 @@ func (e *Event) End(err error) {
 	}
 
 	e.EndTime = time.Now()
-
 	if err == nil {
 		e.Success = true
 		return
