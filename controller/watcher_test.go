@@ -3,6 +3,7 @@ package controller
 import (
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -34,8 +35,8 @@ func TestWatchRetry_retryConsul(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			wr := watcherRetry{
 				maxRetries: tc.maxRetry,
-				waitFunc: func(attempt int, random *rand.Rand) int {
-					return 1
+				waitFunc: func(attempt int, random *rand.Rand) time.Duration {
+					return 1 * time.Nanosecond
 				},
 			}
 

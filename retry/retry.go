@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	taskSystemName  = "task"
-	maxWaitTimeInNs = 15 * float64(time.Minute) // 15 minutes
+	taskSystemName = "task"
+	maxWaitTime    = 15 * time.Minute // 15 minutes
 )
 
 // Retry handles executing and retrying a function
@@ -45,8 +45,8 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 	}
 
 	var attempt int
-	wait := r.waitTimeInNs(attempt)
-	interval := time.NewTicker(time.Duration(wait))
+	wait := r.waitTime(attempt)
+	interval := time.NewTicker(wait)
 	defer interval.Stop()
 
 	for {
@@ -72,8 +72,8 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 				errs = errors.Wrap(errs, err.Error())
 			}
 
-			wait := r.waitTimeInNs(attempt)
-			interval = time.NewTicker(time.Duration(wait))
+			wait := r.waitTime(attempt)
+			interval = time.NewTicker(wait)
 		}
 
 		if r.maxRetry >= 0 && attempt >= r.maxRetry {
@@ -82,28 +82,34 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 	}
 }
 
-func (r Retry) waitTimeInNs(attempt int) int {
+func (r Retry) waitTime(attempt int) time.Duration {
 	if r.testMode {
-		return 1
+		return 1 * time.Nanosecond
 	}
-	return WaitTimeInNs(attempt, r.random)
+	return WaitTime(attempt, r.random)
 }
 
-// WaitTimeInNs calculates the wait time in nanoseconds based off the attempt number based off
-// exponential backoff with a random delay. It caps at the constant maxWaitTimeInNs.
-func WaitTimeInNs(attempt int, random *rand.Rand) int {
+// WaitTime calculates the wait time based off the attempt number based off
+// exponential backoff with a random delay. It caps at the constant maxWaitTime.
+func WaitTime(attempt int, random *rand.Rand) time.Duration {
 	a := float64(attempt)
-	baseTimeSeconds := math.Exp2(a)
-	nextTimeSeconds := math.Exp2(a + 1)
-	delayRange := (nextTimeSeconds - baseTimeSeconds) / 2
-	delay := random.Float64() * delayRange
-	total := (baseTimeSeconds + delay) * float64(time.Second)
 
-	if total > maxWaitTimeInNs {
-		return int(maxWaitTimeInNs)
+	// Check if max attempts reached, assumes no jitter
+	maxBaseTimeWithDelayInS := float64(maxWaitTime) / float64(time.Second)
+	maxA := math.Log2(maxBaseTimeWithDelayInS)
+	if a >= maxA {
+		return maxWaitTime
 	}
 
-	return int(total)
+	// Calculate the wait time
+	baseTimeSeconds := math.Exp2(a)
+	nextTimeSeconds := math.Exp2(a + 1)
+	delayRangeInSeconds := (nextTimeSeconds - baseTimeSeconds) / 2
+	delayInSeconds := random.Float64() * delayRangeInSeconds
+
+	waitTimeInSeconds := baseTimeSeconds + delayInSeconds
+
+	return time.Duration(waitTimeInSeconds * float64(time.Second))
 }
 
 // NewTestRetry is the test version, returns Retry in test mode (nanosecond retry delay).
