@@ -233,10 +233,12 @@ func assertEqualConfig(t *testing.T, exp, act *Config) {
 		assert.Nil(t, act)
 		return
 	}
+
 	if act == nil {
 		assert.Nil(t, exp)
 		return
 	}
+
 	assert.Equal(t, exp.Providers, act.Providers)
 	assert.Equal(t, exp.Services, act.Services)
 	assert.Equal(t, exp.Source, act.Source)
