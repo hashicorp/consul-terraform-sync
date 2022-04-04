@@ -392,7 +392,8 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 
 // createTask creates and initializes a singular task from configuration
 func (rw *ReadWrite) createTask(ctx context.Context, taskConfig config.TaskConfig) (driver.Driver, error) {
-	taskConfig.Finalize(rw.conf.BufferPeriod, *rw.conf.WorkingDir)
+	conf := rw.state.GetConfig()
+	taskConfig.Finalize(conf.BufferPeriod, *conf.WorkingDir)
 	if err := taskConfig.Validate(); err != nil {
 		rw.logger.Trace("invalid config to create task", "error", err)
 		return nil, err

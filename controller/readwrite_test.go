@@ -194,12 +194,12 @@ func TestReadWrite_CheckApply_Store(t *testing.T) {
 	})
 }
 
-func TestOnce(t *testing.T) {
+func Test_once(t *testing.T) {
 	rw := &ReadWrite{}
 
 	testCases := []struct {
 		name     string
-		once     func(context.Context) error
+		onceFxn  func(context.Context) error
 		numTasks int
 	}{
 		{
@@ -222,8 +222,10 @@ func TestOnce(t *testing.T) {
 			w.On("WaitCh", mock.Anything).Return(errChRc)
 			w.On("Size").Return(tc.numTasks)
 
+			// Set up read-write controller with mocks
+			conf := multipleTaskConfig(tc.numTasks)
 			rw.baseController = &baseController{
-				state:   state.NewInMemoryStore(nil),
+				state:   state.NewInMemoryStore(conf),
 				watcher: w,
 				drivers: driver.NewDrivers(),
 				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
@@ -237,19 +239,19 @@ func TestOnce(t *testing.T) {
 					d.On("ApplyTask", mock.Anything).Return(nil).Once()
 					return d, nil
 				},
-				conf:   multipleTaskConfig(tc.numTasks),
-				logger: logging.NewNullLogger(),
+				initConf: conf,
+				logger:   logging.NewNullLogger(),
 			}
 
 			ctx := context.Background()
 			err := rw.Init(ctx)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// testing really starts here...
 			done := make(chan error)
 			// running in goroutine so I can timeout
 			go func() {
-				done <- tc.once(ctx)
+				done <- tc.onceFxn(ctx)
 			}()
 			select {
 			case err := <-done:
@@ -265,7 +267,7 @@ func TestOnce(t *testing.T) {
 	}
 }
 
-func TestReadWrite_Once_error(t *testing.T) {
+func TestReadWrite_once_error(t *testing.T) {
 	// Test once mode error handling when a driver returns an error
 	numTasks := 5
 	w := new(mocks.Watcher)
@@ -275,8 +277,8 @@ func TestReadWrite_Once_error(t *testing.T) {
 	rw := &ReadWrite{}
 
 	testCases := []struct {
-		name string
-		once func(context.Context) error
+		name    string
+		onceFxn func(context.Context) error
 	}{
 		{
 			"onceConsecutive",
@@ -287,8 +289,11 @@ func TestReadWrite_Once_error(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			expectedErr := fmt.Errorf("test error")
+
+			// Set up read-write controller with mocks
+			conf := multipleTaskConfig(numTasks)
 			rw.baseController = &baseController{
-				state:   state.NewInMemoryStore(nil),
+				state:   state.NewInMemoryStore(conf),
 				watcher: w,
 				drivers: driver.NewDrivers(),
 				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
@@ -306,19 +311,19 @@ func TestReadWrite_Once_error(t *testing.T) {
 					}
 					return d, nil
 				},
-				conf:   multipleTaskConfig(numTasks),
-				logger: logging.NewNullLogger(),
+				initConf: conf,
+				logger:   logging.NewNullLogger(),
 			}
 
 			ctx := context.Background()
 			err := rw.Init(ctx)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// testing really starts here...
 			done := make(chan error)
 			// running in goroutine so I can timeout
 			go func() {
-				done <- tc.once(ctx)
+				done <- tc.onceFxn(ctx)
 			}()
 			select {
 			case err := <-done:
@@ -575,8 +580,9 @@ func TestReadWriteRun_context_cancel(t *testing.T) {
 	}
 }
 
-func TestReadWrite_OnceAndRun(t *testing.T) {
-	// Tests Run behaviors as expected with triggers after Once completes
+func TestReadWrite_once_then_Run(t *testing.T) {
+	// Tests Run behaviors as expected with triggers after once completes
+
 	d := new(mocksD.Driver)
 	d.On("Task").Return(enabledTestTask(t, "task_a")).
 		On("TemplateIDs").Return([]string{"tmpl_a"}).
@@ -595,8 +601,8 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 	ctrl.drivers.Add("task_a", d)
 
 	testCases := []struct {
-		name string
-		once func(context.Context) error
+		name    string
+		onceFxn func(context.Context) error
 	}{
 		{
 			"onceConsecutive",
@@ -616,7 +622,7 @@ func TestReadWrite_OnceAndRun(t *testing.T) {
 			ctrl.watcher = w
 
 			go func() {
-				err := tc.once(ctx)
+				err := tc.onceFxn(ctx)
 				if err != nil {
 					errCh <- err
 					return
