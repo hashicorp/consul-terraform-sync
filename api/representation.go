@@ -195,6 +195,13 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 
 	// Enterprise
 	tc.TFVersion = tr.Task.TerraformVersion
+	if tr.Task.TerraformCloudWorkspace != nil {
+		tc.TFCWorkspace = &config.TerraformCloudWorkspaceConfig{
+			ExecutionMode: tr.Task.TerraformCloudWorkspace.ExecutionMode,
+			AgentPoolID:   tr.Task.TerraformCloudWorkspace.AgentPoolId,
+			AgentPoolName: tr.Task.TerraformCloudWorkspace.AgentPoolName,
+		}
+	}
 
 	return tc, nil
 }
@@ -374,7 +381,16 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	}
 
 	// Enterprise
-	task.TerraformVersion = tc.TFVersion
+	if tc.TFVersion != nil && *tc.TFVersion != "" {
+		task.TerraformVersion = tc.TFVersion
+	}
+	if tc.TFCWorkspace != nil && !tc.TFCWorkspace.IsEmpty() {
+		task.TerraformCloudWorkspace = &oapigen.TerraformCloudWorkspace{
+			ExecutionMode: tc.TFCWorkspace.ExecutionMode,
+			AgentPoolId:   tc.TFCWorkspace.AgentPoolID,
+			AgentPoolName: tc.TFCWorkspace.AgentPoolName,
+		}
+	}
 
 	return task
 }
