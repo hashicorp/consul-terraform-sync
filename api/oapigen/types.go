@@ -151,6 +151,9 @@ type Task struct {
 	// The list of provider names that the task's module uses.
 	Providers *[]string `json:"providers,omitempty"`
 
+	// Enterprise only. Configuration values to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver.
+	TerraformCloudWorkspace *TerraformCloudWorkspace `json:"terraform_cloud_workspace,omitempty"`
+
 	// Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest version if not set.
 	TerraformVersion *string `json:"terraform_version,omitempty"`
 
@@ -184,6 +187,18 @@ type TaskResponse struct {
 type TasksResponse struct {
 	RequestId RequestID `json:"request_id"`
 	Tasks     *[]Task   `json:"tasks,omitempty"`
+}
+
+// Enterprise only. Configuration values to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver.
+type TerraformCloudWorkspace struct {
+	// Enterprise only. Agent pool ID to set for the Terraform Cloud workspace associated with the task when the execution mode is "agent". Either agent_pool_id or agent_pool_name is required if execution mode is "agent". If both are set, then agent_pool_id takes precedence.
+	AgentPoolId *string `json:"agent_pool_id,omitempty"`
+
+	// Enterprise only. Name of agent pool to set for the Terraform Cloud workspace associated with the task when the execution mode is "agent". Either agent_pool_id or agent_pool_name is required if execution mode is "agent". If both are set, then agent_pool_id takes precedence.
+	AgentPoolName *string `json:"agent_pool_name,omitempty"`
+
+	// Enterprise only. Execution mode to set for the Terraform Cloud workspace associated with the task. Can only be "remote" or "agent". Defaults to "remote".
+	ExecutionMode *string `json:"execution_mode,omitempty"`
 }
 
 // The map of variables that are provided to the task's module.
