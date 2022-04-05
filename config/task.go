@@ -371,7 +371,7 @@ func (c *TaskConfig) Validate() error {
 			"version within the Terraform driver block", *c.Name)
 	}
 
-	if c.TFCWorkspace != nil && !c.TFCWorkspace.isEmpty() {
+	if c.TFCWorkspace != nil && !c.TFCWorkspace.IsEmpty() {
 		return fmt.Errorf("unsupported configuration 'terraform_cloud_workspace' for "+
 			"task %q. This option is available for Consul-Terraform-Sync Enterprise "+
 			"when using the Terraform Cloud driver", *c.Name)

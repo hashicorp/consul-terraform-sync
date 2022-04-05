@@ -24,7 +24,7 @@ func DefaultTerraformCloudWorkspaceConfig() *TerraformCloudWorkspaceConfig {
 	}
 }
 
-func (c *TerraformCloudWorkspaceConfig) isEmpty() bool {
+func (c *TerraformCloudWorkspaceConfig) IsEmpty() bool {
 	return (*c == TerraformCloudWorkspaceConfig{}) ||
 		(reflect.DeepEqual(c, &TerraformCloudWorkspaceConfig{
 			ExecutionMode: String(""),
@@ -99,7 +99,7 @@ func (c *TerraformCloudWorkspaceConfig) Finalize() {
 
 // Validate validates the values of the configuration struct
 func (c *TerraformCloudWorkspaceConfig) Validate() error {
-	if c == nil || c.isEmpty() { // config not required, return early
+	if c == nil || c.IsEmpty() { // config not required, return early
 		return nil
 	}
 

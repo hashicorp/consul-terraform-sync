@@ -359,7 +359,7 @@ func TestTerraformCloudWorkspaceConfig_isEmpty(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := tc.c.isEmpty()
+			r := tc.c.IsEmpty()
 			assert.Equal(t, tc.expected, r)
 		})
 	}
