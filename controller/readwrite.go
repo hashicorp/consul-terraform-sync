@@ -72,7 +72,7 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		}
 		if counter >= exitBufLen {
 			// Wait for all contexts to cancel
-			return nil
+			return ctx.Err()
 		}
 	}
 }
