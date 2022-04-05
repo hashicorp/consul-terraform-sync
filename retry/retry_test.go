@@ -46,33 +46,39 @@ func TestWithRetry(t *testing.T) {
 
 	cases := []struct {
 		name      string
-		retry     uint
+		maxRetry  int
 		successOn int
 		expected  error
 	}{
 		{
-			"happy path: retry once, success on retry (2)",
+			"happy path: try twice, success on retry (1)",
+			2, // max retries is 2, but will succeed on first retry
 			1,
-			2,
+			nil,
+		},
+		{
+			"happy path: infinite retries, success on retry (3)",
+			-1, // max retries is infinite, but will succeed on retry 3
+			3,
 			nil,
 		},
 		{
 			"no success on retries: retry once",
 			1,
 			100,
-			errors.New("retry attempt #1 failed 'error on 2'"),
+			errors.New("retry attempt #1 failed 'error on 1'"),
 		},
 		{
-			"happy path: no retry",
+			"happy path: no retries",
 			0,
-			1,
+			0,
 			nil,
 		},
 		{
-			"no retry, no success",
+			"no retries, no success",
 			0,
 			100,
-			errors.New("error on 1"),
+			errors.New("error on 0"),
 		},
 	}
 
@@ -82,14 +88,15 @@ func TestWithRetry(t *testing.T) {
 			// set up fake function
 			count := 0
 			fxn := func(context.Context) error {
-				count++
 				if count == tc.successOn {
 					return nil
 				}
-				return fmt.Errorf("error on %d", count)
+				err := fmt.Errorf("error on %d", count)
+				count++
+				return err
 			}
 
-			r := NewRetry(tc.retry, 1)
+			r := NewTestRetry(tc.maxRetry)
 			err := r.Do(ctx, fxn, "test fxn")
 			if tc.expected == nil {
 				assert.NoError(t, err)
@@ -140,27 +147,45 @@ func TestWaitTime(t *testing.T) {
 
 	cases := []struct {
 		name      string
-		attempt   uint
-		minReturn float64
-		maxReturn float64
+		attempt   int
+		minReturn time.Duration
+		maxReturn time.Duration
 	}{
 		{
 			"first attempt",
 			0,
-			1,
-			1.5,
+			1 * time.Second,
+			time.Duration(1.5 * float64(time.Second)),
 		},
 		{
 			"second attempt",
 			1,
-			2,
-			3,
+			2 * time.Second,
+			3 * time.Second,
 		},
 		{
 			"third attempt",
 			2,
-			4,
-			6,
+			4 * time.Second,
+			6 * time.Second,
+		},
+		{
+			"maximum attempt before max wait time",
+			9,
+			8 * time.Minute,
+			13 * time.Minute,
+		},
+		{
+			"minimum attempt max wait time",
+			10,
+			maxWaitTime,
+			maxWaitTime,
+		},
+		{
+			"high number attempt max wait time",
+			20000000000,
+			maxWaitTime,
+			maxWaitTime,
 		},
 	}
 
@@ -169,9 +194,8 @@ func TestWaitTime(t *testing.T) {
 			random := rand.New(rand.NewSource(time.Now().UnixNano()))
 			a := WaitTime(tc.attempt, random)
 
-			actual := float64(a) / float64(time.Second)
-			assert.GreaterOrEqual(t, actual, tc.minReturn)
-			assert.LessOrEqual(t, actual, tc.maxReturn)
+			assert.GreaterOrEqual(t, a, tc.minReturn)
+			assert.LessOrEqual(t, a, tc.maxReturn)
 		})
 	}
 }

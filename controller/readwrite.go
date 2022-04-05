@@ -16,7 +16,7 @@ var (
 	_ Controller = (*ReadWrite)(nil)
 
 	// Number of times to retry attempts
-	defaultRetry uint = 2
+	defaultRetry = 2
 )
 
 // ReadWrite is the controller to run in read-write mode
@@ -530,7 +530,7 @@ func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
 	logger := rw.logger.With(taskNameLogKey, name)
 
 	// Check if task exists
-	driver, ok := rw.drivers.Get(name)
+	d, ok := rw.drivers.Get(name)
 	if !ok {
 		logger.Debug("task does not exist")
 		return nil
@@ -541,7 +541,7 @@ func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
 		return err
 	}
 
-	if driver.Task().IsScheduled() {
+	if d.Task().IsScheduled() {
 		// Notify the scheduled task to stop
 		stopCh := rw.scheduleStopChs[name]
 		if stopCh != nil {
