@@ -25,18 +25,20 @@ func Test_eventStorage_Add(t *testing.T) {
 			true,
 		},
 	}
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			storage := newEventStorage()
 			err := storage.Add(tc.event)
+
 			if tc.expectErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 				events := storage.events[tc.event.TaskName]
-				assert.Equal(t, 1, len(events))
-				event := events[0]
-				assert.Equal(t, tc.event, *event)
+				assert.Len(t, events, 1)
+				e := events[0]
+				assert.Equal(t, tc.event, *e)
 			}
 		})
 	}
@@ -48,16 +50,16 @@ func Test_eventStorage_Add(t *testing.T) {
 		// fill storage
 		err := storage.Add(event.Event{ID: "1", TaskName: "task"})
 		require.NoError(t, err)
-		assert.Equal(t, 1, len(storage.events["task"]))
+		assert.Len(t, storage.events["task"], 1)
 
 		err = storage.Add(event.Event{ID: "2", TaskName: "task"})
 		require.NoError(t, err)
-		assert.Equal(t, 2, len(storage.events["task"]))
+		assert.Len(t, storage.events["task"], 2)
 
 		// check storage did not grow beyond limit
 		err = storage.Add(event.Event{ID: "3", TaskName: "task"})
 		require.NoError(t, err)
-		assert.Equal(t, 2, len(storage.events["task"]))
+		assert.Len(t, storage.events["task"], 2)
 
 		// confirm events in storage
 		event3 := storage.events["task"][0]
@@ -124,8 +126,8 @@ func Test_eventStorage_Read(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			storage := newEventStorage()
-			for _, event := range tc.values {
-				err := storage.Add(event)
+			for _, e := range tc.values {
+				err := storage.Add(e)
 				require.NoError(t, err)
 			}
 
@@ -165,12 +167,12 @@ func Test_eventStorage_Delete(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			storage := newEventStorage()
-			for _, event := range tc.values {
-				err := storage.Add(event)
+			for _, e := range tc.values {
+				err := storage.Add(e)
 				require.NoError(t, err)
 			}
-			storage.Delete(tc.input)
 
+			storage.Delete(tc.input)
 			after := storage.Read("")
 			assert.Equal(t, tc.expected, after)
 		})

@@ -95,7 +95,8 @@ func Test_InMemoryStore_GetTaskEvents(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			events := newEventStorage()
-			events.Add(event.Event{TaskName: "existing_task"})
+			err := events.Add(event.Event{TaskName: "existing_task"})
+			assert.NoError(t, err)
 
 			store := InMemoryStore{
 				events: events,
@@ -123,7 +124,8 @@ func Test_InMemoryStore_DeleteTaskEvents(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			events := newEventStorage()
-			events.Add(event.Event{TaskName: "existing_task"})
+			err := events.Add(event.Event{TaskName: "existing_task"})
+			assert.NoError(t, err)
 
 			store := InMemoryStore{
 				events: events,
@@ -154,13 +156,16 @@ func Test_InMemoryStore_AddTaskEvent(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			events := newEventStorage()
-			events.Add(event.Event{TaskName: "existing_task"})
+			err := events.Add(event.Event{TaskName: "existing_task"})
+			assert.NoError(t, err)
 
 			store := InMemoryStore{
 				events: events,
 			}
 
-			store.AddTaskEvent(tc.event)
+			err = store.AddTaskEvent(tc.event)
+			assert.NoError(t, err)
+
 			// confirm event is added
 			taskName := tc.event.TaskName
 			actual := events.Read(taskName)
@@ -171,6 +176,7 @@ func Test_InMemoryStore_AddTaskEvent(t *testing.T) {
 					exists = true
 				}
 			}
+
 			assert.True(t, exists)
 		})
 	}
