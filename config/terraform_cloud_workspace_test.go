@@ -25,9 +25,10 @@ func TestTerraformCloudWorkspaceConfig_Copy(t *testing.T) {
 		{
 			"fully_configured",
 			&TerraformCloudWorkspaceConfig{
-				ExecutionMode: String("agent"),
-				AgentPoolID:   String("apool-123"),
-				AgentPoolName: String("test_agent_pool"),
+				ExecutionMode:    String("agent"),
+				AgentPoolID:      String("apool-123"),
+				AgentPoolName:    String("test_agent_pool"),
+				TerraformVersion: String("1.0.0"),
 			},
 		},
 	}
@@ -126,6 +127,24 @@ func TestTerraformCloudWorkspaceConfig_Merge(t *testing.T) {
 			&TerraformCloudWorkspaceConfig{},
 			&TerraformCloudWorkspaceConfig{AgentPoolName: String("agent_pool_a")},
 		},
+		{
+			"terraform_version_overrides",
+			&TerraformCloudWorkspaceConfig{TerraformVersion: String("1.0.0")},
+			&TerraformCloudWorkspaceConfig{TerraformVersion: String("1.1.1")},
+			&TerraformCloudWorkspaceConfig{TerraformVersion: String("1.1.1")},
+		},
+		{
+			"terraform_version_empty_a",
+			&TerraformCloudWorkspaceConfig{},
+			&TerraformCloudWorkspaceConfig{TerraformVersion: String("1.1.1")},
+			&TerraformCloudWorkspaceConfig{TerraformVersion: String("1.1.1")},
+		},
+		{
+			"terraform_version_empty_b",
+			&TerraformCloudWorkspaceConfig{TerraformVersion: String("1.0.0")},
+			&TerraformCloudWorkspaceConfig{},
+			&TerraformCloudWorkspaceConfig{TerraformVersion: String("1.0.0")},
+		},
 	}
 
 	for _, tc := range cases {
@@ -152,21 +171,25 @@ func TestTerraformCloudWorkspaceConfig_Finalize(t *testing.T) {
 			"empty",
 			&TerraformCloudWorkspaceConfig{},
 			&TerraformCloudWorkspaceConfig{
-				ExecutionMode: String(""),
-				AgentPoolID:   String(""),
-				AgentPoolName: String(""),
+				ExecutionMode:    String(""),
+				AgentPoolID:      String(""),
+				AgentPoolName:    String(""),
+				TerraformVersion: String(""),
 			},
 		},
 		{
 			"fully_configured",
 			&TerraformCloudWorkspaceConfig{
-				ExecutionMode: String("test_mode"),
-				AgentPoolID:   String("apool-1"),
-				AgentPoolName: String("test")},
+				ExecutionMode:    String("test_mode"),
+				AgentPoolID:      String("apool-1"),
+				AgentPoolName:    String("test"),
+				TerraformVersion: String("1.1.1"),
+			},
 			&TerraformCloudWorkspaceConfig{
-				ExecutionMode: String("test_mode"),
-				AgentPoolID:   String("apool-1"),
-				AgentPoolName: String("test"),
+				ExecutionMode:    String("test_mode"),
+				AgentPoolID:      String("apool-1"),
+				AgentPoolName:    String("test"),
+				TerraformVersion: String("1.1.1"),
 			},
 		},
 	}
@@ -259,6 +282,27 @@ func TestTerraformCloudWorkspaceConfig_Validate(t *testing.T) {
 				AgentPoolName: String("test_agent_pool"),
 			},
 		},
+		{
+			"valid_terraform_version",
+			false,
+			&TerraformCloudWorkspaceConfig{
+				TerraformVersion: String("0.15.1"),
+			},
+		},
+		{
+			"invalid_terraform_version",
+			true,
+			&TerraformCloudWorkspaceConfig{
+				TerraformVersion: String("invalid"),
+			},
+		},
+		{
+			"incompatible_terraform_version",
+			true,
+			&TerraformCloudWorkspaceConfig{
+				TerraformVersion: String("0.12.0"),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -284,27 +328,30 @@ func TestTerraformCloudWorkspaceConfig_GoString(t *testing.T) {
 			"(*TerraformCloudWorkspaceConfig)(nil)",
 		},
 		{
-			"remote",
+			"partially_configured",
 			&TerraformCloudWorkspaceConfig{
 				ExecutionMode: String("remote"),
 			},
 			"&TerraformCloudWorkspaceConfig{" +
 				"AgentPoolID:, " +
-				"AgentPoolName:," +
-				"ExecutionMode:remote" +
+				"AgentPoolName:, " +
+				"ExecutionMode:remote, " +
+				"TerraformVersion:" +
 				"}",
 		},
 		{
 			"fully_configured",
 			&TerraformCloudWorkspaceConfig{
-				ExecutionMode: String("agent"),
-				AgentPoolID:   String("apool-1"),
-				AgentPoolName: String("test_agent_pool"),
+				ExecutionMode:    String("agent"),
+				AgentPoolID:      String("apool-1"),
+				AgentPoolName:    String("test_agent_pool"),
+				TerraformVersion: String("1.0.0"),
 			},
 			"&TerraformCloudWorkspaceConfig{" +
 				"AgentPoolID:apool-1, " +
-				"AgentPoolName:test_agent_pool," +
-				"ExecutionMode:agent" +
+				"AgentPoolName:test_agent_pool, " +
+				"ExecutionMode:agent, " +
+				"TerraformVersion:1.0.0" +
 				"}",
 		},
 	}
@@ -319,9 +366,10 @@ func TestTerraformCloudWorkspaceConfig_GoString(t *testing.T) {
 func TestTerraformCloudWorkspaceConfig_DefaultTerraformCloudWorkspaceConfig(t *testing.T) {
 	r := DefaultTerraformCloudWorkspaceConfig()
 	expected := &TerraformCloudWorkspaceConfig{
-		ExecutionMode: String(""),
-		AgentPoolID:   String(""),
-		AgentPoolName: String(""),
+		ExecutionMode:    String(""),
+		AgentPoolID:      String(""),
+		AgentPoolName:    String(""),
+		TerraformVersion: String(""),
 	}
 	assert.Equal(t, expected, r)
 }
@@ -335,9 +383,17 @@ func TestTerraformCloudWorkspaceConfig_isEmpty(t *testing.T) {
 		{
 			"configured",
 			&TerraformCloudWorkspaceConfig{
-				ExecutionMode: String("agent"),
-				AgentPoolID:   String("apool-1"),
-				AgentPoolName: String("test_agent_pool"),
+				ExecutionMode:    String("agent"),
+				AgentPoolID:      String("apool-1"),
+				AgentPoolName:    String("test_agent_pool"),
+				TerraformVersion: String("1.0.0"),
+			},
+			false,
+		},
+		{
+			"partially_configured",
+			&TerraformCloudWorkspaceConfig{
+				TerraformVersion: String("1.0.0"),
 			},
 			false,
 		},
@@ -349,9 +405,10 @@ func TestTerraformCloudWorkspaceConfig_isEmpty(t *testing.T) {
 		{
 			"empty_default_values",
 			&TerraformCloudWorkspaceConfig{
-				ExecutionMode: String(""),
-				AgentPoolID:   String(""),
-				AgentPoolName: String(""),
+				ExecutionMode:    String(""),
+				AgentPoolID:      String(""),
+				AgentPoolName:    String(""),
+				TerraformVersion: String(""),
 			},
 			true,
 		},
