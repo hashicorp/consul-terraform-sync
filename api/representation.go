@@ -194,7 +194,7 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	}
 
 	// Enterprise
-	tc.TFVersion = tr.Task.TerraformVersion
+	tc.DeprecatedTFVersion = tr.Task.TerraformVersion
 	if tr.Task.TerraformCloudWorkspace != nil {
 		tc.TFCWorkspace = &config.TerraformCloudWorkspaceConfig{
 			ExecutionMode: tr.Task.TerraformCloudWorkspace.ExecutionMode,
@@ -381,8 +381,8 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	}
 
 	// Enterprise
-	if tc.TFVersion != nil && *tc.TFVersion != "" {
-		task.TerraformVersion = tc.TFVersion
+	if tc.DeprecatedTFVersion != nil && *tc.DeprecatedTFVersion != "" {
+		task.TerraformVersion = tc.DeprecatedTFVersion
 	}
 
 	if tc.TFCWorkspace != nil && !tc.TFCWorkspace.IsEmpty() {

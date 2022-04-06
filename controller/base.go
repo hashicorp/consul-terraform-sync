@@ -254,7 +254,7 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		WorkingDir:   *taskConfig.WorkingDir,
 
 		// Enterprise
-		TFVersion:    *taskConfig.TFVersion,
+		TFVersion:    *taskConfig.DeprecatedTFVersion,
 		TFCWorkspace: *taskConfig.TFCWorkspace,
 	})
 	if err != nil {

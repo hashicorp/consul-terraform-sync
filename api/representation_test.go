@@ -150,7 +150,7 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 				ModuleInputs: config.DefaultModuleInputConfigs(),
 
 				// Enterprise
-				TFVersion: config.String("1.0.0"),
+				DeprecatedTFVersion: config.String("1.0.0"),
 				TFCWorkspace: &config.TerraformCloudWorkspaceConfig{
 					ExecutionMode: config.String("agent"),
 					AgentPoolID:   config.String("apool-123"),
@@ -546,7 +546,7 @@ func TestTaskRequest_ToTaskConfig(t *testing.T) {
 				Enabled: config.Bool(true),
 
 				// Enterprise
-				TFVersion: config.String("1.0.0"),
+				DeprecatedTFVersion: config.String("1.0.0"),
 				TFCWorkspace: &config.TerraformCloudWorkspaceConfig{
 					ExecutionMode: config.String("agent"),
 					AgentPoolID:   config.String("apool-123"),
