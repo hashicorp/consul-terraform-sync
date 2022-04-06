@@ -384,6 +384,7 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	if tc.TFVersion != nil && *tc.TFVersion != "" {
 		task.TerraformVersion = tc.TFVersion
 	}
+
 	if tc.TFCWorkspace != nil && !tc.TFCWorkspace.IsEmpty() {
 		task.TerraformCloudWorkspace = &oapigen.TerraformCloudWorkspace{
 			ExecutionMode: tc.TFCWorkspace.ExecutionMode,

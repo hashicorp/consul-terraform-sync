@@ -452,7 +452,7 @@ components:
     TerraformCloudWorkspace:
       type: object
       additionalProperties: false
-      description:  Enterprise only. Configuration values to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver.
+      description: Enterprise only. Configuration values to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver.
       properties:
         execution_mode:
           type: string
