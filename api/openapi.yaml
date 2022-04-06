@@ -247,7 +247,7 @@ components:
           $ref: '#/components/schemas/ModuleInput'
         terraform_version:
            type: string
-           description: Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest version if not set.
+           description: Deprecated, use task.terraform_cloud_workspace.terraform_version instead. Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest compatible version if not set.
            example: "1.0.0"
         terraform_cloud_workspace:
           $ref: '#/components/schemas/TerraformCloudWorkspace'
@@ -466,6 +466,10 @@ components:
           type: string
           example: "test_agent_pool"
           description: Enterprise only. Name of agent pool to set for the Terraform Cloud workspace associated with the task when the execution mode is "agent". Either agent_pool_id or agent_pool_name is required if execution mode is "agent". If both are set, then agent_pool_id takes precedence.
+        terraform_version:
+           type: string
+           description: Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest compatible version if not set.
+           example: "1.0.0"
 
     Run:
       type: object

@@ -154,7 +154,7 @@ type Task struct {
 	// Enterprise only. Configuration values to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver.
 	TerraformCloudWorkspace *TerraformCloudWorkspace `json:"terraform_cloud_workspace,omitempty"`
 
-	// Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest version if not set.
+	// Deprecated, use task.terraform_cloud_workspace.terraform_version instead. Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest compatible version if not set.
 	TerraformVersion *string `json:"terraform_version,omitempty"`
 
 	// The map of variables that are provided to the task's module.
@@ -199,6 +199,9 @@ type TerraformCloudWorkspace struct {
 
 	// Enterprise only. Execution mode to set for the Terraform Cloud workspace associated with the task. Can only be "remote" or "agent". Defaults to "remote".
 	ExecutionMode *string `json:"execution_mode,omitempty"`
+
+	// Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest compatible version if not set.
+	TerraformVersion *string `json:"terraform_version,omitempty"`
 }
 
 // The map of variables that are provided to the task's module.

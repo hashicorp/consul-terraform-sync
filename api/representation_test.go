@@ -152,9 +152,10 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 				// Enterprise
 				DeprecatedTFVersion: config.String("1.0.0"),
 				TFCWorkspace: &config.TerraformCloudWorkspaceConfig{
-					ExecutionMode: config.String("agent"),
-					AgentPoolID:   config.String("apool-123"),
-					AgentPoolName: config.String("test_agent_pool"),
+					ExecutionMode:    config.String("agent"),
+					AgentPoolID:      config.String("apool-123"),
+					AgentPoolName:    config.String("test_agent_pool"),
+					TerraformVersion: config.String("1.0.0"),
 				},
 			},
 			expected: oapigen.Task{
@@ -175,9 +176,10 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 				// Enterprise
 				TerraformVersion: config.String("1.0.0"),
 				TerraformCloudWorkspace: &oapigen.TerraformCloudWorkspace{
-					ExecutionMode: config.String("agent"),
-					AgentPoolId:   config.String("apool-123"),
-					AgentPoolName: config.String("test_agent_pool"),
+					ExecutionMode:    config.String("agent"),
+					AgentPoolId:      config.String("apool-123"),
+					AgentPoolName:    config.String("test_agent_pool"),
+					TerraformVersion: config.String("1.0.0"),
 				},
 			},
 		},
@@ -521,9 +523,10 @@ func TestTaskRequest_ToTaskConfig(t *testing.T) {
 					// Enterprise
 					TerraformVersion: config.String("1.0.0"),
 					TerraformCloudWorkspace: &oapigen.TerraformCloudWorkspace{
-						ExecutionMode: config.String("agent"),
-						AgentPoolId:   config.String("apool-123"),
-						AgentPoolName: config.String("test_agent_pool"),
+						ExecutionMode:    config.String("agent"),
+						AgentPoolId:      config.String("apool-123"),
+						AgentPoolName:    config.String("test_agent_pool"),
+						TerraformVersion: config.String("1.0.0"),
 					},
 				},
 			},
@@ -548,9 +551,10 @@ func TestTaskRequest_ToTaskConfig(t *testing.T) {
 				// Enterprise
 				DeprecatedTFVersion: config.String("1.0.0"),
 				TFCWorkspace: &config.TerraformCloudWorkspaceConfig{
-					ExecutionMode: config.String("agent"),
-					AgentPoolID:   config.String("apool-123"),
-					AgentPoolName: config.String("test_agent_pool"),
+					ExecutionMode:    config.String("agent"),
+					AgentPoolID:      config.String("apool-123"),
+					AgentPoolName:    config.String("test_agent_pool"),
+					TerraformVersion: config.String("1.0.0"),
 				},
 			},
 		},
