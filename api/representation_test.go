@@ -151,6 +151,11 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 
 				// Enterprise
 				TFVersion: config.String("1.0.0"),
+				TFCWorkspace: &config.TerraformCloudWorkspaceConfig{
+					ExecutionMode: config.String("agent"),
+					AgentPoolID:   config.String("apool-123"),
+					AgentPoolName: config.String("test_agent_pool"),
+				},
 			},
 			expected: oapigen.Task{
 				Name:        "test-name",
@@ -169,6 +174,11 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 
 				// Enterprise
 				TerraformVersion: config.String("1.0.0"),
+				TerraformCloudWorkspace: &oapigen.TerraformCloudWorkspace{
+					ExecutionMode: config.String("agent"),
+					AgentPoolId:   config.String("apool-123"),
+					AgentPoolName: config.String("test_agent_pool"),
+				},
 			},
 		},
 		{
@@ -507,6 +517,14 @@ func TestTaskRequest_ToTaskConfig(t *testing.T) {
 						Min:     config.String("30s"),
 					},
 					Enabled: config.Bool(true),
+
+					// Enterprise
+					TerraformVersion: config.String("1.0.0"),
+					TerraformCloudWorkspace: &oapigen.TerraformCloudWorkspace{
+						ExecutionMode: config.String("agent"),
+						AgentPoolId:   config.String("apool-123"),
+						AgentPoolName: config.String("test_agent_pool"),
+					},
 				},
 			},
 			taskConfigExpected: config.TaskConfig{
@@ -526,6 +544,14 @@ func TestTaskRequest_ToTaskConfig(t *testing.T) {
 					Min:     config.TimeDuration(30 * time.Second),
 				},
 				Enabled: config.Bool(true),
+
+				// Enterprise
+				TFVersion: config.String("1.0.0"),
+				TFCWorkspace: &config.TerraformCloudWorkspaceConfig{
+					ExecutionMode: config.String("agent"),
+					AgentPoolID:   config.String("apool-123"),
+					AgentPoolName: config.String("test_agent_pool"),
+				},
 			},
 		},
 		{

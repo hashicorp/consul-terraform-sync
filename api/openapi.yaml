@@ -249,6 +249,9 @@ components:
            type: string
            description: Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest version if not set.
            example: "1.0.0"
+        terraform_cloud_workspace:
+          $ref: '#/components/schemas/TerraformCloudWorkspace'
+
       required:
         - name
         - module
@@ -445,6 +448,24 @@ components:
           example: "default"
       required:
         - path
+
+    TerraformCloudWorkspace:
+      type: object
+      additionalProperties: false
+      description: Enterprise only. Configuration values to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver.
+      properties:
+        execution_mode:
+          type: string
+          example: "agent"
+          description: Enterprise only. Execution mode to set for the Terraform Cloud workspace associated with the task. Can only be "remote" or "agent". Defaults to "remote".
+        agent_pool_id:
+          type: string
+          example: "apool-123"
+          description: Enterprise only. Agent pool ID to set for the Terraform Cloud workspace associated with the task when the execution mode is "agent". Either agent_pool_id or agent_pool_name is required if execution mode is "agent". If both are set, then agent_pool_id takes precedence.
+        agent_pool_name:
+          type: string
+          example: "test_agent_pool"
+          description: Enterprise only. Name of agent pool to set for the Terraform Cloud workspace associated with the task when the execution mode is "agent". Either agent_pool_id or agent_pool_name is required if execution mode is "agent". If both are set, then agent_pool_id takes precedence.
 
     Run:
       type: object
