@@ -25,7 +25,7 @@ func Test_ReadWrite_Run(t *testing.T) {
 
 	ctl := ReadWrite{
 		tasksManager: &TasksManager{
-			baseController: &baseController{
+			driverFactory: &driver.Factory{
 				drivers: driver.NewDrivers(),
 				watcher: w,
 				logger:  logging.NewNullLogger(),
@@ -64,7 +64,7 @@ func Test_ReadWrite_Run_Error(t *testing.T) {
 
 	ctl := ReadWrite{
 		tasksManager: &TasksManager{
-			baseController: &baseController{
+			driverFactory: &driver.Factory{
 				drivers: driver.NewDrivers(),
 				watcher: w,
 				logger:  logging.NewNullLogger(),

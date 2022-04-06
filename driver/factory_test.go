@@ -1,4 +1,4 @@
-package controller
+package driver
 
 import (
 	"context"
@@ -7,9 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
-	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
@@ -29,9 +27,9 @@ func TestBaseControllerInit(t *testing.T) {
 		config      *config.Config
 	}{
 		{
-			"error on driver.InitTask()",
+			"error on InitTask()",
 			true,
-			errors.New("error on driver.InitTask()"),
+			errors.New("error on InitTask()"),
 			conf,
 		},
 		{
@@ -49,11 +47,10 @@ func TestBaseControllerInit(t *testing.T) {
 			d.On("TemplateIDs").Return(nil)
 			d.On("InitTask", mock.Anything).Return(tc.initTaskErr).Once()
 
-			baseCtrl := baseController{
-				newDriver: func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+			baseCtrl := Factory{
+				newDriver: func(*config.Config, *Task, templates.Watcher) (Driver, error) {
 					return d, nil
 				},
-				drivers:  driver.NewDrivers(),
 				initConf: tc.config,
 				logger:   logging.NewNullLogger(),
 			}
@@ -79,16 +76,16 @@ func TestNewDriverTask(t *testing.T) {
 	testCases := []struct {
 		name  string
 		conf  *config.Config
-		tasks []*driver.Task
+		tasks []*Task
 	}{
 		{
 			"no config",
 			nil,
-			[]*driver.Task{},
+			[]*Task{},
 		}, {
 			"no tasks",
 			&config.Config{Tasks: &config.TaskConfigs{}},
-			[]*driver.Task{},
+			[]*Task{},
 		}, {
 			"basic task fields",
 			&config.Config{Tasks: &config.TaskConfigs{
@@ -108,13 +105,13 @@ func TestNewDriverTask(t *testing.T) {
 					TFCWorkspace: config.DefaultTerraformCloudWorkspaceConfig(),
 				},
 			}},
-			[]*driver.Task{newTestTask(t, driver.TaskConfig{
+			[]*Task{newTestTask(t, TaskConfig{
 				Description: "description",
 				Name:        "name",
 				Enabled:     true,
 				Module:      "path",
 				Version:     "version",
-				BufferPeriod: &driver.BufferPeriod{
+				BufferPeriod: &BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
 				},
@@ -129,9 +126,9 @@ func TestNewDriverTask(t *testing.T) {
 				Env: map[string]string{
 					"CONSUL_HTTP_ADDR": "localhost:8500",
 				},
-				Providers:    driver.TerraformProviderBlocks{},
+				Providers:    TerraformProviderBlocks{},
 				ProviderInfo: map[string]interface{}{},
-				Services:     []driver.Service{},
+				Services:     []Service{},
 			})},
 		}, {
 			// Fetches correct provider and required_providers blocks from config
@@ -159,13 +156,13 @@ func TestNewDriverTask(t *testing.T) {
 					}},
 				},
 			},
-			[]*driver.Task{newTestTask(t, driver.TaskConfig{
+			[]*Task{newTestTask(t, TaskConfig{
 				Name:    "name",
 				Enabled: true,
 				Env: map[string]string{
 					"CONSUL_HTTP_ADDR": "localhost:8500",
 				},
-				Providers: driver.NewTerraformProviderBlocks(
+				Providers: NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"providerA": map[string]interface{}{}},
 						{"providerB": map[string]interface{}{
@@ -177,12 +174,12 @@ func TestNewDriverTask(t *testing.T) {
 						"source": "source/providerA",
 					},
 				},
-				Services:     []driver.Service{},
+				Services:     []Service{},
 				Module:       "path",
 				VarFiles:     []string{},
 				Condition:    config.EmptyConditionConfig(),
 				ModuleInputs: *config.DefaultModuleInputConfigs(),
-				BufferPeriod: &driver.BufferPeriod{
+				BufferPeriod: &BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
 				},
@@ -226,13 +223,13 @@ func TestNewDriverTask(t *testing.T) {
 					}},
 				},
 			},
-			[]*driver.Task{newTestTask(t, driver.TaskConfig{
+			[]*Task{newTestTask(t, TaskConfig{
 				Name:    "name",
 				Enabled: true,
 				Env: map[string]string{
 					"CONSUL_HTTP_ADDR": "localhost:8500",
 				},
-				Providers: driver.NewTerraformProviderBlocks(
+				Providers: NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"providerA": map[string]interface{}{
 							"alias": "alias1",
@@ -247,12 +244,12 @@ func TestNewDriverTask(t *testing.T) {
 						"source": "source/providerA",
 					},
 				},
-				Services:     []driver.Service{},
+				Services:     []Service{},
 				Module:       "path",
 				VarFiles:     []string{},
 				Condition:    config.EmptyConditionConfig(),
 				ModuleInputs: *config.DefaultModuleInputConfigs(),
-				BufferPeriod: &driver.BufferPeriod{
+				BufferPeriod: &BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
 				},
@@ -285,7 +282,7 @@ func TestNewDriverTask(t *testing.T) {
 					}},
 				},
 			},
-			[]*driver.Task{newTestTask(t, driver.TaskConfig{
+			[]*Task{newTestTask(t, TaskConfig{
 				Name:    "name",
 				Enabled: true,
 				Env: map[string]string{
@@ -293,7 +290,7 @@ func TestNewDriverTask(t *testing.T) {
 					"CONSUL_HTTP_TOKEN": "TEST_CONSUL_TOKEN",
 					"PROVIDER_TOKEN":    "TEST_PROVIDER_TOKEN",
 				},
-				Providers: driver.NewTerraformProviderBlocks(
+				Providers: NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"providerA": map[string]interface{}{
 							"task_env": map[string]interface{}{
@@ -302,12 +299,12 @@ func TestNewDriverTask(t *testing.T) {
 						}},
 					})),
 				ProviderInfo: map[string]interface{}{},
-				Services:     []driver.Service{},
+				Services:     []Service{},
 				Module:       "path",
 				VarFiles:     []string{},
 				Condition:    config.EmptyConditionConfig(),
 				ModuleInputs: *config.DefaultModuleInputConfigs(),
-				BufferPeriod: &driver.BufferPeriod{
+				BufferPeriod: &BufferPeriod{
 					Min: 5 * time.Second,
 					Max: 20 * time.Second,
 				},
@@ -322,10 +319,10 @@ func TestNewDriverTask(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.conf.Finalize()
 
-			var providerConfigs []driver.TerraformProviderBlock
+			var providerConfigs []TerraformProviderBlock
 			if tc.conf != nil && tc.conf.TerraformProviders != nil {
 				for _, pconf := range *tc.conf.TerraformProviders {
-					providerBlock := driver.NewTerraformProviderBlock(hcltmpl.NewNamedBlockTest(*pconf))
+					providerBlock := NewTerraformProviderBlock(hcltmpl.NewNamedBlockTest(*pconf))
 					providerConfigs = append(providerConfigs, providerBlock)
 				}
 			}
@@ -337,12 +334,12 @@ func TestNewDriverTask(t *testing.T) {
 	}
 }
 
-func newTestDriverTasks(conf *config.Config, providerConfigs driver.TerraformProviderBlocks) ([]*driver.Task, error) {
+func newTestDriverTasks(conf *config.Config, providerConfigs TerraformProviderBlocks) ([]*Task, error) {
 	if conf == nil {
-		return []*driver.Task{}, nil
+		return []*Task{}, nil
 	}
 
-	tasks := make([]*driver.Task, len(*conf.Tasks))
+	tasks := make([]*Task, len(*conf.Tasks))
 	for i, t := range *conf.Tasks {
 		var err error
 		tasks[i], err = newDriverTask(conf, t, providerConfigs)
@@ -354,8 +351,8 @@ func newTestDriverTasks(conf *config.Config, providerConfigs driver.TerraformPro
 	return tasks, nil
 }
 
-func newTestTask(tb testing.TB, conf driver.TaskConfig) *driver.Task {
-	task, err := driver.NewTask(conf)
+func newTestTask(tb testing.TB, conf TaskConfig) *Task {
+	task, err := NewTask(conf)
 	require.NoError(tb, err)
 	return task
 }

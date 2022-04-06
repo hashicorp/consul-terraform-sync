@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
@@ -142,6 +143,26 @@ func (d *Drivers) IsActive(name string) bool {
 	return ok
 }
 
+func (d *Drivers) WaitForInactive(ctx context.Context, name string) error {
+	// Check first if inactive, return early and don't log
+	if !d.IsActive(name) {
+		return nil
+	}
+	// Check continuously in a loop until inactive
+	// d.logger.Debug("waiting for task to become inactive", taskNameLogKey, name)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			if !d.IsActive(name) {
+				return nil
+			}
+			time.Sleep(100 * time.Microsecond)
+		}
+	}
+}
+
 // Delete removes the driver for the given task name from
 // the map of drivers.
 func (d *Drivers) Delete(taskName string) error {
@@ -172,19 +193,19 @@ func (d *Drivers) Delete(taskName string) error {
 	return nil
 }
 
-func (d *Drivers) MarkForDeletion(name string) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	d.deletion[name] = true
-}
+// func (d *Drivers) MarkForDeletion(name string) {
+// 	d.mu.Lock()
+// 	defer d.mu.Unlock()
+// 	d.deletion[name] = true
+// }
 
-func (d *Drivers) IsMarkedForDeletion(name string) bool {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
+// func (d *Drivers) IsMarkedForDeletion(name string) bool {
+// 	d.mu.RLock()
+// 	defer d.mu.RUnlock()
 
-	mark, ok := d.deletion[name]
-	if !ok {
-		return false
-	}
-	return mark
-}
+// 	mark, ok := d.deletion[name]
+// 	if !ok {
+// 		return false
+// 	}
+// 	return mark
+// }

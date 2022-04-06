@@ -11,6 +11,9 @@ import (
 func Test_NewInMemoryStore(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := config.DefaultConfig()
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name     string
 		conf     *config.Config
@@ -21,7 +24,7 @@ func Test_NewInMemoryStore(t *testing.T) {
 			nil,
 			InMemoryStore{
 				conf: &configStorage{
-					conf: *config.DefaultConfig(),
+					conf: finalizedConf,
 				},
 				events: newEventStorage(),
 			},
@@ -33,7 +36,7 @@ func Test_NewInMemoryStore(t *testing.T) {
 			},
 			InMemoryStore{
 				conf: &configStorage{
-					conf: config.Config{
+					conf: &config.Config{
 						Port: config.Int(1234),
 					},
 				},
@@ -48,6 +51,19 @@ func Test_NewInMemoryStore(t *testing.T) {
 			assert.Equal(t, tc.expected, *actual)
 		})
 	}
+
+	t.Run("stored config is dereferenced", func(t *testing.T) {
+		actual := NewInMemoryStore(finalizedConf)
+
+		// Confirm that input and stored config have same values
+		assert.Equal(t, *finalizedConf, *actual.conf.conf)
+
+		// Confrm that input and stored config reference different objects
+		assert.NotSame(t, finalizedConf, actual.conf.conf)
+
+		// Confrm that input and stored config fields reference different objects
+		assert.NotSame(t, finalizedConf.Tasks, actual.conf.conf.Tasks)
+	})
 }
 
 func Test_InMemoryStore_GetConfig(t *testing.T) {
@@ -55,11 +71,11 @@ func Test_InMemoryStore_GetConfig(t *testing.T) {
 
 	cases := []struct {
 		name     string
-		expected config.Config
+		expected *config.Config
 	}{
 		{
 			"happy path",
-			config.Config{
+			&config.Config{
 				Port: config.Int(1234),
 			},
 		},
@@ -67,14 +83,234 @@ func Test_InMemoryStore_GetConfig(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			store := NewInMemoryStore(&tc.expected)
-
+			store := NewInMemoryStore(tc.expected)
 			actual := store.GetConfig()
-			assert.Equal(t, tc.expected, actual)
+
+			storedConfig := store.conf.conf
+
+			// Confirm returned config has same value as stored
+			assert.Equal(t, *storedConfig, actual)
+
+			// Confirm returned config references different object from stored
+			assert.NotSame(t, storedConfig, actual)
+
+			// Confirm returned config children reference different object
+			// from stored
+			assert.NotSame(t, storedConfig.Port, actual.Port)
 		})
 	}
 }
 
+func Test_InMemoryStore_GetAssignedTasks(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		input config.Config
+	}{
+		{
+			"nil tasks",
+			config.Config{},
+		},
+		{
+			"happy path",
+			config.Config{
+				Tasks: &config.TaskConfigs{
+					{Name: config.String("task_a")},
+					{Name: config.String("task_b")},
+					{Name: config.String("task_c")},
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.input.Finalize()
+			store := NewInMemoryStore(&tc.input)
+			actual := store.GetAllTasks()
+
+			storedConfig := store.conf.conf.Tasks
+
+			// Confirm returned task configs has same value as stored
+			assert.Equal(t, *storedConfig, actual)
+
+			// Confirm returned config references different object from stored
+			assert.NotSame(t, storedConfig, actual)
+
+			if len(*tc.input.Tasks) > 0 {
+				// Confirm returned config children reference different object
+				// from stored
+				assert.NotSame(t, (*storedConfig)[0], actual[0])
+			}
+		})
+	}
+}
+
+func Test_InMemoryStore_SetTask(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		stateConf *config.Config
+		input     config.TaskConfig
+		expected  config.TaskConfigs
+	}{
+		{
+			name: "update existing task",
+			stateConf: &config.Config{
+				Tasks: &config.TaskConfigs{
+					{Name: config.String("existing_task")},
+				},
+			},
+			input: config.TaskConfig{
+				Name:        config.String("existing_task"),
+				Description: config.String("new description"),
+			},
+			expected: config.TaskConfigs{
+				&config.TaskConfig{
+					Name:        config.String("existing_task"),
+					Description: config.String("new description"),
+				},
+			},
+		},
+		{
+			name: "add new task",
+			stateConf: &config.Config{
+				Tasks: &config.TaskConfigs{
+					{Name: config.String("existing_task")},
+				},
+			},
+			input: config.TaskConfig{
+				Name: config.String("new_task"),
+			},
+			expected: config.TaskConfigs{
+				&config.TaskConfig{
+					Name: config.String("existing_task"),
+				},
+				&config.TaskConfig{
+					Name: config.String("new_task"),
+				},
+			},
+		},
+		{
+			name:      "no prior existing tasks",
+			stateConf: &config.Config{},
+			input: config.TaskConfig{
+				Name: config.String("new_task"),
+			},
+			expected: config.TaskConfigs{
+				&config.TaskConfig{
+					Name: config.String("new_task"),
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.stateConf.Finalize()
+			store := NewInMemoryStore(tc.stateConf)
+
+			// finalize the task configs
+			bp := tc.stateConf.BufferPeriod
+			wd := config.StringVal(tc.stateConf.WorkingDir)
+			tc.input.Finalize(bp, wd)
+			tc.expected.Finalize(bp, wd)
+
+			store.SetTask(tc.input)
+			assert.Equal(t, tc.expected, *store.conf.conf.Tasks)
+		})
+	}
+}
+
+func Test_InMemoryStore_GetTask(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		input    string
+		exists   bool
+		expected config.TaskConfig
+	}{
+		{
+			"task exists",
+			"existing_task",
+			true,
+			config.TaskConfig{Name: config.String("existing_task")},
+		},
+		{
+			"task doesn't exist",
+			"non_existing_task",
+			false,
+			config.TaskConfig{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			conf := &config.Config{
+				Tasks: &config.TaskConfigs{
+					{Name: config.String("existing_task")},
+				},
+			}
+			store := NewInMemoryStore(conf)
+
+			actual, exists := store.GetTask(tc.input)
+			assert.Equal(t, tc.exists, exists)
+			assert.Equal(t, tc.expected, actual)
+
+			if exists {
+				assert.Len(t, *store.conf.conf.Tasks, 1)
+				storedConfig := (*store.conf.conf.Tasks)[0]
+
+				// Confirm returned task config references different object from stored
+				assert.NotSame(t, *storedConfig, actual)
+
+				// Confirm returned config children reference different object
+				// from stored
+				assert.NotSame(t, storedConfig.Name, actual.Name)
+			}
+		})
+	}
+}
+func Test_InMemoryStore_DeleteTask(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		input    string
+		expected config.TaskConfigs
+	}{
+		{
+			"task exists",
+			"existing_task",
+			config.TaskConfigs{},
+		},
+		{
+			"task does not exists",
+			"non_existing_task",
+			config.TaskConfigs{
+				{Name: config.String("existing_task")},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			conf := &config.Config{
+				Tasks: &config.TaskConfigs{
+					{Name: config.String("existing_task")},
+				},
+			}
+			store := NewInMemoryStore(conf)
+
+			store.DeleteTask(tc.input)
+
+			assert.Equal(t, tc.expected, *store.conf.conf.Tasks)
+		})
+	}
+}
 func Test_InMemoryStore_GetTaskEvents(t *testing.T) {
 	t.Parallel()
 
