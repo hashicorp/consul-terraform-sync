@@ -9,6 +9,11 @@ import (
 )
 
 func TestTaskConfig_Copy(t *testing.T) {
+	t.Parallel()
+
+	finalizedConf := &TaskConfig{}
+	finalizedConf.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+
 	cases := []struct {
 		name string
 		a    *TaskConfig
@@ -19,7 +24,13 @@ func TestTaskConfig_Copy(t *testing.T) {
 		},
 		{
 			"empty",
-			&TaskConfig{},
+			&TaskConfig{
+				Name: String("task_a"),
+			},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",
@@ -1063,4 +1074,17 @@ func TestTaskConfig_validateCondition(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTaskConfig_FinalizeCopy(t *testing.T) {
+	// Finalized values weren't being copied correctly
+
+	t.Parallel()
+
+	conf := TaskConfig{}
+	conf.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+	copyConf := conf.Copy()
+
+	assert.Equal(t, conf, copyConf)
+	assert.NotSame(t, conf, copyConf)
 }

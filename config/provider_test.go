@@ -10,6 +10,9 @@ import (
 func TestProviderConfigs_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &TerraformProviderConfigs{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *TerraformProviderConfigs
@@ -21,6 +24,10 @@ func TestProviderConfigs_Copy(t *testing.T) {
 		{
 			"empty",
 			&TerraformProviderConfigs{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",

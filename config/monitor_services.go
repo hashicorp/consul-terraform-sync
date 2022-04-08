@@ -52,10 +52,18 @@ func (c *ServicesMonitorConfig) Copy() MonitorConfig {
 
 	var o ServicesMonitorConfig
 	o.Regexp = StringCopy(c.Regexp)
-	o.Names = append(o.Names, c.Names...)
+
+	if c.Names != nil {
+		o.Names = make([]string, 0)
+		o.Names = append(o.Names, c.Names...)
+	}
+
 	o.Datacenter = StringCopy(c.Datacenter)
+
 	o.Namespace = StringCopy(c.Namespace)
+
 	o.Filter = StringCopy(c.Filter)
+
 	if c.CTSUserDefinedMeta != nil {
 		o.CTSUserDefinedMeta = make(map[string]string)
 		for k, v := range c.CTSUserDefinedMeta {

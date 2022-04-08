@@ -12,6 +12,9 @@ import (
 func TestDriverConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &DriverConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *DriverConfig
@@ -19,10 +22,16 @@ func TestDriverConfig_Copy(t *testing.T) {
 		{
 			"nil",
 			nil,
-		}, {
+		},
+		{
 			"empty",
 			&DriverConfig{},
-		}, {
+		},
+		{
+			"finalized",
+			finalizedConf,
+		},
+		{
 			"same_enabled",
 			&DriverConfig{
 				consul:    &ConsulConfig{Address: String("localhost:8500")},

@@ -10,6 +10,9 @@ import (
 func TestTLSConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &TLSConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *TLSConfig
@@ -21,6 +24,10 @@ func TestTLSConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&TLSConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",

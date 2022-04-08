@@ -11,6 +11,9 @@ import (
 func TestTransportConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &TransportConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *TransportConfig
@@ -22,6 +25,10 @@ func TestTransportConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&TransportConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",
