@@ -46,11 +46,10 @@ func (c *TerraformCloudWorkspaceConfig) Copy() *TerraformCloudWorkspaceConfig {
 	}
 
 	var o TerraformCloudWorkspaceConfig
-	o.ExecutionMode = c.ExecutionMode
-	o.AgentPoolID = c.AgentPoolID
-	o.AgentPoolName = c.AgentPoolName
-	o.TerraformVersion = c.TerraformVersion
-
+	o.ExecutionMode = StringCopy(c.ExecutionMode)
+	o.AgentPoolID = StringCopy(c.AgentPoolID)
+	o.AgentPoolName = StringCopy(c.AgentPoolName)
+	o.TerraformVersion = StringCopy(c.TerraformVersion)
 	return &o
 }
 

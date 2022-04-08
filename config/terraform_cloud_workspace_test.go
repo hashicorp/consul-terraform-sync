@@ -22,23 +22,28 @@ func TestTerraformCloudWorkspaceConfig_Copy(t *testing.T) {
 			"empty",
 			&TerraformCloudWorkspaceConfig{},
 		},
-		{
-			"fully_configured",
-			&TerraformCloudWorkspaceConfig{
-				ExecutionMode:    String("agent"),
-				AgentPoolID:      String("apool-123"),
-				AgentPoolName:    String("test_agent_pool"),
-				TerraformVersion: String("1.0.0"),
-			},
-		},
 	}
-
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := tc.c.Copy()
 			assert.Equal(t, tc.c, c)
 		})
 	}
+
+	t.Run("fully_configured", func(t *testing.T) {
+		o := &TerraformCloudWorkspaceConfig{
+			ExecutionMode:    String("test-mode"),
+			AgentPoolID:      String("test-id"),
+			AgentPoolName:    String("test-name"),
+			TerraformVersion: String("test-version"),
+		}
+		c := o.Copy()
+		assert.Equal(t, o, c)
+		assert.NotSame(t, o.ExecutionMode, c.ExecutionMode)
+		assert.NotSame(t, o.AgentPoolID, c.AgentPoolID)
+		assert.NotSame(t, o.AgentPoolName, c.AgentPoolName)
+		assert.NotSame(t, o.TerraformVersion, c.TerraformVersion)
+	})
 }
 
 func TestTerraformCloudWorkspaceConfig_Merge(t *testing.T) {
