@@ -52,6 +52,10 @@ func NewTasksManager(conf *config.Config, state state.Store, watcher templates.W
 	}, nil
 }
 
+func (tm *TasksManager) Init(ctx context.Context) error {
+	return tm.driverFactory.Init(ctx)
+}
+
 func (tm *TasksManager) Config() config.Config {
 	return tm.state.GetConfig()
 }

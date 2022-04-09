@@ -44,6 +44,7 @@ func NewFactory(conf *config.Config, watcher templates.Watcher) (*Factory, error
 		logger:    logger,
 		watcher:   watcher,
 		resolver:  hcat.NewResolver(),
+		initConf:  conf,
 	}, nil
 }
 
