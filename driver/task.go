@@ -233,15 +233,15 @@ func (t *Task) Providers() TerraformProviderBlocks {
 }
 
 // ProviderNames returns the list of providers that the task has configured
-func (t *Task) ProviderNames() []string {
+func (t *Task) ProviderIDs() []string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	names := make([]string, len(t.providers))
+	ids := make([]string, len(t.providers))
 	for ix, p := range t.providers {
-		names[ix] = p.Name()
+		ids[ix] = p.ID()
 	}
-	return names
+	return ids
 }
 
 // Services returns a copy of the list of services that the task has configured

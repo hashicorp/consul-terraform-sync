@@ -1,6 +1,10 @@
 package driver
 
-import "github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+import (
+	"fmt"
+
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+)
 
 // TerraformProviderBlock contains provider arguments and environment variables
 // for the Terraform provider.
@@ -60,6 +64,15 @@ func (p TerraformProviderBlock) Copy() TerraformProviderBlock {
 // block.
 func (p TerraformProviderBlock) Name() string {
 	return p.block.Name
+}
+
+// ID returns the id of the provider. Includes the alias
+func (p TerraformProviderBlock) ID() string {
+	alias, ok := p.block.Variables["alias"]
+	if ok {
+		return fmt.Sprintf("%s.%s", p.Name(), alias.AsString())
+	}
+	return p.Name()
 }
 
 // ProviderBlock returns the arguments for the Terraform provider block.

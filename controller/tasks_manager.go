@@ -183,7 +183,7 @@ func (rw *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskCo
 	if runOp == driver.RunOptionNow {
 		task := d.Task()
 		ev, err := event.NewEvent(taskName, &event.Config{
-			Providers: task.ProviderNames(),
+			Providers: task.ProviderIDs(),
 			Services:  task.ServiceNames(),
 			Source:    task.Module(),
 		})
@@ -262,7 +262,7 @@ func (rw *TasksManager) TaskRunNow(ctx context.Context, taskName string) (bool, 
 
 	// setup to store event information
 	ev, err := event.NewEvent(taskName, &event.Config{
-		Providers: task.ProviderNames(),
+		Providers: task.ProviderIDs(),
 		Services:  task.ServiceNames(),
 		Source:    task.Module(),
 	})
@@ -500,7 +500,7 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		Description:        config.String(t.Description()),
 		Name:               config.String(t.Name()),
 		Enabled:            config.Bool(t.IsEnabled()),
-		Providers:          t.ProviderNames(),
+		Providers:          t.ProviderIDs(),
 		DeprecatedServices: t.ServiceNames(),
 		Module:             config.String(t.Module()),
 		Variables:          vars, // TODO: omit or safe to return?

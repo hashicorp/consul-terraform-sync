@@ -269,7 +269,7 @@ func TestTask_ProviderNames(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := tc.task.ProviderNames()
+			actual := tc.task.ProviderIDs()
 			assert.Equal(t, tc.expected, actual)
 		})
 	}
