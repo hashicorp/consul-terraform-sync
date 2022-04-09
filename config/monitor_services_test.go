@@ -132,6 +132,12 @@ func TestServicesMonitorConfig_Merge(t *testing.T) {
 			&ServicesMonitorConfig{Names: []string{"a", "b"}},
 		},
 		{
+			"names_same_merges",
+			&ServicesMonitorConfig{Names: []string{"a"}},
+			&ServicesMonitorConfig{Names: []string{"a"}},
+			&ServicesMonitorConfig{Names: []string{"a"}},
+		},
+		{
 			"names_empty_one",
 			&ServicesMonitorConfig{Names: []string{"service"}},
 			&ServicesMonitorConfig{},
