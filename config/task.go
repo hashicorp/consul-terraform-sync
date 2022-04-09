@@ -181,9 +181,9 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Name = StringCopy(o.Name)
 	}
 
-	r.Providers = append(r.Providers, o.Providers...)
+	r.Providers = mergeSlices(r.Providers, o.Providers)
 
-	r.DeprecatedServices = append(r.DeprecatedServices, o.DeprecatedServices...)
+	r.DeprecatedServices = mergeSlices(r.DeprecatedServices, o.DeprecatedServices)
 
 	if o.Module != nil {
 		r.Module = StringCopy(o.Module)
@@ -199,7 +199,7 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.DeprecatedSourceInputs = r.DeprecatedSourceInputs.Merge(o.DeprecatedSourceInputs)
 	}
 
-	r.VarFiles = append(r.VarFiles, o.VarFiles...)
+	r.VarFiles = mergeSlices(r.VarFiles, o.VarFiles)
 
 	for k, v := range o.Variables {
 		r.Variables[k] = v

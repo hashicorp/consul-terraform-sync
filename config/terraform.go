@@ -318,16 +318,3 @@ func (c *TerraformConfig) IsConsulBackend() bool {
 	_, ok := c.Backend["consul"]
 	return ok
 }
-
-func mergeMaps(c, o map[string]interface{}) map[string]interface{} {
-	r := make(map[string]interface{})
-	for k, v := range c {
-		r[k] = v
-	}
-
-	for k, v := range o {
-		r[k] = v
-	}
-
-	return r
-}
