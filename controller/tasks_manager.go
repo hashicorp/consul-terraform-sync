@@ -65,13 +65,11 @@ func (tm *TasksManager) Events(ctx context.Context, taskName string) (map[string
 }
 
 func (tm *TasksManager) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
-	conf := tm.state.GetConfig()
-	for _, taskConf := range *conf.Tasks {
-		if config.StringVal(taskConf.Name) == taskName {
-			return *taskConf, nil
-
-		}
+	conf, ok := tm.state.GetTask(taskName)
+	if ok {
+		return conf, nil
 	}
+
 	return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
 }
 
@@ -105,32 +103,8 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 		return config.TaskConfig{}, err
 	}
 
-	task := d.Task()
-	taskName := task.Name()
-	logger := tm.logger.With(taskNameLogKey, taskName)
-
-	// Create new event for task run
-	ev, err := event.NewEvent(taskName, &event.Config{
-		Providers: task.ProviderNames(),
-		Services:  task.ServiceNames(),
-		Source:    task.Module(),
-	})
-	if err != nil {
-		logger.Error("error initializing event to run task", "error", err)
-		return config.TaskConfig{}, err
-	}
-	ev.Start()
-
 	if err := tm.runNewTask(ctx, d); err != nil {
 		return config.TaskConfig{}, err
-	}
-
-	// Store event if apply was successful and task will be created
-	ev.End(err)
-	tm.logger.Trace("adding event", "event", ev.GoString())
-	if err := tm.state.AddTaskEvent(*ev); err != nil {
-		// only log error since creating a task occurred successfully by now
-		logger.Error("error storing event", "event", ev.GoString(), "error", err)
 	}
 
 	d.SetBufferPeriod()
@@ -303,8 +277,6 @@ func (rw *TasksManager) TaskRunNow(ctx context.Context, taskName string) (bool, 
 	// new data
 	if rendered {
 		rw.logger.Info("executing task", taskNameLogKey, taskName)
-		rw.drivers.SetActive(taskName)
-		defer rw.drivers.SetInactive(taskName)
 		defer storeEvent()
 
 		desc := fmt.Sprintf("ApplyTask %s", taskName)
@@ -433,11 +405,31 @@ func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
 		return nil
 	}
 
-	logger.Info("executing task")
+	logger.Info("executing new task")
+
+	ev, err := event.NewEvent(taskName, &event.Config{
+		Providers: task.ProviderIDs(),
+		Services:  task.ServiceNames(),
+		Source:    task.Module(),
+	})
+	if err != nil {
+		return fmt.Errorf("error creating event for task %s: %s",
+			taskName, err)
+	}
+	var storedErr error
+	storeEvent := func() {
+		ev.End(storedErr)
+		logger.Trace("adding event", "event", ev.GoString())
+		if err := tm.state.AddTaskEvent(*ev); err != nil {
+			tm.logger.Error("error storing event", "event", ev.GoString())
+		}
+	}
+	defer storeEvent()
+	ev.Start()
 
 	// Apply task
-	if err := d.ApplyTask(ctx); err != nil {
-		logger.Error("error applying task", "error", err)
+	if storedErr = d.ApplyTask(ctx); storedErr != nil {
+		logger.Error("error applying task", "error", storedErr)
 		return err
 	}
 
