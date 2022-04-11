@@ -155,6 +155,9 @@ func (rw *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskCo
 
 	var storedErr error
 	if runOp == driver.RunOptionNow {
+		// Add to state
+		rw.state.SetTask(updateConf)
+
 		task := d.Task()
 		ev, err := event.NewEvent(taskName, &event.Config{
 			Providers: task.ProviderIDs(),
@@ -189,9 +192,6 @@ func (rw *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskCo
 		return false, "", "", storedErr
 	}
 
-	// Add to state
-	rw.state.SetTask(updateConf)
-
 	return plan.ChangesPresent, plan.Plan, "", nil
 }
 
@@ -206,6 +206,21 @@ func (rw *TasksManager) TaskRunNow(ctx context.Context, taskName string) (bool, 
 	}
 
 	task := d.Task()
+
+	// for scheduled tasks, do not wait if task is active
+	if rw.drivers.IsActive(taskName) && task.IsScheduled() {
+		return false, fmt.Errorf("task '%s' is active and cannot be run at this time", taskName)
+	}
+
+	// for dynamic tasks, wait to see if the task will become inactive
+	if err := rw.drivers.WaitForInactive(ctx, taskName); err != nil {
+		return false, err
+	}
+
+	rw.drivers.SetActive(taskName)
+	defer rw.drivers.SetInactive(taskName)
+
+	// ORDER MATTERS. check enabled after task is available
 	if !task.IsEnabled() {
 		if task.IsScheduled() {
 			// Schedule tasks are specifically triggered and logged at INFO.
@@ -220,19 +235,6 @@ func (rw *TasksManager) TaskRunNow(ctx context.Context, taskName string) (bool, 
 	}
 
 	logger.Trace("running task")
-
-	// for scheduled tasks, do not wait if task is active
-	if rw.drivers.IsActive(taskName) && task.IsScheduled() {
-		return false, fmt.Errorf("task '%s' is active and cannot be run at this time", taskName)
-	}
-
-	// for dynamic tasks, wait to see if the task will become inactive
-	if err := rw.drivers.WaitForInactive(ctx, taskName); err != nil {
-		return false, err
-	}
-
-	rw.drivers.SetActive(taskName)
-	defer rw.drivers.SetInactive(taskName)
 
 	// setup to store event information
 	ev, err := event.NewEvent(taskName, &event.Config{
