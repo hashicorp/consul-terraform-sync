@@ -123,8 +123,8 @@ func TestNewDriverTask(t *testing.T) {
 				WorkingDir:   "working-dir/name",
 
 				// Enterprise
-				TFVersion:    "1.0.0",
-				TFCWorkspace: *config.DefaultTerraformCloudWorkspaceConfig(),
+				DeprecatedTFVersion: "1.0.0",
+				TFCWorkspace:        *config.DefaultTerraformCloudWorkspaceConfig(),
 
 				Env: map[string]string{
 					"CONSUL_HTTP_ADDR": "localhost:8500",

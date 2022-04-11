@@ -70,8 +70,8 @@ type Task struct {
 	logger       logging.Logger
 
 	// Enterprise
-	tfVersion    string
-	tfcWorkspace config.TerraformCloudWorkspaceConfig
+	deprecatedTFVersion string
+	tfcWorkspace        config.TerraformCloudWorkspaceConfig
 }
 
 type TaskConfig struct {
@@ -92,8 +92,8 @@ type TaskConfig struct {
 	WorkingDir   string
 
 	// Enterprise
-	TFVersion    string
-	TFCWorkspace config.TerraformCloudWorkspaceConfig
+	DeprecatedTFVersion string
+	TFCWorkspace        config.TerraformCloudWorkspaceConfig
 }
 
 func NewTask(conf TaskConfig) (*Task, error) {
@@ -141,8 +141,8 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		logger:       logging.Global().Named(logSystemName),
 
 		// Enterprise
-		tfVersion:    conf.TFVersion,
-		tfcWorkspace: conf.TFCWorkspace,
+		deprecatedTFVersion: conf.DeprecatedTFVersion,
+		tfcWorkspace:        conf.TFCWorkspace,
 	}, nil
 }
 
@@ -303,14 +303,17 @@ func (t *Task) WorkingDir() string {
 	return t.workingDir
 }
 
-// TFVersion returns the Terraform version to use when using the Terraform Cloud
+// DeprecatedTFVersion returns the Terraform version to use when using the Terraform Cloud
 // driver. Enterprise.
-func (t *Task) TFVersion() string {
+// Deprecated, use the Terraform Version from TFCWorkspace() instead.
+func (t *Task) DeprecatedTFVersion() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.tfVersion
+	return t.deprecatedTFVersion
 }
 
+// TFCWorkspace returns the Terraform Cloud Workspace configuration to use for the task
+// when using the Terraform Cloud driver. Enterprise only.
 func (t *Task) TFCWorkspace() config.TerraformCloudWorkspaceConfig {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
