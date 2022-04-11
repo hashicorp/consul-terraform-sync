@@ -194,12 +194,13 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 	}
 
 	// Enterprise
-	tc.TFVersion = tr.Task.TerraformVersion
+	tc.DeprecatedTFVersion = tr.Task.TerraformVersion
 	if tr.Task.TerraformCloudWorkspace != nil {
 		tc.TFCWorkspace = &config.TerraformCloudWorkspaceConfig{
-			ExecutionMode: tr.Task.TerraformCloudWorkspace.ExecutionMode,
-			AgentPoolID:   tr.Task.TerraformCloudWorkspace.AgentPoolId,
-			AgentPoolName: tr.Task.TerraformCloudWorkspace.AgentPoolName,
+			ExecutionMode:    tr.Task.TerraformCloudWorkspace.ExecutionMode,
+			AgentPoolID:      tr.Task.TerraformCloudWorkspace.AgentPoolId,
+			AgentPoolName:    tr.Task.TerraformCloudWorkspace.AgentPoolName,
+			TerraformVersion: tr.Task.TerraformCloudWorkspace.TerraformVersion,
 		}
 	}
 
@@ -381,15 +382,16 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	}
 
 	// Enterprise
-	if tc.TFVersion != nil && *tc.TFVersion != "" {
-		task.TerraformVersion = tc.TFVersion
+	if tc.DeprecatedTFVersion != nil && *tc.DeprecatedTFVersion != "" {
+		task.TerraformVersion = tc.DeprecatedTFVersion
 	}
 
 	if tc.TFCWorkspace != nil && !tc.TFCWorkspace.IsEmpty() {
 		task.TerraformCloudWorkspace = &oapigen.TerraformCloudWorkspace{
-			ExecutionMode: tc.TFCWorkspace.ExecutionMode,
-			AgentPoolId:   tc.TFCWorkspace.AgentPoolID,
-			AgentPoolName: tc.TFCWorkspace.AgentPoolName,
+			ExecutionMode:    tc.TFCWorkspace.ExecutionMode,
+			AgentPoolId:      tc.TFCWorkspace.AgentPoolID,
+			AgentPoolName:    tc.TFCWorkspace.AgentPoolName,
+			TerraformVersion: tc.TFCWorkspace.TerraformVersion,
 		}
 	}
 

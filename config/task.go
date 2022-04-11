@@ -65,7 +65,8 @@ type TaskConfig struct {
 	// The Terraform client version to use for the task when configured with CTS
 	// enterprise and the Terraform Cloud driver. This option is not supported
 	// when using CTS OSS or the Terraform driver.
-	TFVersion *string `mapstructure:"terraform_version"`
+	// - Deprecated in 0.6. Use `terraform_cloud_workspace.terraform_version` instead
+	DeprecatedTFVersion *string `mapstructure:"terraform_version"`
 
 	// The workspace configurations to use for the task when configured with CTS
 	// enterprise and the Terraform Cloud driver. This option is not supported
@@ -124,7 +125,7 @@ func (c *TaskConfig) Copy() *TaskConfig {
 
 	o.Version = StringCopy(c.Version)
 
-	o.TFVersion = StringCopy(c.TFVersion)
+	o.DeprecatedTFVersion = StringCopy(c.DeprecatedTFVersion)
 
 	if c.TFCWorkspace != nil {
 		o.TFCWorkspace = c.TFCWorkspace.Copy()
@@ -199,8 +200,8 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 		r.Version = StringCopy(o.Version)
 	}
 
-	if o.TFVersion != nil {
-		r.TFVersion = StringCopy(o.TFVersion)
+	if o.DeprecatedTFVersion != nil {
+		r.DeprecatedTFVersion = StringCopy(o.DeprecatedTFVersion)
 	}
 
 	if o.TFCWorkspace != nil {
@@ -286,8 +287,8 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	}
 	c.TFCWorkspace.Finalize()
 
-	if c.TFVersion == nil {
-		c.TFVersion = String("")
+	if c.DeprecatedTFVersion == nil {
+		c.DeprecatedTFVersion = String("")
 	}
 
 	bp := globalBp
@@ -364,7 +365,7 @@ func (c *TaskConfig) Validate() error {
 		return fmt.Errorf("module for the task is required")
 	}
 
-	if c.TFVersion != nil && *c.TFVersion != "" {
+	if c.DeprecatedTFVersion != nil && *c.DeprecatedTFVersion != "" {
 		return fmt.Errorf("unsupported configuration 'terraform_version' for "+
 			"task %q. This option is available for Consul-Terraform-Sync Enterprise "+
 			"when using the Terraform Cloud driver, or configure the Terraform client "+
@@ -434,7 +435,7 @@ func (c *TaskConfig) GoString() string {
 		StringVal(c.Module),
 		c.VarFiles,
 		StringVal(c.Version),
-		StringVal(c.TFVersion),
+		StringVal(c.DeprecatedTFVersion),
 		c.BufferPeriod.GoString(),
 		BoolVal(c.Enabled),
 		c.Condition.GoString(),

@@ -104,8 +104,8 @@ func TestNewDriverTask(t *testing.T) {
 					WorkingDir:   config.String("working-dir/name"),
 
 					// Enterprise
-					TFVersion:    config.String("1.0.0"),
-					TFCWorkspace: config.DefaultTerraformCloudWorkspaceConfig(),
+					DeprecatedTFVersion: config.String("1.0.0"),
+					TFCWorkspace:        config.DefaultTerraformCloudWorkspaceConfig(),
 				},
 			}},
 			[]*driver.Task{newTestTask(t, driver.TaskConfig{

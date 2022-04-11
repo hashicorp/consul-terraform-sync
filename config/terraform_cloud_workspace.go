@@ -4,32 +4,38 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	ctsVersion "github.com/hashicorp/consul-terraform-sync/version"
+	goVersion "github.com/hashicorp/go-version"
 )
 
 // TerraformCloudWorkspaceConfig is an enterprise-only configuration that controls
 // workspace attributes that are specific to a task.
 type TerraformCloudWorkspaceConfig struct {
-	ExecutionMode *string `mapstructure:"execution_mode"`
-	AgentPoolID   *string `mapstructure:"agent_pool_id"`
-	AgentPoolName *string `mapstructure:"agent_pool_name"`
+	ExecutionMode    *string `mapstructure:"execution_mode"`
+	AgentPoolID      *string `mapstructure:"agent_pool_id"`
+	AgentPoolName    *string `mapstructure:"agent_pool_name"`
+	TerraformVersion *string `mapstructure:"terraform_version"`
 }
 
 func DefaultTerraformCloudWorkspaceConfig() *TerraformCloudWorkspaceConfig {
 	return &TerraformCloudWorkspaceConfig{
-		ExecutionMode: String(""),
-		AgentPoolID:   String(""),
-		AgentPoolName: String(""),
+		ExecutionMode:    String(""),
+		AgentPoolID:      String(""),
+		AgentPoolName:    String(""),
+		TerraformVersion: String(""),
 	}
 }
 
 func (c *TerraformCloudWorkspaceConfig) IsEmpty() bool {
 	return (*c == TerraformCloudWorkspaceConfig{}) ||
 		(reflect.DeepEqual(c, &TerraformCloudWorkspaceConfig{
-			ExecutionMode: String(""),
-			AgentPoolID:   String(""),
-			AgentPoolName: String(""),
+			ExecutionMode:    String(""),
+			AgentPoolID:      String(""),
+			AgentPoolName:    String(""),
+			TerraformVersion: String(""),
 		}))
 }
 
@@ -40,10 +46,10 @@ func (c *TerraformCloudWorkspaceConfig) Copy() *TerraformCloudWorkspaceConfig {
 	}
 
 	var o TerraformCloudWorkspaceConfig
-	o.ExecutionMode = c.ExecutionMode
-	o.AgentPoolID = c.AgentPoolID
-	o.AgentPoolName = c.AgentPoolName
-
+	o.ExecutionMode = StringCopy(c.ExecutionMode)
+	o.AgentPoolID = StringCopy(c.AgentPoolID)
+	o.AgentPoolName = StringCopy(c.AgentPoolName)
+	o.TerraformVersion = StringCopy(c.TerraformVersion)
 	return &o
 }
 
@@ -75,6 +81,10 @@ func (c *TerraformCloudWorkspaceConfig) Merge(o *TerraformCloudWorkspaceConfig) 
 		r.AgentPoolName = StringCopy(o.AgentPoolName)
 	}
 
+	if o.TerraformVersion != nil {
+		r.TerraformVersion = StringCopy(o.TerraformVersion)
+	}
+
 	return r
 }
 
@@ -94,6 +104,10 @@ func (c *TerraformCloudWorkspaceConfig) Finalize() {
 
 	if c.AgentPoolName == nil {
 		c.AgentPoolName = String("")
+	}
+
+	if c.TerraformVersion == nil {
+		c.TerraformVersion = String("")
 	}
 }
 
@@ -122,6 +136,23 @@ func (c *TerraformCloudWorkspaceConfig) Validate() error {
 		logger.Warn("agent_pool_id and agent_pool_name are both configured, agent_pool_id will be used")
 	}
 
+	if c.TerraformVersion != nil && *c.TerraformVersion != "" {
+		v, err := goVersion.NewSemver(*c.TerraformVersion)
+		if err != nil {
+			return err
+		}
+
+		if len(strings.Split(*c.TerraformVersion, ".")) < 3 {
+			return fmt.Errorf("provide the exact Terraform version to install: %s", *c.TerraformVersion)
+		}
+
+		if !ctsVersion.TerraformConstraint.Check(v) {
+			return fmt.Errorf("Terraform version is not supported by Consul "+
+				"Terraform Sync, try updating to a different version (%s): %s",
+				ctsVersion.CompatibleTerraformVersionConstraint, *c.TerraformVersion)
+		}
+	}
+
 	return nil
 }
 
@@ -133,11 +164,13 @@ func (c *TerraformCloudWorkspaceConfig) GoString() string {
 
 	return fmt.Sprintf("&TerraformCloudWorkspaceConfig{"+
 		"AgentPoolID:%s, "+
-		"AgentPoolName:%s,"+
-		"ExecutionMode:%s"+
+		"AgentPoolName:%s, "+
+		"ExecutionMode:%s, "+
+		"TerraformVersion:%s"+
 		"}",
 		StringVal(c.AgentPoolID),
 		StringVal(c.AgentPoolName),
 		StringVal(c.ExecutionMode),
+		StringVal(c.TerraformVersion),
 	)
 }
