@@ -23,9 +23,6 @@ type Drivers struct {
 
 	// Tracks which driver is currently active
 	active sync.Map
-
-	// Tracks if a driver is marked for deletion
-	deletion map[string]bool
 }
 
 // NewDrivers returns a new drivers object
@@ -34,7 +31,6 @@ func NewDrivers() *Drivers {
 		mu:              &sync.RWMutex{},
 		drivers:         make(map[string]Driver),
 		driverTemplates: make(map[string]string),
-		deletion:        make(map[string]bool),
 	}
 }
 
@@ -189,23 +185,5 @@ func (d *Drivers) Delete(taskName string) error {
 	}
 
 	delete(d.drivers, taskName)
-	delete(d.deletion, taskName)
 	return nil
 }
-
-// func (d *Drivers) MarkForDeletion(name string) {
-// 	d.mu.Lock()
-// 	defer d.mu.Unlock()
-// 	d.deletion[name] = true
-// }
-
-// func (d *Drivers) IsMarkedForDeletion(name string) bool {
-// 	d.mu.RLock()
-// 	defer d.mu.RUnlock()
-
-// 	mark, ok := d.deletion[name]
-// 	if !ok {
-// 		return false
-// 	}
-// 	return mark
-// }

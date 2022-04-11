@@ -16,7 +16,7 @@ import (
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
-// TasksManager manages CRUD operations and running tasks
+// TasksManager manages CRUD operations and executing tasks
 type TasksManager struct {
 	state  state.Store
 	logger logging.Logger
@@ -28,11 +28,15 @@ type TasksManager struct {
 	// scheduleStartCh sends the task name of newly created scheduled tasks
 	// that will need to be monitored
 	scheduleStartCh chan string
+
+	// scheduleStopCh sends the task name of any deleted tasks that need to
+	// stop being monitored
+	scheduleStopCh chan string
 }
 
 // NewTasksManager configures a new tasks manager
 func NewTasksManager(conf *config.Config, state state.Store, watcher templates.Watcher) (*TasksManager, error) {
-	logger := logging.Global().Named(ctrlSystemName)
+	logger := logging.Global().Named("task_manager")
 
 	// tm.drivers.Reset() TODO: where? here?
 	driverFactory, err := driver.NewFactory(conf, watcher)
@@ -85,6 +89,8 @@ func (tm *TasksManager) Tasks(ctx context.Context) ([]config.TaskConfig, error) 
 }
 
 func (tm *TasksManager) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
+	tm.logger.Trace("creating task", taskNameLogKey, *taskConfig.Name)
+
 	d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
 		return config.TaskConfig{}, err
@@ -98,6 +104,8 @@ func (tm *TasksManager) TaskCreate(ctx context.Context, taskConfig config.TaskCo
 }
 
 func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
+	tm.logger.Trace("creating and running task", taskNameLogKey, *taskConfig.Name)
+
 	d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
 		return config.TaskConfig{}, err
@@ -113,13 +121,26 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 	return tm.addTask(ctx, d)
 }
 
-// TaskDelete deletes a task from the state store
+// TaskDelete marks a task as deleted then deletes the task asyncronously
 func (tm *TasksManager) TaskDelete(ctx context.Context, name string) error {
-	return tm.deleteTask(ctx, name)
+	logger := tm.logger.With(taskNameLogKey, name)
+	logger.Trace("marking task as deleted")
+
+	// Check if task exists
+	d, ok := tm.drivers.Get(name)
+	if !ok {
+		logger.Debug("task does not exist")
+		return nil
+	}
+
+	go tm.deleteTask(ctx, d)
+	return nil
 }
 
 // TaskInspect creates and inspects a temporary task that is not added to the drivers list.
 func (tm *TasksManager) TaskInspect(ctx context.Context, taskConfig config.TaskConfig) (bool, string, string, error) {
+	tm.logger.Trace("inspecting task", taskNameLogKey, *taskConfig.Name)
+
 	d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
 		return false, "", "", err
@@ -130,6 +151,8 @@ func (tm *TasksManager) TaskInspect(ctx context.Context, taskConfig config.TaskC
 }
 
 func (rw *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskConfig, runOp string) (bool, string, string, error) {
+	rw.logger.Trace("updating task", taskNameLogKey, *updateConf.Name)
+
 	// Only enabled changes are supported at this time
 	if updateConf.Enabled == nil {
 		return false, "", "", nil
@@ -172,7 +195,7 @@ func (rw *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskCo
 		}
 		defer func() {
 			ev.End(storedErr)
-			logger.Trace("adding event", "event", ev.GoString())
+			logger.Warn("adding update event", "event", ev.GoString())
 			if err := rw.state.AddTaskEvent(*ev); err != nil {
 				// only log error since update task occurred successfully by now
 				logger.Error("error storing event", "event", ev.GoString(), "error", err)
@@ -200,9 +223,16 @@ func (rw *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskCo
 func (rw *TasksManager) TaskRunNow(ctx context.Context, taskName string) (bool, error) {
 	logger := rw.logger.With(taskNameLogKey, taskName)
 
+	if _, ok := rw.state.GetTask(taskName); !ok {
+		rw.logger.Trace("task no longer exists in state, skipping")
+		return false, nil
+	}
+
 	d, ok := rw.drivers.Get(taskName)
 	if !ok {
-		return false, fmt.Errorf("task %s does not exist to run", taskName)
+		logger.Debug("task no longer exists")
+		// TODO: reattempt task clean up?
+		return false, nil
 	}
 
 	task := d.Task()
@@ -220,7 +250,8 @@ func (rw *TasksManager) TaskRunNow(ctx context.Context, taskName string) (bool, 
 	rw.drivers.SetActive(taskName)
 	defer rw.drivers.SetInactive(taskName)
 
-	// ORDER MATTERS. check enabled after task is available
+	// ORDER MATTERS. check enabled after task is available. enable cli will
+	// change during enable disable status during active
 	if !task.IsEnabled() {
 		if task.IsScheduled() {
 			// Schedule tasks are specifically triggered and logged at INFO.
@@ -249,7 +280,7 @@ func (rw *TasksManager) TaskRunNow(ctx context.Context, taskName string) (bool, 
 	var storedErr error
 	storeEvent := func() {
 		ev.End(storedErr)
-		logger.Trace("adding event", "event", ev.GoString())
+		logger.Warn("adding run event", "event", ev.GoString())
 		if err := rw.state.AddTaskEvent(*ev); err != nil {
 			rw.logger.Error("error storing event", "event", ev.GoString())
 		}
@@ -306,9 +337,13 @@ func (tm TasksManager) WatchNewScheduleTaskCh() <-chan string {
 	return tm.scheduleStartCh
 }
 
-func (tm TasksManager) cleanupTask(ctx context.Context, name string) {
-	if err := tm.deleteTask(ctx, name); err != nil {
-		tm.logger.Error("unable to cleanup task after error", "task_name", name)
+func (tm TasksManager) WatchDeletedScheduleTaskCh() <-chan string {
+	return tm.scheduleStopCh
+}
+
+func (tm TasksManager) cleanupTask(ctx context.Context, d driver.Driver) {
+	if err := tm.deleteTask(ctx, d); err != nil {
+		tm.logger.Error("unable to cleanup task after error", "task_name", d.Task().Name())
 	}
 }
 
@@ -317,13 +352,13 @@ func (tm *TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Ta
 	taskName := d.Task().Name()
 	err := tm.drivers.Add(taskName, d)
 	if err != nil {
-		tm.cleanupTask(ctx, taskName)
+		tm.cleanupTask(ctx, d)
 		return config.TaskConfig{}, err
 	}
 
 	conf, err := configFromDriverTask(d.Task())
 	if err != nil {
-		tm.cleanupTask(ctx, taskName)
+		tm.cleanupTask(ctx, d)
 		return config.TaskConfig{}, err
 	}
 
@@ -421,7 +456,7 @@ func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
 	var storedErr error
 	storeEvent := func() {
 		ev.End(storedErr)
-		logger.Trace("adding event", "event", ev.GoString())
+		logger.Warn("adding create run event", "event", ev.GoString())
 		if err := tm.state.AddTaskEvent(*ev); err != nil {
 			tm.logger.Error("error storing event", "event", ev.GoString())
 		}
@@ -441,20 +476,25 @@ func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
 
 // deleteTask deletes the task from the state. The task runner will handle deleting
 // the task when the task is not running any more
-func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
+func (tm *TasksManager) deleteTask(ctx context.Context, d driver.Driver) error {
+	name := d.Task().Name()
 	logger := tm.logger.With(taskNameLogKey, name)
 
-	// Check if task exists
-	_, ok := tm.state.GetTask(name)
-	if !ok {
-		logger.Debug("task does not exist. no need to delete")
-		return nil
+	if err := tm.drivers.Delete(name); err != nil {
+		return err
 	}
 
+	// delete task from state before drivers. places use state to determine if
+	// task has been deleted
 	tm.state.DeleteTask(name)
 	tm.state.DeleteTaskEvents(name)
 
-	logger.Debug("task deleted")
+	if d.Task().IsScheduled() {
+		// Notify the scheduled task to stop
+		tm.scheduleStopCh <- name
+	}
+
+	logger.Debug("task deletion complete")
 	return nil
 }
 

@@ -96,17 +96,19 @@ func (cm *ConditionMonitor) Start(ctx context.Context) error {
 					" the template ID does not match any task", "template_id", cmplID)
 				continue
 			}
-
 			go cm.runDynamicTask(ctx, taskName) // errors are logged for now
 
 		case taskName := <-cm.tasksManager.WatchNewScheduleTaskCh():
-			cm.logger.Info("received new scheduled task", taskNameLogKey, taskName)
+			cm.logger.Info("received scheduled task to monitor", taskNameLogKey, taskName)
 			stopCh := make(chan struct{}, 1)
 			cm.scheduleStopChs[taskName] = stopCh
 			go cm.runScheduledTask(ctx, taskName, stopCh)
 
-		case name := <-cm.deleteCh:
-			go cm.tasksManager.TaskDelete(ctx, name)
+		case taskName := <-cm.tasksManager.WatchDeletedScheduleTaskCh():
+			cm.logger.Info("stop monitoring scheduled task", taskNameLogKey, taskName)
+			stopCh := cm.scheduleStopChs[taskName]
+			stopCh <- struct{}{}
+			delete(cm.scheduleStopChs, taskName)
 
 		case err := <-errCh:
 			return err
@@ -182,12 +184,6 @@ func (cm *ConditionMonitor) runScheduledTask(ctx context.Context, taskName strin
 	for {
 		select {
 		case <-time.After(waitTime):
-			// continue to check that task isn't up for deletion
-			if _, ok := cm.state.GetTask(taskName); !ok {
-				logger.Trace("task is removed from state and in the process of cleanup, skipping")
-				return nil
-			}
-
 			cm.logger.Info("time for scheduled task", taskNameLogKey, taskName)
 			complete, err := cm.tasksManager.TaskRunNow(ctx, taskName)
 			if err != nil {
