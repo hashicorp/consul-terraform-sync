@@ -341,11 +341,11 @@ func TestTask_WorkingDir(t *testing.T) {
 	assert.Equal(t, task.workingDir, workingDir)
 }
 
-func TestTask_TFVersion(t *testing.T) {
+func TestTask_DeprecatedTFVersion(t *testing.T) {
 	var task Task
-	task.tfVersion = "1.0.0"
-	tfVersion := task.TFVersion()
-	assert.Equal(t, task.tfVersion, tfVersion)
+	task.deprecatedTFVersion = "1.0.0"
+	tfVersion := task.DeprecatedTFVersion()
+	assert.Equal(t, task.deprecatedTFVersion, tfVersion)
 }
 
 func TestTask_TFCWorkspace(t *testing.T) {

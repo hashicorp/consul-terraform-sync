@@ -242,7 +242,7 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		WorkingDir:         config.String(t.WorkingDir()),
 
 		// Enterprise
-		DeprecatedTFVersion: config.String(t.TFVersion()),
+		DeprecatedTFVersion: config.String(t.DeprecatedTFVersion()),
 		TFCWorkspace:        &tfcWs,
 	}, nil
 }
