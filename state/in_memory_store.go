@@ -44,6 +44,87 @@ func (s *InMemoryStore) GetConfig() config.Config {
 	return *s.conf.Copy()
 }
 
+// GetAllTasks returns a copy of the configs for all the tasks
+func (s *InMemoryStore) GetAllTasks() config.TaskConfigs {
+	s.conf.mu.RLock()
+	defer s.conf.mu.RUnlock()
+
+	taskConfs := s.conf.Tasks
+	if taskConfs == nil {
+		// expect nil only for testing
+		return config.TaskConfigs{}
+	}
+
+	return *taskConfs.Copy()
+}
+
+// GetTask returns a copy of the task configuration. If the task name does
+// not exist, then it returns false
+func (s *InMemoryStore) GetTask(taskName string) (config.TaskConfig, bool) {
+	s.conf.mu.RLock()
+	defer s.conf.mu.RUnlock()
+
+	taskConfs := s.conf.Tasks
+	if taskConfs == nil {
+		// expect nil only for testing
+		return config.TaskConfig{}, false
+	}
+
+	for _, taskConf := range *taskConfs {
+		if config.StringVal(taskConf.Name) == taskName {
+			return *taskConf.Copy(), true
+		}
+	}
+
+	return config.TaskConfig{}, false
+}
+
+// SetTask adds a new task configuration or does a patch update to an
+// existing task configuration with the same name
+func (s *InMemoryStore) SetTask(newTaskConf config.TaskConfig) {
+	s.conf.mu.Lock()
+	defer s.conf.mu.Unlock()
+
+	newTaskName := config.StringVal(newTaskConf.Name)
+
+	taskConfs := s.conf.Tasks
+	if taskConfs == nil {
+		taskConfs = &config.TaskConfigs{}
+	}
+
+	for ix, taskConf := range *taskConfs {
+		if config.StringVal(taskConf.Name) == newTaskName {
+			// patch update the existing task
+			updatedTaskConf := taskConf.Merge(&newTaskConf)
+			(*taskConfs)[ix] = updatedTaskConf
+			return
+		}
+	}
+
+	// add as a new task
+	*taskConfs = append(*taskConfs, &newTaskConf)
+}
+
+// DeleteTask deletes the task config if it exists
+func (s *InMemoryStore) DeleteTask(taskName string) {
+	s.conf.mu.Lock()
+	defer s.conf.mu.Unlock()
+
+	taskConfs := s.conf.Tasks
+	if taskConfs == nil {
+		// expect nil only for testing
+		return
+	}
+
+	for ix, taskConf := range *taskConfs {
+		if config.StringVal(taskConf.Name) == taskName {
+			// delete it
+			*taskConfs = append((*taskConfs)[:ix], (*taskConfs)[ix+1:]...)
+			return
+		}
+	}
+}
+
 // GetTaskEvents returns all the events for a task. If no task name is
 // specified, then it returns events for all tasks
 func (s *InMemoryStore) GetTaskEvents(taskName string) map[string][]event.Event {
