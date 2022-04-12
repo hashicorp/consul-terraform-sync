@@ -10,6 +10,9 @@ import (
 func TestServicesMonitorConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &ServicesMonitorConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *ServicesMonitorConfig
@@ -21,6 +24,10 @@ func TestServicesMonitorConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&ServicesMonitorConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"regexp_fully_configured",
