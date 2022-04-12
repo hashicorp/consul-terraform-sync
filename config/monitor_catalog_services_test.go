@@ -9,6 +9,9 @@ import (
 func TestCatalogServicesMonitorConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &CatalogServicesConditionConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *CatalogServicesConditionConfig
@@ -20,6 +23,10 @@ func TestCatalogServicesMonitorConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&CatalogServicesConditionConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"fully_configured",

@@ -10,6 +10,9 @@ import (
 func TestCTSTLSConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &CTSTLSConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *CTSTLSConfig
@@ -21,6 +24,10 @@ func TestCTSTLSConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&CTSTLSConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",

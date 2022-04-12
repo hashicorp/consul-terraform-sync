@@ -10,6 +10,9 @@ import (
 func TestServicesModuleInputConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &ServicesModuleInputConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *ServicesModuleInputConfig
@@ -21,6 +24,10 @@ func TestServicesModuleInputConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&ServicesModuleInputConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"happy_path",

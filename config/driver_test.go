@@ -12,6 +12,9 @@ import (
 func TestDriverConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &DriverConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *DriverConfig
@@ -22,6 +25,9 @@ func TestDriverConfig_Copy(t *testing.T) {
 		}, {
 			"empty",
 			&DriverConfig{},
+		}, {
+			"finalized",
+			finalizedConf,
 		}, {
 			"same_enabled",
 			&DriverConfig{

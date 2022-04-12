@@ -10,6 +10,9 @@ import (
 func TestSyslogConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &SyslogConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *SyslogConfig
@@ -21,6 +24,10 @@ func TestSyslogConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&SyslogConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",

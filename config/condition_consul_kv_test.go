@@ -9,6 +9,9 @@ import (
 func TestConsulKVConditionConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &ConsulKVConditionConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *ConsulKVConditionConfig
@@ -20,6 +23,10 @@ func TestConsulKVConditionConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&ConsulKVConditionConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"fully_configured",

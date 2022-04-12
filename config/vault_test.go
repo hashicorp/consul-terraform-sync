@@ -12,6 +12,9 @@ import (
 func TestVaultConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &VaultConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *VaultConfig
@@ -23,6 +26,10 @@ func TestVaultConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&VaultConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",

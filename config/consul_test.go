@@ -11,6 +11,9 @@ import (
 func TestConsulConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &ConsulConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *ConsulConfig
@@ -22,6 +25,10 @@ func TestConsulConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&ConsulConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",

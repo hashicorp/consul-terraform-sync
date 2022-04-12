@@ -9,6 +9,11 @@ import (
 )
 
 func TestBufferPeriodConfig_Copy(t *testing.T) {
+	t.Parallel()
+
+	finalizedConf := &BufferPeriodConfig{}
+	finalizedConf.Finalize(DefaultBufferPeriodConfig())
+
 	cases := []struct {
 		name string
 		a    *BufferPeriodConfig
@@ -20,6 +25,10 @@ func TestBufferPeriodConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&BufferPeriodConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",

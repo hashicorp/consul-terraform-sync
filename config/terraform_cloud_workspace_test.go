@@ -10,6 +10,9 @@ import (
 func TestTerraformCloudWorkspaceConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &TerraformCloudWorkspaceConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		c    *TerraformCloudWorkspaceConfig
@@ -21,6 +24,10 @@ func TestTerraformCloudWorkspaceConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&TerraformCloudWorkspaceConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 	}
 	for _, tc := range cases {

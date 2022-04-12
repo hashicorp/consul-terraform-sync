@@ -10,6 +10,9 @@ import (
 func TestAuthConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &AuthConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *AuthConfig
@@ -21,6 +24,10 @@ func TestAuthConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&AuthConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"copy",

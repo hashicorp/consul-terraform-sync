@@ -10,6 +10,9 @@ import (
 func TestServiceConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &ServiceConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *ServiceConfig
@@ -21,6 +24,10 @@ func TestServiceConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&ServiceConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",

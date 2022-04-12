@@ -12,6 +12,11 @@ import (
 func TestTerraformConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	consulConf := DefaultConsulConfig()
+	consulConf.Finalize()
+	finalizedConf := &TerraformConfig{}
+	finalizedConf.Finalize(consulConf)
+
 	cases := []struct {
 		name string
 		a    *TerraformConfig
@@ -22,6 +27,9 @@ func TestTerraformConfig_Copy(t *testing.T) {
 		}, {
 			"empty",
 			&TerraformConfig{},
+		}, {
+			"finalized",
+			finalizedConf,
 		}, {
 			"same_enabled",
 			&TerraformConfig{
