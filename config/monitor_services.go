@@ -54,7 +54,7 @@ func (c *ServicesMonitorConfig) Copy() MonitorConfig {
 	o.Regexp = StringCopy(c.Regexp)
 
 	if c.Names != nil {
-		o.Names = make([]string, 0)
+		o.Names = make([]string, 0, len(c.Names))
 		o.Names = append(o.Names, c.Names...)
 	}
 

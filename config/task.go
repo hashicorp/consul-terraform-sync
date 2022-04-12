@@ -105,12 +105,12 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.Name = StringCopy(c.Name)
 
 	if c.Providers != nil {
-		o.Providers = make([]string, 0)
+		o.Providers = make([]string, 0, len(c.Providers))
 		o.Providers = append(o.Providers, c.Providers...)
 	}
 
 	if c.DeprecatedServices != nil {
-		o.DeprecatedServices = make([]string, 0)
+		o.DeprecatedServices = make([]string, 0, len(c.DeprecatedServices))
 		o.DeprecatedServices = append(o.DeprecatedServices, c.DeprecatedServices...)
 	}
 
@@ -121,7 +121,7 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.DeprecatedSourceInputs = c.DeprecatedSourceInputs.Copy()
 
 	if c.VarFiles != nil {
-		o.VarFiles = make([]string, 0)
+		o.VarFiles = make([]string, 0, len(c.VarFiles))
 		o.VarFiles = append(o.VarFiles, c.VarFiles...)
 	}
 
