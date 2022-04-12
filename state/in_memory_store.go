@@ -36,7 +36,6 @@ func NewInMemoryStore(conf *config.Config) *InMemoryStore {
 	}
 }
 
-// GetConfig returns the config
 func (s *InMemoryStore) GetConfig() config.Config {
 	s.conf.mu.RLock()
 	defer s.conf.mu.RUnlock()
@@ -44,18 +43,14 @@ func (s *InMemoryStore) GetConfig() config.Config {
 	return *s.conf.conf.Copy()
 }
 
-// GetTaskEvents returns the events for a given task name. If no task name is
-// specified, then it returns events for all tasks
 func (s *InMemoryStore) GetTaskEvents(taskName string) map[string][]event.Event {
 	return s.events.Read(taskName)
 }
 
-// DeleteTaskEvents deletes all the events for a given task name
 func (s *InMemoryStore) DeleteTaskEvents(taskName string) {
 	s.events.Delete(taskName)
 }
 
-// AddTaskEvent adds an event to the store for the task configured in the event
 func (s *InMemoryStore) AddTaskEvent(event event.Event) error {
 	return s.events.Add(event)
 }

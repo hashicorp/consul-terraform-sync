@@ -8,15 +8,17 @@ import (
 // Store stores the CTS state
 type Store interface {
 
-	// GetConfig returns the CTS configuration
+	// GetConfig returns a copy of the CTS configuration
 	GetConfig() config.Config
 
-	// GetTaskEvents retrieves all the events for a task
+	// GetTaskEvents returns all the events for a task. If no task name is
+	// specified, then it returns events for all tasks
 	GetTaskEvents(taskName string) map[string][]event.Event
 
-	// DeleteTaskEvents deletes all the events for a task
+	// DeleteTaskEvents deletes all the events for a given task
 	DeleteTaskEvents(taskName string)
 
-	// AddTaskEvent adds an event for a task
+	// AddTaskEvent adds an event to the store for the task configured in the
+	// event
 	AddTaskEvent(event event.Event) error
 }
