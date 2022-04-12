@@ -62,6 +62,47 @@ func TestServer_Task(t *testing.T) {
 	})
 }
 
+func TestServer_Tasks(t *testing.T) {
+	ctx := context.Background()
+	ctrl := ReadWrite{
+		baseController: &baseController{},
+	}
+
+	t.Run("success", func(t *testing.T) {
+		taskConfs := config.TaskConfigs{
+			{Name: config.String("task_a")},
+			{Name: config.String("task_b")},
+		}
+		taskConfs.Finalize(config.DefaultBufferPeriodConfig(), config.DefaultWorkingDir)
+
+		s := new(mocksS.Store)
+		s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
+		ctrl.state = s
+
+		actualConfs, err := ctrl.Tasks(ctx)
+		require.NoError(t, err)
+
+		assert.Len(t, actualConfs, taskConfs.Len())
+		for ix, expectedConf := range taskConfs {
+			assert.Equal(t, *expectedConf, actualConfs[ix])
+		}
+
+		s.AssertExpectations(t)
+	})
+
+	t.Run("empty return", func(t *testing.T) {
+		s := new(mocksS.Store)
+		s.On("GetAllTasks", mock.Anything, mock.Anything).Return(config.TaskConfigs{})
+		ctrl.state = s
+
+		actualConfs, err := ctrl.Tasks(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, []config.TaskConfig{}, actualConfs)
+
+		s.AssertExpectations(t)
+	})
+}
+
 func TestServer_TaskCreate(t *testing.T) {
 	ctx := context.Background()
 	conf := &config.Config{

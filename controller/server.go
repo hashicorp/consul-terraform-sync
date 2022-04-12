@@ -29,6 +29,19 @@ func (rw *ReadWrite) Task(ctx context.Context, taskName string) (config.TaskConf
 	return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
 }
 
+func (rw *ReadWrite) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
+	// TODO handle ctx while waiting for state lock if it is currently active
+	tasks := rw.state.GetAllTasks()
+
+	// convert config.TaskConfigs => []config.TaskConfig
+	taskConfs := make([]config.TaskConfig, len(tasks))
+	for ix, taskConf := range tasks {
+		taskConfs[ix] = *taskConf
+	}
+
+	return taskConfs, nil
+}
+
 func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
 	d, err := rw.createTask(ctx, taskConfig)
 	if err != nil {
@@ -175,19 +188,6 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 	}
 
 	return plan.ChangesPresent, plan.Plan, "", nil
-}
-
-func (rw *ReadWrite) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
-	drivers := rw.drivers.Map()
-	confs := make([]config.TaskConfig, 0, len(drivers))
-	for _, d := range rw.drivers.Map() {
-		conf, err := configFromDriverTask(d.Task())
-		if err != nil {
-			return nil, err
-		}
-		confs = append(confs, conf)
-	}
-	return confs, nil
 }
 
 func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
