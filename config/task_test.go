@@ -9,6 +9,11 @@ import (
 )
 
 func TestTaskConfig_Copy(t *testing.T) {
+	t.Parallel()
+
+	finalizedConf := &TaskConfig{}
+	finalizedConf.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+
 	cases := []struct {
 		name string
 		a    *TaskConfig
@@ -20,6 +25,10 @@ func TestTaskConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&TaskConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"same_enabled",
