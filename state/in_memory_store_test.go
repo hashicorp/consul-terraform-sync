@@ -21,7 +21,7 @@ func Test_NewInMemoryStore(t *testing.T) {
 			nil,
 			InMemoryStore{
 				conf: &configStorage{
-					conf: *config.DefaultConfig(),
+					conf: config.DefaultConfig(),
 				},
 				events: newEventStorage(),
 			},
@@ -33,7 +33,7 @@ func Test_NewInMemoryStore(t *testing.T) {
 			},
 			InMemoryStore{
 				conf: &configStorage{
-					conf: config.Config{
+					conf: &config.Config{
 						Port: config.Int(1234),
 					},
 				},
@@ -48,18 +48,33 @@ func Test_NewInMemoryStore(t *testing.T) {
 			assert.Equal(t, tc.expected, *actual)
 		})
 	}
+
+	t.Run("stored config is dereferenced", func(t *testing.T) {
+		finalizedConf := config.DefaultConfig()
+		finalizedConf.Finalize()
+		actual := NewInMemoryStore(finalizedConf)
+
+		// Confirm that input and stored config have same values
+		assert.Equal(t, *finalizedConf, *actual.conf.conf)
+
+		// Confrm that input and stored config reference different objects
+		assert.NotSame(t, finalizedConf, actual.conf.conf)
+
+		// Confrm that input and stored config fields reference different objects
+		assert.NotSame(t, finalizedConf.Tasks, actual.conf.conf.Tasks)
+	})
 }
 
 func Test_InMemoryStore_GetConfig(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name     string
-		expected config.Config
+		name  string
+		input *config.Config
 	}{
 		{
 			"happy path",
-			config.Config{
+			&config.Config{
 				Port: config.Int(1234),
 			},
 		},
@@ -67,12 +82,31 @@ func Test_InMemoryStore_GetConfig(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			store := NewInMemoryStore(&tc.expected)
+			store := NewInMemoryStore(tc.input)
 
 			actual := store.GetConfig()
-			assert.Equal(t, tc.expected, actual)
+			assert.Equal(t, *tc.input, actual)
 		})
 	}
+
+	t.Run("returned config is dereferenced", func(t *testing.T) {
+		finalizedConf := config.DefaultConfig()
+		finalizedConf.Finalize()
+		store := NewInMemoryStore(finalizedConf)
+
+		actual := store.GetConfig()
+		storedConf := store.conf.conf
+
+		// Confirm returned config has same value as stored
+		assert.Equal(t, *storedConf, actual)
+
+		// Confirm returned config references different object from stored
+		assert.NotSame(t, storedConf, actual)
+
+		// Confirm returned config field reference different object from stored
+		assert.NotSame(t, storedConf.Port, actual.Port)
+	})
+
 }
 
 func Test_InMemoryStore_GetTaskEvents(t *testing.T) {
