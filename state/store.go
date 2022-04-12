@@ -5,6 +5,8 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/state/event"
 )
 
+//go:generate mockery --name=Store --filename=store.go  --output=../mocks/store
+
 // Store stores the CTS state
 type Store interface {
 
