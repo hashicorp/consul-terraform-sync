@@ -556,7 +556,11 @@ func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
 		logger.Error("unable to delete task", "error", err)
 		return err
 	}
+
+	// Delete task from state only after driver successfully deleted
+	rw.state.DeleteTask(name)
 	rw.state.DeleteTaskEvents(name)
+
 	logger.Debug("task deleted")
 	return nil
 }

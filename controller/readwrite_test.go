@@ -860,9 +860,13 @@ func TestReadWrite_deleteTask(t *testing.T) {
 
 			assert.NoError(t, err)
 			_, exists := drivers.Get(tc.name)
-			assert.False(t, exists, "task should no longer exist")
+			assert.False(t, exists, "driver should no longer exist")
+
 			events := ctrl.state.GetTaskEvents(tc.name)
 			assert.Empty(t, events, "task events should no longer exist")
+
+			_, exists = ctrl.state.GetTask(tc.name)
+			assert.False(t, exists, "task should no longer exist in state")
 		})
 	}
 
@@ -941,9 +945,13 @@ func TestReadWrite_deleteTask(t *testing.T) {
 
 		// Check that task removed from drivers and store
 		_, exists = drivers.Get(taskName)
-		assert.False(t, exists, "task should no longer exist")
+		assert.False(t, exists, "driver should no longer exist")
+
 		events = ctrl.state.GetTaskEvents(taskName)
 		assert.Empty(t, events, "task events should no longer exist")
+
+		_, exists = ctrl.state.GetTask(taskName)
+		assert.False(t, exists, "task should no longer exist in state")
 	})
 
 }
