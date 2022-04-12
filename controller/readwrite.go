@@ -589,6 +589,7 @@ func (rw *ReadWrite) waitForTaskInactive(ctx context.Context, name string) error
 // executed. Callers of this method must consume from TaskNotify channel to
 // prevent the buffered channel from filling and causing a dead lock.
 func (rw *ReadWrite) EnableTestMode() <-chan string {
-	rw.taskNotify = make(chan string, rw.drivers.Len())
+	tasks := rw.state.GetAllTasks()
+	rw.taskNotify = make(chan string, tasks.Len())
 	return rw.taskNotify
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
@@ -818,6 +819,30 @@ func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
 		assert.True(t, ok, "scheduled task stop channel not added to map")
 		assert.NotNil(t, stopCh, "expected stop channel not to be nil")
 	})
+}
+
+func TestReadWrite_EnableTestMode(t *testing.T) {
+	t.Parallel()
+
+	// Mock state store
+	taskConfs := config.TaskConfigs{
+		{Name: config.String("task_a")},
+		{Name: config.String("task_b")},
+	}
+	s := new(mocksS.Store)
+	s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
+
+	// Set up controller
+	ctrl := ReadWrite{
+		baseController: &baseController{
+			state: s,
+		},
+	}
+
+	// Test EnableTestMode
+	channel := ctrl.EnableTestMode()
+	assert.Equal(t, 2, cap(channel))
+	s.AssertExpectations(t)
 }
 
 func TestReadWrite_deleteTask(t *testing.T) {
