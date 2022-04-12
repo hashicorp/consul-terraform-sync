@@ -148,9 +148,11 @@ func TestServer_TaskCreate(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, conf, actual)
 
+		// Basic check that task was added
 		_, ok := ctrl.drivers.Get("task")
 		assert.True(t, ok, "task should have a driver")
 
+		// Basic check that task was not run
 		events := ctrl.state.GetTaskEvents("task")
 		assert.Len(t, events, 0, "no events stored on creation")
 	})
@@ -220,9 +222,11 @@ func TestServer_TaskCreateAndRun(t *testing.T) {
 		_, err = ctrl.TaskCreateAndRun(ctx, validTaskConf)
 		assert.NoError(t, err)
 
+		// Basic check that task was added
 		_, ok := ctrl.drivers.Get("task")
 		assert.True(t, ok)
 
+		// Basic check that task was ran
 		events := ctrl.state.GetTaskEvents("task")
 		assert.Len(t, events, 1)
 		require.Len(t, events["task"], 1)
@@ -505,6 +509,99 @@ func TestServer_TaskUpdate(t *testing.T) {
 		stateTask, exists := ctrl.state.GetTask(taskName)
 		require.True(t, exists)
 		assert.True(t, *stateTask.Enabled)
+	})
+}
+
+func TestServer_addTask(t *testing.T) {
+	t.Parallel()
+
+	ctrl := ReadWrite{
+		deleteCh:        make(chan string, 1),
+		scheduleStartCh: make(chan driver.Driver, 1),
+		baseController: &baseController{
+			logger: logging.NewNullLogger(),
+		},
+	}
+
+	t.Run("success", func(t *testing.T) {
+		// Set up driver's task object
+		driverTask, err := driver.NewTask(driver.TaskConfig{
+			Name:      "task_a",
+			Condition: &config.ScheduleConditionConfig{},
+		})
+		require.NoError(t, err)
+
+		// Mock driver
+		d := new(mocksD.Driver)
+		d.On("SetBufferPeriod").Return().Once()
+		d.On("Task").Return(driverTask)
+		d.On("TemplateIDs").Return(nil).Once()
+		ctrl.drivers = driver.NewDrivers()
+
+		// Mock state
+		s := new(mocksS.Store)
+		s.On("SetTask", mock.Anything).Return().Once()
+		ctrl.state = s
+
+		// Test addTask
+		ctx := context.Background()
+		taskConf, err := ctrl.addTask(ctx, d)
+		require.NoError(t, err)
+
+		// Basic check of returned conf
+		assert.Equal(t, "task_a", *taskConf.Name)
+
+		// Confirm driver added to drivers list
+		assert.Equal(t, ctrl.drivers.Len(), 1)
+
+		// Confirm state's Set called
+		s.AssertExpectations(t)
+		d.AssertExpectations(t)
+
+		// Confirm received from scheduleStartCh
+		select {
+		case <-ctrl.scheduleStartCh:
+			break
+		case <-time.After(time.Second * 5):
+			t.Fatal("did not receive from scheduleStartCh as expected")
+		}
+	})
+
+	t.Run("error adding driver", func(t *testing.T) {
+		taskName := "task_a"
+
+		// Set up driver's task object
+		driverTask, err := driver.NewTask(driver.TaskConfig{
+			Name: taskName,
+		})
+		require.NoError(t, err)
+
+		// Mock driver
+		d := new(mocksD.Driver)
+		d.On("SetBufferPeriod").Return().Once()
+		d.On("Task").Return(driverTask)
+
+		// Create an error by already adding the task to the drivers list
+		ctrl.drivers.Add(taskName, d)
+
+		// Test addTask
+		ctx := context.Background()
+		_, err = ctrl.addTask(ctx, d)
+		require.Error(t, err)
+		d.AssertExpectations(t)
+
+		// Confirm that this second driver was not added to drivers list
+		assert.Equal(t, 1, ctrl.drivers.Len())
+
+		// Confirm received from delete channel for cleanup
+		select {
+		case <-ctrl.scheduleStartCh:
+			t.Fatal("should not have received from scheduleStartCh")
+		case <-ctrl.deleteCh:
+			break
+		case <-time.After(time.Second * 5):
+			t.Fatal("did not receive from deleteCh as expected")
+		}
 	})
 }
 

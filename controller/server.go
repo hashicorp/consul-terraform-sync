@@ -48,28 +48,7 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 		return config.TaskConfig{}, err
 	}
 
-	// Set the buffer period
-	d.SetBufferPeriod()
-
-	// Add the task driver to the driver list only after successful create
-	name := *taskConfig.Name
-	err = rw.drivers.Add(name, d)
-	if err != nil {
-		rw.cleanupTask(ctx, name)
-		return config.TaskConfig{}, err
-	}
-	conf, err := configFromDriverTask(d.Task())
-	if err != nil {
-		// Cleanup driver
-		rw.cleanupTask(ctx, name)
-		return config.TaskConfig{}, err
-	}
-
-	if d.Task().IsScheduled() {
-		rw.scheduleStartCh <- d
-	}
-
-	return conf, nil
+	return rw.addTask(ctx, d)
 }
 
 func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
@@ -82,26 +61,7 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 		return config.TaskConfig{}, err
 	}
 
-	d.SetBufferPeriod()
-
-	// Add the task driver to the driver list only after successful create and run
-	name := *taskConfig.Name
-	err = rw.drivers.Add(*taskConfig.Name, d)
-	if err != nil {
-		rw.cleanupTask(ctx, name)
-		return config.TaskConfig{}, err
-	}
-	conf, err := configFromDriverTask(d.Task())
-	if err != nil {
-		rw.cleanupTask(ctx, name)
-		return config.TaskConfig{}, err
-	}
-
-	if d.Task().IsScheduled() {
-		rw.scheduleStartCh <- d
-	}
-
-	return conf, nil
+	return rw.addTask(ctx, d)
 }
 
 // TaskDelete marks a task for deletion
@@ -245,6 +205,36 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		DeprecatedTFVersion: config.String(t.DeprecatedTFVersion()),
 		TFCWorkspace:        &tfcWs,
 	}, nil
+}
+
+// addTask handles the necessary steps to add a task for CTS to monitor and run.
+// For example: setting buffer period, updating driver list and state, etc
+//
+// Assumes that the task driver has already been successfully created. On any
+// error, the task will be cleaned up. Returns a copy of the added task's
+// config
+func (rw ReadWrite) addTask(ctx context.Context, d driver.Driver) (config.TaskConfig, error) {
+	d.SetBufferPeriod()
+
+	name := d.Task().Name()
+	if err := rw.drivers.Add(name, d); err != nil {
+		rw.cleanupTask(ctx, name)
+		return config.TaskConfig{}, err
+	}
+
+	conf, err := configFromDriverTask(d.Task())
+	if err != nil {
+		rw.cleanupTask(ctx, name)
+		return config.TaskConfig{}, err
+	}
+
+	rw.state.SetTask(conf)
+
+	if d.Task().IsScheduled() {
+		rw.scheduleStartCh <- d
+	}
+
+	return conf, nil
 }
 
 func (rw ReadWrite) cleanupTask(ctx context.Context, name string) {
