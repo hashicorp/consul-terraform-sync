@@ -176,6 +176,11 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 		ev.Start()
 	}
 
+	if runOp != driver.RunOptionInspect {
+		// Only update state if the update is not inspect type
+		rw.state.SetTask(updateConf)
+	}
+
 	patch := driver.PatchTask{
 		RunOption: runOp,
 		Enabled:   *updateConf.Enabled,

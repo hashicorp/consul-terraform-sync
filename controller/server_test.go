@@ -399,15 +399,24 @@ func TestServer_TaskUpdate(t *testing.T) {
 			ChangesPresent: true,
 			Plan:           "plan!",
 		}
+
+		taskName := "task_b"
+
 		// add a driver
 		d := new(mocksD.Driver)
 		mockDriver(ctx, d, &driver.Task{})
 		d.On("UpdateTask", mock.Anything, mock.Anything).Return(expectedPlan, nil).Once()
-		err := ctrl.drivers.Add("task_b", d)
+		err := ctrl.drivers.Add(taskName, d)
 		require.NoError(t, err)
 
+		// add to state
+		ctrl.state.SetTask(config.TaskConfig{
+			Name:    &taskName,
+			Enabled: config.Bool(false),
+		})
+
 		updateConf := config.TaskConfig{
-			Name:    config.String("task_b"),
+			Name:    config.String(taskName),
 			Enabled: config.Bool(true),
 		}
 
@@ -418,8 +427,13 @@ func TestServer_TaskUpdate(t *testing.T) {
 		assert.Equal(t, expectedPlan.ChangesPresent, changed)
 
 		// No events since the task did not run
-		events := ctrl.state.GetTaskEvents("task_b")
+		events := ctrl.state.GetTaskEvents(taskName)
 		assert.Empty(t, events)
+
+		// Confirm task stayed disabled in state
+		stateTask, exists := ctrl.state.GetTask(taskName)
+		require.True(t, exists)
+		assert.False(t, *stateTask.Enabled)
 	})
 
 	t.Run("task-run-now", func(t *testing.T) {
@@ -431,6 +445,12 @@ func TestServer_TaskUpdate(t *testing.T) {
 		d.On("UpdateTask", mock.Anything, mock.Anything).Return(driver.InspectPlan{}, nil).Once()
 		err := ctrl.drivers.Add(taskName, d)
 		require.NoError(t, err)
+
+		// add to state
+		ctrl.state.SetTask(config.TaskConfig{
+			Name:    &taskName,
+			Enabled: config.Bool(false),
+		})
 
 		updateConf := config.TaskConfig{
 			Name:    &taskName,
@@ -445,6 +465,46 @@ func TestServer_TaskUpdate(t *testing.T) {
 
 		events := ctrl.state.GetTaskEvents(taskName)
 		assert.Len(t, events, 1)
+
+		// Confirm task became enabled in state
+		stateTask, exists := ctrl.state.GetTask(taskName)
+		require.True(t, exists)
+		assert.True(t, *stateTask.Enabled)
+	})
+
+	t.Run("task-no-option", func(t *testing.T) {
+		taskName := "task_d"
+
+		// add a driver
+		d := new(mocksD.Driver)
+		mockDriver(ctx, d, &driver.Task{})
+		d.On("UpdateTask", mock.Anything, mock.Anything).Return(driver.InspectPlan{}, nil).Once()
+		err := ctrl.drivers.Add(taskName, d)
+		require.NoError(t, err)
+
+		// add to state
+		ctrl.state.SetTask(config.TaskConfig{
+			Name:    &taskName,
+			Enabled: config.Bool(false),
+		})
+
+		updateConf := config.TaskConfig{
+			Name:    &taskName,
+			Enabled: config.Bool(true),
+		}
+
+		changed, plan, _, err := ctrl.TaskUpdate(ctx, updateConf, "")
+		require.NoError(t, err)
+		assert.Equal(t, "", plan, "no option does not return plan info")
+		assert.False(t, changed, "no option does not return plan info")
+
+		events := ctrl.state.GetTaskEvents(taskName)
+		assert.Len(t, events, 0)
+
+		// Confirm task became enabled in state
+		stateTask, exists := ctrl.state.GetTask(taskName)
+		require.True(t, exists)
+		assert.True(t, *stateTask.Enabled)
 	})
 }
 
