@@ -21,7 +21,7 @@ func Test_NewInMemoryStore(t *testing.T) {
 			nil,
 			InMemoryStore{
 				conf: &configStorage{
-					conf: config.DefaultConfig(),
+					conf: *config.DefaultConfig(),
 				},
 				events: newEventStorage(),
 			},
@@ -33,7 +33,7 @@ func Test_NewInMemoryStore(t *testing.T) {
 			},
 			InMemoryStore{
 				conf: &configStorage{
-					conf: &config.Config{
+					conf: config.Config{
 						Port: config.Int(1234),
 					},
 				},
@@ -55,7 +55,7 @@ func Test_NewInMemoryStore(t *testing.T) {
 		actual := NewInMemoryStore(finalizedConf)
 
 		// Confirm that input and stored config have same values
-		assert.Equal(t, *finalizedConf, *actual.conf.conf)
+		assert.Equal(t, *finalizedConf, actual.conf.conf)
 
 		// Confrm that input and stored config reference different objects
 		assert.NotSame(t, finalizedConf, actual.conf.conf)
@@ -98,7 +98,7 @@ func Test_InMemoryStore_GetConfig(t *testing.T) {
 		storedConf := store.conf.conf
 
 		// Confirm returned config has same value as stored
-		assert.Equal(t, *storedConf, actual)
+		assert.Equal(t, storedConf, actual)
 
 		// Confirm returned config references different object from stored
 		assert.NotSame(t, storedConf, actual)

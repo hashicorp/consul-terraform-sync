@@ -20,7 +20,7 @@ type InMemoryStore struct {
 // configStorage is the storage for the configuration with its own mutex lock
 type configStorage struct {
 	mu   sync.RWMutex
-	conf *config.Config
+	conf config.Config
 }
 
 // NewInMemoryStore returns a new in-memory store for CTS state
@@ -31,7 +31,7 @@ func NewInMemoryStore(conf *config.Config) *InMemoryStore {
 	}
 
 	return &InMemoryStore{
-		conf:   &configStorage{conf: conf.Copy()},
+		conf:   &configStorage{conf: *conf.Copy()},
 		events: newEventStorage(),
 	}
 }
