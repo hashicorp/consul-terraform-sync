@@ -22,7 +22,7 @@ const (
 	terraformSubsystemName = "terraform"
 )
 
-const fallbackTFVersion = "0.13.7"
+const fallbackTFVersion = "1.1.8"
 
 // TerraformVersion is the version of Terraform CLI for the Terraform driver.
 var TerraformVersion *goVersion.Version
