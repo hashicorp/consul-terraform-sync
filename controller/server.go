@@ -20,18 +20,13 @@ func (rw *ReadWrite) Events(ctx context.Context, taskName string) (map[string][]
 }
 
 func (rw *ReadWrite) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
-	// TODO handle ctx while waiting for driver lock if it is currently active
-	d, ok := rw.drivers.Get(taskName)
-	if !ok {
-		return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
+	// TODO handle ctx while waiting for state lock if it is currently active
+	conf, ok := rw.state.GetTask(taskName)
+	if ok {
+		return conf, nil
 	}
 
-	conf, err := configFromDriverTask(d.Task())
-	if err != nil {
-		return config.TaskConfig{}, err
-	}
-
-	return conf, nil
+	return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
 }
 
 func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
