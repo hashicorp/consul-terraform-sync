@@ -300,6 +300,42 @@ func TestFromPath(t *testing.T) {
 	}
 }
 
+func TestConfig_Copy(t *testing.T) {
+	t.Parallel()
+
+	finalizedConf := &Config{}
+	finalizedConf.Finalize()
+
+	cases := []struct {
+		name string
+		a    *Config
+	}{
+		{
+			"nil",
+			nil,
+		},
+		{
+			"empty",
+			&Config{},
+		},
+		{
+			"finalized",
+			finalizedConf,
+		},
+		{
+			"long",
+			&longConfig,
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			r := tc.a.Copy()
+			assert.Equal(t, tc.a, r)
+		})
+	}
+}
+
 func TestConfig_Finalize(t *testing.T) {
 	// Finalize tests top level config calls nested finalize
 	// Backfill expected values
