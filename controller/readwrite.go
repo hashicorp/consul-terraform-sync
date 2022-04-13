@@ -323,7 +323,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 
 	// setup to store event information
 	ev, err := event.NewEvent(taskName, &event.Config{
-		Providers: task.ProviderNames(),
+		Providers: task.ProviderIDs(),
 		Services:  task.ServiceNames(),
 		Source:    task.Module(),
 	})
@@ -491,7 +491,7 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 
 	// Create new event for task run
 	ev, err := event.NewEvent(taskName, &event.Config{
-		Providers: task.ProviderNames(),
+		Providers: task.ProviderIDs(),
 		Services:  task.ServiceNames(),
 		Source:    task.Module(),
 	})

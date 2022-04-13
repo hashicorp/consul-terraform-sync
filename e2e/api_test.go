@@ -93,7 +93,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					TaskName:  fakeSuccessTaskName,
 					Status:    api.StatusSuccessful,
 					Enabled:   true,
-					Providers: []string{"fake-sync"},
+					Providers: []string{"fake-sync.success"},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
 				},
@@ -101,7 +101,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					TaskName:  fakeFailureTaskName,
 					Status:    api.StatusErrored,
 					Enabled:   true,
-					Providers: []string{"fake-sync"},
+					Providers: []string{"fake-sync.failure"},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/fake_handler_failure_task?include=events",
 				},
@@ -109,7 +109,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					TaskName:  disabledTaskName,
 					Status:    api.StatusUnknown,
 					Enabled:   false,
-					Providers: []string{"fake-sync"},
+					Providers: []string{"fake-sync.success"},
 					Services:  []string{},
 					EventsURL: "",
 				},
@@ -124,7 +124,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 					TaskName:  fakeSuccessTaskName,
 					Status:    api.StatusSuccessful,
 					Enabled:   true,
-					Providers: []string{"fake-sync"},
+					Providers: []string{"fake-sync.success"},
 					Services:  []string{},
 					EventsURL: "/v1/status/tasks/fake_handler_success_task?include=events",
 				},
@@ -832,7 +832,7 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 		assert.Equal(t, taskName, e.TaskName)
 
 		require.NotNil(t, e.Config)
-		assert.Equal(t, []string{"fake-sync"}, e.Config.Providers)
+
 		wd, err := os.Getwd()
 		assert.NoError(t, err)
 		module := filepath.Join(wd, "./test_modules/local_instances_file")
@@ -840,6 +840,7 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 
 		if taskName == fakeSuccessTaskName {
 			assert.True(t, e.Success)
+			assert.Equal(t, []string{"fake-sync.success"}, e.Config.Providers)
 		}
 
 		if taskName == fakeFailureTaskName {
@@ -850,6 +851,8 @@ func checkEvents(t *testing.T, taskStatuses map[string]api.TaskStatus,
 			} else {
 				assert.False(t, e.Success, msg)
 			}
+
+			assert.Equal(t, []string{"fake-sync.failure"}, e.Config.Providers)
 		}
 	}
 }
