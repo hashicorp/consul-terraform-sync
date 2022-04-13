@@ -260,16 +260,16 @@ func (tm *TasksManager) EnableTestMode() <-chan string {
 
 // Run runs the controller in read-only mode by checking Consul catalog once for
 // latest and using the driver to plan network infrastructure changes
-func (ctrl *ReadOnly) Run(ctx context.Context) error {
-	ctrl.logger.Info("inspecting all tasks")
+func (tm *TasksManager) RunInspect(ctx context.Context) error {
+	tm.logger.Info("inspecting all tasks")
 
-	driversCopy := ctrl.drivers.Map()
+	driversCopy := tm.drivers.Map()
 	completed := make(map[string]bool, len(driversCopy))
 	for i := int64(0); ; i++ {
 		done := true
 		for taskName, d := range driversCopy {
 			if !completed[taskName] {
-				complete, err := ctrl.checkInspect(ctx, d)
+				complete, err := tm.checkInspect(ctx, d)
 				if err != nil {
 					return err
 				}
@@ -279,16 +279,16 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 				}
 			}
 		}
-		ctrl.logDepSize(50, i)
+		tm.logDepSize(50, i)
 		if done {
-			ctrl.logger.Info("completed task inspections")
+			tm.logger.Info("completed task inspections")
 			return nil
 		}
 
 		select {
-		case err := <-ctrl.watcher.WaitCh(ctx):
+		case err := <-tm.watcher.WaitCh(ctx):
 			if err != nil {
-				ctrl.logger.Error("error watching template dependencies", "error", err)
+				tm.logger.Error("error watching template dependencies", "error", err)
 				return err
 			}
 		case <-ctx.Done():
@@ -297,11 +297,11 @@ func (ctrl *ReadOnly) Run(ctx context.Context) error {
 	}
 }
 
-func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, error) {
+func (tm *TasksManager) checkInspect(ctx context.Context, d driver.Driver) (bool, error) {
 	task := d.Task()
 	taskName := task.Name()
 
-	ctrl.logger.Trace("checking dependencies changes for task", taskNameLogKey, taskName)
+	tm.logger.Trace("checking dependencies changes for task", taskNameLogKey, taskName)
 
 	rendered, err := d.RenderTemplate(ctx)
 	if err != nil {
@@ -312,21 +312,21 @@ func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, 
 	// rendering a template may take several cycles in order to completely fetch
 	// new data
 	if rendered {
-		ctrl.logger.Trace("template for task rendered", taskNameLogKey, taskName)
+		tm.logger.Trace("template for task rendered", taskNameLogKey, taskName)
 
-		ctrl.logger.Info("inspecting task", taskNameLogKey, taskName)
+		tm.logger.Info("inspecting task", taskNameLogKey, taskName)
 		p, err := d.InspectTask(ctx)
 		if err != nil {
 			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
 		}
 
 		if p.URL != "" {
-			ctrl.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan, "url", p.URL)
+			tm.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan, "url", p.URL)
 		} else {
-			ctrl.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan)
+			tm.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan)
 		}
 
-		ctrl.logger.Info("inspected task", taskNameLogKey, taskName)
+		tm.logger.Info("inspected task", taskNameLogKey, taskName)
 	}
 
 	return rendered, nil

@@ -653,7 +653,7 @@ func TestReadOnlyRun(t *testing.T) {
 			err := ctrl.drivers.Add("task", d)
 			require.NoError(t, err)
 
-			err = ctrl.Run(context.Background())
+			err = ctrl.RunInspect(context.Background())
 			if tc.expectError {
 				if assert.Error(t, err) {
 					assert.Contains(t, err.Error(), tc.name)
@@ -693,7 +693,7 @@ func TestReadOnlyRun_context_cancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		err := ctrl.Run(ctx)
+		err := ctrl.RunInspect(ctx)
 		if err != nil {
 			errCh <- err
 		}
