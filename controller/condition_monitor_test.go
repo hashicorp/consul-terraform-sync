@@ -22,14 +22,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestReadWrite_once_error(t *testing.T) {
+func Test_TasksManager_once_error(t *testing.T) {
 	// Test once mode error handling when a driver returns an error
 	numTasks := 5
 	w := new(mocks.Watcher)
 	w.On("WaitCh", mock.Anything).Return(nil)
 	w.On("Size").Return(numTasks)
 
-	rw := &ReadWrite{}
+	rw := &TasksManager{}
 
 	testCases := []struct {
 		name    string
@@ -45,7 +45,7 @@ func TestReadWrite_once_error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			expectedErr := fmt.Errorf("test error")
 
-			// Set up read-write controller with mocks
+			// Set up read-write tm with mocks
 			conf := multipleTaskConfig(numTasks)
 			rw.baseController = &baseController{
 				state:   state.NewInMemoryStore(conf),
@@ -91,21 +91,21 @@ func TestReadWrite_once_error(t *testing.T) {
 	}
 }
 
-func TestReadWrite_runDynamicTask(t *testing.T) {
+func Test_TasksManager_runDynamicTask(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
-		controller := newTestController()
+		tm := newTestTasksManager()
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
 		mockDriver(ctx, d, enabledTestTask(t, "task"))
-		controller.drivers.Add("task", d)
+		tm.drivers.Add("task", d)
 
-		err := controller.runDynamicTask(ctx, d)
+		err := tm.runDynamicTask(ctx, d)
 		assert.NoError(t, err)
 	})
 
 	t.Run("apply-error", func(t *testing.T) {
-		controller := newTestController()
+		tm := newTestTasksManager()
 
 		testErr := fmt.Errorf("could not apply: %s", "test")
 		d := new(mocksD.Driver)
@@ -114,48 +114,48 @@ func TestReadWrite_runDynamicTask(t *testing.T) {
 		d.On("InitWork", mock.Anything).Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(testErr)
-		controller.drivers.Add("task", d)
+		tm.drivers.Add("task", d)
 
-		err := controller.runDynamicTask(context.Background(), d)
+		err := tm.runDynamicTask(context.Background(), d)
 		assert.Contains(t, err.Error(), testErr.Error())
 	})
 
 	t.Run("skip-scheduled-tasks", func(t *testing.T) {
-		controller := newTestController()
+		tm := newTestTasksManager()
 
 		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
 		d.On("Task").Return(scheduledTestTask(t, taskName))
 		d.On("TemplateIDs").Return(nil)
 		// no other methods should be called (or mocked)
-		controller.drivers.Add(taskName, d)
+		tm.drivers.Add(taskName, d)
 
-		err := controller.runDynamicTask(context.Background(), d)
+		err := tm.runDynamicTask(context.Background(), d)
 		assert.NoError(t, err)
 	})
 
 	t.Run("active-task", func(t *testing.T) {
-		controller := newTestController()
-		controller.EnableTestMode()
+		tm := newTestTasksManager()
+		tm.EnableTestMode()
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
 		taskName := "task"
 		mockDriver(ctx, d, enabledTestTask(t, taskName))
-		drivers := controller.drivers
+		drivers := tm.drivers
 		drivers.Add(taskName, d)
 		drivers.SetActive(taskName)
 
 		// Attempt to run the active task
 		ch := make(chan error)
 		go func() {
-			err := controller.runDynamicTask(ctx, d)
+			err := tm.runDynamicTask(ctx, d)
 			ch <- err
 		}()
 
 		// Check that the task did not run while active
 		select {
-		case <-controller.taskNotify:
+		case <-tm.taskNotify:
 			t.Fatal("task ran even though active")
 		case <-time.After(250 * time.Millisecond):
 			break
@@ -166,16 +166,16 @@ func TestReadWrite_runDynamicTask(t *testing.T) {
 		select {
 		case <-time.After(250 * time.Millisecond):
 			t.Fatal("task did not run after it became inactive")
-		case <-controller.taskNotify:
+		case <-tm.taskNotify:
 			break
 		}
 	})
 
 }
 
-func TestReadWrite_runScheduledTask(t *testing.T) {
+func Test_TasksManager_runScheduledTask(t *testing.T) {
 	t.Run("happy-path", func(t *testing.T) {
-		ctrl := newTestController()
+		tm := newTestTasksManager()
 
 		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
@@ -183,13 +183,13 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
 		d.On("TemplateIDs").Return(nil)
-		ctrl.drivers.Add(taskName, d)
+		tm.drivers.Add(taskName, d)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := ctrl.runScheduledTask(ctx, d, stopCh)
+			err := tm.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -208,7 +208,7 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 	})
 
 	t.Run("dynamic-task-errors", func(t *testing.T) {
-		ctrl := newTestController()
+		tm := newTestTasksManager()
 
 		taskName := "dynamic_task"
 		d := new(mocksD.Driver)
@@ -218,7 +218,7 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := ctrl.runScheduledTask(ctx, d, stopCh)
+			err := tm.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -238,19 +238,19 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 
 	t.Run("stop-scheduled-task", func(t *testing.T) {
 		// Tests that signaling to the stop channel stops the function
-		ctrl := newTestController()
+		tm := newTestTasksManager()
 
 		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
 		d.On("Task").Return(scheduledTestTask(t, taskName)).Once()
 		d.On("TemplateIDs").Return(nil)
-		ctrl.drivers.Add(taskName, d)
+		tm.drivers.Add(taskName, d)
 
 		ctx := context.Background()
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := ctrl.runScheduledTask(ctx, d, stopCh)
+			err := tm.runScheduledTask(ctx, d, stopCh)
 			errCh <- err
 		}()
 		stopCh <- struct{}{}
@@ -266,7 +266,7 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 	t.Run("deleted-scheduled-task", func(t *testing.T) {
 		// Tests that a scheduled task stops if it no longer is in the
 		// list of drivers
-		ctrl := newTestController()
+		tm := newTestTasksManager()
 
 		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
@@ -276,10 +276,10 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 		ctx := context.Background()
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
-		ctrl.scheduleStopChs[taskName] = stopCh
+		tm.scheduleStopChs[taskName] = stopCh
 		done := make(chan bool)
 		go func() {
-			err := ctrl.runScheduledTask(ctx, d, stopCh)
+			err := tm.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -292,7 +292,7 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 		case <-done:
 			// runScheduledTask exited as expected
 			d.AssertExpectations(t)
-			_, ok := ctrl.scheduleStopChs[taskName]
+			_, ok := tm.scheduleStopChs[taskName]
 			assert.False(t, ok, "expected scheduled task stop channel to be removed")
 		case <-time.After(time.Second * 5):
 			t.Fatal("runScheduledTask did not exit as expected")
@@ -300,13 +300,13 @@ func TestReadWrite_runScheduledTask(t *testing.T) {
 	})
 }
 
-func TestReadWriteRun_context_cancel(t *testing.T) {
+func Test_TasksManager_Run_context_cancel(t *testing.T) {
 	w := new(mocks.Watcher)
 	w.On("Watch", mock.Anything, mock.Anything).Return(nil).
 		On("Size").Return(5).
 		On("Stop").Return()
 
-	ctl := ReadWrite{
+	ctl := TasksManager{
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			watcher: w,
@@ -335,7 +335,7 @@ func TestReadWriteRun_context_cancel(t *testing.T) {
 	}
 }
 
-func TestReadWrite_once_then_Run(t *testing.T) {
+func Test_TasksManager_once_then_Run(t *testing.T) {
 	// Tests Run behaviors as expected with triggers after once completes
 
 	d := new(mocksD.Driver)
@@ -345,7 +345,7 @@ func TestReadWrite_once_then_Run(t *testing.T) {
 		On("ApplyTask", mock.Anything).Return(nil).
 		On("SetBufferPeriod")
 
-	ctrl := ReadWrite{
+	tm := TasksManager{
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
@@ -353,7 +353,7 @@ func TestReadWrite_once_then_Run(t *testing.T) {
 		},
 		watcherCh: make(chan string, 5),
 	}
-	ctrl.drivers.Add("task_a", d)
+	tm.drivers.Add("task_a", d)
 
 	testCases := []struct {
 		name    string
@@ -361,20 +361,20 @@ func TestReadWrite_once_then_Run(t *testing.T) {
 	}{
 		{
 			"onceConsecutive",
-			ctrl.onceConsecutive,
+			tm.onceConsecutive,
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			completedTasksCh := ctrl.EnableTestMode()
+			completedTasksCh := tm.EnableTestMode()
 			errCh := make(chan error)
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
 
 			w := new(mocks.Watcher)
 			w.On("Size").Return(5)
-			w.On("Watch", ctx, ctrl.watcherCh).Return(nil)
-			ctrl.watcher = w
+			w.On("Watch", ctx, tm.watcherCh).Return(nil)
+			tm.watcher = w
 
 			go func() {
 				err := tc.onceFxn(ctx)
@@ -383,7 +383,7 @@ func TestReadWrite_once_then_Run(t *testing.T) {
 					return
 				}
 
-				err = ctrl.Run(ctx)
+				err = tm.Run(ctx)
 				if err != nil {
 					errCh <- err
 				}
@@ -391,7 +391,7 @@ func TestReadWrite_once_then_Run(t *testing.T) {
 
 			// Emulate triggers to evaluate task completion
 			for i := 0; i < 5; i++ {
-				ctrl.watcherCh <- "tmpl_a"
+				tm.watcherCh <- "tmpl_a"
 				select {
 				case taskName := <-completedTasksCh:
 					assert.Equal(t, "task_a", taskName)
@@ -405,9 +405,9 @@ func TestReadWrite_once_then_Run(t *testing.T) {
 	}
 }
 
-func TestReadWrite_Run_ActiveTask(t *testing.T) {
-	// Set up controller with two tasks
-	ctrl := ReadWrite{
+func Test_TasksManager_Run_ActiveTask(t *testing.T) {
+	// Set up tm with two tasks
+	tm := TasksManager{
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
@@ -422,32 +422,32 @@ func TestReadWrite_Run_ActiveTask(t *testing.T) {
 			On("RenderTemplate", mock.Anything).Return(true, nil).
 			On("ApplyTask", mock.Anything).Return(nil).
 			On("SetBufferPeriod")
-		ctrl.drivers.Add(n, d)
+		tm.drivers.Add(n, d)
 	}
-	completedTasksCh := ctrl.EnableTestMode()
+	completedTasksCh := tm.EnableTestMode()
 
-	// Set up watcher for controller
+	// Set up watcher for tm
 	ctx := context.Background()
 	w := new(mocks.Watcher)
 	w.On("Size").Return(5)
-	w.On("Watch", ctx, ctrl.watcherCh).Return(nil)
-	ctrl.watcher = w
+	w.On("Watch", ctx, tm.watcherCh).Return(nil)
+	tm.watcher = w
 
 	// Start Run
 	errCh := make(chan error)
 	go func() {
-		err := ctrl.Run(ctx)
+		err := tm.Run(ctx)
 		if err != nil {
 			errCh <- err
 		}
 	}()
 
 	// Set task_a to active
-	ctrl.drivers.SetActive("task_a")
+	tm.drivers.SetActive("task_a")
 
 	// Trigger twice on active task_a, task should not complete
 	for i := 0; i < 2; i++ {
-		ctrl.watcherCh <- "tmpl_task_a"
+		tm.watcherCh <- "tmpl_task_a"
 	}
 	select {
 	case <-completedTasksCh:
@@ -457,7 +457,7 @@ func TestReadWrite_Run_ActiveTask(t *testing.T) {
 	}
 
 	// Trigger on inactive task_b, task should complete
-	ctrl.watcherCh <- "tmpl_task_b"
+	tm.watcherCh <- "tmpl_task_b"
 	select {
 	case taskName := <-completedTasksCh:
 		assert.Equal(t, "task_b", taskName)
@@ -466,7 +466,7 @@ func TestReadWrite_Run_ActiveTask(t *testing.T) {
 	}
 
 	// Set task_a to inactive, should expect two tasks to complete
-	ctrl.drivers.SetInactive("task_a")
+	tm.drivers.SetInactive("task_a")
 	for i := 0; i < 2; i++ {
 		select {
 		case taskName := <-completedTasksCh:
@@ -477,7 +477,7 @@ func TestReadWrite_Run_ActiveTask(t *testing.T) {
 	}
 
 	// Notify on task_a again, should complete
-	ctrl.watcherCh <- "tmpl_task_a"
+	tm.watcherCh <- "tmpl_task_a"
 	select {
 	case taskName := <-completedTasksCh:
 		assert.Equal(t, "task_a", taskName)
@@ -486,9 +486,9 @@ func TestReadWrite_Run_ActiveTask(t *testing.T) {
 	}
 }
 
-func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
+func Test_TasksManager_Run_ScheduledTasks(t *testing.T) {
 	t.Run("startup_task", func(t *testing.T) {
-		ctrl := ReadWrite{
+		tm := TasksManager{
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
 				logger:  logging.NewNullLogger(),
@@ -497,7 +497,7 @@ func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
 			watcherCh:       make(chan string, 5),
 			scheduleStopChs: make(map[string](chan struct{})),
 		}
-		ctrl.EnableTestMode()
+		tm.EnableTestMode()
 
 		// Add initial task
 		taskName := "scheduled_task"
@@ -507,32 +507,32 @@ func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
 			On("RenderTemplate", mock.Anything).Return(true, nil).
 			On("ApplyTask", mock.Anything).Return(nil).
 			On("SetBufferPeriod")
-		ctrl.drivers.Add(taskName, d)
+		tm.drivers.Add(taskName, d)
 
-		// Set up watcher for controller
+		// Set up watcher for tm
 		ctx := context.Background()
 		w := new(mocks.Watcher)
 		w.On("Size").Return(5)
-		w.On("Watch", ctx, ctrl.watcherCh).Return(nil)
-		ctrl.watcher = w
+		w.On("Watch", ctx, tm.watcherCh).Return(nil)
+		tm.watcher = w
 
-		go ctrl.Run(context.Background())
+		go tm.Run(context.Background())
 
 		// Check that the task ran
 		select {
-		case n := <-ctrl.taskNotify:
+		case n := <-tm.taskNotify:
 			assert.Equal(t, taskName, n)
 		case <-time.After(5 * time.Second):
 			t.Fatal("scheduled task did not run")
 		}
 
-		stopCh, ok := ctrl.scheduleStopChs[taskName]
+		stopCh, ok := tm.scheduleStopChs[taskName]
 		assert.True(t, ok, "scheduled task stop channel not added to map")
 		assert.NotNil(t, stopCh, "expected stop channel not to be nil")
 	})
 
 	t.Run("created_task", func(t *testing.T) {
-		ctrl := ReadWrite{
+		tm := TasksManager{
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
 				logger:  logging.NewNullLogger(),
@@ -542,16 +542,16 @@ func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
 			scheduleStartCh: make(chan driver.Driver, 1),
 			scheduleStopChs: make(map[string](chan struct{})),
 		}
-		ctrl.EnableTestMode()
+		tm.EnableTestMode()
 
-		// Set up watcher for controller
+		// Set up watcher for tm
 		ctx := context.Background()
 		w := new(mocks.Watcher)
 		w.On("Size").Return(5)
-		w.On("Watch", ctx, ctrl.watcherCh).Return(nil)
-		ctrl.watcher = w
+		w.On("Watch", ctx, tm.watcherCh).Return(nil)
+		tm.watcher = w
 
-		go ctrl.Run(context.Background())
+		go tm.Run(context.Background())
 
 		createdTaskName := "created_scheduled_task"
 		createdDriver := new(mocksD.Driver)
@@ -560,22 +560,22 @@ func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
 			On("RenderTemplate", mock.Anything).Return(true, nil).
 			On("ApplyTask", mock.Anything).Return(nil).
 			On("SetBufferPeriod")
-		ctrl.drivers.Add(createdTaskName, createdDriver)
-		ctrl.scheduleStartCh <- createdDriver
+		tm.drivers.Add(createdTaskName, createdDriver)
+		tm.scheduleStartCh <- createdDriver
 
 		select {
-		case n := <-ctrl.taskNotify:
+		case n := <-tm.taskNotify:
 			assert.Equal(t, createdTaskName, n)
 		case <-time.After(5 * time.Second):
 			t.Fatal("scheduled task did not run")
 		}
-		stopCh, ok := ctrl.scheduleStopChs[createdTaskName]
+		stopCh, ok := tm.scheduleStopChs[createdTaskName]
 		assert.True(t, ok, "scheduled task stop channel not added to map")
 		assert.NotNil(t, stopCh, "expected stop channel not to be nil")
 	})
 }
 
-func TestReadWrite_EnableTestMode(t *testing.T) {
+func Test_TasksManager_EnableTestMode(t *testing.T) {
 	t.Parallel()
 
 	// Mock state store
@@ -586,20 +586,20 @@ func TestReadWrite_EnableTestMode(t *testing.T) {
 	s := new(mocksS.Store)
 	s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
 
-	// Set up controller
-	ctrl := ReadWrite{
+	// Set up tm
+	tm := TasksManager{
 		baseController: &baseController{
 			state: s,
 		},
 	}
 
 	// Test EnableTestMode
-	channel := ctrl.EnableTestMode()
+	channel := tm.EnableTestMode()
 	assert.Equal(t, 2, cap(channel))
 	s.AssertExpectations(t)
 }
 
-func TestReadOnlyRun(t *testing.T) {
+func Test_TasksManager_RunInspect(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -637,7 +637,7 @@ func TestReadOnlyRun(t *testing.T) {
 			w := new(mocks.Watcher)
 			w.On("Size").Return(5)
 
-			ctrl := ReadOnly{baseController: &baseController{
+			tm := TasksManager{baseController: &baseController{
 				watcher: w,
 				drivers: driver.NewDrivers(),
 				logger:  logging.NewNullLogger(),
@@ -650,10 +650,10 @@ func TestReadOnlyRun(t *testing.T) {
 				Return(true, tc.renderTmplErr)
 			d.On("InspectTask", mock.Anything).
 				Return(driver.InspectPlan{}, tc.inspectTaskErr)
-			err := ctrl.drivers.Add("task", d)
+			err := tm.drivers.Add("task", d)
 			require.NoError(t, err)
 
-			err = ctrl.RunInspect(context.Background())
+			err = tm.RunInspect(context.Background())
 			if tc.expectError {
 				if assert.Error(t, err) {
 					assert.Contains(t, err.Error(), tc.name)
@@ -665,7 +665,7 @@ func TestReadOnlyRun(t *testing.T) {
 	}
 }
 
-func TestReadOnlyRun_context_cancel(t *testing.T) {
+func Test_TasksManager_RunInspect_context_cancel(t *testing.T) {
 	r := new(mocks.Resolver)
 	r.On("Run", mock.Anything, mock.Anything).
 		Return(hcat.ResolveEvent{Complete: false}, nil)
@@ -683,7 +683,7 @@ func TestReadOnlyRun_context_cancel(t *testing.T) {
 	err := drivers.Add("task", d)
 	require.NoError(t, err)
 
-	ctrl := ReadOnly{baseController: &baseController{
+	tm := TasksManager{baseController: &baseController{
 		watcher:  w,
 		resolver: r,
 		drivers:  drivers,
@@ -693,7 +693,7 @@ func TestReadOnlyRun_context_cancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		err := ctrl.RunInspect(ctx)
+		err := tm.RunInspect(ctx)
 		if err != nil {
 			errCh <- err
 		}
@@ -793,8 +793,8 @@ func scheduledTestTask(tb testing.TB, name string) *driver.Task {
 	return task
 }
 
-func newTestController() ReadWrite {
-	return ReadWrite{
+func newTestTasksManager() TasksManager {
+	return TasksManager{
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
