@@ -257,3 +257,77 @@ func (rw *ReadWrite) EnableTestMode() <-chan string {
 	rw.taskNotify = make(chan string, tasks.Len())
 	return rw.taskNotify
 }
+
+// Run runs the controller in read-only mode by checking Consul catalog once for
+// latest and using the driver to plan network infrastructure changes
+func (ctrl *ReadOnly) Run(ctx context.Context) error {
+	ctrl.logger.Info("inspecting all tasks")
+
+	driversCopy := ctrl.drivers.Map()
+	completed := make(map[string]bool, len(driversCopy))
+	for i := int64(0); ; i++ {
+		done := true
+		for taskName, d := range driversCopy {
+			if !completed[taskName] {
+				complete, err := ctrl.checkInspect(ctx, d)
+				if err != nil {
+					return err
+				}
+				completed[taskName] = complete
+				if !complete && done {
+					done = false
+				}
+			}
+		}
+		ctrl.logDepSize(50, i)
+		if done {
+			ctrl.logger.Info("completed task inspections")
+			return nil
+		}
+
+		select {
+		case err := <-ctrl.watcher.WaitCh(ctx):
+			if err != nil {
+				ctrl.logger.Error("error watching template dependencies", "error", err)
+				return err
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+func (ctrl *ReadOnly) checkInspect(ctx context.Context, d driver.Driver) (bool, error) {
+	task := d.Task()
+	taskName := task.Name()
+
+	ctrl.logger.Trace("checking dependencies changes for task", taskNameLogKey, taskName)
+
+	rendered, err := d.RenderTemplate(ctx)
+	if err != nil {
+		return false, fmt.Errorf("error rendering template for task %s: %s",
+			taskName, err)
+	}
+
+	// rendering a template may take several cycles in order to completely fetch
+	// new data
+	if rendered {
+		ctrl.logger.Trace("template for task rendered", taskNameLogKey, taskName)
+
+		ctrl.logger.Info("inspecting task", taskNameLogKey, taskName)
+		p, err := d.InspectTask(ctx)
+		if err != nil {
+			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
+		}
+
+		if p.URL != "" {
+			ctrl.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan, "url", p.URL)
+		} else {
+			ctrl.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan)
+		}
+
+		ctrl.logger.Info("inspected task", taskNameLogKey, taskName)
+	}
+
+	return rendered, nil
+}
