@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/pkg/errors"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
@@ -14,7 +15,44 @@ import (
 
 // TasksManager manages the CRUD operations and execution of tasks
 type TasksManager struct {
-	// TODO: placeholder. Will convert these ReadWrite methods to TasksManager
+	*baseController
+
+	retry retry.Retry
+
+	watcherCh chan string
+
+	// scheduleStartCh is used to coordinate scheduled tasks created via the API
+	scheduleStartCh chan driver.Driver
+	// scheduleStopChs is a map of channels used to stop scheduled tasks
+	scheduleStopChs map[string](chan struct{})
+
+	// deleteCh is used to coordinate task deletion via the API
+	deleteCh chan string
+
+	// taskNotify is only initialized if EnableTestMode() is used. It provides
+	// tests insight into which tasks were triggered and had completed
+	taskNotify chan string
+}
+
+// NewTasksManager configures a new tasks manager
+func NewTasksManager(conf *config.Config) (*TasksManager, error) {
+	baseCtrl, err := newBaseController(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TasksManager{
+		baseController:  baseCtrl,
+		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
+		deleteCh:        make(chan string, 10),        // arbitrarily chosen size
+		scheduleStopChs: make(map[string](chan struct{})),
+	}, nil
+}
+
+// Init initializes a tasks manager
+func (tm *TasksManager) Init(ctx context.Context) error {
+	return tm.init(ctx)
 }
 
 func (tm *TasksManager) Config() config.Config {
