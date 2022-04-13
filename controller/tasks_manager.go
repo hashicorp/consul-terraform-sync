@@ -11,6 +11,11 @@ import (
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
+// TasksManager manages the CRUD operations and execution of tasks
+type TasksManager struct {
+	// TODO: placeholder. Will convert these ReadWrite methods to TasksManager
+}
+
 func (rw *ReadWrite) Config() config.Config {
 	return rw.state.GetConfig()
 }
