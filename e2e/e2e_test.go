@@ -412,11 +412,93 @@ func TestE2EInspectMode(t *testing.T) {
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
-	cmd.Run()
+	err := cmd.Run()
+	require.NoError(t, err)
 
+	// Confirm shutdown
+	assert.Contains(t, buf.String(), "graceful shutdown")
+
+	// Confirm plan outputted
 	assert.Contains(t, buf.String(), "Plan: 2 to add, 0 to change, 0 to destroy.")
+
+	// Confirm resources not created
 	resourcePath := filepath.Join(tempDir, webTaskName, resourcesDir)
 	validateServices(t, false, []string{"web", "api"}, resourcePath)
+}
+
+// TestE2E_OnceMode tests running CTS in once mode and verifies that
+// the each task is run once and that CTS exits.
+// Tests by using two tasks:
+// - First run a scheduled task that runs every 1s
+// - Then run a delayed task that takes 5s to execute
+// - Confirm that scheduled task didn't run again while waiting on delayed task
+func TestE2E_OnceMode(t *testing.T) {
+	setParallelism(t)
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "once-mode")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+	defer cleanup()
+
+	// Task will run every 1 second. "a" prefix to ensure alphabetically 1st
+	scheduledTaskName := "a_scheduled_task"
+	scheduledTask := fmt.Sprintf(`task {
+		name = "%s"
+		module = "./test_modules/local_instances_file"
+		condition "schedule" {
+			cron = "*/1 * * * * * *"
+		}
+		module_input "services"{
+			names = ["web", "api"]
+		}
+	}`, scheduledTaskName)
+
+	// Task will take 5 seconds to execute. "b" prefix to ensure alphabetically 2nd
+	delayedTaskName := "b_delayed_task"
+	delayedTask := moduleTaskConfig(delayedTaskName, "./test_modules/delayed_module")
+
+	config := baseConfig(tempDir).appendConsulBlock(srv).
+		appendTerraformBlock().appendString(scheduledTask).appendString(delayedTask)
+
+	configPath := filepath.Join(tempDir, configFile)
+	config.write(t, configPath)
+
+	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath),
+		api.CTSOnceModeFlag)
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	err := cmd.Run()
+
+	output := buf.String()
+	defer func() {
+		if t.Failed() {
+			t.Log("Log output:\n", output)
+		}
+	}()
+
+	require.NoError(t, err, output)
+
+	// Confirm shutdown
+	assert.Contains(t, output, "graceful shutdown", output)
+
+	// Confirm scheduled task ran before delayed task
+	completedStr := "task completed: task_name=%s"
+	schedIx := strings.Index(output, fmt.Sprintf(completedStr, scheduledTaskName))
+	delayedIx := strings.Index(output, fmt.Sprintf(completedStr, delayedTaskName))
+	assert.Less(t, schedIx, delayedIx, "delayed task ran before scheduled task")
+
+	for _, taskName := range []string{delayedTaskName, scheduledTaskName} {
+		// Confirm each task ran only once
+		taskRunCount := strings.Count(output, fmt.Sprintf(completedStr, taskName))
+		assert.Equal(t, 1, taskRunCount)
+
+		// Confirm resources are created for each task
+		resourcePath := filepath.Join(tempDir, taskName, resourcesDir)
+		validateServices(t, true, []string{"web", "api"}, resourcePath)
+	}
 }
 
 // TestE2E_ConfigStreamlining_Deprecations runs the CTS binary in once mode to test a CTS config
