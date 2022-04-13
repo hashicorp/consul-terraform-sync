@@ -9,6 +9,9 @@ import (
 func TestScheduleConditionConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &ScheduleConditionConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *ScheduleConditionConfig
@@ -20,6 +23,10 @@ func TestScheduleConditionConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&ScheduleConditionConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"fully_configured",

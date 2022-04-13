@@ -110,6 +110,7 @@ func (c *Config) Copy() *Config {
 		TerraformProviders: c.TerraformProviders.Copy(),
 		BufferPeriod:       c.BufferPeriod.Copy(),
 		TLS:                c.TLS.Copy(),
+		ClientType:         StringCopy(c.ClientType),
 	}
 }
 

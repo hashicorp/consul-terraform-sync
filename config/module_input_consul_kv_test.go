@@ -11,6 +11,9 @@ import (
 func TestConsulKVModuleInputConfig_Copy(t *testing.T) {
 	t.Parallel()
 
+	finalizedConf := &ConsulKVModuleInputConfig{}
+	finalizedConf.Finalize()
+
 	cases := []struct {
 		name string
 		a    *ConsulKVModuleInputConfig
@@ -22,6 +25,10 @@ func TestConsulKVModuleInputConfig_Copy(t *testing.T) {
 		{
 			"empty",
 			&ConsulKVModuleInputConfig{},
+		},
+		{
+			"finalized",
+			finalizedConf,
 		},
 		{
 			"fully_configured",

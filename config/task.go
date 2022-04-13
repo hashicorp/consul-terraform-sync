@@ -104,9 +104,15 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.Description = StringCopy(c.Description)
 	o.Name = StringCopy(c.Name)
 
-	o.Providers = append(o.Providers, c.Providers...)
+	if c.Providers != nil {
+		o.Providers = make([]string, 0, len(c.Providers))
+		o.Providers = append(o.Providers, c.Providers...)
+	}
 
-	o.DeprecatedServices = append(o.DeprecatedServices, c.DeprecatedServices...)
+	if c.DeprecatedServices != nil {
+		o.DeprecatedServices = make([]string, 0, len(c.DeprecatedServices))
+		o.DeprecatedServices = append(o.DeprecatedServices, c.DeprecatedServices...)
+	}
 
 	o.Module = StringCopy(c.Module)
 	o.DeprecatedSource = StringCopy(c.DeprecatedSource)
@@ -114,7 +120,10 @@ func (c *TaskConfig) Copy() *TaskConfig {
 	o.ModuleInputs = c.ModuleInputs.Copy()
 	o.DeprecatedSourceInputs = c.DeprecatedSourceInputs.Copy()
 
-	o.VarFiles = append(o.VarFiles, c.VarFiles...)
+	if c.VarFiles != nil {
+		o.VarFiles = make([]string, 0, len(c.VarFiles))
+		o.VarFiles = append(o.VarFiles, c.VarFiles...)
+	}
 
 	if c.Variables != nil {
 		o.Variables = make(map[string]string)
