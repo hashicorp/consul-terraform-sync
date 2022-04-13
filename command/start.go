@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/controller"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -263,7 +262,7 @@ func (c *startCommand) Run(args []string) int {
 	}
 
 	errCh := make(chan error, 1)
-	exitBufLen := 2 // exit api & controller
+	exitBufLen := 1 // exit controller
 	exitCh := make(chan struct{}, exitBufLen)
 
 	go func() {
@@ -296,27 +295,6 @@ func (c *startCommand) Run(args []string) int {
 				return
 			}
 		}
-
-		go func() {
-			if *c.isInspect {
-				return
-			}
-			s, err := api.NewAPI(api.Config{
-				Controller: ctrl.(api.Server),
-				Port:       config.IntVal(conf.Port),
-				TLS:        conf.TLS,
-			})
-			if err != nil {
-				errCh <- err
-				return
-			}
-			err = s.Serve(ctx)
-			if err != nil && err != context.Canceled {
-				errCh <- err
-				return
-			}
-			exitCh <- struct{}{}
-		}()
 
 		if err := ctrl.Run(ctx); err != nil {
 			if err == context.Canceled {
