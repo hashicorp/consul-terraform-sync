@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 )
 
@@ -21,6 +22,7 @@ var (
 type ReadWrite struct {
 	logger logging.Logger
 
+	state        state.Store
 	tasksManager *TasksManager
 	watcher      templates.Watcher
 }
@@ -35,13 +37,16 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 		return nil, err
 	}
 
-	tm, err := NewTasksManager(conf, watcher)
+	state := state.NewInMemoryStore(conf)
+
+	tm, err := NewTasksManager(conf, watcher, state)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ReadWrite{
 		logger:       logger,
+		state:        state,
 		tasksManager: tm,
 		watcher:      watcher,
 	}, nil

@@ -47,8 +47,8 @@ func Test_TasksManager_once_error(t *testing.T) {
 
 			// Set up read-write tm with mocks
 			conf := multipleTaskConfig(numTasks)
+			rw.state = state.NewInMemoryStore(conf)
 			rw.baseController = &baseController{
-				state:   state.NewInMemoryStore(conf),
 				watcher: w,
 				drivers: driver.NewDrivers(),
 				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
@@ -307,11 +307,11 @@ func Test_TasksManager_Run_context_cancel(t *testing.T) {
 		On("Stop").Return()
 
 	ctl := TasksManager{
+		state:   state.NewInMemoryStore(nil),
 		watcher: w,
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
-			state:   state.NewInMemoryStore(nil),
 		},
 	}
 
@@ -349,8 +349,8 @@ func Test_TasksManager_once_then_Run(t *testing.T) {
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
-			state:   state.NewInMemoryStore(nil),
 		},
+		state:     state.NewInMemoryStore(nil),
 		watcherCh: make(chan string, 5),
 	}
 	tm.drivers.Add("task_a", d)
@@ -411,8 +411,8 @@ func Test_TasksManager_Run_ActiveTask(t *testing.T) {
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
-			state:   state.NewInMemoryStore(nil),
 		},
+		state:     state.NewInMemoryStore(nil),
 		watcherCh: make(chan string, 5),
 	}
 	for _, n := range []string{"task_a", "task_b"} {
@@ -492,8 +492,8 @@ func Test_TasksManager_Run_ScheduledTasks(t *testing.T) {
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
 				logger:  logging.NewNullLogger(),
-				state:   state.NewInMemoryStore(nil),
 			},
+			state:           state.NewInMemoryStore(nil),
 			watcherCh:       make(chan string, 5),
 			scheduleStopChs: make(map[string](chan struct{})),
 		}
@@ -536,8 +536,8 @@ func Test_TasksManager_Run_ScheduledTasks(t *testing.T) {
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
 				logger:  logging.NewNullLogger(),
-				state:   state.NewInMemoryStore(nil),
 			},
+			state:           state.NewInMemoryStore(nil),
 			watcherCh:       make(chan string, 5),
 			scheduleStartCh: make(chan driver.Driver, 1),
 			scheduleStopChs: make(map[string](chan struct{})),
@@ -588,9 +588,7 @@ func Test_TasksManager_EnableTestMode(t *testing.T) {
 
 	// Set up tm
 	tm := TasksManager{
-		baseController: &baseController{
-			state: s,
-		},
+		state: s,
 	}
 
 	// Test EnableTestMode
@@ -802,8 +800,8 @@ func newTestTasksManager() TasksManager {
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
-			state:   state.NewInMemoryStore(nil),
 		},
+		state:           state.NewInMemoryStore(nil),
 		scheduleStopChs: make(map[string](chan struct{})),
 	}
 }

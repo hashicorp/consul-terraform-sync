@@ -117,8 +117,8 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
 			watcher: new(mocksTmpl.Watcher),
-			state:   state.NewInMemoryStore(conf),
 		},
+		state: state.NewInMemoryStore(conf),
 	}
 
 	t.Run("success", func(t *testing.T) {
@@ -298,8 +298,8 @@ func Test_TasksManager_TaskDelete(t *testing.T) {
 	tm := TasksManager{
 		baseController: &baseController{
 			logger: logging.NewNullLogger(),
-			state:  state.NewInMemoryStore(nil),
 		},
+		state:    state.NewInMemoryStore(nil),
 		deleteCh: make(chan string),
 	}
 
@@ -338,10 +338,10 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 	ctx := context.Background()
 	tm := TasksManager{
 		baseController: &baseController{
-			state:   state.NewInMemoryStore(conf),
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
 		},
+		state: state.NewInMemoryStore(conf),
 	}
 
 	t.Run("disable-then-enable", func(t *testing.T) {
@@ -811,8 +811,8 @@ func Test_once(t *testing.T) {
 			// Set up read-write tm with mocks
 			conf := multipleTaskConfig(tc.numTasks)
 			rw.watcher = w
+			rw.state = state.NewInMemoryStore(conf)
 			rw.baseController = &baseController{
-				state:   state.NewInMemoryStore(conf),
 				drivers: driver.NewDrivers(),
 				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 					taskName := task.Name()
@@ -883,8 +883,8 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 			tm := TasksManager{
 				baseController: &baseController{
 					logger: logging.NewNullLogger(),
-					state:  state.NewInMemoryStore(nil),
 				},
+				state: state.NewInMemoryStore(nil),
 			}
 			tm.baseController.drivers = drivers
 			tm.state.AddTaskEvent(event.Event{TaskName: "success"})
@@ -947,8 +947,8 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 		tm := TasksManager{
 			baseController: &baseController{
 				logger: logging.NewNullLogger(),
-				state:  state.NewInMemoryStore(nil),
 			},
+			state: state.NewInMemoryStore(nil),
 		}
 		tm.baseController.drivers = drivers
 		tm.state.AddTaskEvent(event.Event{TaskName: taskName})

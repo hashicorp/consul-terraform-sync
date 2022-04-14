@@ -29,10 +29,10 @@ func Test_ReadWrite_Run(t *testing.T) {
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
 				logger:  logging.NewNullLogger(),
-				state: state.NewInMemoryStore(&config.Config{
-					Port: config.Int(port),
-				}),
 			},
+			state: state.NewInMemoryStore(&config.Config{
+				Port: config.Int(port),
+			}),
 		},
 	}
 

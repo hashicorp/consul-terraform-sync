@@ -11,14 +11,12 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
-	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcat"
 )
 
 type baseController struct {
-	state     state.Store
 	newDriver func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error)
 	drivers   *driver.Drivers
 	watcher   templates.Watcher
@@ -40,7 +38,6 @@ func newBaseController(conf *config.Config, watcher templates.Watcher) (*baseCon
 	logger := logging.Global().Named(ctrlSystemName)
 
 	return &baseController{
-		state:     state.NewInMemoryStore(conf),
 		newDriver: nd,
 		drivers:   driver.NewDrivers(),
 		watcher:   watcher,
