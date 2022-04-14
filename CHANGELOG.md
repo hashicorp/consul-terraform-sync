@@ -1,3 +1,37 @@
+## 0.6.0-beta1 (May 11, 2022)
+
+KNOWN ISSUES:
+* Terraform driver requests to the Terraform CLI leaks go-routines which can lead to "error from kill" entries in logs [[GH-849](https://github.com/hashicorp/consul-terraform-sync/issues/849)]
+
+FEATURES:
+* Support for CLI autocompletion [[GH-775](https://github.com/hashicorp/consul-terraform-sync/issues/775)]
+* Support for retrieving CTS health through the API [[GH-850](https://github.com/hashicorp/consul-terraform-sync/issues/850)]
+* Support for retrieving information about all existing tasks through the API [[GH-770](https://github.com/hashicorp/consul-terraform-sync/pull/770)]
+* Support for automatically registering CTS with Consul as a service with a health check [[GH-860](https://github.com/hashicorp/consul-terraform-sync/issues/860)]
+* **(Enterprise Only)** Official support for HCP Consul
+* **(Enterprise Only)** Support for creating workspaces configured with Terraform Cloud agents [[GH-772](https://github.com/hashicorp/consul-terraform-sync/issues/772)]
+* **(Enterprise Only)** Support for automatically retrieving a license from the configured Consul Enterprise or HCP Consul backend [[GH-810](https://github.com/hashicorp/consul-terraform-sync/issues/810)]
+
+IMPROVEMENTS:
+* Update fallback version of Terraform to 1.1.8 [[GH-802](https://github.com/hashicorp/consul-terraform-sync/pull/802)]
+* Update API request logging from INFO to DEBUG to reduce noise in logs [[GH-738](https://github.com/hashicorp/consul-terraform-sync/pull/738)]
+* Support starting up CTS with new `start` command [[GH-866](https://github.com/hashicorp/consul-terraform-sync/issues/866)]
+* **(Enterprise Only)** Use fallback version of Terraform if determining latest compatible version from Terraform Cloud fails.
+* **(Enterprise Only)** Add `terraform_version` to `task.terraform_cloud_workspace`, which was introduced as part of support for Terraform Cloud agents [[GH-790](https://github.com/hashicorp/consul-terraform-sync/issues/790)]
+
+BUG FIXES:
+* **(Enterprise Only)** Fix issue where created TFC tasks not using specified Terraform version [[GH-792](https://github.com/hashicorp/consul-terraform-sync/issues/792)]
+* **(Enterprise Only)** Fix issue where fetching compatible Terraform version from TFC not using TLS configurations [[GH-795](https://github.com/hashicorp/consul-terraform-sync/issues/795)]
+* Fix issue where Task Status API response's `provider` field was returning provider name instead of provider id, which includes provider name and alias [[GH-798](https://github.com/hashicorp/consul-terraform-sync/issues/798)]
+* Fix issue where the main function for running the CTS binary was only using a logger with default settings [[GH-789](https://github.com/hashicorp/consul-terraform-sync/issues/789)]
+* Fix issue where `syslog.enabled` was not automatically set to true when other `syslog` configs were configured [[GH-815](https://github.com/hashicorp/consul-terraform-sync/pull/815)]
+* Fix issue where deleting task run events used a read-lock instead of write-lock [[GH-787](https://github.com/hashicorp/consul-terraform-sync/pull/787)]
+
+DEPRECATIONS:
+* **(Enterprise Only)** Deprecate `terraform_version` task configuration in favor of `terraform_cloud_workspace.terraform_version` task configuration [[GH-790](https://github.com/hashicorp/consul-terraform-sync/issues/790)]
+* **(Enterprise Only)** Deprecate `license_path` configuration in favor of `license.path` configuration [[GH-810](https://github.com/hashicorp/consul-terraform-sync/issues/810)]
+* Deprecate starting CTS as a daemon using no CLI command in favor of starting CTS as a daemon using the new `start` command [[GH-866](https://github.com/hashicorp/consul-terraform-sync/issues/866)]
+
 ## 0.5.2 (March 15, 2022)
 
 BUG FIXES:
