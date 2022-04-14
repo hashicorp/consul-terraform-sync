@@ -412,7 +412,7 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 		return nil, fmt.Errorf("task with name %s already exists", taskName)
 	}
 
-	d, err := tm.createNewTaskDriver(taskConfig)
+	d, err := tm.createNewTaskDriver(&conf, taskConfig)
 	if err != nil {
 		logger.Error("error creating new task driver", "error", err)
 		return nil, err

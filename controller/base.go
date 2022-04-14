@@ -76,7 +76,7 @@ func (ctrl *baseController) init(ctx context.Context) error {
 
 		var err error
 		taskName := *t.Name
-		d, err := ctrl.createNewTaskDriver(*t)
+		d, err := ctrl.createNewTaskDriver(ctrl.initConf, *t)
 		if err != nil {
 			ctrl.logger.Error("error creating new task driver", taskNameLogKey, taskName)
 			return err
@@ -101,15 +101,15 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	return nil
 }
 
-func (ctrl *baseController) createNewTaskDriver(taskConfig config.TaskConfig) (driver.Driver, error) {
+func (ctrl *baseController) createNewTaskDriver(conf *config.Config, taskConfig config.TaskConfig) (driver.Driver, error) {
 	logger := ctrl.logger.With("task_name", *taskConfig.Name)
 	logger.Trace("creating new task driver")
-	task, err := newDriverTask(ctrl.initConf, &taskConfig, ctrl.providers)
+	task, err := newDriverTask(conf, &taskConfig, ctrl.providers)
 	if err != nil {
 		return nil, err
 	}
 
-	d, err := ctrl.newDriver(ctrl.initConf, task, ctrl.watcher)
+	d, err := ctrl.newDriver(conf, task, ctrl.watcher)
 	if err != nil {
 		return nil, err
 	}
