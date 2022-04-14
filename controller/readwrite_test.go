@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
@@ -820,6 +821,30 @@ func TestReadWrite_Run_ScheduledTasks(t *testing.T) {
 	})
 }
 
+func TestReadWrite_EnableTestMode(t *testing.T) {
+	t.Parallel()
+
+	// Mock state store
+	taskConfs := config.TaskConfigs{
+		{Name: config.String("task_a")},
+		{Name: config.String("task_b")},
+	}
+	s := new(mocksS.Store)
+	s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
+
+	// Set up controller
+	ctrl := ReadWrite{
+		baseController: &baseController{
+			state: s,
+		},
+	}
+
+	// Test EnableTestMode
+	channel := ctrl.EnableTestMode()
+	assert.Equal(t, 2, cap(channel))
+	s.AssertExpectations(t)
+}
+
 func TestReadWrite_deleteTask(t *testing.T) {
 	ctx := context.Background()
 	mockD := new(mocksD.Driver)
@@ -860,9 +885,13 @@ func TestReadWrite_deleteTask(t *testing.T) {
 
 			assert.NoError(t, err)
 			_, exists := drivers.Get(tc.name)
-			assert.False(t, exists, "task should no longer exist")
+			assert.False(t, exists, "driver should no longer exist")
+
 			events := ctrl.state.GetTaskEvents(tc.name)
 			assert.Empty(t, events, "task events should no longer exist")
+
+			_, exists = ctrl.state.GetTask(tc.name)
+			assert.False(t, exists, "task should no longer exist in state")
 		})
 	}
 
@@ -941,9 +970,13 @@ func TestReadWrite_deleteTask(t *testing.T) {
 
 		// Check that task removed from drivers and store
 		_, exists = drivers.Get(taskName)
-		assert.False(t, exists, "task should no longer exist")
+		assert.False(t, exists, "driver should no longer exist")
+
 		events = ctrl.state.GetTaskEvents(taskName)
 		assert.Empty(t, events, "task events should no longer exist")
+
+		_, exists = ctrl.state.GetTask(taskName)
+		assert.False(t, exists, "task should no longer exist in state")
 	})
 
 }

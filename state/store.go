@@ -5,11 +5,27 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/state/event"
 )
 
+//go:generate mockery --name=Store --filename=store.go  --output=../mocks/store
+
 // Store stores the CTS state
 type Store interface {
 
 	// GetConfig returns a copy of the CTS configuration
 	GetConfig() config.Config
+
+	// GetAllTasks returns a copy of the configs for all the tasks
+	GetAllTasks() config.TaskConfigs
+
+	// GetTask returns a copy of the task configuration. If the task name does
+	// not exist, then it returns false
+	GetTask(taskName string) (config.TaskConfig, bool)
+
+	// SetTask adds a new task configuration or does a patch update to an
+	// existing task configuration with the same name
+	SetTask(taskConf config.TaskConfig)
+
+	// DeleteTask deletes the task config if it exists
+	DeleteTask(taskName string)
 
 	// GetTaskEvents returns all the events for a task. If no task name is
 	// specified, then it returns events for all tasks

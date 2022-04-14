@@ -20,18 +20,26 @@ func (rw *ReadWrite) Events(ctx context.Context, taskName string) (map[string][]
 }
 
 func (rw *ReadWrite) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
-	// TODO handle ctx while waiting for driver lock if it is currently active
-	d, ok := rw.drivers.Get(taskName)
-	if !ok {
-		return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
+	// TODO handle ctx while waiting for state lock if it is currently active
+	conf, ok := rw.state.GetTask(taskName)
+	if ok {
+		return conf, nil
 	}
 
-	conf, err := configFromDriverTask(d.Task())
-	if err != nil {
-		return config.TaskConfig{}, err
+	return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
+}
+
+func (rw *ReadWrite) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
+	// TODO handle ctx while waiting for state lock if it is currently active
+	tasks := rw.state.GetAllTasks()
+
+	// convert config.TaskConfigs => []config.TaskConfig
+	taskConfs := make([]config.TaskConfig, len(tasks))
+	for ix, taskConf := range tasks {
+		taskConfs[ix] = *taskConf
 	}
 
-	return conf, nil
+	return taskConfs, nil
 }
 
 func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
@@ -40,28 +48,7 @@ func (rw *ReadWrite) TaskCreate(ctx context.Context, taskConfig config.TaskConfi
 		return config.TaskConfig{}, err
 	}
 
-	// Set the buffer period
-	d.SetBufferPeriod()
-
-	// Add the task driver to the driver list only after successful create
-	name := *taskConfig.Name
-	err = rw.drivers.Add(name, d)
-	if err != nil {
-		rw.cleanupTask(ctx, name)
-		return config.TaskConfig{}, err
-	}
-	conf, err := configFromDriverTask(d.Task())
-	if err != nil {
-		// Cleanup driver
-		rw.cleanupTask(ctx, name)
-		return config.TaskConfig{}, err
-	}
-
-	if d.Task().IsScheduled() {
-		rw.scheduleStartCh <- d
-	}
-
-	return conf, nil
+	return rw.addTask(ctx, d)
 }
 
 func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
@@ -74,26 +61,7 @@ func (rw *ReadWrite) TaskCreateAndRun(ctx context.Context, taskConfig config.Tas
 		return config.TaskConfig{}, err
 	}
 
-	d.SetBufferPeriod()
-
-	// Add the task driver to the driver list only after successful create and run
-	name := *taskConfig.Name
-	err = rw.drivers.Add(*taskConfig.Name, d)
-	if err != nil {
-		rw.cleanupTask(ctx, name)
-		return config.TaskConfig{}, err
-	}
-	conf, err := configFromDriverTask(d.Task())
-	if err != nil {
-		rw.cleanupTask(ctx, name)
-		return config.TaskConfig{}, err
-	}
-
-	if d.Task().IsScheduled() {
-		rw.scheduleStartCh <- d
-	}
-
-	return conf, nil
+	return rw.addTask(ctx, d)
 }
 
 // TaskDelete marks a task for deletion
@@ -147,7 +115,7 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 	if runOp == driver.RunOptionNow {
 		task := d.Task()
 		ev, err := event.NewEvent(taskName, &event.Config{
-			Providers: task.ProviderNames(),
+			Providers: task.ProviderIDs(),
 			Services:  task.ServiceNames(),
 			Source:    task.Module(),
 		})
@@ -168,6 +136,11 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 		ev.Start()
 	}
 
+	if runOp != driver.RunOptionInspect {
+		// Only update state if the update is not inspect type
+		rw.state.SetTask(updateConf)
+	}
+
 	patch := driver.PatchTask{
 		RunOption: runOp,
 		Enabled:   *updateConf.Enabled,
@@ -180,19 +153,6 @@ func (rw *ReadWrite) TaskUpdate(ctx context.Context, updateConf config.TaskConfi
 	}
 
 	return plan.ChangesPresent, plan.Plan, "", nil
-}
-
-func (rw *ReadWrite) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
-	drivers := rw.drivers.Map()
-	confs := make([]config.TaskConfig, 0, len(drivers))
-	for _, d := range rw.drivers.Map() {
-		conf, err := configFromDriverTask(d.Task())
-		if err != nil {
-			return nil, err
-		}
-		confs = append(confs, conf)
-	}
-	return confs, nil
 }
 
 func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
@@ -231,7 +191,7 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		Description:        config.String(t.Description()),
 		Name:               config.String(t.Name()),
 		Enabled:            config.Bool(t.IsEnabled()),
-		Providers:          t.ProviderNames(),
+		Providers:          t.ProviderIDs(),
 		DeprecatedServices: t.ServiceNames(),
 		Module:             config.String(t.Module()),
 		Variables:          vars, // TODO: omit or safe to return?
@@ -245,6 +205,36 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 		DeprecatedTFVersion: config.String(t.DeprecatedTFVersion()),
 		TFCWorkspace:        &tfcWs,
 	}, nil
+}
+
+// addTask handles the necessary steps to add a task for CTS to monitor and run.
+// For example: setting buffer period, updating driver list and state, etc
+//
+// Assumes that the task driver has already been successfully created. On any
+// error, the task will be cleaned up. Returns a copy of the added task's
+// config
+func (rw ReadWrite) addTask(ctx context.Context, d driver.Driver) (config.TaskConfig, error) {
+	d.SetBufferPeriod()
+
+	name := d.Task().Name()
+	if err := rw.drivers.Add(name, d); err != nil {
+		rw.cleanupTask(ctx, name)
+		return config.TaskConfig{}, err
+	}
+
+	conf, err := configFromDriverTask(d.Task())
+	if err != nil {
+		rw.cleanupTask(ctx, name)
+		return config.TaskConfig{}, err
+	}
+
+	rw.state.SetTask(conf)
+
+	if d.Task().IsScheduled() {
+		rw.scheduleStartCh <- d
+	}
+
+	return conf, nil
 }
 
 func (rw ReadWrite) cleanupTask(ctx context.Context, name string) {

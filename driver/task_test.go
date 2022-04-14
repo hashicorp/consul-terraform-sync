@@ -239,7 +239,7 @@ func TestTask_Services(t *testing.T) {
 	assert.Equal(t, task.services, services)
 }
 
-func TestTask_ProviderNames(t *testing.T) {
+func TestTask_ProviderIDs(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -253,7 +253,7 @@ func TestTask_ProviderNames(t *testing.T) {
 			[]string{},
 		},
 		{
-			"happy path",
+			"provider, no alias",
 			Task{
 				providers: NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
@@ -265,11 +265,27 @@ func TestTask_ProviderNames(t *testing.T) {
 			},
 			[]string{"local", "null"},
 		},
+		{
+			"provider, with alias",
+			Task{
+				providers: NewTerraformProviderBlocks(
+					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
+						{"local": map[string]interface{}{
+							"configs": "stuff",
+							"alias":   "east",
+						}},
+						{"null": map[string]interface{}{
+							"alias": "west",
+						}},
+					})),
+			},
+			[]string{"local.east", "null.west"},
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := tc.task.ProviderNames()
+			actual := tc.task.ProviderIDs()
 			assert.Equal(t, tc.expected, actual)
 		})
 	}

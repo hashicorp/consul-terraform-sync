@@ -105,6 +105,45 @@ func TestTerraformProviderBlock_Name(t *testing.T) {
 	assert.Equal(t, expectedName, tpb.Name())
 }
 
+func TestTerraformProviderBlock_ID(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		tpb      TerraformProviderBlock
+		expected string
+	}{
+		{
+			"with alias",
+			TerraformProviderBlock{
+				block: hcltmpl.NamedBlock{
+					Name: "local",
+					Variables: hcltmpl.Variables{
+						"alias": cty.StringVal("east"),
+					},
+				},
+			},
+			"local.east",
+		},
+		{
+			"no alias",
+			TerraformProviderBlock{
+				block: hcltmpl.NamedBlock{
+					Name:      "local",
+					Variables: hcltmpl.Variables{},
+				},
+			},
+			"local",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, tc.tpb.ID())
+		})
+	}
+}
+
 func TestTerraformProviderBlock_ProviderBlock(t *testing.T) {
 	expectedName := "local"
 	tpb := TerraformProviderBlock{

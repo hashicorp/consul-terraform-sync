@@ -323,7 +323,7 @@ func (rw *ReadWrite) checkApply(ctx context.Context, d driver.Driver, retry, onc
 
 	// setup to store event information
 	ev, err := event.NewEvent(taskName, &event.Config{
-		Providers: task.ProviderNames(),
+		Providers: task.ProviderIDs(),
 		Services:  task.ServiceNames(),
 		Source:    task.Module(),
 	})
@@ -491,7 +491,7 @@ func (rw *ReadWrite) runTask(ctx context.Context, d driver.Driver) error {
 
 	// Create new event for task run
 	ev, err := event.NewEvent(taskName, &event.Config{
-		Providers: task.ProviderNames(),
+		Providers: task.ProviderIDs(),
 		Services:  task.ServiceNames(),
 		Source:    task.Module(),
 	})
@@ -556,7 +556,11 @@ func (rw *ReadWrite) deleteTask(ctx context.Context, name string) error {
 		logger.Error("unable to delete task", "error", err)
 		return err
 	}
+
+	// Delete task from state only after driver successfully deleted
+	rw.state.DeleteTask(name)
 	rw.state.DeleteTaskEvents(name)
+
 	logger.Debug("task deleted")
 	return nil
 }
@@ -585,6 +589,7 @@ func (rw *ReadWrite) waitForTaskInactive(ctx context.Context, name string) error
 // executed. Callers of this method must consume from TaskNotify channel to
 // prevent the buffered channel from filling and causing a dead lock.
 func (rw *ReadWrite) EnableTestMode() <-chan string {
-	rw.taskNotify = make(chan string, rw.drivers.Len())
+	tasks := rw.state.GetAllTasks()
+	rw.taskNotify = make(chan string, tasks.Len())
 	return rw.taskNotify
 }
