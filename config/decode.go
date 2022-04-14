@@ -29,11 +29,23 @@ try 'terraform_provider'. The terraform_provider configuration blocks are
 similar to provider blocks in Terraform but have additional features
 supported only by CTS.`, err)
 
+			// Enterprise-specific configurations, will only error in OSS
 		case "driver.terraform-cloud":
 			return fmt.Errorf(`%s
 
 Terraform Cloud is a Consul-Terraform-Sync (CTS) Enterprise feature.
 Upgrade to Consul Enterprise to enable CTS Enterprise features.`, err)
+
+		case "license_path":
+			return fmt.Errorf(`%s
+
+'license_path' is a Consul-Terraform-Sync (CTS) Enterprise configuration.`, err)
+
+		case "license":
+			return fmt.Errorf(`%s
+
+'license' is a Consul-Terraform-Sync (CTS) Enterprise configuration.`, err)
+
 		}
 	}
 	return err
