@@ -307,9 +307,9 @@ func Test_TasksManager_Run_context_cancel(t *testing.T) {
 		On("Stop").Return()
 
 	ctl := TasksManager{
+		watcher: w,
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
-			watcher: w,
 			logger:  logging.NewNullLogger(),
 			state:   state.NewInMemoryStore(nil),
 		},
@@ -637,11 +637,13 @@ func Test_TasksManager_RunInspect(t *testing.T) {
 			w := new(mocks.Watcher)
 			w.On("Size").Return(5)
 
-			tm := TasksManager{baseController: &baseController{
+			tm := TasksManager{
 				watcher: w,
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			}}
+				baseController: &baseController{
+					drivers: driver.NewDrivers(),
+					logger:  logging.NewNullLogger(),
+				},
+			}
 
 			d := new(mocksD.Driver)
 			d.On("Task").Return(enabledTestTask(t, "task"))
@@ -683,12 +685,14 @@ func Test_TasksManager_RunInspect_context_cancel(t *testing.T) {
 	err := drivers.Add("task", d)
 	require.NoError(t, err)
 
-	tm := TasksManager{baseController: &baseController{
-		watcher:  w,
-		resolver: r,
-		drivers:  drivers,
-		logger:   logging.NewNullLogger(),
-	}}
+	tm := TasksManager{
+		watcher: w,
+		baseController: &baseController{
+			resolver: r,
+			drivers:  drivers,
+			logger:   logging.NewNullLogger(),
+		},
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)

@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
+	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/pkg/errors"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -16,6 +17,8 @@ import (
 // TasksManager manages the CRUD operations and execution of tasks
 type TasksManager struct {
 	*baseController
+
+	watcher templates.Watcher
 
 	retry retry.Retry
 
@@ -35,14 +38,15 @@ type TasksManager struct {
 }
 
 // NewTasksManager configures a new tasks manager
-func NewTasksManager(conf *config.Config) (*TasksManager, error) {
-	baseCtrl, err := newBaseController(conf)
+func NewTasksManager(conf *config.Config, watcher templates.Watcher) (*TasksManager, error) {
+	baseCtrl, err := newBaseController(conf, watcher)
 	if err != nil {
 		return nil, err
 	}
 
 	return &TasksManager{
 		baseController:  baseCtrl,
+		watcher:         watcher,
 		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
 		deleteCh:        make(chan string, 10),        // arbitrarily chosen size

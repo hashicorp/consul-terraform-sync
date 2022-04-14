@@ -25,9 +25,9 @@ func Test_ReadWrite_Run(t *testing.T) {
 
 	ctl := ReadWrite{
 		tasksManager: &TasksManager{
+			watcher: w,
 			baseController: &baseController{
 				drivers: driver.NewDrivers(),
-				watcher: w,
 				logger:  logging.NewNullLogger(),
 				state: state.NewInMemoryStore(&config.Config{
 					Port: config.Int(port),

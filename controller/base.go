@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -32,18 +31,13 @@ type baseController struct {
 	initConf *config.Config
 }
 
-func newBaseController(conf *config.Config) (*baseController, error) {
+func newBaseController(conf *config.Config, watcher templates.Watcher) (*baseController, error) {
 	nd, err := newDriverFunc(conf)
 	if err != nil {
 		return nil, err
 	}
 
 	logger := logging.Global().Named(ctrlSystemName)
-	logger.Info("initializing Consul client and testing connection")
-	watcher, err := newWatcher(conf, client.ConsulDefaultMaxRetry)
-	if err != nil {
-		return nil, err
-	}
 
 	return &baseController{
 		state:     state.NewInMemoryStore(conf),
@@ -158,19 +152,6 @@ func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]driver.T
 		return nil, lastErr
 	}
 	return providerConfigs, nil
-}
-
-// logDepSize logs the watcher dependency size every nth iteration. Set the
-// iterator to a negative value to log each iteration.
-func (ctrl *baseController) logDepSize(n uint, i int64) {
-	depSize := ctrl.watcher.Size()
-	if i%int64(n) == 0 || i < 0 {
-		ctrl.logger.Debug("watching dependencies", "dependency_size", depSize)
-		if depSize > templates.DepSizeWarning {
-			ctrl.logger.Warn(fmt.Sprintf(" watching more than %d dependencies could "+
-				"DDoS your Consul cluster: %d", templates.DepSizeWarning, depSize))
-		}
-	}
 }
 
 // newDriverFunc is a constructor abstraction for all of supported drivers

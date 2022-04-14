@@ -810,9 +810,9 @@ func Test_once(t *testing.T) {
 
 			// Set up read-write tm with mocks
 			conf := multipleTaskConfig(tc.numTasks)
+			rw.watcher = w
 			rw.baseController = &baseController{
 				state:   state.NewInMemoryStore(conf),
-				watcher: w,
 				drivers: driver.NewDrivers(),
 				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 					taskName := task.Name()
