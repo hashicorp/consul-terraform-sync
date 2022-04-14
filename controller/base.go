@@ -74,31 +74,48 @@ func (ctrl *baseController) init(ctx context.Context) error {
 		default:
 		}
 
-		var err error
+		d, err := ctrl.makeDriver(ctx, ctrl.initConf, *t)
+		if err != nil {
+			return err
+		}
+
 		taskName := *t.Name
-		d, err := ctrl.createNewTaskDriver(ctrl.initConf, *t)
-		if err != nil {
-			ctrl.logger.Error("error creating new task driver", taskNameLogKey, taskName)
-			return err
-		}
-
-		// Using the newly created driver, initialize the task
-		err = d.InitTask(ctx)
-		if err != nil {
-			ctrl.logger.Error("error initializing task", taskNameLogKey, taskName)
-			return err
-		}
-
 		err = ctrl.drivers.Add(taskName, d)
 		if err != nil {
 			ctrl.logger.Error("error adding task driver to drivers list", taskNameLogKey, taskName)
 			return err
 		}
-		ctrl.logger.Trace("driver initialized", taskNameLogKey, taskName)
 	}
 
 	ctrl.logger.Info("drivers initialized")
 	return nil
+}
+
+func (ctrl *baseController) makeDriver(ctx context.Context, conf *config.Config,
+	taskConf config.TaskConfig) (driver.Driver, error) {
+
+	taskName := *taskConf.Name
+	logger := ctrl.logger.With(taskNameLogKey, taskName)
+
+	d, err := ctrl.createNewTaskDriver(conf, taskConf)
+	if err != nil {
+		logger.Error("error creating new task driver")
+		return nil, err
+	}
+
+	// Using the newly created driver, initialize the task
+	err = d.InitTask(ctx)
+	if err != nil {
+		logger.Error("error initializing task")
+
+		// Cleanup the task
+		d.DestroyTask(ctx)
+		logger.Debug("cleaned up task that errored initializing")
+		return nil, err
+	}
+
+	logger.Trace("driver initialized")
+	return d, nil
 }
 
 func (ctrl *baseController) createNewTaskDriver(conf *config.Config, taskConfig config.TaskConfig) (driver.Driver, error) {
