@@ -265,3 +265,49 @@ func copyFileContents(src, dst string) error {
 	err = out.Sync()
 	return err
 }
+
+type roundTripFunc func(req *http.Request) *http.Response
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req), nil
+}
+
+type HttpIntercept struct {
+	Path               string
+	RequestTest        func(*testing.T, *http.Request)
+	ResponseStatusCode int
+	ResponseData       []byte
+}
+
+func NewHttpClient(t *testing.T, intercepts []*HttpIntercept) *http.Client {
+	f := func(req *http.Request) *http.Response {
+		intercept, err := find(intercepts, req.URL.Path)
+		if err != nil {
+			return &http.Response{
+				StatusCode: http.StatusBadRequest,
+				Body:       io.NopCloser(bytes.NewBufferString(err.Error())),
+			}
+		}
+
+		if intercept.RequestTest != nil {
+			intercept.RequestTest(t, req)
+		}
+
+		return &http.Response{
+			StatusCode: intercept.ResponseStatusCode,
+			Body:       io.NopCloser(bytes.NewBuffer(intercept.ResponseData)),
+		}
+	}
+
+	return &http.Client{Transport: roundTripFunc(f)}
+}
+
+func find(intercepts []*HttpIntercept, path string) (*HttpIntercept, error) {
+	for _, c := range intercepts {
+		if c.Path == path {
+			return c, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no intercept found for path [%s]", path)
+}

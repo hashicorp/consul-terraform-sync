@@ -2,106 +2,158 @@ package client
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
+	"net/http"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	"github.com/hashicorp/consul-terraform-sync/retry"
+	"github.com/hashicorp/consul-terraform-sync/testutils"
+	consulapi "github.com/hashicorp/consul/api"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_isConsulEnterprise(t *testing.T) {
+func Test_GetLicense_API_Failure(t *testing.T) {
 	t.Parallel()
+	path := "/v1/operator/license"
+	ctx := logging.WithContext(context.Background(), logging.NewNullLogger())
+
+	intercepts := []*testutils.HttpIntercept{
+		{Path: path, ResponseStatusCode: http.StatusInternalServerError},
+	}
+
+	c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+	_, err := c.GetLicense(ctx, nil)
+	assert.Error(t, err)
+}
+
+func Test_GetLicense(t *testing.T) {
+	t.Parallel()
+	path := "/v1/operator/license"
+	ctx := logging.WithContext(context.Background(), logging.NewNullLogger())
+
+	expectedLicense := "foo"
+	intercepts := []*testutils.HttpIntercept{
+		{Path: path, ResponseStatusCode: http.StatusOK, ResponseData: []byte(expectedLicense)},
+	}
+
+	c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+	license, err := c.GetLicense(ctx, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, license, expectedLicense)
+}
+
+func Test_IsEnterprise_API_Failure(t *testing.T) {
+	t.Parallel()
+	path := "/v1/agent/self"
+	ctx := logging.WithContext(context.Background(), logging.NewNullLogger())
+
+	intercepts := []*testutils.HttpIntercept{
+		{Path: path, ResponseStatusCode: http.StatusInternalServerError},
+	}
+
+	c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+	_, err := c.IsEnterprise(ctx)
+	assert.Error(t, err)
+}
+
+func Test_IsEnterprise(t *testing.T) {
+	t.Parallel()
+	path := "/v1/agent/self"
+	ctx := logging.WithContext(context.Background(), logging.NewNullLogger())
 
 	cases := []struct {
-		name             string
-		info             ConsulAgentConfig
-		expectEnterprise bool
-		expectError      bool
-		error            error
+		name           string
+		response       ConsulAgentConfig
+		expectedResult bool
+		expectError    bool
 	}{
 		{
-			name: "oss",
-			info: ConsulAgentConfig{
-				"Config": {"Version": "v1.9.5"},
-			},
-			expectEnterprise: false,
-			expectError:      false,
+			"oss",
+			ConsulAgentConfig{"Config": {"Version": "v1.9.5"}},
+			false,
+			false,
 		},
 		{
-			name: "oss dev",
-			info: ConsulAgentConfig{
-				"Config": {"Version": "v1.9.5-dev"},
-			},
-			expectEnterprise: false,
-			expectError:      false,
+			"oss dev",
+			ConsulAgentConfig{"Config": {"Version": "v1.9.5-dev"}},
+			false,
+			false,
 		},
 		{
-			name: "ent",
-			info: ConsulAgentConfig{
-				"Config": {"Version": "v1.9.5+ent"},
-			},
-			expectEnterprise: true,
-			expectError:      false,
+			"ent",
+			ConsulAgentConfig{"Config": {"Version": "v1.9.5+ent"}},
+			true,
+			false,
 		},
 		{
-			name: "ent dev",
-			info: ConsulAgentConfig{
-				"Config": {"Version": "v1.9.5+ent-dev"},
-			},
-			expectEnterprise: true,
-			expectError:      false,
+			"ent dev",
+			ConsulAgentConfig{"Config": {"Version": "v1.9.5+ent-dev"}},
+			true,
+			false,
 		},
 		{
-			name: "missing",
-			info: ConsulAgentConfig{
-				"Config": {},
-			},
-			expectEnterprise: false,
-			expectError:      true,
-			error:            errors.New("unable to parse map[Config][Version], keys do not exist"),
+			"missing",
+			ConsulAgentConfig{"Config": {}},
+			false,
+			true,
 		},
 		{
-			name: "malformed",
-			info: ConsulAgentConfig{
-				"Config": {"Version": "***"},
-			},
-			expectEnterprise: false,
-			expectError:      true,
+			"malformed",
+			ConsulAgentConfig{"Config": {"Version": "***"}},
+			false,
+			true,
 		},
 		{
-			name: "bad key",
-			info: ConsulAgentConfig{
-				"NoConfig": {"Version": "***"},
-			},
-			expectEnterprise: false,
-			expectError:      true,
-			error:            errors.New("unable to parse map[Config][Version], keys do not exist"),
+			"bad key 1",
+			ConsulAgentConfig{"NoConfig": {"Version": "***"}},
+			false,
+			true,
 		},
 		{
-			name: "not string",
-			info: ConsulAgentConfig{
-				"Config": {"Version": []string{}},
-			},
-			expectEnterprise: false,
-			expectError:      true,
-			error:            errors.New("unable to parse map[Config][Version], keys do not map to string"),
+			"bad key 2",
+			ConsulAgentConfig{"Config": {"NoVersion": "v1.9.5"}},
+			false,
+			true,
+		},
+		{
+			"not a string",
+			ConsulAgentConfig{"Config": {"Version": 123}},
+			false,
+			true,
 		},
 	}
 
-	ctx := logging.WithContext(context.Background(), logging.NewNullLogger())
-
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			isEnterprise, err := isConsulEnterprise(ctx, tc.info)
+			infoBytes, err := json.Marshal(tc.response)
+			assert.NoError(t, err)
+
+			intercepts := []*testutils.HttpIntercept{
+				{Path: path, ResponseStatusCode: http.StatusOK, ResponseData: infoBytes},
+			}
+
+			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+
+			isEnterprise, err := c.IsEnterprise(ctx)
 			if tc.expectError {
 				assert.Error(t, err)
-				if tc.error != nil {
-					assert.Equal(t, tc.error, err)
-				}
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tc.expectEnterprise, isEnterprise)
+				assert.Equal(t, tc.expectedResult, isEnterprise)
 			}
 		})
+	}
+}
+
+func newTestConsulClient(t *testing.T, httpClient *http.Client, maxRetry int) ConsulClientInterface {
+	c, err := consulapi.NewClient(&consulapi.Config{HttpClient: httpClient})
+	assert.NoError(t, err)
+
+	return &ConsulClient{
+		Client: c,
+		retry:  retry.NewRetry(maxRetry, time.Now().UnixNano()),
+		logger: logging.Global().Named(consulSubsystemName),
 	}
 }
