@@ -315,14 +315,17 @@ func Test_InMemoryStore_DeleteTask(t *testing.T) {
 	}{
 		{
 			"task exists",
-			"existing_task",
-			config.TaskConfigs{},
+			"existing_task_a",
+			config.TaskConfigs{
+				{Name: config.String("existing_task_b")},
+			},
 		},
 		{
 			"task does not exist",
 			"non_existing_task",
 			config.TaskConfigs{
-				{Name: config.String("existing_task")},
+				{Name: config.String("existing_task_a")},
+				{Name: config.String("existing_task_b")},
 			},
 		},
 	}
@@ -331,7 +334,8 @@ func Test_InMemoryStore_DeleteTask(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := &config.Config{
 				Tasks: &config.TaskConfigs{
-					{Name: config.String("existing_task")},
+					{Name: config.String("existing_task_a")},
+					{Name: config.String("existing_task_b")},
 				},
 			}
 			store := NewInMemoryStore(conf)
