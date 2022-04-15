@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
@@ -18,6 +19,7 @@ import (
 // TasksManager manages the CRUD operations and execution of tasks
 type TasksManager struct {
 	*baseController
+	logger logging.Logger
 
 	watcher templates.Watcher
 	state   state.Store
@@ -43,12 +45,15 @@ type TasksManager struct {
 func NewTasksManager(conf *config.Config, watcher templates.Watcher,
 	state state.Store) (*TasksManager, error) {
 
+	logger := logging.Global().Named("tasks_manager")
+
 	baseCtrl, err := newBaseController(conf, watcher)
 	if err != nil {
 		return nil, err
 	}
 
 	return &TasksManager{
+		logger:          logger,
 		baseController:  baseCtrl,
 		watcher:         watcher,
 		state:           state,

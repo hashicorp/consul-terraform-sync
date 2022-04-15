@@ -797,6 +797,7 @@ func scheduledTestTask(tb testing.TB, name string) *driver.Task {
 
 func newTestTasksManager() TasksManager {
 	return TasksManager{
+		logger: logging.NewNullLogger(),
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
