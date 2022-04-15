@@ -29,7 +29,7 @@ func Test_TasksManager_once_error(t *testing.T) {
 	w.On("WaitCh", mock.Anything).Return(nil)
 	w.On("Size").Return(numTasks)
 
-	rw := newTestTasksManager()
+	tm := newTestTasksManager()
 
 	testCases := []struct {
 		name    string
@@ -37,7 +37,7 @@ func Test_TasksManager_once_error(t *testing.T) {
 	}{
 		{
 			"onceConsecutive",
-			rw.onceConsecutive,
+			tm.onceConsecutive,
 		},
 	}
 
@@ -47,10 +47,10 @@ func Test_TasksManager_once_error(t *testing.T) {
 
 			// Set up read-write tm with mocks
 			conf := multipleTaskConfig(numTasks)
-			rw.state = state.NewInMemoryStore(conf)
-			rw.initConf = conf
-			rw.baseController.watcher = w
-			rw.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+			tm.state = state.NewInMemoryStore(conf)
+			tm.initConf = conf
+			tm.baseController.watcher = w
+			tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 				taskName := task.Name()
 				d := new(mocksD.Driver)
 				d.On("Task").Return(enabledTestTask(t, taskName))
@@ -67,7 +67,7 @@ func Test_TasksManager_once_error(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			err := rw.Init(ctx)
+			err := tm.Init(ctx)
 			require.NoError(t, err)
 
 			// testing really starts here...
@@ -302,13 +302,13 @@ func Test_TasksManager_Run_context_cancel(t *testing.T) {
 		On("Size").Return(5).
 		On("Stop").Return()
 
-	ctl := newTestTasksManager()
-	ctl.watcher = w
+	tm := newTestTasksManager()
+	tm.watcher = w
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		err := ctl.Run(ctx)
+		err := tm.Run(ctx)
 		if err != nil {
 			errCh <- err
 		}

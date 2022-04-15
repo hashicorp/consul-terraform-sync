@@ -753,7 +753,7 @@ func Test_TasksManager_CheckApply_Store(t *testing.T) {
 }
 
 func Test_once(t *testing.T) {
-	rw := newTestTasksManager()
+	tm := newTestTasksManager()
 
 	testCases := []struct {
 		name     string
@@ -762,12 +762,12 @@ func Test_once(t *testing.T) {
 	}{
 		{
 			"consecutive one task",
-			rw.onceConsecutive,
+			tm.onceConsecutive,
 			1,
 		},
 		{
 			"consecutive multiple tasks",
-			rw.onceConsecutive,
+			tm.onceConsecutive,
 			10,
 		},
 	}
@@ -782,10 +782,10 @@ func Test_once(t *testing.T) {
 
 			// Set up read-write tm with mocks
 			conf := multipleTaskConfig(tc.numTasks)
-			rw.watcher = w
-			rw.state = state.NewInMemoryStore(conf)
-			rw.baseController.initConf = conf
-			rw.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+			tm.watcher = w
+			tm.state = state.NewInMemoryStore(conf)
+			tm.baseController.initConf = conf
+			tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 				taskName := task.Name()
 				d := new(mocksD.Driver)
 				d.On("Task").Return(enabledTestTask(t, taskName)).Twice()
@@ -798,7 +798,7 @@ func Test_once(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			err := rw.Init(ctx)
+			err := tm.Init(ctx)
 			require.NoError(t, err)
 
 			// testing really starts here...
@@ -814,7 +814,7 @@ func Test_once(t *testing.T) {
 				t.Fatal("Once didn't return in expected time")
 			}
 
-			for _, d := range rw.drivers.Map() {
+			for _, d := range tm.drivers.Map() {
 				d.(*mocksD.Driver).AssertExpectations(t)
 			}
 		})
