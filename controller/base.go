@@ -57,7 +57,6 @@ func (ctrl *baseController) init(ctx context.Context) error {
 
 	// Future: improve by combining tasks into workflows.
 	ctrl.logger.Info("initializing all tasks")
-	ctrl.drivers.Reset()
 
 	// Create and initialize task drivers
 	for _, t := range *ctrl.initConf.Tasks {

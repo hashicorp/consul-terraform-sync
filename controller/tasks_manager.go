@@ -70,6 +70,8 @@ func NewTasksManager(conf *config.Config, watcher templates.Watcher,
 
 // Init initializes a tasks manager
 func (tm *TasksManager) Init(ctx context.Context) error {
+	tm.drivers.Reset()
+
 	return tm.init(ctx)
 }
 
