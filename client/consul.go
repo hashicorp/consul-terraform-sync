@@ -51,37 +51,36 @@ type ConsulClient struct {
 type ConsulAgentConfig = map[string]map[string]interface{}
 
 // NewConsulClient constructs a consul api client
-func NewConsulClient(conf *config.Config, maxRetry int) (*ConsulClient, error) {
-	consulConf := conf.Consul
-	transport := hcat.TransportInput{
-		SSLEnabled: *consulConf.TLS.Enabled,
-		SSLVerify:  *consulConf.TLS.Verify,
-		SSLCert:    *consulConf.TLS.Cert,
-		SSLKey:     *consulConf.TLS.Key,
-		SSLCACert:  *consulConf.TLS.CACert,
-		SSLCAPath:  *consulConf.TLS.CAPath,
-		ServerName: *consulConf.TLS.ServerName,
+func NewConsulClient(conf *config.ConsulConfig, maxRetry int) (*ConsulClient, error) {
+	t := hcat.TransportInput{
+		SSLEnabled: *conf.TLS.Enabled,
+		SSLVerify:  *conf.TLS.Verify,
+		SSLCert:    *conf.TLS.Cert,
+		SSLKey:     *conf.TLS.Key,
+		SSLCACert:  *conf.TLS.CACert,
+		SSLCAPath:  *conf.TLS.CAPath,
+		ServerName: *conf.TLS.ServerName,
 
-		DialKeepAlive:       *consulConf.Transport.DialKeepAlive,
-		DialTimeout:         *consulConf.Transport.DialTimeout,
-		DisableKeepAlives:   *consulConf.Transport.DisableKeepAlives,
-		IdleConnTimeout:     *consulConf.Transport.IdleConnTimeout,
-		MaxIdleConns:        *consulConf.Transport.MaxIdleConns,
-		MaxIdleConnsPerHost: *consulConf.Transport.MaxIdleConnsPerHost,
-		TLSHandshakeTimeout: *consulConf.Transport.TLSHandshakeTimeout,
+		DialKeepAlive:       *conf.Transport.DialKeepAlive,
+		DialTimeout:         *conf.Transport.DialTimeout,
+		DisableKeepAlives:   *conf.Transport.DisableKeepAlives,
+		IdleConnTimeout:     *conf.Transport.IdleConnTimeout,
+		MaxIdleConns:        *conf.Transport.MaxIdleConns,
+		MaxIdleConnsPerHost: *conf.Transport.MaxIdleConnsPerHost,
+		TLSHandshakeTimeout: *conf.Transport.TLSHandshakeTimeout,
 	}
 
-	consul := hcat.ConsulInput{
-		Address:      *consulConf.Address,
-		Token:        *consulConf.Token,
-		AuthEnabled:  *consulConf.Auth.Enabled,
-		AuthUsername: *consulConf.Auth.Username,
-		AuthPassword: *consulConf.Auth.Password,
-		Transport:    transport,
+	ci := hcat.ConsulInput{
+		Address:      *conf.Address,
+		Token:        *conf.Token,
+		AuthEnabled:  *conf.Auth.Enabled,
+		AuthUsername: *conf.Auth.Username,
+		AuthPassword: *conf.Auth.Password,
+		Transport:    t,
 	}
 
 	clients := hcat.NewClientSet()
-	if err := clients.AddConsul(consul); err != nil {
+	if err := clients.AddConsul(ci); err != nil {
 		return nil, err
 	}
 
@@ -91,7 +90,9 @@ func NewConsulClient(conf *config.Config, maxRetry int) (*ConsulClient, error) {
 	c := &ConsulClient{
 		Client: clients.Consul(),
 		retry:  r,
-		logger: logger}
+		logger: logger,
+	}
+
 	return c, nil
 }
 
