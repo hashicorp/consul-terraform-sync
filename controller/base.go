@@ -46,7 +46,7 @@ func newBaseController(conf *config.Config, watcher templates.Watcher) (*baseCon
 }
 
 func (ctrl *baseController) init(ctx context.Context) error {
-	ctrl.logger.Info("initializing driver")
+	ctrl.logger.Info("initializing base controller")
 
 	// Load provider configuration and evaluate dynamic values
 	var err error
@@ -55,32 +55,6 @@ func (ctrl *baseController) init(ctx context.Context) error {
 		return err
 	}
 
-	// Future: improve by combining tasks into workflows.
-	ctrl.logger.Info("initializing all tasks")
-
-	// Create and initialize task drivers
-	for _, t := range *ctrl.initConf.Tasks {
-		select {
-		case <-ctx.Done():
-			// Stop initializing remaining tasks if context has stopped.
-			return ctx.Err()
-		default:
-		}
-
-		d, err := ctrl.makeDriver(ctx, ctrl.initConf, *t)
-		if err != nil {
-			return err
-		}
-
-		taskName := *t.Name
-		err = ctrl.drivers.Add(taskName, d)
-		if err != nil {
-			ctrl.logger.Error("error adding task driver to drivers list", taskNameLogKey, taskName)
-			return err
-		}
-	}
-
-	ctrl.logger.Info("drivers initialized")
 	return nil
 }
 

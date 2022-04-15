@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBaseControllerInit(t *testing.T) {
+func TestBaseController_init(t *testing.T) {
 	t.Parallel()
 
 	conf := singleTaskConfig()
@@ -26,19 +26,16 @@ func TestBaseControllerInit(t *testing.T) {
 	cases := []struct {
 		name        string
 		expectError bool
-		initTaskErr error
 		config      *config.Config
+		// TODO: after baseController is refactored to driers package, add
+		// check for `expectedProviders` field. Need to wait because
+		// driver.TerraformProviderBlock fields are private
+
+		// expectedProviders []driver.TerraformProviderBlock
 	}{
-		{
-			"error on driver.InitTask()",
-			true,
-			errors.New("error on driver.InitTask()"),
-			conf,
-		},
 		{
 			"happy path",
 			false,
-			nil,
 			conf,
 		},
 	}
@@ -46,31 +43,20 @@ func TestBaseControllerInit(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			d := new(mocksD.Driver)
-			d.On("TemplateIDs").Return(nil)
-			d.On("InitTask", mock.Anything).Return(tc.initTaskErr).Once()
-			if tc.expectError {
-				d.On("DestroyTask", mock.Anything).Return().Once()
-			}
-
 			baseCtrl := baseController{
-				newDriver: func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
-					return d, nil
-				},
-				drivers:  driver.NewDrivers(),
 				initConf: tc.config,
 				logger:   logging.NewNullLogger(),
 			}
-			err := baseCtrl.drivers.Add("task", d)
-			require.NoError(t, err)
 
-			err = baseCtrl.init(ctx)
+			err := baseCtrl.init(ctx)
 
 			if tc.expectError {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tc.name)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
+				// TODO: uncomment assert after refactor to driver package
+				// assert.Equal(t, tc.expectedProviders, baseCtrl.providers)
 			}
 		})
 	}
