@@ -47,10 +47,6 @@ func newBaseController(conf *config.Config, watcher templates.Watcher) (*baseCon
 	}, nil
 }
 
-func (ctrl *baseController) Stop() {
-	ctrl.watcher.Stop()
-}
-
 func (ctrl *baseController) init(ctx context.Context) error {
 	ctrl.logger.Info("initializing driver")
 

@@ -18,6 +18,10 @@ type ConditionMonitor struct {
 	// TODO: placeholder. Will convert ReadWrite methods to ConditionMonitor
 }
 
+func (tm *TasksManager) Stop() {
+	tm.watcher.Stop()
+}
+
 // Run runs the controller in read-write mode by continuously monitoring Consul
 // catalog and using the driver to apply network infrastructure changes for
 // any work that have been updated.
