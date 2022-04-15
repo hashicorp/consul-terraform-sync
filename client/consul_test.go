@@ -17,7 +17,7 @@ import (
 func Test_GetLicense_API_Failure(t *testing.T) {
 	t.Parallel()
 	path := "/v1/operator/license"
-	ctx := logging.WithContext(context.Background(), logging.NewNullLogger())
+	ctx := context.Background()
 
 	intercepts := []*testutils.HttpIntercept{
 		{Path: path, ResponseStatusCode: http.StatusInternalServerError},
@@ -147,13 +147,13 @@ func Test_IsEnterprise(t *testing.T) {
 	}
 }
 
-func newTestConsulClient(t *testing.T, httpClient *http.Client, maxRetry int) ConsulClientInterface {
+func newTestConsulClient(t *testing.T, httpClient *http.Client, maxRetry int) *ConsulClient {
 	c, err := consulapi.NewClient(&consulapi.Config{HttpClient: httpClient})
 	assert.NoError(t, err)
 
 	return &ConsulClient{
 		Client: c,
 		retry:  retry.NewRetry(maxRetry, time.Now().UnixNano()),
-		logger: logging.Global().Named(consulSubsystemName),
+		logger: logging.NewNullLogger(),
 	}
 }

@@ -51,7 +51,7 @@ type ConsulClient struct {
 type ConsulAgentConfig = map[string]map[string]interface{}
 
 // NewConsulClient constructs a consul api client
-func NewConsulClient(conf *config.ConsulConfig, maxRetry int) (ConsulClientInterface, error) {
+func NewConsulClient(conf *config.ConsulConfig, maxRetry int) (*ConsulClient, error) {
 	t := hcat.TransportInput{
 		SSLEnabled: *conf.TLS.Enabled,
 		SSLVerify:  *conf.TLS.Verify,
