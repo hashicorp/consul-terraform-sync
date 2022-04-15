@@ -910,7 +910,7 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 
 		// Set up tm with drivers and store
 		tm := newTestTasksManager()
-		tm.baseController.drivers = drivers
+		tm.drivers = drivers
 		tm.state.AddTaskEvent(event.Event{TaskName: taskName})
 
 		// Attempt to delete the active task

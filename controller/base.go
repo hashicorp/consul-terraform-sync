@@ -18,7 +18,6 @@ import (
 
 type baseController struct {
 	newDriver func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error)
-	drivers   *driver.Drivers
 	watcher   templates.Watcher
 	resolver  templates.Resolver
 	logger    logging.Logger
@@ -39,7 +38,6 @@ func newBaseController(conf *config.Config, watcher templates.Watcher) (*baseCon
 
 	return &baseController{
 		newDriver: nd,
-		drivers:   driver.NewDrivers(),
 		watcher:   watcher,
 		resolver:  hcat.NewResolver(),
 		logger:    logger,

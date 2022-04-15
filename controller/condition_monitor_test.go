@@ -644,8 +644,8 @@ func Test_TasksManager_RunInspect_context_cancel(t *testing.T) {
 
 	tm := newTestTasksManager()
 	tm.watcher = w
+	tm.drivers = drivers
 	tm.baseController.resolver = r
-	tm.baseController.drivers = drivers
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -756,9 +756,9 @@ func newTestTasksManager() TasksManager {
 	return TasksManager{
 		logger: logging.NewNullLogger(),
 		baseController: &baseController{
-			drivers: driver.NewDrivers(),
-			logger:  logging.NewNullLogger(),
+			logger: logging.NewNullLogger(),
 		},
+		drivers:         driver.NewDrivers(),
 		state:           state.NewInMemoryStore(nil),
 		scheduleStopChs: make(map[string](chan struct{})),
 	}

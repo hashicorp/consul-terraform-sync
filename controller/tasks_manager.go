@@ -25,6 +25,7 @@ type TasksManager struct {
 
 	watcher templates.Watcher
 	state   state.Store
+	drivers *driver.Drivers
 
 	retry retry.Retry
 
@@ -59,6 +60,7 @@ func NewTasksManager(conf *config.Config, watcher templates.Watcher,
 		baseController:  baseCtrl,
 		watcher:         watcher,
 		state:           state,
+		drivers:         driver.NewDrivers(),
 		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
 		deleteCh:        make(chan string, 10),        // arbitrarily chosen size
