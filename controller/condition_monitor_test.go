@@ -689,12 +689,14 @@ func singleTaskConfig() *config.Config {
 				Version:            config.String("v1"),
 			},
 		},
-		TerraformProviders: &config.TerraformProviderConfigs{{
-			"X": map[string]interface{}{},
-			handler.TerraformProviderFake: map[string]interface{}{
-				"name": "fake-provider",
+		TerraformProviders: &config.TerraformProviderConfigs{
+			{"X": map[string]interface{}{}},
+			{
+				handler.TerraformProviderFake: map[string]interface{}{
+					"name": "fake-provider",
+				},
 			},
-		}},
+		},
 	}
 
 	c.Finalize()
