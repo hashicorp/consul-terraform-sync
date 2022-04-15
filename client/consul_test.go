@@ -17,29 +17,27 @@ import (
 func Test_GetLicense_API_Failure(t *testing.T) {
 	t.Parallel()
 	path := "/v1/operator/license"
-	ctx := context.Background()
 
 	intercepts := []*testutils.HttpIntercept{
 		{Path: path, ResponseStatusCode: http.StatusInternalServerError},
 	}
 
 	c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
-	_, err := c.GetLicense(ctx, nil)
+	_, err := c.GetLicense(context.Background(), nil)
 	assert.Error(t, err)
 }
 
 func Test_GetLicense(t *testing.T) {
 	t.Parallel()
 	path := "/v1/operator/license"
-	ctx := logging.WithContext(context.Background(), logging.NewNullLogger())
-
 	expectedLicense := "foo"
+
 	intercepts := []*testutils.HttpIntercept{
 		{Path: path, ResponseStatusCode: http.StatusOK, ResponseData: []byte(expectedLicense)},
 	}
 
 	c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
-	license, err := c.GetLicense(ctx, nil)
+	license, err := c.GetLicense(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, license, expectedLicense)
 }
@@ -47,21 +45,19 @@ func Test_GetLicense(t *testing.T) {
 func Test_IsEnterprise_API_Failure(t *testing.T) {
 	t.Parallel()
 	path := "/v1/agent/self"
-	ctx := logging.WithContext(context.Background(), logging.NewNullLogger())
 
 	intercepts := []*testutils.HttpIntercept{
 		{Path: path, ResponseStatusCode: http.StatusInternalServerError},
 	}
 
 	c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
-	_, err := c.IsEnterprise(ctx)
+	_, err := c.IsEnterprise(context.Background())
 	assert.Error(t, err)
 }
 
 func Test_IsEnterprise(t *testing.T) {
 	t.Parallel()
 	path := "/v1/agent/self"
-	ctx := logging.WithContext(context.Background(), logging.NewNullLogger())
 
 	cases := []struct {
 		name           string
@@ -136,7 +132,7 @@ func Test_IsEnterprise(t *testing.T) {
 
 			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
 
-			isEnterprise, err := c.IsEnterprise(ctx)
+			isEnterprise, err := c.IsEnterprise(context.Background())
 			if tc.expectError {
 				assert.Error(t, err)
 			} else {
