@@ -667,6 +667,75 @@ func Test_TasksManager_RunInspect_context_cancel(t *testing.T) {
 	}
 }
 
+func Test_TasksManager_WatchDep_context_cancel(t *testing.T) {
+	t.Parallel()
+
+	t.Run("cancel exits successfully", func(t *testing.T) {
+		tm := newTestTasksManager()
+
+		// Mock watcher
+		w := new(mocks.Watcher)
+		waitErrCh := make(chan error, 1)
+		var waitErrChRc <-chan error = waitErrCh
+		waitErrCh <- nil
+		w.On("WaitCh", mock.Anything).Return(waitErrChRc)
+		w.On("Size", mock.Anything).Return(1)
+		tm.watcher = w
+
+		errCh := make(chan error)
+		ctx, cancel := context.WithCancel(context.Background())
+
+		go func() {
+			if err := tm.WatchDep(ctx); err != nil {
+				errCh <- err
+			}
+		}()
+		cancel()
+
+		select {
+		case err := <-errCh:
+			// Confirm that exit is due to context cancel
+			assert.Equal(t, err, context.Canceled)
+		case <-time.After(time.Second * 5):
+			t.Fatal("WatchDep did not exit properly from cancelling context")
+		}
+
+		w.AssertExpectations(t)
+	})
+
+	t.Run("error exits successfully", func(t *testing.T) {
+		tm := newTestTasksManager()
+
+		// Mock watcher
+		w := new(mocks.Watcher)
+		waitErrCh := make(chan error, 1)
+		var waitErrChRc <-chan error = waitErrCh
+		waitErrCh <- errors.New("error!")
+		w.On("WaitCh", mock.Anything).Return(waitErrChRc)
+		tm.watcher = w
+
+		errCh := make(chan error)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			if err := tm.WatchDep(ctx); err != nil {
+				errCh <- err
+			}
+		}()
+
+		select {
+		case err := <-errCh:
+			// Confirm error was received and successfully exit
+			assert.Contains(t, err.Error(), "error!")
+		case <-time.After(time.Second * 5):
+			t.Fatal("WatchDep did not error and exit properly")
+		}
+
+		w.AssertExpectations(t)
+	})
+}
+
 // singleTaskConfig returns a happy path config that has a single task
 func singleTaskConfig() *config.Config {
 	c := &config.Config{

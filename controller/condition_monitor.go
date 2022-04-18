@@ -22,6 +22,27 @@ func (tm *TasksManager) Stop() {
 	tm.watcher.Stop()
 }
 
+// WatchDep is a helper method to start watching dependencies to allow templates
+// to render. It will run until the caller cancels the context.
+func (tm *TasksManager) WatchDep(ctx context.Context) error {
+	tm.logger.Trace("starting template dependency monitoring")
+
+	for ix := int64(0); ; ix++ {
+		select {
+		case err := <-tm.watcher.WaitCh(ctx):
+			if err != nil {
+				tm.logger.Error("error watching template dependencies", "error", err)
+				return err
+			}
+
+		case <-ctx.Done():
+			// stop for context canceled
+			return ctx.Err()
+		}
+		tm.logDepSize(50, int64(ix))
+	}
+}
+
 // Run runs the controller in read-write mode by continuously monitoring Consul
 // catalog and using the driver to apply network infrastructure changes for
 // any work that have been updated.
@@ -30,9 +51,7 @@ func (tm *TasksManager) Stop() {
 // for dynamic tasks. Scheduled tasks use their own go routine to trigger on
 // schedule.
 func (tm *TasksManager) Run(ctx context.Context) error {
-	// Only initialize buffer periods for running the full loop and not for Once
-	// mode so it can immediately render the first time.
-	tm.drivers.SetBufferPeriod()
+	// Assumes buffer_period has been set by taskManager
 
 	for _, d := range tm.drivers.Map() {
 		if d.Task().IsScheduled() {
@@ -204,51 +223,6 @@ func (tm *TasksManager) runScheduledTask(ctx context.Context, d driver.Driver, s
 			return nil
 		case <-ctx.Done():
 			tm.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
-			return ctx.Err()
-		}
-	}
-}
-
-// Once runs the controller in read-write mode making sure each template has
-// been fully rendered and the task run, then it returns.
-func (tm *TasksManager) Once(ctx context.Context) error {
-	tm.logger.Info("executing all tasks once through")
-
-	// run consecutively to keep logs in order
-	return tm.onceConsecutive(ctx)
-}
-
-// onceConsecutive runs all tasks consecutively until each task has completed once
-func (tm *TasksManager) onceConsecutive(ctx context.Context) error {
-	driversCopy := tm.drivers.Map()
-	completed := make(map[string]bool, len(driversCopy))
-	for i := int64(0); ; i++ {
-		done := true
-		for taskName, d := range driversCopy {
-			if !completed[taskName] {
-				complete, err := tm.checkApply(ctx, d, false, true)
-				if err != nil {
-					return err
-				}
-				completed[taskName] = complete
-				if !complete && done {
-					done = false
-				}
-			}
-		}
-		tm.logDepSize(50, i)
-		if done {
-			tm.logger.Info("all tasks completed once")
-			return nil
-		}
-
-		select {
-		case err := <-tm.watcher.WaitCh(ctx):
-			if err != nil {
-				tm.logger.Error("error watching template dependencies", "error", err)
-				return err
-			}
-		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}

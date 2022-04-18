@@ -99,7 +99,38 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 }
 
 func (rw *ReadWrite) Once(ctx context.Context) error {
-	return rw.tasksManager.Once(ctx)
+	rw.logger.Info("executing all tasks once through")
+
+	// Stop watchiing dependencies after once-mode completes
+	ctxDep, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// start watching dependencies in order to render templates to apply tasks
+	// once
+	go rw.tasksManager.WatchDep(ctxDep)
+
+	// run consecutively to keep logs in order
+	return rw.onceConsecutive(ctx)
+}
+
+func (rw *ReadWrite) onceConsecutive(ctx context.Context) error {
+	tasks := rw.state.GetAllTasks()
+	for _, task := range tasks {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			taskName := *task.Name
+			rw.logger.Info("running task once", taskNameLogKey, taskName)
+			if _, err := rw.tasksManager.TaskCreateAndRun(ctx, *task); err != nil {
+				return err
+			}
+			rw.logger.Info("task completed", taskNameLogKey, taskName)
+		}
+	}
+
+	rw.logger.Info("all tasks completed once")
+	return nil
 }
 
 func (rw *ReadWrite) Stop() {
