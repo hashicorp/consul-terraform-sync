@@ -7,15 +7,24 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/retry"
+	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
+	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/pkg/errors"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
+var tasksManagerSystemName = "tasksmanager"
+
 // TasksManager manages the CRUD operations and execution of tasks
 type TasksManager struct {
 	*baseController
+	logger logging.Logger
+
+	watcher templates.Watcher
+	state   state.Store
 
 	retry retry.Retry
 
@@ -35,14 +44,21 @@ type TasksManager struct {
 }
 
 // NewTasksManager configures a new tasks manager
-func NewTasksManager(conf *config.Config) (*TasksManager, error) {
-	baseCtrl, err := newBaseController(conf)
+func NewTasksManager(conf *config.Config, watcher templates.Watcher,
+	state state.Store) (*TasksManager, error) {
+
+	logger := logging.Global().Named(tasksManagerSystemName)
+
+	baseCtrl, err := newBaseController(conf, watcher)
 	if err != nil {
 		return nil, err
 	}
 
 	return &TasksManager{
+		logger:          logger,
 		baseController:  baseCtrl,
+		watcher:         watcher,
+		state:           state,
 		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
 		deleteCh:        make(chan string, 10),        // arbitrarily chosen size
@@ -403,19 +419,8 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 		return nil, fmt.Errorf("task with name %s already exists", taskName)
 	}
 
-	d, err := tm.createNewTaskDriver(taskConfig)
+	d, err := tm.makeDriver(ctx, &conf, taskConfig)
 	if err != nil {
-		logger.Error("error creating new task driver", "error", err)
-		return nil, err
-	}
-
-	// Initialize the new task
-	err = d.InitTask(ctx)
-	if err != nil {
-		logger.Error("error initializing new task", "error", err)
-		// Cleanup the task
-		d.DestroyTask(ctx)
-		logger.Debug("task destroyed", "task_name", *taskConfig.Name)
 		return nil, err
 	}
 

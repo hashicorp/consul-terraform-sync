@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
@@ -23,18 +21,14 @@ func Test_ReadWrite_Run(t *testing.T) {
 
 	port := testutils.FreePort(t)
 
-	ctl := ReadWrite{
-		tasksManager: &TasksManager{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				watcher: w,
-				logger:  logging.NewNullLogger(),
-				state: state.NewInMemoryStore(&config.Config{
-					Port: config.Int(port),
-				}),
-			},
-		},
-	}
+	ctl := ReadWrite{}
+
+	tm := newTestTasksManager()
+	tm.watcher = w
+	tm.state = state.NewInMemoryStore(&config.Config{
+		Port: config.Int(port),
+	})
+	ctl.tasksManager = &tm
 
 	t.Run("cancel exits successfully", func(t *testing.T) {
 		errCh := make(chan error)

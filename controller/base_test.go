@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
+	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/stretchr/testify/assert"
@@ -48,6 +49,9 @@ func TestBaseControllerInit(t *testing.T) {
 			d := new(mocksD.Driver)
 			d.On("TemplateIDs").Return(nil)
 			d.On("InitTask", mock.Anything).Return(tc.initTaskErr).Once()
+			if tc.expectError {
+				d.On("DestroyTask", mock.Anything).Return().Once()
+			}
 
 			baseCtrl := baseController{
 				newDriver: func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
@@ -63,13 +67,63 @@ func TestBaseControllerInit(t *testing.T) {
 			err = baseCtrl.init(ctx)
 
 			if tc.expectError {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), tc.name)
 			} else {
 				assert.NoError(t, err)
 			}
 		})
 	}
+}
+
+func TestBaseController_makeDrivers(t *testing.T) {
+	t.Parallel()
+
+	conf := singleTaskConfig()
+	taskConf := *(*conf.Tasks)[0]
+
+	// Mock watcher
+	w := new(mocksTmpl.Watcher)
+	w.On("Clients").Return(nil).Once()
+	w.On("Register", mock.Anything).Return(nil).Once()
+
+	// Setup for controller
+	baseCtrl, err := newBaseController(conf, w)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	t.Run("happy path", func(t *testing.T) {
+		// Mock returned driver
+		d := new(mocksD.Driver)
+		baseCtrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+			d.On("InitTask", mock.Anything).Return(nil).Once()
+			return d, nil
+		}
+
+		// Test makeDriver
+		actualD, err := baseCtrl.makeDriver(ctx, conf, taskConf)
+		assert.NoError(t, err)
+		assert.NotNil(t, actualD)
+		d.AssertExpectations(t)
+	})
+
+	t.Run("driver init error", func(t *testing.T) {
+		// Mock returned driver
+		errStr := "init error"
+		d := new(mocksD.Driver)
+		baseCtrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+			d.On("InitTask", mock.Anything).Return(errors.New(errStr)).Once()
+			d.On("DestroyTask", mock.Anything).Return().Once()
+			return d, nil
+		}
+
+		// Test makeDriver
+		_, err = baseCtrl.makeDriver(ctx, conf, taskConf)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), errStr)
+		d.AssertExpectations(t)
+	})
 }
 
 func TestNewDriverTask(t *testing.T) {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/cronexpr"
 )
 
@@ -15,6 +16,10 @@ import (
 // inform of starting / stopping task monitoring as well as executing a task
 type ConditionMonitor struct {
 	// TODO: placeholder. Will convert ReadWrite methods to ConditionMonitor
+}
+
+func (tm *TasksManager) Stop() {
+	tm.watcher.Stop()
 }
 
 // Run runs the controller in read-write mode by continuously monitoring Consul
@@ -330,4 +335,17 @@ func (tm *TasksManager) checkInspect(ctx context.Context, d driver.Driver) (bool
 	}
 
 	return rendered, nil
+}
+
+// logDepSize logs the watcher dependency size every nth iteration. Set the
+// iterator to a negative value to log each iteration.
+func (tm *TasksManager) logDepSize(n uint, i int64) {
+	depSize := tm.watcher.Size()
+	if i%int64(n) == 0 || i < 0 {
+		tm.logger.Debug("watching dependencies", "dependency_size", depSize)
+		if depSize > templates.DepSizeWarning {
+			tm.logger.Warn(fmt.Sprintf(" watching more than %d dependencies could "+
+				"DDoS your Consul cluster: %d", templates.DepSizeWarning, depSize))
+		}
+	}
 }

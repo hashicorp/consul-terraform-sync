@@ -8,18 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
-	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcat"
 )
 
 type baseController struct {
-	state     state.Store
 	newDriver func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error)
 	drivers   *driver.Drivers
 	watcher   templates.Watcher
@@ -32,21 +29,15 @@ type baseController struct {
 	initConf *config.Config
 }
 
-func newBaseController(conf *config.Config) (*baseController, error) {
+func newBaseController(conf *config.Config, watcher templates.Watcher) (*baseController, error) {
 	nd, err := newDriverFunc(conf)
 	if err != nil {
 		return nil, err
 	}
 
 	logger := logging.Global().Named(ctrlSystemName)
-	logger.Info("initializing Consul client and testing connection")
-	watcher, err := newWatcher(conf, client.ConsulDefaultMaxRetry)
-	if err != nil {
-		return nil, err
-	}
 
 	return &baseController{
-		state:     state.NewInMemoryStore(conf),
 		newDriver: nd,
 		drivers:   driver.NewDrivers(),
 		watcher:   watcher,
@@ -54,10 +45,6 @@ func newBaseController(conf *config.Config) (*baseController, error) {
 		logger:    logger,
 		initConf:  conf,
 	}, nil
-}
-
-func (ctrl *baseController) Stop() {
-	ctrl.watcher.Stop()
 }
 
 func (ctrl *baseController) init(ctx context.Context) error {
@@ -83,42 +70,59 @@ func (ctrl *baseController) init(ctx context.Context) error {
 		default:
 		}
 
-		var err error
+		d, err := ctrl.makeDriver(ctx, ctrl.initConf, *t)
+		if err != nil {
+			return err
+		}
+
 		taskName := *t.Name
-		d, err := ctrl.createNewTaskDriver(*t)
-		if err != nil {
-			ctrl.logger.Error("error creating new task driver", taskNameLogKey, taskName)
-			return err
-		}
-
-		// Using the newly created driver, initialize the task
-		err = d.InitTask(ctx)
-		if err != nil {
-			ctrl.logger.Error("error initializing task", taskNameLogKey, taskName)
-			return err
-		}
-
 		err = ctrl.drivers.Add(taskName, d)
 		if err != nil {
 			ctrl.logger.Error("error adding task driver to drivers list", taskNameLogKey, taskName)
 			return err
 		}
-		ctrl.logger.Trace("driver initialized", taskNameLogKey, taskName)
 	}
 
 	ctrl.logger.Info("drivers initialized")
 	return nil
 }
 
-func (ctrl *baseController) createNewTaskDriver(taskConfig config.TaskConfig) (driver.Driver, error) {
+func (ctrl *baseController) makeDriver(ctx context.Context, conf *config.Config,
+	taskConf config.TaskConfig) (driver.Driver, error) {
+
+	taskName := *taskConf.Name
+	logger := ctrl.logger.With(taskNameLogKey, taskName)
+
+	d, err := ctrl.createNewTaskDriver(conf, taskConf)
+	if err != nil {
+		logger.Error("error creating new task driver")
+		return nil, err
+	}
+
+	// Using the newly created driver, initialize the task
+	err = d.InitTask(ctx)
+	if err != nil {
+		logger.Error("error initializing task")
+
+		// Cleanup the task
+		d.DestroyTask(ctx)
+		logger.Debug("cleaned up task that errored initializing")
+		return nil, err
+	}
+
+	logger.Trace("driver initialized")
+	return d, nil
+}
+
+func (ctrl *baseController) createNewTaskDriver(conf *config.Config, taskConfig config.TaskConfig) (driver.Driver, error) {
 	logger := ctrl.logger.With("task_name", *taskConfig.Name)
 	logger.Trace("creating new task driver")
-	task, err := newDriverTask(ctrl.initConf, &taskConfig, ctrl.providers)
+	task, err := newDriverTask(conf, &taskConfig, ctrl.providers)
 	if err != nil {
 		return nil, err
 	}
 
-	d, err := ctrl.newDriver(ctrl.initConf, task, ctrl.watcher)
+	d, err := ctrl.newDriver(conf, task, ctrl.watcher)
 	if err != nil {
 		return nil, err
 	}
@@ -158,19 +162,6 @@ func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]driver.T
 		return nil, lastErr
 	}
 	return providerConfigs, nil
-}
-
-// logDepSize logs the watcher dependency size every nth iteration. Set the
-// iterator to a negative value to log each iteration.
-func (ctrl *baseController) logDepSize(n uint, i int64) {
-	depSize := ctrl.watcher.Size()
-	if i%int64(n) == 0 || i < 0 {
-		ctrl.logger.Debug("watching dependencies", "dependency_size", depSize)
-		if depSize > templates.DepSizeWarning {
-			ctrl.logger.Warn(fmt.Sprintf(" watching more than %d dependencies could "+
-				"DDoS your Consul cluster: %d", templates.DepSizeWarning, depSize))
-		}
-	}
 }
 
 // newDriverFunc is a constructor abstraction for all of supported drivers

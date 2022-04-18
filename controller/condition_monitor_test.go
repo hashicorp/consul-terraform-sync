@@ -29,7 +29,7 @@ func Test_TasksManager_once_error(t *testing.T) {
 	w.On("WaitCh", mock.Anything).Return(nil)
 	w.On("Size").Return(numTasks)
 
-	rw := &TasksManager{}
+	tm := newTestTasksManager()
 
 	testCases := []struct {
 		name    string
@@ -37,7 +37,7 @@ func Test_TasksManager_once_error(t *testing.T) {
 	}{
 		{
 			"onceConsecutive",
-			rw.onceConsecutive,
+			tm.onceConsecutive,
 		},
 	}
 
@@ -47,31 +47,27 @@ func Test_TasksManager_once_error(t *testing.T) {
 
 			// Set up read-write tm with mocks
 			conf := multipleTaskConfig(numTasks)
-			rw.baseController = &baseController{
-				state:   state.NewInMemoryStore(conf),
-				watcher: w,
-				drivers: driver.NewDrivers(),
-				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
-					taskName := task.Name()
-					d := new(mocksD.Driver)
-					d.On("Task").Return(enabledTestTask(t, taskName))
-					d.On("TemplateIDs").Return(nil)
-					d.On("RenderTemplate", mock.Anything).Return(true, nil)
-					d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
-					if taskName == "task_03" {
-						// Mock an error during apply for a task
-						d.On("ApplyTask", mock.Anything).Return(expectedErr)
-					} else {
-						d.On("ApplyTask", mock.Anything).Return(nil)
-					}
-					return d, nil
-				},
-				initConf: conf,
-				logger:   logging.NewNullLogger(),
+			tm.state = state.NewInMemoryStore(conf)
+			tm.initConf = conf
+			tm.baseController.watcher = w
+			tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+				taskName := task.Name()
+				d := new(mocksD.Driver)
+				d.On("Task").Return(enabledTestTask(t, taskName))
+				d.On("TemplateIDs").Return(nil)
+				d.On("RenderTemplate", mock.Anything).Return(true, nil)
+				d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
+				if taskName == "task_03" {
+					// Mock an error during apply for a task
+					d.On("ApplyTask", mock.Anything).Return(expectedErr)
+				} else {
+					d.On("ApplyTask", mock.Anything).Return(nil)
+				}
+				return d, nil
 			}
 
 			ctx := context.Background()
-			err := rw.Init(ctx)
+			err := tm.Init(ctx)
 			require.NoError(t, err)
 
 			// testing really starts here...
@@ -306,19 +302,13 @@ func Test_TasksManager_Run_context_cancel(t *testing.T) {
 		On("Size").Return(5).
 		On("Stop").Return()
 
-	ctl := TasksManager{
-		baseController: &baseController{
-			drivers: driver.NewDrivers(),
-			watcher: w,
-			logger:  logging.NewNullLogger(),
-			state:   state.NewInMemoryStore(nil),
-		},
-	}
+	tm := newTestTasksManager()
+	tm.watcher = w
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		err := ctl.Run(ctx)
+		err := tm.Run(ctx)
 		if err != nil {
 			errCh <- err
 		}
@@ -345,14 +335,8 @@ func Test_TasksManager_once_then_Run(t *testing.T) {
 		On("ApplyTask", mock.Anything).Return(nil).
 		On("SetBufferPeriod")
 
-	tm := TasksManager{
-		baseController: &baseController{
-			drivers: driver.NewDrivers(),
-			logger:  logging.NewNullLogger(),
-			state:   state.NewInMemoryStore(nil),
-		},
-		watcherCh: make(chan string, 5),
-	}
+	tm := newTestTasksManager()
+	tm.watcherCh = make(chan string, 5)
 	tm.drivers.Add("task_a", d)
 
 	testCases := []struct {
@@ -407,14 +391,9 @@ func Test_TasksManager_once_then_Run(t *testing.T) {
 
 func Test_TasksManager_Run_ActiveTask(t *testing.T) {
 	// Set up tm with two tasks
-	tm := TasksManager{
-		baseController: &baseController{
-			drivers: driver.NewDrivers(),
-			logger:  logging.NewNullLogger(),
-			state:   state.NewInMemoryStore(nil),
-		},
-		watcherCh: make(chan string, 5),
-	}
+	tm := newTestTasksManager()
+	tm.watcherCh = make(chan string, 5)
+
 	for _, n := range []string{"task_a", "task_b"} {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, n)).
@@ -488,15 +467,8 @@ func Test_TasksManager_Run_ActiveTask(t *testing.T) {
 
 func Test_TasksManager_Run_ScheduledTasks(t *testing.T) {
 	t.Run("startup_task", func(t *testing.T) {
-		tm := TasksManager{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-				state:   state.NewInMemoryStore(nil),
-			},
-			watcherCh:       make(chan string, 5),
-			scheduleStopChs: make(map[string](chan struct{})),
-		}
+		tm := newTestTasksManager()
+		tm.watcherCh = make(chan string, 5)
 		tm.EnableTestMode()
 
 		// Add initial task
@@ -532,16 +504,9 @@ func Test_TasksManager_Run_ScheduledTasks(t *testing.T) {
 	})
 
 	t.Run("created_task", func(t *testing.T) {
-		tm := TasksManager{
-			baseController: &baseController{
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-				state:   state.NewInMemoryStore(nil),
-			},
-			watcherCh:       make(chan string, 5),
-			scheduleStartCh: make(chan driver.Driver, 1),
-			scheduleStopChs: make(map[string](chan struct{})),
-		}
+		tm := newTestTasksManager()
+		tm.watcherCh = make(chan string, 5)
+		tm.scheduleStartCh = make(chan driver.Driver, 1)
 		tm.EnableTestMode()
 
 		// Set up watcher for tm
@@ -586,12 +551,9 @@ func Test_TasksManager_EnableTestMode(t *testing.T) {
 	s := new(mocksS.Store)
 	s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
 
-	// Set up tm
-	tm := TasksManager{
-		baseController: &baseController{
-			state: s,
-		},
-	}
+	// Set up tasks manager
+	tm := newTestTasksManager()
+	tm.state = s
 
 	// Test EnableTestMode
 	channel := tm.EnableTestMode()
@@ -637,11 +599,8 @@ func Test_TasksManager_RunInspect(t *testing.T) {
 			w := new(mocks.Watcher)
 			w.On("Size").Return(5)
 
-			tm := TasksManager{baseController: &baseController{
-				watcher: w,
-				drivers: driver.NewDrivers(),
-				logger:  logging.NewNullLogger(),
-			}}
+			tm := newTestTasksManager()
+			tm.watcher = w
 
 			d := new(mocksD.Driver)
 			d.On("Task").Return(enabledTestTask(t, "task"))
@@ -683,12 +642,10 @@ func Test_TasksManager_RunInspect_context_cancel(t *testing.T) {
 	err := drivers.Add("task", d)
 	require.NoError(t, err)
 
-	tm := TasksManager{baseController: &baseController{
-		watcher:  w,
-		resolver: r,
-		drivers:  drivers,
-		logger:   logging.NewNullLogger(),
-	}}
+	tm := newTestTasksManager()
+	tm.watcher = w
+	tm.baseController.resolver = r
+	tm.baseController.drivers = drivers
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -732,12 +689,14 @@ func singleTaskConfig() *config.Config {
 				Version:            config.String("v1"),
 			},
 		},
-		TerraformProviders: &config.TerraformProviderConfigs{{
-			"X": map[string]interface{}{},
-			handler.TerraformProviderFake: map[string]interface{}{
-				"name": "fake-provider",
+		TerraformProviders: &config.TerraformProviderConfigs{
+			{"X": map[string]interface{}{}},
+			{
+				handler.TerraformProviderFake: map[string]interface{}{
+					"name": "fake-provider",
+				},
 			},
-		}},
+		},
 	}
 
 	c.Finalize()
@@ -795,11 +754,12 @@ func scheduledTestTask(tb testing.TB, name string) *driver.Task {
 
 func newTestTasksManager() TasksManager {
 	return TasksManager{
+		logger: logging.NewNullLogger(),
 		baseController: &baseController{
 			drivers: driver.NewDrivers(),
 			logger:  logging.NewNullLogger(),
-			state:   state.NewInMemoryStore(nil),
 		},
+		state:           state.NewInMemoryStore(nil),
 		scheduleStopChs: make(map[string](chan struct{})),
 	}
 }

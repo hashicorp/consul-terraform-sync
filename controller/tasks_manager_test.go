@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
-	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
@@ -32,9 +31,7 @@ var validTaskConf = config.TaskConfig{
 
 func Test_TasksManager_Task(t *testing.T) {
 	ctx := context.Background()
-	tm := TasksManager{
-		baseController: &baseController{},
-	}
+	tm := newTestTasksManager()
 
 	t.Run("success", func(t *testing.T) {
 		taskConf := validTaskConf
@@ -66,9 +63,7 @@ func Test_TasksManager_Task(t *testing.T) {
 
 func Test_TasksManager_Tasks(t *testing.T) {
 	ctx := context.Background()
-	tm := TasksManager{
-		baseController: &baseController{},
-	}
+	tm := newTestTasksManager()
 
 	t.Run("success", func(t *testing.T) {
 		taskConfs := config.TaskConfigs{
@@ -112,14 +107,9 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 		WorkingDir:   config.String(config.DefaultWorkingDir),
 	}
 	conf.Finalize()
-	tm := TasksManager{
-		baseController: &baseController{
-			drivers: driver.NewDrivers(),
-			logger:  logging.NewNullLogger(),
-			watcher: new(mocksTmpl.Watcher),
-			state:   state.NewInMemoryStore(conf),
-		},
-	}
+	tm := newTestTasksManager()
+	tm.baseController.watcher = new(mocksTmpl.Watcher)
+	tm.state = state.NewInMemoryStore(conf)
 
 	t.Run("success", func(t *testing.T) {
 		taskConf := validTaskConf
@@ -192,12 +182,8 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 	// This tests what hasn't been testeed in Test_TasksManager_TaskCreate
 	ctx := context.Background()
 
-	tm := TasksManager{
-		baseController: &baseController{
-			logger:  logging.NewNullLogger(),
-			watcher: new(mocksTmpl.Watcher),
-		},
-	}
+	tm := newTestTasksManager()
+	tm.baseController.watcher = new(mocksTmpl.Watcher)
 
 	conf := &config.Config{
 		BufferPeriod: config.DefaultBufferPeriodConfig(),
@@ -295,13 +281,8 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 
 func Test_TasksManager_TaskDelete(t *testing.T) {
 	ctx := context.Background()
-	tm := TasksManager{
-		baseController: &baseController{
-			logger: logging.NewNullLogger(),
-			state:  state.NewInMemoryStore(nil),
-		},
-		deleteCh: make(chan string),
-	}
+	tm := newTestTasksManager()
+	tm.deleteCh = make(chan string)
 
 	t.Run("happy path", func(t *testing.T) {
 		drivers := driver.NewDrivers()
@@ -336,13 +317,8 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 	conf := &config.Config{}
 	conf.Finalize()
 	ctx := context.Background()
-	tm := TasksManager{
-		baseController: &baseController{
-			state:   state.NewInMemoryStore(conf),
-			drivers: driver.NewDrivers(),
-			logger:  logging.NewNullLogger(),
-		},
-	}
+	tm := newTestTasksManager()
+	tm.state = state.NewInMemoryStore(conf)
 
 	t.Run("disable-then-enable", func(t *testing.T) {
 		taskName := "task_a"
@@ -517,13 +493,9 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 func Test_TasksManager_addTask(t *testing.T) {
 	t.Parallel()
 
-	tm := TasksManager{
-		deleteCh:        make(chan string, 1),
-		scheduleStartCh: make(chan driver.Driver, 1),
-		baseController: &baseController{
-			logger: logging.NewNullLogger(),
-		},
-	}
+	tm := newTestTasksManager()
+	tm.deleteCh = make(chan string, 1)
+	tm.scheduleStartCh = make(chan driver.Driver, 1)
 
 	t.Run("success", func(t *testing.T) {
 		// Set up driver's task object
@@ -781,7 +753,7 @@ func Test_TasksManager_CheckApply_Store(t *testing.T) {
 }
 
 func Test_once(t *testing.T) {
-	rw := &TasksManager{}
+	tm := newTestTasksManager()
 
 	testCases := []struct {
 		name     string
@@ -790,12 +762,12 @@ func Test_once(t *testing.T) {
 	}{
 		{
 			"consecutive one task",
-			rw.onceConsecutive,
+			tm.onceConsecutive,
 			1,
 		},
 		{
 			"consecutive multiple tasks",
-			rw.onceConsecutive,
+			tm.onceConsecutive,
 			10,
 		},
 	}
@@ -810,27 +782,23 @@ func Test_once(t *testing.T) {
 
 			// Set up read-write tm with mocks
 			conf := multipleTaskConfig(tc.numTasks)
-			rw.baseController = &baseController{
-				state:   state.NewInMemoryStore(conf),
-				watcher: w,
-				drivers: driver.NewDrivers(),
-				newDriver: func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
-					taskName := task.Name()
-					d := new(mocksD.Driver)
-					d.On("Task").Return(enabledTestTask(t, taskName)).Twice()
-					d.On("TemplateIDs").Return(nil)
-					d.On("RenderTemplate", mock.Anything).Return(false, nil).Once()
-					d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
-					d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
-					d.On("ApplyTask", mock.Anything).Return(nil).Once()
-					return d, nil
-				},
-				initConf: conf,
-				logger:   logging.NewNullLogger(),
+			tm.watcher = w
+			tm.state = state.NewInMemoryStore(conf)
+			tm.baseController.initConf = conf
+			tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+				taskName := task.Name()
+				d := new(mocksD.Driver)
+				d.On("Task").Return(enabledTestTask(t, taskName)).Twice()
+				d.On("TemplateIDs").Return(nil)
+				d.On("RenderTemplate", mock.Anything).Return(false, nil).Once()
+				d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
+				d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
+				d.On("ApplyTask", mock.Anything).Return(nil).Once()
+				return d, nil
 			}
 
 			ctx := context.Background()
-			err := rw.Init(ctx)
+			err := tm.Init(ctx)
 			require.NoError(t, err)
 
 			// testing really starts here...
@@ -846,7 +814,7 @@ func Test_once(t *testing.T) {
 				t.Fatal("Once didn't return in expected time")
 			}
 
-			for _, d := range rw.drivers.Map() {
+			for _, d := range tm.drivers.Map() {
 				d.(*mocksD.Driver).AssertExpectations(t)
 			}
 		})
@@ -858,41 +826,38 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 	mockD := new(mocksD.Driver)
 
 	testCases := []struct {
-		name  string
-		setup func(*driver.Drivers)
+		name         string
+		setupDrivers func() *driver.Drivers
 	}{
 		{
 			"success",
-			func(d *driver.Drivers) {
+			func() *driver.Drivers {
 				mockD.On("TemplateIDs").Return(nil)
-				d.Add("success", mockD)
 				mockD.On("Task").Return(enabledTestTask(t, "success"))
 				mockD.On("DestroyTask", ctx).Return()
+				d := driver.NewDrivers()
+				d.Add("success", mockD)
+				return d
 			},
 		},
 		{
 			"does_not_exist",
-			func(*driver.Drivers) {},
+			func() *driver.Drivers {
+				return driver.NewDrivers()
+			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			drivers := driver.NewDrivers()
+			tm := newTestTasksManager()
+			tm.drivers = tc.setupDrivers()
 
-			tc.setup(drivers)
-			tm := TasksManager{
-				baseController: &baseController{
-					logger: logging.NewNullLogger(),
-					state:  state.NewInMemoryStore(nil),
-				},
-			}
-			tm.baseController.drivers = drivers
 			tm.state.AddTaskEvent(event.Event{TaskName: "success"})
 
 			err := tm.deleteTask(ctx, tc.name)
 
 			assert.NoError(t, err)
-			_, exists := drivers.Get(tc.name)
+			_, exists := tm.drivers.Get(tc.name)
 			assert.False(t, exists, "driver should no longer exist")
 
 			events := tm.state.GetTaskEvents(tc.name)
@@ -944,12 +909,7 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 		drivers.SetActive(taskName)
 
 		// Set up tm with drivers and store
-		tm := TasksManager{
-			baseController: &baseController{
-				logger: logging.NewNullLogger(),
-				state:  state.NewInMemoryStore(nil),
-			},
-		}
+		tm := newTestTasksManager()
 		tm.baseController.drivers = drivers
 		tm.state.AddTaskEvent(event.Event{TaskName: taskName})
 
