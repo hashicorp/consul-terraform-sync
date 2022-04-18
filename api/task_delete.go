@@ -15,7 +15,7 @@ func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 	requestID := requestIDFromContext(ctx)
-	logger := logging.FromContext(r.Context()).Named(deleteTaskSubsystemName).With("task_name", name)
+	logger := logging.FromContext(ctx).Named(deleteTaskSubsystemName).With("task_name", name)
 	logger.Trace("delete task request")
 
 	// Check if task exists

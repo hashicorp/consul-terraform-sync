@@ -14,12 +14,13 @@ import (
 func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request, params oapigen.CreateTaskParams) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	logger := logging.FromContext(r.Context()).Named(createTaskSubsystemName)
+
+	ctx := r.Context()
+	logger := logging.FromContext(ctx).Named(createTaskSubsystemName)
 	logger.Trace("create task request received, reading request")
 
 	// Decode the task request
 	var req TaskRequest
-	ctx := r.Context()
 	requestID := requestIDFromContext(ctx)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("bad request", "error", err, "create_task_request", r.Body)
@@ -27,6 +28,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 			fmt.Errorf("error decoding the request: %v", err))
 		return
 	}
+
 	logger = logger.With("task_name", req.Task.Name)
 	logger.Trace("create task request", "create_task_request", req)
 
@@ -58,6 +60,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 		h.createDryRunTask(w, r, trc)
 		return
 	}
+
 	if err != nil {
 		sendError(w, r, http.StatusInternalServerError, err)
 		return
@@ -70,8 +73,7 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	logger.Trace("task created", "create_task_response", resp)
 }
 
-func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.Request,
-	taskConf config.TaskConfig) {
+func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.Request, taskConf config.TaskConfig) {
 	ctx := r.Context()
 	logger := logging.FromContext(ctx).Named(createTaskSubsystemName).With("task_name", *taskConf.Name)
 
@@ -89,9 +91,11 @@ func (h *TaskLifeCycleHandler) createDryRunTask(w http.ResponseWriter, r *http.R
 		Plan:           &plan,
 		ChangesPresent: &changes,
 	}
+
 	if runUrl != "" {
 		resp.Run.TfcRunUrl = &runUrl
 	}
+
 	writeResponse(w, r, http.StatusOK, resp)
 	logger.Trace("task inspection complete", "create_task_response", resp)
 }

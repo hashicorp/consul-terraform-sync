@@ -13,7 +13,7 @@ func (h *TaskLifeCycleHandler) GetAllTasks(w http.ResponseWriter, r *http.Reques
 
 	ctx := r.Context()
 	requestID := requestIDFromContext(ctx)
-	logger := logging.FromContext(r.Context()).Named(getTaskSubsystemName)
+	logger := logging.FromContext(ctx).Named(getTaskSubsystemName)
 	logger.Trace("get all tasks request")
 
 	// Retrieve all tasks
@@ -37,7 +37,7 @@ func (h *TaskLifeCycleHandler) GetTaskByName(w http.ResponseWriter, r *http.Requ
 
 	ctx := r.Context()
 	requestID := requestIDFromContext(ctx)
-	logger := logging.FromContext(r.Context()).Named(getTaskSubsystemName).With("task_name", name)
+	logger := logging.FromContext(ctx).Named(getTaskSubsystemName).With("task_name", name)
 	logger.Trace("get task request")
 
 	// Retrieve task if it exists
