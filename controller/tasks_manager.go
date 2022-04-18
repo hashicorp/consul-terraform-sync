@@ -16,6 +16,8 @@ import (
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
+var tasksManagerSystemName = "tasksmanager"
+
 // TasksManager manages the CRUD operations and execution of tasks
 type TasksManager struct {
 	*baseController
@@ -45,7 +47,7 @@ type TasksManager struct {
 func NewTasksManager(conf *config.Config, watcher templates.Watcher,
 	state state.Store) (*TasksManager, error) {
 
-	logger := logging.Global().Named("tasks_manager")
+	logger := logging.Global().Named(tasksManagerSystemName)
 
 	baseCtrl, err := newBaseController(conf, watcher)
 	if err != nil {
