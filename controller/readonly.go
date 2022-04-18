@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -29,11 +30,6 @@ type ReadOnly struct {
 
 // NewReadOnly configures and initializes a new ReadOnly controller
 func NewReadOnly(conf *config.Config) (*ReadOnly, error) {
-	// Run the driver with logging to output the Terraform plan to stdout
-	if tfConfig := conf.Driver.Terraform; tfConfig != nil && !MuteReadOnlyController {
-		tfConfig.Log = config.Bool(true)
-	}
-
 	logger := logging.Global().Named(ctrlSystemName)
 
 	logger.Info("initializing Consul client and testing connection")
@@ -63,7 +59,45 @@ func (ro *ReadOnly) Init(ctx context.Context) error {
 }
 
 func (ro *ReadOnly) Run(ctx context.Context) error {
-	return ro.tasksManager.RunInspect(ctx)
+	ro.logger.Info("inspecting all tasks")
+
+	// Stop watchiing dependencies after inspect-mode completes
+	ctxDep, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// start watching dependencies in order to render templates to plan tasks
+	// once
+	go ro.tasksManager.WatchDep(ctxDep)
+
+	// always inspect consecutively to keep inspect logs in order
+	return ro.inspectConsecutive(ctx)
+}
+
+func (ro *ReadOnly) inspectConsecutive(ctx context.Context) error {
+	tasks := ro.state.GetAllTasks()
+	for _, task := range tasks {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			taskName := *task.Name
+			ro.logger.Info("inspecting task", taskNameLogKey, taskName)
+			_, plan, _, err := ro.tasksManager.TaskInspect(ctx, *task)
+			if err != nil {
+				return err
+			}
+
+			if !MuteReadOnlyController {
+				// output plan to console
+				fmt.Println(plan)
+			}
+
+			ro.logger.Info("inspected task", taskNameLogKey, taskName)
+		}
+	}
+
+	ro.logger.Info("all tasks inspected")
+	return nil
 }
 
 func (ro *ReadOnly) Stop() {
