@@ -425,7 +425,8 @@ func Test_TasksManager_WatchDep_context_cancel(t *testing.T) {
 			t.Fatal("WatchDep did not exit properly from cancelling context")
 		}
 
-		w.AssertExpectations(t)
+		// Don't w.AssertExpectations(). Race condition on when cancel() is
+		// called if and if watcher.Size() is called
 	})
 
 	t.Run("error exits successfully", func(t *testing.T) {
