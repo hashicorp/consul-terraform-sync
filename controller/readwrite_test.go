@@ -155,6 +155,66 @@ func Test_ReadWrite_Once_then_Run_Terraform(t *testing.T) {
 
 	testOnceThenRun(t, driverConf)
 }
+
+func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
+	// - Controller will try to create and run 5 tasks
+	// - Mock a task to take 2 seconds to create and run
+	// - Cancel context after 1 second. Confirm only 1 task created and run
+	t.Parallel()
+
+	conf := multipleTaskConfig(5)
+	ss := state.NewInMemoryStore(conf)
+
+	rw := ReadWrite{
+		logger: logging.NewNullLogger(),
+		state:  ss,
+	}
+
+	// Set up tasks manager
+	tm := newTestTasksManager()
+	tm.state = ss
+	rw.tasksManager = &tm
+
+	// Set up baseController
+	tm.baseController.initConf = conf
+	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+		d := new(mocksD.Driver)
+		d.On("Task").Return(task).Times(4)
+		d.On("TemplateIDs").Return(nil)
+		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
+		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
+		d.On("ApplyTask", mock.Anything).Return(nil).Once()
+		d.On("OverrideNotifier").Return().Once()
+		// Last driver call takes 2 seconds
+		d.On("SetBufferPeriod").Return().After(2 * time.Second).Once()
+		return d, nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error)
+	go func() {
+		err := rw.onceConsecutive(ctx)
+		if err != nil {
+			errCh <- err
+		}
+	}()
+	// Cancel context after 1 second (during first task)
+	time.Sleep(time.Second)
+	cancel()
+
+	select {
+	case err := <-errCh:
+		assert.Equal(t, err, context.Canceled)
+	case <-time.After(time.Second * 5):
+		t.Fatal("onceConsecutive did not exit properly from cancelling context")
+	}
+
+	assert.Equal(t, 1, tm.drivers.Len(), "only one driver should have been created")
+	for _, d := range tm.drivers.Map() {
+		d.(*mocksD.Driver).AssertExpectations(t)
+	}
+}
+
 func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	setupNewDriver func(*driver.Task) driver.Driver) error {
 
