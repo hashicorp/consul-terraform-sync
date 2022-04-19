@@ -73,6 +73,76 @@ func Test_ReadOnly_Run(t *testing.T) {
 	}
 }
 
+func Test_ReadOnly_Run_context_cancel(t *testing.T) {
+	// - Controller will try to create and inspect 5 tasks
+	// - Mock a task to take 2 seconds to inspect
+	// - Cancel context after 1 second. Confirm only 1 task inspected
+
+	t.Parallel()
+
+	conf := multipleTaskConfig(5)
+	ss := state.NewInMemoryStore(conf)
+
+	ro := ReadOnly{
+		logger: logging.NewNullLogger(),
+		state:  ss,
+	}
+
+	// Set up tasks manager
+	tm := newTestTasksManager()
+	tm.state = ss
+	ro.tasksManager = &tm
+
+	// Mock watcher
+	waitErrCh := make(chan error)
+	var waitErrChRc <-chan error = waitErrCh
+	go func() { waitErrCh <- nil }()
+	w := new(mocksTmpl.Watcher)
+	w.On("WaitCh", mock.Anything).Return(waitErrChRc)
+	w.On("Size").Return(5)
+	tm.watcher = w
+
+	// Set up baseController
+	tm.baseController.initConf = conf
+	drivers := make(map[string]driver.Driver)
+	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+		d := new(mocksD.Driver)
+		d.On("RenderTemplate", mock.Anything).Return(true, nil)
+		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
+		d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, nil)
+		// Last driver call takes 2 seconds
+		d.On("OverrideNotifier").Return().After(2 * time.Second).Once()
+
+		drivers[task.Name()] = d
+
+		return d, nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error)
+	go func() {
+		err := ro.Run(ctx)
+		if err != nil {
+			errCh <- err
+		}
+	}()
+	// Cancel context after 1 second (during first task)
+	time.Sleep(time.Second)
+	cancel()
+
+	select {
+	case err := <-errCh:
+		assert.Equal(t, err, context.Canceled)
+	case <-time.After(time.Second * 5):
+		t.Fatal("Run did not exit properly from cancelling context")
+	}
+
+	w.AssertExpectations(t)
+	for _, d := range drivers {
+		d.(*mocksD.Driver).AssertExpectations(t)
+	}
+}
+
 func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) driver.Driver) error {
 
 	conf := multipleTaskConfig(numTasks)

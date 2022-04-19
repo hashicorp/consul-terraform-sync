@@ -430,50 +430,6 @@ func Test_TasksManager_EnableTestMode(t *testing.T) {
 	s.AssertExpectations(t)
 }
 
-
-func Test_TasksManager_RunInspect_context_cancel(t *testing.T) {
-	r := new(mocks.Resolver)
-	r.On("Run", mock.Anything, mock.Anything).
-		Return(hcat.ResolveEvent{Complete: false}, nil)
-
-	w := new(mocks.Watcher)
-	w.On("WaitCh", mock.Anything, mock.Anything).Return(nil).
-		On("Size").Return(5).
-		On("Stop").Return()
-
-	d := new(mocksD.Driver)
-	d.On("Task").Return(enabledTestTask(t, "task"))
-	d.On("TemplateIDs").Return(nil)
-	d.On("RenderTemplate", mock.Anything).Return(false, nil)
-	drivers := driver.NewDrivers()
-	err := drivers.Add("task", d)
-	require.NoError(t, err)
-
-	tm := newTestTasksManager()
-	tm.watcher = w
-	tm.drivers = drivers
-	tm.baseController.resolver = r
-
-	ctx, cancel := context.WithCancel(context.Background())
-	errCh := make(chan error)
-	go func() {
-		err := tm.RunInspect(ctx)
-		if err != nil {
-			errCh <- err
-		}
-	}()
-	cancel()
-
-	select {
-	case err := <-errCh:
-		if err != context.Canceled {
-			t.Error("wanted 'context canceled', got:", err)
-		}
-	case <-time.After(time.Second * 5):
-		t.Fatal("Run did not exit properly from cancelling context")
-	}
-}
-
 func Test_TasksManager_WatchDep_context_cancel(t *testing.T) {
 	t.Parallel()
 
