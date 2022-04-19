@@ -144,6 +144,17 @@ func Test_ReadWrite_Once_Terraform(t *testing.T) {
 		})
 	}
 }
+
+func Test_ReadWrite_Once_then_Run_Terraform(t *testing.T) {
+	// Tests Run behaves as expected with triggers after once completes
+	t.Parallel()
+
+	driverConf := &config.DriverConfig{
+		Terraform: &config.TerraformConfig{},
+	}
+
+	testOnceThenRun(t, driverConf)
+}
 func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	setupNewDriver func(*driver.Task) driver.Driver) error {
 
@@ -187,6 +198,87 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	return err
 }
 
+func testOnceThenRun(t *testing.T, driverConf *config.DriverConfig) {
+	port := testutils.FreePort(t)
+	conf := singleTaskConfig()
+	conf.Driver = driverConf
+	conf.Port = config.Int(port)
+	conf.Finalize()
+
+	st := state.NewInMemoryStore(conf)
+
+	rw := ReadWrite{
+		logger: logging.NewNullLogger(),
+		state:  st,
+	}
+
+	// Setup taskmanager
+	tm := newTestTasksManager()
+	tm.watcherCh = make(chan string, 5)
+	tm.state = st
+	rw.tasksManager = &tm
+
+	// Mock driver
+	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+		d := new(mocksD.Driver)
+		d.On("Task").Return(task)
+		d.On("TemplateIDs").Return([]string{"{{tmpl}}"})
+		d.On("RenderTemplate", mock.Anything).Return(true, nil)
+		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
+		d.On("ApplyTask", mock.Anything).Return(nil)
+		d.On("OverrideNotifier").Return().Once()
+		d.On("SetBufferPeriod").Return().Once()
+		return d, nil
+	}
+
+	// Setup variables for testing
+	errCh := make(chan error)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	completedTasksCh := tm.EnableTestMode()
+
+	// Mock watcher
+	w := new(mocks.Watcher)
+	waitErrCh := make(chan error)
+	var waitErrChRc <-chan error = waitErrCh
+	go func() { errCh <- nil }()
+	w.On("WaitCh", mock.Anything).Return(waitErrChRc).Once()
+	w.On("Size").Return(5)
+	w.On("Watch", ctx, tm.watcherCh).Return(nil)
+	tm.watcher = w
+
+	go func() {
+		err := rw.Once(ctx)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		err = rw.Run(ctx)
+		if err != nil {
+			errCh <- err
+		}
+	}()
+
+	// Emulate triggers to evaluate task completion
+	for i := 0; i < 5; i++ {
+		tm.watcherCh <- "{{tmpl}}"
+		select {
+		case taskName := <-completedTasksCh:
+			assert.Equal(t, "task", taskName)
+
+		case err := <-errCh:
+			require.NoError(t, err)
+		case <-ctx.Done():
+			assert.NoError(t, ctx.Err(), "Context should not timeout. Once and Run usage of Watcher does not match the expected triggers.")
+		}
+	}
+
+	w.AssertExpectations(t)
+	for _, d := range tm.drivers.Map() {
+		d.(*mocksD.Driver).AssertExpectations(t)
+	}
+}
 
 // onceMockDriver mocks the driver with the methods needed for once-mode
 func onceMockDriver(task *driver.Task, applyTaskErr error) driver.Driver {
