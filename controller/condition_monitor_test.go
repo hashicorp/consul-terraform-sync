@@ -15,77 +15,11 @@ import (
 	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
-	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-func Test_TasksManager_once_error(t *testing.T) {
-	// Test once mode error handling when a driver returns an error
-	numTasks := 5
-	w := new(mocks.Watcher)
-	w.On("WaitCh", mock.Anything).Return(nil)
-	w.On("Size").Return(numTasks)
-
-	tm := newTestTasksManager()
-
-	testCases := []struct {
-		name    string
-		onceFxn func(context.Context) error
-	}{
-		{
-			"onceConsecutive",
-			tm.onceConsecutive,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			expectedErr := fmt.Errorf("test error")
-
-			// Set up read-write tm with mocks
-			conf := multipleTaskConfig(numTasks)
-			tm.state = state.NewInMemoryStore(conf)
-			tm.initConf = conf
-			tm.baseController.watcher = w
-			tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
-				taskName := task.Name()
-				d := new(mocksD.Driver)
-				d.On("Task").Return(enabledTestTask(t, taskName))
-				d.On("TemplateIDs").Return(nil)
-				d.On("RenderTemplate", mock.Anything).Return(true, nil)
-				d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
-				if taskName == "task_03" {
-					// Mock an error during apply for a task
-					d.On("ApplyTask", mock.Anything).Return(expectedErr)
-				} else {
-					d.On("ApplyTask", mock.Anything).Return(nil)
-				}
-				return d, nil
-			}
-
-			ctx := context.Background()
-			err := tm.Init(ctx)
-			require.NoError(t, err)
-
-			// testing really starts here...
-			done := make(chan error)
-			// running in goroutine so I can timeout
-			go func() {
-				done <- tc.onceFxn(ctx)
-			}()
-			select {
-			case err := <-done:
-				assert.Error(t, err, "task_03 driver error should bubble up")
-				assert.Contains(t, err.Error(), expectedErr.Error(), "unexpected error in Once")
-			case <-time.After(time.Second):
-				t.Fatal("Once didn't return in expected time")
-			}
-		})
-	}
-}
 
 func Test_TasksManager_runDynamicTask(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
