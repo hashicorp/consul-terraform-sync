@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -82,14 +81,20 @@ func (ro *ReadOnly) inspectConsecutive(ctx context.Context) error {
 		default:
 			taskName := *task.Name
 			ro.logger.Info("inspecting task", taskNameLogKey, taskName)
-			_, plan, _, err := ro.tasksManager.TaskInspect(ctx, *task)
+			_, plan, url, err := ro.tasksManager.TaskInspect(ctx, *task)
 			if err != nil {
 				return err
 			}
 
 			if !MuteReadOnlyController {
 				// output plan to console
-				fmt.Println(plan)
+				if url != "" {
+					ro.logger.Info("inspection results", taskNameLogKey,
+						taskName, "plan", plan, "url", url)
+				} else {
+					ro.logger.Info("inspection results", taskNameLogKey,
+						taskName, "plan", plan)
+				}
 			}
 
 			ro.logger.Info("inspected task", taskNameLogKey, taskName)
