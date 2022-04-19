@@ -7,7 +7,7 @@ Consul-Terraform-Sync (just Sync from here on) is a service-oriented tool for ma
 * Website: [consul.io/docs/nia](https://www.consul.io/docs/nia)
 
 ## Community Support
-If you have questions about how `consul-terraform-sync` works, its capabilities or anything other than a bug or feature request (use github's issue tracker for those), please see our community support resources.
+If you have questions about how `consul-terraform-sync` works, its capabilities or anything other than a bug or feature request (use GitHub's issue tracker for those), please see our community support resources.
 
 Community portal: [discuss.hashicorp.com](https://discuss.hashicorp.com/tags/c/consul/29/consul-terraform-sync)
 
@@ -63,20 +63,45 @@ Once installed, verify the installation works by prompting the help option.
 
 ```shell
 $ consul-terraform-sync -h
-Usage of consul-terraform-sync:
-  -config-dir value
-      A directory to load files for configuring Sync. Configuration files
-      require an .hcl or .json file extention in order to specify their format.
-      This option can be specified multiple times to load different directories.
-  -config-file value
-      A file to load for configuring Sync. Configuration file requires an
-      .hcl or .json extension in order to specify their format. This option can
-      be specified multiple times to load different configuration files.
-  -once
-      Render templates and run tasks once. Does not run the process as a daemon
-      and disables wait timers.
-  -version
-      Print the version of this daemon.
+Usage CLI: consul-terraform-sync <command> [-help] [options]
+
+Commands:
+    start
+     task
+
+Options:
+
+    -autocomplete-install false
+        Install the autocomplete
+
+    -autocomplete-uninstall false
+        Uninstall the autocomplete
+
+    -config-dir 
+        A directory to load files for configuring Consul-Terraform-Sync. 
+        Configuration files require an .hcl or .json file extension in order 
+        to specify their format. This option can be specified multiple times to 
+        load different directories.
+
+    -config-file 
+        A file to load for configuring Consul-Terraform-Sync. Configuration 
+        file requires an .hcl or .json extension in order to specify their format. 
+        This option can be specified multiple times to load different 
+        configuration files.
+
+    -inspect false
+        Run Consul-Terraform-Sync in Inspect mode to print the proposed state 
+        changes for all tasks, and then exit. No changes are applied 
+        in this mode.
+
+    -inspect-task 
+        Run Consul-Terraform-Sync in Inspect mode to print the proposed 
+        state changes for the task, and then exit. No changes are applied
+        in this mode.
+
+    -once false
+        Render templates and run tasks once. Does not run the process 
+        as a daemon and disables buffer periods.
 ```
 
 ## Configuration
@@ -95,7 +120,7 @@ Because the highest priority for us to put out a secure and operationally stable
 **What are the roadmap categories?**
 * *Recently Shipped* - These are the features, enhancements or bug fixes that we recently delivered.
 * *Up Next* - Features, enhancements or bug fixes coming in the next couple of months.
-* *Researching* - This might mean that we are still designing and thinking through how this feature or enhancement might work. We would love to hear from you on how you would like to see something implemented. Additionally, we would like to hear your usecase or design ideas here.
+* *Researching* - This might mean that we are still designing and thinking through how this feature or enhancement might work. We would love to hear from you on how you would like to see something implemented. Additionally, we would like to hear your use case or design ideas here.
 
 
 **How can I request a feature be added to the roadmap?**
