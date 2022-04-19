@@ -15,7 +15,6 @@ import (
 	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
-	"github.com/hashicorp/hcat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -431,68 +430,6 @@ func Test_TasksManager_EnableTestMode(t *testing.T) {
 	s.AssertExpectations(t)
 }
 
-func Test_TasksManager_RunInspect(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		name           string
-		expectError    bool
-		inspectTaskErr error
-		renderTmplErr  error
-		config         *config.Config
-	}{
-		{
-			"error on driver.RenderTemplate()",
-			true,
-			nil,
-			errors.New("error on driver.RenderTemplate()"),
-			singleTaskConfig(),
-		},
-		{
-			"error on driver.InspectTask()",
-			true,
-			errors.New("error on driver.InspectTask()"),
-			nil,
-			singleTaskConfig(),
-		},
-		{
-			"happy path",
-			false,
-			nil,
-			nil,
-			singleTaskConfig(),
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			w := new(mocks.Watcher)
-			w.On("Size").Return(5)
-
-			tm := newTestTasksManager()
-			tm.watcher = w
-
-			d := new(mocksD.Driver)
-			d.On("Task").Return(enabledTestTask(t, "task"))
-			d.On("TemplateIDs").Return(nil)
-			d.On("RenderTemplate", mock.Anything).
-				Return(true, tc.renderTmplErr)
-			d.On("InspectTask", mock.Anything).
-				Return(driver.InspectPlan{}, tc.inspectTaskErr)
-			err := tm.drivers.Add("task", d)
-			require.NoError(t, err)
-
-			err = tm.RunInspect(context.Background())
-			if tc.expectError {
-				if assert.Error(t, err) {
-					assert.Contains(t, err.Error(), tc.name)
-				}
-				return
-			}
-			assert.NoError(t, err)
-		})
-	}
-}
 
 func Test_TasksManager_RunInspect_context_cancel(t *testing.T) {
 	r := new(mocks.Resolver)
