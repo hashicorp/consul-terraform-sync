@@ -335,78 +335,40 @@ func Test_TasksManager_Run_ActiveTask(t *testing.T) {
 }
 
 func Test_TasksManager_Run_ScheduledTasks(t *testing.T) {
-	t.Run("startup_task", func(t *testing.T) {
-		tm := newTestTasksManager()
-		tm.watcherCh = make(chan string, 5)
-		tm.EnableTestMode()
+	tm := newTestTasksManager()
+	tm.watcherCh = make(chan string, 5)
+	tm.scheduleStartCh = make(chan driver.Driver, 1)
+	tm.EnableTestMode()
 
-		// Add initial task
-		taskName := "scheduled_task"
-		d := new(mocksD.Driver)
-		d.On("Task").Return(scheduledTestTask(t, taskName)).
-			On("TemplateIDs").Return([]string{"tmpl_a"}).
-			On("RenderTemplate", mock.Anything).Return(true, nil).
-			On("ApplyTask", mock.Anything).Return(nil).
-			On("SetBufferPeriod")
-		tm.drivers.Add(taskName, d)
+	// Set up watcher for tm
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	w := new(mocks.Watcher)
+	w.On("Size").Return(5)
+	w.On("Watch", ctx, tm.watcherCh).Return(nil)
+	tm.watcher = w
 
-		// Set up watcher for tm
-		ctx := context.Background()
-		w := new(mocks.Watcher)
-		w.On("Size").Return(5)
-		w.On("Watch", ctx, tm.watcherCh).Return(nil)
-		tm.watcher = w
+	go tm.Run(ctx)
 
-		go tm.Run(context.Background())
+	createdTaskName := "created_scheduled_task"
+	createdDriver := new(mocksD.Driver)
+	createdDriver.On("Task").Return(scheduledTestTask(t, createdTaskName)).
+		On("TemplateIDs").Return([]string{"tmpl_b"}).
+		On("RenderTemplate", mock.Anything).Return(true, nil).
+		On("ApplyTask", mock.Anything).Return(nil).
+		On("SetBufferPeriod")
+	_, err := tm.addTask(ctx, createdDriver)
+	require.NoError(t, err)
 
-		// Check that the task ran
-		select {
-		case n := <-tm.taskNotify:
-			assert.Equal(t, taskName, n)
-		case <-time.After(5 * time.Second):
-			t.Fatal("scheduled task did not run")
-		}
-
-		stopCh, ok := tm.scheduleStopChs[taskName]
-		assert.True(t, ok, "scheduled task stop channel not added to map")
-		assert.NotNil(t, stopCh, "expected stop channel not to be nil")
-	})
-
-	t.Run("created_task", func(t *testing.T) {
-		tm := newTestTasksManager()
-		tm.watcherCh = make(chan string, 5)
-		tm.scheduleStartCh = make(chan driver.Driver, 1)
-		tm.EnableTestMode()
-
-		// Set up watcher for tm
-		ctx := context.Background()
-		w := new(mocks.Watcher)
-		w.On("Size").Return(5)
-		w.On("Watch", ctx, tm.watcherCh).Return(nil)
-		tm.watcher = w
-
-		go tm.Run(context.Background())
-
-		createdTaskName := "created_scheduled_task"
-		createdDriver := new(mocksD.Driver)
-		createdDriver.On("Task").Return(scheduledTestTask(t, createdTaskName)).
-			On("TemplateIDs").Return([]string{"tmpl_b"}).
-			On("RenderTemplate", mock.Anything).Return(true, nil).
-			On("ApplyTask", mock.Anything).Return(nil).
-			On("SetBufferPeriod")
-		tm.drivers.Add(createdTaskName, createdDriver)
-		tm.scheduleStartCh <- createdDriver
-
-		select {
-		case n := <-tm.taskNotify:
-			assert.Equal(t, createdTaskName, n)
-		case <-time.After(5 * time.Second):
-			t.Fatal("scheduled task did not run")
-		}
-		stopCh, ok := tm.scheduleStopChs[createdTaskName]
-		assert.True(t, ok, "scheduled task stop channel not added to map")
-		assert.NotNil(t, stopCh, "expected stop channel not to be nil")
-	})
+	select {
+	case n := <-tm.taskNotify:
+		assert.Equal(t, createdTaskName, n)
+	case <-time.After(5 * time.Second):
+		t.Fatal("scheduled task did not run")
+	}
+	stopCh, ok := tm.scheduleStopChs[createdTaskName]
+	assert.True(t, ok, "scheduled task stop channel not added to map")
+	assert.NotNil(t, stopCh, "expected stop channel not to be nil")
 }
 
 func Test_TasksManager_EnableTestMode(t *testing.T) {

@@ -53,14 +53,6 @@ func (tm *TasksManager) WatchDep(ctx context.Context) error {
 func (tm *TasksManager) Run(ctx context.Context) error {
 	// Assumes buffer_period has been set by taskManager
 
-	for _, d := range tm.drivers.Map() {
-		if d.Task().IsScheduled() {
-			stopCh := make(chan struct{}, 1)
-			tm.scheduleStopChs[d.Task().Name()] = stopCh
-			go tm.runScheduledTask(ctx, d, stopCh)
-		}
-	}
-
 	errCh := make(chan error)
 	if tm.watcherCh == nil {
 		// Size of channel is larger than just current number of drivers
