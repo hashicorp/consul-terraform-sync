@@ -55,7 +55,7 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 // Init initializes the controller before it can be run. Ensures that
 // driver is initializes, works are created for each task.
 func (rw *ReadWrite) Init(ctx context.Context) error {
-	return rw.tasksManager.init(ctx)
+	return rw.tasksManager.Init(ctx)
 }
 
 func (rw *ReadWrite) Run(ctx context.Context) error {

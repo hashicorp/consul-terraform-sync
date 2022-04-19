@@ -130,7 +130,7 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 		mockD.On("SetBufferPeriod").Return()
 		mockD.On("OverrideNotifier").Return()
 		mockDriver(ctx, mockD, driverTask)
-		tm.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.baseController.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -162,7 +162,7 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 		mockD.On("InitTask", mock.Anything).Return(fmt.Errorf("init err"))
 		mockD.On("DestroyTask", mock.Anything).Return()
 		tm.drivers = driver.NewDrivers()
-		tm.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.baseController.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -203,7 +203,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		mockDriver(ctx, mockD, task)
 		tm.state = state.NewInMemoryStore(conf)
 		tm.drivers = driver.NewDrivers()
-		tm.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.baseController.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -233,7 +233,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		mockDriver(ctx, mockD, task)
 		tm.state = state.NewInMemoryStore(conf)
 		tm.drivers = driver.NewDrivers()
-		tm.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.baseController.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -264,7 +264,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 			On("ApplyTask", ctx).Return(fmt.Errorf("apply err"))
 		tm.state = state.NewInMemoryStore(conf)
 		tm.drivers = driver.NewDrivers()
-		tm.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.baseController.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 

@@ -54,7 +54,7 @@ func NewReadOnly(conf *config.Config) (*ReadOnly, error) {
 
 // Init initializes the controller before it can be run
 func (ro *ReadOnly) Init(ctx context.Context) error {
-	return ro.tasksManager.init(ctx)
+	return ro.tasksManager.Init(ctx)
 }
 
 func (ro *ReadOnly) Run(ctx context.Context) error {

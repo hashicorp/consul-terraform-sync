@@ -20,12 +20,12 @@ var tasksManagerSystemName = "tasksmanager"
 
 // TasksManager manages the CRUD operations and execution of tasks
 type TasksManager struct {
-	*baseController
 	logger logging.Logger
 
-	watcher templates.Watcher
-	state   state.Store
-	drivers *driver.Drivers
+	baseController *baseController
+	watcher        templates.Watcher
+	state          state.Store
+	drivers        *driver.Drivers
 
 	retry retry.Retry
 
@@ -72,7 +72,7 @@ func NewTasksManager(conf *config.Config, watcher templates.Watcher,
 func (tm *TasksManager) Init(ctx context.Context) error {
 	tm.drivers.Reset()
 
-	return tm.init(ctx)
+	return tm.baseController.init(ctx)
 }
 
 func (tm *TasksManager) Config() config.Config {
@@ -423,7 +423,7 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 		return nil, fmt.Errorf("task with name %s already exists", taskName)
 	}
 
-	d, err := tm.makeDriver(ctx, &conf, taskConfig)
+	d, err := tm.baseController.makeDriver(ctx, &conf, taskConfig)
 	if err != nil {
 		return nil, err
 	}
