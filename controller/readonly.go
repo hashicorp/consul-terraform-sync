@@ -85,8 +85,9 @@ func (ro *ReadOnly) Run(ctx context.Context) error {
 	for {
 		err := <-exitCh
 		counter++
-		if err != context.Canceled {
-			// Exit if error is returned
+		if err != nil && err != context.Canceled {
+			// Exit if an error is returned
+			// inspectConsecutive sends a nil error on completion
 			return err
 		}
 		if counter >= exitBufLen {

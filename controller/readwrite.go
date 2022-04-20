@@ -87,8 +87,10 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	for {
 		err := <-exitCh
 		counter++
-		if err != context.Canceled {
-			// Exit if error is returned
+		if err != nil && err != context.Canceled {
+			// Exit if an error is returned
+			// Not expecting any routines to send a nil error because they run
+			// until canceled. Nil check is just to be safe
 			return err
 		}
 		if counter >= exitBufLen {
@@ -126,8 +128,9 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 	for {
 		err := <-exitCh
 		counter++
-		if err != context.Canceled {
-			// Exit if error is returned
+		if err != nil && err != context.Canceled {
+			// Exit if an error is returned
+			// Once method sends a nil error on completion
 			return err
 		}
 		if counter >= exitBufLen {
