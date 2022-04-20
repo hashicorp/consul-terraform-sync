@@ -214,6 +214,9 @@ func (c *startCommand) Run(args []string) int {
 		return ExitCodeConfigError
 	}
 
+	// Reset logger now that its been setup
+	logger = logging.Global().Named(logSystemName)
+
 	// Print information on startup for debugging
 	logger.Info(version.GetHumanVersion())
 	logger.Debug("configuration", "config", conf.GoString())
