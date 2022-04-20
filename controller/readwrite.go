@@ -87,8 +87,10 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	for {
 		err := <-exitCh
 		counter++
-		if err != context.Canceled {
-			// Exit if error is returned
+		if err != nil && err != context.Canceled {
+			// Exit if an error is returned
+			// Not expecting any routines to send a nil error because they run
+			// until canceled. Nil check is just to be safe
 			return err
 		}
 		if counter >= exitBufLen {
@@ -99,7 +101,63 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 }
 
 func (rw *ReadWrite) Once(ctx context.Context) error {
-	return rw.tasksManager.Once(ctx)
+	rw.logger.Info("executing all tasks once through")
+
+	// Stop watching dependencies after once-ing tasks ends
+	ctxWatch, cancelWatch := context.WithCancel(ctx)
+
+	// Stop once-ing tasks early if WatchDep errors
+	ctxOnce, cancelOnce := context.WithCancel(ctx)
+
+	exitBufLen := 2 // watchDep & once-ing tasks
+	exitCh := make(chan error, exitBufLen)
+
+	// start watching dependencies in order to render templates to apply tasks
+	go func() {
+		exitCh <- rw.tasksManager.WatchDep(ctxWatch)
+		cancelOnce()
+	}()
+
+	// run consecutively to keep logs in order
+	go func() {
+		exitCh <- rw.onceConsecutive(ctxOnce)
+		cancelWatch()
+	}()
+
+	counter := 0
+	for {
+		err := <-exitCh
+		counter++
+		if err != nil && err != context.Canceled {
+			// Exit if an error is returned
+			// Once method sends a nil error on completion
+			return err
+		}
+		if counter >= exitBufLen {
+			// Wait for all contexts to cancel
+			return ctx.Err()
+		}
+	}
+}
+
+func (rw *ReadWrite) onceConsecutive(ctx context.Context) error {
+	tasks := rw.state.GetAllTasks()
+	for _, task := range tasks {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			taskName := *task.Name
+			rw.logger.Info("running task once", taskNameLogKey, taskName)
+			if _, err := rw.tasksManager.TaskCreateAndRun(ctx, *task); err != nil {
+				return err
+			}
+			rw.logger.Info("task completed", taskNameLogKey, taskName)
+		}
+	}
+
+	rw.logger.Info("all tasks completed once")
+	return nil
 }
 
 func (rw *ReadWrite) Stop() {

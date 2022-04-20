@@ -170,6 +170,12 @@ func TestTaskConfig_Merge(t *testing.T) {
 			&TaskConfig{DeprecatedServices: []string{"a", "b"}},
 		},
 		{
+			"services_same_merges",
+			&TaskConfig{DeprecatedServices: []string{"a"}},
+			&TaskConfig{DeprecatedServices: []string{"a"}},
+			&TaskConfig{DeprecatedServices: []string{"a"}},
+		},
+		{
 			"services_empty_one",
 			&TaskConfig{DeprecatedServices: []string{"service"}},
 			&TaskConfig{},
@@ -188,6 +194,12 @@ func TestTaskConfig_Merge(t *testing.T) {
 			&TaskConfig{Providers: []string{"a", "b"}},
 		},
 		{
+			"providers_same_merges",
+			&TaskConfig{Providers: []string{"a"}},
+			&TaskConfig{Providers: []string{"a"}},
+			&TaskConfig{Providers: []string{"a"}},
+		},
+		{
 			"providers_empty_one",
 			&TaskConfig{Providers: []string{"provider"}},
 			&TaskConfig{},
@@ -198,6 +210,30 @@ func TestTaskConfig_Merge(t *testing.T) {
 			&TaskConfig{},
 			&TaskConfig{Providers: []string{"provider"}},
 			&TaskConfig{Providers: []string{"provider"}},
+		},
+		{
+			"varfiles_merges",
+			&TaskConfig{VarFiles: []string{"a.tfvars"}},
+			&TaskConfig{VarFiles: []string{"b.tfvars"}},
+			&TaskConfig{VarFiles: []string{"a.tfvars", "b.tfvars"}},
+		},
+		{
+			"varfiles_same_merges",
+			&TaskConfig{VarFiles: []string{"a.tfvars"}},
+			&TaskConfig{VarFiles: []string{"a.tfvars"}},
+			&TaskConfig{VarFiles: []string{"a.tfvars"}},
+		},
+		{
+			"varfiles_empty_one",
+			&TaskConfig{VarFiles: []string{"a.tfvars"}},
+			&TaskConfig{},
+			&TaskConfig{VarFiles: []string{"a.tfvars"}},
+		},
+		{
+			"varfiles_empty_two",
+			&TaskConfig{},
+			&TaskConfig{VarFiles: []string{"a.tfvars"}},
+			&TaskConfig{VarFiles: []string{"a.tfvars"}},
 		},
 		{
 			"source_overrides",

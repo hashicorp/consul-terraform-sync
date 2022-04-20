@@ -102,7 +102,7 @@ func (c *ServicesMonitorConfig) Merge(o MonitorConfig) MonitorConfig {
 		r2.Regexp = StringCopy(o2.Regexp)
 	}
 
-	r2.Names = append(r2.Names, o2.Names...)
+	r2.Names = mergeSlices(r2.Names, o2.Names)
 
 	if o2.Datacenter != nil {
 		r2.Datacenter = StringCopy(o2.Datacenter)

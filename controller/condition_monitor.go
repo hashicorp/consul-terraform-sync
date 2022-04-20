@@ -22,6 +22,27 @@ func (tm *TasksManager) Stop() {
 	tm.watcher.Stop()
 }
 
+// WatchDep is a helper method to start watching dependencies to allow templates
+// to render. It will run until the caller cancels the context.
+func (tm *TasksManager) WatchDep(ctx context.Context) error {
+	tm.logger.Trace("starting template dependency monitoring")
+
+	for ix := int64(0); ; ix++ {
+		select {
+		case err := <-tm.watcher.WaitCh(ctx):
+			if err != nil {
+				tm.logger.Error("error watching template dependencies", "error", err)
+				return err
+			}
+
+		case <-ctx.Done():
+			// stop for context canceled
+			return ctx.Err()
+		}
+		tm.logDepSize(50, int64(ix))
+	}
+}
+
 // Run runs the controller in read-write mode by continuously monitoring Consul
 // catalog and using the driver to apply network infrastructure changes for
 // any work that have been updated.
@@ -30,17 +51,7 @@ func (tm *TasksManager) Stop() {
 // for dynamic tasks. Scheduled tasks use their own go routine to trigger on
 // schedule.
 func (tm *TasksManager) Run(ctx context.Context) error {
-	// Only initialize buffer periods for running the full loop and not for Once
-	// mode so it can immediately render the first time.
-	tm.drivers.SetBufferPeriod()
-
-	for _, d := range tm.drivers.Map() {
-		if d.Task().IsScheduled() {
-			stopCh := make(chan struct{}, 1)
-			tm.scheduleStopChs[d.Task().Name()] = stopCh
-			go tm.runScheduledTask(ctx, d, stopCh)
-		}
-	}
+	// Assumes buffer_period has been set by taskManager
 
 	errCh := make(chan error)
 	if tm.watcherCh == nil {
@@ -209,51 +220,6 @@ func (tm *TasksManager) runScheduledTask(ctx context.Context, d driver.Driver, s
 	}
 }
 
-// Once runs the controller in read-write mode making sure each template has
-// been fully rendered and the task run, then it returns.
-func (tm *TasksManager) Once(ctx context.Context) error {
-	tm.logger.Info("executing all tasks once through")
-
-	// run consecutively to keep logs in order
-	return tm.onceConsecutive(ctx)
-}
-
-// onceConsecutive runs all tasks consecutively until each task has completed once
-func (tm *TasksManager) onceConsecutive(ctx context.Context) error {
-	driversCopy := tm.drivers.Map()
-	completed := make(map[string]bool, len(driversCopy))
-	for i := int64(0); ; i++ {
-		done := true
-		for taskName, d := range driversCopy {
-			if !completed[taskName] {
-				complete, err := tm.checkApply(ctx, d, false, true)
-				if err != nil {
-					return err
-				}
-				completed[taskName] = complete
-				if !complete && done {
-					done = false
-				}
-			}
-		}
-		tm.logDepSize(50, i)
-		if done {
-			tm.logger.Info("all tasks completed once")
-			return nil
-		}
-
-		select {
-		case err := <-tm.watcher.WaitCh(ctx):
-			if err != nil {
-				tm.logger.Error("error watching template dependencies", "error", err)
-				return err
-			}
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-}
-
 // EnableTestMode is a helper for testing which tasks were triggered and
 // executed. Callers of this method must consume from TaskNotify channel to
 // prevent the buffered channel from filling and causing a dead lock.
@@ -261,80 +227,6 @@ func (tm *TasksManager) EnableTestMode() <-chan string {
 	tasks := tm.state.GetAllTasks()
 	tm.taskNotify = make(chan string, tasks.Len())
 	return tm.taskNotify
-}
-
-// Run runs the controller in read-only mode by checking Consul catalog once for
-// latest and using the driver to plan network infrastructure changes
-func (tm *TasksManager) RunInspect(ctx context.Context) error {
-	tm.logger.Info("inspecting all tasks")
-
-	driversCopy := tm.drivers.Map()
-	completed := make(map[string]bool, len(driversCopy))
-	for i := int64(0); ; i++ {
-		done := true
-		for taskName, d := range driversCopy {
-			if !completed[taskName] {
-				complete, err := tm.checkInspect(ctx, d)
-				if err != nil {
-					return err
-				}
-				completed[taskName] = complete
-				if !complete && done {
-					done = false
-				}
-			}
-		}
-		tm.logDepSize(50, i)
-		if done {
-			tm.logger.Info("completed task inspections")
-			return nil
-		}
-
-		select {
-		case err := <-tm.watcher.WaitCh(ctx):
-			if err != nil {
-				tm.logger.Error("error watching template dependencies", "error", err)
-				return err
-			}
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-}
-
-func (tm *TasksManager) checkInspect(ctx context.Context, d driver.Driver) (bool, error) {
-	task := d.Task()
-	taskName := task.Name()
-
-	tm.logger.Trace("checking dependencies changes for task", taskNameLogKey, taskName)
-
-	rendered, err := d.RenderTemplate(ctx)
-	if err != nil {
-		return false, fmt.Errorf("error rendering template for task %s: %s",
-			taskName, err)
-	}
-
-	// rendering a template may take several cycles in order to completely fetch
-	// new data
-	if rendered {
-		tm.logger.Trace("template for task rendered", taskNameLogKey, taskName)
-
-		tm.logger.Info("inspecting task", taskNameLogKey, taskName)
-		p, err := d.InspectTask(ctx)
-		if err != nil {
-			return false, fmt.Errorf("could not apply changes for task %s: %s", taskName, err)
-		}
-
-		if p.URL != "" {
-			tm.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan, "url", p.URL)
-		} else {
-			tm.logger.Info("inspection results", taskNameLogKey, taskName, "plan", p.Plan)
-		}
-
-		tm.logger.Info("inspected task", taskNameLogKey, taskName)
-	}
-
-	return rendered, nil
 }
 
 // logDepSize logs the watcher dependency size every nth iteration. Set the
