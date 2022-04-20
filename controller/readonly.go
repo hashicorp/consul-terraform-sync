@@ -60,16 +60,40 @@ func (ro *ReadOnly) Init(ctx context.Context) error {
 func (ro *ReadOnly) Run(ctx context.Context) error {
 	ro.logger.Info("inspecting all tasks")
 
-	// Stop watchiing dependencies after inspect-mode completes
-	ctxDep, cancel := context.WithCancel(ctx)
-	defer cancel()
+	// Stop watching dependencies after inspecting tasks ends
+	ctxWatch, cancelWatch := context.WithCancel(ctx)
+
+	// Stop inspecting tasks early if WatchDep errors
+	ctxInspect, cancelInspect := context.WithCancel(ctx)
+
+	exitBufLen := 2 // watchDep & once-ing tasks
+	exitCh := make(chan error, exitBufLen)
 
 	// start watching dependencies in order to render templates to plan tasks
-	// once
-	go ro.tasksManager.WatchDep(ctxDep)
+	go func() {
+		exitCh <- ro.tasksManager.WatchDep(ctxWatch)
+		cancelInspect()
+	}()
 
 	// always inspect consecutively to keep inspect logs in order
-	return ro.inspectConsecutive(ctx)
+	go func() {
+		exitCh <- ro.inspectConsecutive(ctxInspect)
+		cancelWatch()
+	}()
+
+	counter := 0
+	for {
+		err := <-exitCh
+		counter++
+		if err != context.Canceled {
+			// Exit if error is returned
+			return err
+		}
+		if counter >= exitBufLen {
+			// Wait for all contexts to cancel
+			return ctx.Err()
+		}
+	}
 }
 
 func (ro *ReadOnly) inspectConsecutive(ctx context.Context) error {

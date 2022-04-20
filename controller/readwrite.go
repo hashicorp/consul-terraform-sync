@@ -101,16 +101,40 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 func (rw *ReadWrite) Once(ctx context.Context) error {
 	rw.logger.Info("executing all tasks once through")
 
-	// Stop watchiing dependencies after once-mode completes
-	ctxDep, cancel := context.WithCancel(ctx)
-	defer cancel()
+	// Stop watching dependencies after once-ing tasks ends
+	ctxWatch, cancelWatch := context.WithCancel(ctx)
+
+	// Stop once-ing tasks early if WatchDep errors
+	ctxOnce, cancelOnce := context.WithCancel(ctx)
+
+	exitBufLen := 2 // watchDep & once-ing tasks
+	exitCh := make(chan error, exitBufLen)
 
 	// start watching dependencies in order to render templates to apply tasks
-	// once
-	go rw.tasksManager.WatchDep(ctxDep)
+	go func() {
+		exitCh <- rw.tasksManager.WatchDep(ctxWatch)
+		cancelOnce()
+	}()
 
 	// run consecutively to keep logs in order
-	return rw.onceConsecutive(ctx)
+	go func() {
+		exitCh <- rw.onceConsecutive(ctxOnce)
+		cancelWatch()
+	}()
+
+	counter := 0
+	for {
+		err := <-exitCh
+		counter++
+		if err != context.Canceled {
+			// Exit if error is returned
+			return err
+		}
+		if counter >= exitBufLen {
+			// Wait for all contexts to cancel
+			return ctx.Err()
+		}
+	}
 }
 
 func (rw *ReadWrite) onceConsecutive(ctx context.Context) error {

@@ -145,6 +145,19 @@ func Test_ReadWrite_Once_Terraform(t *testing.T) {
 	}
 }
 
+func Test_ReadWrite_Once_WatchDep_errors_Terraform(t *testing.T) {
+	// Mock the situation where WatchDep WaitCh errors which can cause
+	// driver.RenderTemplate() to always returns false. Confirm on WatchDep
+	// error, that creating/running tasks does not hang and exits.
+	t.Parallel()
+
+	driverConf := &config.DriverConfig{
+		Terraform: &config.TerraformConfig{},
+	}
+
+	testOnceWatchDepErrors(t, driverConf)
+}
+
 func Test_ReadWrite_Once_then_Run_Terraform(t *testing.T) {
 	// Tests Run behaves as expected with triggers after once completes
 	t.Parallel()
@@ -256,6 +269,70 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	}
 
 	return err
+}
+
+func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
+	conf := singleTaskConfig()
+
+	if driverConf != nil {
+		conf.Driver = driverConf
+	}
+
+	ss := state.NewInMemoryStore(conf)
+
+	rw := ReadWrite{
+		logger: logging.NewNullLogger(),
+		state:  ss,
+	}
+
+	// Set up tasks manager
+	tm := newTestTasksManager()
+	tm.state = ss
+	rw.tasksManager = &tm
+
+	// Mock watcher
+	expectedErr := errors.New("error!")
+	waitErrCh := make(chan error)
+	var waitErrChRc <-chan error = waitErrCh
+	go func() { waitErrCh <- expectedErr }()
+	w := new(mocksTmpl.Watcher)
+	w.On("WaitCh", mock.Anything).Return(waitErrChRc)
+	tm.watcher = w
+
+	// Set up baseController
+	tm.baseController.initConf = conf
+	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+		d := new(mocksD.Driver)
+		d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
+		// Always return false on render template to mock what happens when
+		// WaitCh returns an error
+		d.On("RenderTemplate", mock.Anything).Return(false, nil)
+
+		return d, nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	errCh := make(chan error)
+	go func() {
+		err := rw.Once(ctx)
+		if err != nil {
+			errCh <- err
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		require.Error(t, err)
+		assert.Equal(t, err, expectedErr)
+	case <-time.After(time.Second * 5):
+		t.Fatal("Once did not exit properly after WatcherDep errored")
+	}
+
+	w.AssertExpectations(t)
+	for _, d := range tm.drivers.Map() {
+		d.(*mocksD.Driver).AssertExpectations(t)
+	}
 }
 
 func testOnceThenRun(t *testing.T, driverConf *config.DriverConfig) {

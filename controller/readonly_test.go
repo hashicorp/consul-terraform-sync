@@ -143,6 +143,71 @@ func Test_ReadOnly_Run_context_cancel(t *testing.T) {
 	}
 }
 
+func Test_ReadOnly_Run_WatchDep_errors(t *testing.T) {
+	// Mock the situation where WatchDep WaitCh errors which can cause
+	// driver.RenderTemplate() to always returns false. Confirm on WatchDep
+	// error, that creating/running tasks does not hang and exits.
+	t.Parallel()
+
+	conf := singleTaskConfig()
+
+	ss := state.NewInMemoryStore(conf)
+
+	ro := ReadOnly{
+		logger: logging.NewNullLogger(),
+		state:  ss,
+	}
+
+	// Set up tasks manager
+	tm := newTestTasksManager()
+	tm.state = ss
+	ro.tasksManager = &tm
+
+	// Mock watcher
+	expectedErr := errors.New("error!")
+	waitErrCh := make(chan error)
+	var waitErrChRc <-chan error = waitErrCh
+	go func() { waitErrCh <- expectedErr }()
+	w := new(mocksTmpl.Watcher)
+	w.On("WaitCh", mock.Anything).Return(waitErrChRc)
+	tm.watcher = w
+
+	// Set up baseController
+	tm.baseController.initConf = conf
+	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+		d := new(mocksD.Driver)
+		d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
+		// Always return false on render template to mock what happens when
+		// WaitCh returns an error
+		d.On("RenderTemplate", mock.Anything).Return(false, nil)
+
+		return d, nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	errCh := make(chan error)
+	go func() {
+		err := ro.Run(ctx)
+		if err != nil {
+			errCh <- err
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		require.Error(t, err)
+		assert.Equal(t, err, expectedErr)
+	case <-time.After(time.Second * 5):
+		t.Fatal("Run did not exit properly after WatcherDep errored")
+	}
+
+	w.AssertExpectations(t)
+	for _, d := range tm.drivers.Map() {
+		d.(*mocksD.Driver).AssertExpectations(t)
+	}
+}
+
 func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) driver.Driver) error {
 
 	conf := multipleTaskConfig(numTasks)
