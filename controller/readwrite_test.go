@@ -410,7 +410,8 @@ func testOnceThenRun(t *testing.T, driverConf *config.DriverConfig) {
 		}
 	}
 
-	w.AssertExpectations(t)
+	// Don't w.AssertExpectations(). Race condition when Watch() is called
+	// for rw.Run
 	for _, d := range tm.drivers.Map() {
 		d.(*mocksD.Driver).AssertExpectations(t)
 	}
