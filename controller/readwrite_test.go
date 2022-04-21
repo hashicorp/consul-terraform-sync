@@ -188,9 +188,9 @@ func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
 	tm.state = ss
 	rw.tasksManager = &tm
 
-	// Set up baseController
-	tm.baseController.initConf = conf
-	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	// Set up driver factory
+	tm.factory.initConf = conf
+	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(task).Times(4)
 		d.On("TemplateIDs").Return(nil)
@@ -255,9 +255,9 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	w.On("Size").Return(numTasks)
 	tm.watcher = w
 
-	// Set up baseController
-	tm.baseController.initConf = conf
-	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	// Set up driver factory
+	tm.factory.initConf = conf
+	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		return setupNewDriver(task), nil
 	}
 
@@ -299,9 +299,9 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 	w.On("WaitCh", mock.Anything).Return(waitErrChRc)
 	tm.watcher = w
 
-	// Set up baseController
-	tm.baseController.initConf = conf
-	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	// Set up driver factory
+	tm.factory.initConf = conf
+	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
 		// Always return false on render template to mock what happens when
@@ -356,7 +356,7 @@ func testOnceThenRun(t *testing.T, driverConf *config.DriverConfig) {
 	rw.tasksManager = &tm
 
 	// Mock driver
-	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(task)
 		d.On("TemplateIDs").Return([]string{"{{tmpl}}"})

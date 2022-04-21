@@ -23,10 +23,10 @@ var tasksManagerSystemName = "tasksmanager"
 type TasksManager struct {
 	logger logging.Logger
 
-	baseController *baseController
-	watcher        templates.Watcher
-	state          state.Store
-	drivers        *driver.Drivers
+	factory *driverFactory
+	watcher templates.Watcher
+	state   state.Store
+	drivers *driver.Drivers
 
 	retry retry.Retry
 
@@ -56,14 +56,14 @@ func NewTasksManager(conf *config.Config, state state.Store) (*TasksManager, err
 		return nil, err
 	}
 
-	baseCtrl, err := newBaseController(conf, watcher)
+	factory, err := newDriverFactory(conf, watcher)
 	if err != nil {
 		return nil, err
 	}
 
 	return &TasksManager{
 		logger:          logger,
-		baseController:  baseCtrl,
+		factory:         factory,
 		watcher:         watcher,
 		state:           state,
 		drivers:         driver.NewDrivers(),
@@ -78,7 +78,7 @@ func NewTasksManager(conf *config.Config, state state.Store) (*TasksManager, err
 func (tm *TasksManager) Init(ctx context.Context) error {
 	tm.drivers.Reset()
 
-	return tm.baseController.init(ctx)
+	return tm.factory.init(ctx)
 }
 
 func (tm *TasksManager) Config() config.Config {
@@ -429,7 +429,7 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 		return nil, fmt.Errorf("task with name %s already exists", taskName)
 	}
 
-	d, err := tm.baseController.makeDriver(ctx, &conf, taskConfig)
+	d, err := tm.factory.makeDriver(ctx, &conf, taskConfig)
 	if err != nil {
 		return nil, err
 	}

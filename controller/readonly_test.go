@@ -102,10 +102,10 @@ func Test_ReadOnly_Run_context_cancel(t *testing.T) {
 	w.On("Size").Return(5)
 	tm.watcher = w
 
-	// Set up baseController
-	tm.baseController.initConf = conf
+	// Set up driver factory
+	tm.factory.initConf = conf
 	drivers := make(map[string]driver.Driver)
-	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
@@ -172,9 +172,9 @@ func Test_ReadOnly_Run_WatchDep_errors(t *testing.T) {
 	w.On("WaitCh", mock.Anything).Return(waitErrChRc)
 	tm.watcher = w
 
-	// Set up baseController
-	tm.baseController.initConf = conf
-	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	// Set up driver factory
+	tm.factory.initConf = conf
+	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
 		// Always return false on render template to mock what happens when
@@ -232,10 +232,10 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 	w.On("Size").Return(numTasks)
 	tm.watcher = w
 
-	// Set up baseController
-	tm.baseController.initConf = conf
+	// Set up driver factory
+	tm.factory.initConf = conf
 	drivers := make(map[string]driver.Driver)
-	tm.baseController.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := setupNewDriver(task)
 		drivers[task.Name()] = d
 		return d, nil

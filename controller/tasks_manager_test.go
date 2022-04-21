@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
@@ -108,7 +109,7 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 	}
 	conf.Finalize()
 	tm := newTestTasksManager()
-	tm.baseController.watcher = new(mocksTmpl.Watcher)
+	tm.factory.watcher = new(mocksTmpl.Watcher)
 	tm.state = state.NewInMemoryStore(conf)
 
 	t.Run("success", func(t *testing.T) {
@@ -130,7 +131,7 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 		mockD.On("SetBufferPeriod").Return()
 		mockD.On("OverrideNotifier").Return()
 		mockDriver(ctx, mockD, driverTask)
-		tm.baseController.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.factory.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -162,7 +163,7 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 		mockD.On("InitTask", mock.Anything).Return(fmt.Errorf("init err"))
 		mockD.On("DestroyTask", mock.Anything).Return()
 		tm.drivers = driver.NewDrivers()
-		tm.baseController.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.factory.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -183,7 +184,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 	ctx := context.Background()
 
 	tm := newTestTasksManager()
-	tm.baseController.watcher = new(mocksTmpl.Watcher)
+	tm.factory.watcher = new(mocksTmpl.Watcher)
 
 	conf := &config.Config{
 		BufferPeriod: config.DefaultBufferPeriodConfig(),
@@ -203,7 +204,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		mockDriver(ctx, mockD, task)
 		tm.state = state.NewInMemoryStore(conf)
 		tm.drivers = driver.NewDrivers()
-		tm.baseController.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.factory.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -233,7 +234,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		mockDriver(ctx, mockD, task)
 		tm.state = state.NewInMemoryStore(conf)
 		tm.drivers = driver.NewDrivers()
-		tm.baseController.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.factory.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -264,7 +265,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 			On("ApplyTask", ctx).Return(fmt.Errorf("apply err"))
 		tm.state = state.NewInMemoryStore(conf)
 		tm.drivers = driver.NewDrivers()
-		tm.baseController.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.factory.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -937,4 +938,16 @@ func mockDriver(ctx context.Context, d *mocksD.Driver, task *driver.Task) {
 		On("TemplateIDs").Return(nil).
 		On("RenderTemplate", mock.Anything).Return(true, nil).
 		On("ApplyTask", ctx).Return(nil)
+}
+
+func newTestTasksManager() TasksManager {
+	return TasksManager{
+		logger: logging.NewNullLogger(),
+		factory: &driverFactory{
+			logger: logging.NewNullLogger(),
+		},
+		drivers:         driver.NewDrivers(),
+		state:           state.NewInMemoryStore(nil),
+		scheduleStopChs: make(map[string](chan struct{})),
+	}
 }
