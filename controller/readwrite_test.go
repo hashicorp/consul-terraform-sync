@@ -132,13 +132,21 @@ func Test_ReadWrite_Once_Terraform(t *testing.T) {
 				Terraform: &config.TerraformConfig{},
 			}
 
-			err := testOnce(t, tc.numTasks, driverConf, tc.setupNewDriver)
+			mockDrivers, err := testOnce(t, tc.numTasks, driverConf, tc.setupNewDriver)
 			if tc.expectErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), expectedErr.Error(),
 					"unexpected error in Once")
+
+				//task 00, 01, 02 should have been created before 03 errored
+				assert.Len(t, mockDrivers, 3)
 			} else {
 				require.NoError(t, err)
+				assert.Len(t, mockDrivers, tc.numTasks)
+			}
+
+			for _, mockD := range mockDrivers {
+				mockD.AssertExpectations(t)
 			}
 		})
 	}
@@ -227,8 +235,10 @@ func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
 	}
 }
 
+// testOnce test running once-mode. Returns the mocked drivers for the caller
+// to assert expectations
 func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
-	setupNewDriver func(*driver.Task) driver.Driver) error {
+	setupNewDriver func(*driver.Task) driver.Driver) ([]*mocksD.Driver, error) {
 
 	conf := multipleTaskConfig(numTasks)
 	conf.Driver = driverConf
@@ -263,11 +273,14 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	err := rw.Once(context.Background())
 
 	w.AssertExpectations(t)
+
+	mockDrivers := make([]*mocksD.Driver, 0, tm.drivers.Len())
 	for _, d := range tm.drivers.Map() {
-		d.(*mocksD.Driver).AssertExpectations(t)
+		mockDriver := d.(*mocksD.Driver)
+		mockDrivers = append(mockDrivers, mockDriver)
 	}
 
-	return err
+	return mockDrivers, err
 }
 
 func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
