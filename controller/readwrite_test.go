@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/templates"
@@ -375,7 +374,7 @@ func testOnceThenRun(t *testing.T, driverConf *config.DriverConfig) {
 	completedTasksCh := tm.EnableTestMode()
 
 	// Mock watcher
-	w := new(mocks.Watcher)
+	w := new(mocksTmpl.Watcher)
 	waitErrCh := make(chan error)
 	var waitErrChRc <-chan error = waitErrCh
 	go func() { errCh <- nil }()
