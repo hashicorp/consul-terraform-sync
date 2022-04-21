@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBaseController_init(t *testing.T) {
+func Test_driverFactory_init(t *testing.T) {
 	t.Parallel()
 
 	conf := singleTaskConfig()
@@ -27,11 +27,9 @@ func TestBaseController_init(t *testing.T) {
 		name        string
 		expectError bool
 		config      *config.Config
-		// TODO: after baseController is refactored to driers package, add
-		// check for `expectedProviders` field. Need to wait because
-		// driver.TerraformProviderBlock fields are private
-
-		// expectedProviders []driver.TerraformProviderBlock
+		// Note: if driverFactory is refactored to the drivers package, we
+		// can add a check for expected providers. driver.TerraformProviderBlock
+		// fields are private so currently cannot easily check
 	}{
 		{
 			"happy path",
@@ -43,26 +41,24 @@ func TestBaseController_init(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			baseCtrl := baseController{
+			f := driverFactory{
 				initConf: tc.config,
 				logger:   logging.NewNullLogger(),
 			}
 
-			err := baseCtrl.init(ctx)
+			err := f.init(ctx)
 
 			if tc.expectError {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tc.name)
 			} else {
 				require.NoError(t, err)
-				// TODO: uncomment assert after refactor to driver package
-				// assert.Equal(t, tc.expectedProviders, baseCtrl.providers)
 			}
 		})
 	}
 }
 
-func TestBaseController_makeDrivers(t *testing.T) {
+func Test_driverFactory_makeDrivers(t *testing.T) {
 	t.Parallel()
 
 	conf := singleTaskConfig()
@@ -73,8 +69,8 @@ func TestBaseController_makeDrivers(t *testing.T) {
 	w.On("Clients").Return(nil).Once()
 	w.On("Register", mock.Anything).Return(nil).Once()
 
-	// Setup for controller
-	baseCtrl, err := newBaseController(conf, w)
+	// Setup for driver factory
+	f, err := newDriverFactory(conf, w)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -82,13 +78,13 @@ func TestBaseController_makeDrivers(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		// Mock returned driver
 		d := new(mocksD.Driver)
-		baseCtrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		f.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			d.On("InitTask", mock.Anything).Return(nil).Once()
 			return d, nil
 		}
 
 		// Test makeDriver
-		actualD, err := baseCtrl.makeDriver(ctx, conf, taskConf)
+		actualD, err := f.makeDriver(ctx, conf, taskConf)
 		assert.NoError(t, err)
 		assert.NotNil(t, actualD)
 		d.AssertExpectations(t)
@@ -98,14 +94,14 @@ func TestBaseController_makeDrivers(t *testing.T) {
 		// Mock returned driver
 		errStr := "init error"
 		d := new(mocksD.Driver)
-		baseCtrl.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		f.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			d.On("InitTask", mock.Anything).Return(errors.New(errStr)).Once()
 			d.On("DestroyTask", mock.Anything).Return().Once()
 			return d, nil
 		}
 
 		// Test makeDriver
-		_, err = baseCtrl.makeDriver(ctx, conf, taskConf)
+		_, err = f.makeDriver(ctx, conf, taskConf)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), errStr)
 		d.AssertExpectations(t)
