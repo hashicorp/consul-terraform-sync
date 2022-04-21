@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -45,10 +46,15 @@ type TasksManager struct {
 }
 
 // NewTasksManager configures a new tasks manager
-func NewTasksManager(conf *config.Config, watcher templates.Watcher,
-	state state.Store) (*TasksManager, error) {
+func NewTasksManager(conf *config.Config, state state.Store) (*TasksManager, error) {
 
 	logger := logging.Global().Named(tasksManagerSystemName)
+
+	logger.Info("initializing Consul client and testing connection")
+	watcher, err := newWatcher(conf, client.ConsulDefaultMaxRetry)
+	if err != nil {
+		return nil, err
+	}
 
 	baseCtrl, err := newBaseController(conf, watcher)
 	if err != nil {
