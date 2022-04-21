@@ -29,7 +29,8 @@ type driverFactory struct {
 	initConf *config.Config
 }
 
-func newDriverFactory(conf *config.Config, watcher templates.Watcher) (*driverFactory, error) {
+// NewDriverFactory configures a new driver factory
+func NewDriverFactory(conf *config.Config, watcher templates.Watcher) (*driverFactory, error) {
 	nd, err := newDriverFunc(conf)
 	if err != nil {
 		return nil, err
@@ -46,7 +47,8 @@ func newDriverFactory(conf *config.Config, watcher templates.Watcher) (*driverFa
 	}, nil
 }
 
-func (f *driverFactory) init(ctx context.Context) error {
+// Init initializes a new driver factory and loads information
+func (f *driverFactory) Init(ctx context.Context) error {
 	f.logger.Info("initializing driver factory")
 
 	// Load provider configuration and evaluate dynamic values
@@ -59,7 +61,8 @@ func (f *driverFactory) init(ctx context.Context) error {
 	return nil
 }
 
-func (f *driverFactory) makeDriver(ctx context.Context, conf *config.Config,
+// Make makes a new driver for a task
+func (f *driverFactory) Make(ctx context.Context, conf *config.Config,
 	taskConf config.TaskConfig) (driver.Driver, error) {
 
 	taskName := *taskConf.Name

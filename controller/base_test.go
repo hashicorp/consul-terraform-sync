@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_driverFactory_init(t *testing.T) {
+func Test_driverFactory_Init(t *testing.T) {
 	t.Parallel()
 
 	conf := singleTaskConfig()
@@ -46,7 +46,7 @@ func Test_driverFactory_init(t *testing.T) {
 				logger:   logging.NewNullLogger(),
 			}
 
-			err := f.init(ctx)
+			err := f.Init(ctx)
 
 			if tc.expectError {
 				require.Error(t, err)
@@ -58,7 +58,7 @@ func Test_driverFactory_init(t *testing.T) {
 	}
 }
 
-func Test_driverFactory_makeDrivers(t *testing.T) {
+func Test_driverFactory_Make(t *testing.T) {
 	t.Parallel()
 
 	conf := singleTaskConfig()
@@ -70,7 +70,7 @@ func Test_driverFactory_makeDrivers(t *testing.T) {
 	w.On("Register", mock.Anything).Return(nil).Once()
 
 	// Setup for driver factory
-	f, err := newDriverFactory(conf, w)
+	f, err := NewDriverFactory(conf, w)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -83,8 +83,8 @@ func Test_driverFactory_makeDrivers(t *testing.T) {
 			return d, nil
 		}
 
-		// Test makeDriver
-		actualD, err := f.makeDriver(ctx, conf, taskConf)
+		// Test Make
+		actualD, err := f.Make(ctx, conf, taskConf)
 		assert.NoError(t, err)
 		assert.NotNil(t, actualD)
 		d.AssertExpectations(t)
@@ -100,8 +100,8 @@ func Test_driverFactory_makeDrivers(t *testing.T) {
 			return d, nil
 		}
 
-		// Test makeDriver
-		_, err = f.makeDriver(ctx, conf, taskConf)
+		// Test Make
+		_, err = f.Make(ctx, conf, taskConf)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), errStr)
 		d.AssertExpectations(t)

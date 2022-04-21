@@ -56,7 +56,7 @@ func NewTasksManager(conf *config.Config, state state.Store) (*TasksManager, err
 		return nil, err
 	}
 
-	factory, err := newDriverFactory(conf, watcher)
+	factory, err := NewDriverFactory(conf, watcher)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func NewTasksManager(conf *config.Config, state state.Store) (*TasksManager, err
 func (tm *TasksManager) Init(ctx context.Context) error {
 	tm.drivers.Reset()
 
-	return tm.factory.init(ctx)
+	return tm.factory.Init(ctx)
 }
 
 func (tm *TasksManager) Config() config.Config {
@@ -429,7 +429,7 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 		return nil, fmt.Errorf("task with name %s already exists", taskName)
 	}
 
-	d, err := tm.factory.makeDriver(ctx, &conf, taskConfig)
+	d, err := tm.factory.Make(ctx, &conf, taskConfig)
 	if err != nil {
 		return nil, err
 	}
