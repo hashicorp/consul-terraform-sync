@@ -176,26 +176,40 @@ func (c *Client) Scheme() string {
 	return c.url.Scheme
 }
 
-// WaitForAPI polls the /v1/status endpoint to check when the CTS API is
-// available. The API is started when CTS is run as a daemon and completes
-// all tasks once.
-func (c *Client) WaitForAPI(timeout time.Duration) error {
+// WaitForOnce checks if all the current enabled tasks have been run once by
+// polling the /v1/status/tasks endpoint. Tasks that have not run will have an
+// unknown status. Should only use if no runtime changes are being actively made.
+func (c *Client) WaitForOnce(timeout time.Duration) error {
 	polling := make(chan struct{})
 	stopPolling := make(chan struct{})
 	statusAPI := c.Status()
 
 	go func() {
-		var err error
 		for {
 			select {
 			case <-stopPolling:
 				return
 			default:
-				_, err = statusAPI.Overall()
-				if err == nil {
-					polling <- struct{}{}
-					return
+				taskStatuses, err := statusAPI.Task("", nil)
+				if err != nil {
+					continue
 				}
+
+				once := true
+				for _, task := range taskStatuses {
+					if task.Enabled && task.Status == StatusUnknown {
+						// This enabled task has not run once yet
+						once = false
+						break
+					}
+				}
+				if !once {
+					continue
+				}
+
+				// All enabled tasks have run
+				polling <- struct{}{}
+				return
 			}
 		}
 	}()
@@ -205,7 +219,8 @@ func (c *Client) WaitForAPI(timeout time.Duration) error {
 		return nil
 	case <-time.After(timeout):
 		close(stopPolling)
-		return fmt.Errorf("client timed out waiting for CTS API to start at %s: %v", c.url.Host, timeout)
+		return fmt.Errorf("client timed out waiting for tasks run once "+
+			"using api host %q: %v", c.url.Host, timeout)
 	}
 }
 
