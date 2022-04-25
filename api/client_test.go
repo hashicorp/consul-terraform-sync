@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 )
@@ -351,7 +352,7 @@ func Test_StatusClient_Overall(t *testing.T) {
 	assert.Equal(t, expectedOverallStatus, o)
 }
 
-func Test_WaitForAPI(t *testing.T) {
+func Test_WaitForOnce(t *testing.T) {
 	expectedOverallStatus := OverallStatus{TaskSummary: TaskSummary{
 		Status:  StatusSummary{Successful: 1},
 		Enabled: EnabledSummary{True: 2},
@@ -373,11 +374,11 @@ func Test_WaitForAPI(t *testing.T) {
 	c, err := NewClient(clientConfig, nil)
 	assert.NoError(t, err)
 
-	err = c.WaitForAPI(100 * time.Millisecond)
+	err = c.WaitForOnce(100 * time.Millisecond)
 	assert.NoError(t, err)
 }
 
-func Test_WaitForAPI_Timeout(t *testing.T) {
+func Test_WaitForOnce_Timeout(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// do nothing
 	}))
@@ -389,6 +390,6 @@ func Test_WaitForAPI_Timeout(t *testing.T) {
 	c, err := NewClient(clientConfig, nil)
 	assert.NoError(t, err)
 
-	err = c.WaitForAPI(100 * time.Millisecond)
+	err = c.WaitForOnce(100 * time.Millisecond)
 	assert.Error(t, err)
 }

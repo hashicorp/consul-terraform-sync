@@ -135,7 +135,7 @@ func TestStatus(t *testing.T) {
 
 	c, err := NewClient(createTestClientConfig(port), nil)
 	require.NoError(t, err)
-	err = c.WaitForAPI(3 * time.Second) // in case tests run before server is ready
+	err = c.WaitForOnce(3 * time.Second) // in case tests run before server is ready
 	require.NoError(t, err)
 
 	t.Run("overall-status", func(t *testing.T) {
@@ -277,13 +277,13 @@ func TestStatus(t *testing.T) {
 	})
 }
 
-func TestWaitForAPI(t *testing.T) {
+func TestWaitForOnce(t *testing.T) {
 	t.Parallel()
 
 	t.Run("timeout", func(t *testing.T) {
 		cts, err := NewClient(createTestClientConfig(0), nil)
 		require.NoError(t, err)
-		err = cts.WaitForAPI(time.Second)
+		err = cts.WaitForOnce(time.Second)
 		assert.Error(t, err, "No CTS API server running, test is expected to timeout")
 	})
 
@@ -305,7 +305,7 @@ func TestWaitForAPI(t *testing.T) {
 
 		cts, err := NewClient(createTestClientConfig(port), nil)
 		require.NoError(t, err)
-		err = cts.WaitForAPI(3 * time.Second)
+		err = cts.WaitForOnce(3 * time.Second)
 		assert.NoError(t, err, "CTS API server should be available")
 	})
 }

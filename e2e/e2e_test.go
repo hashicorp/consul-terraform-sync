@@ -51,7 +51,7 @@ func TestE2EBasic(t *testing.T) {
 	// Start CTS and wait for once mode to complete before verifying
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForOnce(defaultWaitForOnce)
 	require.NoError(t, err)
 
 	dbResourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
@@ -83,14 +83,14 @@ func TestE2EBasic(t *testing.T) {
 	now := time.Now()
 	service := testutil.TestService{ID: "web-1", Name: "web", Address: "5.5.5.5"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForAPI)
+	api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForOnce)
 
 	contents = testutils.CheckFile(t, true, webResourcesPath, "web-1.txt")
 	assert.Equal(t, service.Address, contents, "web-1 should be created after registering")
 
 	now = time.Now()
 	testutils.DeregisterConsulService(t, srv, service.ID)
-	api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForAPI)
+	api.WaitForEvent(t, cts, webTaskName, now, defaultWaitForOnce)
 
 	// web-1 should be removed after deregistering
 	testutils.CheckFile(t, false, webResourcesPath, "web-1.txt")
@@ -115,10 +115,10 @@ func TestE2ERestart(t *testing.T) {
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().appendDBTask()
 	config.write(t, configPath)
 
-	runSyncStop(t, configPath, defaultWaitForAPI)
+	runSyncStop(t, configPath, defaultWaitForOnce)
 
 	// rerun sync. confirm no errors e.g. recreating workspaces
-	runSyncStop(t, configPath, defaultWaitForAPI)
+	runSyncStop(t, configPath, defaultWaitForOnce)
 
 	_ = cleanup()
 }
@@ -145,7 +145,7 @@ func TestE2ERestartConsul(t *testing.T) {
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
 	// wait enough for cts to cycle through once-mode successfully
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForOnce(defaultWaitForOnce)
 	require.NoError(t, err)
 
 	// stop Consul

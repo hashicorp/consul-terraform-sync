@@ -40,7 +40,7 @@ const (
 	// liberal default times to wait
 	defaultWaitForRegistration = 8 * time.Second
 	defaultWaitForEvent        = 15 * time.Second
-	defaultWaitForAPI          = 30 * time.Second
+	defaultWaitForOnce         = 30 * time.Second
 
 	// liberal wait time to ensure event doesn't happen
 	defaultWaitForNoEvent = 6 * time.Second
@@ -121,7 +121,7 @@ func newTestConsulServer(t *testing.T) *testutil.TestServer {
 
 func runSyncStop(t *testing.T, configPath string, dur time.Duration) {
 	cts, stop := api.StartCTS(t, configPath)
-	err := cts.WaitForAPI(dur)
+	err := cts.WaitForOnce(dur)
 	require.NoError(t, err)
 	stop(t)
 }
@@ -189,7 +189,7 @@ func ctsSetup(t *testing.T, srv *testutil.TestServer, tempDir string, taskConfig
 		stop(t)
 	})
 
-	err := cts.WaitForAPI(defaultWaitForAPI * time.Duration(len(taskConfig)))
+	err := cts.WaitForOnce(defaultWaitForOnce * time.Duration(len(taskConfig)))
 	require.NoError(t, err)
 
 	return cts
@@ -238,7 +238,7 @@ func ctsSetupTLS(t *testing.T, srv *testutil.TestServer, tempDir string, taskCon
 		stop(t)
 	})
 
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForOnce(defaultWaitForOnce)
 	require.NoError(t, err)
 
 	return cts
