@@ -82,6 +82,15 @@ func TestNewControllers(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, controller)
 			})
+			t.Run("once", func(t *testing.T) {
+				controller, err := NewOnce(tc.setupConf())
+				if tc.expectError {
+					assert.Error(t, err)
+					return
+				}
+				assert.NoError(t, err)
+				assert.NotNil(t, controller)
+			})
 		})
 	}
 }
