@@ -73,8 +73,8 @@ func TestNewControllers(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, controller)
 			})
-			t.Run("readonly", func(t *testing.T) {
-				controller, err := NewReadOnly(tc.setupConf())
+			t.Run("inspect", func(t *testing.T) {
+				controller, err := NewInspect(tc.setupConf())
 				if tc.expectError {
 					assert.Error(t, err)
 					return

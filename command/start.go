@@ -246,8 +246,8 @@ func (c *startCommand) Run(args []string) int {
 	var ctrl controller.Controller
 	if *c.isInspect {
 		logger.Debug("inspect mode enabled, processing then exiting")
-		logger.Info("setting up controller", "type", "readonly")
-		ctrl, err = controller.NewReadOnly(conf)
+		logger.Info("setting up controller", "type", "inspect")
+		ctrl, err = controller.NewInspect(conf)
 	} else {
 		logger.Info("setting up controller", "type", "readwrite")
 		ctrl, err = controller.NewReadWrite(conf)

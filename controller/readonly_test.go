@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ReadOnly_Run(t *testing.T) {
+func Test_Inspect_Run(t *testing.T) {
 	t.Parallel()
 
 	expectedErr := errors.New("test error")
@@ -73,7 +73,7 @@ func Test_ReadOnly_Run(t *testing.T) {
 	}
 }
 
-func Test_ReadOnly_Run_context_cancel(t *testing.T) {
+func Test_Inspect_Run_context_cancel(t *testing.T) {
 	// - Controller will try to create and inspect 5 tasks
 	// - Mock a task to take 2 seconds to inspect
 	// - Cancel context after 1 second. Confirm only 1 task inspected
@@ -83,7 +83,7 @@ func Test_ReadOnly_Run_context_cancel(t *testing.T) {
 	conf := multipleTaskConfig(5)
 	ss := state.NewInMemoryStore(conf)
 
-	ro := ReadOnly{
+	ro := Inspect{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -143,7 +143,7 @@ func Test_ReadOnly_Run_context_cancel(t *testing.T) {
 	}
 }
 
-func Test_ReadOnly_Run_WatchDep_errors(t *testing.T) {
+func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 	// Mock the situation where WatchDep WaitCh errors which can cause
 	// driver.RenderTemplate() to always returns false. Confirm on WatchDep
 	// error, that creating/running tasks does not hang and exits.
@@ -153,7 +153,7 @@ func Test_ReadOnly_Run_WatchDep_errors(t *testing.T) {
 
 	ss := state.NewInMemoryStore(conf)
 
-	ro := ReadOnly{
+	ro := Inspect{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -213,7 +213,7 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 	conf := multipleTaskConfig(numTasks)
 	ss := state.NewInMemoryStore(conf)
 
-	ro := ReadOnly{
+	ro := Inspect{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
