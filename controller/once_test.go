@@ -13,13 +13,12 @@ import (
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/templates"
-	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ReadWrite_Once_Terraform(t *testing.T) {
+func Test_Once_Run_Terraform(t *testing.T) {
 	t.Parallel()
 
 	expectedErr := errors.New("test error")
@@ -86,7 +85,7 @@ func Test_ReadWrite_Once_Terraform(t *testing.T) {
 	}
 }
 
-func Test_ReadWrite_Once_WatchDep_errors_Terraform(t *testing.T) {
+func Test_Once_Run_WatchDep_errors_Terraform(t *testing.T) {
 	// Mock the situation where WatchDep WaitCh errors which can cause
 	// driver.RenderTemplate() to always returns false. Confirm on WatchDep
 	// error, that creating/running tasks does not hang and exits.
@@ -99,7 +98,7 @@ func Test_ReadWrite_Once_WatchDep_errors_Terraform(t *testing.T) {
 	testOnceWatchDepErrors(t, driverConf)
 }
 
-func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
+func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 	// - Controller will try to create and run 5 tasks
 	// - Mock a task to take 2 seconds to create and run
 	// - Cancel context after 1 second. Confirm only 1 task created and run
@@ -108,7 +107,7 @@ func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
 	conf := multipleTaskConfig(5)
 	ss := state.NewInMemoryStore(conf)
 
-	rw := ReadWrite{
+	ctrl := Once{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -116,7 +115,7 @@ func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	rw.tasksManager = &tm
+	ctrl.tasksManager = &tm
 
 	// Set up driver factory
 	tm.factory.initConf = conf
@@ -136,7 +135,7 @@ func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		err := rw.onceConsecutive(ctx)
+		err := ctrl.onceConsecutive(ctx)
 		if err != nil {
 			errCh <- err
 		}
@@ -167,7 +166,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	conf.Driver = driverConf
 	ss := state.NewInMemoryStore(conf)
 
-	rw := ReadWrite{
+	ctrl := Once{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -176,7 +175,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	tm := newTestTasksManager()
 	tm.state = ss
 	tm.deleteCh = make(chan string, 1)
-	rw.tasksManager = &tm
+	ctrl.tasksManager = &tm
 
 	// Mock watcher
 	errCh := make(chan error)
@@ -193,7 +192,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 		return setupNewDriver(task), nil
 	}
 
-	err := rw.Once(context.Background())
+	err := ctrl.Run(context.Background())
 
 	w.AssertExpectations(t)
 
@@ -215,7 +214,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 
 	ss := state.NewInMemoryStore(conf)
 
-	rw := ReadWrite{
+	ctrl := Once{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -223,7 +222,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	rw.tasksManager = &tm
+	ctrl.tasksManager = &tm
 
 	// Mock watcher
 	expectedErr := errors.New("error!")
@@ -250,7 +249,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 	defer cancel()
 	errCh := make(chan error)
 	go func() {
-		err := rw.Once(ctx)
+		err := ctrl.Run(ctx)
 		if err != nil {
 			errCh <- err
 		}

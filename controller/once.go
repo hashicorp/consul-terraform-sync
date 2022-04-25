@@ -3,29 +3,25 @@ package controller
 import (
 	"context"
 
-	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/state"
 )
 
 var (
-	_ Controller = (*ReadWrite)(nil)
-
-	// Number of times to retry attempts
-	defaultRetry = 2
+	_ Controller = (*Once)(nil)
 )
 
-// ReadWrite is the controller to run in read-write mode
-type ReadWrite struct {
+// Once is the controller to run in once mode
+type Once struct {
 	logger logging.Logger
 
 	state        state.Store
 	tasksManager *TasksManager
 }
 
-// NewReadWrite configures and initializes a new ReadWrite controller
-func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
+// NewOnce configures and initializes a new Once controller
+func NewOnce(conf *config.Config) (*Once, error) {
 	logger := logging.Global().Named(ctrlSystemName)
 
 	state := state.NewInMemoryStore(conf)
@@ -35,63 +31,20 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 		return nil, err
 	}
 
-	return &ReadWrite{
+	return &Once{
 		logger:       logger,
 		state:        state,
 		tasksManager: tm,
 	}, nil
 }
 
-// Init initializes the controller before it can be run. Ensures that
-// driver is initializes, works are created for each task.
-func (rw *ReadWrite) Init(ctx context.Context) error {
-	return rw.tasksManager.Init(ctx)
+// Init initializes the controller before it can be run.
+func (ctrl *Once) Init(ctx context.Context) error {
+	return ctrl.tasksManager.Init(ctx)
 }
 
-func (rw *ReadWrite) Run(ctx context.Context) error {
-	// Serve API
-	conf := rw.tasksManager.state.GetConfig()
-	s, err := api.NewAPI(api.Config{
-		Controller: rw.tasksManager,
-		Port:       config.IntVal(conf.Port),
-		TLS:        conf.TLS,
-	})
-	if err != nil {
-		return err
-	}
-
-	exitBufLen := 2 // api & run tasks exit
-	exitCh := make(chan error, exitBufLen)
-	go func() {
-		err := s.Serve(ctx)
-		exitCh <- err
-	}()
-
-	// Run tasks
-	go func() {
-		err := rw.tasksManager.Run(ctx)
-		exitCh <- err
-	}()
-
-	counter := 0
-	for {
-		err := <-exitCh
-		counter++
-		if err != nil && err != context.Canceled {
-			// Exit if an error is returned
-			// Not expecting any routines to send a nil error because they run
-			// until canceled. Nil check is just to be safe
-			return err
-		}
-		if counter >= exitBufLen {
-			// Wait for all contexts to cancel
-			return ctx.Err()
-		}
-	}
-}
-
-func (rw *ReadWrite) Once(ctx context.Context) error {
-	rw.logger.Info("executing all tasks once through")
+func (ctrl *Once) Run(ctx context.Context) error {
+	ctrl.logger.Info("executing all tasks once through")
 
 	// Stop watching dependencies after once-ing tasks ends
 	ctxWatch, cancelWatch := context.WithCancel(ctx)
@@ -104,13 +57,13 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 
 	// start watching dependencies in order to render templates to apply tasks
 	go func() {
-		exitCh <- rw.tasksManager.WatchDep(ctxWatch)
+		exitCh <- ctrl.tasksManager.WatchDep(ctxWatch)
 		cancelOnce()
 	}()
 
 	// run consecutively to keep logs in order
 	go func() {
-		exitCh <- rw.onceConsecutive(ctxOnce)
+		exitCh <- ctrl.onceConsecutive(ctxOnce)
 		cancelWatch()
 	}()
 
@@ -130,26 +83,26 @@ func (rw *ReadWrite) Once(ctx context.Context) error {
 	}
 }
 
-func (rw *ReadWrite) onceConsecutive(ctx context.Context) error {
-	tasks := rw.state.GetAllTasks()
+func (ctrl *Once) onceConsecutive(ctx context.Context) error {
+	tasks := ctrl.state.GetAllTasks()
 	for _, task := range tasks {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 			taskName := *task.Name
-			rw.logger.Info("running task once", taskNameLogKey, taskName)
-			if _, err := rw.tasksManager.TaskCreateAndRun(ctx, *task); err != nil {
+			ctrl.logger.Info("running task once", taskNameLogKey, taskName)
+			if _, err := ctrl.tasksManager.TaskCreateAndRun(ctx, *task); err != nil {
 				return err
 			}
-			rw.logger.Info("task completed", taskNameLogKey, taskName)
+			ctrl.logger.Info("task completed", taskNameLogKey, taskName)
 		}
 	}
 
-	rw.logger.Info("all tasks completed once")
+	ctrl.logger.Info("all tasks completed once")
 	return nil
 }
 
-func (rw *ReadWrite) Stop() {
-	rw.tasksManager.Stop()
+func (ctrl *Once) Stop() {
+	ctrl.tasksManager.Stop()
 }
