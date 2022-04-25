@@ -352,13 +352,14 @@ func Test_StatusClient_Overall(t *testing.T) {
 	assert.Equal(t, expectedOverallStatus, o)
 }
 
-func Test_WaitForOnce(t *testing.T) {
-	expectedOverallStatus := OverallStatus{TaskSummary: TaskSummary{
-		Status:  StatusSummary{Successful: 1},
-		Enabled: EnabledSummary{True: 2},
-	}}
+func Test_WaitForOnce_success(t *testing.T) {
+	expected := map[string]TaskStatus{
+		"task_a": {Enabled: true, Status: StatusCritical},
+		"task_b": {Enabled: true, Status: StatusSuccessful},
+		"task_c": {Enabled: false, Status: StatusUnknown},
+	}
 
-	bytes, err := json.Marshal(&expectedOverallStatus)
+	bytes, err := json.Marshal(&expected)
 	assert.NotEmpty(t, bytes)
 	assert.NoError(t, err)
 
@@ -378,18 +379,42 @@ func Test_WaitForOnce(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func Test_WaitForOnce_Timeout(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// do nothing
-	}))
+func Test_WaitForOnce_timeout(t *testing.T) {
+	cases := []struct {
+		name        string
+		handlerFunc func(w http.ResponseWriter, r *http.Request)
+	}{
+		{
+			"api unavailable",
+			func(w http.ResponseWriter, r *http.Request) {
+				// do nothing
+			},
+		},
+		{
+			"enabled tasks with unknown status",
+			func(w http.ResponseWriter, r *http.Request) {
+				status := map[string]TaskStatus{
+					"task_a": {Enabled: true, Status: StatusUnknown},
+				}
 
-	defer server.Close()
+				bytes, _ := json.Marshal(&status)
+				_, _ = fmt.Fprint(w, string(bytes))
+			},
+		},
+	}
 
-	clientConfig := BaseClientConfig()
-	clientConfig.URL = server.URL
-	c, err := NewClient(clientConfig, nil)
-	assert.NoError(t, err)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(tc.handlerFunc))
+			defer server.Close()
 
-	err = c.WaitForOnce(100 * time.Millisecond)
-	assert.Error(t, err)
+			clientConfig := BaseClientConfig()
+			clientConfig.URL = server.URL
+			c, err := NewClient(clientConfig, nil)
+			require.NoError(t, err)
+
+			err = c.WaitForOnce(100 * time.Millisecond)
+			assert.Error(t, err)
+		})
+	}
 }
