@@ -16,19 +16,21 @@ import (
 	"github.com/hashicorp/hcat"
 )
 
-type baseController struct {
+// driverFactory creates a driver for a task
+type driverFactory struct {
 	newDriver func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error)
 	watcher   templates.Watcher
 	resolver  templates.Resolver
 	logger    logging.Logger
 	providers []driver.TerraformProviderBlock
 
-	// config that CTS is initialized with i.e. only used by base controller.
+	// config that CTS is initialized with i.e. only used by driver factory.
 	// subsequent access to the configs should be through the state store.
 	initConf *config.Config
 }
 
-func newBaseController(conf *config.Config, watcher templates.Watcher) (*baseController, error) {
+// NewDriverFactory configures a new driver factory
+func NewDriverFactory(conf *config.Config, watcher templates.Watcher) (*driverFactory, error) {
 	nd, err := newDriverFunc(conf)
 	if err != nil {
 		return nil, err
@@ -36,7 +38,7 @@ func newBaseController(conf *config.Config, watcher templates.Watcher) (*baseCon
 
 	logger := logging.Global().Named(ctrlSystemName)
 
-	return &baseController{
+	return &driverFactory{
 		newDriver: nd,
 		watcher:   watcher,
 		resolver:  hcat.NewResolver(),
@@ -45,12 +47,13 @@ func newBaseController(conf *config.Config, watcher templates.Watcher) (*baseCon
 	}, nil
 }
 
-func (ctrl *baseController) init(ctx context.Context) error {
-	ctrl.logger.Info("initializing base controller")
+// Init initializes a new driver factory and loads information
+func (f *driverFactory) Init(ctx context.Context) error {
+	f.logger.Info("initializing driver factory")
 
 	// Load provider configuration and evaluate dynamic values
 	var err error
-	ctrl.providers, err = ctrl.loadProviderConfigs(ctx)
+	f.providers, err = f.loadProviderConfigs(ctx)
 	if err != nil {
 		return err
 	}
@@ -58,13 +61,14 @@ func (ctrl *baseController) init(ctx context.Context) error {
 	return nil
 }
 
-func (ctrl *baseController) makeDriver(ctx context.Context, conf *config.Config,
+// Make makes a new driver for a task
+func (f *driverFactory) Make(ctx context.Context, conf *config.Config,
 	taskConf config.TaskConfig) (driver.Driver, error) {
 
 	taskName := *taskConf.Name
-	logger := ctrl.logger.With(taskNameLogKey, taskName)
+	logger := f.logger.With(taskNameLogKey, taskName)
 
-	d, err := ctrl.createNewTaskDriver(conf, taskConf)
+	d, err := f.createNewTaskDriver(conf, taskConf)
 	if err != nil {
 		logger.Error("error creating new task driver")
 		return nil, err
@@ -85,15 +89,15 @@ func (ctrl *baseController) makeDriver(ctx context.Context, conf *config.Config,
 	return d, nil
 }
 
-func (ctrl *baseController) createNewTaskDriver(conf *config.Config, taskConfig config.TaskConfig) (driver.Driver, error) {
-	logger := ctrl.logger.With("task_name", *taskConfig.Name)
+func (f *driverFactory) createNewTaskDriver(conf *config.Config, taskConfig config.TaskConfig) (driver.Driver, error) {
+	logger := f.logger.With("task_name", *taskConfig.Name)
 	logger.Trace("creating new task driver")
-	task, err := newDriverTask(conf, &taskConfig, ctrl.providers)
+	task, err := newDriverTask(conf, &taskConfig, f.providers)
 	if err != nil {
 		return nil, err
 	}
 
-	d, err := ctrl.newDriver(conf, task, ctrl.watcher)
+	d, err := f.newDriver(conf, task, f.watcher)
 	if err != nil {
 		return nil, err
 	}
@@ -104,22 +108,22 @@ func (ctrl *baseController) createNewTaskDriver(conf *config.Config, taskConfig 
 
 // loadProviderConfigs loads provider configs and evaluates provider blocks
 // for dynamic values in parallel.
-func (ctrl *baseController) loadProviderConfigs(ctx context.Context) ([]driver.TerraformProviderBlock, error) {
-	numBlocks := len(*ctrl.initConf.TerraformProviders)
+func (f *driverFactory) loadProviderConfigs(ctx context.Context) ([]driver.TerraformProviderBlock, error) {
+	numBlocks := len(*f.initConf.TerraformProviders)
 	var wg sync.WaitGroup
 	wg.Add(numBlocks)
 
 	var lastErr error
 	providerConfigs := make([]driver.TerraformProviderBlock, numBlocks)
-	for i, providerConf := range *ctrl.initConf.TerraformProviders {
+	for i, providerConf := range *f.initConf.TerraformProviders {
 		go func(i int, initConf map[string]interface{}) {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 			defer wg.Done()
 
-			block, err := hcltmpl.LoadDynamicConfig(ctxTimeout, ctrl.watcher, ctrl.resolver, initConf)
+			block, err := hcltmpl.LoadDynamicConfig(ctxTimeout, f.watcher, f.resolver, initConf)
 			if err != nil {
-				ctrl.logger.Error("error loading dynamic configuration for provider",
+				f.logger.Error("error loading dynamic configuration for provider",
 					"provider", block.Name, "error", err)
 				lastErr = err
 				return

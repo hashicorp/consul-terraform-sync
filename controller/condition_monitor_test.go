@@ -10,11 +10,9 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/handler"
-	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
-	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -545,16 +543,4 @@ func scheduledTestTask(tb testing.TB, name string) *driver.Task {
 	})
 	require.NoError(tb, err)
 	return task
-}
-
-func newTestTasksManager() TasksManager {
-	return TasksManager{
-		logger: logging.NewNullLogger(),
-		baseController: &baseController{
-			logger: logging.NewNullLogger(),
-		},
-		drivers:         driver.NewDrivers(),
-		state:           state.NewInMemoryStore(nil),
-		scheduleStopChs: make(map[string](chan struct{})),
-	}
 }

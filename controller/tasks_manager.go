@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -20,9 +21,9 @@ var tasksManagerSystemName = "tasksmanager"
 
 // TasksManager manages the CRUD operations and execution of tasks
 type TasksManager struct {
-	*baseController
 	logger logging.Logger
 
+	factory *driverFactory
 	watcher templates.Watcher
 	state   state.Store
 	drivers *driver.Drivers
@@ -45,19 +46,24 @@ type TasksManager struct {
 }
 
 // NewTasksManager configures a new tasks manager
-func NewTasksManager(conf *config.Config, watcher templates.Watcher,
-	state state.Store) (*TasksManager, error) {
+func NewTasksManager(conf *config.Config, state state.Store) (*TasksManager, error) {
 
 	logger := logging.Global().Named(tasksManagerSystemName)
 
-	baseCtrl, err := newBaseController(conf, watcher)
+	logger.Info("initializing Consul client and testing connection")
+	watcher, err := newWatcher(conf, client.ConsulDefaultMaxRetry)
+	if err != nil {
+		return nil, err
+	}
+
+	factory, err := NewDriverFactory(conf, watcher)
 	if err != nil {
 		return nil, err
 	}
 
 	return &TasksManager{
 		logger:          logger,
-		baseController:  baseCtrl,
+		factory:         factory,
 		watcher:         watcher,
 		state:           state,
 		drivers:         driver.NewDrivers(),
@@ -72,7 +78,7 @@ func NewTasksManager(conf *config.Config, watcher templates.Watcher,
 func (tm *TasksManager) Init(ctx context.Context) error {
 	tm.drivers.Reset()
 
-	return tm.init(ctx)
+	return tm.factory.Init(ctx)
 }
 
 func (tm *TasksManager) Config() config.Config {
@@ -423,7 +429,7 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 		return nil, fmt.Errorf("task with name %s already exists", taskName)
 	}
 
-	d, err := tm.makeDriver(ctx, &conf, taskConfig)
+	d, err := tm.factory.Make(ctx, &conf, taskConfig)
 	if err != nil {
 		return nil, err
 	}
