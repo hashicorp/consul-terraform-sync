@@ -279,6 +279,11 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	cts := ctsSetup(t, srv, tempDir, disabledTaskConfig())
 
+	// ctsSetup WaitForReadiness doesn't wait for disabled tasks to be added to
+	// driver which can cause issues for tests that modifies the disabled tasks
+	// too soon. Add manual wait.
+	time.Sleep(defaultWaitForTestReadiness)
+
 	// Confirm that terraform files were generated for a disabled task
 	taskPath := filepath.Join(tempDir, disabledTaskName)
 	files := testutils.CheckDir(t, true, taskPath)
