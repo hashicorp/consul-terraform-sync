@@ -176,10 +176,12 @@ func (c *Client) Scheme() string {
 	return c.url.Scheme
 }
 
-// WaitForOnce checks if all the current enabled tasks have been run once by
-// polling the /v1/status/tasks endpoint. Tasks that have not run will have an
-// unknown status. Should only use if no runtime changes are being actively made.
-func (c *Client) WaitForOnce(timeout time.Duration) error {
+// WaitForTestReadiness is used by tests that start CTS to determine how long
+// to wait until CTS is in a state to be tested. Currently this is determined by
+// when all enabled tasks have been run once by polling the /v1/status/tasks
+// endpoint. Tasks that have not run will have an unknown status. This should
+// only be use if no runtime changes are being actively made.
+func (c *Client) WaitForTestReadiness(timeout time.Duration) error {
 	polling := make(chan struct{})
 	stopPolling := make(chan struct{})
 	statusAPI := c.Status()

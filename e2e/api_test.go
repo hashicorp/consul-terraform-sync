@@ -65,7 +65,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 	cts, stopCTS := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 
 	// wait to run once before registering another instance to collect another event
-	err := cts.WaitForOnce(defaultWaitForOnce)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
 	service := testutil.TestService{
 		ID:      "api-2",

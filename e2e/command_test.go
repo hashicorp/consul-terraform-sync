@@ -41,7 +41,7 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 
 	cts, stop := api.StartCTS(t, configPath, api.CTSDevModeFlag)
 	defer stop(t)
-	err := cts.WaitForOnce(defaultWaitForOnce)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
 
 	address := cts.FullAddress()
@@ -249,7 +249,7 @@ func TestE2E_ReenableTaskTriggers(t *testing.T) {
 		stop(t)
 	})
 
-	err := cts.WaitForOnce(defaultWaitForOnce)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
 
 	// Test that regex filter is filtering service registration information and

@@ -352,7 +352,7 @@ func Test_StatusClient_Overall(t *testing.T) {
 	assert.Equal(t, expectedOverallStatus, o)
 }
 
-func Test_WaitForOnce_success(t *testing.T) {
+func Test_WaitForTestReadiness_success(t *testing.T) {
 	expected := map[string]TaskStatus{
 		"task_a": {Enabled: true, Status: StatusCritical},
 		"task_b": {Enabled: true, Status: StatusSuccessful},
@@ -375,11 +375,11 @@ func Test_WaitForOnce_success(t *testing.T) {
 	c, err := NewClient(clientConfig, nil)
 	assert.NoError(t, err)
 
-	err = c.WaitForOnce(100 * time.Millisecond)
+	err = c.WaitForTestReadiness(100 * time.Millisecond)
 	assert.NoError(t, err)
 }
 
-func Test_WaitForOnce_timeout(t *testing.T) {
+func Test_WaitForTestReadiness_timeout(t *testing.T) {
 	cases := []struct {
 		name        string
 		handlerFunc func(w http.ResponseWriter, r *http.Request)
@@ -413,7 +413,7 @@ func Test_WaitForOnce_timeout(t *testing.T) {
 			c, err := NewClient(clientConfig, nil)
 			require.NoError(t, err)
 
-			err = c.WaitForOnce(100 * time.Millisecond)
+			err = c.WaitForTestReadiness(100 * time.Millisecond)
 			assert.Error(t, err)
 		})
 	}
