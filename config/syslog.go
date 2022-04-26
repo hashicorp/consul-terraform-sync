@@ -26,7 +26,8 @@ type SyslogConfig struct {
 // DefaultSyslogConfig returns the default configuration struct.
 func DefaultSyslogConfig() *SyslogConfig {
 	return &SyslogConfig{
-		Enabled: Bool(false),
+		// No default values. `Enabled` value depends on other fields as
+		// handled in Finalize()
 	}
 }
 
