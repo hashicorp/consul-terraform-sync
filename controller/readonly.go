@@ -27,6 +27,7 @@ type Inspect struct {
 // NewInspect configures and initializes a new inspect controller
 func NewInspect(conf *config.Config) (*Inspect, error) {
 	logger := logging.Global().Named(ctrlSystemName)
+	logger.Info("setting up controller", "type", "inspect")
 
 	state := state.NewInMemoryStore(conf)
 

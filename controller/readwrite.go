@@ -33,6 +33,7 @@ type Daemon struct {
 // NewDaemon configures and initializes a new Daemon controller
 func NewDaemon(conf *config.Config) (*Daemon, error) {
 	logger := logging.Global().Named(ctrlSystemName)
+	logger.Info("setting up controller", "type", "daemon")
 
 	state := state.NewInMemoryStore(conf)
 

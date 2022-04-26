@@ -232,24 +232,17 @@ func (c *startCommand) Run(args []string) int {
 		}
 	}
 
-	switch {
-	case *c.isInspect:
-		logger.Info("running controller in inspect mode")
-	case *c.isOnce:
-		logger.Info("running controller in once mode")
-	default:
-		logger.Info("running controller in daemon mode")
-	}
-
 	// Set up controller
 	conf.ClientType = config.String(*c.clientType)
 	var ctrl controller.Controller
-	if *c.isInspect {
+	switch {
+	case *c.isInspect:
 		logger.Debug("inspect mode enabled, processing then exiting")
-		logger.Info("setting up controller", "type", "inspect")
 		ctrl, err = controller.NewInspect(conf)
-	} else {
-		logger.Info("setting up controller", "type", "daemon")
+	case *c.isOnce:
+		logger.Debug("once mode enabled, processing then exiting")
+		ctrl, err = controller.NewOnce(conf)
+	default:
 		ctrl, err = controller.NewDaemon(conf)
 	}
 	if err != nil {
@@ -279,24 +272,6 @@ func (c *startCommand) Run(args []string) int {
 			logger.Error("error initializing controller", "error", err)
 			errCh <- err
 			return
-		}
-
-		switch ctrl := ctrl.(type) {
-		case controller.Oncer:
-			if err := ctrl.Once(ctx); err != nil {
-				if err == context.Canceled {
-					exitCh <- struct{}{}
-				} else {
-					logger.Error("error running controller in Once mode", "error", err)
-					errCh <- err
-				}
-				return
-			}
-			if *c.isOnce {
-				logger.Info("controller in Once mode has completed")
-				exitCh <- struct{}{}
-				return
-			}
 		}
 
 		if err := ctrl.Run(ctx); err != nil {

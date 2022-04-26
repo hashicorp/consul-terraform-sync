@@ -23,6 +23,7 @@ type Once struct {
 // NewOnce configures and initializes a new Once controller
 func NewOnce(conf *config.Config) (*Once, error) {
 	logger := logging.Global().Named(ctrlSystemName)
+	logger.Info("setting up controller", "type", "once")
 
 	state := state.NewInMemoryStore(conf)
 
