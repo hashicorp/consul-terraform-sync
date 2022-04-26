@@ -54,7 +54,7 @@ task {
 
 	t.Run("once mode", func(t *testing.T) {
 		// Wait for all three tasks to execute once
-		err := cts.WaitForAPI(defaultWaitForAPI * 3)
+		err := cts.WaitForTestReadiness(defaultWaitForTestReadiness * 3)
 		require.NoError(t, err)
 
 		// Verify Catalog information is reflected in terraform.tfvars

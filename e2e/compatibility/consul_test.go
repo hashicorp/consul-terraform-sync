@@ -31,8 +31,8 @@ const (
 
 	nullTaskName = "null_task"
 
-	defaultWaitForAPI   = 30 * time.Second
-	defaultWaitForEvent = 8 * time.Second
+	defaultWaitForTestReadiness = 30 * time.Second
+	defaultWaitForEvent         = 8 * time.Second
 )
 
 // TestCompatibility_Compile confirms that the compatibility test(s) are
@@ -140,7 +140,7 @@ func testConsulBackendCompatibility(t *testing.T, tempDir string, port int) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
 
 	// Test: ConsulKV backend
@@ -162,7 +162,7 @@ func testServiceInstanceCompatibility(t *testing.T, tempDir string, port int) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
 
 	// Test adding and removing service instances
@@ -227,7 +227,7 @@ func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
 
 	// Test updating service-related values
@@ -320,7 +320,7 @@ func testTagQueryCompatibility(t *testing.T, tempDir string, port int) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
 
 	// Test that filtering by tags
@@ -358,7 +358,7 @@ func testNodeValuesCompatibility(t *testing.T, tempDir string, port int) {
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
-	err := cts.WaitForAPI(defaultWaitForAPI)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
 
 	// Test updating node-related values
