@@ -15,7 +15,7 @@ import (
 // responsible for triggering a task to execute. It uses the task manager to
 // inform of starting / stopping task monitoring as well as executing a task
 type ConditionMonitor struct {
-	// TODO: placeholder. Will convert ReadWrite methods to ConditionMonitor
+	// TODO: placeholder. Will convert TaskManager methods to ConditionMonitor
 }
 
 func (tm *TasksManager) Stop() {

@@ -1,7 +1,7 @@
 //go:build e2e
 // +build e2e
 
-// BenchmarkTasksConcurrent executes the ReadWrite controller directly to
+// BenchmarkTasksConcurrent executes the Daemon controller directly to
 // benchmark tasks running concurrently with the default TF driver. This
 // emulates CTS in daemon mode.
 // $ go test ./e2e/benchmarks -bench=BenchmarkTasksConcurrent_ -tags e2e
@@ -54,9 +54,9 @@ func BenchmarkTasksConcurrent_t50_s50(b *testing.B) {
 }
 
 func benchmarkTasksConcurrent(b *testing.B, bConf benchmarkConfig) {
-	// Benchmarks Run for the ReadWrite controller
+	// Benchmarks Run for the Daemon controller
 	//
-	// ReadWriteController.Run involves executing Terraform apply concurrently
+	// Daemon.Run involves executing Terraform apply concurrently
 	srv := bConf.consul
 	if srv == nil {
 		srv = testutils.NewTestConsulServer(b, testutils.TestConsulServerConfig{
@@ -74,7 +74,7 @@ func benchmarkTasksConcurrent(b *testing.B, bConf benchmarkConfig) {
 
 	conf := generateConf(b, bConf)
 
-	rwCtrl, err := controller.NewReadWrite(conf)
+	rwCtrl, err := controller.NewDaemon(conf)
 	require.NoError(b, err)
 
 	err = rwCtrl.Init(context.Background())

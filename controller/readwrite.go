@@ -10,14 +10,16 @@ import (
 )
 
 var (
-	_ Controller = (*ReadWrite)(nil)
+	_ Controller = (*Daemon)(nil)
 
 	// Number of times to retry attempts
 	defaultRetry = 2
 )
 
-// ReadWrite is the controller to run in read-write mode
-type ReadWrite struct {
+// Daemon is the controller to run CTS as a daemon. It executes the tasks once
+// (once-mode) and then runs the task in long-running mode. It also starts
+// daemon-only features such as the API server
+type Daemon struct {
 	logger logging.Logger
 
 	state        state.Store
@@ -28,8 +30,8 @@ type ReadWrite struct {
 	once bool
 }
 
-// NewReadWrite configures and initializes a new ReadWrite controller
-func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
+// NewDaemon configures and initializes a new Daemon controller
+func NewDaemon(conf *config.Config) (*Daemon, error) {
 	logger := logging.Global().Named(ctrlSystemName)
 
 	state := state.NewInMemoryStore(conf)
@@ -39,7 +41,7 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 		return nil, err
 	}
 
-	return &ReadWrite{
+	return &Daemon{
 		logger:       logger,
 		state:        state,
 		tasksManager: tm,
@@ -48,15 +50,15 @@ func NewReadWrite(conf *config.Config) (*ReadWrite, error) {
 
 // Init initializes the controller before it can be run. Ensures that
 // driver is initializes, works are created for each task.
-func (rw *ReadWrite) Init(ctx context.Context) error {
-	return rw.tasksManager.Init(ctx)
+func (ctrl *Daemon) Init(ctx context.Context) error {
+	return ctrl.tasksManager.Init(ctx)
 }
 
-func (rw *ReadWrite) Run(ctx context.Context) error {
+func (ctrl *Daemon) Run(ctx context.Context) error {
 	// Serve API
-	conf := rw.tasksManager.state.GetConfig()
+	conf := ctrl.tasksManager.state.GetConfig()
 	s, err := api.NewAPI(api.Config{
-		Controller: rw.tasksManager,
+		Controller: ctrl.tasksManager,
 		Port:       config.IntVal(conf.Port),
 		TLS:        conf.TLS,
 	})
@@ -72,15 +74,15 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	}()
 
 	// Run tasks once through once-mode
-	if !rw.once {
-		if err := rw.Once(ctx); err != nil {
+	if !ctrl.once {
+		if err := ctrl.Once(ctx); err != nil {
 			return err
 		}
 	}
 
 	// Run tasks in long-running mode
 	go func() {
-		err := rw.tasksManager.Run(ctx)
+		err := ctrl.tasksManager.Run(ctx)
 		exitCh <- err
 	}()
 
@@ -103,27 +105,27 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 
 // Once runs the tasks once. Intended to only be called by Run() or outside of
 // Run() for the case of benchmarks
-func (rw *ReadWrite) Once(ctx context.Context) error {
+func (ctrl *Daemon) Once(ctx context.Context) error {
 	once := Once{
-		logger:       rw.logger,
-		state:        rw.state,
-		tasksManager: rw.tasksManager,
+		logger:       ctrl.logger,
+		state:        ctrl.state,
+		tasksManager: ctrl.tasksManager,
 	}
 
 	// no need to init or stop Once controller since it shares tasksManager
-	// with ReadWrite controller
+	// with Daemon controller
 	if err := once.Run(ctx); err != nil {
 		return err
 	}
 
-	rw.once = true
+	ctrl.once = true
 	return nil
 }
 
-func (rw *ReadWrite) Stop() {
-	rw.tasksManager.Stop()
+func (ctrl *Daemon) Stop() {
+	ctrl.tasksManager.Stop()
 }
 
-func (rw *ReadWrite) EnableTestMode() <-chan string {
-	return rw.tasksManager.EnableTestMode()
+func (ctrl *Daemon) EnableTestMode() <-chan string {
+	return ctrl.tasksManager.EnableTestMode()
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ReadWrite_Run_long(t *testing.T) {
+func Test_Daemon_Run_long(t *testing.T) {
 	// Only tests long-running mode of Run()
 	t.Parallel()
 
@@ -27,7 +27,7 @@ func Test_ReadWrite_Run_long(t *testing.T) {
 
 	port := testutils.FreePort(t)
 
-	ctl := ReadWrite{once: true}
+	ctl := Daemon{once: true}
 
 	tm := newTestTasksManager()
 	tm.watcher = w
@@ -85,7 +85,7 @@ func Test_ReadWrite_Run_long(t *testing.T) {
 	})
 }
 
-func Test_ReadWrite_Run_once_long_Terraform(t *testing.T) {
+func Test_Daemon_Run_once_long_Terraform(t *testing.T) {
 	// Tests long-running mode behaves as expected with triggers after once
 	// completes
 	t.Parallel()
@@ -106,7 +106,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 
 	st := state.NewInMemoryStore(conf)
 
-	rw := ReadWrite{
+	rw := Daemon{
 		logger: logging.NewNullLogger(),
 		state:  st,
 	}

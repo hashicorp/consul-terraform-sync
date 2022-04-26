@@ -68,7 +68,7 @@ func TestServicesRenderRace(t *testing.T) {
 	require.NoError(t, err)
 
 	// run controller
-	ctrl, err := controller.NewReadWrite(conf)
+	ctrl, err := controller.NewDaemon(conf)
 	defer ctrl.Stop()
 	require.NoError(t, err)
 	err = ctrl.Init(ctx)

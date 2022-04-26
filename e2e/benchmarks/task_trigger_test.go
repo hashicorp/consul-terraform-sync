@@ -40,7 +40,7 @@ func BenchmarkTaskTrigger(b *testing.B) {
 		numServices: 25,
 	})
 
-	rwCtrl, err := controller.NewReadWrite(conf)
+	rwCtrl, err := controller.NewDaemon(conf)
 	require.NoError(b, err)
 	err = rwCtrl.Init(ctx)
 	require.NoError(b, err)

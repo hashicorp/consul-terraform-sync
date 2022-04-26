@@ -249,8 +249,8 @@ func (c *startCommand) Run(args []string) int {
 		logger.Info("setting up controller", "type", "inspect")
 		ctrl, err = controller.NewInspect(conf)
 	} else {
-		logger.Info("setting up controller", "type", "readwrite")
-		ctrl, err = controller.NewReadWrite(conf)
+		logger.Info("setting up controller", "type", "daemon")
+		ctrl, err = controller.NewDaemon(conf)
 	}
 	if err != nil {
 		logger.Error("error setting up controller", "error", err)
