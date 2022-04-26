@@ -261,7 +261,7 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 
 	if c.DeprecatedServices == nil {
 		c.DeprecatedServices = []string{}
-	} else {
+	} else if len(c.DeprecatedServices) > 0 {
 		logger.Warn(servicesFieldLogMsg)
 	}
 
