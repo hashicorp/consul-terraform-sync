@@ -18,7 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ReadWrite_Run(t *testing.T) {
+func Test_ReadWrite_Run_long(t *testing.T) {
+	// Only tests long-running mode of Run()
 	t.Parallel()
 
 	w := new(mocksTmpl.Watcher)
@@ -26,7 +27,7 @@ func Test_ReadWrite_Run(t *testing.T) {
 
 	port := testutils.FreePort(t)
 
-	ctl := ReadWrite{}
+	ctl := ReadWrite{once: true}
 
 	tm := newTestTasksManager()
 	tm.watcher = w
@@ -84,18 +85,19 @@ func Test_ReadWrite_Run(t *testing.T) {
 	})
 }
 
-func Test_ReadWrite_Once_then_Run_Terraform(t *testing.T) {
-	// Tests Run behaves as expected with triggers after once completes
+func Test_ReadWrite_Run_once_long_Terraform(t *testing.T) {
+	// Tests long-running mode behaves as expected with triggers after once
+	// completes
 	t.Parallel()
 
 	driverConf := &config.DriverConfig{
 		Terraform: &config.TerraformConfig{},
 	}
 
-	testOnceThenRun(t, driverConf)
+	testOnceThenLong(t, driverConf)
 }
 
-func testOnceThenRun(t *testing.T, driverConf *config.DriverConfig) {
+func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	port := testutils.FreePort(t)
 	conf := singleTaskConfig()
 	conf.Driver = driverConf
@@ -145,13 +147,7 @@ func testOnceThenRun(t *testing.T, driverConf *config.DriverConfig) {
 	tm.watcher = w
 
 	go func() {
-		err := rw.Once(ctx)
-		if err != nil {
-			errCh <- err
-			return
-		}
-
-		err = rw.Run(ctx)
+		err := rw.Run(ctx)
 		if err != nil {
 			errCh <- err
 		}

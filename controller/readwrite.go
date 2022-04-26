@@ -22,6 +22,10 @@ type ReadWrite struct {
 
 	state        state.Store
 	tasksManager *TasksManager
+
+	// whether or not the tasks have gone through once-mode. intended to be used
+	// by benchmarks to run once-mode separately
+	once bool
 }
 
 // NewReadWrite configures and initializes a new ReadWrite controller
@@ -67,7 +71,14 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 		exitCh <- err
 	}()
 
-	// Run tasks
+	// Run tasks once through once-mode
+	if !rw.once {
+		if err := rw.Once(ctx); err != nil {
+			return err
+		}
+	}
+
+	// Run tasks in long-running mode
 	go func() {
 		err := rw.tasksManager.Run(ctx)
 		exitCh <- err
@@ -90,63 +101,22 @@ func (rw *ReadWrite) Run(ctx context.Context) error {
 	}
 }
 
+// Once runs the tasks once. Intended to only be called by Run() or outside of
+// Run() for the case of benchmarks
 func (rw *ReadWrite) Once(ctx context.Context) error {
-	rw.logger.Info("executing all tasks once through")
-
-	// Stop watching dependencies after once-ing tasks ends
-	ctxWatch, cancelWatch := context.WithCancel(ctx)
-
-	// Stop once-ing tasks early if WatchDep errors
-	ctxOnce, cancelOnce := context.WithCancel(ctx)
-
-	exitBufLen := 2 // watchDep & once-ing tasks
-	exitCh := make(chan error, exitBufLen)
-
-	// start watching dependencies in order to render templates to apply tasks
-	go func() {
-		exitCh <- rw.tasksManager.WatchDep(ctxWatch)
-		cancelOnce()
-	}()
-
-	// run consecutively to keep logs in order
-	go func() {
-		exitCh <- rw.onceConsecutive(ctxOnce)
-		cancelWatch()
-	}()
-
-	counter := 0
-	for {
-		err := <-exitCh
-		counter++
-		if err != nil && err != context.Canceled {
-			// Exit if an error is returned
-			// Once method sends a nil error on completion
-			return err
-		}
-		if counter >= exitBufLen {
-			// Wait for all contexts to cancel
-			return ctx.Err()
-		}
-	}
-}
-
-func (rw *ReadWrite) onceConsecutive(ctx context.Context) error {
-	tasks := rw.state.GetAllTasks()
-	for _, task := range tasks {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			taskName := *task.Name
-			rw.logger.Info("running task once", taskNameLogKey, taskName)
-			if _, err := rw.tasksManager.TaskCreateAndRun(ctx, *task); err != nil {
-				return err
-			}
-			rw.logger.Info("task completed", taskNameLogKey, taskName)
-		}
+	once := Once{
+		logger:       rw.logger,
+		state:        rw.state,
+		tasksManager: rw.tasksManager,
 	}
 
-	rw.logger.Info("all tasks completed once")
+	// no need to init or stop Once controller since it shares tasksManager
+	// with ReadWrite controller
+	if err := once.Run(ctx); err != nil {
+		return err
+	}
+
+	rw.once = true
 	return nil
 }
 
