@@ -2,16 +2,12 @@ package client
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/retry"
 	consulapi "github.com/hashicorp/consul/api"
-	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/hcat"
 )
 
@@ -34,7 +30,6 @@ var _ ConsulClientInterface = (*ConsulClient)(nil)
 // - Easily mocked
 type ConsulClientInterface interface {
 	GetLicense(ctx context.Context, q *consulapi.QueryOptions) (string, error)
-	IsEnterprise(ctx context.Context) (bool, error)
 }
 
 // ConsulClient is a client to the Consul API
@@ -116,62 +111,4 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 	err = c.retry.Do(ctx, f, desc)
 
 	return license, err
-}
-
-// IsEnterprise queries Consul for information about itself, it then
-// parses this information to determine whether the Consul being
-// queried is Enterprise or OSS. Returns true if Consul is Enterprise.
-func (c *ConsulClient) IsEnterprise(ctx context.Context) (bool, error) {
-	c.logger.Debug("checking if connected to Consul Enterprise")
-
-	desc := "consul client get is enterprise"
-	var err error
-	var info ConsulAgentConfig
-
-	f := func(context.Context) error {
-		info, err = c.Agent().Self()
-		if err != nil {
-			info = nil
-			return err
-		}
-		return nil
-	}
-
-	err = c.retry.Do(ctx, f, desc)
-	if err != nil {
-		return false, err
-	}
-
-	ctx = logging.WithContext(ctx, c.logger)
-
-	isEnterprise, err := isConsulEnterprise(ctx, info)
-	if err != nil {
-		return false, fmt.Errorf("unable to parse if Consul is enterprise: %v", err)
-	}
-	return isEnterprise, nil
-}
-
-func isConsulEnterprise(ctx context.Context, info ConsulAgentConfig) (bool, error) {
-	logger := logging.FromContext(ctx)
-	v, ok := info["Config"]["Version"]
-	if !ok {
-		logger.Debug("expected keys, map[Config][Version], to exist", "ConsulAgentConfig", info)
-		return false, errors.New("unable to parse map[Config][Version], keys do not exist")
-	}
-
-	vs, ok := v.(string)
-	if !ok {
-		logger.Debug("expected keys, map[Config][Version], do not map to a string", "ConsulAgentConfig", info["Config"]["Version"])
-		return false, errors.New("unable to parse map[Config][Version], keys do not map to string")
-	}
-
-	ver, err := version.NewVersion(vs)
-	if err != nil {
-		return false, err
-	}
-
-	if strings.Contains(ver.Metadata(), ConsulEnterpriseSignifier) {
-		return true, nil
-	}
-	return false, nil
 }
