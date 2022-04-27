@@ -2,8 +2,14 @@ package client
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"regexp"
+	"strconv"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/retry"
@@ -18,6 +24,22 @@ const (
 )
 
 //go:generate mockery --name=ConsulClientInterface --filename=consul_client.go --output=../mocks/client --tags=enterprise
+
+// NonEnterpriseConsulError represents an error returned
+// if expected enterprise Consul, but enterprise Consul was not found
+type NonEnterpriseConsulError struct {
+	Err error
+}
+
+// Error returns an error string
+func (e *NonEnterpriseConsulError) Error() string {
+	return fmt.Sprintf("consul is not consul enterprise, %v", e.Err)
+}
+
+// Unwrap returns the underlying error
+func (e *NonEnterpriseConsulError) Unwrap() error {
+	return e.Err
+}
 
 var _ ConsulClientInterface = (*ConsulClient)(nil)
 
@@ -39,8 +61,8 @@ type ConsulClient struct {
 	logger logging.Logger
 }
 
-// ConsulAgentConfig represents the response body from Consul /v1/agent/self API endpoint.
-// The response contains configuration and member information of the requested agent.
+// ConsulAgentConfig represents the responseCode body from Consul /v1/agent/self API endpoint.
+// The responseCode contains configuration and member information of the requested agent.
 // Care must always be taken to do type checks when casting, as structure could
 // potentially change over time.
 type ConsulAgentConfig = map[string]map[string]interface{}
@@ -92,6 +114,8 @@ func NewConsulClient(conf *config.ConsulConfig, maxRetry int) (*ConsulClient, er
 }
 
 // GetLicense queries Consul for a signed license, and returns it if available
+// GetLicense is a Consul Enterprise only endpoint, a 404 returned assumes we are connected to OSS Consul
+// GetLicense does not require any ACLs
 func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions) (string, error) {
 	c.logger.Debug("getting license")
 
@@ -100,15 +124,73 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 	var license string
 
 	f := func(context.Context) error {
+		var err error
 		license, err = c.Operator().LicenseGetSigned(q)
+
+		// Process the error by wrapping it in the correct error types
 		if err != nil {
-			license = ""
-			return err
+			statusCode := getStatusCodeFromError(ctx, err)
+
+			// If we get a StatusNotFound assume that this is because CTS
+			// is connected to OSS Consul where this endpoint isn't available
+			// wrap in the appropriate error
+			if statusCode == http.StatusNotFound {
+				err = &NonEnterpriseConsulError{Err: err}
+			}
+
+			// non-retryable errors allows for termination of retries
+			if isStatusCodeRetryable(statusCode) {
+				return err
+			} else {
+				return &retry.NonRetryableError{Err: err}
+			}
 		}
 		return nil
 	}
 
+	var nonEnterpriseConsulError *NonEnterpriseConsulError
 	err = c.retry.Do(ctx, f, desc)
+	if err != nil {
+		if errors.As(err, &nonEnterpriseConsulError) {
+			c.logger.Warn("Unable to get license, this is most likely caused by CTS connecting to OSS Consul")
+		}
+	}
 
 	return license, err
+}
+
+func getStatusCodeFromError(ctx context.Context, err error) int {
+	// Extract the unexpected responseCode substring
+	re := regexp.MustCompile("Unexpected response code: ([0-9]{3})")
+	s := re.FindString(err.Error())
+	if s == "" {
+		return 0
+	}
+
+	// Extract the status code substring from the unexpected responseCode substring
+	re = regexp.MustCompile("[0-9]{3}")
+	s = re.FindString(s)
+	if s == "" {
+		return 0
+	}
+
+	// Convert the status code to an integer
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		logging.FromContext(ctx).Debug("unable to convert string to integer", "error", err)
+		return 0
+	}
+
+	return i
+}
+
+func isStatusCodeRetryable(statusCode int) bool {
+	// 400 status codes are not useful to retry
+	// with exception to 429, `too many requests` which may be useful for retries
+	if api.CheckStatusCodeCategory(api.ClientErrorResponseCategory, statusCode) && statusCode != http.StatusTooManyRequests {
+		return false
+	}
+
+	// Default to retry
+	return true
 }
