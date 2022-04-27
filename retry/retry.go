@@ -16,6 +16,22 @@ const (
 	maxWaitTime    = 15 * time.Minute // 15 minutes
 )
 
+// NonRetryableError represents an error returned
+// if the error should not be retried
+type NonRetryableError struct {
+	Err error
+}
+
+// Error returns an error string
+func (e *NonRetryableError) Error() string {
+	return fmt.Sprintf("this error is not retryable: err %v", e.Err)
+}
+
+// Unwrap returns the underlying error
+func (e *NonRetryableError) Unwrap() error {
+	return e.Err
+}
+
 // Retry handles executing and retrying a function
 type Retry struct {
 	maxRetry int // doesn't count initial try, set to -1 for infinite retries
@@ -40,7 +56,11 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 	var errs error
 
 	err := f(ctx)
+	var nonRetryableError *NonRetryableError
 	if err == nil || r.maxRetry == 0 {
+		return err
+	} else if errors.As(err, &nonRetryableError) {
+		r.logger.Debug("received non retryable error")
 		return err
 	}
 
@@ -64,12 +84,17 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 				return nil
 			}
 
-			err = fmt.Errorf("retry attempt #%d failed '%s'", attempt, err)
+			err = fmt.Errorf("retry attempt #%d failed '%w'", attempt, err)
 
 			if errs == nil {
 				errs = err
 			} else {
 				errs = errors.Wrap(errs, err.Error())
+			}
+
+			if errors.As(err, &nonRetryableError) {
+				r.logger.Debug("received non retryable error")
+				return errs
 			}
 
 			wait := r.waitTime(attempt)
