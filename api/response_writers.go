@@ -14,12 +14,12 @@ const (
 	ServerErrorResponseCategory = 5 // category for http status codes from 500-599
 )
 
-// checkStatusCodeCategory checks if a given status code matches
+// CheckStatusCodeCategory checks if a given status code matches
 // a particular category. It does this by taking the first digit
 // of a category (i.e. 4 for 400, 401, etc.) and checking if the first
 // digit of the status code matches.
-// E.g. category = 4, statusCode = 401 checkStatusCodeCategory returns true
-func checkStatusCodeCategory(category int, statusCode int) bool {
+// E.g. category = 4, statusCode = 401 CheckStatusCodeCategory returns true
+func CheckStatusCodeCategory(category int, statusCode int) bool {
 	var i int
 	for i = statusCode; i >= 10; i = i / 10 {
 	}
@@ -57,7 +57,7 @@ func (r *plaintextErrorToJsonResponseWriter) WriteHeader(code int) {
 // Write checks if the status code is a 4xx and if it is plaintext. If it is plaintext,
 // it converts the error into the correct JSON error response
 func (r *plaintextErrorToJsonResponseWriter) Write(p []byte) (int, error) {
-	if checkStatusCodeCategory(ClientErrorResponseCategory, r.statusCode) {
+	if CheckStatusCodeCategory(ClientErrorResponseCategory, r.statusCode) {
 		var errResp oapigen.ErrorResponse
 		if err := json.Unmarshal(p, &errResp); err != nil {
 			msg := strings.TrimSpace(string(p))
