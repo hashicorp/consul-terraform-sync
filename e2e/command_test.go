@@ -144,6 +144,11 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 
 			cts := ctsSetup(t, srv, tempDir, disabledTaskConfig())
 
+			// ctsSetup WaitForReadiness doesn't wait for disabled tasks to be added to
+			// driver which can cause issues for tests that modifies the disabled tasks
+			// too soon. Add manual wait.
+			time.Sleep(defaultWaitForTestReadiness)
+
 			subcmd := []string{"task", "enable",
 				fmt.Sprintf("-%s=%d", command.FlagPort, cts.Port()),
 				fmt.Sprintf("-%s=%s", command.FlagHTTPAddr, cts.FullAddress()),

@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -288,13 +289,30 @@ func TestE2EValidateError(t *testing.T) {
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
 		appendString(conditionTask)
 	config.write(t, configPath)
-	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 
-	err := cmd.Run()
-	require.Error(t, err)
+	errCh := make(chan error)
+	go func() {
+		if err := cmd.Run(); err != nil {
+			errCh <- err
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		require.Error(t, err)
+	case <-time.After(defaultWaitForTestReadiness):
+		t.Log(buf.String())
+		t.Fatal(fmt.Sprintf("TestE2EValidateError should not take more than %s",
+			defaultWaitForTestReadiness))
+	}
 
 	assert.Contains(t, buf.String(), fmt.Sprintf(`module for task "%s" is missing the "services" variable`, taskName))
 	require.Contains(t,

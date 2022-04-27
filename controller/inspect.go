@@ -9,24 +9,25 @@ import (
 )
 
 var (
-	_ Controller = (*ReadOnly)(nil)
+	_ Controller = (*Inspect)(nil)
 
-	// MuteReadOnlyController is used to toggle muting the ReadOnlyController
+	// MuteInspectController is used to toggle muting the InspectController
 	// from forcing Terraform output, useful for benchmarks
-	MuteReadOnlyController bool
+	MuteInspectController bool
 )
 
-// ReadOnly is the controller to run in read-only mode
-type ReadOnly struct {
+// Inspect is the controller to run in inspect mode
+type Inspect struct {
 	logger logging.Logger
 
 	state        state.Store
 	tasksManager *TasksManager
 }
 
-// NewReadOnly configures and initializes a new ReadOnly controller
-func NewReadOnly(conf *config.Config) (*ReadOnly, error) {
+// NewInspect configures and initializes a new inspect controller
+func NewInspect(conf *config.Config) (*Inspect, error) {
 	logger := logging.Global().Named(ctrlSystemName)
+	logger.Info("setting up controller", "type", "inspect")
 
 	state := state.NewInMemoryStore(conf)
 
@@ -35,7 +36,7 @@ func NewReadOnly(conf *config.Config) (*ReadOnly, error) {
 		return nil, err
 	}
 
-	return &ReadOnly{
+	return &Inspect{
 		logger:       logger,
 		state:        state,
 		tasksManager: tm,
@@ -43,12 +44,12 @@ func NewReadOnly(conf *config.Config) (*ReadOnly, error) {
 }
 
 // Init initializes the controller before it can be run
-func (ro *ReadOnly) Init(ctx context.Context) error {
-	return ro.tasksManager.Init(ctx)
+func (ctrl *Inspect) Init(ctx context.Context) error {
+	return ctrl.tasksManager.Init(ctx)
 }
 
-func (ro *ReadOnly) Run(ctx context.Context) error {
-	ro.logger.Info("inspecting all tasks")
+func (ctrl *Inspect) Run(ctx context.Context) error {
+	ctrl.logger.Info("inspecting all tasks")
 
 	// Stop watching dependencies after inspecting tasks ends
 	ctxWatch, cancelWatch := context.WithCancel(ctx)
@@ -61,13 +62,13 @@ func (ro *ReadOnly) Run(ctx context.Context) error {
 
 	// start watching dependencies in order to render templates to plan tasks
 	go func() {
-		exitCh <- ro.tasksManager.WatchDep(ctxWatch)
+		exitCh <- ctrl.tasksManager.WatchDep(ctxWatch)
 		cancelInspect()
 	}()
 
 	// always inspect consecutively to keep inspect logs in order
 	go func() {
-		exitCh <- ro.inspectConsecutive(ctxInspect)
+		exitCh <- ctrl.inspectConsecutive(ctxInspect)
 		cancelWatch()
 	}()
 
@@ -87,39 +88,39 @@ func (ro *ReadOnly) Run(ctx context.Context) error {
 	}
 }
 
-func (ro *ReadOnly) inspectConsecutive(ctx context.Context) error {
-	tasks := ro.state.GetAllTasks()
+func (ctrl *Inspect) inspectConsecutive(ctx context.Context) error {
+	tasks := ctrl.state.GetAllTasks()
 	for _, task := range tasks {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 			taskName := *task.Name
-			ro.logger.Info("inspecting task", taskNameLogKey, taskName)
-			_, plan, url, err := ro.tasksManager.TaskInspect(ctx, *task)
+			ctrl.logger.Info("inspecting task", taskNameLogKey, taskName)
+			_, plan, url, err := ctrl.tasksManager.TaskInspect(ctx, *task)
 			if err != nil {
 				return err
 			}
 
-			if !MuteReadOnlyController {
+			if !MuteInspectController {
 				// output plan to console
 				if url != "" {
-					ro.logger.Info("inspection results", taskNameLogKey,
+					ctrl.logger.Info("inspection results", taskNameLogKey,
 						taskName, "plan", plan, "url", url)
 				} else {
-					ro.logger.Info("inspection results", taskNameLogKey,
+					ctrl.logger.Info("inspection results", taskNameLogKey,
 						taskName, "plan", plan)
 				}
 			}
 
-			ro.logger.Info("inspected task", taskNameLogKey, taskName)
+			ctrl.logger.Info("inspected task", taskNameLogKey, taskName)
 		}
 	}
 
-	ro.logger.Info("all tasks inspected")
+	ctrl.logger.Info("all tasks inspected")
 	return nil
 }
 
-func (ro *ReadOnly) Stop() {
-	ro.tasksManager.Stop()
+func (ctrl *Inspect) Stop() {
+	ctrl.tasksManager.Stop()
 }

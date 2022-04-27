@@ -13,79 +13,12 @@ import (
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/templates"
-	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ReadWrite_Run(t *testing.T) {
-	t.Parallel()
-
-	w := new(mocksTmpl.Watcher)
-	w.On("Watch", mock.Anything, mock.Anything).Return(nil)
-
-	port := testutils.FreePort(t)
-
-	ctl := ReadWrite{}
-
-	tm := newTestTasksManager()
-	tm.watcher = w
-	tm.state = state.NewInMemoryStore(&config.Config{
-		Port: config.Int(port),
-	})
-	ctl.tasksManager = &tm
-
-	t.Run("cancel exits successfully", func(t *testing.T) {
-		errCh := make(chan error)
-		ctx, cancel := context.WithCancel(context.Background())
-
-		go func() {
-			if err := ctl.Run(ctx); err != nil {
-				errCh <- err
-			}
-		}()
-		cancel()
-
-		select {
-		case err := <-errCh:
-			// Confirm that exit is due to context cancel
-			assert.Equal(t, err, context.Canceled)
-		case <-time.After(time.Second * 15):
-			t.Fatal("Run did not exit properly from cancelling context")
-		}
-	})
-
-	t.Run("error exits successfully", func(t *testing.T) {
-		errCh := make(chan error)
-		ctx, cancel := context.WithCancel(context.Background())
-
-		go func() {
-			if err := ctl.Run(ctx); err != nil {
-				errCh <- err
-			}
-		}()
-
-		// Re-run controller to create an "address already in use" error when
-		// trying to serve api at same port
-		go func() {
-			if err := ctl.Run(ctx); err != nil {
-				errCh <- err
-			}
-		}()
-		defer cancel()
-
-		select {
-		case err := <-errCh:
-			// Confirm error was received and successfully exit
-			assert.Contains(t, err.Error(), "address already in use")
-		case <-time.After(time.Second * 5):
-			t.Fatal("Run did not error and exit properly")
-		}
-	})
-}
-
-func Test_ReadWrite_Once_Terraform(t *testing.T) {
+func Test_Once_Run_Terraform(t *testing.T) {
 	t.Parallel()
 
 	expectedErr := errors.New("test error")
@@ -152,7 +85,7 @@ func Test_ReadWrite_Once_Terraform(t *testing.T) {
 	}
 }
 
-func Test_ReadWrite_Once_WatchDep_errors_Terraform(t *testing.T) {
+func Test_Once_Run_WatchDep_errors_Terraform(t *testing.T) {
 	// Mock the situation where WatchDep WaitCh errors which can cause
 	// driver.RenderTemplate() to always returns false. Confirm on WatchDep
 	// error, that creating/running tasks does not hang and exits.
@@ -165,18 +98,7 @@ func Test_ReadWrite_Once_WatchDep_errors_Terraform(t *testing.T) {
 	testOnceWatchDepErrors(t, driverConf)
 }
 
-func Test_ReadWrite_Once_then_Run_Terraform(t *testing.T) {
-	// Tests Run behaves as expected with triggers after once completes
-	t.Parallel()
-
-	driverConf := &config.DriverConfig{
-		Terraform: &config.TerraformConfig{},
-	}
-
-	testOnceThenRun(t, driverConf)
-}
-
-func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
+func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 	// - Controller will try to create and run 5 tasks
 	// - Mock a task to take 2 seconds to create and run
 	// - Cancel context after 1 second. Confirm only 1 task created and run
@@ -185,7 +107,7 @@ func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
 	conf := multipleTaskConfig(5)
 	ss := state.NewInMemoryStore(conf)
 
-	rw := ReadWrite{
+	ctrl := Once{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -193,7 +115,7 @@ func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	rw.tasksManager = &tm
+	ctrl.tasksManager = &tm
 
 	// Set up driver factory
 	tm.factory.initConf = conf
@@ -213,7 +135,7 @@ func Test_ReadWrite_onceConsecutive_context_canceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		err := rw.onceConsecutive(ctx)
+		err := ctrl.onceConsecutive(ctx)
 		if err != nil {
 			errCh <- err
 		}
@@ -244,7 +166,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	conf.Driver = driverConf
 	ss := state.NewInMemoryStore(conf)
 
-	rw := ReadWrite{
+	ctrl := Once{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -253,7 +175,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	tm := newTestTasksManager()
 	tm.state = ss
 	tm.deleteCh = make(chan string, 1)
-	rw.tasksManager = &tm
+	ctrl.tasksManager = &tm
 
 	// Mock watcher
 	errCh := make(chan error)
@@ -270,7 +192,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 		return setupNewDriver(task), nil
 	}
 
-	err := rw.Once(context.Background())
+	err := ctrl.Run(context.Background())
 
 	w.AssertExpectations(t)
 
@@ -292,7 +214,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 
 	ss := state.NewInMemoryStore(conf)
 
-	rw := ReadWrite{
+	ctrl := Once{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -300,7 +222,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	rw.tasksManager = &tm
+	ctrl.tasksManager = &tm
 
 	// Mock watcher
 	expectedErr := errors.New("error!")
@@ -327,7 +249,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 	defer cancel()
 	errCh := make(chan error)
 	go func() {
-		err := rw.Once(ctx)
+		err := ctrl.Run(ctx)
 		if err != nil {
 			errCh <- err
 		}
@@ -342,89 +264,6 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 	}
 
 	w.AssertExpectations(t)
-	for _, d := range tm.drivers.Map() {
-		d.(*mocksD.Driver).AssertExpectations(t)
-	}
-}
-
-func testOnceThenRun(t *testing.T, driverConf *config.DriverConfig) {
-	port := testutils.FreePort(t)
-	conf := singleTaskConfig()
-	conf.Driver = driverConf
-	conf.Port = config.Int(port)
-	conf.Finalize()
-
-	st := state.NewInMemoryStore(conf)
-
-	rw := ReadWrite{
-		logger: logging.NewNullLogger(),
-		state:  st,
-	}
-
-	// Setup taskmanager
-	tm := newTestTasksManager()
-	tm.watcherCh = make(chan string, 5)
-	tm.state = st
-	rw.tasksManager = &tm
-
-	// Mock driver
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
-		d := new(mocksD.Driver)
-		d.On("Task").Return(task)
-		d.On("TemplateIDs").Return([]string{"{{tmpl}}"})
-		d.On("RenderTemplate", mock.Anything).Return(true, nil)
-		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
-		d.On("ApplyTask", mock.Anything).Return(nil)
-		d.On("OverrideNotifier").Return().Once()
-		d.On("SetBufferPeriod").Return().Once()
-		return d, nil
-	}
-
-	// Setup variables for testing
-	errCh := make(chan error)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	completedTasksCh := tm.EnableTestMode()
-
-	// Mock watcher
-	w := new(mocksTmpl.Watcher)
-	waitErrCh := make(chan error)
-	var waitErrChRc <-chan error = waitErrCh
-	go func() { errCh <- nil }()
-	w.On("WaitCh", mock.Anything).Return(waitErrChRc).Once()
-	w.On("Size").Return(5)
-	w.On("Watch", ctx, tm.watcherCh).Return(nil)
-	tm.watcher = w
-
-	go func() {
-		err := rw.Once(ctx)
-		if err != nil {
-			errCh <- err
-			return
-		}
-
-		err = rw.Run(ctx)
-		if err != nil {
-			errCh <- err
-		}
-	}()
-
-	// Emulate triggers to evaluate task completion
-	for i := 0; i < 5; i++ {
-		tm.watcherCh <- "{{tmpl}}"
-		select {
-		case taskName := <-completedTasksCh:
-			assert.Equal(t, "task", taskName)
-
-		case err := <-errCh:
-			require.NoError(t, err)
-		case <-ctx.Done():
-			assert.NoError(t, ctx.Err(), "Context should not timeout. Once and Run usage of Watcher does not match the expected triggers.")
-		}
-	}
-
-	// Don't w.AssertExpectations(). Race condition when Watch() is called
-	// for rw.Run
 	for _, d := range tm.drivers.Map() {
 		d.(*mocksD.Driver).AssertExpectations(t)
 	}

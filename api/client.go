@@ -181,6 +181,11 @@ func (c *Client) Scheme() string {
 // when all enabled tasks have been run once by polling the /v1/status/tasks
 // endpoint. Tasks that have not run will have an unknown status. This should
 // only be use if no runtime changes are being actively made.
+//
+// Note: this does not wait for disabled tasks to initialize. Tests that start
+// up with only a disabled task and then modify the disabled tasks will need to
+// add an extra wait. This can be fixed after we support more task status
+// information e.g. task initialization.
 func (c *Client) WaitForTestReadiness(timeout time.Duration) error {
 	polling := make(chan struct{})
 	stopPolling := make(chan struct{})

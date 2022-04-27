@@ -27,11 +27,6 @@ type Controller interface {
 	Stop()
 }
 
-// Oncer describes the interface a controller that can run in once mode
-type Oncer interface {
-	Once(ctx context.Context) error
-}
-
 // InstallDriver installs necessary drivers based on user configuration.
 func InstallDriver(ctx context.Context, conf *config.Config) error {
 	if conf.Driver.Terraform != nil {
