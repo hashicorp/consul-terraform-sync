@@ -22,6 +22,27 @@ servers:
       port:
         default: '8558'
 paths:
+  /v1/health:
+    get:
+      summary: Gets health status
+      operationId: getHealth
+      tags:
+        - health
+      description: Checks the health of CTS
+      responses:
+        '200':
+          description: CTS is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoodHealthCheckResponse'
+        default:
+          description: CTS is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadHealthCheckResponse'
+
   /v1/tasks:
     post:
       summary: Creates a new task
@@ -86,6 +107,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
   /v1/tasks/{name}:
     delete:
       summary: Marks a task for deletion
@@ -500,3 +522,19 @@ components:
           example: "this is an error message"
       required:
         - message
+
+    GoodHealthCheckResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+
+    BadHealthCheckResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+      required:
+        - error

@@ -136,6 +136,36 @@ func (_m *ClientWithResponsesInterface) GetAllTasksWithResponse(ctx context.Cont
 	return r0, r1
 }
 
+// GetHealthWithResponse provides a mock function with given fields: ctx, reqEditors
+func (_m *ClientWithResponsesInterface) GetHealthWithResponse(ctx context.Context, reqEditors ...oapigen.RequestEditorFn) (*oapigen.GetHealthResponse, error) {
+	_va := make([]interface{}, len(reqEditors))
+	for _i := range reqEditors {
+		_va[_i] = reqEditors[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *oapigen.GetHealthResponse
+	if rf, ok := ret.Get(0).(func(context.Context, ...oapigen.RequestEditorFn) *oapigen.GetHealthResponse); ok {
+		r0 = rf(ctx, reqEditors...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*oapigen.GetHealthResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, ...oapigen.RequestEditorFn) error); ok {
+		r1 = rf(ctx, reqEditors...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTaskByNameWithResponse provides a mock function with given fields: ctx, name, reqEditors
 func (_m *ClientWithResponsesInterface) GetTaskByNameWithResponse(ctx context.Context, name string, reqEditors ...oapigen.RequestEditorFn) (*oapigen.GetTaskByNameResponse, error) {
 	_va := make([]interface{}, len(reqEditors))
