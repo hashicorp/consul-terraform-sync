@@ -24,7 +24,7 @@ type NonRetryableError struct {
 
 // Error returns an error string
 func (e *NonRetryableError) Error() string {
-	return fmt.Sprintf("this error is not retryable: err %v", e.Err)
+	return fmt.Sprintf("this error is not retryable: %v", e.Err)
 }
 
 // Unwrap returns the underlying error
