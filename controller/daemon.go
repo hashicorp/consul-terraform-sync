@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	"github.com/hashicorp/consul-terraform-sync/manager"
 	"github.com/hashicorp/consul-terraform-sync/state"
 )
 
@@ -35,16 +36,16 @@ func NewDaemon(conf *config.Config) (*Daemon, error) {
 	logger := logging.Global().Named(ctrlSystemName)
 	logger.Info("setting up controller", "type", "daemon")
 
-	state := state.NewInMemoryStore(conf)
+	s := state.NewInMemoryStore(conf)
 
-	tm, err := NewTasksManager(conf, state)
+	tm, err := NewTasksManager(conf, s)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Daemon{
 		logger:       logger,
-		state:        state,
+		state:        s,
 		tasksManager: tm,
 	}, nil
 }
@@ -60,6 +61,7 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 	conf := ctrl.tasksManager.state.GetConfig()
 	s, err := api.NewAPI(api.Config{
 		Controller: ctrl.tasksManager,
+		Health:     &manager.BasicHealth{},
 		Port:       config.IntVal(conf.Port),
 		TLS:        conf.TLS,
 	})
