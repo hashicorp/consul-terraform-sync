@@ -2,6 +2,7 @@
   "log_level": "ERR",
   "port": "8502",
   "working_dir": "working",
+  "id": "cts-123",
   "syslog": {
     "enabled": true,
     "name": "syslog"
@@ -110,7 +111,7 @@
             "path": "key-path",
             "recurse": true,
             "datacenter": "dc2",
-            "namespace": "ns2"  
+            "namespace": "ns2"
           }
         }
       ]

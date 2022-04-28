@@ -26,6 +26,7 @@ var (
 		LogLevel:   String("ERR"),
 		Port:       Int(8502),
 		WorkingDir: String("working"),
+		ID:         String("cts-123"),
 		Syslog: &SyslogConfig{
 			Enabled: Bool(true),
 			Name:    String("syslog"),
@@ -385,6 +386,15 @@ func TestConfig_Finalize(t *testing.T) {
 
 	c := longConfig.Copy()
 	c.Finalize()
+
+	// Verify that ID is not nil, then hardcode since we don't know what
+	// the exact genenerated value would be. Allows us to still use
+	// assert.Equal to check all other values.
+	assert.NotNil(t, c.ID)
+	id := "cts-123"
+	c.ID = &id
+	expected.ID = &id
+
 	assert.Equal(t, expected, c)
 }
 

@@ -195,7 +195,12 @@ func (c *startCommand) Run(args []string) int {
 		logger.Error("error building configuration", "error", err)
 		os.Exit(ExitCodeConfigError)
 	}
-	conf.Finalize()
+
+	err = conf.Finalize()
+	if err != nil {
+		logger.Error("error finalzing configuration", "error", err)
+		os.Exit(ExitCodeConfigError)
+	}
 
 	if err := conf.Validate(); err != nil {
 		logger.Error("error validating configuration", "error", err)

@@ -1,6 +1,7 @@
 log_level = "ERR"
 port = 8502
 working_dir = "working"
+id = "cts-123"
 
 syslog {
   enabled = true
