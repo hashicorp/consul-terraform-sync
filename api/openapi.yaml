@@ -22,6 +22,25 @@ servers:
       port:
         default: '8558'
 paths:
+  /v1/health:
+    get:
+      summary: Gets health status
+      operationId: getHealth
+      description: Checks the health of CTS
+      responses:
+        '200':
+          description: CTS is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoodHealthCheckResponse'
+        default:
+          description: CTS is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadHealthCheckResponse'
+
   /v1/tasks:
     post:
       summary: Creates a new task
@@ -500,3 +519,29 @@ components:
           example: "this is an error message"
       required:
         - message
+
+    Timestamp:
+      type: string
+      description: Date and time (RFC 3339) representing the UTC timestamp of the health check
+      example: 2021-10-23T15:05:37Z
+
+    GoodHealthCheckResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        timestamp:
+          $ref: '#/components/schemas/Timestamp'
+      required:
+        - timestamp
+
+    BadHealthCheckResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        timestamp:
+          $ref: '#/components/schemas/Timestamp'
+        error:
+          $ref: '#/components/schemas/Error'
+      required:
+        - timestamp
+        - error
