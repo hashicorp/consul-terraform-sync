@@ -673,20 +673,20 @@ func Test_TasksManager_CheckApply(t *testing.T) {
 			}
 
 			assert.Equal(t, 1, len(events))
-			event := events[0]
-			assert.Equal(t, tc.taskName, event.TaskName)
-			assert.False(t, event.StartTime.IsZero())
-			assert.False(t, event.EndTime.IsZero())
+			e := events[0]
+			assert.Equal(t, tc.taskName, e.TaskName)
+			assert.False(t, e.StartTime.IsZero())
+			assert.False(t, e.EndTime.IsZero())
 
 			if tc.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tc.name)
-				assert.False(t, event.Success)
-				require.NotNil(t, event.EventError)
-				assert.Contains(t, event.EventError.Message, tc.name)
+				assert.False(t, e.Success)
+				require.NotNil(t, e.EventError)
+				assert.Contains(t, e.EventError.Message, tc.name)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, event.Success)
+				assert.True(t, e.Success)
 			}
 		})
 	}

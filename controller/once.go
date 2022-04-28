@@ -25,16 +25,16 @@ func NewOnce(conf *config.Config) (*Once, error) {
 	logger := logging.Global().Named(ctrlSystemName)
 	logger.Info("setting up controller", "type", "once")
 
-	state := state.NewInMemoryStore(conf)
+	s := state.NewInMemoryStore(conf)
 
-	tm, err := NewTasksManager(conf, state)
+	tm, err := NewTasksManager(conf, s)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Once{
 		logger:       logger,
-		state:        state,
+		state:        s,
 		tasksManager: tm,
 	}, nil
 }

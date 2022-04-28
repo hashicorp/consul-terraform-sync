@@ -34,8 +34,9 @@ type TasksManager struct {
 
 	// scheduleStartCh is used to coordinate scheduled tasks created via the API
 	scheduleStartCh chan driver.Driver
+
 	// scheduleStopChs is a map of channels used to stop scheduled tasks
-	scheduleStopChs map[string](chan struct{})
+	scheduleStopChs map[string]chan struct{}
 
 	// deleteCh is used to coordinate task deletion via the API
 	deleteCh chan string
@@ -70,7 +71,7 @@ func NewTasksManager(conf *config.Config, state state.Store) (*TasksManager, err
 		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
 		deleteCh:        make(chan string, 10),        // arbitrarily chosen size
-		scheduleStopChs: make(map[string](chan struct{})),
+		scheduleStopChs: make(map[string]chan struct{}),
 	}, nil
 }
 
@@ -85,11 +86,11 @@ func (tm *TasksManager) Config() config.Config {
 	return tm.state.GetConfig()
 }
 
-func (tm *TasksManager) Events(ctx context.Context, taskName string) (map[string][]event.Event, error) {
+func (tm *TasksManager) Events(_ context.Context, taskName string) (map[string][]event.Event, error) {
 	return tm.state.GetTaskEvents(taskName), nil
 }
 
-func (tm *TasksManager) Task(ctx context.Context, taskName string) (config.TaskConfig, error) {
+func (tm *TasksManager) Task(_ context.Context, taskName string) (config.TaskConfig, error) {
 	// TODO handle ctx while waiting for state lock if it is currently active
 	conf, ok := tm.state.GetTask(taskName)
 	if ok {
@@ -99,7 +100,7 @@ func (tm *TasksManager) Task(ctx context.Context, taskName string) (config.TaskC
 	return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
 }
 
-func (tm *TasksManager) Tasks(ctx context.Context) ([]config.TaskConfig, error) {
+func (tm *TasksManager) Tasks(_ context.Context) ([]config.TaskConfig, error) {
 	// TODO handle ctx while waiting for state lock if it is currently active
 	tasks := tm.state.GetAllTasks()
 
@@ -135,7 +136,7 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 }
 
 // TaskDelete marks a task for deletion
-func (tm *TasksManager) TaskDelete(ctx context.Context, name string) error {
+func (tm *TasksManager) TaskDelete(_ context.Context, name string) error {
 	logger := tm.logger.With(taskNameLogKey, name)
 	if tm.drivers.IsMarkedForDeletion(name) {
 		logger.Debug("task is already marked for deletion")
