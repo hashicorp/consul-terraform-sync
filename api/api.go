@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/health"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-rootcerts"
@@ -61,6 +62,7 @@ const (
 // API supports api requests to the cts binary
 type API struct {
 	ctrl    Server
+	health  health.Checker
 	port    int
 	version string
 	srv     *http.Server
@@ -71,6 +73,7 @@ type Config struct {
 	Port       int
 	TLS        *config.CTSTLSConfig
 	Controller Server
+	Health     health.Checker
 }
 
 // NewAPI create a new API object
@@ -78,6 +81,7 @@ func NewAPI(conf Config) (*API, error) {
 	logger := logging.Global().Named(logSystemName)
 	api := &API{
 		ctrl:    conf.Controller,
+		health:  conf.Health,
 		port:    conf.Port,
 		version: defaultAPIVersion,
 		tls:     conf.TLS,
@@ -118,7 +122,9 @@ func NewAPI(conf Config) (*API, error) {
 		// Generated Endpoints
 		server := Handlers{
 			TaskLifeCycleHandler: NewTaskLifeCycleHandler(api.ctrl),
+			HealthHandler:        NewHealthHandler(api.health),
 		}
+
 		oapigen.HandlerFromMux(server, r)
 	})
 

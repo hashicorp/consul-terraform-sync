@@ -19,10 +19,11 @@ const (
 // the handler to adhere to the generated server interface
 type Handlers struct {
 	*TaskLifeCycleHandler
+	*HealthHandler
 }
 
-//go:generate oapi-codegen  -package oapigen -generate types -o oapigen/types.go openapi.yaml
-//go:generate oapi-codegen  -package oapigen -generate chi-server,spec -o oapigen/server.go openapi.yaml
+//go:generate oapi-codegen -package oapigen -generate types -o oapigen/types.go openapi.yaml
+//go:generate oapi-codegen -package oapigen -generate chi-server,spec -o oapigen/server.go openapi.yaml
 
 // writeResponse sets headers and JSON encodes the response body in the response writer
 func writeResponse(w http.ResponseWriter, r *http.Request, code int, resp interface{}) {
