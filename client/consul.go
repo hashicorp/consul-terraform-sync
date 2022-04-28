@@ -21,7 +21,7 @@ const (
 	consulSubsystemName       = "consul"
 )
 
-//go:generate mockery --name=ConsulClientInterface --filename=consul_client.go --output=../mocks/client --tags=enterprise
+//go:generate mockery --name=ConsulClientInterface --filename=consul.go --output=../mocks/client --tags=enterprise
 
 var _ ConsulClientInterface = (*ConsulClient)(nil)
 
@@ -110,6 +110,7 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 			license = ""
 			return err
 		}
+
 		return nil
 	}
 
