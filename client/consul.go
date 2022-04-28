@@ -18,10 +18,11 @@ import (
 )
 
 const (
-	ConsulEnterpriseSignifier = "ent"
-	ConsulDefaultMaxRetry     = 8 // to be consistent with hcat retries
-	consulSubsystemName       = "consul"
+	ConsulDefaultMaxRetry = 8 // to be consistent with hcat retries
+	consulSubsystemName   = "consul"
 )
+
+var regexUnexpectedResponseCode = regexp.MustCompile("Unexpected response code: ([0-9]{3})")
 
 //go:generate mockery --name=ConsulClientInterface --filename=consul_client.go --output=../mocks/client --tags=enterprise
 
@@ -62,7 +63,7 @@ type ConsulClient struct {
 }
 
 // ConsulAgentConfig represents the responseCode body from Consul /v1/agent/self API endpoint.
-// The responseCode contains configuration and member information of the requested agent.
+// The response contains configuration and member information of the requested agent.
 // Care must always be taken to do type checks when casting, as structure could
 // potentially change over time.
 type ConsulAgentConfig = map[string]map[string]interface{}
@@ -129,7 +130,7 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 
 		// Process the error by wrapping it in the correct error types
 		if err != nil {
-			statusCode := getStatusCodeFromError(ctx, err)
+			statusCode := getResponseCodeFromError(ctx, err)
 
 			// If we get a StatusNotFound assume that this is because CTS
 			// is connected to OSS Consul where this endpoint isn't available
@@ -139,11 +140,11 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 			}
 
 			// non-retryable errors allows for termination of retries
-			if isStatusCodeRetryable(statusCode) {
-				return err
-			} else {
-				return &retry.NonRetryableError{Err: err}
+			if !isResponseCodeRetryable(statusCode) {
+				err = &retry.NonRetryableError{Err: err}
 			}
+
+			return err
 		}
 		return nil
 	}
@@ -159,22 +160,17 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 	return license, err
 }
 
-func getStatusCodeFromError(ctx context.Context, err error) int {
-	// Extract the unexpected responseCode substring
-	re := regexp.MustCompile("Unexpected response code: ([0-9]{3})")
-	s := re.FindString(err.Error())
+func getResponseCodeFromError(ctx context.Context, err error) int {
+	// Extract the unexpected response substring
+	s := regexUnexpectedResponseCode.FindString(err.Error())
 	if s == "" {
 		return 0
 	}
 
-	// Extract the status code substring from the unexpected responseCode substring
-	re = regexp.MustCompile("[0-9]{3}")
-	s = re.FindString(s)
-	if s == "" {
-		return 0
-	}
+	// Extract the response code substring from the unexpected response substring
+	s = s[len(s)-3:]
 
-	// Convert the status code to an integer
+	// Convert the response code to an integer
 	i, err := strconv.Atoi(s)
 	if err != nil {
 		logging.FromContext(ctx).Debug("unable to convert string to integer", "error", err)
@@ -184,8 +180,8 @@ func getStatusCodeFromError(ctx context.Context, err error) int {
 	return i
 }
 
-func isStatusCodeRetryable(statusCode int) bool {
-	// 400 status codes are not useful to retry
+func isResponseCodeRetryable(statusCode int) bool {
+	// 400 response codes are not useful to retry
 	// with exception to 429, `too many requests` which may be useful for retries
 	if api.CheckStatusCodeCategory(api.ClientErrorResponseCategory, statusCode) && statusCode != http.StatusTooManyRequests {
 		return false
