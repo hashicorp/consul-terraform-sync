@@ -24,7 +24,7 @@ const (
 
 var regexUnexpectedResponseCode = regexp.MustCompile("Unexpected response code: ([0-9]{3})")
 
-//go:generate mockery --name=ConsulClientInterface --filename=consul_client.go --output=../mocks/client --tags=enterprise
+//go:generate mockery --name=ConsulClientInterface --filename=consul.go --output=../mocks/client --tags=enterprise
 
 // NonEnterpriseConsulError represents an error returned
 // if expected enterprise Consul, but enterprise Consul was not found
