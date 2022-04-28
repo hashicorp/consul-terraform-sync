@@ -46,6 +46,10 @@ consul {
     max_idle_conns_per_host = 100
     tls_handshake_timeout = "10s"
   }
+  self_registration {
+    enabled = true
+    namespace = "test-ns"
+  }
 }
 
 driver "terraform" {

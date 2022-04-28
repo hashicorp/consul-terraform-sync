@@ -56,6 +56,10 @@ var (
 				MaxIdleConnsPerHost: Int(100),
 				TLSHandshakeTimeout: TimeDuration(10 * time.Second),
 			},
+			SelfRegistration: &SelfRegistrationConfig{
+				Enabled:   Bool(true),
+				Namespace: String("test-ns"),
+			},
 		},
 		TLS: &CTSTLSConfig{
 			Enabled:        Bool(true),

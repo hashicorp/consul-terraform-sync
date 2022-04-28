@@ -36,15 +36,19 @@ type ConsulConfig struct {
 
 	// Transport configures the low-level network connection details.
 	Transport *TransportConfig `mapstructure:"transport"`
+
+	// SelfRegistration configures the self-registration as a service with Consul
+	SelfRegistration *SelfRegistrationConfig `mapstructure:"self_registration"`
 }
 
 // DefaultConsulConfig returns the default configuration struct
 func DefaultConsulConfig() *ConsulConfig {
 	return &ConsulConfig{
-		Auth:      DefaultAuthConfig(),
-		KVPath:    String(DefaultConsulKVPath),
-		TLS:       DefaultTLSConfig(),
-		Transport: DefaultTransportConfig(),
+		Auth:             DefaultAuthConfig(),
+		KVPath:           String(DefaultConsulKVPath),
+		TLS:              DefaultTLSConfig(),
+		Transport:        DefaultTransportConfig(),
+		SelfRegistration: DefaultSelfRegistrationConfig(),
 	}
 }
 
@@ -74,6 +78,10 @@ func (c *ConsulConfig) Copy() *ConsulConfig {
 
 	if c.Transport != nil {
 		o.Transport = c.Transport.Copy()
+	}
+
+	if c.SelfRegistration != nil {
+		o.SelfRegistration = c.SelfRegistration.Copy()
 	}
 
 	return &o
@@ -125,6 +133,10 @@ func (c *ConsulConfig) Merge(o *ConsulConfig) *ConsulConfig {
 		r.Transport = r.Transport.Merge(o.Transport)
 	}
 
+	if o.SelfRegistration != nil {
+		r.SelfRegistration = r.SelfRegistration.Merge(o.SelfRegistration)
+	}
+
 	return r
 }
 
@@ -169,6 +181,12 @@ func (c *ConsulConfig) Finalize() {
 		c.Transport = DefaultTransportConfig()
 	}
 	c.Transport.Finalize()
+
+	if c.SelfRegistration == nil {
+		c.SelfRegistration = DefaultSelfRegistrationConfig()
+	}
+	c.SelfRegistration.Finalize()
+
 }
 
 // GoString defines the printable version of this struct.
@@ -185,7 +203,8 @@ func (c *ConsulConfig) GoString() string {
 		"KVPath:%s, "+
 		"TLS:%s, "+
 		"Token:%s, "+
-		"Transport:%s"+
+		"Transport:%s, "+
+		"SelfRegistration:%s"+
 		"}",
 		StringVal(c.Address),
 		c.Auth.GoString(),
@@ -194,6 +213,7 @@ func (c *ConsulConfig) GoString() string {
 		c.TLS.GoString(),
 		sensitiveGoString(c.Token),
 		c.Transport.GoString(),
+		c.SelfRegistration.GoString(),
 	)
 }
 
