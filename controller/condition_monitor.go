@@ -33,10 +33,6 @@ func NewConditionMonitor(tm *TasksManager) (*ConditionMonitor, error) {
 	}, nil
 }
 
-func (cm *ConditionMonitor) Stop() {
-	cm.watcher.Stop()
-}
-
 // WatchDep is a helper method to start watching dependencies to allow templates
 // to render. It will run until the caller cancels the context.
 func (cm *ConditionMonitor) WatchDep(ctx context.Context) error {
