@@ -21,6 +21,7 @@ type Once struct {
 	state        state.Store
 	tasksManager *TasksManager
 	watcher      templates.Watcher
+	monitor      *ConditionMonitor
 }
 
 // NewOnce configures and initializes a new Once controller
@@ -46,6 +47,7 @@ func NewOnce(conf *config.Config) (*Once, error) {
 		state:        s,
 		tasksManager: tm,
 		watcher:      watcher,
+		monitor:      NewConditionMonitor(tm),
 	}, nil
 }
 
@@ -68,7 +70,7 @@ func (ctrl *Once) Run(ctx context.Context) error {
 
 	// start watching dependencies in order to render templates to apply tasks
 	go func() {
-		exitCh <- ctrl.tasksManager.WatchDep(ctxWatch)
+		exitCh <- ctrl.monitor.WatchDep(ctxWatch)
 		cancelOnce()
 	}()
 

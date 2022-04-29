@@ -28,6 +28,7 @@ type Daemon struct {
 	state        state.Store
 	tasksManager *TasksManager
 	watcher      templates.Watcher
+	monitor      *ConditionMonitor
 
 	// whether or not the tasks have gone through once-mode. intended to be used
 	// by benchmarks to run once-mode separately
@@ -57,6 +58,7 @@ func NewDaemon(conf *config.Config) (*Daemon, error) {
 		state:        s,
 		tasksManager: tm,
 		watcher:      watcher,
+		monitor:      NewConditionMonitor(tm),
 	}, nil
 }
 
@@ -95,7 +97,7 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 
 	// Run tasks in long-running mode
 	go func() {
-		err := ctrl.tasksManager.Run(ctx)
+		err := ctrl.monitor.Run(ctx)
 		exitCh <- err
 	}()
 
@@ -140,5 +142,5 @@ func (ctrl *Daemon) Stop() {
 }
 
 func (ctrl *Daemon) EnableTestMode() <-chan string {
-	return ctrl.tasksManager.EnableTestMode()
+	return ctrl.monitor.EnableTestMode()
 }
