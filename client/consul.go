@@ -34,7 +34,7 @@ type NonEnterpriseConsulError struct {
 
 // Error returns an error string
 func (e *NonEnterpriseConsulError) Error() string {
-	return fmt.Sprintf("consul is not consul enterprise, %v", e.Err)
+	return fmt.Sprintf("consul is not consul enterprise: %v", e.Err)
 }
 
 // Unwrap returns the underlying error
