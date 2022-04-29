@@ -142,6 +142,53 @@ func TestWithRetry_client(t *testing.T) {
 	}
 }
 
+func TestRetry_WithNonRetryableError(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name                string
+		maxRetry            int
+		nonRetryAbleErrorOn int
+		expected            error
+	}{
+		{
+			"non retryable error on first attempt",
+			2, // max retries is 2, but will not retry
+			0,
+			&NonRetryableError{
+				Err: errors.New("error on 0"),
+			},
+		},
+		{
+			"non retryable error after enters retry loop",
+			2, // max retries is 2, but will exit due to non retryable error after first retry
+			1,
+			errors.New("retry attempt #1 failed 'this error is not retryable: error on 1'"),
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// set up fake function
+			count := 0
+			fxn := func(context.Context) error {
+				if count == tc.nonRetryAbleErrorOn {
+					err := fmt.Errorf("error on %d", count)
+					return &NonRetryableError{Err: err}
+				}
+				err := fmt.Errorf("error on %d", count)
+				count++
+				return err
+			}
+
+			r := NewTestRetry(tc.maxRetry)
+			err := r.Do(ctx, fxn, "test fxn")
+			assert.Equal(t, tc.expected.Error(), err.Error())
+		})
+	}
+}
+
 func TestWaitTime(t *testing.T) {
 	t.Parallel()
 

@@ -2,7 +2,7 @@ package client
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -16,15 +16,53 @@ import (
 
 func Test_GetLicense_API_Failure(t *testing.T) {
 	t.Parallel()
-	path := "/v1/operator/license"
 
-	intercepts := []*testutils.HttpIntercept{
-		{Path: path, ResponseStatusCode: http.StatusInternalServerError},
+	var nonRetryableError *retry.NonRetryableError
+	var nonEnterpriseConsulError *NonEnterpriseConsulError
+	cases := []struct {
+		name                 string
+		responseCode         int
+		isNonRetryableError  bool
+		isNonEnterpriseError bool
+	}{
+		{
+			name:         "server error",
+			responseCode: http.StatusInternalServerError,
+		},
+		{
+			name:         "request limit reached error",
+			responseCode: http.StatusTooManyRequests,
+		},
+		{
+			name:                "bad request non retryable error",
+			responseCode:        http.StatusBadRequest,
+			isNonRetryableError: true,
+		},
+		{
+			name:                 "status not found non retryable and non enterprise",
+			responseCode:         http.StatusNotFound,
+			isNonRetryableError:  true,
+			isNonEnterpriseError: true,
+		},
 	}
 
-	c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
-	_, err := c.GetLicense(context.Background(), nil)
-	assert.Error(t, err)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			path := "/v1/operator/license"
+
+			intercepts := []*testutils.HttpIntercept{
+				{Path: path, ResponseStatusCode: tc.responseCode},
+			}
+
+			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+			_, err := c.GetLicense(context.Background(), nil)
+			assert.Error(t, err)
+
+			// Verify the error types
+			assert.Equal(t, tc.isNonRetryableError, errors.As(err, &nonRetryableError))
+			assert.Equal(t, tc.isNonEnterpriseError, errors.As(err, &nonEnterpriseConsulError))
+		})
+	}
 }
 
 func Test_GetLicense(t *testing.T) {
@@ -40,107 +78,6 @@ func Test_GetLicense(t *testing.T) {
 	license, err := c.GetLicense(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, license, expectedLicense)
-}
-
-func Test_IsEnterprise_API_Failure(t *testing.T) {
-	t.Parallel()
-	path := "/v1/agent/self"
-
-	intercepts := []*testutils.HttpIntercept{
-		{Path: path, ResponseStatusCode: http.StatusInternalServerError},
-	}
-
-	c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
-	_, err := c.IsEnterprise(context.Background())
-	assert.Error(t, err)
-}
-
-func Test_IsEnterprise(t *testing.T) {
-	t.Parallel()
-	path := "/v1/agent/self"
-
-	cases := []struct {
-		name           string
-		response       ConsulAgentConfig
-		expectedResult bool
-		expectError    bool
-	}{
-		{
-			"oss",
-			ConsulAgentConfig{"Config": {"Version": "v1.9.5"}},
-			false,
-			false,
-		},
-		{
-			"oss dev",
-			ConsulAgentConfig{"Config": {"Version": "v1.9.5-dev"}},
-			false,
-			false,
-		},
-		{
-			"ent",
-			ConsulAgentConfig{"Config": {"Version": "v1.9.5+ent"}},
-			true,
-			false,
-		},
-		{
-			"ent dev",
-			ConsulAgentConfig{"Config": {"Version": "v1.9.5+ent-dev"}},
-			true,
-			false,
-		},
-		{
-			"missing",
-			ConsulAgentConfig{"Config": {}},
-			false,
-			true,
-		},
-		{
-			"malformed",
-			ConsulAgentConfig{"Config": {"Version": "***"}},
-			false,
-			true,
-		},
-		{
-			"bad key 1",
-			ConsulAgentConfig{"NoConfig": {"Version": "***"}},
-			false,
-			true,
-		},
-		{
-			"bad key 2",
-			ConsulAgentConfig{"Config": {"NoVersion": "v1.9.5"}},
-			false,
-			true,
-		},
-		{
-			"not a string",
-			ConsulAgentConfig{"Config": {"Version": 123}},
-			false,
-			true,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			infoBytes, err := json.Marshal(tc.response)
-			assert.NoError(t, err)
-
-			intercepts := []*testutils.HttpIntercept{
-				{Path: path, ResponseStatusCode: http.StatusOK, ResponseData: infoBytes},
-			}
-
-			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
-
-			isEnterprise, err := c.IsEnterprise(context.Background())
-			if tc.expectError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedResult, isEnterprise)
-			}
-		})
-	}
 }
 
 func newTestConsulClient(t *testing.T, httpClient *http.Client, maxRetry int) *ConsulClient {
