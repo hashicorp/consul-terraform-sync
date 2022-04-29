@@ -44,6 +44,8 @@ func BenchmarkTaskTrigger(b *testing.B) {
 	require.NoError(b, err)
 	err = ctrl.Init(ctx)
 	require.NoError(b, err)
+	defer ctrl.Stop()
+
 	err = ctrl.Once(ctx)
 	require.NoError(b, err)
 

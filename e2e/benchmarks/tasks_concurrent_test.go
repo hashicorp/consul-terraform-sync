@@ -79,6 +79,7 @@ func benchmarkTasksConcurrent(b *testing.B, bConf benchmarkConfig) {
 
 	err = ctrl.Init(context.Background())
 	require.NoError(b, err)
+	defer ctrl.Stop()
 
 	err = ctrl.Once(context.Background())
 	require.NoError(b, err)
