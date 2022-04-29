@@ -18,10 +18,6 @@ type ConditionMonitor struct {
 	// TODO: placeholder. Will convert TaskManager methods to ConditionMonitor
 }
 
-func (tm *TasksManager) Stop() {
-	tm.watcher.Stop()
-}
-
 // WatchDep is a helper method to start watching dependencies to allow templates
 // to render. It will run until the caller cancels the context.
 func (tm *TasksManager) WatchDep(ctx context.Context) error {

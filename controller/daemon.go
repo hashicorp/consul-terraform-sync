@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/health"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/state"
+	"github.com/hashicorp/consul-terraform-sync/templates"
 )
 
 var (
@@ -25,6 +27,7 @@ type Daemon struct {
 
 	state        state.Store
 	tasksManager *TasksManager
+	watcher      templates.Watcher
 
 	// whether or not the tasks have gone through once-mode. intended to be used
 	// by benchmarks to run once-mode separately
@@ -38,7 +41,13 @@ func NewDaemon(conf *config.Config) (*Daemon, error) {
 
 	s := state.NewInMemoryStore(conf)
 
-	tm, err := NewTasksManager(conf, s)
+	logger.Info("initializing Consul client and testing connection")
+	watcher, err := newWatcher(conf, client.ConsulDefaultMaxRetry)
+	if err != nil {
+		return nil, err
+	}
+
+	tm, err := NewTasksManager(conf, s, watcher)
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +56,7 @@ func NewDaemon(conf *config.Config) (*Daemon, error) {
 		logger:       logger,
 		state:        s,
 		tasksManager: tm,
+		watcher:      watcher,
 	}, nil
 }
 
@@ -126,7 +136,7 @@ func (ctrl *Daemon) Once(ctx context.Context) error {
 }
 
 func (ctrl *Daemon) Stop() {
-	ctrl.tasksManager.Stop()
+	ctrl.watcher.Stop()
 }
 
 func (ctrl *Daemon) EnableTestMode() <-chan string {

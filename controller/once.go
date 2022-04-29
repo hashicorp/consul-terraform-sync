@@ -3,9 +3,11 @@ package controller
 import (
 	"context"
 
+	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/state"
+	"github.com/hashicorp/consul-terraform-sync/templates"
 )
 
 var (
@@ -18,6 +20,7 @@ type Once struct {
 
 	state        state.Store
 	tasksManager *TasksManager
+	watcher      templates.Watcher
 }
 
 // NewOnce configures and initializes a new Once controller
@@ -27,7 +30,13 @@ func NewOnce(conf *config.Config) (*Once, error) {
 
 	s := state.NewInMemoryStore(conf)
 
-	tm, err := NewTasksManager(conf, s)
+	logger.Info("initializing Consul client and testing connection")
+	watcher, err := newWatcher(conf, client.ConsulDefaultMaxRetry)
+	if err != nil {
+		return nil, err
+	}
+
+	tm, err := NewTasksManager(conf, s, watcher)
 	if err != nil {
 		return nil, err
 	}
@@ -36,6 +45,7 @@ func NewOnce(conf *config.Config) (*Once, error) {
 		logger:       logger,
 		state:        s,
 		tasksManager: tm,
+		watcher:      watcher,
 	}, nil
 }
 
@@ -105,5 +115,5 @@ func (ctrl *Once) onceConsecutive(ctx context.Context) error {
 }
 
 func (ctrl *Once) Stop() {
-	ctrl.tasksManager.Stop()
+	ctrl.watcher.Stop()
 }
