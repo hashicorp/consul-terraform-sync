@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/cronexpr"
 )
@@ -15,7 +16,19 @@ import (
 // responsible for triggering a task to execute. It uses the task manager to
 // inform of starting / stopping task monitoring as well as executing a task
 type ConditionMonitor struct {
-	// TODO: placeholder. Will convert TaskManager methods to ConditionMonitor
+	logger logging.Logger
+
+	tasksManager *TasksManager
+}
+
+// NewConditionMonitor configures a new condition monitor
+func NewConditionMonitor(tm *TasksManager) *ConditionMonitor {
+	logger := logging.Global().Named(tasksManagerSystemName)
+
+	return &ConditionMonitor{
+		logger:       logger,
+		tasksManager: tm,
+	}
 }
 
 // WatchDep is a helper method to start watching dependencies to allow templates
