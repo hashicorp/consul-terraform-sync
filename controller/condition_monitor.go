@@ -20,14 +20,14 @@ type ConditionMonitor struct {
 
 // WatchDep is a helper method to start watching dependencies to allow templates
 // to render. It will run until the caller cancels the context.
-func (tm *TasksManager) WatchDep(ctx context.Context) error {
-	tm.logger.Trace("starting template dependency monitoring")
+func (cm *ConditionMonitor) WatchDep(ctx context.Context) error {
+	cm.logger.Trace("starting template dependency monitoring")
 
 	for ix := int64(0); ; ix++ {
 		select {
-		case err := <-tm.watcher.WaitCh(ctx):
+		case err := <-cm.watcher.WaitCh(ctx):
 			if err != nil {
-				tm.logger.Error("error watching template dependencies", "error", err)
+				cm.logger.Error("error watching template dependencies", "error", err)
 				return err
 			}
 
@@ -35,7 +35,7 @@ func (tm *TasksManager) WatchDep(ctx context.Context) error {
 			// stop for context canceled
 			return ctx.Err()
 		}
-		tm.logDepSize(50, int64(ix))
+		cm.logDepSize(50, int64(ix))
 	}
 }
 
@@ -46,96 +46,96 @@ func (tm *TasksManager) WatchDep(ctx context.Context) error {
 // Blocking call runs the main consul monitoring loop, which identifies triggers
 // for dynamic tasks. Scheduled tasks use their own go routine to trigger on
 // schedule.
-func (tm *TasksManager) Run(ctx context.Context) error {
+func (cm *ConditionMonitor) Run(ctx context.Context) error {
 	// Assumes buffer_period has been set by taskManager
 
 	errCh := make(chan error)
-	if tm.watcherCh == nil {
+	if cm.watcherCh == nil {
 		// Size of channel is larger than just current number of drivers
 		// to account for additional tasks created via the API. Adding 10
 		// is an arbitrarily chosen value.
-		tm.watcherCh = make(chan string, tm.drivers.Len()+10)
+		cm.watcherCh = make(chan string, cm.drivers.Len()+10)
 	}
-	if tm.scheduleStartCh == nil {
+	if cm.scheduleStartCh == nil {
 		// Size of channel is an arbitrarily chosen value.
-		tm.scheduleStartCh = make(chan driver.Driver, 10)
+		cm.scheduleStartCh = make(chan driver.Driver, 10)
 	}
-	if tm.deleteCh == nil {
+	if cm.deleteCh == nil {
 		// Size of channel is an arbitrarily chosen value.
-		tm.deleteCh = make(chan string, 10)
+		cm.deleteCh = make(chan string, 10)
 	}
-	if tm.scheduleStopChs == nil {
-		tm.scheduleStopChs = make(map[string](chan struct{}))
+	if cm.scheduleStopChs == nil {
+		cm.scheduleStopChs = make(map[string](chan struct{}))
 	}
 	go func() {
 		for {
-			tm.logger.Trace("starting template dependency monitoring")
-			err := tm.watcher.Watch(ctx, tm.watcherCh)
+			cm.logger.Trace("starting template dependency monitoring")
+			err := cm.watcher.Watch(ctx, cm.watcherCh)
 			if err == nil || err == context.Canceled {
-				tm.logger.Info("stopping dependency monitoring")
+				cm.logger.Info("stopping dependency monitoring")
 				return
 			}
-			tm.logger.Error("error monitoring template dependencies", "error", err)
+			cm.logger.Error("error monitoring template dependencies", "error", err)
 		}
 	}()
 
 	for i := int64(1); ; i++ {
 		select {
-		case tmplID := <-tm.watcherCh:
-			d, ok := tm.drivers.GetTaskByTemplate(tmplID)
+		case tmplID := <-cm.watcherCh:
+			d, ok := cm.drivers.GetTaskByTemplate(tmplID)
 			if !ok {
-				tm.logger.Debug("template was notified for update but the template ID does not match any task", "template_id", tmplID)
+				cm.logger.Debug("template was notified for update but the template ID does not match any task", "template_id", tmplID)
 				continue
 			}
 
-			go tm.runDynamicTask(ctx, d) // errors are logged for now
+			go cm.runDynamicTask(ctx, d) // errors are logged for now
 
-		case d := <-tm.scheduleStartCh:
+		case d := <-cm.scheduleStartCh:
 			// Run newly created scheduled tasks
 			stopCh := make(chan struct{}, 1)
-			tm.scheduleStopChs[d.Task().Name()] = stopCh
-			go tm.runScheduledTask(ctx, d, stopCh)
+			cm.scheduleStopChs[d.Task().Name()] = stopCh
+			go cm.runScheduledTask(ctx, d, stopCh)
 
-		case n := <-tm.deleteCh:
-			go tm.deleteTask(ctx, n)
+		case n := <-cm.deleteCh:
+			go cm.deleteTask(ctx, n)
 
 		case err := <-errCh:
 			return err
 
 		case <-ctx.Done():
-			tm.logger.Info("stopping controller")
+			cm.logger.Info("stopping controller")
 			return ctx.Err()
 		}
 
-		tm.logDepSize(50, i)
+		cm.logDepSize(50, i)
 	}
 }
 
 // runDynamicTask will try to render the template and apply the task if necessary.
-func (tm *TasksManager) runDynamicTask(ctx context.Context, d driver.Driver) error {
+func (cm *ConditionMonitor) runDynamicTask(ctx context.Context, d driver.Driver) error {
 	task := d.Task()
 	taskName := task.Name()
 	if task.IsScheduled() {
 		// Schedule tasks are not dynamic and run in a different process
 		return nil
 	}
-	if tm.drivers.IsMarkedForDeletion(taskName) {
-		tm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+	if cm.drivers.IsMarkedForDeletion(taskName) {
+		cm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
 		return nil
 	}
 
-	err := tm.waitForTaskInactive(ctx, taskName)
+	err := cm.waitForTaskInactive(ctx, taskName)
 	if err != nil {
 		return err
 	}
-	complete, err := tm.checkApply(ctx, d, true, false)
+	complete, err := cm.checkApply(ctx, d, true, false)
 	if err != nil {
 		tm.logger.Error("error applying task", taskNameLogKey, taskName, "error", err)
 		return err
 	}
 
-	if tm.taskNotify != nil && complete {
-		tm.taskNotify <- taskName
+	if cm.taskNotify != nil && complete {
+		cm.taskNotify <- taskName
 	}
 	return nil
 }
@@ -144,13 +144,13 @@ func (tm *TasksManager) runDynamicTask(ctx context.Context, d driver.Driver) err
 // The go-routine will manage the task's schedule and trigger the task on time.
 // If there are dependency changes since the task's last run time, then the task
 // will also apply.
-func (tm *TasksManager) runScheduledTask(ctx context.Context, d driver.Driver, stopCh chan struct{}) error {
+func (cm *ConditionMonitor) runScheduledTask(ctx context.Context, d driver.Driver, stopCh chan struct{}) error {
 	task := d.Task()
 	taskName := task.Name()
 
 	cond, ok := task.Condition().(*config.ScheduleConditionConfig)
 	if !ok {
-		tm.logger.Error("unexpected condition while running a scheduled "+
+		cm.logger.Error("unexpected condition while running a scheduled "+
 			"condition", taskNameLogKey, taskName, "condition_type",
 			fmt.Sprintf("%T", task.Condition()))
 		return fmt.Errorf("error: expected a schedule condition but got "+
@@ -159,58 +159,58 @@ func (tm *TasksManager) runScheduledTask(ctx context.Context, d driver.Driver, s
 
 	expr, err := cronexpr.Parse(*cond.Cron)
 	if err != nil {
-		tm.logger.Error("error parsing task cron", taskNameLogKey, taskName,
+		cm.logger.Error("error parsing task cron", taskNameLogKey, taskName,
 			"cron", *cond.Cron, "error", err)
 		return err
 	}
 
 	nextTime := expr.Next(time.Now())
 	waitTime := time.Until(nextTime)
-	tm.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
+	cm.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
 		"wait_time", waitTime, "next_runtime", nextTime)
 
 	for {
 		select {
 		case <-time.After(waitTime):
-			if _, ok := tm.drivers.Get(taskName); !ok {
+			if _, ok := cm.drivers.Get(taskName); !ok {
 				// Should not happen in the typical workflow, but stopping if in this state
-				tm.logger.Debug("scheduled task no longer exists", taskNameLogKey, taskName)
-				tm.logger.Info("stopping deleted scheduled task", taskNameLogKey, taskName)
-				delete(tm.scheduleStopChs, taskName)
+				cm.logger.Debug("scheduled task no longer exists", taskNameLogKey, taskName)
+				cm.logger.Info("stopping deleted scheduled task", taskNameLogKey, taskName)
+				delete(cm.scheduleStopChs, taskName)
 				return nil
 			}
 
-			if tm.drivers.IsMarkedForDeletion(taskName) {
-				tm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+			if cm.drivers.IsMarkedForDeletion(taskName) {
+				cm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
 				return nil
 			}
 
-			tm.logger.Info("time for scheduled task", taskNameLogKey, taskName)
-			if tm.drivers.IsActive(taskName) {
+			cm.logger.Info("time for scheduled task", taskNameLogKey, taskName)
+			if cm.drivers.IsActive(taskName) {
 				// The driver is currently active with the task, initiated by an ad-hoc run.
-				tm.logger.Trace("task is active", taskNameLogKey, taskName)
+				cm.logger.Trace("task is active", taskNameLogKey, taskName)
 				continue
 			}
 
-			complete, err := tm.checkApply(ctx, d, true, false)
+			complete, err := cm.checkApply(ctx, d, true, false)
 			if err != nil {
 				// print error but continue
-				tm.logger.Error("error applying task", taskNameLogKey, taskName, "error", err)
+				cm.logger.Error("error applying task", taskNameLogKey, taskName, "error", err)
 			}
 
-			if tm.taskNotify != nil && complete {
-				tm.taskNotify <- taskName
+			if cm.taskNotify != nil && complete {
+				cm.taskNotify <- taskName
 			}
 
 			nextTime := expr.Next(time.Now())
 			waitTime = time.Until(nextTime)
-			tm.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
+			cm.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
 				"wait_time", waitTime, "next_runtime", nextTime)
 		case <-stopCh:
-			tm.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
+			cm.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
 			return nil
 		case <-ctx.Done():
-			tm.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
+			cm.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
 			return ctx.Err()
 		}
 	}
@@ -218,12 +218,12 @@ func (tm *TasksManager) runScheduledTask(ctx context.Context, d driver.Driver, s
 
 // logDepSize logs the watcher dependency size every nth iteration. Set the
 // iterator to a negative value to log each iteration.
-func (tm *TasksManager) logDepSize(n uint, i int64) {
-	depSize := tm.watcher.Size()
+func (cm *ConditionMonitor) logDepSize(n uint, i int64) {
+	depSize := cm.watcher.Size()
 	if i%int64(n) == 0 || i < 0 {
-		tm.logger.Debug("watching dependencies", "dependency_size", depSize)
+		cm.logger.Debug("watching dependencies", "dependency_size", depSize)
 		if depSize > templates.DepSizeWarning {
-			tm.logger.Warn(fmt.Sprintf(" watching more than %d dependencies could "+
+			cm.logger.Warn(fmt.Sprintf(" watching more than %d dependencies could "+
 				"DDoS your Consul cluster: %d", templates.DepSizeWarning, depSize))
 		}
 	}

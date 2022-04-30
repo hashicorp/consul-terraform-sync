@@ -29,7 +29,7 @@ var (
 	}
 )
 
-func Test_TasksManager_runDynamicTask(t *testing.T) {
+func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
 		tm := newTestTasksManager()
 
@@ -109,7 +109,7 @@ func Test_TasksManager_runDynamicTask(t *testing.T) {
 
 }
 
-func Test_TasksManager_runScheduledTask(t *testing.T) {
+func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 	t.Run("happy-path", func(t *testing.T) {
 		tm := newTestTasksManager()
 
@@ -232,7 +232,7 @@ func Test_TasksManager_runScheduledTask(t *testing.T) {
 	})
 }
 
-func Test_TasksManager_Run_context_cancel(t *testing.T) {
+func Test_ConditionMonitor_Run_context_cancel(t *testing.T) {
 	w := new(mocks.Watcher)
 	w.On("Watch", mock.Anything, mock.Anything).Return(nil).
 		On("Size").Return(5).
@@ -261,7 +261,7 @@ func Test_TasksManager_Run_context_cancel(t *testing.T) {
 	}
 }
 
-func Test_TasksManager_Run_ActiveTask(t *testing.T) {
+func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	// Set up tm with two tasks
 	tm := newTestTasksManager()
 	tm.watcherCh = make(chan string, 5)
@@ -337,7 +337,7 @@ func Test_TasksManager_Run_ActiveTask(t *testing.T) {
 	}
 }
 
-func Test_TasksManager_Run_ScheduledTasks(t *testing.T) {
+func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	tm := newTestTasksManager()
 	tm.watcherCh = make(chan string, 5)
 	tm.scheduleStartCh = make(chan driver.Driver, 1)
@@ -374,7 +374,7 @@ func Test_TasksManager_Run_ScheduledTasks(t *testing.T) {
 	assert.NotNil(t, stopCh, "expected stop channel not to be nil")
 }
 
-func Test_TasksManager_WatchDep_context_cancel(t *testing.T) {
+func Test_ConditionMonitor_WatchDep_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	t.Run("cancel exits successfully", func(t *testing.T) {
