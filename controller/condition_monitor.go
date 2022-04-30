@@ -216,15 +216,6 @@ func (tm *TasksManager) runScheduledTask(ctx context.Context, d driver.Driver, s
 	}
 }
 
-// EnableTestMode is a helper for testing which tasks were triggered and
-// executed. Callers of this method must consume from TaskNotify channel to
-// prevent the buffered channel from filling and causing a dead lock.
-func (tm *TasksManager) EnableTestMode() <-chan string {
-	tasks := tm.state.GetAllTasks()
-	tm.taskNotify = make(chan string, tasks.Len())
-	return tm.taskNotify
-}
-
 // logDepSize logs the watcher dependency size every nth iteration. Set the
 // iterator to a negative value to log each iteration.
 func (tm *TasksManager) logDepSize(n uint, i int64) {

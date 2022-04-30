@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
-	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -260,6 +259,7 @@ func Test_TasksManager_Run_ActiveTask(t *testing.T) {
 	// Set up tm with two tasks
 	tm := newTestTasksManager()
 	tm.watcherCh = make(chan string, 5)
+	completedTasksCh := tm.EnableTestMode()
 
 	for _, n := range []string{"task_a", "task_b"} {
 		d := new(mocksD.Driver)
@@ -270,7 +270,6 @@ func Test_TasksManager_Run_ActiveTask(t *testing.T) {
 			On("SetBufferPeriod")
 		tm.drivers.Add(n, d)
 	}
-	completedTasksCh := tm.EnableTestMode()
 
 	// Set up watcher for tm
 	ctx := context.Background()
@@ -367,27 +366,6 @@ func Test_TasksManager_Run_ScheduledTasks(t *testing.T) {
 	stopCh, ok := tm.scheduleStopChs[createdTaskName]
 	assert.True(t, ok, "scheduled task stop channel not added to map")
 	assert.NotNil(t, stopCh, "expected stop channel not to be nil")
-}
-
-func Test_TasksManager_EnableTestMode(t *testing.T) {
-	t.Parallel()
-
-	// Mock state store
-	taskConfs := config.TaskConfigs{
-		{Name: config.String("task_a")},
-		{Name: config.String("task_b")},
-	}
-	s := new(mocksS.Store)
-	s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
-
-	// Set up tasks manager
-	tm := newTestTasksManager()
-	tm.state = s
-
-	// Test EnableTestMode
-	channel := tm.EnableTestMode()
-	assert.Equal(t, 2, cap(channel))
-	s.AssertExpectations(t)
 }
 
 func Test_TasksManager_WatchDep_context_cancel(t *testing.T) {
