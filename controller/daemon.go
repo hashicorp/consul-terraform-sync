@@ -58,7 +58,7 @@ func NewDaemon(conf *config.Config) (*Daemon, error) {
 		state:        s,
 		tasksManager: tm,
 		watcher:      watcher,
-		monitor:      NewConditionMonitor(tm),
+		monitor:      NewConditionMonitor(tm, watcher),
 	}, nil
 }
 

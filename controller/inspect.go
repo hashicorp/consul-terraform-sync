@@ -51,7 +51,7 @@ func NewInspect(conf *config.Config) (*Inspect, error) {
 		state:        s,
 		tasksManager: tm,
 		watcher:      watcher,
-		monitor:      NewConditionMonitor(tm),
+		monitor:      NewConditionMonitor(tm, watcher),
 	}, nil
 }
 

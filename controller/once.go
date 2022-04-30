@@ -47,7 +47,7 @@ func NewOnce(conf *config.Config) (*Once, error) {
 		state:        s,
 		tasksManager: tm,
 		watcher:      watcher,
-		monitor:      NewConditionMonitor(tm),
+		monitor:      NewConditionMonitor(tm, watcher),
 	}, nil
 }
 
