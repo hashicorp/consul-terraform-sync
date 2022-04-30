@@ -91,7 +91,7 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	ro.tasksManager = &tm
+	ro.tasksManager = tm
 
 	// Mock watcher
 	waitErrCh := make(chan error)
@@ -161,7 +161,7 @@ func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	ro.tasksManager = &tm
+	ro.tasksManager = tm
 
 	// Mock watcher
 	expectedErr := errors.New("error!")
@@ -221,7 +221,7 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	ro.tasksManager = &tm
+	ro.tasksManager = tm
 
 	// Mock watcher
 	errCh := make(chan error)

@@ -940,8 +940,8 @@ func mockDriver(ctx context.Context, d *mocksD.Driver, task *driver.Task) {
 		On("ApplyTask", ctx).Return(nil)
 }
 
-func newTestTasksManager() TasksManager {
-	return TasksManager{
+func newTestTasksManager() *TasksManager {
+	return &TasksManager{
 		logger: logging.NewNullLogger(),
 		factory: &driverFactory{
 			logger: logging.NewNullLogger(),
