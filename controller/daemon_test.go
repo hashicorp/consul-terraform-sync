@@ -113,7 +113,6 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 
 	// Setup taskmanager
 	tm := newTestTasksManager()
-	tm.watcherCh = make(chan string, 5)
 	tm.state = st
 	rw.tasksManager = tm
 
@@ -134,7 +133,10 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	errCh := make(chan error)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	completedTasksCh := tm.EnableTestMode()
+
+	cm := newTestConditionMonitor(tm)
+	cm.watcherCh = make(chan string, 5)
+	completedTasksCh := cm.EnableTestMode()
 
 	// Mock watcher
 	w := new(mocksTmpl.Watcher)
@@ -143,7 +145,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	go func() { errCh <- nil }()
 	w.On("WaitCh", mock.Anything).Return(waitErrChRc).Once()
 	w.On("Size").Return(5)
-	w.On("Watch", ctx, tm.watcherCh).Return(nil)
+	w.On("Watch", ctx, cm.watcherCh).Return(nil)
 	tm.watcher = w
 
 	go func() {
@@ -155,7 +157,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 
 	// Emulate triggers to evaluate task completion
 	for i := 0; i < 5; i++ {
-		tm.watcherCh <- "{{tmpl}}"
+		cm.watcherCh <- "{{tmpl}}"
 		select {
 		case taskName := <-completedTasksCh:
 			assert.Equal(t, "task", taskName)

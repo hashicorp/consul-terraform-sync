@@ -20,6 +20,8 @@ type ConditionMonitor struct {
 
 	watcher      templates.Watcher
 	tasksManager *TasksManager
+
+	watcherCh chan string
 }
 
 // NewConditionMonitor configures a new condition monitor
@@ -66,10 +68,13 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 
 	errCh := make(chan error)
 	if cm.watcherCh == nil {
-		// Size of channel is larger than just current number of drivers
-		// to account for additional tasks created via the API. Adding 10
-		// is an arbitrarily chosen value.
-		cm.watcherCh = make(chan string, cm.drivers.Len()+10)
+		// Size of channel is the number of CTS tasks configured at initialization
+		// +10 for any additional tasks created during runtime. 10 arbitrarily chosen
+		tasks, err := cm.tasksManager.Tasks(ctx)
+		if err != nil {
+			return err
+		}
+		cm.watcherCh = make(chan string, len(tasks)+10)
 	}
 	if cm.scheduleStartCh == nil {
 		// Size of channel is an arbitrarily chosen value.

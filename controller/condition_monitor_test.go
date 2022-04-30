@@ -275,7 +275,6 @@ func Test_ConditionMonitor_Run_context_cancel(t *testing.T) {
 func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	// Set up tm with two tasks
 	tm := newTestTasksManager()
-	tm.watcherCh = make(chan string, 5)
 
 	for _, n := range []string{"task_a", "task_b"} {
 		d := new(mocksD.Driver)
@@ -287,15 +286,17 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 		tm.drivers.Add(n, d)
 	}
 
+	// Set up condition monitor
+	cm := newTestConditionMonitor(tm)
+	completedTasksCh := cm.EnableTestMode()
+	cm.watcherCh = make(chan string, 5)
+
 	// Set up watcher for tm
 	ctx := context.Background()
 	w := new(mocks.Watcher)
 	w.On("Size").Return(5)
-	w.On("Watch", ctx, tm.watcherCh).Return(nil)
+	w.On("Watch", ctx, cm.watcherCh).Return(nil)
 	tm.watcher = w
-
-	cm := newTestConditionMonitor(tm)
-	completedTasksCh := cm.EnableTestMode()
 
 	// Start Run
 	errCh := make(chan error)
@@ -311,7 +312,7 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 
 	// Trigger twice on active task_a, task should not complete
 	for i := 0; i < 2; i++ {
-		tm.watcherCh <- "tmpl_task_a"
+		cm.watcherCh <- "tmpl_task_a"
 	}
 	select {
 	case <-completedTasksCh:
@@ -321,7 +322,7 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	}
 
 	// Trigger on inactive task_b, task should complete
-	tm.watcherCh <- "tmpl_task_b"
+	cm.watcherCh <- "tmpl_task_b"
 	select {
 	case taskName := <-completedTasksCh:
 		assert.Equal(t, "task_b", taskName)
@@ -341,7 +342,7 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	}
 
 	// Notify on task_a again, should complete
-	tm.watcherCh <- "tmpl_task_a"
+	cm.watcherCh <- "tmpl_task_a"
 	select {
 	case taskName := <-completedTasksCh:
 		assert.Equal(t, "task_a", taskName)
@@ -352,19 +353,20 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 
 func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	tm := newTestTasksManager()
-	tm.watcherCh = make(chan string, 5)
 	tm.scheduleStartCh = make(chan driver.Driver, 1)
+
+	// Set up condition monitor
+	cm := newTestConditionMonitor(tm)
+	cm.watcherCh = make(chan string, 5)
+	cm.EnableTestMode()
 
 	// Set up watcher for tm
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	w := new(mocks.Watcher)
 	w.On("Size").Return(5)
-	w.On("Watch", ctx, tm.watcherCh).Return(nil)
+	w.On("Watch", ctx, cm.watcherCh).Return(nil)
 	tm.watcher = w
-
-	cm := newTestConditionMonitor(tm)
-	cm.EnableTestMode()
 
 	go cm.Run(ctx)
 
