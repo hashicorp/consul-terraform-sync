@@ -28,8 +28,6 @@ type TasksManager struct {
 
 	retry retry.Retry
 
-	watcherCh chan string
-
 	// scheduleStartCh is used to coordinate scheduled tasks created via the API
 	scheduleStartCh chan driver.Driver
 
