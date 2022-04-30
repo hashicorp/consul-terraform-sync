@@ -573,8 +573,10 @@ func newTestConditionMonitor(tm *TasksManager) *ConditionMonitor {
 		logger:       logging.NewNullLogger(),
 		tasksManager: newTestTasksManager(),
 	}
+
 	if tm != nil {
 		cm.tasksManager = tm
+		cm.watcher = tm.watcher
 	}
 
 	return cm

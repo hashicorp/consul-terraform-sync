@@ -18,6 +18,7 @@ import (
 type ConditionMonitor struct {
 	logger logging.Logger
 
+	watcher      templates.Watcher
 	tasksManager *TasksManager
 }
 
@@ -27,6 +28,7 @@ func NewConditionMonitor(tm *TasksManager) (*ConditionMonitor, error) {
 
 	return &ConditionMonitor{
 		logger:       logger,
+		watcher:      tm.watcher,
 		tasksManager: tm,
 	}, nil
 }
