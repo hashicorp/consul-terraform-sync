@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/handler"
+	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
@@ -27,7 +28,8 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		mockDriver(ctx, d, enabledTestTask(t, "task"))
 		tm.drivers.Add("task", d)
 
-		err := tm.runDynamicTask(ctx, d)
+		cm := newTestConditionMonitor(tm)
+		err := cm.runDynamicTask(ctx, d)
 		assert.NoError(t, err)
 	})
 
@@ -43,7 +45,8 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		d.On("ApplyTask", mock.Anything).Return(testErr)
 		tm.drivers.Add("task", d)
 
-		err := tm.runDynamicTask(context.Background(), d)
+		cm := newTestConditionMonitor(tm)
+		err := cm.runDynamicTask(context.Background(), d)
 		assert.Contains(t, err.Error(), testErr.Error())
 	})
 
@@ -57,13 +60,13 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		// no other methods should be called (or mocked)
 		tm.drivers.Add(taskName, d)
 
-		err := tm.runDynamicTask(context.Background(), d)
+		cm := newTestConditionMonitor(tm)
+		err := cm.runDynamicTask(context.Background(), d)
 		assert.NoError(t, err)
 	})
 
 	t.Run("active-task", func(t *testing.T) {
 		tm := newTestTasksManager()
-		tm.EnableTestMode()
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
@@ -73,10 +76,13 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		drivers.Add(taskName, d)
 		drivers.SetActive(taskName)
 
+		cm := newTestConditionMonitor(tm)
+		cm.EnableTestMode()
+
 		// Attempt to run the active task
 		ch := make(chan error)
 		go func() {
-			err := tm.runDynamicTask(ctx, d)
+			err := cm.runDynamicTask(ctx, d)
 			ch <- err
 		}()
 
@@ -112,11 +118,13 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		d.On("TemplateIDs").Return(nil)
 		tm.drivers.Add(taskName, d)
 
+		cm := newTestConditionMonitor(tm)
+
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := tm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -141,11 +149,13 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, taskName)).Once()
 
+		cm := newTestConditionMonitor(tm)
+
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := tm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -173,11 +183,13 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		d.On("TemplateIDs").Return(nil)
 		tm.drivers.Add(taskName, d)
 
+		cm := newTestConditionMonitor(tm)
+
 		ctx := context.Background()
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := tm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, d, stopCh)
 			errCh <- err
 		}()
 		stopCh <- struct{}{}
@@ -200,13 +212,15 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		d.On("Task").Return(scheduledTestTask(t, taskName)).Once()
 		// driver is not added to drivers map
 
+		cm := newTestConditionMonitor(tm)
+
 		ctx := context.Background()
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		tm.scheduleStopChs[taskName] = stopCh
 		done := make(chan bool)
 		go func() {
-			err := tm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, d, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -236,10 +250,12 @@ func Test_ConditionMonitor_Run_context_cancel(t *testing.T) {
 	tm := newTestTasksManager()
 	tm.watcher = w
 
+	cm := newTestConditionMonitor(tm)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		err := tm.Run(ctx)
+		err := cm.Run(ctx)
 		if err != nil {
 			errCh <- err
 		}
@@ -270,7 +286,6 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 			On("SetBufferPeriod")
 		tm.drivers.Add(n, d)
 	}
-	completedTasksCh := tm.EnableTestMode()
 
 	// Set up watcher for tm
 	ctx := context.Background()
@@ -279,10 +294,13 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	w.On("Watch", ctx, tm.watcherCh).Return(nil)
 	tm.watcher = w
 
+	cm := newTestConditionMonitor(tm)
+	completedTasksCh := cm.EnableTestMode()
+
 	// Start Run
 	errCh := make(chan error)
 	go func() {
-		err := tm.Run(ctx)
+		err := cm.Run(ctx)
 		if err != nil {
 			errCh <- err
 		}
@@ -336,7 +354,6 @@ func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	tm := newTestTasksManager()
 	tm.watcherCh = make(chan string, 5)
 	tm.scheduleStartCh = make(chan driver.Driver, 1)
-	tm.EnableTestMode()
 
 	// Set up watcher for tm
 	ctx, cancel := context.WithCancel(context.Background())
@@ -346,7 +363,10 @@ func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	w.On("Watch", ctx, tm.watcherCh).Return(nil)
 	tm.watcher = w
 
-	go tm.Run(ctx)
+	cm := newTestConditionMonitor(tm)
+	cm.EnableTestMode()
+
+	go cm.Run(ctx)
 
 	createdTaskName := "created_scheduled_task"
 	createdDriver := new(mocksD.Driver)
@@ -385,7 +405,8 @@ func Test_ConditionMonitor_EnableTestMode(t *testing.T) {
 	tm.state = s
 
 	// Test EnableTestMode
-	channel := tm.EnableTestMode()
+	cm := newTestConditionMonitor(tm)
+	channel := cm.EnableTestMode()
 	assert.Equal(t, 2, cap(channel))
 	s.AssertExpectations(t)
 }
@@ -408,8 +429,9 @@ func Test_ConditionMonitor_WatchDep_context_cancel(t *testing.T) {
 		errCh := make(chan error)
 		ctx, cancel := context.WithCancel(context.Background())
 
+		cm := newTestConditionMonitor(tm)
 		go func() {
-			if err := tm.WatchDep(ctx); err != nil {
+			if err := cm.WatchDep(ctx); err != nil {
 				errCh <- err
 			}
 		}()
@@ -442,8 +464,9 @@ func Test_ConditionMonitor_WatchDep_context_cancel(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		cm := newTestConditionMonitor(tm)
 		go func() {
-			if err := tm.WatchDep(ctx); err != nil {
+			if err := cm.WatchDep(ctx); err != nil {
 				errCh <- err
 			}
 		}()
@@ -543,4 +566,16 @@ func scheduledTestTask(tb testing.TB, name string) *driver.Task {
 	})
 	require.NoError(tb, err)
 	return task
+}
+
+func newTestConditionMonitor(tm *TasksManager) *ConditionMonitor {
+	cm := &ConditionMonitor{
+		logger:       logging.NewNullLogger(),
+		tasksManager: newTestTasksManager(),
+	}
+	if tm != nil {
+		cm.tasksManager = tm
+	}
+
+	return cm
 }
