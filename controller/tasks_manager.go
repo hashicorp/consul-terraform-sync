@@ -412,6 +412,15 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, d driver.Driver) error {
 	return nil
 }
 
+// EnableTestMode is a helper for testing which tasks were triggered and
+// executed. Callers of this method must consume from TaskNotify channel to
+// prevent the buffered channel from filling and causing a dead lock.
+func (tm *TasksManager) EnableTestMode() <-chan string {
+	tasks := tm.state.GetAllTasks()
+	tm.taskNotify = make(chan string, tasks.Len())
+	return tm.taskNotify
+}
+
 // createTask creates and initializes a singular task from configuration
 func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskConfig) (driver.Driver, error) {
 	conf := tm.state.GetConfig()

@@ -724,6 +724,27 @@ func Test_TasksManager_TaskRunNow_Store(t *testing.T) {
 	})
 }
 
+func Test_ConditionMonitor_EnableTestMode(t *testing.T) {
+	t.Parallel()
+
+	// Mock state store
+	taskConfs := config.TaskConfigs{
+		{Name: config.String("task_a")},
+		{Name: config.String("task_b")},
+	}
+	s := new(mocksS.Store)
+	s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
+
+	// Set up tasks manager
+	tm := newTestTasksManager()
+	tm.state = s
+
+	// Test EnableTestMode
+	channel := tm.EnableTestMode()
+	assert.Equal(t, 2, cap(channel))
+	s.AssertExpectations(t)
+}
+
 func Test_TasksManager_deleteTask(t *testing.T) {
 	ctx := context.Background()
 	mockD := new(mocksD.Driver)

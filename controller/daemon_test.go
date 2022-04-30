@@ -114,6 +114,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	// Setup taskmanager
 	tm := newTestTasksManager()
 	tm.state = st
+	completedTasksCh := tm.EnableTestMode()
 	rw.tasksManager = tm
 
 	// Mock driver
@@ -136,7 +137,6 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 
 	cm := newTestConditionMonitor(tm)
 	cm.watcherCh = make(chan string, 5)
-	completedTasksCh := cm.EnableTestMode()
 
 	// Mock watcher
 	w := new(mocksTmpl.Watcher)

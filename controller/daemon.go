@@ -142,5 +142,5 @@ func (ctrl *Daemon) Stop() {
 }
 
 func (ctrl *Daemon) EnableTestMode() <-chan string {
-	return ctrl.monitor.EnableTestMode()
+	return ctrl.tasksManager.EnableTestMode()
 }

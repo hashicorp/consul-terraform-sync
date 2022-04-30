@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
-	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -67,6 +66,7 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 
 	t.Run("active-task", func(t *testing.T) {
 		tm := newTestTasksManager()
+		tm.EnableTestMode()
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
@@ -77,7 +77,6 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		drivers.SetActive(taskName)
 
 		cm := newTestConditionMonitor(tm)
-		cm.EnableTestMode()
 
 		// Attempt to run the active task
 		ch := make(chan error)
@@ -275,6 +274,7 @@ func Test_ConditionMonitor_Run_context_cancel(t *testing.T) {
 func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	// Set up tm with two tasks
 	tm := newTestTasksManager()
+	completedTasksCh := tm.EnableTestMode()
 
 	for _, n := range []string{"task_a", "task_b"} {
 		d := new(mocksD.Driver)
@@ -288,7 +288,6 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 
 	// Set up condition monitor
 	cm := newTestConditionMonitor(tm)
-	completedTasksCh := cm.EnableTestMode()
 	cm.watcherCh = make(chan string, 5)
 
 	// Set up watcher for tm
@@ -354,11 +353,11 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	tm := newTestTasksManager()
 	tm.scheduleStartCh = make(chan driver.Driver, 1)
+	tm.EnableTestMode()
 
 	// Set up condition monitor
 	cm := newTestConditionMonitor(tm)
 	cm.watcherCh = make(chan string, 5)
-	cm.EnableTestMode()
 
 	// Set up watcher for tm
 	ctx, cancel := context.WithCancel(context.Background())
@@ -389,28 +388,6 @@ func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	stopCh, ok := tm.scheduleStopChs[createdTaskName]
 	assert.True(t, ok, "scheduled task stop channel not added to map")
 	assert.NotNil(t, stopCh, "expected stop channel not to be nil")
-}
-
-func Test_ConditionMonitor_EnableTestMode(t *testing.T) {
-	t.Parallel()
-
-	// Mock state store
-	taskConfs := config.TaskConfigs{
-		{Name: config.String("task_a")},
-		{Name: config.String("task_b")},
-	}
-	s := new(mocksS.Store)
-	s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
-
-	// Set up tasks manager
-	tm := newTestTasksManager()
-	tm.state = s
-
-	// Test EnableTestMode
-	cm := newTestConditionMonitor(tm)
-	channel := cm.EnableTestMode()
-	assert.Equal(t, 2, cap(channel))
-	s.AssertExpectations(t)
 }
 
 func Test_ConditionMonitor_WatchDep_context_cancel(t *testing.T) {

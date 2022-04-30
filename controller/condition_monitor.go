@@ -202,15 +202,6 @@ func (cm *ConditionMonitor) runScheduledTask(ctx context.Context, d driver.Drive
 	}
 }
 
-// EnableTestMode is a helper for testing which tasks were triggered and
-// executed. Callers of this method must consume from TaskNotify channel to
-// prevent the buffered channel from filling and causing a dead lock.
-func (cm *ConditionMonitor) EnableTestMode() <-chan string {
-	tasks := cm.state.GetAllTasks()
-	cm.taskNotify = make(chan string, tasks.Len())
-	return cm.taskNotify
-}
-
 // logDepSize logs the watcher dependency size every nth iteration. Set the
 // iterator to a negative value to log each iteration.
 func (cm *ConditionMonitor) logDepSize(n uint, i int64) {
