@@ -115,7 +115,7 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	ctrl.tasksManager = &tm
+	ctrl.tasksManager = tm
 
 	// Set up driver factory
 	tm.factory.initConf = conf
@@ -175,7 +175,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	tm := newTestTasksManager()
 	tm.state = ss
 	tm.deleteCh = make(chan string, 1)
-	ctrl.tasksManager = &tm
+	ctrl.tasksManager = tm
 
 	// Mock watcher
 	errCh := make(chan error)
@@ -222,7 +222,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	ctrl.tasksManager = &tm
+	ctrl.tasksManager = tm
 
 	// Mock watcher
 	expectedErr := errors.New("error!")
