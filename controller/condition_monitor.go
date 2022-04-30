@@ -76,10 +76,6 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 		}
 		cm.watcherCh = make(chan string, len(tasks)+10)
 	}
-	if cm.scheduleStartCh == nil {
-		// Size of channel is an arbitrarily chosen value.
-		cm.scheduleStartCh = make(chan driver.Driver, 10)
-	}
 	if cm.deleteCh == nil {
 		// Size of channel is an arbitrarily chosen value.
 		cm.deleteCh = make(chan string, 10)
@@ -110,10 +106,10 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 
 			go cm.runDynamicTask(ctx, d) // errors are logged for now
 
-		case d := <-cm.scheduleStartCh:
+		case taskName := <-cm.tasksManager.WatchCreatedScheduleTask():
 			// Run newly created scheduled tasks
 			stopCh := make(chan struct{}, 1)
-			cm.scheduleStopChs[d.Task().Name()] = stopCh
+			cm.scheduleStopChs[taskName] = stopCh
 			go cm.runScheduledTask(ctx, d, stopCh)
 
 		case n := <-cm.deleteCh:

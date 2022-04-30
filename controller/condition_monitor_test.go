@@ -350,7 +350,7 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 
 func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	tm := newTestTasksManager()
-	tm.scheduleStartCh = make(chan driver.Driver, 1)
+	tm.createdScheduleCh = make(chan string, 1)
 	tm.EnableTestMode()
 
 	// Set up condition monitor
