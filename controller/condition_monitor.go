@@ -23,14 +23,14 @@ type ConditionMonitor struct {
 }
 
 // NewConditionMonitor configures a new condition monitor
-func NewConditionMonitor(tm *TasksManager) (*ConditionMonitor, error) {
+func NewConditionMonitor(tm *TasksManager) *ConditionMonitor {
 	logger := logging.Global().Named(tasksManagerSystemName)
 
 	return &ConditionMonitor{
 		logger:       logger,
 		watcher:      tm.watcher,
 		tasksManager: tm,
-	}, nil
+	}
 }
 
 // WatchDep is a helper method to start watching dependencies to allow templates
