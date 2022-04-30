@@ -23,7 +23,6 @@ type TasksManager struct {
 	logger logging.Logger
 
 	factory *driverFactory
-	watcher templates.Watcher
 	state   state.Store
 	drivers *driver.Drivers
 
@@ -55,7 +54,6 @@ func NewTasksManager(conf *config.Config, state state.Store, watcher templates.W
 	return &TasksManager{
 		logger:          logger,
 		factory:         factory,
-		watcher:         watcher,
 		state:           state,
 		drivers:         driver.NewDrivers(),
 		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
