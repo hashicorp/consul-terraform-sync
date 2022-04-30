@@ -134,29 +134,12 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 // runDynamicTask will try to render the template and apply the task if necessary.
 func (cm *ConditionMonitor) runDynamicTask(ctx context.Context, d driver.Driver) error {
 	task := d.Task()
-	taskName := task.Name()
 	if task.IsScheduled() {
 		// Schedule tasks are not dynamic and run in a different process
 		return nil
 	}
-	if cm.drivers.IsMarkedForDeletion(taskName) {
-		cm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
-		return nil
-	}
 
-	err := cm.waitForTaskInactive(ctx, taskName)
-	if err != nil {
-		return err
-	}
-	complete, err := cm.checkApply(ctx, d, true, false)
-	if err != nil {
-		return err
-	}
-
-	if cm.taskNotify != nil && complete {
-		cm.taskNotify <- taskName
-	}
-	return nil
+	return cm.tasksManager.TaskRunNow(ctx, d)
 }
 
 // runScheduledTask starts up a go-routine for a given scheduled task/driver.
@@ -199,27 +182,10 @@ func (cm *ConditionMonitor) runScheduledTask(ctx context.Context, d driver.Drive
 				return nil
 			}
 
-			if cm.drivers.IsMarkedForDeletion(taskName) {
-				cm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
-				return nil
-			}
-
-			cm.logger.Info("time for scheduled task", taskNameLogKey, taskName)
-			if cm.drivers.IsActive(taskName) {
-				// The driver is currently active with the task, initiated by an ad-hoc run.
-				cm.logger.Trace("task is active", taskNameLogKey, taskName)
-				continue
-			}
-
-			complete, err := cm.checkApply(ctx, d, true, false)
-			if err != nil {
+			if err := cm.tasksManager.TaskRunNow(ctx, d); err != nil {
 				// print error but continue
 				cm.logger.Error("error applying task %q: %s",
 					taskNameLogKey, taskName, "error", err)
-			}
-
-			if cm.taskNotify != nil && complete {
-				cm.taskNotify <- taskName
 			}
 
 			nextTime := expr.Next(time.Now())

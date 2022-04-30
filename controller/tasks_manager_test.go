@@ -580,7 +580,7 @@ func Test_TasksManager_addTask(t *testing.T) {
 	})
 }
 
-func Test_TasksManager_CheckApply(t *testing.T) {
+func Test_TasksManager_TaskRunNow(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -659,7 +659,7 @@ func Test_TasksManager_CheckApply(t *testing.T) {
 			tm := newTestTasksManager()
 			ctx := context.Background()
 
-			_, err := tm.checkApply(ctx, d, false, false)
+			err := tm.TaskRunNow(ctx, d)
 			data := tm.state.GetTaskEvents(tc.taskName)
 			events := data[tc.taskName]
 
@@ -690,38 +690,9 @@ func Test_TasksManager_CheckApply(t *testing.T) {
 			}
 		})
 	}
-
-	t.Run("unrendered-scheduled-tasks", func(t *testing.T) {
-		// Test the behavior for once-mode and daemon-mode for the situation
-		// where a scheduled task's template did not render
-
-		tm := newTestTasksManager()
-
-		d := new(mocksD.Driver)
-		taskName := "scheduled_task"
-		d.On("Task").Return(scheduledTestTask(t, taskName))
-		d.On("TemplateIDs").Return(nil)
-		d.On("RenderTemplate", mock.Anything).Return(false, nil)
-		tm.drivers.Add(taskName, d)
-
-		// Once-mode - confirm no events are stored
-		ctx := context.Background()
-		_, err := tm.checkApply(ctx, d, false, true)
-		assert.NoError(t, err)
-		data := tm.state.GetTaskEvents(taskName)
-		events := data[taskName]
-		assert.Equal(t, 0, len(events))
-
-		// Daemon-mode - confirm an event is stored
-		_, err = tm.checkApply(ctx, d, false, false)
-		assert.NoError(t, err)
-		data = tm.state.GetTaskEvents(taskName)
-		events = data[taskName]
-		assert.Equal(t, 1, len(events))
-	})
 }
 
-func Test_TasksManager_CheckApply_Store(t *testing.T) {
+func Test_TasksManager_TaskRunNow_Store(t *testing.T) {
 	t.Run("mult-checkapply-store", func(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, "task_a"))
@@ -739,12 +710,12 @@ func Test_TasksManager_CheckApply_Store(t *testing.T) {
 		tm.drivers.Add("task_b", disabledD)
 		ctx := context.Background()
 
-		tm.checkApply(ctx, d, false, false)
-		tm.checkApply(ctx, disabledD, false, false)
-		tm.checkApply(ctx, d, false, false)
-		tm.checkApply(ctx, d, false, false)
-		tm.checkApply(ctx, d, false, false)
-		tm.checkApply(ctx, disabledD, false, false)
+		tm.TaskRunNow(ctx, d)
+		tm.TaskRunNow(ctx, disabledD)
+		tm.TaskRunNow(ctx, d)
+		tm.TaskRunNow(ctx, d)
+		tm.TaskRunNow(ctx, d)
+		tm.TaskRunNow(ctx, disabledD)
 
 		taskStatuses := tm.state.GetTaskEvents("")
 
