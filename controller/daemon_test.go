@@ -22,15 +22,16 @@ func Test_Daemon_Run_long(t *testing.T) {
 	// Only tests long-running mode of Run()
 	t.Parallel()
 
+	cm := newTestConditionMonitor(nil)
 	w := new(mocksTmpl.Watcher)
 	w.On("Watch", mock.Anything, mock.Anything).Return(nil)
+	cm.watcher = w
 
 	port := testutils.FreePort(t)
 
 	ctl := Daemon{once: true}
 
 	tm := newTestTasksManager()
-	tm.watcher = w
 	tm.state = state.NewInMemoryStore(&config.Config{
 		Port: config.Int(port),
 	})
@@ -137,6 +138,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 
 	cm := newTestConditionMonitor(tm)
 	cm.watcherCh = make(chan string, 5)
+	rw.monitor = cm
 
 	// Mock watcher
 	w := new(mocksTmpl.Watcher)
@@ -146,7 +148,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	w.On("WaitCh", mock.Anything).Return(waitErrChRc).Once()
 	w.On("Size").Return(5)
 	w.On("Watch", ctx, cm.watcherCh).Return(nil)
-	tm.watcher = w
+	cm.watcher = w
 
 	go func() {
 		err := rw.Run(ctx)

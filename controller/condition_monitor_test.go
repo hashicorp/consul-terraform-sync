@@ -246,10 +246,8 @@ func Test_ConditionMonitor_Run_context_cancel(t *testing.T) {
 		On("Size").Return(5).
 		On("Stop").Return()
 
-	tm := newTestTasksManager()
-	tm.watcher = w
-
-	cm := newTestConditionMonitor(tm)
+	cm := newTestConditionMonitor(nil)
+	cm.watcher = w
 
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -295,7 +293,7 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	w := new(mocks.Watcher)
 	w.On("Size").Return(5)
 	w.On("Watch", ctx, cm.watcherCh).Return(nil)
-	tm.watcher = w
+	cm.watcher = w
 
 	// Start Run
 	errCh := make(chan error)
@@ -359,13 +357,13 @@ func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	cm := newTestConditionMonitor(tm)
 	cm.watcherCh = make(chan string, 5)
 
-	// Set up watcher for tm
+	// Set up watcher for condition monitor
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	w := new(mocks.Watcher)
 	w.On("Size").Return(5)
 	w.On("Watch", ctx, cm.watcherCh).Return(nil)
-	tm.watcher = w
+	cm.watcher = w
 
 	go cm.Run(ctx)
 
@@ -394,7 +392,7 @@ func Test_ConditionMonitor_WatchDep_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	t.Run("cancel exits successfully", func(t *testing.T) {
-		tm := newTestTasksManager()
+		cm := newTestConditionMonitor(nil)
 
 		// Mock watcher
 		w := new(mocks.Watcher)
@@ -403,12 +401,11 @@ func Test_ConditionMonitor_WatchDep_context_cancel(t *testing.T) {
 		waitErrCh <- nil
 		w.On("WaitCh", mock.Anything).Return(waitErrChRc)
 		w.On("Size", mock.Anything).Return(1)
-		tm.watcher = w
+		cm.watcher = w
 
 		errCh := make(chan error)
 		ctx, cancel := context.WithCancel(context.Background())
 
-		cm := newTestConditionMonitor(tm)
 		go func() {
 			if err := cm.WatchDep(ctx); err != nil {
 				errCh <- err
@@ -429,7 +426,7 @@ func Test_ConditionMonitor_WatchDep_context_cancel(t *testing.T) {
 	})
 
 	t.Run("error exits successfully", func(t *testing.T) {
-		tm := newTestTasksManager()
+		cm := newTestConditionMonitor(nil)
 
 		// Mock watcher
 		w := new(mocks.Watcher)
@@ -437,13 +434,12 @@ func Test_ConditionMonitor_WatchDep_context_cancel(t *testing.T) {
 		var waitErrChRc <-chan error = waitErrCh
 		waitErrCh <- errors.New("error!")
 		w.On("WaitCh", mock.Anything).Return(waitErrChRc)
-		tm.watcher = w
+		cm.watcher = w
 
 		errCh := make(chan error)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		cm := newTestConditionMonitor(tm)
 		go func() {
 			if err := cm.WatchDep(ctx); err != nil {
 				errCh <- err
@@ -555,7 +551,6 @@ func newTestConditionMonitor(tm *TasksManager) *ConditionMonitor {
 
 	if tm != nil {
 		cm.tasksManager = tm
-		cm.watcher = tm.watcher
 	}
 
 	return cm
