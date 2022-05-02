@@ -40,16 +40,18 @@ func BenchmarkTaskTrigger(b *testing.B) {
 		numServices: 25,
 	})
 
-	rwCtrl, err := controller.NewDaemon(conf)
+	ctrl, err := controller.NewDaemon(conf)
 	require.NoError(b, err)
-	err = rwCtrl.Init(ctx)
+	err = ctrl.Init(ctx)
 	require.NoError(b, err)
-	err = rwCtrl.Once(ctx)
+	defer ctrl.Stop()
+
+	err = ctrl.Once(ctx)
 	require.NoError(b, err)
 
 	ctrlStopped := make(chan error)
 	go func() {
-		err := rwCtrl.Run(ctx)
+		err := ctrl.Run(ctx)
 		ctrlStopped <- err
 	}()
 

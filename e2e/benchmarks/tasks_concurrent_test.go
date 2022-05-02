@@ -74,13 +74,14 @@ func benchmarkTasksConcurrent(b *testing.B, bConf benchmarkConfig) {
 
 	conf := generateConf(b, bConf)
 
-	rwCtrl, err := controller.NewDaemon(conf)
+	ctrl, err := controller.NewDaemon(conf)
 	require.NoError(b, err)
 
-	err = rwCtrl.Init(context.Background())
+	err = ctrl.Init(context.Background())
 	require.NoError(b, err)
+	defer ctrl.Stop()
 
-	err = rwCtrl.Once(context.Background())
+	err = ctrl.Once(context.Background())
 	require.NoError(b, err)
 
 	// This is the crux of the benchmark which evaluates the performance of
@@ -88,10 +89,10 @@ func benchmarkTasksConcurrent(b *testing.B, bConf benchmarkConfig) {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	defer ctxCancel()
 	ctrlStopped := make(chan error)
-	completedTasksCh := rwCtrl.EnableTestMode()
+	completedTasksCh := ctrl.EnableTestMode()
 
 	go func() {
-		ctrlStopped <- rwCtrl.Run(ctx)
+		ctrlStopped <- ctrl.Run(ctx)
 	}()
 
 	// Benchmark setup is done, reset the timer

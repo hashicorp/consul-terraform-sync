@@ -80,6 +80,7 @@ func benchmarkTasks(b *testing.B, numTasks int, numServices int) {
 
 	err = ctrl.Init(ctx)
 	require.NoError(b, err)
+	defer ctrl.Stop()
 
 	// Make an initial dependency change as setup, reset timer
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
