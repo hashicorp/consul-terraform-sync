@@ -216,7 +216,7 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		ctx := context.Background()
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
-		tm.scheduleStopChs[taskName] = stopCh
+		cm.scheduleStopChs[taskName] = stopCh
 		done := make(chan bool)
 		go func() {
 			err := cm.runScheduledTask(ctx, taskName, stopCh)
@@ -232,7 +232,7 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		case <-done:
 			// runScheduledTask exited as expected
 			d.AssertExpectations(t)
-			_, ok := tm.scheduleStopChs[taskName]
+			_, ok := cm.scheduleStopChs[taskName]
 			assert.False(t, ok, "expected scheduled task stop channel to be removed")
 		case <-time.After(time.Second * 5):
 			t.Fatal("runScheduledTask did not exit as expected")
@@ -383,9 +383,47 @@ func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("scheduled task did not run")
 	}
-	stopCh, ok := tm.scheduleStopChs[createdTaskName]
+	stopCh, ok := cm.scheduleStopChs[createdTaskName]
 	assert.True(t, ok, "scheduled task stop channel not added to map")
 	assert.NotNil(t, stopCh, "expected stop channel not to be nil")
+}
+
+func Test_ConditionMonitor_Run_ScheduledTasks_Stop(t *testing.T) {
+	t.Parallel()
+	// Tests receiving a stop notification for deleting a scheduled task
+
+	// Setup task manager
+	taskName := "scheduled_task"
+	tm := newTestTasksManager()
+	tm.deletedScheduleCh = make(chan string, 1)
+
+	// Setup condition monitor
+	cm := newTestConditionMonitor(tm)
+	stopCh := make(chan struct{}, 1)
+	cm.scheduleStopChs[taskName] = stopCh
+
+	// Set up watcher for condition monitor
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	w := new(mocks.Watcher)
+	w.On("Size").Return(5)
+	w.On("Watch", mock.Anything, mock.Anything).Return(nil)
+	cm.watcher = w
+
+	go cm.Run(ctx)
+
+	// Send notification that task was deleted
+	tm.deletedScheduleCh <- taskName
+
+	// Verify the stop channel received message
+	select {
+	case <-time.After(1 * time.Second):
+		t.Fatal("scheduled task was not notified to stop")
+	case <-stopCh:
+		// expected case
+		_, ok := cm.scheduleStopChs[taskName]
+		assert.False(t, ok, "scheduled task stop channel still in map")
+	}
 }
 
 func Test_ConditionMonitor_WatchDep_context_cancel(t *testing.T) {
@@ -545,8 +583,9 @@ func scheduledTestTask(tb testing.TB, name string) *driver.Task {
 
 func newTestConditionMonitor(tm *TasksManager) *ConditionMonitor {
 	cm := &ConditionMonitor{
-		logger:       logging.NewNullLogger(),
-		tasksManager: newTestTasksManager(),
+		logger:          logging.NewNullLogger(),
+		tasksManager:    newTestTasksManager(),
+		scheduleStopChs: make(map[string](chan struct{})),
 	}
 
 	if tm != nil {

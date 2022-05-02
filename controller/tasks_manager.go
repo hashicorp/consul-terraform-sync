@@ -32,8 +32,9 @@ type TasksManager struct {
 	// that will need to be monitored
 	createdScheduleCh chan string
 
-	// scheduleStopChs is a map of channels used to stop scheduled tasks
-	scheduleStopChs map[string]chan struct{}
+	// deletedScheduleCh sends the task name of deleted scheduled tasks that
+	// should stop being monitored
+	deletedScheduleCh chan string
 
 	// taskNotify is only initialized if EnableTestMode() is used. It provides
 	// tests insight into which tasks were triggered and had completed
@@ -56,7 +57,7 @@ func NewTasksManager(conf *config.Config, state state.Store, watcher templates.W
 		drivers:           driver.NewDrivers(),
 		retry:             retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		createdScheduleCh: make(chan string, 10), // arbitrarily chosen size
-		scheduleStopChs:   make(map[string]chan struct{}),
+		deletedScheduleCh: make(chan string, 10), // arbitrarily chosen size
 	}, nil
 }
 
@@ -437,6 +438,12 @@ func (tm TasksManager) WatchCreatedScheduleTask() <-chan string {
 	return tm.createdScheduleCh
 }
 
+// WatchDeletedScheduleTask returns a channel to inform any watcher that a new
+// scheduled task has been deleted and removed from CTS.
+func (tm TasksManager) WatchDeletedScheduleTask() <-chan string {
+	return tm.deletedScheduleCh
+}
+
 // createTask creates and initializes a singular task from configuration
 func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskConfig) (driver.Driver, error) {
 	conf := tm.state.GetConfig()
@@ -579,11 +586,7 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 
 	if d.Task().IsScheduled() {
 		// Notify the scheduled task to stop
-		stopCh := tm.scheduleStopChs[name]
-		if stopCh != nil {
-			stopCh <- struct{}{}
-		}
-		delete(tm.scheduleStopChs, name)
+		tm.deletedScheduleCh <- name
 	}
 
 	// Delete task from drivers

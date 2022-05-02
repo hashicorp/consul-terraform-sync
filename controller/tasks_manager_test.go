@@ -790,7 +790,7 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 	}
 
 	t.Run("scheduled_task", func(t *testing.T) {
-		// Tests that deleting a scheduled task sends a stop notification
+		// Tests that deleting a scheduled task sends a deleted notification
 
 		// Setup tm and drivers
 		taskName := "scheduled_task"
@@ -800,22 +800,18 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 		scheduledDriver.On("TemplateIDs").Return(nil)
 		tm := newTestTasksManager()
 		tm.drivers.Add(taskName, scheduledDriver)
-		stopCh := make(chan struct{}, 1)
-		tm.scheduleStopChs[taskName] = stopCh
 
 		// Delete task
 		err := tm.deleteTask(ctx, taskName)
 		assert.NoError(t, err)
 
-		// Verify the stop channel received message
+		// Verify the deleted schedule channel received message
 		select {
 		case <-time.After(1 * time.Second):
 			t.Fatal("scheduled task was not notified to stop")
-		case <-stopCh:
+		case <-tm.WatchDeletedScheduleTask():
 			break // expected case
 		}
-		_, ok := tm.scheduleStopChs[taskName]
-		assert.False(t, ok, "scheduled task stop channel still in map")
 	})
 
 	t.Run("active_task", func(t *testing.T) {
@@ -935,8 +931,7 @@ func newTestTasksManager() *TasksManager {
 		factory: &driverFactory{
 			logger: logging.NewNullLogger(),
 		},
-		drivers:         driver.NewDrivers(),
-		state:           state.NewInMemoryStore(nil),
-		scheduleStopChs: make(map[string](chan struct{})),
+		drivers: driver.NewDrivers(),
+		state:   state.NewInMemoryStore(nil),
 	}
 }
