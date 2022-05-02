@@ -67,20 +67,12 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 			assert.Equal(t, m.client, client)
 			assert.NotNil(t, m.logger)
 
-			// Verify service attributes
+			// Verify service attributes and health check attributes
 			assert.NotNil(t, m.service)
-			assert.Equal(t, tc.expectedService.name, m.service.name)
-			assert.Equal(t, tc.expectedService.id, m.service.id)
-			assert.Equal(t, tc.expectedService.tags, m.service.tags)
-			assert.Equal(t, tc.expectedService.port, m.service.port)
-			assert.Equal(t, tc.expectedService.namespace, m.service.namespace)
-
-			// Verify service has default health check
-			assert.NotNil(t, m.service.checks)
-			assert.Equal(t, 1, len(m.service.checks))
-			check := m.service.checks[0]
-			defaultCheck := defaultHTTPCheck(tc.conf)
-			assert.Equal(t, defaultCheck, check)
+			if tc.expectedService.checks == nil {
+				tc.expectedService.checks = []*consulapi.AgentServiceCheck{defaultHTTPCheck(tc.conf)}
+			}
+			assert.Equal(t, tc.expectedService, m.service)
 		})
 	}
 }
