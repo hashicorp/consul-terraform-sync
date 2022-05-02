@@ -659,7 +659,7 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 			tm := newTestTasksManager()
 			ctx := context.Background()
 
-			err := tm.TaskRunNow(ctx, d)
+			err := tm.TaskRunNow(ctx, tc.taskName)
 			data := tm.state.GetTaskEvents(tc.taskName)
 			events := data[tc.taskName]
 
@@ -710,12 +710,12 @@ func Test_TasksManager_TaskRunNow_Store(t *testing.T) {
 		tm.drivers.Add("task_b", disabledD)
 		ctx := context.Background()
 
-		tm.TaskRunNow(ctx, d)
-		tm.TaskRunNow(ctx, disabledD)
-		tm.TaskRunNow(ctx, d)
-		tm.TaskRunNow(ctx, d)
-		tm.TaskRunNow(ctx, d)
-		tm.TaskRunNow(ctx, disabledD)
+		tm.TaskRunNow(ctx, "task_a")
+		tm.TaskRunNow(ctx, "task_b")
+		tm.TaskRunNow(ctx, "task_a")
+		tm.TaskRunNow(ctx, "task_a")
+		tm.TaskRunNow(ctx, "task_a")
+		tm.TaskRunNow(ctx, "task_b")
 
 		taskStatuses := tm.state.GetTaskEvents("")
 

@@ -28,7 +28,7 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		tm.drivers.Add("task", d)
 
 		cm := newTestConditionMonitor(tm)
-		err := cm.runDynamicTask(ctx, d)
+		err := cm.runDynamicTask(ctx, "task")
 		assert.NoError(t, err)
 	})
 
@@ -45,7 +45,7 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		tm.drivers.Add("task", d)
 
 		cm := newTestConditionMonitor(tm)
-		err := cm.runDynamicTask(context.Background(), d)
+		err := cm.runDynamicTask(context.Background(), "task")
 		assert.Contains(t, err.Error(), testErr.Error())
 	})
 
@@ -60,7 +60,7 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		tm.drivers.Add(taskName, d)
 
 		cm := newTestConditionMonitor(tm)
-		err := cm.runDynamicTask(context.Background(), d)
+		err := cm.runDynamicTask(context.Background(), taskName)
 		assert.NoError(t, err)
 	})
 
@@ -81,7 +81,7 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		// Attempt to run the active task
 		ch := make(chan error)
 		go func() {
-			err := cm.runDynamicTask(ctx, d)
+			err := cm.runDynamicTask(ctx, taskName)
 			ch <- err
 		}()
 
@@ -123,7 +123,7 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := cm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, taskName, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -154,7 +154,7 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := cm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, taskName, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -188,7 +188,7 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := cm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, taskName, stopCh)
 			errCh <- err
 		}()
 		stopCh <- struct{}{}
@@ -219,7 +219,7 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		tm.scheduleStopChs[taskName] = stopCh
 		done := make(chan bool)
 		go func() {
-			err := cm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, taskName, stopCh)
 			if err != nil {
 				errCh <- err
 			}

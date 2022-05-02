@@ -317,14 +317,18 @@ func (tm TasksManager) cleanupTask(ctx context.Context, name string) {
 // Note on #2: no event is stored when a dynamic task renders but does not apply.
 // This can occur because driver.RenderTemplate() may need to be called multiple
 // times before a template is ready to be applied.
-func (tm *TasksManager) TaskRunNow(ctx context.Context, d driver.Driver) error {
-	task := d.Task()
-	taskName := task.Name()
-
+func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 	if tm.drivers.IsMarkedForDeletion(taskName) {
 		tm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
 		return nil
 	}
+
+	d, ok := tm.drivers.Get(taskName)
+	if !ok {
+		return fmt.Errorf("task '%s' driver was deleted", taskName)
+	}
+
+	task := d.Task()
 
 	// For scheduled tasks, do not wait if task is active
 	if tm.drivers.IsActive(taskName) && task.IsScheduled() {
@@ -409,6 +413,16 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, d driver.Driver) error {
 	}
 
 	return nil
+}
+
+// TaskByTemplate returns the name of the task associated with a template id.
+// If no task is associated with the template id, returns false.
+func (tm TasksManager) TaskByTemplate(tmplID string) (string, bool) {
+	driver, ok := tm.drivers.GetTaskByTemplate(tmplID)
+	if !ok {
+		return "", false
+	}
+	return driver.Task().Name(), true
 }
 
 // EnableTestMode is a helper for testing which tasks were triggered and
