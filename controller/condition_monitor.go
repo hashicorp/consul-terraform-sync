@@ -75,10 +75,6 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 		}
 		cm.watcherCh = make(chan string, len(tasks)+10)
 	}
-	if cm.deleteCh == nil {
-		// Size of channel is an arbitrarily chosen value.
-		cm.deleteCh = make(chan string, 10)
-	}
 	if cm.scheduleStopChs == nil {
 		cm.scheduleStopChs = make(map[string](chan struct{}))
 	}
@@ -110,9 +106,6 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 			stopCh := make(chan struct{}, 1)
 			cm.scheduleStopChs[taskName] = stopCh
 			go cm.runScheduledTask(ctx, taskName, stopCh)
-
-		case n := <-cm.deleteCh:
-			go cm.deleteTask(ctx, n)
 
 		case err := <-errCh:
 			return err

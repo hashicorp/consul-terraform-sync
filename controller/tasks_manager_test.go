@@ -283,22 +283,22 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 func Test_TasksManager_TaskDelete(t *testing.T) {
 	ctx := context.Background()
 	tm := newTestTasksManager()
-	tm.deleteCh = make(chan string)
 
 	t.Run("happy path", func(t *testing.T) {
 		drivers := driver.NewDrivers()
 		taskName := "delete_task"
 
+		mockD := new(mocksD.Driver)
+		mockD.On("TemplateIDs").Return(nil)
+		mockD.On("Task").Return(enabledTestTask(t, "delete_task"))
+		mockD.On("DestroyTask", ctx).Return()
+		drivers.Add(taskName, mockD)
+
 		tm.drivers = drivers
-		go tm.TaskDelete(ctx, taskName)
-		select {
-		case n := <-tm.deleteCh:
-			assert.Equal(t, taskName, n)
-		case <-time.After(1 * time.Second):
-			t.Log("delete channel did not receive message")
-			t.Fail()
-		}
-		assert.True(t, tm.drivers.IsMarkedForDeletion(taskName))
+		tm.TaskDelete(ctx, taskName)
+		time.Sleep(2 * time.Second)
+
+		assert.Empty(t, drivers)
 	})
 
 	t.Run("already marked for deletion", func(t *testing.T) {
@@ -495,7 +495,6 @@ func Test_TasksManager_addTask(t *testing.T) {
 	t.Parallel()
 
 	tm := newTestTasksManager()
-	tm.deleteCh = make(chan string, 1)
 	tm.createdScheduleCh = make(chan string, 1)
 
 	t.Run("success", func(t *testing.T) {
@@ -572,8 +571,6 @@ func Test_TasksManager_addTask(t *testing.T) {
 		select {
 		case <-tm.createdScheduleCh:
 			t.Fatal("should not have received from scheduleStartCh")
-		case <-tm.deleteCh:
-			break
 		case <-time.After(time.Second * 5):
 			t.Fatal("did not receive from deleteCh as expected")
 		}

@@ -35,9 +35,6 @@ type TasksManager struct {
 	// scheduleStopChs is a map of channels used to stop scheduled tasks
 	scheduleStopChs map[string]chan struct{}
 
-	// deleteCh is used to coordinate task deletion via the API
-	deleteCh chan string
-
 	// taskNotify is only initialized if EnableTestMode() is used. It provides
 	// tests insight into which tasks were triggered and had completed
 	taskNotify chan string
@@ -59,7 +56,6 @@ func NewTasksManager(conf *config.Config, state state.Store, watcher templates.W
 		drivers:           driver.NewDrivers(),
 		retry:             retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		createdScheduleCh: make(chan string, 10), // arbitrarily chosen size
-		deleteCh:          make(chan string, 10), // arbitrarily chosen size
 		scheduleStopChs:   make(map[string]chan struct{}),
 	}, nil
 }
@@ -124,16 +120,17 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 	return tm.addTask(ctx, d)
 }
 
-// TaskDelete marks a task for deletion
-func (tm *TasksManager) TaskDelete(_ context.Context, name string) error {
+// TaskDelete marks a task for deletion then asynchronously deletes the task.
+func (tm *TasksManager) TaskDelete(ctx context.Context, name string) error {
 	logger := tm.logger.With(taskNameLogKey, name)
 	if tm.drivers.IsMarkedForDeletion(name) {
 		logger.Debug("task is already marked for deletion")
 		return nil
 	}
 	tm.drivers.MarkForDeletion(name)
-	tm.deleteCh <- name
 	logger.Debug("task marked for deletion")
+
+	go tm.deleteTask(ctx, name)
 	return nil
 }
 
@@ -589,7 +586,7 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 		delete(tm.scheduleStopChs, name)
 	}
 
-	// Delete task from drivers and event store
+	// Delete task from drivers
 	err = tm.drivers.Delete(name)
 	if err != nil {
 		logger.Error("unable to delete task", "error", err)
