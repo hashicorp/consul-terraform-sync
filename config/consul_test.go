@@ -39,6 +39,10 @@ func TestConsulConfig_Copy(t *testing.T) {
 				KVNamespace: String("org"),
 				TLS:         &TLSConfig{Enabled: Bool(true)},
 				Token:       String("abcd1234"),
+				SelfRegistration: &SelfRegistrationConfig{
+					Enabled:   Bool(false),
+					Namespace: String("test-ns"),
+				},
 			},
 		},
 	}
@@ -204,6 +208,30 @@ func TestConsulConfig_Merge(t *testing.T) {
 			&ConsulConfig{Transport: &TransportConfig{DialKeepAlive: TimeDuration(10 * time.Second)}},
 			&ConsulConfig{Transport: &TransportConfig{DialKeepAlive: TimeDuration(10 * time.Second)}},
 		},
+		{
+			"self_registration_overrides",
+			&ConsulConfig{SelfRegistration: &SelfRegistrationConfig{Enabled: Bool(true)}},
+			&ConsulConfig{SelfRegistration: &SelfRegistrationConfig{Enabled: Bool(false)}},
+			&ConsulConfig{SelfRegistration: &SelfRegistrationConfig{Enabled: Bool(false)}},
+		},
+		{
+			"self_registration_empty_one",
+			&ConsulConfig{SelfRegistration: &SelfRegistrationConfig{Enabled: Bool(true)}},
+			&ConsulConfig{},
+			&ConsulConfig{SelfRegistration: &SelfRegistrationConfig{Enabled: Bool(true)}},
+		},
+		{
+			"self_registration_empty_two",
+			&ConsulConfig{},
+			&ConsulConfig{SelfRegistration: &SelfRegistrationConfig{Enabled: Bool(true)}},
+			&ConsulConfig{SelfRegistration: &SelfRegistrationConfig{Enabled: Bool(true)}},
+		},
+		{
+			"self_registration_same",
+			&ConsulConfig{SelfRegistration: &SelfRegistrationConfig{Enabled: Bool(true)}},
+			&ConsulConfig{SelfRegistration: &SelfRegistrationConfig{Enabled: Bool(true)}},
+			&ConsulConfig{SelfRegistration: &SelfRegistrationConfig{Enabled: Bool(true)}},
+		},
 	}
 
 	for i, tc := range cases {
@@ -252,6 +280,10 @@ func TestConsulConfig_Finalize(t *testing.T) {
 					MaxIdleConns:        Int(DefaultMaxIdleConns),
 					MaxIdleConnsPerHost: Int(DefaultMaxIdleConnsPerHost),
 					TLSHandshakeTimeout: TimeDuration(DefaultTLSHandshakeTimeout),
+				},
+				SelfRegistration: &SelfRegistrationConfig{
+					Enabled:   Bool(true),
+					Namespace: String(""),
 				},
 			},
 		},

@@ -1,6 +1,7 @@
 log_level = "ERR"
 port = 8502
 working_dir = "working"
+id = "cts-123"
 
 syslog {
   enabled = true
@@ -44,6 +45,10 @@ consul {
     idle_conn_timeout = "1m"
     max_idle_conns_per_host = 100
     tls_handshake_timeout = "10s"
+  }
+  self_registration {
+    enabled = true
+    namespace = "test-ns"
   }
 }
 

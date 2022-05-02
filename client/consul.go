@@ -53,6 +53,8 @@ var _ ConsulClientInterface = (*ConsulClient)(nil)
 // - Easily mocked
 type ConsulClientInterface interface {
 	GetLicense(ctx context.Context, q *consulapi.QueryOptions) (string, error)
+	RegisterService(ctx context.Context, s *consulapi.AgentServiceRegistration) error
+	DeregisterService(ctx context.Context, serviceID string) error
 }
 
 // ConsulClient is a client to the Consul API
@@ -158,6 +160,48 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 	}
 
 	return license, err
+}
+
+// RegisterService registers a service through the Consul agent.
+func (c *ConsulClient) RegisterService(ctx context.Context, r *consulapi.AgentServiceRegistration) error {
+	desc := "AgentServiceRegister"
+
+	f := func(context.Context) error {
+		err := c.Agent().ServiceRegister(r)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	err := c.retry.Do(ctx, f, desc)
+	if err != nil {
+		// TODO: Do not retry depending on error, log message about service:write rule on 403
+		return err
+	}
+
+	return nil
+}
+
+// DeregisterService removes a service through the Consul agent.
+func (c *ConsulClient) DeregisterService(ctx context.Context, serviceID string) error {
+	desc := "AgentServiceDeregister"
+
+	f := func(context.Context) error {
+		err := c.Agent().ServiceDeregister(serviceID)
+		if err != nil {
+			// TODO: Do not retry depending on error, log message about service:write rule on 403
+			return err
+		}
+		return nil
+	}
+
+	err := c.retry.Do(ctx, f, desc)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getResponseCodeFromError(ctx context.Context, err error) int {

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/internal/decode"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/hcl"
 	"github.com/mitchellh/mapstructure"
 )
@@ -37,6 +38,7 @@ type Config struct {
 	ClientType *string `mapstructure:"client_type"`
 	Port       *int    `mapstructure:"port"`
 	WorkingDir *string `mapstructure:"working_dir"`
+	ID         *string `mapstructure:"id"`
 
 	Syslog             *SyslogConfig             `mapstructure:"syslog"`
 	Consul             *ConsulConfig             `mapstructure:"consul"`
@@ -102,6 +104,7 @@ func (c *Config) Copy() *Config {
 		Syslog:             c.Syslog.Copy(),
 		Port:               IntCopy(c.Port),
 		WorkingDir:         StringCopy(c.WorkingDir),
+		ID:                 StringCopy(c.ID),
 		Consul:             c.Consul.Copy(),
 		Vault:              c.Vault.Copy(),
 		Driver:             c.Driver.Copy(),
@@ -144,6 +147,10 @@ func (c *Config) Merge(o *Config) *Config {
 		r.WorkingDir = StringCopy(o.WorkingDir)
 	}
 
+	if o.ID != nil {
+		r.ID = StringCopy(o.ID)
+	}
+
 	if o.Syslog != nil {
 		r.Syslog = r.Syslog.Merge(o.Syslog)
 	}
@@ -184,9 +191,9 @@ func (c *Config) Merge(o *Config) *Config {
 }
 
 // Finalize ensures there no nil pointers.
-func (c *Config) Finalize() {
+func (c *Config) Finalize() error {
 	if c == nil {
-		return
+		return nil
 	}
 
 	if c.Port == nil {
@@ -195,6 +202,14 @@ func (c *Config) Finalize() {
 
 	if c.ClientType == nil {
 		c.ClientType = String("")
+	}
+
+	if c.ID == nil {
+		id, err := generateID()
+		if err != nil {
+			return err
+		}
+		c.ID = &id
 	}
 
 	if c.Syslog == nil {
@@ -255,6 +270,8 @@ func (c *Config) Finalize() {
 		c.TLS = DefaultCTSTLSConfig()
 	}
 	c.TLS.Finalize()
+
+	return nil
 }
 
 // Validate validates the values and nested values of the configuration struct
@@ -340,6 +357,7 @@ func (c *Config) GoString() string {
 		"LogLevel:%s, "+
 		"Port:%d, "+
 		"WorkingDir:%s, "+
+		"ID:%s, "+
 		"Syslog:%s, "+
 		"Consul:%s, "+
 		"Vault:%s, "+
@@ -353,6 +371,7 @@ func (c *Config) GoString() string {
 		StringVal(c.LogLevel),
 		IntVal(c.Port),
 		StringVal(c.WorkingDir),
+		StringVal(c.ID),
 		c.Syslog.GoString(),
 		c.Consul.GoString(),
 		c.Vault.GoString(),
@@ -588,6 +607,15 @@ func antiboolFromEnv(list []string, def bool) *bool {
 		}
 	}
 	return Bool(def)
+}
+
+// generateID generates a UUID to be used as the ID for a CTS instance
+func generateID() (string, error) {
+	uuid, err := uuid.GenerateUUID()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("cts-%s", uuid), nil
 }
 
 // serviceBlockLogMsg is the log message for deprecating the `service` block

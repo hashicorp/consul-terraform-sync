@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -78,6 +79,81 @@ func Test_GetLicense(t *testing.T) {
 	license, err := c.GetLicense(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, license, expectedLicense)
+}
+
+func TestConsulClient_RegisterService(t *testing.T) {
+	t.Parallel()
+	path := "/v1/agent/service/register"
+
+	cases := []struct {
+		name      string
+		response  int
+		expectErr bool
+	}{
+		{
+			"success",
+			http.StatusOK,
+			false,
+		},
+		{
+			"errors",
+			http.StatusBadRequest,
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			intercepts := []*testutils.HttpIntercept{
+				{Path: path, ResponseStatusCode: tc.response},
+			}
+			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+			err := c.RegisterService(context.Background(), nil)
+			if !tc.expectErr {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestConsulClient_DeregisterService(t *testing.T) {
+	t.Parallel()
+	id := "cts-123"
+	path := fmt.Sprintf("/v1/agent/service/deregister/%s", id)
+
+	cases := []struct {
+		name      string
+		response  int
+		expectErr bool
+	}{
+		{
+			"success",
+			http.StatusOK,
+			false,
+		},
+		{
+			"errors",
+			http.StatusNotFound,
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			intercepts := []*testutils.HttpIntercept{
+				{Path: path, ResponseStatusCode: tc.response},
+			}
+			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+			err := c.DeregisterService(context.Background(), id)
+			if !tc.expectErr {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
 }
 
 func newTestConsulClient(t *testing.T, httpClient *http.Client, maxRetry int) *ConsulClient {
