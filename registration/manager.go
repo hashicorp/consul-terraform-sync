@@ -33,16 +33,16 @@ const (
 
 var defaultServiceTags = []string{"cts"}
 
-// RegistrationManager handles the registration of a service and the health checks for that service
-// to Consul.
-type RegistrationManager struct {
+// SelfRegistrationManager handles the registration of Consul-Terraform-Sync as a service to Consul.
+type SelfRegistrationManager struct {
 	client  client.ConsulClientInterface
 	service *service
 
 	logger logging.Logger
 }
 
-type RegistrationManagerConfig struct {
+// SelfRegistrationManagerConfig defines the configurations needed to create a new SelfRegistrationManager.
+type SelfRegistrationManagerConfig struct {
 	ID               string
 	Port             int
 	TLSEnabled       bool
@@ -59,7 +59,9 @@ type service struct {
 	checks []*consulapi.AgentServiceCheck
 }
 
-func NewRegistrationManager(conf *RegistrationManagerConfig, client client.ConsulClientInterface) *RegistrationManager {
+// NewSelfRegistrationManager creates a new SelfRegistrationManager object with the given configuration
+// and Consul client. It sets default values where relevant, including a default HTTP check.
+func NewSelfRegistrationManager(conf *SelfRegistrationManagerConfig, client client.ConsulClientInterface) *SelfRegistrationManager {
 	logger := logging.Global().Named(logSystemName)
 
 	name := defaultServiceName
@@ -72,7 +74,7 @@ func NewRegistrationManager(conf *RegistrationManagerConfig, client client.Consu
 	var checks []*consulapi.AgentServiceCheck
 	checks = append(checks, defaultHTTPCheck(conf))
 
-	return &RegistrationManager{
+	return &SelfRegistrationManager{
 		client: client,
 		logger: logger,
 		service: &service{
@@ -86,7 +88,8 @@ func NewRegistrationManager(conf *RegistrationManagerConfig, client client.Consu
 	}
 }
 
-func (m *RegistrationManager) RegisterService(ctx context.Context) error {
+// SelfRegisterService registers Consul-Terraform-Sync with Consul
+func (m *SelfRegistrationManager) SelfRegisterService(ctx context.Context) error {
 	s := m.service
 	r := &consulapi.AgentServiceRegistration{
 		ID:        s.id,
@@ -97,16 +100,16 @@ func (m *RegistrationManager) RegisterService(ctx context.Context) error {
 		Namespace: s.namespace,
 	}
 
-	m.logger.Debug("registering service with Consul", "name", s.name, "id", s.id)
+	m.logger.Debug("self-registering Consul-Terraform-Sync as a service with Consul", "name", s.name, "id", s.id)
 	err := m.client.RegisterService(ctx, r)
 	if err != nil {
-		m.logger.Error("error registering service with Consul", "name", s.name, "id", s.id)
+		m.logger.Error("error self-registering Consul-Terraform-Sync as a service with Consul", "name", s.name, "id", s.id)
 		return err
 	}
 	return nil
 }
 
-func defaultHTTPCheck(conf *RegistrationManagerConfig) *consulapi.AgentServiceCheck {
+func defaultHTTPCheck(conf *SelfRegistrationManagerConfig) *consulapi.AgentServiceCheck {
 	var protocol string
 	if conf.TLSEnabled {
 		protocol = "https"

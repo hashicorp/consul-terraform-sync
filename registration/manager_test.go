@@ -16,15 +16,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewRegistrationManager(t *testing.T) {
+func TestNewSelfRegistrationManager(t *testing.T) {
 	testcases := []struct {
 		name            string
-		conf            *RegistrationManagerConfig
+		conf            *SelfRegistrationManagerConfig
 		expectedService *service
 	}{
 		{
 			"defaults",
-			&RegistrationManagerConfig{
+			&SelfRegistrationManagerConfig{
 				ID:               "cts-123",
 				Port:             123,
 				TLSEnabled:       false,
@@ -40,7 +40,7 @@ func TestNewRegistrationManager(t *testing.T) {
 		},
 		{
 			"namespace",
-			&RegistrationManagerConfig{
+			&SelfRegistrationManagerConfig{
 				ID:         "cts-123",
 				Port:       123,
 				TLSEnabled: false,
@@ -60,7 +60,7 @@ func TestNewRegistrationManager(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			client := new(mocks.ConsulClientInterface)
-			m := NewRegistrationManager(tc.conf, client)
+			m := NewSelfRegistrationManager(tc.conf, client)
 
 			// Verify general attributes
 			assert.NotNil(t, m)
@@ -85,7 +85,7 @@ func TestNewRegistrationManager(t *testing.T) {
 	}
 }
 
-func TestRegistrationManager_defaultHTTPCheck(t *testing.T) {
+func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 	id := "cts-123"
 	port := 8558
 	// TODO: update these addresses when /v1/health implemented
@@ -95,12 +95,12 @@ func TestRegistrationManager_defaultHTTPCheck(t *testing.T) {
 
 	testcases := []struct {
 		name     string
-		conf     *RegistrationManagerConfig
+		conf     *SelfRegistrationManagerConfig
 		expected *consulapi.AgentServiceCheck
 	}{
 		{
 			"tls_disabled",
-			&RegistrationManagerConfig{
+			&SelfRegistrationManagerConfig{
 				ID:               id,
 				Port:             port,
 				TLSEnabled:       false,
@@ -121,7 +121,7 @@ func TestRegistrationManager_defaultHTTPCheck(t *testing.T) {
 		},
 		{
 			"tls_enabled",
-			&RegistrationManagerConfig{
+			&SelfRegistrationManagerConfig{
 				ID:               id,
 				Port:             port,
 				TLSEnabled:       true,
@@ -149,11 +149,11 @@ func TestRegistrationManager_defaultHTTPCheck(t *testing.T) {
 	}
 }
 
-func TestRegistrationManager_RegisterService(t *testing.T) {
+func TestSelfRegistrationManager_SelfRegisterService(t *testing.T) {
 	id := "cts-123"
 	port := 8558
 	ns := "ns-1"
-	check := defaultHTTPCheck(&RegistrationManagerConfig{
+	check := defaultHTTPCheck(&SelfRegistrationManagerConfig{
 		ID:   id,
 		Port: port,
 		SelfRegistration: &config.SelfRegistrationConfig{
@@ -202,13 +202,13 @@ func TestRegistrationManager_RegisterService(t *testing.T) {
 			mockClient := new(mocks.ConsulClientInterface)
 			tc.setup(mockClient)
 
-			m := &RegistrationManager{
+			m := &SelfRegistrationManager{
 				client:  mockClient,
 				service: service,
 				logger:  logging.NewNullLogger(),
 			}
 
-			err := m.RegisterService(context.Background())
+			err := m.SelfRegisterService(context.Background())
 
 			if !tc.expectErr {
 				require.NoError(t, err)
