@@ -21,6 +21,9 @@ type ConditionMonitor struct {
 	tasksManager *TasksManager
 
 	watcherCh chan string
+
+	// scheduleStopChs is a map of channels used to stop scheduled tasks
+	scheduleStopChs map[string](chan struct{})
 }
 
 // NewConditionMonitor configures a new condition monitor
@@ -28,9 +31,10 @@ func NewConditionMonitor(tm *TasksManager, w templates.Watcher) *ConditionMonito
 	logger := logging.Global().Named(tasksManagerSystemName)
 
 	return &ConditionMonitor{
-		logger:       logger,
-		watcher:      w,
-		tasksManager: tm,
+		logger:          logger,
+		watcher:         w,
+		tasksManager:    tm,
+		scheduleStopChs: make(map[string](chan struct{})),
 	}
 }
 
@@ -107,6 +111,14 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 			cm.scheduleStopChs[taskName] = stopCh
 			go cm.runScheduledTask(ctx, taskName, stopCh)
 
+		case taskName := <-cm.tasksManager.WatchDeletedScheduleTask():
+			// Stop deleted scheduled tasks
+			stopCh := cm.scheduleStopChs[taskName]
+			if stopCh != nil {
+				stopCh <- struct{}{}
+			}
+			delete(cm.scheduleStopChs, taskName)
+
 		case err := <-errCh:
 			return err
 
@@ -181,7 +193,7 @@ func (cm *ConditionMonitor) runScheduledTask(ctx context.Context, taskName strin
 	for {
 		select {
 		case <-time.After(waitTime):
-			if _, ok := cm.drivers.Get(taskName); !ok {
+			if _, err := cm.tasksManager.Task(ctx, taskName); err != nil {
 				// Should not happen in the typical workflow, but stopping if in this state
 				logger.Debug("scheduled task no longer exists")
 				logger.Info("stopping deleted scheduled task")
