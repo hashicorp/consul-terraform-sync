@@ -200,8 +200,10 @@ func (c *Client) WaitForTestReadiness(timeout time.Duration) error {
 				taskStatuses, err := statusAPI.Task("", nil)
 				if err != nil {
 					if timeout.Seconds() > 1 {
-						// Add a sleep for longer tests
-						time.Sleep(500 * time.Millisecond)
+						// Add a small sleep for longer tests. Reduces resource
+						// usage but doesn't wait too long to cause flakiness
+						// with schedule task runs
+						time.Sleep(100 * time.Millisecond)
 					}
 					continue
 				}
@@ -216,8 +218,10 @@ func (c *Client) WaitForTestReadiness(timeout time.Duration) error {
 				}
 				if !once {
 					if timeout.Seconds() > 1 {
-						// Add a sleep for longer tests
-						time.Sleep(500 * time.Millisecond)
+						// Add a small sleep for longer tests. Reduces resource
+						// usage but doesn't wait too long to cause flakiness
+						// with schedule task runs
+						time.Sleep(100 * time.Millisecond)
 					}
 					continue
 				}
