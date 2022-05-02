@@ -198,7 +198,7 @@ func (c *startCommand) Run(args []string) int {
 
 	err = conf.Finalize()
 	if err != nil {
-		logger.Error("error finalzing configuration", "error", err)
+		logger.Error("error finalizing configuration", "error", err)
 		os.Exit(ExitCodeConfigError)
 	}
 

@@ -2,11 +2,15 @@ package config
 
 import "fmt"
 
+// SelfRegistrationConfig is a configuration that controls how CTS will
+// self-register itself as a service with Consul.
 type SelfRegistrationConfig struct {
 	Enabled   *bool   `mapstructure:"enabled"`
 	Namespace *string `mapstructure:"namespace"`
 }
 
+// DefaultSelfRegistrationConfig returns a SelfRegistrationConfig with
+// default values.
 func DefaultSelfRegistrationConfig() *SelfRegistrationConfig {
 	return &SelfRegistrationConfig{
 		Enabled:   Bool(true),
@@ -14,6 +18,7 @@ func DefaultSelfRegistrationConfig() *SelfRegistrationConfig {
 	}
 }
 
+// Copy returns a deep copy of this configuration.
 func (c *SelfRegistrationConfig) Copy() *SelfRegistrationConfig {
 	if c == nil {
 		return nil
@@ -26,6 +31,8 @@ func (c *SelfRegistrationConfig) Copy() *SelfRegistrationConfig {
 	return &o
 }
 
+// Merge combines all values in this configuration with the values in the other
+// configuration, with values in the other configuration taking precedence.
 func (c *SelfRegistrationConfig) Merge(o *SelfRegistrationConfig) *SelfRegistrationConfig {
 	if c == nil {
 		if o == nil {
@@ -51,6 +58,7 @@ func (c *SelfRegistrationConfig) Merge(o *SelfRegistrationConfig) *SelfRegistrat
 	return r
 }
 
+// Finalize ensures that the receiver contains no nil pointers.
 func (c *SelfRegistrationConfig) Finalize() {
 	if c.Enabled == nil {
 		c.Enabled = Bool(true)
@@ -61,6 +69,7 @@ func (c *SelfRegistrationConfig) Finalize() {
 	}
 }
 
+// GoString defines the printable version of this struct.
 func (c *SelfRegistrationConfig) GoString() string {
 	if c == nil {
 		return "(*SelfRegistrationConfig)(nil)"
