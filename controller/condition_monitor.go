@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/hashicorp/cronexpr"
@@ -98,21 +97,19 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 	for i := int64(1); ; i++ {
 		select {
 		case tmplID := <-cm.watcherCh:
-			d, ok := cm.drivers.GetTaskByTemplate(tmplID)
+			taskName, ok := cm.tasksManager.TaskByTemplate(tmplID)
 			if !ok {
 				cm.logger.Debug("template was notified for update but the template ID does not match any task", "template_id", tmplID)
 				continue
 			}
 
-			go cm.runDynamicTask(ctx, d) // errors are logged for now
+			go cm.runDynamicTask(ctx, taskName) // errors are logged for now
 
 		case taskName := <-cm.tasksManager.WatchCreatedScheduleTasks():
 			// Run newly created scheduled tasks
 			stopCh := make(chan struct{}, 1)
-
-			// TODO: next commit fixes issue where driver no longer returned
-			cm.scheduleStopChs[d.Task().Name()] = stopCh
-			go cm.runScheduledTask(ctx, d, stopCh)
+			cm.scheduleStopChs[taskName] = stopCh
+			go cm.runScheduledTask(ctx, taskName, stopCh)
 
 		case n := <-cm.deleteCh:
 			go cm.deleteTask(ctx, n)
@@ -130,15 +127,25 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 }
 
 // runDynamicTask will try to render the template and apply the task if necessary.
-func (cm *ConditionMonitor) runDynamicTask(ctx context.Context, d driver.Driver) error {
-	task := d.Task()
-	if task.IsScheduled() {
-		// Schedule tasks are not dynamic and run in a different process
-		return nil
+func (cm *ConditionMonitor) runDynamicTask(ctx context.Context, taskName string) error {
+	logger := cm.logger.With(taskNameLogKey, taskName)
+
+	task, err := cm.tasksManager.Task(ctx, taskName)
+	if err != nil {
+		logger.Warn("dynamic task cannot be run. task may have been deleted",
+			"error", err)
+		return err
 	}
 
-	if err := cm.tasksManager.TaskRunNow(ctx, d); err != nil {
-		cm.logger.Error("error running task", taskNameLogKey, task.Name(), "error", err)
+	if _, ok := task.Condition.(*config.ScheduleConditionConfig); ok {
+		logger.Error("unexpected scheduled condition while running a dynamic " +
+			"condition")
+		return fmt.Errorf("error: expected a dynamic condition but got " +
+			"a scheduled condition type")
+	}
+
+	if err := cm.tasksManager.TaskRunNow(ctx, taskName); err != nil {
+		logger.Error("error running task", "error", err)
 		return err
 	}
 
@@ -149,56 +156,60 @@ func (cm *ConditionMonitor) runDynamicTask(ctx context.Context, d driver.Driver)
 // The go-routine will manage the task's schedule and trigger the task on time.
 // If there are dependency changes since the task's last run time, then the task
 // will also apply.
-func (cm *ConditionMonitor) runScheduledTask(ctx context.Context, d driver.Driver, stopCh chan struct{}) error {
-	task := d.Task()
-	taskName := task.Name()
+func (cm *ConditionMonitor) runScheduledTask(ctx context.Context, taskName string, stopCh chan struct{}) error {
+	logger := cm.logger.With(taskNameLogKey, taskName)
 
-	cond, ok := task.Condition().(*config.ScheduleConditionConfig)
+	task, err := cm.tasksManager.Task(ctx, taskName)
+	if err != nil {
+		logger.Warn("scheduled task cannot be run. task may have been deleted",
+			"error", err)
+		return err
+	}
+
+	cond, ok := task.Condition.(*config.ScheduleConditionConfig)
 	if !ok {
-		cm.logger.Error("unexpected condition while running a scheduled "+
-			"condition", taskNameLogKey, taskName, "condition_type",
-			fmt.Sprintf("%T", task.Condition()))
+		logger.Error("unexpected condition while running a scheduled "+
+			"condition", "condition_type", fmt.Sprintf("%T", task.Condition))
 		return fmt.Errorf("error: expected a schedule condition but got "+
-			"condition type %T", task.Condition())
+			"condition type %T", task.Condition)
 	}
 
 	expr, err := cronexpr.Parse(*cond.Cron)
 	if err != nil {
-		cm.logger.Error("error parsing task cron", taskNameLogKey, taskName,
-			"cron", *cond.Cron, "error", err)
+		logger.Error("error parsing task cron", "cron", *cond.Cron, "error", err)
 		return err
 	}
 
 	nextTime := expr.Next(time.Now())
 	waitTime := time.Until(nextTime)
-	cm.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
-		"wait_time", waitTime, "next_runtime", nextTime)
+	logger.Info("scheduled task next run time", "wait_time", waitTime,
+		"next_runtime", nextTime)
 
 	for {
 		select {
 		case <-time.After(waitTime):
 			if _, ok := cm.drivers.Get(taskName); !ok {
 				// Should not happen in the typical workflow, but stopping if in this state
-				cm.logger.Debug("scheduled task no longer exists", taskNameLogKey, taskName)
-				cm.logger.Info("stopping deleted scheduled task", taskNameLogKey, taskName)
+				logger.Debug("scheduled task no longer exists")
+				logger.Info("stopping deleted scheduled task")
 				delete(cm.scheduleStopChs, taskName)
 				return nil
 			}
 
-			if err := cm.tasksManager.TaskRunNow(ctx, d); err != nil {
+			if err := cm.tasksManager.TaskRunNow(ctx, taskName); err != nil {
 				// print error but continue
-				cm.logger.Error("error applying task", taskNameLogKey, taskName, "error", err)
+				logger.Error("error running task", "error", err)
 			}
 
 			nextTime := expr.Next(time.Now())
 			waitTime = time.Until(nextTime)
-			cm.logger.Info("scheduled task next run time", taskNameLogKey, taskName,
-				"wait_time", waitTime, "next_runtime", nextTime)
+			logger.Info("scheduled task next run time", "wait_time", waitTime,
+				"next_runtime", nextTime)
 		case <-stopCh:
-			cm.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
+			logger.Info("stopping scheduled task")
 			return nil
 		case <-ctx.Done():
-			cm.logger.Info("stopping scheduled task", taskNameLogKey, taskName)
+			logger.Info("stopping scheduled task")
 			return ctx.Err()
 		}
 	}

@@ -40,7 +40,7 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		tm.drivers.Add(validTaskName, d)
 
 		cm := newTestConditionMonitor(tm)
-		err := cm.runDynamicTask(ctx, d)
+		err := cm.runDynamicTask(ctx, validTaskName)
 		assert.NoError(t, err)
 	})
 
@@ -57,7 +57,7 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		tm.drivers.Add(validTaskName, d)
 
 		cm := newTestConditionMonitor(tm)
-		err := cm.runDynamicTask(context.Background(), d)
+		err := cm.runDynamicTask(context.Background(), validTaskName)
 		assert.Contains(t, err.Error(), testErr.Error())
 	})
 
@@ -71,7 +71,7 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		tm.drivers.Add(schedTaskName, d)
 
 		cm := newTestConditionMonitor(tm)
-		err := cm.runDynamicTask(context.Background(), d)
+		err := cm.runDynamicTask(context.Background(), schedTaskName)
 		assert.NoError(t, err)
 	})
 }
@@ -93,7 +93,7 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := cm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, schedTaskName, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -123,7 +123,7 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := cm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, validTaskName, stopCh)
 			if err != nil {
 				errCh <- err
 			}
@@ -156,7 +156,7 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
 		go func() {
-			err := cm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, schedTaskName, stopCh)
 			errCh <- err
 		}()
 		stopCh <- struct{}{}
@@ -186,7 +186,7 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		tm.scheduleStopChs[schedTaskName] = stopCh
 		done := make(chan bool)
 		go func() {
-			err := cm.runScheduledTask(ctx, d, stopCh)
+			err := cm.runScheduledTask(ctx, schedTaskName, stopCh)
 			if err != nil {
 				errCh <- err
 			}
