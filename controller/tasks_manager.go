@@ -434,6 +434,8 @@ func (tm *TasksManager) EnableTestMode() <-chan string {
 	return tm.taskNotify
 }
 
+// WatchCreatedScheduleTask returns a channel to inform any watcher that a new
+// scheduled task has been created and added to CTS.
 func (tm TasksManager) WatchCreatedScheduleTask() <-chan string {
 	return tm.createdScheduleCh
 }
