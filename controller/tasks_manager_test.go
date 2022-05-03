@@ -614,15 +614,6 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 			true,
 		},
 		{
-			"error creating new event",
-			true,
-			true,
-			nil,
-			nil,
-			"",
-			false,
-		},
-		{
 			"disabled task",
 			false,
 			false,
@@ -660,8 +651,9 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 			drivers.Add(tc.taskName, d)
 
 			tm := newTestTasksManager()
-			ctx := context.Background()
+			tm.drivers = drivers
 
+			ctx := context.Background()
 			err := tm.TaskRunNow(ctx, tc.taskName)
 			data := tm.state.GetTaskEvents(tc.taskName)
 			events := data[tc.taskName]
@@ -675,7 +667,7 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, 1, len(events))
+			require.Len(t, events, 1)
 			e := events[0]
 			assert.Equal(t, tc.taskName, e.TaskName)
 			assert.False(t, e.StartTime.IsZero())
@@ -768,10 +760,14 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 
 		tm := newTestTasksManager()
 		tm.EnableTestMode()
+		tm.state.SetTask(validTaskConf)
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
-		mockDriver(ctx, d, enabledTestTask(t, validTaskName))
+		d.On("Task").Return(enabledTestTask(t, validTaskName)).
+			On("TemplateIDs").Return(nil).
+			On("RenderTemplate", mock.Anything).Return(true, nil).
+			On("ApplyTask", ctx).Return(nil)
 		drivers := tm.drivers
 		drivers.Add(validTaskName, d)
 		drivers.SetActive(validTaskName)
@@ -1032,7 +1028,8 @@ func Test_TasksManager_waitForTaskInactive(t *testing.T) {
 	})
 }
 
-// mockDriver sets up a mock driver with the happy path for all methods
+// mockDriver sets up a mock driver with the happy path for task create and
+// update methods
 func mockDriver(ctx context.Context, d *mocksD.Driver, task *driver.Task) {
 	d.On("Task").Return(task).
 		On("InitTask", ctx).Return(nil).

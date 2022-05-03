@@ -33,25 +33,30 @@ var (
 func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
 		tm := newTestTasksManager()
+		tm.state.SetTask(validTaskConf)
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
-		mockDriver(ctx, d, enabledTestTask(t, validTaskName))
+		d.On("Task").Return(enabledTestTask(t, validTaskName)).
+			On("TemplateIDs").Return(nil).
+			On("RenderTemplate", mock.Anything).Return(true, nil).
+			On("ApplyTask", ctx).Return(nil)
 		tm.drivers.Add(validTaskName, d)
 
 		cm := newTestConditionMonitor(tm)
 		err := cm.runDynamicTask(ctx, validTaskName)
 		assert.NoError(t, err)
+		d.AssertExpectations(t)
 	})
 
 	t.Run("apply-error", func(t *testing.T) {
 		tm := newTestTasksManager()
+		tm.state.SetTask(validTaskConf)
 
 		testErr := fmt.Errorf("could not apply: %s", "test")
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, validTaskName))
 		d.On("TemplateIDs").Return(nil)
-		d.On("InitWork", mock.Anything).Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(testErr)
 		tm.drivers.Add(validTaskName, d)
@@ -59,29 +64,32 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		cm := newTestConditionMonitor(tm)
 		err := cm.runDynamicTask(context.Background(), validTaskName)
 		assert.Contains(t, err.Error(), testErr.Error())
+		d.AssertExpectations(t)
 	})
 
 	t.Run("skip-scheduled-tasks", func(t *testing.T) {
 		tm := newTestTasksManager()
+		tm.state.SetTask(schedTaskConf)
 
 		d := new(mocksD.Driver)
-		d.On("Task").Return(scheduledTestTask(t, schedTaskName))
 		d.On("TemplateIDs").Return(nil)
 		// no other methods should be called (or mocked)
 		tm.drivers.Add(schedTaskName, d)
 
 		cm := newTestConditionMonitor(tm)
 		err := cm.runDynamicTask(context.Background(), schedTaskName)
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		d.AssertExpectations(t)
 	})
 }
 
 func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 	t.Run("happy-path", func(t *testing.T) {
 		tm := newTestTasksManager()
+		tm.state.SetTask(schedTaskConf)
 
 		d := new(mocksD.Driver)
-		d.On("Task").Return(scheduledTestTask(t, schedTaskName)).Twice()
+		d.On("Task").Return(scheduledTestTask(t, schedTaskName)).Once()
 		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
 		d.On("TemplateIDs").Return(nil)
@@ -113,9 +121,8 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 
 	t.Run("dynamic-task-errors", func(t *testing.T) {
 		tm := newTestTasksManager()
-
-		d := new(mocksD.Driver)
-		d.On("Task").Return(enabledTestTask(t, validTaskName)).Once()
+		tm.state.SetTask(validTaskConf)
+		// No calls to driver are made
 
 		cm := newTestConditionMonitor(tm)
 
@@ -137,16 +144,14 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		case <-time.After(time.Second * 5):
 			t.Fatal("runScheduledTask did not exit properly from cancelling context")
 		}
-
-		d.AssertExpectations(t)
 	})
 
 	t.Run("stop-scheduled-task", func(t *testing.T) {
 		// Tests that signaling to the stop channel stops the function
 		tm := newTestTasksManager()
+		tm.state.SetTask(schedTaskConf)
 
 		d := new(mocksD.Driver)
-		d.On("Task").Return(scheduledTestTask(t, schedTaskName)).Once()
 		d.On("TemplateIDs").Return(nil)
 		tm.drivers.Add(schedTaskName, d)
 
@@ -167,6 +172,8 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 		case <-time.After(time.Second * 5):
 			t.Fatal("runScheduledTask did not exit as expected")
 		}
+
+		d.AssertExpectations(t)
 	})
 
 	t.Run("deleted-scheduled-task", func(t *testing.T) {
@@ -249,6 +256,10 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 			On("ApplyTask", mock.Anything).Return(nil).
 			On("SetBufferPeriod")
 		tm.drivers.Add(n, d)
+
+		conf := validTaskConf
+		conf.Name = config.String(n)
+		tm.state.SetTask(conf)
 	}
 
 	// Set up condition monitor
@@ -280,7 +291,7 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	}
 	select {
 	case <-completedTasksCh:
-		t.Fatal("task should not have completed")
+		t.Fatal("already active task should not have completed trigger")
 	case <-time.After(time.Millisecond * 250):
 		break // expected case
 	}
@@ -291,7 +302,7 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	case taskName := <-completedTasksCh:
 		assert.Equal(t, "task_b", taskName)
 	case <-time.After(time.Millisecond * 250):
-		t.Fatal("task should have completed")
+		t.Fatal("inactive task should have completed when triggered")
 	}
 
 	// Set task_a to inactive, should expect two tasks to complete
@@ -301,7 +312,7 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 		case taskName := <-completedTasksCh:
 			assert.Equal(t, "task_a", taskName)
 		case <-time.After(time.Millisecond * 250):
-			t.Fatal("task should have completed")
+			t.Fatal("inactive task_a should have completed")
 		}
 	}
 
@@ -311,7 +322,7 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	case taskName := <-completedTasksCh:
 		assert.Equal(t, "task_a", taskName)
 	case <-time.After(time.Millisecond * 250):
-		t.Fatal("task should have completed")
+		t.Fatal("inactive task_a should have complete again")
 	}
 }
 
