@@ -63,19 +63,8 @@ func (c *TaskLifecycleClient) Scheme() string {
 // a task response object and any errors to the caller.
 // TODO: remove this to conform to interface
 func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, req TaskRequest) (*oapigen.CreateTaskResponse, error) {
-	var run *oapigen.CreateTaskParamsRun
-	ro := oapigen.CreateTaskParamsRun(runOption)
-	run = &ro
-	if runOption == "" {
-		run = nil
-	}
-
-	resp, err := c.CreateTaskWithResponse(ctx, &oapigen.CreateTaskParams{Run: run}, oapigen.CreateTaskJSONRequestBody(req))
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
+	run := oapigen.CreateTaskParamsRun(runOption)
+	return c.CreateTaskWithResponse(ctx, &oapigen.CreateTaskParams{Run: &run}, oapigen.CreateTaskJSONRequestBody(req))
 }
 
 var _ httpClient = (*TaskLifecycleHTTPClient)(nil)

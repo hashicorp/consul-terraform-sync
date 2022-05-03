@@ -370,10 +370,6 @@ func TestCondition_CatalogServices_SharedDependency_NoServices(t *testing.T) {
 		runMode string
 	}{
 		{
-			"create",
-			"",
-		},
-		{
 			"inspect",
 			"inspect",
 		},
