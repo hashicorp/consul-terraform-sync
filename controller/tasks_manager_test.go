@@ -21,14 +21,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var validTaskConf = config.TaskConfig{
-	Enabled: config.Bool(true),
-	Name:    config.String("task"),
-	Module:  config.String("module"),
-	Condition: &config.CatalogServicesConditionConfig{
-		CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{Regexp: config.String("regex")},
-	},
-}
+var (
+	validTaskName = "task"
+	validTaskConf = config.TaskConfig{
+		Enabled: config.Bool(true),
+		Name:    config.String(validTaskName),
+		Module:  config.String("module"),
+		Condition: &config.CatalogServicesConditionConfig{
+			CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{Regexp: config.String("regex")},
+		},
+	}
+)
 
 func Test_TasksManager_Task(t *testing.T) {
 	ctx := context.Background()
@@ -142,11 +145,11 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 		assert.Equal(t, conf, actual)
 
 		// Basic check that task was added
-		_, ok := tm.drivers.Get("task")
+		_, ok := tm.drivers.Get(validTaskName)
 		assert.True(t, ok, "task should have a driver")
 
 		// Basic check that task was not run
-		events := tm.state.GetTaskEvents("task")
+		events := tm.state.GetTaskEvents(validTaskName)
 		assert.Len(t, events, 0, "no events stored on creation")
 	})
 
@@ -170,10 +173,10 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 		_, err := tm.TaskCreate(ctx, validTaskConf)
 		assert.Error(t, err)
 
-		_, ok := tm.drivers.Get("task")
+		_, ok := tm.drivers.Get(validTaskName)
 		assert.False(t, ok, "errored task should not have a driver added")
 
-		events := tm.state.GetTaskEvents("task")
+		events := tm.state.GetTaskEvents(validTaskName)
 		assert.Len(t, events, 0, "no events stored on creation")
 	})
 }
@@ -198,7 +201,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		mockD.On("OverrideNotifier").Return()
 		task, err := driver.NewTask(driver.TaskConfig{
 			Enabled: true,
-			Name:    "task",
+			Name:    validTaskName,
 		})
 		require.NoError(t, err)
 		mockDriver(ctx, mockD, task)
@@ -212,14 +215,14 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Basic check that task was added
-		_, ok := tm.drivers.Get("task")
+		_, ok := tm.drivers.Get(validTaskName)
 		assert.True(t, ok)
 
 		// Basic check that task was ran
-		events := tm.state.GetTaskEvents("task")
+		events := tm.state.GetTaskEvents(validTaskName)
 		assert.Len(t, events, 1)
-		require.Len(t, events["task"], 1)
-		assert.Nil(t, events["task"][0].EventError, "unexpected error event")
+		require.Len(t, events[validTaskName], 1)
+		assert.Nil(t, events[validTaskName][0].EventError, "unexpected error event")
 	})
 
 	t.Run("disabled task", func(t *testing.T) {
@@ -228,7 +231,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		mockD.On("OverrideNotifier").Return()
 		task, err := driver.NewTask(driver.TaskConfig{
 			Enabled: false,
-			Name:    "task",
+			Name:    validTaskName,
 		})
 		require.NoError(t, err)
 		mockDriver(ctx, mockD, task)
@@ -244,10 +247,10 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		_, err = tm.TaskCreateAndRun(ctx, *taskConf)
 		assert.NoError(t, err)
 
-		_, ok := tm.drivers.Get("task")
+		_, ok := tm.drivers.Get(validTaskName)
 		assert.True(t, ok, "driver is created for task even if it's disabled")
 
-		events := tm.state.GetTaskEvents("task")
+		events := tm.state.GetTaskEvents(validTaskName)
 		assert.Len(t, events, 0, "task is disabled, no run should occur")
 	})
 
@@ -255,7 +258,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		mockD := new(mocksD.Driver)
 		task, err := driver.NewTask(driver.TaskConfig{
 			Enabled: true,
-			Name:    "task",
+			Name:    validTaskName,
 		})
 		require.NoError(t, err)
 		mockD.On("Task").Return(task).
@@ -272,10 +275,10 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		_, err = tm.TaskCreateAndRun(ctx, validTaskConf)
 		assert.Error(t, err)
 
-		_, ok := tm.drivers.Get("task")
+		_, ok := tm.drivers.Get(validTaskName)
 		assert.False(t, ok, "driver is only added if the run is successful")
 
-		events := tm.state.GetTaskEvents("task")
+		events := tm.state.GetTaskEvents(validTaskName)
 		assert.Len(t, events, 0, "event is only stored on successful creation and run")
 	})
 }
@@ -698,25 +701,24 @@ func Test_TasksManager_CheckApply(t *testing.T) {
 		tm := newTestTasksManager()
 
 		d := new(mocksD.Driver)
-		taskName := "scheduled_task"
-		d.On("Task").Return(scheduledTestTask(t, taskName))
+		d.On("Task").Return(scheduledTestTask(t, schedTaskName))
 		d.On("TemplateIDs").Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(false, nil)
-		tm.drivers.Add(taskName, d)
+		tm.drivers.Add(schedTaskName, d)
 
 		// Once-mode - confirm no events are stored
 		ctx := context.Background()
 		_, err := tm.checkApply(ctx, d, false, true)
 		assert.NoError(t, err)
-		data := tm.state.GetTaskEvents(taskName)
-		events := data[taskName]
+		data := tm.state.GetTaskEvents(schedTaskName)
+		events := data[schedTaskName]
 		assert.Equal(t, 0, len(events))
 
 		// Daemon-mode - confirm an event is stored
 		_, err = tm.checkApply(ctx, d, false, false)
 		assert.NoError(t, err)
-		data = tm.state.GetTaskEvents(taskName)
-		events = data[taskName]
+		data = tm.state.GetTaskEvents(schedTaskName)
+		events = data[schedTaskName]
 		assert.Equal(t, 1, len(events))
 	})
 }
@@ -825,18 +827,17 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 		// Tests that deleting a scheduled task sends a stop notification
 
 		// Setup tm and drivers
-		taskName := "scheduled_task"
 		scheduledDriver := new(mocksD.Driver)
-		scheduledDriver.On("Task").Return(scheduledTestTask(t, taskName))
+		scheduledDriver.On("Task").Return(scheduledTestTask(t, schedTaskName))
 		scheduledDriver.On("DestroyTask", ctx).Return()
 		scheduledDriver.On("TemplateIDs").Return(nil)
 		tm := newTestTasksManager()
-		tm.drivers.Add(taskName, scheduledDriver)
+		tm.drivers.Add(schedTaskName, scheduledDriver)
 		stopCh := make(chan struct{}, 1)
-		tm.scheduleStopChs[taskName] = stopCh
+		tm.scheduleStopChs[schedTaskName] = stopCh
 
 		// Delete task
-		err := tm.deleteTask(ctx, taskName)
+		err := tm.deleteTask(ctx, schedTaskName)
 		assert.NoError(t, err)
 
 		// Verify the stop channel received message
@@ -846,7 +847,7 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 		case <-stopCh:
 			break // expected case
 		}
-		_, ok := tm.scheduleStopChs[taskName]
+		_, ok := tm.scheduleStopChs[schedTaskName]
 		assert.False(t, ok, "scheduled task stop channel still in map")
 	})
 
