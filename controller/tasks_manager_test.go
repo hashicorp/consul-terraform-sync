@@ -558,7 +558,6 @@ func Test_TasksManager_addTask(t *testing.T) {
 		// Mock driver
 		d := new(mocksD.Driver)
 		d.On("SetBufferPeriod").Return().Once()
-		d.On("TemplateIDs").Return(nil).Once()
 		d.On("Task").Return(driverTask)
 
 		// Already added the task to the drivers list
@@ -597,7 +596,6 @@ func Test_TasksManager_addTask(t *testing.T) {
 		// Mock driver
 		d := new(mocksD.Driver)
 		d.On("SetBufferPeriod").Return().Once()
-		d.On("TemplateIDs").Return(nil).Once()
 		d.On("Task").Return(driverTask)
 
 		// Create an error by already adding the task to the drivers list
