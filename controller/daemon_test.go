@@ -2,12 +2,14 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
@@ -27,12 +29,23 @@ func Test_Daemon_Run_long(t *testing.T) {
 
 	port := testutils.FreePort(t)
 
-	ctl := Daemon{once: true}
+	mockConsul := new(mocks.ConsulClientInterface)
+	mockConsul.On("RegisterService", mock.Anything, mock.Anything).Return(nil)
+	mockConsul.On("DeregisterService", mock.Anything, mock.Anything).Return(nil)
+
+	ctl := Daemon{
+		once:         true,
+		consulClient: mockConsul,
+	}
 
 	tm := newTestTasksManager()
 	tm.watcher = w
+	consulConf := config.DefaultConsulConfig()
+	consulConf.Finalize()
 	tm.state = state.NewInMemoryStore(&config.Config{
-		Port: config.Int(port),
+		ID:     config.String("cts-test"),
+		Port:   config.Int(port),
+		Consul: consulConf,
 	})
 	ctl.tasksManager = &tm
 
@@ -83,6 +96,28 @@ func Test_Daemon_Run_long(t *testing.T) {
 			t.Fatal("Run did not error and exit properly")
 		}
 	})
+
+	t.Run("registration errors does not cause exit", func(t *testing.T) {
+		errCh := make(chan error)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		mockConsul.On("RegisterService", mock.Anything, mock.Anything).
+			Return(errors.New("mock error"))
+		go func() {
+			if err := ctl.Run(ctx); err != nil {
+				errCh <- err
+			}
+		}()
+
+		select {
+		case <-errCh:
+			t.Fatal("Run should not have errored and exited on registration error")
+		case <-time.After(time.Second * 2):
+			// expected case
+			break
+		}
+	})
 }
 
 func Test_Daemon_Run_once_long_Terraform(t *testing.T) {
@@ -103,6 +138,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	conf.Driver = driverConf
 	conf.Port = config.Int(port)
 	conf.Finalize()
+	conf.Consul.SelfRegistration.Enabled = config.Bool(false)
 
 	st := state.NewInMemoryStore(conf)
 
