@@ -22,20 +22,20 @@ func Test_Daemon_Run_long(t *testing.T) {
 	// Only tests long-running mode of Run()
 	t.Parallel()
 
-	cm := newTestConditionMonitor(nil)
-	w := new(mocksTmpl.Watcher)
-	w.On("Watch", mock.Anything, mock.Anything).Return(nil)
-	cm.watcher = w
-
-	port := testutils.FreePort(t)
-
 	ctl := Daemon{once: true}
 
 	tm := newTestTasksManager()
+	port := testutils.FreePort(t)
 	tm.state = state.NewInMemoryStore(&config.Config{
 		Port: config.Int(port),
 	})
 	ctl.tasksManager = tm
+
+	cm := newTestConditionMonitor(tm)
+	w := new(mocksTmpl.Watcher)
+	w.On("Watch", mock.Anything, mock.Anything).Return(nil)
+	cm.watcher = w
+	ctl.monitor = cm
 
 	t.Run("cancel exits successfully", func(t *testing.T) {
 		errCh := make(chan error)
