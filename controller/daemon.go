@@ -125,6 +125,7 @@ func (ctrl *Daemon) Once(ctx context.Context) error {
 		logger:       ctrl.logger,
 		state:        ctrl.state,
 		tasksManager: ctrl.tasksManager,
+		monitor:      ctrl.monitor,
 	}
 
 	// no need to init or stop Once controller since it shares tasksManager
