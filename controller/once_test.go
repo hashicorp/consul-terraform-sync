@@ -177,6 +177,14 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	tm.deleteCh = make(chan string, 1)
 	ctrl.tasksManager = tm
 
+	// Set up driver factory
+	tm.factory.initConf = conf
+	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+		return setupNewDriver(task), nil
+	}
+
+	// Set up condition monitor
+	cm := newTestConditionMonitor(tm)
 	// Mock watcher
 	errCh := make(chan error)
 	var errChRc <-chan error = errCh
@@ -184,13 +192,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	w := new(mocksTmpl.Watcher)
 	w.On("WaitCh", mock.Anything).Return(errChRc)
 	w.On("Size").Return(numTasks)
-	tm.watcher = w
-
-	// Set up driver factory
-	tm.factory.initConf = conf
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
-		return setupNewDriver(task), nil
-	}
+	cm.watcher = w
 
 	err := ctrl.Run(context.Background())
 
@@ -224,6 +226,8 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 	tm.state = ss
 	ctrl.tasksManager = tm
 
+	// Set up condition monitor
+	cm := newTestConditionMonitor(tm)
 	// Mock watcher
 	expectedErr := errors.New("error!")
 	waitErrCh := make(chan error)
@@ -231,7 +235,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 	go func() { waitErrCh <- expectedErr }()
 	w := new(mocksTmpl.Watcher)
 	w.On("WaitCh", mock.Anything).Return(waitErrChRc)
-	tm.watcher = w
+	cm.watcher = w
 
 	// Set up driver factory
 	tm.factory.initConf = conf

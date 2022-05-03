@@ -18,15 +18,17 @@ import (
 type ConditionMonitor struct {
 	logger logging.Logger
 
+	watcher      templates.Watcher
 	tasksManager *TasksManager
 }
 
 // NewConditionMonitor configures a new condition monitor
-func NewConditionMonitor(tm *TasksManager) *ConditionMonitor {
+func NewConditionMonitor(tm *TasksManager, w templates.Watcher) *ConditionMonitor {
 	logger := logging.Global().Named(tasksManagerSystemName)
 
 	return &ConditionMonitor{
 		logger:       logger,
+		watcher:      w,
 		tasksManager: tm,
 	}
 }

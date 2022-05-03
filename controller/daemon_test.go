@@ -24,9 +24,6 @@ func Test_Daemon_Run_long(t *testing.T) {
 	// Only tests long-running mode of Run()
 	t.Parallel()
 
-	w := new(mocksTmpl.Watcher)
-	w.On("Watch", mock.Anything, mock.Anything).Return(nil)
-
 	port := testutils.FreePort(t)
 
 	mockConsul := new(mocksC.ConsulClientInterface)
@@ -39,7 +36,6 @@ func Test_Daemon_Run_long(t *testing.T) {
 	}
 
 	tm := newTestTasksManager()
-	tm.watcher = w
 	consulConf := config.DefaultConsulConfig()
 	consulConf.Finalize()
 	tm.state = state.NewInMemoryStore(&config.Config{
@@ -49,6 +45,10 @@ func Test_Daemon_Run_long(t *testing.T) {
 	})
 	ctl.tasksManager = tm
 
+	cm := newTestConditionMonitor(tm)
+	w := new(mocksTmpl.Watcher)
+	w.On("Watch", mock.Anything, mock.Anything).Return(nil)
+	cm.watcher = w
 	t.Run("cancel exits successfully", func(t *testing.T) {
 		errCh := make(chan error)
 		ctx, cancel := context.WithCancel(context.Background())
@@ -172,6 +172,9 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
+	cm := newTestConditionMonitor(tm)
+	rw.monitor = cm
+
 	// Mock watcher
 	w := new(mocksTmpl.Watcher)
 	waitErrCh := make(chan error)
@@ -180,7 +183,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	w.On("WaitCh", mock.Anything).Return(waitErrChRc).Once()
 	w.On("Size").Return(5)
 	w.On("Watch", ctx, tm.watcherCh).Return(nil)
-	tm.watcher = w
+	cm.watcher = w
 
 	go func() {
 		err := rw.Run(ctx)

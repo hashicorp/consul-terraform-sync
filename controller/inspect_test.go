@@ -93,6 +93,8 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 	tm.state = ss
 	ro.tasksManager = tm
 
+	// Set up condition monitor
+	cm := newTestConditionMonitor(tm)
 	// Mock watcher
 	waitErrCh := make(chan error)
 	var waitErrChRc <-chan error = waitErrCh
@@ -100,7 +102,7 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 	w := new(mocksTmpl.Watcher)
 	w.On("WaitCh", mock.Anything).Return(waitErrChRc)
 	w.On("Size").Return(5)
-	tm.watcher = w
+	cm.watcher = w
 
 	// Set up driver factory
 	tm.factory.initConf = conf
@@ -163,6 +165,8 @@ func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 	tm.state = ss
 	ro.tasksManager = tm
 
+	// Set up condition monitor
+	cm := newTestConditionMonitor(tm)
 	// Mock watcher
 	expectedErr := errors.New("error!")
 	waitErrCh := make(chan error)
@@ -170,7 +174,7 @@ func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 	go func() { waitErrCh <- expectedErr }()
 	w := new(mocksTmpl.Watcher)
 	w.On("WaitCh", mock.Anything).Return(waitErrChRc)
-	tm.watcher = w
+	cm.watcher = w
 
 	// Set up driver factory
 	tm.factory.initConf = conf
@@ -223,6 +227,8 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 	tm.state = ss
 	ro.tasksManager = tm
 
+	// Set up condition monitor
+	cm := newTestConditionMonitor(tm)
 	// Mock watcher
 	errCh := make(chan error)
 	var errChRc <-chan error = errCh
@@ -230,7 +236,7 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 	w := new(mocksTmpl.Watcher)
 	w.On("WaitCh", mock.Anything).Return(errChRc)
 	w.On("Size").Return(numTasks)
-	tm.watcher = w
+	cm.watcher = w
 
 	// Set up driver factory
 	tm.factory.initConf = conf
