@@ -298,7 +298,7 @@ func Test_TasksManager_TaskDelete(t *testing.T) {
 		tm.TaskDelete(ctx, taskName)
 		time.Sleep(2 * time.Second)
 
-		assert.Empty(t, drivers)
+		assert.Equal(t, 0, drivers.Len())
 	})
 
 	t.Run("already marked for deletion", func(t *testing.T) {
