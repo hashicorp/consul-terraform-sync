@@ -50,7 +50,8 @@ func newTaskStatusHandler(ctrl Server, version string) *taskStatusHandler {
 
 // ServeHTTP serves the task status endpoint
 func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	logger := logging.FromContext(r.Context()).Named(taskStatusSubsystemName)
+	ctx := r.Context()
+	logger := logging.FromContext(ctx).Named(taskStatusSubsystemName)
 	logger.Trace("request task status", "url_path", r.URL.Path)
 
 	switch r.Method {
@@ -60,7 +61,7 @@ func (h *taskStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := fmt.Errorf("'%s' in an unsupported method. The task status API "+
 			"currently supports the method(s): '%s'", r.Method, http.MethodGet)
 		logger.Trace("unsupported method: %s", err)
-		jsonErrorResponse(r.Context(), w, http.StatusMethodNotAllowed, err)
+		jsonErrorResponse(ctx, w, http.StatusMethodNotAllowed, err)
 	}
 }
 
