@@ -132,7 +132,9 @@ func (tm *TasksManager) TaskDelete(ctx context.Context, name string) error {
 	tm.drivers.MarkForDeletion(name)
 	logger.Debug("task marked for deletion")
 
-	go tm.deleteTask(ctx, name)
+	// Use new context. For runtime task deletions, deleteTask() would get
+	// canceled when the API request completes if shared context.
+	go tm.deleteTask(context.Background(), name)
 	return nil
 }
 
@@ -585,11 +587,15 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 		return nil
 	}
 
+	logger.Trace("waiting for task to become inactive before deleting")
 	err := tm.waitForTaskInactive(ctx, name)
 	if err != nil {
+		logger.Error("error deleting task: error waiting for task to be come inactive",
+			"error", err)
 		return err
 	}
 
+	logger.Trace("task is inactive, deleting")
 	if d.Task().IsScheduled() {
 		// Notify the scheduled task to stop
 		tm.deletedScheduleCh <- name
