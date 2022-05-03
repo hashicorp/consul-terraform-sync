@@ -838,6 +838,7 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 		scheduledDriver.On("TemplateIDs").Return(nil)
 		tm := newTestTasksManager()
 		tm.drivers.Add(schedTaskName, scheduledDriver)
+		tm.deletedScheduleCh = make(chan string, 1)
 
 		// Delete task
 		errCh := make(chan error)
@@ -852,8 +853,8 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 			t.Fatal("deleting task should not have errored", err)
 		case <-time.After(1 * time.Second):
 			t.Fatal("scheduled task was not notified to stop")
-		case <-tm.WatchDeletedScheduleTask():
-			break // expected case
+		case name := <-tm.WatchDeletedScheduleTask():
+			assert.Equal(t, schedTaskName, name)
 		}
 	})
 
