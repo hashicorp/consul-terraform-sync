@@ -115,7 +115,7 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 		return config.TaskConfig{}, err
 	}
 
-	if err := tm.runTask(ctx, d); err != nil {
+	if err := tm.runNewTask(ctx, d); err != nil {
 		return config.TaskConfig{}, err
 	}
 
@@ -525,10 +525,17 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 	}
 }
 
-// runTask will set the driver to active, apply it, and store a run event.
-// This method will run the task as-is with current values of templates that
-// have already been resolved and rendered. This does not handle any templating.
-func (tm *TasksManager) runTask(ctx context.Context, d driver.Driver) error {
+// runNewTask runs a new task that has not been added to CTS yet. This differs
+// from TaskRunNow which runs existing tasks that have been added to CTS.
+// runNewTask has reduced complexity because the task driver has not been added
+// to CTS
+//
+// Applies the task as-is with current values of the template that has already
+// been resolved and rendered. This does not handle any templating.
+//
+// Stores an event in the state that should be cleaned up if the task is not
+// added to CTS.
+func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
 	task := d.Task()
 	taskName := task.Name()
 	logger := tm.logger.With(taskNameLogKey, taskName)
@@ -536,19 +543,6 @@ func (tm *TasksManager) runTask(ctx context.Context, d driver.Driver) error {
 		logger.Trace("skipping disabled task")
 		return nil
 	}
-
-	if tm.drivers.IsMarkedForDeletion(taskName) {
-		logger.Trace("task is marked for deletion, skipping")
-		return nil
-	}
-
-	err := tm.waitForTaskInactive(ctx, taskName)
-	if err != nil {
-		return err
-	}
-
-	tm.drivers.SetActive(taskName)
-	defer tm.drivers.SetInactive(taskName)
 
 	// Create new event for task run
 	ev, err := event.NewEvent(taskName, &event.Config{
