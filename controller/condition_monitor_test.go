@@ -222,37 +222,35 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 	})
 
 	t.Run("deleted-scheduled-task", func(t *testing.T) {
-		// Tests that a scheduled task stops if it no longer is in the
-		// list of drivers
+		// Tests that a scheduled task stops if it no longer is in the state
 		tm := newTestTasksManager()
-
-		taskName := "scheduled_task"
-		d := new(mocksD.Driver)
-		d.On("Task").Return(scheduledTestTask(t, taskName)).Once()
-		// driver is not added to drivers map
+		tm.state.SetTask(schedTaskConf)
 
 		cm := newTestConditionMonitor(tm)
 
 		ctx := context.Background()
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
-		cm.scheduleStopChs[taskName] = stopCh
+		cm.scheduleStopChs[schedTaskName] = stopCh
 		done := make(chan bool)
 		go func() {
-			err := cm.runScheduledTask(ctx, taskName, stopCh)
+			err := cm.runScheduledTask(ctx, schedTaskName, stopCh)
 			if err != nil {
 				errCh <- err
 			}
 			done <- true
 		}()
 
+		// Wait for scheduled task to start cadence, then remove task from state
+		time.Sleep(1 * time.Second)
+		tm.state.DeleteTask(schedTaskName)
+
 		select {
 		case <-errCh:
 			t.Fatal("runScheduledTask did not exit properly when task is not in map of drivers")
 		case <-done:
 			// runScheduledTask exited as expected
-			d.AssertExpectations(t)
-			_, ok := cm.scheduleStopChs[taskName]
+			_, ok := cm.scheduleStopChs[schedTaskName]
 			assert.False(t, ok, "expected scheduled task stop channel to be removed")
 		case <-time.After(time.Second * 5):
 			t.Fatal("runScheduledTask did not exit as expected")

@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -275,8 +276,13 @@ func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Tas
 	d.SetBufferPeriod()
 
 	name := d.Task().Name()
-	if err := tm.drivers.Add(name, d); err != nil {
-		tm.cleanupTask(ctx, name)
+	err := tm.drivers.Add(name, d)
+	if err != nil {
+		// do not clean up if driver already exists. this would destroy the
+		// existing driver.
+		if !strings.Contains(err.Error(), "driver already exists") {
+			tm.cleanupTask(ctx, name)
+		}
 		return config.TaskConfig{}, err
 	}
 

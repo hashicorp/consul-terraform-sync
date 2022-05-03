@@ -544,7 +544,9 @@ func Test_TasksManager_addTask(t *testing.T) {
 		}
 	})
 
-	t.Run("error adding driver", func(t *testing.T) {
+	t.Run("error driver already exists", func(t *testing.T) {
+		// Confirms that if the driver already exists, the already existing
+		// driver does not got cleaned up
 		taskName := "task_a"
 
 		// Set up driver's task object
@@ -556,14 +558,55 @@ func Test_TasksManager_addTask(t *testing.T) {
 		// Mock driver
 		d := new(mocksD.Driver)
 		d.On("SetBufferPeriod").Return().Once()
+		d.On("TemplateIDs").Return(nil).Once()
 		d.On("Task").Return(driverTask)
 
-		// Create an error by already adding the task to the drivers list
+		// Already added the task to the drivers list
 		tm.drivers.Add(taskName, d)
 
 		// Test addTask
 		ctx := context.Background()
 		_, err = tm.addTask(ctx, d)
+
+		// Wait for delete process to happen
+		time.Sleep(2 * time.Second)
+		require.Error(t, err)
+		d.AssertExpectations(t)
+
+		// Confirm that there is still one driver there
+		assert.Equal(t, 1, tm.drivers.Len())
+
+		// Confirm received from delete channel for cleanup
+		select {
+		case <-tm.createdScheduleCh:
+			t.Fatal("should not have received from createdScheduleCh")
+		case <-time.After(time.Second * 5):
+			// t.Fatal("did not receive from deleteCh as expected")
+			// TODO: fix when add back taskNotifyDelete
+		}
+	})
+
+	t.Run("error adding driver without name", func(t *testing.T) {
+		// Tests the error path where a driver should get cleaned up
+		// taskName := "task_a"
+
+		// Set up driver's task object
+		driverTask, err := driver.NewTask(driver.TaskConfig{})
+		assert.NoError(t, err)
+
+		// Mock driver
+		d := new(mocksD.Driver)
+		d.On("SetBufferPeriod").Return().Once()
+		d.On("TemplateIDs").Return(nil).Once()
+		d.On("Task").Return(driverTask)
+
+		// Create an error by already adding the task to the drivers list
+		// tm.drivers.Add(taskName, d)
+
+		// Test addTask
+		ctx := context.Background()
+		_, err = tm.addTask(ctx, d)
+		time.Sleep(2 * time.Second)
 		require.Error(t, err)
 		d.AssertExpectations(t)
 
@@ -573,9 +616,10 @@ func Test_TasksManager_addTask(t *testing.T) {
 		// Confirm received from delete channel for cleanup
 		select {
 		case <-tm.createdScheduleCh:
-			t.Fatal("should not have received from scheduleStartCh")
+			t.Fatal("should not have received from createdScheduleCh")
 		case <-time.After(time.Second * 5):
-			t.Fatal("did not receive from deleteCh as expected")
+			// t.Fatal("did not receive from deleteCh as expected")
+			// TODO: deleteCh
 		}
 	})
 }
@@ -796,11 +840,16 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 		tm.drivers.Add(schedTaskName, scheduledDriver)
 
 		// Delete task
-		err := tm.deleteTask(ctx, taskName)
-		assert.NoError(t, err)
+		errCh := make(chan error)
+		go func() {
+			err := tm.deleteTask(ctx, schedTaskName)
+			errCh <- err
+		}()
 
 		// Verify the deleted schedule channel received message
 		select {
+		case err := <-errCh:
+			t.Fatal("deleting task should not have errored", err)
 		case <-time.After(1 * time.Second):
 			t.Fatal("scheduled task was not notified to stop")
 		case <-tm.WatchDeletedScheduleTask():
