@@ -22,7 +22,7 @@ const (
 	defaultCheckStatus                    = consulapi.HealthCritical
 
 	// HTTP-specific check defaults
-	defaultEndpoint      = "/v1/status" // TODO: temporary until /v1/health is implemented
+	defaultEndpoint      = "/v1/health"
 	defaultMethod        = "GET"
 	defaultInterval      = "10s"
 	defaultTimeout       = "2s"

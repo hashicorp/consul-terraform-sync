@@ -80,9 +80,8 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 	id := "cts-123"
 	port := 8558
-	// TODO: update these addresses when /v1/health implemented
-	httpAddress := fmt.Sprintf("http://localhost:%d/v1/status", port)
-	httpsAddress := fmt.Sprintf("https://localhost:%d/v1/status", port)
+	httpAddress := fmt.Sprintf("http://localhost:%d/v1/health", port)
+	httpsAddress := fmt.Sprintf("https://localhost:%d/v1/health", port)
 	checkID := fmt.Sprintf("%s-health", id)
 
 	testcases := []struct {
