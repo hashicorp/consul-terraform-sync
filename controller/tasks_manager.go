@@ -310,7 +310,7 @@ func (tm TasksManager) cleanupTask(ctx context.Context, name string) {
 	}
 }
 
-// TaskRunNow forces an existing taks to run with a retry. It assumes that the
+// TaskRunNow forces an existing task to run with a retry. It assumes that the
 // task already been created through TaskCreate or TaskCreateAndRun. It runs a
 // task by attempting to render the template and applying the task as necessary.
 //
@@ -396,12 +396,22 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 			taskName, storedErr)
 	}
 
+	if !rendered {
+		if task.IsScheduled() {
+			// We sometimes want to store an event when a scheduled task did not
+			// render i.e. the task ran on schedule but there were no
+			// dependency changes so the template did not re-render
+			tm.logger.Info("scheduled task triggered but had no changes",
+				taskNameLogKey, taskName)
+			defer storeEvent()
+		}
+		return nil
+	}
+
 	// rendering a template may take several cycles in order to completely fetch
 	// new data
 	if rendered {
 		tm.logger.Info("executing task", taskNameLogKey, taskName)
-		tm.drivers.SetActive(taskName)
-		defer tm.drivers.SetInactive(taskName)
 		defer storeEvent()
 
 		desc := fmt.Sprintf("ApplyTask %s", taskName)
