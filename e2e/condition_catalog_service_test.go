@@ -430,7 +430,10 @@ task {
 			}
 
 			// Create task, check that API request is successful and does not hang
-			_, err = client.CreateTask(context.Background(), tc.runMode, createReq)
+			run := oapigen.CreateTaskParamsRun(tc.runMode)
+			_, err = client.CreateTaskWithResponse(context.Background(), &oapigen.CreateTaskParams{Run: &run},
+				oapigen.CreateTaskJSONRequestBody(createReq))
+
 			require.NoError(t, err)
 		})
 	}
