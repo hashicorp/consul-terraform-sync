@@ -16,15 +16,15 @@ const (
 
 // HealthHandler handles the health endpoints
 type HealthHandler struct {
-	mu sync.RWMutex
-	hm health.Checker
+	mu      sync.RWMutex
+	checker health.Checker
 }
 
 // NewHealthHandler creates a new health handler using the provided health manager
 // to determine health
-func NewHealthHandler(hm health.Checker) *HealthHandler {
+func NewHealthHandler(hc health.Checker) *HealthHandler {
 	return &HealthHandler{
-		hm: hm,
+		checker: hc,
 	}
 }
 
@@ -36,7 +36,7 @@ func (hh *HealthHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	logger := logging.FromContext(r.Context()).Named(getHealthSubsystemName)
 	logger.Trace("get health")
 
-	err := hh.hm.Check()
+	err := hh.checker.Check()
 
 	// use error type to determine if service is considered unhealthy and return
 	// a 503: service unavailable response if the system is unhealthy

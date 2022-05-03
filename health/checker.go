@@ -2,7 +2,7 @@ package health
 
 import "fmt"
 
-//go:generate mockery --name=Manager --filename=manager.go --output=../mocks/health
+//go:generate mockery --name=Checker --filename=checker.go --output=../mocks/health
 
 // UnhealthySystemError represents an error returned
 // if the system is not healthy. This error can be returned from a health manager
