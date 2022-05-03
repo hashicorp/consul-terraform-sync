@@ -88,9 +88,28 @@ func NewSelfRegistrationManager(conf *SelfRegistrationManagerConfig, client clie
 	}
 }
 
+// Start starts the self-registration manager, which will register CTS as a service
+// with Consul and deregister it if CTS is stopped.
+func (m *SelfRegistrationManager) Start(ctx context.Context) error {
+	// Register CTS with Consul
+	err := m.SelfRegisterService(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Wait until the context is cancelled, initiate deregistration
+	<-ctx.Done()
+	err = m.Deregister(ctx)
+	if err != nil {
+		return err
+	}
+	return ctx.Err()
+}
+
 // SelfRegisterService registers Consul-Terraform-Sync with Consul
 func (m *SelfRegistrationManager) SelfRegisterService(ctx context.Context) error {
 	s := m.service
+	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
 	r := &consulapi.AgentServiceRegistration{
 		ID:        s.id,
 		Name:      s.name,
@@ -100,12 +119,26 @@ func (m *SelfRegistrationManager) SelfRegisterService(ctx context.Context) error
 		Namespace: s.namespace,
 	}
 
-	m.logger.Debug("self-registering Consul-Terraform-Sync as a service with Consul", "name", s.name, "id", s.id)
+	logger.Info("self-registering Consul-Terraform-Sync as a service with Consul")
 	err := m.client.RegisterService(ctx, r)
 	if err != nil {
-		m.logger.Error("error self-registering Consul-Terraform-Sync as a service with Consul", "name", s.name, "id", s.id)
+		logger.Error("error self-registering Consul-Terraform-Sync as a service with Consul")
 		return err
 	}
+	logger.Info("Consul-Terraform-Sync registered as a service with Consul")
+	return nil
+}
+
+// Deregister deregisters Consul-Terraform-Sync from Consul
+func (m *SelfRegistrationManager) Deregister(ctx context.Context) error {
+	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
+	logger.Info("deregistering Consul-Terraform-Sync from Consul")
+	err := m.client.DeregisterService(ctx, m.service.id)
+	if err != nil {
+		logger.Error("error deregistering Consul-Terraform-Sync from Consul")
+		return err
+	}
+	logger.Info("Consul-Terraform-Sync deregistered from Consul")
 	return nil
 }
 
