@@ -59,24 +59,18 @@ func (c *TaskLifecycleClient) Scheme() string {
 	return c.url.Scheme
 }
 
-// CreateTaskSimple takes a task request and run option and sends this information to the client. It then returns
+// CreateTask takes a task request and run option and sends this information to the client. It then returns
 // a task response object and any errors to the caller.
 // TODO: remove this to conform to interface
 func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, req TaskRequest) (*oapigen.CreateTaskResponse, error) {
-	var run oapigen.CreateTaskParamsRun
-	switch runOption {
-	case RunOptionInspect:
-		run = RunOptionInspect
-	case RunOptionNow:
-		run = RunOptionNow
-	case "":
-		run = ""
-	default:
-		err := errors.New("invalid run option provided")
-		return nil, err
+	var run *oapigen.CreateTaskParamsRun
+	ro := oapigen.CreateTaskParamsRun(runOption)
+	run = &ro
+	if runOption == "" {
+		run = nil
 	}
 
-	resp, err := c.CreateTaskWithResponse(ctx, &oapigen.CreateTaskParams{Run: &run}, oapigen.CreateTaskJSONRequestBody(req))
+	resp, err := c.CreateTaskWithResponse(ctx, &oapigen.CreateTaskParams{Run: run}, oapigen.CreateTaskJSONRequestBody(req))
 	if err != nil {
 		return nil, err
 	}
