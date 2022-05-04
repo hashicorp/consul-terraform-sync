@@ -94,11 +94,13 @@ func NewAPI(conf Config) (*API, error) {
 	r := chi.NewRouter()
 
 	// add the middleware for all endpoints
-	r.Use(withLogging)
 	r.Use(withCORS)
+	r.Use(withRequestID)
 
 	// add the base path route then mount the endpoints
 	r.Route(fmt.Sprintf("/%s", defaultAPIVersion), func(r chi.Router) {
+		lm := newLoggingMiddleware(nil)
+		r.Use(lm.withLogging)
 		// Legacy Endpoints
 		// retrieve overall status
 		r.Mount(fmt.Sprintf("/%s", overallStatusPath),
@@ -116,6 +118,8 @@ func NewAPI(conf Config) (*API, error) {
 	r.Group(func(r chi.Router) {
 		// Use our validation middleware to check all requests against the
 		// OpenAPI schema.
+		lm := newLoggingMiddleware([]string{healthPath})
+		r.Use(lm.withLogging)
 		r.Use(withPlaintextErrorToJson)
 		r.Use(withSwaggerValidate)
 
