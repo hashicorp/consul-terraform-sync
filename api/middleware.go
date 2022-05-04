@@ -16,21 +16,47 @@ const (
 	timeFormat = "2006-01-02T15:04:05.000Z0700"
 )
 
-// withLogging creates a request ID and logger and adds them to the context passed to the
-// next handler. It also handles logging incoming requests and once a request has finished processing.
-func withLogging(next http.Handler) http.Handler {
+func withRequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Generate a UUID to be included with all log messages for an incoming request
 		reqID, err := uuid.GenerateUUID()
-
-		logger := logging.Global().Named(logSystemName)
 		if err != nil {
 			logging.Global().Named(logSystemName).Error("error generating uuid", "error", err)
 			return
 		}
 
-		// UUID was successfully created, so add it now
-		logger = logger.With("request_id", reqID)
+		r = r.WithContext(requestIDWithContext(r.Context(), reqID))
+		next.ServeHTTP(w, r)
+	})
+}
+
+type loggingMiddleware struct {
+	uriExclusions map[string]bool
+}
+
+func newLoggingMiddleware(uriExclusions []string) loggingMiddleware {
+	lm := loggingMiddleware{}
+	lm.uriExclusions = make(map[string]bool)
+	for _, v := range uriExclusions {
+		lm.uriExclusions[v] = true
+	}
+	return lm
+}
+
+// withLogging creates a request ID and logger and adds them to the context passed to the
+// next handler. It also handles logging incoming requests and once a request has finished processing.
+func (lm loggingMiddleware) withLogging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// If we are excluding a URI, return here, this is required to support
+		// oapi-codegen which has an all-or-nothing approach to generated endpoint middleware
+		if _, ok := lm.uriExclusions[r.RequestURI]; ok {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		logger := logging.Global().Named(logSystemName)
+
+		// Add a UUID from the context if available
+		logger = logger.With("request_id", requestIDFromContext(r.Context()))
 		ts := time.Now()
 
 		// Log request info before calling the next handler
@@ -42,7 +68,6 @@ func withLogging(next http.Handler) http.Handler {
 			"host", r.Host)
 
 		r = r.WithContext(logging.WithContext(r.Context(), logger))
-		r = r.WithContext(requestIDWithContext(r.Context(), reqID))
 
 		// Use logger response writer so that the status code can be captured for logging
 		rw := &loggerResponseWriter{
