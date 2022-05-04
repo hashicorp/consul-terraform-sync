@@ -10,11 +10,6 @@ import (
 	openapi_types "github.com/deepmap/oapi-codegen/pkg/types"
 )
 
-// BadHealthCheckResponse defines model for BadHealthCheckResponse.
-type BadHealthCheckResponse struct {
-	Error Error `json:"error"`
-}
-
 // The buffer period for triggering task execution.
 type BufferPeriod struct {
 	// Whether the buffer period is enabled or disabled. Defaults to the global buffer period configured for CTS.
@@ -77,9 +72,10 @@ type ErrorResponse struct {
 	RequestId RequestID `json:"request_id"`
 }
 
-// GoodHealthCheckResponse defines model for GoodHealthCheckResponse.
-type GoodHealthCheckResponse struct {
-	Error *Error `json:"error,omitempty"`
+// HealthCheckResponse defines model for HealthCheckResponse.
+type HealthCheckResponse struct {
+	Error     *Error    `json:"error,omitempty"`
+	RequestId RequestID `json:"request_id"`
 }
 
 // The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.

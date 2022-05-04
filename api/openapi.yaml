@@ -35,13 +35,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GoodHealthCheckResponse'
+                $ref: '#/components/schemas/HealthCheckResponse'
         default:
           description: CTS is unhealthy
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BadHealthCheckResponse'
+                $ref: '#/components/schemas/HealthCheckResponse'
 
   /v1/tasks:
     post:
@@ -523,18 +523,13 @@ components:
       required:
         - message
 
-    GoodHealthCheckResponse:
+    HealthCheckResponse:
       type: object
       additionalProperties: false
       properties:
-        error:
-          $ref: '#/components/schemas/Error'
-
-    BadHealthCheckResponse:
-      type: object
-      additionalProperties: false
-      properties:
+        request_id:
+          $ref: '#/components/schemas/RequestID'
         error:
           $ref: '#/components/schemas/Error'
       required:
-        - error
+        - request_id
