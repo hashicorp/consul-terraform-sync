@@ -505,7 +505,6 @@ func Test_TasksManager_addTask(t *testing.T) {
 	t.Parallel()
 
 	tm := newTestTasksManager()
-	tm.deleteCh = make(chan string, 1)
 	tm.createdScheduleCh = make(chan string, 1)
 
 	t.Run("success", func(t *testing.T) {
@@ -565,6 +564,7 @@ func Test_TasksManager_addTask(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("SetBufferPeriod").Return().Once()
 		d.On("Task").Return(driverTask)
+		d.On("DestroyTask", mock.Anything).Return().Once()
 
 		// Create an error by already adding the task to the drivers list
 		tm.drivers.Add(taskName, d)
@@ -577,16 +577,6 @@ func Test_TasksManager_addTask(t *testing.T) {
 
 		// Confirm that this second driver was not added to drivers list
 		assert.Equal(t, 1, tm.drivers.Len())
-
-		// Confirm received from delete channel for cleanup
-		select {
-		case <-tm.createdScheduleCh:
-			t.Fatal("should not have received from createdScheduleCh")
-		case <-tm.deleteCh:
-			break
-		case <-time.After(time.Second * 5):
-			t.Fatal("did not receive from deleteCh as expected")
-		}
 	})
 }
 

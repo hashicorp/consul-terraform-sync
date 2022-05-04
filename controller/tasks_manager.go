@@ -282,13 +282,13 @@ func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Tas
 
 	name := d.Task().Name()
 	if err := tm.drivers.Add(name, d); err != nil {
-		tm.cleanupTask(ctx, name)
+		tm.cleanupTask(ctx, d)
 		return config.TaskConfig{}, err
 	}
 
 	conf, err := configFromDriverTask(d.Task())
 	if err != nil {
-		tm.cleanupTask(ctx, name)
+		tm.cleanupTask(ctx, d)
 		return config.TaskConfig{}, err
 	}
 
@@ -301,11 +301,11 @@ func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Tas
 	return conf, nil
 }
 
-func (tm TasksManager) cleanupTask(ctx context.Context, name string) {
-	err := tm.TaskDelete(ctx, name)
-	if err != nil {
-		tm.logger.Error("unable to cleanup task after error", "task_name", name)
-	}
+// cleanupTask cleans up a newly created task that has not yet been added to CTS
+// and started monitoring. Use TaskDelete added and monitored tasks
+func (tm TasksManager) cleanupTask(ctx context.Context, d driver.Driver) {
+	// at the moment, only the driver needs to destroy its dependencies
+	d.DestroyTask(ctx)
 }
 
 // TaskRunNow forces an existing task to run with a retry. It assumes that the
