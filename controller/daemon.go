@@ -76,6 +76,19 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 		return err
 	}
 
+	// Serve API
+	go func() {
+		err := s.Serve(ctx)
+		exitCh <- err
+	}()
+
+	// Run tasks once through once-mode
+	if !ctrl.once {
+		if err := ctrl.Once(ctx); err != nil {
+			return err
+		}
+	}
+
 	var rm *registration.SelfRegistrationManager
 	if *conf.Consul.SelfRegistration.Enabled {
 		// Expect one more long-running goroutine
@@ -101,28 +114,11 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 				SelfRegistration: conf.Consul.SelfRegistration,
 			},
 			ctrl.consulClient)
-			
+
 		go func() {
 			rm.Start(ctx)
 			exitCh <- nil // registration errors are logged only
 		}()
-	}
-
-	// Serve API
-	go func() {
-		err := s.Serve(ctx)
-		exitCh <- err
-	}()
-
-	// Run tasks once through once-mode
-	if !ctrl.once {
-		if err := ctrl.Once(ctx); err != nil {
-			if rm != nil {
-				// Deregister CTS service from Consul
-				rm.Deregister(ctx)
-			}
-			return err
-		}
 	}
 
 	// Run tasks in long-running mode
