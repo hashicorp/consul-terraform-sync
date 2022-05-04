@@ -3,11 +3,11 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"github.com/google/uuid"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/health"
 	mockHealth "github.com/hashicorp/consul-terraform-sync/mocks/health"
