@@ -437,10 +437,8 @@ task {
 			}
 
 			// Create task, check that API request is successful and does not hang
-			params := oapigen.CreateTaskParams{}
-			if tc.runMode != nil {
-				r := oapigen.CreateTaskParamsRun(*tc.runMode)
-				params.Run = &r
+			params := oapigen.CreateTaskParams{
+				Run: (*oapigen.CreateTaskParamsRun)(tc.runMode),
 			}
 
 			_, err = client.CreateTaskWithResponse(context.Background(), &params, oapigen.CreateTaskJSONRequestBody(createReq))
