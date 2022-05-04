@@ -286,22 +286,29 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 func Test_TasksManager_TaskDelete(t *testing.T) {
 	ctx := context.Background()
 	tm := newTestTasksManager()
-	tm.deleteCh = make(chan string)
+	deletedCh := tm.EnableDeleteTestMode()
 
 	t.Run("happy path", func(t *testing.T) {
 		drivers := driver.NewDrivers()
 		taskName := "delete_task"
 
+		mockD := new(mocksD.Driver)
+		mockD.On("TemplateIDs").Return(nil)
+		mockD.On("Task").Return(enabledTestTask(t, "delete_task"))
+		mockD.On("DestroyTask", ctx).Return()
+		drivers.Add(taskName, mockD)
+
 		tm.drivers = drivers
+
 		go tm.TaskDelete(ctx, taskName)
 		select {
-		case n := <-tm.deleteCh:
+		case n := <-deletedCh:
 			assert.Equal(t, taskName, n)
 		case <-time.After(1 * time.Second):
 			t.Log("delete channel did not receive message")
 			t.Fail()
 		}
-		assert.True(t, tm.drivers.IsMarkedForDeletion(taskName))
+		assert.Equal(t, 0, drivers.Len())
 	})
 
 	t.Run("already marked for deletion", func(t *testing.T) {

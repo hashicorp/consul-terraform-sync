@@ -174,7 +174,6 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	tm.deleteCh = make(chan string, 1)
 	ctrl.tasksManager = tm
 
 	// Set up driver factory

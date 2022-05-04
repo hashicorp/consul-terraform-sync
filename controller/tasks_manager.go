@@ -35,12 +35,13 @@ type TasksManager struct {
 	// scheduleStopChs is a map of channels used to stop scheduled tasks
 	scheduleStopChs map[string]chan struct{}
 
-	// deleteCh is used to coordinate task deletion via the API
-	deleteCh chan string
-
 	// taskNotify is only initialized if EnableTestMode() is used. It provides
 	// tests insight into which tasks were triggered and had completed
 	taskNotify chan string
+
+	// deleteTaskNotify is only initialized if EnableDeleteTestMode() is used.
+	// It provides tests insight into when a task has been deleted
+	deleteTaskNotify chan string
 }
 
 // NewTasksManager configures a new tasks manager
@@ -59,7 +60,6 @@ func NewTasksManager(conf *config.Config, state state.Store, watcher templates.W
 		drivers:           driver.NewDrivers(),
 		retry:             retry.NewRetry(defaultRetry, time.Now().UnixNano()),
 		createdScheduleCh: make(chan string, 10), // arbitrarily chosen size
-		deleteCh:          make(chan string, 10), // arbitrarily chosen size
 		scheduleStopChs:   make(map[string]chan struct{}),
 	}, nil
 }
@@ -124,16 +124,20 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 	return tm.addTask(ctx, d)
 }
 
-// TaskDelete marks a task for deletion
-func (tm *TasksManager) TaskDelete(_ context.Context, name string) error {
+// TaskDelete marks an existing task that has been added to CTS for deletion
+// then asynchronously deletes the task.
+func (tm *TasksManager) TaskDelete(ctx context.Context, name string) error {
 	logger := tm.logger.With(taskNameLogKey, name)
 	if tm.drivers.IsMarkedForDeletion(name) {
 		logger.Debug("task is already marked for deletion")
 		return nil
 	}
 	tm.drivers.MarkForDeletion(name)
-	tm.deleteCh <- name
 	logger.Debug("task marked for deletion")
+
+	// Use new context. For runtime task deletions, deleteTask() would get
+	// canceled when the API request completes if shared context.
+	go tm.deleteTask(context.Background(), name)
 	return nil
 }
 
@@ -446,6 +450,15 @@ func (tm *TasksManager) EnableTestMode() <-chan string {
 	return tm.taskNotify
 }
 
+// EnableDeleteTestMode is a helper for testing when a task has finished
+// deleting. Callers of this method must consume from deleteTaskNotify channel to
+// prevent the buffered channel from filling and causing a dead lock.
+func (tm *TasksManager) EnableDeleteTestMode() <-chan string {
+	tasks := tm.state.GetAllTasks()
+	tm.deleteTaskNotify = make(chan string, tasks.Len())
+	return tm.deleteTaskNotify
+}
+
 // WatchCreatedScheduleTasks returns a channel to inform any watcher that a new
 // scheduled task has been created and added to CTS.
 func (tm TasksManager) WatchCreatedScheduleTasks() <-chan string {
@@ -568,9 +581,12 @@ func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
 	return err
 }
 
-// deleteTask deletes a task from the drivers map and deletes the task's events.
-// If a task is active and running, it will wait until the task has completed before
-// proceeding with the deletion.
+// deleteTask deletes an existing task that has been added to CTS. If a task is
+// active and running, it will wait until the task has completed before
+// proceeding with the deletion. Deletion:
+// - delete task from drivers map (and destroys driver dependencies)
+// - delete task config from state
+// - delete task events from state
 func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 	logger := tm.logger.With(taskNameLogKey, name)
 
@@ -581,11 +597,15 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 		return nil
 	}
 
+	logger.Trace("waiting for task to become inactive before deleting")
 	err := tm.waitForTaskInactive(ctx, name)
 	if err != nil {
+		logger.Error("error deleting task: error waiting for task to be come inactive",
+			"error", err)
 		return err
 	}
 
+	logger.Trace("task is inactive, deleting")
 	if d.Task().IsScheduled() {
 		// Notify the scheduled task to stop
 		stopCh := tm.scheduleStopChs[name]
@@ -595,7 +615,7 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 		delete(tm.scheduleStopChs, name)
 	}
 
-	// Delete task from drivers and event store
+	// Delete task from drivers
 	err = tm.drivers.Delete(name)
 	if err != nil {
 		logger.Error("unable to delete task", "error", err)
@@ -605,6 +625,10 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 	// Delete task from state only after driver successfully deleted
 	tm.state.DeleteTask(name)
 	tm.state.DeleteTaskEvents(name)
+
+	if tm.deleteTaskNotify != nil {
+		tm.deleteTaskNotify <- name
+	}
 
 	logger.Debug("task deleted")
 	return nil
