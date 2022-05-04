@@ -59,7 +59,7 @@ func (ctrl *Daemon) Init(ctx context.Context) error {
 func (ctrl *Daemon) Run(ctx context.Context) error {
 	// Serve API
 	conf := ctrl.tasksManager.state.GetConfig()
-	s, err := api.NewAPI(api.Config{
+	s, err := api.NewAPI(ctx, api.Config{
 		Controller: ctrl.tasksManager,
 		Health:     &health.BasicChecker{},
 		Port:       config.IntVal(conf.Port),

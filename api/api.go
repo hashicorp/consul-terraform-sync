@@ -77,8 +77,9 @@ type Config struct {
 }
 
 // NewAPI create a new API object
-func NewAPI(conf Config) (*API, error) {
-	logger := logging.Global().Named(logSystemName)
+func NewAPI(ctx context.Context, conf Config) (*API, error) {
+	logger := logging.FromContext(ctx).Named(logSystemName)
+
 	api := &API{
 		ctrl:    conf.Controller,
 		health:  conf.Health,
@@ -99,7 +100,7 @@ func NewAPI(conf Config) (*API, error) {
 
 	// add the base path route then mount the endpoints
 	r.Route(fmt.Sprintf("/%s", defaultAPIVersion), func(r chi.Router) {
-		lm := newLoggingMiddleware(nil)
+		lm := newLoggingMiddleware(nil, logger)
 		r.Use(lm.withLogging)
 		// Legacy Endpoints
 		// retrieve overall status
@@ -118,7 +119,7 @@ func NewAPI(conf Config) (*API, error) {
 	r.Group(func(r chi.Router) {
 		// Use our validation middleware to check all requests against the
 		// OpenAPI schema.
-		lm := newLoggingMiddleware([]string{healthPath})
+		lm := newLoggingMiddleware([]string{healthPath}, logger)
 		r.Use(lm.withLogging)
 		r.Use(withPlaintextErrorToJson)
 		r.Use(withSwaggerValidate)
