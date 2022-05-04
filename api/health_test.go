@@ -30,10 +30,8 @@ func Test_HealthHandler_GetHealth(t *testing.T) {
 			validate: func(t *testing.T, resp *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, resp.Code)
 
-				var hcr oapigen.GoodHealthCheckResponse
+				var hcr oapigen.HealthCheckResponse
 				err := json.NewDecoder(resp.Body).Decode(&hcr)
-				assert.NoError(t, err)
-
 				assert.NoError(t, err)
 			},
 		},
@@ -45,10 +43,8 @@ func Test_HealthHandler_GetHealth(t *testing.T) {
 			validate: func(t *testing.T, resp *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusInternalServerError, resp.Code)
 
-				var hcr oapigen.BadHealthCheckResponse
+				var hcr oapigen.HealthCheckResponse
 				err := json.NewDecoder(resp.Body).Decode(&hcr)
-				assert.NoError(t, err)
-
 				assert.NoError(t, err)
 				assert.Equal(t, "test error", hcr.Error.Message)
 			},
@@ -61,10 +57,8 @@ func Test_HealthHandler_GetHealth(t *testing.T) {
 			validate: func(t *testing.T, resp *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
 
-				var hcr oapigen.BadHealthCheckResponse
+				var hcr oapigen.HealthCheckResponse
 				err := json.NewDecoder(resp.Body).Decode(&hcr)
-				assert.NoError(t, err)
-
 				assert.NoError(t, err)
 				assert.Equal(t, "CTS is not healthy: test error", hcr.Error.Message)
 			},

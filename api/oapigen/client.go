@@ -426,8 +426,8 @@ type ClientWithResponsesInterface interface {
 type GetHealthResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *GoodHealthCheckResponse
-	JSONDefault  *BadHealthCheckResponse
+	JSON200      *HealthCheckResponse
+	JSONDefault  *HealthCheckResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -607,14 +607,14 @@ func ParseGetHealthResponse(rsp *http.Response) (*GetHealthResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest GoodHealthCheckResponse
+		var dest HealthCheckResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
-		var dest BadHealthCheckResponse
+		var dest HealthCheckResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
