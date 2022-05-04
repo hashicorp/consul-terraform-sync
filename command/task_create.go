@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mcli "github.com/mitchellh/cli"
@@ -187,7 +188,9 @@ func (c *taskCreateCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("Inspecting changes to resource if creating task '%s'...\n", taskName))
 	c.UI.Output("Generating plan that Consul-Terraform-Sync will use Terraform to execute\n")
 
-	resp, err := client.CreateTask(context.Background(), api.RunOptionInspect, taskReq)
+	ctx := context.Background()
+	runInspect := oapigen.CreateTaskParamsRun(api.RunOptionInspect)
+	resp, err := client.CreateTaskWithResponse(ctx, &oapigen.CreateTaskParams{Run: &runInspect}, oapigen.CreateTaskJSONRequestBody(taskReq))
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to generate plan for '%s'", taskName))
@@ -201,6 +204,7 @@ func (c *taskCreateCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error: received nil response with status %s", resp.Status()))
 		return ExitCodeError
 	}
+
 	taskResp := resp.JSON200
 	c.UI.Output(fmt.Sprintf("Request ID: %s", taskResp.RequestId))
 	b, _ := json.MarshalIndent(taskReq, "    ", "  ")
@@ -223,7 +227,8 @@ func (c *taskCreateCommand) Run(args []string) int {
 	c.UI.Output("Warning: Terminating this process will not stop task creation.\n")
 
 	// Plan approved, create new task and run now
-	resp, err = client.CreateTask(context.Background(), api.RunOptionNow, taskReq)
+	runNow := oapigen.CreateTaskParamsRun(api.RunOptionNow)
+	resp, err = client.CreateTaskWithResponse(ctx, &oapigen.CreateTaskParams{Run: &runNow}, oapigen.CreateTaskJSONRequestBody(taskReq))
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: unable to create '%s'", taskName))

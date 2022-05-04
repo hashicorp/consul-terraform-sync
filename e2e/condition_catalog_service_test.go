@@ -365,21 +365,24 @@ func TestCondition_CatalogServices_InvalidQueries(t *testing.T) {
 // https://github.com/hashicorp/consul-terraform-sync/issues/704
 func TestCondition_CatalogServices_SharedDependency_NoServices(t *testing.T) {
 	setParallelism(t)
+
+	inspectRunMode := "inspect"
+	nowRunMode := "now"
+
 	cases := []struct {
 		name    string
-		runMode string
+		runMode *string // using string pointer type to test the case of no run mode being set
 	}{
 		{
 			"create",
-			"",
-		},
-		{
+			nil,
+		}, {
 			"inspect",
-			"inspect",
+			&inspectRunMode,
 		},
 		{
 			"create_and_run",
-			"now",
+			&nowRunMode,
 		},
 	}
 	for _, tc := range cases {
@@ -434,7 +437,14 @@ task {
 			}
 
 			// Create task, check that API request is successful and does not hang
-			_, err = client.CreateTask(context.Background(), tc.runMode, createReq)
+			params := oapigen.CreateTaskParams{}
+			if tc.runMode != nil {
+				r := oapigen.CreateTaskParamsRun(*tc.runMode)
+				params.Run = &r
+			}
+
+			_, err = client.CreateTaskWithResponse(context.Background(), &params, oapigen.CreateTaskJSONRequestBody(createReq))
+
 			require.NoError(t, err)
 		})
 	}

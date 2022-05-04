@@ -19,12 +19,12 @@ func Test_HealthHandler_GetHealth(t *testing.T) {
 
 	cases := []struct {
 		name     string
-		setup    func(m *mockHealth.Manager)
+		setup    func(m *mockHealth.Checker)
 		validate func(t *testing.T, resp *httptest.ResponseRecorder)
 	}{
 		{
 			name: "success",
-			setup: func(m *mockHealth.Manager) {
+			setup: func(m *mockHealth.Checker) {
 				m.On("Check").Return(nil)
 			},
 			validate: func(t *testing.T, resp *httptest.ResponseRecorder) {
@@ -39,7 +39,7 @@ func Test_HealthHandler_GetHealth(t *testing.T) {
 		},
 		{
 			name: "failure checking health",
-			setup: func(m *mockHealth.Manager) {
+			setup: func(m *mockHealth.Checker) {
 				m.On("Check").Return(errors.New("test error"))
 			},
 			validate: func(t *testing.T, resp *httptest.ResponseRecorder) {
@@ -55,7 +55,7 @@ func Test_HealthHandler_GetHealth(t *testing.T) {
 		},
 		{
 			name: "failure unhealthy system",
-			setup: func(m *mockHealth.Manager) {
+			setup: func(m *mockHealth.Checker) {
 				m.On("Check").Return(&health.UnhealthySystemError{Err: errors.New("test error")})
 			},
 			validate: func(t *testing.T, resp *httptest.ResponseRecorder) {
@@ -73,9 +73,9 @@ func Test_HealthHandler_GetHealth(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			hm := new(mockHealth.Manager)
-			tc.setup(hm)
-			handler := NewHealthHandler(hm)
+			checker := new(mockHealth.Checker)
+			tc.setup(checker)
+			handler := NewHealthHandler(checker)
 
 			path := "/v1/health"
 			req, err := http.NewRequest(http.MethodGet, path, nil)

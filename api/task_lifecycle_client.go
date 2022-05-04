@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -57,31 +56,6 @@ func NewTaskLifecycleClient(c *ClientConfig, httpClient httpClient) (*TaskLifecy
 // Scheme returns the scheme being used by the client
 func (c *TaskLifecycleClient) Scheme() string {
 	return c.url.Scheme
-}
-
-// CreateTaskSimple takes a task request and run option and sends this information to the client. It then returns
-// a task response object and any errors to the caller.
-// TODO: remove this to conform to interface
-func (c *TaskLifecycleClient) CreateTask(ctx context.Context, runOption string, req TaskRequest) (*oapigen.CreateTaskResponse, error) {
-	var run oapigen.CreateTaskParamsRun
-	switch runOption {
-	case RunOptionInspect:
-		run = RunOptionInspect
-	case RunOptionNow:
-		run = RunOptionNow
-	case "":
-		run = ""
-	default:
-		err := errors.New("invalid run option provided")
-		return nil, err
-	}
-
-	resp, err := c.CreateTaskWithResponse(ctx, &oapigen.CreateTaskParams{Run: &run}, oapigen.CreateTaskJSONRequestBody(req))
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
 }
 
 var _ httpClient = (*TaskLifecycleHTTPClient)(nil)
