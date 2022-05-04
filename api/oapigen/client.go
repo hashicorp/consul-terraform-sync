@@ -266,8 +266,7 @@ func NewCreateTaskRequestWithBody(server string, params *CreateTaskParams, conte
 
 	queryValues := queryURL.Query()
 
-	if params.Run != nil {
-
+	if params != nil && params.Run != nil {
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "run", runtime.ParamLocationQuery, *params.Run); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
@@ -279,7 +278,6 @@ func NewCreateTaskRequestWithBody(server string, params *CreateTaskParams, conte
 				}
 			}
 		}
-
 	}
 
 	queryURL.RawQuery = queryValues.Encode()
