@@ -31,10 +31,13 @@ func withRequestID(next http.Handler) http.Handler {
 
 type loggingMiddleware struct {
 	uriExclusions map[string]bool
+	logger        logging.Logger
 }
 
-func newLoggingMiddleware(uriExclusions []string) loggingMiddleware {
-	lm := loggingMiddleware{}
+func newLoggingMiddleware(uriExclusions []string, logger logging.Logger) loggingMiddleware {
+	lm := loggingMiddleware{
+		logger: logger,
+	}
 	lm.uriExclusions = make(map[string]bool)
 	for _, v := range uriExclusions {
 		lm.uriExclusions[v] = true
@@ -53,7 +56,7 @@ func (lm loggingMiddleware) withLogging(next http.Handler) http.Handler {
 			return
 		}
 
-		logger := logging.Global().Named(logSystemName)
+		logger := lm.logger
 
 		// Add a UUID from the context if available
 		logger = logger.With("request_id", requestIDFromContext(r.Context()))
