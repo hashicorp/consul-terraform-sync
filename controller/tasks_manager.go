@@ -303,8 +303,9 @@ func (tm TasksManager) cleanupTask(ctx context.Context, name string) {
 	}
 }
 
-// checkApply runs a task by attempting to render the template and applying the
-// task as necessary.
+// TaskRunNow forces an existing task to run with a retry. It assumes that the
+// task has already been created through TaskCreate or TaskCreateAndRun. It runs
+// a task by attempting to render the template and applying the task as necessary.
 //
 // An event is stored:
 //  1. whenever a task errors while executing
@@ -315,9 +316,31 @@ func (tm TasksManager) cleanupTask(ctx context.Context, name string) {
 // Note on #2: no event is stored when a dynamic task renders but does not apply.
 // This can occur because driver.RenderTemplate() may need to be called multiple
 // times before a template is ready to be applied.
-func (tm *TasksManager) checkApply(ctx context.Context, d driver.Driver, retry, once bool) (bool, error) {
+func (tm *TasksManager) TaskRunNow(ctx context.Context, d driver.Driver) error {
 	task := d.Task()
 	taskName := task.Name()
+
+	if tm.drivers.IsMarkedForDeletion(taskName) {
+		tm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+		return nil
+	}
+
+	// For scheduled tasks, do not wait if task is active
+	if tm.drivers.IsActive(taskName) && task.IsScheduled() {
+		return fmt.Errorf("task '%s' is active and cannot be run at this time", taskName)
+	}
+
+	// For dynamic tasks, wait to see if the task will become inactive
+	if err := tm.waitForTaskInactive(ctx, taskName); err != nil {
+		return err
+	}
+
+	tm.drivers.SetActive(taskName)
+	defer tm.drivers.SetInactive(taskName)
+
+	// Note: order of these checks matters. Must check task.enabled after the
+	// in/active checks. It's possible that the task becomes disabled during the
+	// active period.
 	if !task.IsEnabled() {
 		if task.IsScheduled() {
 			// Schedule tasks are specifically triggered and logged at INFO.
@@ -328,7 +351,11 @@ func (tm *TasksManager) checkApply(ctx context.Context, d driver.Driver, retry, 
 			// change so logs can be noisy
 			tm.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
 		}
-		return true, nil
+
+		if tm.taskNotify != nil {
+			tm.taskNotify <- taskName
+		}
+		return nil
 	}
 
 	// setup to store event information
@@ -338,7 +365,7 @@ func (tm *TasksManager) checkApply(ctx context.Context, d driver.Driver, retry, 
 		Source:    task.Module(),
 	})
 	if err != nil {
-		return false, fmt.Errorf("error creating event for task %s: %s",
+		return fmt.Errorf("error creating event for task %s: %s",
 			taskName, err)
 	}
 	var storedErr error
@@ -355,49 +382,43 @@ func (tm *TasksManager) checkApply(ctx context.Context, d driver.Driver, retry, 
 	rendered, storedErr = d.RenderTemplate(ctx)
 	if storedErr != nil {
 		defer storeEvent()
-		return false, fmt.Errorf("error rendering template for task %s: %s",
+		return fmt.Errorf("error rendering template for task %s: %s",
 			taskName, storedErr)
 	}
 
-	if !rendered && !once {
+	if !rendered {
 		if task.IsScheduled() {
-			// We sometimes want to store an event when a scheduled task did not
+			// We want to store an event even when a scheduled task did not
 			// render i.e. the task ran on schedule but there were no
 			// dependency changes so the template did not re-render
-			//
-			// During once-mode though, a task may not have rendered because it
-			// may take multiple calls to fully render. check for once-mode to
-			// avoid extra logs/events while the template is finishing rendering.
 			tm.logger.Info("scheduled task triggered but had no changes",
 				taskNameLogKey, taskName)
 			defer storeEvent()
 		}
-		return rendered, nil
+		return nil
 	}
 
 	// rendering a template may take several cycles in order to completely fetch
 	// new data
 	if rendered {
 		tm.logger.Info("executing task", taskNameLogKey, taskName)
-		tm.drivers.SetActive(taskName)
-		defer tm.drivers.SetInactive(taskName)
 		defer storeEvent()
 
-		if retry {
-			desc := fmt.Sprintf("ApplyTask %s", taskName)
-			storedErr = tm.retry.Do(ctx, d.ApplyTask, desc)
-		} else {
-			storedErr = d.ApplyTask(ctx)
-		}
+		desc := fmt.Sprintf("ApplyTask %s", taskName)
+		storedErr = tm.retry.Do(ctx, d.ApplyTask, desc)
 		if storedErr != nil {
-			return false, fmt.Errorf("could not apply changes for task %s: %s",
+			return fmt.Errorf("could not apply changes for task %s: %s",
 				taskName, storedErr)
 		}
 
 		tm.logger.Info("task completed", taskNameLogKey, taskName)
+
+		if tm.taskNotify != nil {
+			tm.taskNotify <- taskName
+		}
 	}
 
-	return rendered, nil
+	return nil
 }
 
 // EnableTestMode is a helper for testing which tasks were triggered and
