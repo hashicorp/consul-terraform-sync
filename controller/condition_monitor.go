@@ -134,6 +134,7 @@ func (tm *TasksManager) runDynamicTask(ctx context.Context, d driver.Driver) err
 	}
 	complete, err := tm.checkApply(ctx, d, true, false)
 	if err != nil {
+		tm.logger.Error("error applying task", taskNameLogKey, taskName, "error", err)
 		return err
 	}
 
@@ -198,8 +199,7 @@ func (tm *TasksManager) runScheduledTask(ctx context.Context, d driver.Driver, s
 			complete, err := tm.checkApply(ctx, d, true, false)
 			if err != nil {
 				// print error but continue
-				tm.logger.Error("error applying task %q: %s",
-					taskNameLogKey, taskName, "error", err)
+				tm.logger.Error("error applying task", taskNameLogKey, taskName, "error", err)
 			}
 
 			if tm.taskNotify != nil && complete {
