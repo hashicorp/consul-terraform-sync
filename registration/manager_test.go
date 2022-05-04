@@ -175,6 +175,7 @@ func TestSelfRegistrationManager_Start(t *testing.T) {
 			}
 		}()
 		cancel()
+		
 		select {
 		case err := <-errCh:
 			// Confirm that exit is due to context cancel
@@ -199,6 +200,7 @@ func TestSelfRegistrationManager_Start(t *testing.T) {
 				errCh <- err
 			}
 		}()
+		
 		select {
 		case err := <-errCh:
 			// Confirm that exit is due to mock error
@@ -252,10 +254,7 @@ func TestSelfRegistrationManager_Deregister(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockClient := new(mocks.ConsulClientInterface)
-		mockClient.On("DeregisterService", mock.Anything,
-			mock.MatchedBy(func(actual string) bool {
-				return actual == id
-			})).Return(nil)
+		mockClient.On("DeregisterService", ctx, id).Return(nil)
 		manager.client = mockClient
 
 		err := manager.Deregister(ctx)

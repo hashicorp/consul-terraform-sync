@@ -101,6 +101,7 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 				SelfRegistration: conf.Consul.SelfRegistration,
 			},
 			ctrl.consulClient)
+			
 		go func() {
 			rm.Start(ctx)
 			exitCh <- nil // registration errors are logged only
