@@ -714,6 +714,92 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 		events := data[schedTaskName]
 		assert.Len(t, events, 1)
 	})
+
+	t.Run("marked-for-deletion", func(t *testing.T) {
+		// Tests that drivers marked for deletion are not run
+
+		// Confirms that other Run-type driver methods are not called
+		d := new(mocksD.Driver)
+		d.On("TemplateIDs").Return(nil)
+
+		tm := newTestTasksManager()
+		tm.drivers.Add(schedTaskName, d)
+
+		tm.drivers.MarkForDeletion(schedTaskName)
+
+		ctx := context.Background()
+		err := tm.TaskRunNow(ctx, d)
+		assert.NoError(t, err)
+		d.AssertExpectations(t)
+
+		// Confirm no event stored
+		data := tm.state.GetTaskEvents(schedTaskName)
+		events := data[schedTaskName]
+		assert.Empty(t, events)
+	})
+
+	t.Run("active-scheduled-tasks", func(t *testing.T) {
+		// Tests that active scheduled task drivers do not run
+
+		// Confirms that other Run-type driver methods are not called
+		d := new(mocksD.Driver)
+		d.On("TemplateIDs").Return(nil)
+		d.On("Task").Return(scheduledTestTask(t, schedTaskName))
+
+		tm := newTestTasksManager()
+		tm.drivers.Add(schedTaskName, d)
+
+		tm.drivers.SetActive(schedTaskName)
+
+		ctx := context.Background()
+		err := tm.TaskRunNow(ctx, d)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "is active")
+		d.AssertExpectations(t)
+
+		// Confirm no event stored
+		data := tm.state.GetTaskEvents(schedTaskName)
+		events := data[schedTaskName]
+		assert.Empty(t, events)
+	})
+
+	t.Run("active-dynamic-task", func(t *testing.T) {
+		// Tests that active dynamic task drivers will wait for inactive
+
+		tm := newTestTasksManager()
+		tm.EnableTestMode()
+
+		ctx := context.Background()
+		d := new(mocksD.Driver)
+		mockDriver(ctx, d, enabledTestTask(t, validTaskName))
+		drivers := tm.drivers
+		drivers.Add(validTaskName, d)
+		drivers.SetActive(validTaskName)
+
+		// Attempt to run the active task
+		ch := make(chan error)
+		go func() {
+			err := tm.TaskRunNow(ctx, d)
+			ch <- err
+		}()
+
+		// Check that the task did not run while active
+		select {
+		case <-tm.taskNotify:
+			t.Fatal("task ran even though active")
+		case <-time.After(250 * time.Millisecond):
+			break
+		}
+
+		// Set task to inactive, wait for run to happen
+		drivers.SetInactive(validTaskName)
+		select {
+		case <-time.After(250 * time.Millisecond):
+			t.Fatal("task did not run after it became inactive")
+		case <-tm.taskNotify:
+			break
+		}
+	})
 }
 
 func Test_TasksManager_TaskRunNow_Store(t *testing.T) {

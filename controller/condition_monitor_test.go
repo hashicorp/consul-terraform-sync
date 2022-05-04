@@ -74,45 +74,6 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		err := cm.runDynamicTask(context.Background(), d)
 		assert.NoError(t, err)
 	})
-
-	t.Run("active-task", func(t *testing.T) {
-		tm := newTestTasksManager()
-		tm.EnableTestMode()
-
-		ctx := context.Background()
-		d := new(mocksD.Driver)
-		mockDriver(ctx, d, enabledTestTask(t, validTaskName))
-		drivers := tm.drivers
-		drivers.Add(validTaskName, d)
-		drivers.SetActive(validTaskName)
-
-		cm := newTestConditionMonitor(tm)
-
-		// Attempt to run the active task
-		ch := make(chan error)
-		go func() {
-			err := cm.runDynamicTask(ctx, d)
-			ch <- err
-		}()
-
-		// Check that the task did not run while active
-		select {
-		case <-tm.taskNotify:
-			t.Fatal("task ran even though active")
-		case <-time.After(250 * time.Millisecond):
-			break
-		}
-
-		// Set task to inactive, wait for run to happen
-		drivers.SetInactive(validTaskName)
-		select {
-		case <-time.After(250 * time.Millisecond):
-			t.Fatal("task did not run after it became inactive")
-		case <-tm.taskNotify:
-			break
-		}
-	})
-
 }
 
 func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
