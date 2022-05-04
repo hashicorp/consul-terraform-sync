@@ -185,6 +185,8 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 
 	// Set up condition monitor
 	cm := newTestConditionMonitor(tm)
+	ctrl.monitor = cm
+
 	// Mock watcher
 	errCh := make(chan error)
 	var errChRc <-chan error = errCh
@@ -228,6 +230,8 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 
 	// Set up condition monitor
 	cm := newTestConditionMonitor(tm)
+	ctrl.monitor = cm
+
 	// Mock watcher
 	expectedErr := errors.New("error!")
 	waitErrCh := make(chan error)

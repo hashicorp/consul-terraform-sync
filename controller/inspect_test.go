@@ -83,7 +83,7 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 	conf := multipleTaskConfig(5)
 	ss := state.NewInMemoryStore(conf)
 
-	ro := Inspect{
+	ctrl := Inspect{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -91,10 +91,12 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	ro.tasksManager = tm
+	ctrl.tasksManager = tm
 
 	// Set up condition monitor
 	cm := newTestConditionMonitor(tm)
+	ctrl.monitor = cm
+
 	// Mock watcher
 	waitErrCh := make(chan error)
 	var waitErrChRc <-chan error = waitErrCh
@@ -123,7 +125,7 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
-		err := ro.Run(ctx)
+		err := ctrl.Run(ctx)
 		if err != nil {
 			errCh <- err
 		}
@@ -155,7 +157,7 @@ func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 
 	ss := state.NewInMemoryStore(conf)
 
-	ro := Inspect{
+	ctrl := Inspect{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -163,10 +165,12 @@ func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	ro.tasksManager = tm
+	ctrl.tasksManager = tm
 
 	// Set up condition monitor
 	cm := newTestConditionMonitor(tm)
+	ctrl.monitor = cm
+
 	// Mock watcher
 	expectedErr := errors.New("error!")
 	waitErrCh := make(chan error)
@@ -192,7 +196,7 @@ func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 	defer cancel()
 	errCh := make(chan error)
 	go func() {
-		err := ro.Run(ctx)
+		err := ctrl.Run(ctx)
 		if err != nil {
 			errCh <- err
 		}
@@ -217,7 +221,7 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 	conf := multipleTaskConfig(numTasks)
 	ss := state.NewInMemoryStore(conf)
 
-	ro := Inspect{
+	ctrl := Inspect{
 		logger: logging.NewNullLogger(),
 		state:  ss,
 	}
@@ -225,10 +229,12 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 	// Set up tasks manager
 	tm := newTestTasksManager()
 	tm.state = ss
-	ro.tasksManager = tm
+	ctrl.tasksManager = tm
 
 	// Set up condition monitor
 	cm := newTestConditionMonitor(tm)
+	ctrl.monitor = cm
+
 	// Mock watcher
 	errCh := make(chan error)
 	var errChRc <-chan error = errCh
@@ -247,7 +253,7 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 		return d, nil
 	}
 
-	err := ro.Run(context.Background())
+	err := ctrl.Run(context.Background())
 
 	// Don't w.AssertExpectations(). Race condition on inspection completion
 	// and if watcher.Size() is called

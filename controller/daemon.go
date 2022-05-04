@@ -29,6 +29,7 @@ type Daemon struct {
 	state        state.Store
 	tasksManager *TasksManager
 	watcher      templates.Watcher
+	monitor      *ConditionMonitor
 
 	consulClient client.ConsulClientInterface
 
@@ -60,6 +61,7 @@ func NewDaemon(conf *config.Config) (*Daemon, error) {
 		state:        s,
 		tasksManager: tm,
 		watcher:      watcher,
+		monitor:      NewConditionMonitor(tm, watcher),
 	}, nil
 }
 
@@ -132,7 +134,7 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 
 	// Run tasks in long-running mode
 	go func() {
-		err := ctrl.tasksManager.Run(ctx)
+		err := ctrl.monitor.Run(ctx)
 		exitCh <- err
 	}()
 
@@ -158,6 +160,7 @@ func (ctrl *Daemon) Once(ctx context.Context) error {
 		logger:       ctrl.logger,
 		state:        ctrl.state,
 		tasksManager: ctrl.tasksManager,
+		monitor:      ctrl.monitor,
 	}
 
 	// no need to init or stop Once controller since it shares tasksManager

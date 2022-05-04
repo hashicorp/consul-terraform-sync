@@ -49,6 +49,8 @@ func Test_Daemon_Run_long(t *testing.T) {
 	w := new(mocksTmpl.Watcher)
 	w.On("Watch", mock.Anything, mock.Anything).Return(nil)
 	cm.watcher = w
+	ctl.monitor = cm
+
 	t.Run("cancel exits successfully", func(t *testing.T) {
 		errCh := make(chan error)
 		ctx, cancel := context.WithCancel(context.Background())
