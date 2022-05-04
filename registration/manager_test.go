@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
@@ -158,13 +157,12 @@ func TestSelfRegistrationManager_Start(t *testing.T) {
 	t.Run("start registers, cancel deregisters", func(t *testing.T) {
 		mockClient := new(mocks.ConsulClientInterface)
 		mockClient.On("RegisterService", mock.Anything,
-			mock.MatchedBy(func(r *consulapi.AgentServiceRegistration) bool {
-				return r.ID == id && r.Name == defaultServiceName
-			})).Return(nil)
-		mockClient.On("DeregisterService", mock.Anything,
-			mock.MatchedBy(func(actual string) bool {
-				return actual == id
-			})).Return(nil)
+			&consulapi.AgentServiceRegistration{
+				ID:   id,
+				Name: defaultServiceName,
+			},
+		).Return(nil)
+		mockClient.On("DeregisterService", mock.Anything, id).Return(nil)
 		manager.client = mockClient
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -175,13 +173,13 @@ func TestSelfRegistrationManager_Start(t *testing.T) {
 			}
 		}()
 		cancel()
-		
+
 		select {
 		case err := <-errCh:
 			// Confirm that exit is due to context cancel
 			assert.Equal(t, err, context.Canceled)
 		case <-time.After(time.Second * 5):
-			t.Fatal("Run did not exit properly from cancelling context")
+			t.Fatal("Start did not exit properly from cancelling context")
 		}
 		mockClient.AssertExpectations(t)
 	})
@@ -200,13 +198,13 @@ func TestSelfRegistrationManager_Start(t *testing.T) {
 				errCh <- err
 			}
 		}()
-		
+
 		select {
 		case err := <-errCh:
 			// Confirm that exit is due to mock error
 			assert.Contains(t, err.Error(), "mock register error")
 		case <-time.After(time.Second * 5):
-			t.Fatal("Run did not exit properly from cancelling context")
+			t.Fatal("Start did not exit properly from cancelling context")
 		}
 		mockClient.AssertExpectations(t)
 	})
@@ -303,15 +301,16 @@ func TestSelfRegistrationManager_SelfRegisterService(t *testing.T) {
 			"success",
 			func(cMock *mocks.ConsulClientInterface) {
 				cMock.On("RegisterService", mock.Anything,
-					mock.MatchedBy(func(r *consulapi.AgentServiceRegistration) bool {
-						// expect these values as for the service registration request
-						return r.ID == id &&
-							r.Name == defaultServiceName &&
-							r.Port == port &&
-							r.Namespace == ns &&
-							reflect.DeepEqual(r.Tags, defaultServiceTags) &&
-							reflect.DeepEqual(r.Checks, consulapi.AgentServiceChecks{check})
-					})).Return(nil)
+					// expect these values for the service registration request
+					&consulapi.AgentServiceRegistration{
+						ID:        id,
+						Name:      defaultServiceName,
+						Port:      port,
+						Namespace: ns,
+						Tags:      defaultServiceTags,
+						Checks:    consulapi.AgentServiceChecks{check},
+					},
+				).Return(nil)
 			},
 			false,
 		},

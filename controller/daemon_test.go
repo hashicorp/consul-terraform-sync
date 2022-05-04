@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
-	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
+	mocksC "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
@@ -29,7 +29,7 @@ func Test_Daemon_Run_long(t *testing.T) {
 
 	port := testutils.FreePort(t)
 
-	mockConsul := new(mocks.ConsulClientInterface)
+	mockConsul := new(mocksC.ConsulClientInterface)
 	mockConsul.On("RegisterService", mock.Anything, mock.Anything).Return(nil)
 	mockConsul.On("DeregisterService", mock.Anything, mock.Anything).Return(nil)
 
