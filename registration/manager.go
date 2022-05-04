@@ -92,22 +92,22 @@ func NewSelfRegistrationManager(conf *SelfRegistrationManagerConfig, client clie
 // with Consul and deregister it if CTS is stopped.
 func (m *SelfRegistrationManager) Start(ctx context.Context) error {
 	// Register CTS with Consul
-	err := m.SelfRegisterService(ctx)
+	err := m.register(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Wait until the context is cancelled, initiate deregistration
 	<-ctx.Done()
-	err = m.Deregister(ctx)
+	err = m.deregister(ctx)
 	if err != nil {
 		return err
 	}
 	return ctx.Err()
 }
 
-// SelfRegisterService registers Consul-Terraform-Sync with Consul
-func (m *SelfRegistrationManager) SelfRegisterService(ctx context.Context) error {
+// register registers Consul-Terraform-Sync with Consul
+func (m *SelfRegistrationManager) register(ctx context.Context) error {
 	s := m.service
 	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
 	r := &consulapi.AgentServiceRegistration{
@@ -129,8 +129,8 @@ func (m *SelfRegistrationManager) SelfRegisterService(ctx context.Context) error
 	return nil
 }
 
-// Deregister deregisters Consul-Terraform-Sync from Consul
-func (m *SelfRegistrationManager) Deregister(ctx context.Context) error {
+// deregister deregisters Consul-Terraform-Sync from Consul
+func (m *SelfRegistrationManager) deregister(ctx context.Context) error {
 	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
 	logger.Info("deregistering Consul-Terraform-Sync from Consul")
 	err := m.client.DeregisterService(ctx, m.service.id)

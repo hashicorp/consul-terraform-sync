@@ -237,7 +237,7 @@ func TestSelfRegistrationManager_Start(t *testing.T) {
 	})
 }
 
-func TestSelfRegistrationManager_Deregister(t *testing.T) {
+func TestSelfRegistrationManager_deregister(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
 	ctx := context.Background()
@@ -255,7 +255,7 @@ func TestSelfRegistrationManager_Deregister(t *testing.T) {
 		mockClient.On("DeregisterService", ctx, id).Return(nil)
 		manager.client = mockClient
 
-		err := manager.Deregister(ctx)
+		err := manager.deregister(ctx)
 		assert.NoError(t, err)
 		mockClient.AssertExpectations(t)
 	})
@@ -266,13 +266,13 @@ func TestSelfRegistrationManager_Deregister(t *testing.T) {
 			Return(errors.New("mock deregister error"))
 		manager.client = mockClient
 
-		err := manager.Deregister(ctx)
+		err := manager.deregister(ctx)
 		assert.Error(t, err)
 		mockClient.AssertExpectations(t)
 	})
 }
 
-func TestSelfRegistrationManager_SelfRegisterService(t *testing.T) {
+func TestSelfRegistrationManager_register(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
 	port := 8558
@@ -333,7 +333,7 @@ func TestSelfRegistrationManager_SelfRegisterService(t *testing.T) {
 				logger:  logging.NewNullLogger(),
 			}
 
-			err := m.SelfRegisterService(context.Background())
+			err := m.register(context.Background())
 
 			if !tc.expectErr {
 				require.NoError(t, err)
