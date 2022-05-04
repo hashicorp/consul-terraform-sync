@@ -166,3 +166,30 @@ func newTestConsulClient(t *testing.T, httpClient *http.Client, maxRetry int) *C
 		logger: logging.NewNullLogger(),
 	}
 }
+
+func TestNonEnterpriseConsulError_Error(t *testing.T) {
+	err := NonEnterpriseConsulError{Err: errors.New("some error")}
+	var nonEnterpriseConsulError *NonEnterpriseConsulError
+
+	assert.True(t, errors.As(&err, &nonEnterpriseConsulError))
+	assert.Equal(t, "consul is not consul enterprise: some error", err.Error())
+}
+
+func TestNonEnterpriseConsulError_Unwrap(t *testing.T) {
+	var terr *testError
+
+	var otherErr testError
+	err := NonEnterpriseConsulError{Err: &otherErr}
+
+	// Assert that the wrapped error is still detectable
+	// errors.As is the preferred way to call the underlying Unwrap
+	assert.True(t, errors.As(&err, &terr))
+}
+
+type testError struct {
+}
+
+// Error returns an error string
+func (e *testError) Error() string {
+	return "this is a test error"
+}

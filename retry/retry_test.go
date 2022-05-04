@@ -246,3 +246,30 @@ func TestWaitTime(t *testing.T) {
 		})
 	}
 }
+
+func TestNonRetryableError_Error(t *testing.T) {
+	err := NonRetryableError{Err: errors.New("some error")}
+	var nonRetryableError *NonRetryableError
+
+	assert.True(t, errors.As(&err, &nonRetryableError))
+	assert.Equal(t, "this error is not retryable: some error", err.Error())
+}
+
+func TestNonRetryableError_Unwrap(t *testing.T) {
+	var terr *testError
+
+	var otherErr testError
+	err := NonRetryableError{Err: &otherErr}
+
+	// Assert that the wrapped error is still detectable
+	// errors.As is the preferred way to call the underlying Unwrap
+	assert.True(t, errors.As(&err, &terr))
+}
+
+type testError struct {
+}
+
+// Error returns an error string
+func (e *testError) Error() string {
+	return "this is a test error"
+}
