@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -15,6 +16,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
+	"github.com/hashicorp/consul-terraform-sync/logging"
+	mockHealth "github.com/hashicorp/consul-terraform-sync/mocks/health"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
@@ -145,7 +148,7 @@ func TestServe(t *testing.T) {
 
 			ctrl := new(mocks.Server)
 			tc.mock(ctrl)
-			api, err := NewAPI(Config{
+			api, err := NewAPI(ctx, Config{
 				Controller: ctrl,
 				Port:       port,
 			})
@@ -172,10 +175,10 @@ func TestServe_context_cancel(t *testing.T) {
 	t.Parallel()
 
 	port := testutils.FreePort(t)
-	api, err := NewAPI(Config{Port: port})
+	ctx, cancel := context.WithCancel(context.Background())
+	api, err := NewAPI(ctx, Config{Port: port})
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
 		err := api.Serve(ctx)
@@ -192,6 +195,61 @@ func TestServe_context_cancel(t *testing.T) {
 		}
 	case <-time.After(time.Second * 5):
 		t.Fatal("Run did not exit properly from cancelling context")
+	}
+}
+
+func TestServe_LoggingExclusions(t *testing.T) {
+	port := testutils.FreePort(t)
+	checker := new(mockHealth.Checker)
+	checker.On("Check").Return(nil)
+
+	var buf bytes.Buffer
+	logger := logging.NewTestLogger("TRACE", &buf)
+
+	ctrl := new(mocks.Server)
+	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil)
+
+	cfg := Config{
+		Port:       port,
+		Controller: ctrl,
+		Health:     checker,
+	}
+	ctx := context.Background()
+	ctx = logging.WithContext(ctx, logger)
+	api, err := NewAPI(ctx, cfg)
+	require.NoError(t, err)
+
+	go api.Serve(ctx)
+	time.Sleep(500 * time.Millisecond)
+
+	cases := []struct {
+		name       string
+		endpoint   string
+		expectLogs bool
+	}{
+		{
+			"health handler no logs",
+			"health",
+			false,
+		},
+		{
+			"task handler with logs",
+			"tasks",
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Make request to HTTPS endpoint
+			buf.Reset()
+			u := fmt.Sprintf("http://localhost:%d/%s/%s",
+				port, defaultAPIVersion, tc.endpoint)
+			client := http.Client{}
+			_, err = client.Get(u)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectLogs, buf.String() != "")
+		})
 	}
 }
 
@@ -259,7 +317,7 @@ func TestServeWithTLS(t *testing.T) {
 				Cert:    config.String(tc.serverCert),
 				Key:     config.String(tc.serverKey),
 			}
-			api, err := NewAPI(Config{
+			api, err := NewAPI(ctx, Config{
 				Controller: ctrl,
 				Port:       port,
 				TLS:        tlsConfig,
@@ -356,7 +414,7 @@ func TestServeWithMutualTLS(t *testing.T) {
 	ctrl := new(mocks.Server)
 	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
 		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
-	api, err := NewAPI(Config{
+	api, err := NewAPI(ctx, Config{
 		Controller: ctrl,
 		Port:       port,
 		TLS:        tlsConfig,
@@ -486,7 +544,7 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 	ctrl := new(mocks.Server)
 	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
 		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
-	api, err := NewAPI(Config{
+	api, err := NewAPI(ctx, Config{
 		Controller: ctrl,
 		Port:       port,
 		TLS:        tlsConfig,
