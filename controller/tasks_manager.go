@@ -28,8 +28,9 @@ type TasksManager struct {
 
 	retry retry.Retry
 
-	// scheduleStartCh is used to coordinate scheduled tasks created via the API
-	scheduleStartCh chan driver.Driver
+	// createdScheduleCh sends the task name of newly created scheduled tasks
+	// that will need to be monitored
+	createdScheduleCh chan string
 
 	// scheduleStopChs is a map of channels used to stop scheduled tasks
 	scheduleStopChs map[string]chan struct{}
@@ -52,14 +53,14 @@ func NewTasksManager(conf *config.Config, state state.Store, watcher templates.W
 	}
 
 	return &TasksManager{
-		logger:          logger,
-		factory:         factory,
-		state:           state,
-		drivers:         driver.NewDrivers(),
-		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
-		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
-		deleteCh:        make(chan string, 10),        // arbitrarily chosen size
-		scheduleStopChs: make(map[string]chan struct{}),
+		logger:            logger,
+		factory:           factory,
+		state:             state,
+		drivers:           driver.NewDrivers(),
+		retry:             retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		createdScheduleCh: make(chan string, 10), // arbitrarily chosen size
+		deleteCh:          make(chan string, 10), // arbitrarily chosen size
+		scheduleStopChs:   make(map[string]chan struct{}),
 	}, nil
 }
 
@@ -290,7 +291,7 @@ func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Tas
 	tm.state.SetTask(conf)
 
 	if d.Task().IsScheduled() {
-		tm.scheduleStartCh <- d
+		tm.createdScheduleCh <- name
 	}
 
 	return conf, nil
@@ -428,6 +429,12 @@ func (tm *TasksManager) EnableTestMode() <-chan string {
 	tasks := tm.state.GetAllTasks()
 	tm.taskNotify = make(chan string, tasks.Len())
 	return tm.taskNotify
+}
+
+// WatchCreatedScheduleTasks returns a channel to inform any watcher that a new
+// scheduled task has been created and added to CTS.
+func (tm TasksManager) WatchCreatedScheduleTasks() <-chan string {
+	return tm.createdScheduleCh
 }
 
 // createTask creates and initializes a singular task from configuration

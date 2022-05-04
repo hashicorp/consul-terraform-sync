@@ -499,7 +499,7 @@ func Test_TasksManager_addTask(t *testing.T) {
 
 	tm := newTestTasksManager()
 	tm.deleteCh = make(chan string, 1)
-	tm.scheduleStartCh = make(chan driver.Driver, 1)
+	tm.createdScheduleCh = make(chan string, 1)
 
 	t.Run("success", func(t *testing.T) {
 		// Set up driver's task object
@@ -536,12 +536,12 @@ func Test_TasksManager_addTask(t *testing.T) {
 		s.AssertExpectations(t)
 		d.AssertExpectations(t)
 
-		// Confirm received from scheduleStartCh
+		// Confirm received from createdScheduleCh
 		select {
-		case <-tm.scheduleStartCh:
+		case <-tm.createdScheduleCh:
 			break
 		case <-time.After(time.Second * 5):
-			t.Fatal("did not receive from scheduleStartCh as expected")
+			t.Fatal("did not receive from createdScheduleCh as expected")
 		}
 	})
 
@@ -573,8 +573,8 @@ func Test_TasksManager_addTask(t *testing.T) {
 
 		// Confirm received from delete channel for cleanup
 		select {
-		case <-tm.scheduleStartCh:
-			t.Fatal("should not have received from scheduleStartCh")
+		case <-tm.createdScheduleCh:
+			t.Fatal("should not have received from createdScheduleCh")
 		case <-tm.deleteCh:
 			break
 		case <-time.After(time.Second * 5):
