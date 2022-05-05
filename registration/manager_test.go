@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -17,6 +17,7 @@ import (
 )
 
 func TestNewSelfRegistrationManager(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		name            string
 		conf            *SelfRegistrationManagerConfig
@@ -78,11 +79,11 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 }
 
 func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
+	t.Parallel()
 	id := "cts-123"
 	port := 8558
-	// TODO: update these addresses when /v1/health implemented
-	httpAddress := fmt.Sprintf("http://localhost:%d/v1/status", port)
-	httpsAddress := fmt.Sprintf("https://localhost:%d/v1/status", port)
+	httpAddress := fmt.Sprintf("http://localhost:%d/v1/health", port)
+	httpsAddress := fmt.Sprintf("https://localhost:%d/v1/health", port)
 	checkID := fmt.Sprintf("%s-health", id)
 
 	testcases := []struct {
@@ -141,7 +142,138 @@ func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 	}
 }
 
-func TestSelfRegistrationManager_SelfRegisterService(t *testing.T) {
+func TestSelfRegistrationManager_Start(t *testing.T) {
+	t.Parallel()
+	id := "cts-123"
+	manager := &SelfRegistrationManager{
+		service: &service{
+			name: defaultServiceName,
+			id:   id,
+		},
+		logger: logging.NewNullLogger(),
+		// mock client will be set per test case
+	}
+
+	t.Run("start registers, cancel deregisters", func(t *testing.T) {
+		mockClient := new(mocks.ConsulClientInterface)
+		mockClient.On("RegisterService", mock.Anything,
+			&consulapi.AgentServiceRegistration{
+				ID:   id,
+				Name: defaultServiceName,
+			},
+		).Return(nil)
+		mockClient.On("DeregisterService", mock.Anything, id).Return(nil)
+		manager.client = mockClient
+
+		ctx, cancel := context.WithCancel(context.Background())
+		errCh := make(chan error)
+		go func() {
+			if err := manager.Start(ctx); err != nil {
+				errCh <- err
+			}
+		}()
+		cancel()
+
+		select {
+		case err := <-errCh:
+			// Confirm that exit is due to context cancel
+			assert.Equal(t, err, context.Canceled)
+		case <-time.After(time.Second * 5):
+			t.Fatal("Start did not exit properly from cancelling context")
+		}
+		mockClient.AssertExpectations(t)
+	})
+
+	t.Run("error on register", func(t *testing.T) {
+		mockClient := new(mocks.ConsulClientInterface)
+		mockClient.On("RegisterService", mock.Anything, mock.Anything).
+			Return(errors.New("mock register error"))
+		manager.client = mockClient
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		errCh := make(chan error)
+		go func() {
+			if err := manager.Start(ctx); err != nil {
+				errCh <- err
+			}
+		}()
+
+		select {
+		case err := <-errCh:
+			// Confirm that exit is due to mock error
+			assert.Contains(t, err.Error(), "mock register error")
+		case <-time.After(time.Second * 5):
+			t.Fatal("Start did not exit properly from cancelling context")
+		}
+		mockClient.AssertExpectations(t)
+	})
+
+	t.Run("error on deregister", func(t *testing.T) {
+		mockClient := new(mocks.ConsulClientInterface)
+		mockClient.On("RegisterService", mock.Anything, mock.Anything).
+			Return(nil)
+		mockClient.On("DeregisterService", mock.Anything, mock.Anything).
+			Return(errors.New("mock deregister error"))
+		manager.client = mockClient
+
+		ctx, cancel := context.WithCancel(context.Background())
+		errCh := make(chan error)
+		go func() {
+			if err := manager.Start(ctx); err != nil {
+				errCh <- err
+			}
+		}()
+		cancel() // cancel to initiate deregister
+
+		select {
+		case err := <-errCh:
+			// Confirm that exit is due to mock error
+			assert.Contains(t, err.Error(), "mock deregister error")
+		case <-time.After(time.Second * 5):
+			t.Fatal("Run did not exit properly from cancelling context")
+		}
+		mockClient.AssertExpectations(t)
+	})
+}
+
+func TestSelfRegistrationManager_deregister(t *testing.T) {
+	t.Parallel()
+	id := "cts-123"
+	ctx := context.Background()
+	manager := &SelfRegistrationManager{
+		service: &service{
+			name: defaultServiceName,
+			id:   id,
+		},
+		logger: logging.NewNullLogger(),
+		// mock client will be set per test case
+	}
+
+	t.Run("success", func(t *testing.T) {
+		mockClient := new(mocks.ConsulClientInterface)
+		mockClient.On("DeregisterService", ctx, id).Return(nil)
+		manager.client = mockClient
+
+		err := manager.deregister(ctx)
+		assert.NoError(t, err)
+		mockClient.AssertExpectations(t)
+	})
+
+	t.Run("error on deregister", func(t *testing.T) {
+		mockClient := new(mocks.ConsulClientInterface)
+		mockClient.On("DeregisterService", mock.Anything, mock.Anything).
+			Return(errors.New("mock deregister error"))
+		manager.client = mockClient
+
+		err := manager.deregister(ctx)
+		assert.Error(t, err)
+		mockClient.AssertExpectations(t)
+	})
+}
+
+func TestSelfRegistrationManager_register(t *testing.T) {
+	t.Parallel()
 	id := "cts-123"
 	port := 8558
 	ns := "ns-1"
@@ -169,15 +301,16 @@ func TestSelfRegistrationManager_SelfRegisterService(t *testing.T) {
 			"success",
 			func(cMock *mocks.ConsulClientInterface) {
 				cMock.On("RegisterService", mock.Anything,
-					mock.MatchedBy(func(r *consulapi.AgentServiceRegistration) bool {
-						// expect these values as for the service registration request
-						return r.ID == id &&
-							r.Name == defaultServiceName &&
-							r.Port == port &&
-							r.Namespace == ns &&
-							reflect.DeepEqual(r.Tags, defaultServiceTags) &&
-							reflect.DeepEqual(r.Checks, consulapi.AgentServiceChecks{check})
-					})).Return(nil)
+					// expect these values for the service registration request
+					&consulapi.AgentServiceRegistration{
+						ID:        id,
+						Name:      defaultServiceName,
+						Port:      port,
+						Namespace: ns,
+						Tags:      defaultServiceTags,
+						Checks:    consulapi.AgentServiceChecks{check},
+					},
+				).Return(nil)
 			},
 			false,
 		},
@@ -200,7 +333,7 @@ func TestSelfRegistrationManager_SelfRegisterService(t *testing.T) {
 				logger:  logging.NewNullLogger(),
 			}
 
-			err := m.SelfRegisterService(context.Background())
+			err := m.register(context.Background())
 
 			if !tc.expectErr {
 				require.NoError(t, err)

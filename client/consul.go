@@ -165,10 +165,15 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 // RegisterService registers a service through the Consul agent.
 func (c *ConsulClient) RegisterService(ctx context.Context, r *consulapi.AgentServiceRegistration) error {
 	desc := "AgentServiceRegister"
+	logger := c.logger
+	if r != nil {
+		logger = logger.With("service_name", r.Name, "service_id", r.ID)
+	}
 
 	f := func(context.Context) error {
 		err := c.Agent().ServiceRegister(r)
 		if err != nil {
+			logger.Error("error registering service", "error", err)
 			return err
 		}
 		return nil
@@ -190,6 +195,7 @@ func (c *ConsulClient) DeregisterService(ctx context.Context, serviceID string) 
 	f := func(context.Context) error {
 		err := c.Agent().ServiceDeregister(serviceID)
 		if err != nil {
+			c.logger.Error("error deregistering service", "error", err, "service_id", serviceID)
 			// TODO: Do not retry depending on error, log message about service:write rule on 403
 			return err
 		}

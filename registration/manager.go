@@ -22,7 +22,7 @@ const (
 	defaultCheckStatus                    = consulapi.HealthCritical
 
 	// HTTP-specific check defaults
-	defaultEndpoint      = "/v1/status" // TODO: temporary until /v1/health is implemented
+	defaultEndpoint      = "/v1/health"
 	defaultMethod        = "GET"
 	defaultInterval      = "10s"
 	defaultTimeout       = "2s"
@@ -88,9 +88,28 @@ func NewSelfRegistrationManager(conf *SelfRegistrationManagerConfig, client clie
 	}
 }
 
-// SelfRegisterService registers Consul-Terraform-Sync with Consul
-func (m *SelfRegistrationManager) SelfRegisterService(ctx context.Context) error {
+// Start starts the self-registration manager, which will register CTS as a service
+// with Consul and deregister it if CTS is stopped.
+func (m *SelfRegistrationManager) Start(ctx context.Context) error {
+	// Register CTS with Consul
+	err := m.register(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Wait until the context is cancelled, initiate deregistration
+	<-ctx.Done()
+	err = m.deregister(ctx)
+	if err != nil {
+		return err
+	}
+	return ctx.Err()
+}
+
+// register registers Consul-Terraform-Sync with Consul
+func (m *SelfRegistrationManager) register(ctx context.Context) error {
 	s := m.service
+	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
 	r := &consulapi.AgentServiceRegistration{
 		ID:        s.id,
 		Name:      s.name,
@@ -100,12 +119,26 @@ func (m *SelfRegistrationManager) SelfRegisterService(ctx context.Context) error
 		Namespace: s.namespace,
 	}
 
-	m.logger.Debug("self-registering Consul-Terraform-Sync as a service with Consul", "name", s.name, "id", s.id)
+	logger.Info("self-registering Consul-Terraform-Sync as a service with Consul")
 	err := m.client.RegisterService(ctx, r)
 	if err != nil {
-		m.logger.Error("error self-registering Consul-Terraform-Sync as a service with Consul", "name", s.name, "id", s.id)
+		logger.Error("error self-registering Consul-Terraform-Sync as a service with Consul")
 		return err
 	}
+	logger.Info("Consul-Terraform-Sync registered as a service with Consul")
+	return nil
+}
+
+// deregister deregisters Consul-Terraform-Sync from Consul
+func (m *SelfRegistrationManager) deregister(ctx context.Context) error {
+	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
+	logger.Info("deregistering Consul-Terraform-Sync from Consul")
+	err := m.client.DeregisterService(ctx, m.service.id)
+	if err != nil {
+		logger.Error("error deregistering Consul-Terraform-Sync from Consul")
+		return err
+	}
+	logger.Info("Consul-Terraform-Sync deregistered from Consul")
 	return nil
 }
 

@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/health"
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	"github.com/hashicorp/consul-terraform-sync/registration"
 	"github.com/hashicorp/consul-terraform-sync/state"
 )
 
@@ -25,6 +27,8 @@ type Daemon struct {
 
 	state        state.Store
 	tasksManager *TasksManager
+
+	consulClient client.ConsulClientInterface
 
 	// whether or not the tasks have gone through once-mode. intended to be used
 	// by benchmarks to run once-mode separately
@@ -57,7 +61,10 @@ func (ctrl *Daemon) Init(ctx context.Context) error {
 }
 
 func (ctrl *Daemon) Run(ctx context.Context) error {
-	// Serve API
+	exitBufLen := 2 // api & run tasks exit
+	exitCh := make(chan error, exitBufLen)
+
+	// Configure API
 	conf := ctrl.tasksManager.state.GetConfig()
 	s, err := api.NewAPI(api.Config{
 		Controller: ctrl.tasksManager,
@@ -69,8 +76,7 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 		return err
 	}
 
-	exitBufLen := 2 // api & run tasks exit
-	exitCh := make(chan error, exitBufLen)
+	// Serve API
 	go func() {
 		err := s.Serve(ctx)
 		exitCh <- err
@@ -81,6 +87,38 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 		if err := ctrl.Once(ctx); err != nil {
 			return err
 		}
+	}
+
+	var rm *registration.SelfRegistrationManager
+	if *conf.Consul.SelfRegistration.Enabled {
+		// Expect one more long-running goroutine
+		exitBufLen++
+		exitCh = make(chan error, exitBufLen)
+
+		// Configure Consul client if not already
+		if ctrl.consulClient == nil {
+			c, err := client.NewConsulClient(conf.Consul, client.ConsulDefaultMaxRetry)
+			if err != nil {
+				ctrl.logger.Error("error setting up Consul client", "error", err)
+				return err
+			}
+			ctrl.consulClient = c
+		}
+
+		// Configure and start self-registration manager
+		rm = registration.NewSelfRegistrationManager(
+			&registration.SelfRegistrationManagerConfig{
+				ID:               *conf.ID,
+				Port:             *conf.Port,
+				TLSEnabled:       (conf.TLS != nil && *conf.TLS.Enabled),
+				SelfRegistration: conf.Consul.SelfRegistration,
+			},
+			ctrl.consulClient)
+
+		go func() {
+			rm.Start(ctx)
+			exitCh <- nil // registration errors are logged only
+		}()
 	}
 
 	// Run tasks in long-running mode
@@ -95,8 +133,6 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 		counter++
 		if err != nil && err != context.Canceled {
 			// Exit if an error is returned
-			// Not expecting any routines to send a nil error because they run
-			// until canceled. Nil check is just to be safe
 			return err
 		}
 		if counter >= exitBufLen {
