@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
@@ -47,15 +46,8 @@ type TasksManager struct {
 }
 
 // NewTasksManager configures a new tasks manager
-func NewTasksManager(conf *config.Config, state state.Store) (*TasksManager, error) {
-
+func NewTasksManager(conf *config.Config, state state.Store, watcher templates.Watcher) (*TasksManager, error) {
 	logger := logging.Global().Named(tasksManagerSystemName)
-
-	logger.Info("initializing Consul client and testing connection")
-	watcher, err := newWatcher(conf, client.ConsulDefaultMaxRetry)
-	if err != nil {
-		return nil, err
-	}
 
 	factory, err := NewDriverFactory(conf, watcher)
 	if err != nil {
@@ -410,6 +402,15 @@ func (tm *TasksManager) checkApply(ctx context.Context, d driver.Driver, retry, 
 	}
 
 	return rendered, nil
+}
+
+// EnableTestMode is a helper for testing which tasks were triggered and
+// executed. Callers of this method must consume from TaskNotify channel to
+// prevent the buffered channel from filling and causing a dead lock.
+func (tm *TasksManager) EnableTestMode() <-chan string {
+	tasks := tm.state.GetAllTasks()
+	tm.taskNotify = make(chan string, tasks.Len())
+	return tm.taskNotify
 }
 
 // createTask creates and initializes a singular task from configuration

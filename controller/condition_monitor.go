@@ -18,10 +18,6 @@ type ConditionMonitor struct {
 	// TODO: placeholder. Will convert TaskManager methods to ConditionMonitor
 }
 
-func (tm *TasksManager) Stop() {
-	tm.watcher.Stop()
-}
-
 // WatchDep is a helper method to start watching dependencies to allow templates
 // to render. It will run until the caller cancels the context.
 func (tm *TasksManager) WatchDep(ctx context.Context) error {
@@ -218,15 +214,6 @@ func (tm *TasksManager) runScheduledTask(ctx context.Context, d driver.Driver, s
 			return ctx.Err()
 		}
 	}
-}
-
-// EnableTestMode is a helper for testing which tasks were triggered and
-// executed. Callers of this method must consume from TaskNotify channel to
-// prevent the buffered channel from filling and causing a dead lock.
-func (tm *TasksManager) EnableTestMode() <-chan string {
-	tasks := tm.state.GetAllTasks()
-	tm.taskNotify = make(chan string, tasks.Len())
-	return tm.taskNotify
 }
 
 // logDepSize logs the watcher dependency size every nth iteration. Set the

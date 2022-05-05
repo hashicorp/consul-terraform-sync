@@ -47,7 +47,7 @@ func Test_Daemon_Run_long(t *testing.T) {
 		Port:   config.Int(port),
 		Consul: consulConf,
 	})
-	ctl.tasksManager = &tm
+	ctl.tasksManager = tm
 
 	t.Run("cancel exits successfully", func(t *testing.T) {
 		errCh := make(chan error)
@@ -151,7 +151,8 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	tm := newTestTasksManager()
 	tm.watcherCh = make(chan string, 5)
 	tm.state = st
-	rw.tasksManager = &tm
+	completedTasksCh := tm.EnableTestMode()
+	rw.tasksManager = tm
 
 	// Mock driver
 	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
@@ -170,7 +171,6 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	errCh := make(chan error)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	completedTasksCh := tm.EnableTestMode()
 
 	// Mock watcher
 	w := new(mocksTmpl.Watcher)

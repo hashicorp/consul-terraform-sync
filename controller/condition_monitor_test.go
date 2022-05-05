@@ -11,11 +11,22 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/handler"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
-	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	schedTaskName = "scheduled_task"
+	schedTaskConf = config.TaskConfig{
+		Enabled: config.Bool(true),
+		Name:    config.String(schedTaskName),
+		Module:  config.String("module"),
+		Condition: &config.ScheduleConditionConfig{
+			Cron: config.String("*/3 * * * * * *"),
+		},
+	}
 )
 
 func Test_TasksManager_runDynamicTask(t *testing.T) {
@@ -24,8 +35,8 @@ func Test_TasksManager_runDynamicTask(t *testing.T) {
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
-		mockDriver(ctx, d, enabledTestTask(t, "task"))
-		tm.drivers.Add("task", d)
+		mockDriver(ctx, d, enabledTestTask(t, validTaskName))
+		tm.drivers.Add(validTaskName, d)
 
 		err := tm.runDynamicTask(ctx, d)
 		assert.NoError(t, err)
@@ -36,12 +47,12 @@ func Test_TasksManager_runDynamicTask(t *testing.T) {
 
 		testErr := fmt.Errorf("could not apply: %s", "test")
 		d := new(mocksD.Driver)
-		d.On("Task").Return(enabledTestTask(t, "task"))
+		d.On("Task").Return(enabledTestTask(t, validTaskName))
 		d.On("TemplateIDs").Return(nil)
 		d.On("InitWork", mock.Anything).Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("ApplyTask", mock.Anything).Return(testErr)
-		tm.drivers.Add("task", d)
+		tm.drivers.Add(validTaskName, d)
 
 		err := tm.runDynamicTask(context.Background(), d)
 		assert.Contains(t, err.Error(), testErr.Error())
@@ -50,12 +61,11 @@ func Test_TasksManager_runDynamicTask(t *testing.T) {
 	t.Run("skip-scheduled-tasks", func(t *testing.T) {
 		tm := newTestTasksManager()
 
-		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
-		d.On("Task").Return(scheduledTestTask(t, taskName))
+		d.On("Task").Return(scheduledTestTask(t, schedTaskName))
 		d.On("TemplateIDs").Return(nil)
 		// no other methods should be called (or mocked)
-		tm.drivers.Add(taskName, d)
+		tm.drivers.Add(schedTaskName, d)
 
 		err := tm.runDynamicTask(context.Background(), d)
 		assert.NoError(t, err)
@@ -67,11 +77,10 @@ func Test_TasksManager_runDynamicTask(t *testing.T) {
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
-		taskName := "task"
-		mockDriver(ctx, d, enabledTestTask(t, taskName))
+		mockDriver(ctx, d, enabledTestTask(t, validTaskName))
 		drivers := tm.drivers
-		drivers.Add(taskName, d)
-		drivers.SetActive(taskName)
+		drivers.Add(validTaskName, d)
+		drivers.SetActive(validTaskName)
 
 		// Attempt to run the active task
 		ch := make(chan error)
@@ -89,7 +98,7 @@ func Test_TasksManager_runDynamicTask(t *testing.T) {
 		}
 
 		// Set task to inactive, wait for run to happen
-		drivers.SetInactive(taskName)
+		drivers.SetInactive(validTaskName)
 		select {
 		case <-time.After(250 * time.Millisecond):
 			t.Fatal("task did not run after it became inactive")
@@ -104,13 +113,12 @@ func Test_TasksManager_runScheduledTask(t *testing.T) {
 	t.Run("happy-path", func(t *testing.T) {
 		tm := newTestTasksManager()
 
-		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
-		d.On("Task").Return(scheduledTestTask(t, taskName)).Twice()
+		d.On("Task").Return(scheduledTestTask(t, schedTaskName)).Twice()
 		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
 		d.On("TemplateIDs").Return(nil)
-		tm.drivers.Add(taskName, d)
+		tm.drivers.Add(schedTaskName, d)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
@@ -137,9 +145,8 @@ func Test_TasksManager_runScheduledTask(t *testing.T) {
 	t.Run("dynamic-task-errors", func(t *testing.T) {
 		tm := newTestTasksManager()
 
-		taskName := "dynamic_task"
 		d := new(mocksD.Driver)
-		d.On("Task").Return(enabledTestTask(t, taskName)).Once()
+		d.On("Task").Return(enabledTestTask(t, validTaskName)).Once()
 
 		ctx, cancel := context.WithCancel(context.Background())
 		errCh := make(chan error)
@@ -167,11 +174,10 @@ func Test_TasksManager_runScheduledTask(t *testing.T) {
 		// Tests that signaling to the stop channel stops the function
 		tm := newTestTasksManager()
 
-		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
-		d.On("Task").Return(scheduledTestTask(t, taskName)).Once()
+		d.On("Task").Return(scheduledTestTask(t, schedTaskName)).Once()
 		d.On("TemplateIDs").Return(nil)
-		tm.drivers.Add(taskName, d)
+		tm.drivers.Add(schedTaskName, d)
 
 		ctx := context.Background()
 		errCh := make(chan error)
@@ -195,15 +201,14 @@ func Test_TasksManager_runScheduledTask(t *testing.T) {
 		// list of drivers
 		tm := newTestTasksManager()
 
-		taskName := "scheduled_task"
 		d := new(mocksD.Driver)
-		d.On("Task").Return(scheduledTestTask(t, taskName)).Once()
+		d.On("Task").Return(scheduledTestTask(t, schedTaskName)).Once()
 		// driver is not added to drivers map
 
 		ctx := context.Background()
 		errCh := make(chan error)
 		stopCh := make(chan struct{}, 1)
-		tm.scheduleStopChs[taskName] = stopCh
+		tm.scheduleStopChs[schedTaskName] = stopCh
 		done := make(chan bool)
 		go func() {
 			err := tm.runScheduledTask(ctx, d, stopCh)
@@ -219,7 +224,7 @@ func Test_TasksManager_runScheduledTask(t *testing.T) {
 		case <-done:
 			// runScheduledTask exited as expected
 			d.AssertExpectations(t)
-			_, ok := tm.scheduleStopChs[taskName]
+			_, ok := tm.scheduleStopChs[schedTaskName]
 			assert.False(t, ok, "expected scheduled task stop channel to be removed")
 		case <-time.After(time.Second * 5):
 			t.Fatal("runScheduledTask did not exit as expected")
@@ -260,6 +265,7 @@ func Test_TasksManager_Run_ActiveTask(t *testing.T) {
 	// Set up tm with two tasks
 	tm := newTestTasksManager()
 	tm.watcherCh = make(chan string, 5)
+	completedTasksCh := tm.EnableTestMode()
 
 	for _, n := range []string{"task_a", "task_b"} {
 		d := new(mocksD.Driver)
@@ -270,7 +276,6 @@ func Test_TasksManager_Run_ActiveTask(t *testing.T) {
 			On("SetBufferPeriod")
 		tm.drivers.Add(n, d)
 	}
-	completedTasksCh := tm.EnableTestMode()
 
 	// Set up watcher for tm
 	ctx := context.Background()
@@ -369,27 +374,6 @@ func Test_TasksManager_Run_ScheduledTasks(t *testing.T) {
 	assert.NotNil(t, stopCh, "expected stop channel not to be nil")
 }
 
-func Test_TasksManager_EnableTestMode(t *testing.T) {
-	t.Parallel()
-
-	// Mock state store
-	taskConfs := config.TaskConfigs{
-		{Name: config.String("task_a")},
-		{Name: config.String("task_b")},
-	}
-	s := new(mocksS.Store)
-	s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
-
-	// Set up tasks manager
-	tm := newTestTasksManager()
-	tm.state = s
-
-	// Test EnableTestMode
-	channel := tm.EnableTestMode()
-	assert.Equal(t, 2, cap(channel))
-	s.AssertExpectations(t)
-}
-
 func Test_TasksManager_WatchDep_context_cancel(t *testing.T) {
 	t.Parallel()
 
@@ -475,7 +459,7 @@ func singleTaskConfig() *config.Config {
 		Tasks: &config.TaskConfigs{
 			{
 				Description:        config.String("automate services for X to do Y"),
-				Name:               config.String("task"),
+				Name:               config.String(validTaskName),
 				DeprecatedServices: []string{"serviceA", "serviceB", "serviceC"},
 				Providers:          []string{"X", handler.TerraformProviderFake},
 				Module:             config.String("Y"),
