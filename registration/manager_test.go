@@ -32,7 +32,7 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 				SelfRegistration: config.DefaultSelfRegistrationConfig(),
 			},
 			&service{
-				name:      defaultServiceName,
+				name:      config.DefaultServiceName,
 				tags:      defaultServiceTags,
 				id:        "cts-123",
 				port:      123,
@@ -40,17 +40,18 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 			},
 		},
 		{
-			"namespace",
+			"configured",
 			&SelfRegistrationManagerConfig{
 				ID:         "cts-123",
 				Port:       123,
 				TLSEnabled: false,
 				SelfRegistration: &config.SelfRegistrationConfig{
-					Namespace: config.String("ns-1"),
+					ServiceName: config.String("cts-service"),
+					Namespace:   config.String("ns-1"),
 				},
 			},
 			&service{
-				name:      defaultServiceName,
+				name:      "cts-service",
 				tags:      defaultServiceTags,
 				id:        "cts-123",
 				port:      123,
@@ -145,9 +146,10 @@ func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 func TestSelfRegistrationManager_Start(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
+	name := "cts-service"
 	manager := &SelfRegistrationManager{
 		service: &service{
-			name: defaultServiceName,
+			name: name,
 			id:   id,
 		},
 		logger: logging.NewNullLogger(),
@@ -159,7 +161,7 @@ func TestSelfRegistrationManager_Start(t *testing.T) {
 		mockClient.On("RegisterService", mock.Anything,
 			&consulapi.AgentServiceRegistration{
 				ID:   id,
-				Name: defaultServiceName,
+				Name: name,
 			},
 		).Return(nil)
 		mockClient.On("DeregisterService", mock.Anything, id).Return(nil)
@@ -243,7 +245,7 @@ func TestSelfRegistrationManager_deregister(t *testing.T) {
 	ctx := context.Background()
 	manager := &SelfRegistrationManager{
 		service: &service{
-			name: defaultServiceName,
+			name: config.DefaultServiceName,
 			id:   id,
 		},
 		logger: logging.NewNullLogger(),
@@ -275,6 +277,7 @@ func TestSelfRegistrationManager_deregister(t *testing.T) {
 func TestSelfRegistrationManager_register(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
+	name := "cts-service"
 	port := 8558
 	ns := "ns-1"
 	check := defaultHTTPCheck(&SelfRegistrationManagerConfig{
@@ -285,7 +288,7 @@ func TestSelfRegistrationManager_register(t *testing.T) {
 		},
 	})
 	service := &service{
-		name:      defaultServiceName,
+		name:      name,
 		tags:      defaultServiceTags,
 		port:      port,
 		id:        id,
@@ -304,7 +307,7 @@ func TestSelfRegistrationManager_register(t *testing.T) {
 					// expect these values for the service registration request
 					&consulapi.AgentServiceRegistration{
 						ID:        id,
-						Name:      defaultServiceName,
+						Name:      name,
 						Port:      port,
 						Namespace: ns,
 						Tags:      defaultServiceTags,

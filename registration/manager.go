@@ -12,8 +12,7 @@ import (
 
 const (
 	// Service defaults
-	defaultServiceName = "Consul-Terraform-Sync"
-	defaultNamespace   = ""
+	defaultNamespace = ""
 
 	// Check defaults
 	defaultCheckName                      = "CTS Health Status"
@@ -64,7 +63,10 @@ type service struct {
 func NewSelfRegistrationManager(conf *SelfRegistrationManagerConfig, client client.ConsulClientInterface) *SelfRegistrationManager {
 	logger := logging.Global().Named(logSystemName)
 
-	name := defaultServiceName
+	name := config.DefaultServiceName
+	if conf.SelfRegistration.ServiceName != nil {
+		name = *conf.SelfRegistration.ServiceName
+	}
 
 	ns := defaultNamespace
 	if conf.SelfRegistration.Namespace != nil {
