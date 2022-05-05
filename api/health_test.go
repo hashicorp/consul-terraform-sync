@@ -47,7 +47,7 @@ func Test_HealthHandler_GetHealth(t *testing.T) {
 			checker.On("Check").Return(tc.checkReturn)
 			handler := NewHealthHandler(checker)
 
-			path := "/v1/health"
+			path := healthPath
 			req, err := http.NewRequest(http.MethodGet, path, nil)
 			require.NoError(t, err)
 

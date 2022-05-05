@@ -139,3 +139,13 @@ func validateLogLevel(minLevel string) bool {
 	}
 	return false
 }
+
+// NewTestLogger configures a new logger using a provided logLevel and output and
+// returns the new hclog.Logger as type Logger
+func NewTestLogger(logLevel string, output io.Writer) Logger {
+	return hclog.New(&hclog.LoggerOptions{
+		Level:      hclog.LevelFromString(logLevel),
+		Output:     output,
+		TimeFormat: hclog.TimeFormat,
+	})
+}
