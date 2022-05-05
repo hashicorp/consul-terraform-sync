@@ -10,8 +10,9 @@ func TestSelfRegistrationConfig_DefaultSelfRegistrationConfig(t *testing.T) {
 	t.Parallel()
 	r := DefaultSelfRegistrationConfig()
 	expected := &SelfRegistrationConfig{
-		Enabled:   Bool(true),
-		Namespace: String(""),
+		Enabled:     Bool(true),
+		Namespace:   String(""),
+		ServiceName: String(DefaultServiceName),
 	}
 	assert.Equal(t, expected, r)
 }
@@ -41,8 +42,9 @@ func TestSelfRegistrationConfig_Copy(t *testing.T) {
 		{
 			"fully_configured",
 			&SelfRegistrationConfig{
-				Enabled:   Bool(false),
-				Namespace: String("test"),
+				Enabled:     Bool(false),
+				ServiceName: String("cts-service"),
+				Namespace:   String("test"),
 			},
 		},
 	}
@@ -136,6 +138,30 @@ func TestSelfRegistrationConfig_Merge(t *testing.T) {
 			&SelfRegistrationConfig{Namespace: String("ns_a")},
 			&SelfRegistrationConfig{Namespace: String("ns_a")},
 		},
+		{
+			"service_name_overrides",
+			&SelfRegistrationConfig{ServiceName: String("service_a")},
+			&SelfRegistrationConfig{ServiceName: String("service_b")},
+			&SelfRegistrationConfig{ServiceName: String("service_b")},
+		},
+		{
+			"service_name_empty_one",
+			&SelfRegistrationConfig{ServiceName: String("service_a")},
+			&SelfRegistrationConfig{},
+			&SelfRegistrationConfig{ServiceName: String("service_a")},
+		},
+		{
+			"service_name_empty_two",
+			&SelfRegistrationConfig{},
+			&SelfRegistrationConfig{ServiceName: String("service_a")},
+			&SelfRegistrationConfig{ServiceName: String("service_a")},
+		},
+		{
+			"service_name_same",
+			&SelfRegistrationConfig{ServiceName: String("service_a")},
+			&SelfRegistrationConfig{ServiceName: String("service_a")},
+			&SelfRegistrationConfig{ServiceName: String("service_a")},
+		},
 	}
 
 	for _, tc := range cases {
@@ -158,8 +184,9 @@ func TestSelfRegistrationConfig_Finalize(t *testing.T) {
 			"empty",
 			&SelfRegistrationConfig{},
 			&SelfRegistrationConfig{
-				Enabled:   Bool(true),
-				Namespace: String(""),
+				Enabled:     Bool(true),
+				ServiceName: String(DefaultServiceName),
+				Namespace:   String(""),
 			},
 		},
 	}
@@ -186,11 +213,13 @@ func TestSelfRegistrationConfig_GoString(t *testing.T) {
 		{
 			"fully_configured",
 			&SelfRegistrationConfig{
-				Enabled:   Bool(true),
-				Namespace: String("test"),
+				Enabled:     Bool(true),
+				ServiceName: String("cts-service"),
+				Namespace:   String("test"),
 			},
 			"&SelfRegistrationConfig{" +
 				"Enabled:true, " +
+				"ServiceName:cts-service, " +
 				"Namespace:test" +
 				"}",
 		},

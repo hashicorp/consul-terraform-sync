@@ -40,8 +40,9 @@ func TestConsulConfig_Copy(t *testing.T) {
 				TLS:         &TLSConfig{Enabled: Bool(true)},
 				Token:       String("abcd1234"),
 				SelfRegistration: &SelfRegistrationConfig{
-					Enabled:   Bool(false),
-					Namespace: String("test-ns"),
+					Enabled:     Bool(false),
+					ServiceName: String("test-service"),
+					Namespace:   String("test-ns"),
 				},
 			},
 		},
@@ -282,8 +283,9 @@ func TestConsulConfig_Finalize(t *testing.T) {
 					TLSHandshakeTimeout: TimeDuration(DefaultTLSHandshakeTimeout),
 				},
 				SelfRegistration: &SelfRegistrationConfig{
-					Enabled:   Bool(true),
-					Namespace: String(""),
+					Enabled:     Bool(true),
+					ServiceName: String(DefaultServiceName),
+					Namespace:   String(""),
 				},
 			},
 		},

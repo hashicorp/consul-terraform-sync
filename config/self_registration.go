@@ -2,19 +2,25 @@ package config
 
 import "fmt"
 
+const (
+	DefaultServiceName = "Consul-Terraform-Sync"
+)
+
 // SelfRegistrationConfig is a configuration that controls how CTS will
 // self-register itself as a service with Consul.
 type SelfRegistrationConfig struct {
-	Enabled   *bool   `mapstructure:"enabled"`
-	Namespace *string `mapstructure:"namespace"`
+	Enabled     *bool   `mapstructure:"enabled"`
+	ServiceName *string `mapstructure:"service_name"`
+	Namespace   *string `mapstructure:"namespace"`
 }
 
 // DefaultSelfRegistrationConfig returns a SelfRegistrationConfig with
 // default values.
 func DefaultSelfRegistrationConfig() *SelfRegistrationConfig {
 	return &SelfRegistrationConfig{
-		Enabled:   Bool(true),
-		Namespace: String(""),
+		Enabled:     Bool(true),
+		ServiceName: String(DefaultServiceName),
+		Namespace:   String(""),
 	}
 }
 
@@ -26,6 +32,7 @@ func (c *SelfRegistrationConfig) Copy() *SelfRegistrationConfig {
 
 	var o SelfRegistrationConfig
 	o.Enabled = BoolCopy(c.Enabled)
+	o.ServiceName = StringCopy(c.ServiceName)
 	o.Namespace = StringCopy(c.Namespace)
 
 	return &o
@@ -51,6 +58,10 @@ func (c *SelfRegistrationConfig) Merge(o *SelfRegistrationConfig) *SelfRegistrat
 		r.Enabled = BoolCopy(o.Enabled)
 	}
 
+	if o.ServiceName != nil {
+		r.ServiceName = StringCopy(o.ServiceName)
+	}
+
 	if o.Namespace != nil {
 		r.Namespace = StringCopy(o.Namespace)
 	}
@@ -62,6 +73,10 @@ func (c *SelfRegistrationConfig) Merge(o *SelfRegistrationConfig) *SelfRegistrat
 func (c *SelfRegistrationConfig) Finalize() {
 	if c.Enabled == nil {
 		c.Enabled = Bool(true)
+	}
+
+	if c.ServiceName == nil {
+		c.ServiceName = String(DefaultServiceName)
 	}
 
 	if c.Namespace == nil {
@@ -77,9 +92,11 @@ func (c *SelfRegistrationConfig) GoString() string {
 
 	return fmt.Sprintf("&SelfRegistrationConfig{"+
 		"Enabled:%v, "+
+		"ServiceName:%s, "+
 		"Namespace:%s"+
 		"}",
 		BoolVal(c.Enabled),
+		StringVal(c.ServiceName),
 		StringVal(c.Namespace),
 	)
 }

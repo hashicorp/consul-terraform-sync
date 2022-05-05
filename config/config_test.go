@@ -57,8 +57,9 @@ var (
 				TLSHandshakeTimeout: TimeDuration(10 * time.Second),
 			},
 			SelfRegistration: &SelfRegistrationConfig{
-				Enabled:   Bool(true),
-				Namespace: String("test-ns"),
+				Enabled:     Bool(true),
+				ServiceName: String("test-service"),
+				Namespace:   String("test-ns"),
 			},
 		},
 		TLS: &CTSTLSConfig{

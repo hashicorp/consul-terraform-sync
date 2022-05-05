@@ -48,6 +48,7 @@ consul {
   }
   self_registration {
     enabled = true
+    service_name = "test-service"
     namespace = "test-ns"
   }
 }
