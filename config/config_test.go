@@ -60,6 +60,10 @@ var (
 				Enabled:     Bool(true),
 				ServiceName: String("test-service"),
 				Namespace:   String("test-ns"),
+				DefaultCheck: &DefaultCheckConfig{
+					Enabled: Bool(true),
+					Address: String("cts"),
+				},
 			},
 		},
 		TLS: &CTSTLSConfig{

@@ -46,7 +46,11 @@
     "self_registration": {
       "enabled": true,
       "service_name": "test-service",
-      "namespace": "test-ns"
+      "namespace": "test-ns",
+      "default_check": {
+        "enabled": true,
+        "address": "cts"
+      }
     }
   },
   "driver": {

@@ -43,6 +43,10 @@ func TestConsulConfig_Copy(t *testing.T) {
 					Enabled:     Bool(false),
 					ServiceName: String("test-service"),
 					Namespace:   String("test-ns"),
+					DefaultCheck: &DefaultCheckConfig{
+						Enabled: Bool(true),
+						Address: String("test"),
+					},
 				},
 			},
 		},
@@ -286,6 +290,10 @@ func TestConsulConfig_Finalize(t *testing.T) {
 					Enabled:     Bool(true),
 					ServiceName: String(DefaultServiceName),
 					Namespace:   String(""),
+					DefaultCheck: &DefaultCheckConfig{
+						Enabled: Bool(true),
+						Address: String(""),
+					},
 				},
 			},
 		},

@@ -9,9 +9,10 @@ const (
 // SelfRegistrationConfig is a configuration that controls how CTS will
 // self-register itself as a service with Consul.
 type SelfRegistrationConfig struct {
-	Enabled     *bool   `mapstructure:"enabled"`
-	ServiceName *string `mapstructure:"service_name"`
-	Namespace   *string `mapstructure:"namespace"`
+	Enabled      *bool               `mapstructure:"enabled"`
+	ServiceName  *string             `mapstructure:"service_name"`
+	Namespace    *string             `mapstructure:"namespace"`
+	DefaultCheck *DefaultCheckConfig `mapstructure:"default_check"`
 }
 
 // DefaultSelfRegistrationConfig returns a SelfRegistrationConfig with
@@ -21,6 +22,10 @@ func DefaultSelfRegistrationConfig() *SelfRegistrationConfig {
 		Enabled:     Bool(true),
 		ServiceName: String(DefaultServiceName),
 		Namespace:   String(""),
+		DefaultCheck: &DefaultCheckConfig{
+			Enabled: Bool(true),
+			Address: String(""),
+		},
 	}
 }
 
@@ -34,6 +39,10 @@ func (c *SelfRegistrationConfig) Copy() *SelfRegistrationConfig {
 	o.Enabled = BoolCopy(c.Enabled)
 	o.ServiceName = StringCopy(c.ServiceName)
 	o.Namespace = StringCopy(c.Namespace)
+
+	if c.DefaultCheck != nil {
+		o.DefaultCheck = c.DefaultCheck.Copy()
+	}
 
 	return &o
 }
@@ -66,6 +75,10 @@ func (c *SelfRegistrationConfig) Merge(o *SelfRegistrationConfig) *SelfRegistrat
 		r.Namespace = StringCopy(o.Namespace)
 	}
 
+	if o.DefaultCheck != nil {
+		r.DefaultCheck = r.DefaultCheck.Merge(o.DefaultCheck)
+	}
+
 	return r
 }
 
@@ -82,6 +95,11 @@ func (c *SelfRegistrationConfig) Finalize() {
 	if c.Namespace == nil {
 		c.Namespace = String("")
 	}
+
+	if c.DefaultCheck == nil {
+		c.DefaultCheck = &DefaultCheckConfig{}
+		c.DefaultCheck.Finalize()
+	}
 }
 
 // GoString defines the printable version of this struct.
@@ -93,10 +111,12 @@ func (c *SelfRegistrationConfig) GoString() string {
 	return fmt.Sprintf("&SelfRegistrationConfig{"+
 		"Enabled:%v, "+
 		"ServiceName:%s, "+
-		"Namespace:%s"+
+		"Namespace:%s, "+
+		"DefaultCheck: %s"+
 		"}",
 		BoolVal(c.Enabled),
 		StringVal(c.ServiceName),
 		StringVal(c.Namespace),
+		c.DefaultCheck.GoString(),
 	)
 }

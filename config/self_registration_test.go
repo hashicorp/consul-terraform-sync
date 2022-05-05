@@ -13,6 +13,10 @@ func TestSelfRegistrationConfig_DefaultSelfRegistrationConfig(t *testing.T) {
 		Enabled:     Bool(true),
 		Namespace:   String(""),
 		ServiceName: String(DefaultServiceName),
+		DefaultCheck: &DefaultCheckConfig{
+			Enabled: Bool(true),
+			Address: String(""),
+		},
 	}
 	assert.Equal(t, expected, r)
 }
@@ -45,6 +49,10 @@ func TestSelfRegistrationConfig_Copy(t *testing.T) {
 				Enabled:     Bool(false),
 				ServiceName: String("cts-service"),
 				Namespace:   String("test"),
+				DefaultCheck: &DefaultCheckConfig{
+					Enabled: Bool(false),
+					Address: String("test"),
+				},
 			},
 		},
 	}
@@ -162,6 +170,30 @@ func TestSelfRegistrationConfig_Merge(t *testing.T) {
 			&SelfRegistrationConfig{ServiceName: String("service_a")},
 			&SelfRegistrationConfig{ServiceName: String("service_a")},
 		},
+		{
+			"default_check_overrides",
+			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(true)}},
+			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+		},
+		{
+			"default_check_empty_one",
+			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&SelfRegistrationConfig{},
+			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+		},
+		{
+			"default_check_empty_two",
+			&SelfRegistrationConfig{},
+			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+		},
+		{
+			"default_check_same",
+			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+		},
 	}
 
 	for _, tc := range cases {
@@ -187,6 +219,10 @@ func TestSelfRegistrationConfig_Finalize(t *testing.T) {
 				Enabled:     Bool(true),
 				ServiceName: String(DefaultServiceName),
 				Namespace:   String(""),
+				DefaultCheck: &DefaultCheckConfig{
+					Enabled: Bool(true),
+					Address: String(""),
+				},
 			},
 		},
 	}
@@ -216,11 +252,16 @@ func TestSelfRegistrationConfig_GoString(t *testing.T) {
 				Enabled:     Bool(true),
 				ServiceName: String("cts-service"),
 				Namespace:   String("test"),
+				DefaultCheck: &DefaultCheckConfig{
+					Enabled: Bool(false),
+					Address: String("test"),
+				},
 			},
 			"&SelfRegistrationConfig{" +
 				"Enabled:true, " +
 				"ServiceName:cts-service, " +
-				"Namespace:test" +
+				"Namespace:test, " +
+				"DefaultCheck: &DefaultCheckConfig{Enabled:false, Address:test}" +
 				"}",
 		},
 	}
