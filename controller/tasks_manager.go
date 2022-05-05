@@ -303,7 +303,7 @@ func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Tas
 }
 
 // cleanupTask cleans up a newly created task that has not yet been added to CTS
-// and started monitoring. Use TaskDelete added and monitored tasks
+// and started monitoring. Use TaskDelete for added and monitored tasks
 func (tm TasksManager) cleanupTask(ctx context.Context, d driver.Driver) {
 	// at the moment, only the driver needs to destroy its dependencies
 	d.DestroyTask(ctx)
