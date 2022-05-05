@@ -23,26 +23,26 @@ type TasksManager struct {
 	logger logging.Logger
 
 	factory *driverFactory
-	watcher templates.Watcher
 	state   state.Store
 	drivers *driver.Drivers
 
 	retry retry.Retry
 
-	watcherCh chan string
+	// createdScheduleCh sends the task name of newly created scheduled tasks
+	// that will need to be monitored
+	createdScheduleCh chan string
 
-	// scheduleStartCh is used to coordinate scheduled tasks created via the API
-	scheduleStartCh chan driver.Driver
-
-	// scheduleStopChs is a map of channels used to stop scheduled tasks
-	scheduleStopChs map[string]chan struct{}
-
-	// deleteCh is used to coordinate task deletion via the API
-	deleteCh chan string
+	// deletedScheduleCh sends the task name of deleted scheduled tasks that
+	// should stop being monitored
+	deletedScheduleCh chan string
 
 	// taskNotify is only initialized if EnableTestMode() is used. It provides
 	// tests insight into which tasks were triggered and had completed
 	taskNotify chan string
+
+	// deleteTaskNotify is only initialized if EnableDeleteTestMode() is used.
+	// It provides tests insight into when a task has been deleted
+	deleteTaskNotify chan string
 }
 
 // NewTasksManager configures a new tasks manager
@@ -55,15 +55,13 @@ func NewTasksManager(conf *config.Config, state state.Store, watcher templates.W
 	}
 
 	return &TasksManager{
-		logger:          logger,
-		factory:         factory,
-		watcher:         watcher,
-		state:           state,
-		drivers:         driver.NewDrivers(),
-		retry:           retry.NewRetry(defaultRetry, time.Now().UnixNano()),
-		scheduleStartCh: make(chan driver.Driver, 10), // arbitrarily chosen size
-		deleteCh:        make(chan string, 10),        // arbitrarily chosen size
-		scheduleStopChs: make(map[string]chan struct{}),
+		logger:            logger,
+		factory:           factory,
+		state:             state,
+		drivers:           driver.NewDrivers(),
+		retry:             retry.NewRetry(defaultRetry, time.Now().UnixNano()),
+		createdScheduleCh: make(chan string, 10), // arbitrarily chosen size
+		deletedScheduleCh: make(chan string, 10), // arbitrarily chosen size
 	}, nil
 }
 
@@ -120,23 +118,27 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 		return config.TaskConfig{}, err
 	}
 
-	if err := tm.runTask(ctx, d); err != nil {
+	if err := tm.runNewTask(ctx, d); err != nil {
 		return config.TaskConfig{}, err
 	}
 
 	return tm.addTask(ctx, d)
 }
 
-// TaskDelete marks a task for deletion
-func (tm *TasksManager) TaskDelete(_ context.Context, name string) error {
+// TaskDelete marks an existing task that has been added to CTS for deletion
+// then asynchronously deletes the task.
+func (tm *TasksManager) TaskDelete(ctx context.Context, name string) error {
 	logger := tm.logger.With(taskNameLogKey, name)
 	if tm.drivers.IsMarkedForDeletion(name) {
 		logger.Debug("task is already marked for deletion")
 		return nil
 	}
 	tm.drivers.MarkForDeletion(name)
-	tm.deleteCh <- name
 	logger.Debug("task marked for deletion")
+
+	// Use new context. For runtime task deletions, deleteTask() would get
+	// canceled when the API request completes if shared context.
+	go tm.deleteTask(context.Background(), name)
 	return nil
 }
 
@@ -281,34 +283,35 @@ func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Tas
 
 	name := d.Task().Name()
 	if err := tm.drivers.Add(name, d); err != nil {
-		tm.cleanupTask(ctx, name)
+		tm.cleanupTask(ctx, d)
 		return config.TaskConfig{}, err
 	}
 
 	conf, err := configFromDriverTask(d.Task())
 	if err != nil {
-		tm.cleanupTask(ctx, name)
+		tm.cleanupTask(ctx, d)
 		return config.TaskConfig{}, err
 	}
 
 	tm.state.SetTask(conf)
 
 	if d.Task().IsScheduled() {
-		tm.scheduleStartCh <- d
+		tm.createdScheduleCh <- name
 	}
 
 	return conf, nil
 }
 
-func (tm TasksManager) cleanupTask(ctx context.Context, name string) {
-	err := tm.TaskDelete(ctx, name)
-	if err != nil {
-		tm.logger.Error("unable to cleanup task after error", "task_name", name)
-	}
+// cleanupTask cleans up a newly created task that has not yet been added to CTS
+// and started monitoring. Use TaskDelete for added and monitored tasks
+func (tm TasksManager) cleanupTask(ctx context.Context, d driver.Driver) {
+	// at the moment, only the driver needs to destroy its dependencies
+	d.DestroyTask(ctx)
 }
 
-// checkApply runs a task by attempting to render the template and applying the
-// task as necessary.
+// TaskRunNow forces an existing task to run with a retry. It assumes that the
+// task has already been created through TaskCreate or TaskCreateAndRun. It runs
+// a task by attempting to render the template and applying the task as necessary.
 //
 // An event is stored:
 //  1. whenever a task errors while executing
@@ -319,9 +322,36 @@ func (tm TasksManager) cleanupTask(ctx context.Context, name string) {
 // Note on #2: no event is stored when a dynamic task renders but does not apply.
 // This can occur because driver.RenderTemplate() may need to be called multiple
 // times before a template is ready to be applied.
-func (tm *TasksManager) checkApply(ctx context.Context, d driver.Driver, retry, once bool) (bool, error) {
+func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
+	if tm.drivers.IsMarkedForDeletion(taskName) {
+		tm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+		return nil
+	}
+
+	d, ok := tm.drivers.Get(taskName)
+	if !ok {
+		return fmt.Errorf("task '%s' does not have a driver. task may have been"+
+			" deleted", taskName)
+	}
+
 	task := d.Task()
-	taskName := task.Name()
+
+	// For scheduled tasks, do not wait if task is active
+	if tm.drivers.IsActive(taskName) && task.IsScheduled() {
+		return fmt.Errorf("task '%s' is active and cannot be run at this time", taskName)
+	}
+
+	// For dynamic tasks, wait to see if the task will become inactive
+	if err := tm.waitForTaskInactive(ctx, taskName); err != nil {
+		return err
+	}
+
+	tm.drivers.SetActive(taskName)
+	defer tm.drivers.SetInactive(taskName)
+
+	// Note: order of these checks matters. Must check task.enabled after the
+	// in/active checks. It's possible that the task becomes disabled during the
+	// active period.
 	if !task.IsEnabled() {
 		if task.IsScheduled() {
 			// Schedule tasks are specifically triggered and logged at INFO.
@@ -332,7 +362,11 @@ func (tm *TasksManager) checkApply(ctx context.Context, d driver.Driver, retry, 
 			// change so logs can be noisy
 			tm.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
 		}
-		return true, nil
+
+		if tm.taskNotify != nil {
+			tm.taskNotify <- taskName
+		}
+		return nil
 	}
 
 	// setup to store event information
@@ -342,7 +376,7 @@ func (tm *TasksManager) checkApply(ctx context.Context, d driver.Driver, retry, 
 		Source:    task.Module(),
 	})
 	if err != nil {
-		return false, fmt.Errorf("error creating event for task %s: %s",
+		return fmt.Errorf("error creating event for task %s: %s",
 			taskName, err)
 	}
 	var storedErr error
@@ -359,49 +393,53 @@ func (tm *TasksManager) checkApply(ctx context.Context, d driver.Driver, retry, 
 	rendered, storedErr = d.RenderTemplate(ctx)
 	if storedErr != nil {
 		defer storeEvent()
-		return false, fmt.Errorf("error rendering template for task %s: %s",
+		return fmt.Errorf("error rendering template for task %s: %s",
 			taskName, storedErr)
 	}
 
-	if !rendered && !once {
+	if !rendered {
 		if task.IsScheduled() {
-			// We sometimes want to store an event when a scheduled task did not
+			// We want to store an event even when a scheduled task did not
 			// render i.e. the task ran on schedule but there were no
 			// dependency changes so the template did not re-render
-			//
-			// During once-mode though, a task may not have rendered because it
-			// may take multiple calls to fully render. check for once-mode to
-			// avoid extra logs/events while the template is finishing rendering.
 			tm.logger.Info("scheduled task triggered but had no changes",
 				taskNameLogKey, taskName)
 			defer storeEvent()
 		}
-		return rendered, nil
+		return nil
 	}
 
 	// rendering a template may take several cycles in order to completely fetch
 	// new data
 	if rendered {
 		tm.logger.Info("executing task", taskNameLogKey, taskName)
-		tm.drivers.SetActive(taskName)
-		defer tm.drivers.SetInactive(taskName)
 		defer storeEvent()
 
-		if retry {
-			desc := fmt.Sprintf("ApplyTask %s", taskName)
-			storedErr = tm.retry.Do(ctx, d.ApplyTask, desc)
-		} else {
-			storedErr = d.ApplyTask(ctx)
-		}
+		desc := fmt.Sprintf("ApplyTask %s", taskName)
+		storedErr = tm.retry.Do(ctx, d.ApplyTask, desc)
 		if storedErr != nil {
-			return false, fmt.Errorf("could not apply changes for task %s: %s",
+			return fmt.Errorf("could not apply changes for task %s: %s",
 				taskName, storedErr)
 		}
 
 		tm.logger.Info("task completed", taskNameLogKey, taskName)
+
+		if tm.taskNotify != nil {
+			tm.taskNotify <- taskName
+		}
 	}
 
-	return rendered, nil
+	return nil
+}
+
+// TaskByTemplate returns the name of the task associated with a template id.
+// If no task is associated with the template id, returns false.
+func (tm TasksManager) TaskByTemplate(tmplID string) (string, bool) {
+	driver, ok := tm.drivers.GetTaskByTemplate(tmplID)
+	if !ok {
+		return "", false
+	}
+	return driver.Task().Name(), true
 }
 
 // EnableTestMode is a helper for testing which tasks were triggered and
@@ -411,6 +449,27 @@ func (tm *TasksManager) EnableTestMode() <-chan string {
 	tasks := tm.state.GetAllTasks()
 	tm.taskNotify = make(chan string, tasks.Len())
 	return tm.taskNotify
+}
+
+// EnableDeleteTestMode is a helper for testing when a task has finished
+// deleting. Callers of this method must consume from deleteTaskNotify channel to
+// prevent the buffered channel from filling and causing a dead lock.
+func (tm *TasksManager) EnableDeleteTestMode() <-chan string {
+	tasks := tm.state.GetAllTasks()
+	tm.deleteTaskNotify = make(chan string, tasks.Len())
+	return tm.deleteTaskNotify
+}
+
+// WatchCreatedScheduleTasks returns a channel to inform any watcher that a new
+// scheduled task has been created and added to CTS.
+func (tm TasksManager) WatchCreatedScheduleTasks() <-chan string {
+	return tm.createdScheduleCh
+}
+
+// WatchDeletedScheduleTask returns a channel to inform any watcher that a new
+// scheduled task has been deleted and removed from CTS.
+func (tm TasksManager) WatchDeletedScheduleTask() <-chan string {
+	return tm.deletedScheduleCh
 }
 
 // createTask creates and initializes a singular task from configuration
@@ -476,10 +535,17 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 	}
 }
 
-// runTask will set the driver to active, apply it, and store a run event.
-// This method will run the task as-is with current values of templates that
-// have already been resolved and rendered. This does not handle any templating.
-func (tm *TasksManager) runTask(ctx context.Context, d driver.Driver) error {
+// runNewTask runs a new task that has not been added to CTS yet. This differs
+// from TaskRunNow which runs existing tasks that have been added to CTS.
+// runNewTask has reduced complexity because the task driver has not been added
+// to CTS
+//
+// Applies the task as-is with current values of the template that has already
+// been resolved and rendered. This does not handle any templating.
+//
+// Stores an event in the state that should be cleaned up if the task is not
+// added to CTS.
+func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
 	task := d.Task()
 	taskName := task.Name()
 	logger := tm.logger.With(taskNameLogKey, taskName)
@@ -487,19 +553,6 @@ func (tm *TasksManager) runTask(ctx context.Context, d driver.Driver) error {
 		logger.Trace("skipping disabled task")
 		return nil
 	}
-
-	if tm.drivers.IsMarkedForDeletion(taskName) {
-		logger.Trace("task is marked for deletion, skipping")
-		return nil
-	}
-
-	err := tm.waitForTaskInactive(ctx, taskName)
-	if err != nil {
-		return err
-	}
-
-	tm.drivers.SetActive(taskName)
-	defer tm.drivers.SetInactive(taskName)
 
 	// Create new event for task run
 	ev, err := event.NewEvent(taskName, &event.Config{
@@ -535,9 +588,12 @@ func (tm *TasksManager) runTask(ctx context.Context, d driver.Driver) error {
 	return err
 }
 
-// deleteTask deletes a task from the drivers map and deletes the task's events.
-// If a task is active and running, it will wait until the task has completed before
-// proceeding with the deletion.
+// deleteTask deletes an existing task that has been added to CTS. If a task is
+// active and running, it will wait until the task has completed before
+// proceeding with the deletion. Deletion:
+// - delete task from drivers map (and destroys driver dependencies)
+// - delete task config from state
+// - delete task events from state
 func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 	logger := tm.logger.With(taskNameLogKey, name)
 
@@ -548,21 +604,21 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 		return nil
 	}
 
+	logger.Trace("waiting for task to become inactive before deleting")
 	err := tm.waitForTaskInactive(ctx, name)
 	if err != nil {
+		logger.Error("error deleting task: error waiting for task to be come inactive",
+			"error", err)
 		return err
 	}
 
+	logger.Trace("task is inactive, deleting")
 	if d.Task().IsScheduled() {
 		// Notify the scheduled task to stop
-		stopCh := tm.scheduleStopChs[name]
-		if stopCh != nil {
-			stopCh <- struct{}{}
-		}
-		delete(tm.scheduleStopChs, name)
+		tm.deletedScheduleCh <- name
 	}
 
-	// Delete task from drivers and event store
+	// Delete task from drivers
 	err = tm.drivers.Delete(name)
 	if err != nil {
 		logger.Error("unable to delete task", "error", err)
@@ -572,6 +628,10 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 	// Delete task from state only after driver successfully deleted
 	tm.state.DeleteTask(name)
 	tm.state.DeleteTaskEvents(name)
+
+	if tm.deleteTaskNotify != nil {
+		tm.deleteTaskNotify <- name
+	}
 
 	logger.Debug("task deleted")
 	return nil

@@ -25,6 +25,7 @@ type Inspect struct {
 	state        state.Store
 	tasksManager *TasksManager
 	watcher      templates.Watcher
+	monitor      *ConditionMonitor
 }
 
 // NewInspect configures and initializes a new inspect controller
@@ -50,6 +51,7 @@ func NewInspect(conf *config.Config) (*Inspect, error) {
 		state:        s,
 		tasksManager: tm,
 		watcher:      watcher,
+		monitor:      NewConditionMonitor(tm, watcher),
 	}, nil
 }
 
@@ -72,7 +74,7 @@ func (ctrl *Inspect) Run(ctx context.Context) error {
 
 	// start watching dependencies in order to render templates to plan tasks
 	go func() {
-		exitCh <- ctrl.tasksManager.WatchDep(ctxWatch)
+		exitCh <- ctrl.monitor.WatchDep(ctxWatch)
 		cancelInspect()
 	}()
 

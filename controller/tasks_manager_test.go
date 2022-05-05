@@ -286,22 +286,29 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 func Test_TasksManager_TaskDelete(t *testing.T) {
 	ctx := context.Background()
 	tm := newTestTasksManager()
-	tm.deleteCh = make(chan string)
+	deletedCh := tm.EnableDeleteTestMode()
 
 	t.Run("happy path", func(t *testing.T) {
 		drivers := driver.NewDrivers()
 		taskName := "delete_task"
 
+		mockD := new(mocksD.Driver)
+		mockD.On("TemplateIDs").Return(nil)
+		mockD.On("Task").Return(enabledTestTask(t, "delete_task"))
+		mockD.On("DestroyTask", ctx).Return()
+		drivers.Add(taskName, mockD)
+
 		tm.drivers = drivers
+
 		go tm.TaskDelete(ctx, taskName)
 		select {
-		case n := <-tm.deleteCh:
+		case n := <-deletedCh:
 			assert.Equal(t, taskName, n)
 		case <-time.After(1 * time.Second):
 			t.Log("delete channel did not receive message")
 			t.Fail()
 		}
-		assert.True(t, tm.drivers.IsMarkedForDeletion(taskName))
+		assert.Equal(t, 0, drivers.Len())
 	})
 
 	t.Run("already marked for deletion", func(t *testing.T) {
@@ -498,8 +505,7 @@ func Test_TasksManager_addTask(t *testing.T) {
 	t.Parallel()
 
 	tm := newTestTasksManager()
-	tm.deleteCh = make(chan string, 1)
-	tm.scheduleStartCh = make(chan driver.Driver, 1)
+	tm.createdScheduleCh = make(chan string, 1)
 
 	t.Run("success", func(t *testing.T) {
 		// Set up driver's task object
@@ -536,12 +542,12 @@ func Test_TasksManager_addTask(t *testing.T) {
 		s.AssertExpectations(t)
 		d.AssertExpectations(t)
 
-		// Confirm received from scheduleStartCh
+		// Confirm received from createdScheduleCh
 		select {
-		case <-tm.scheduleStartCh:
+		case <-tm.createdScheduleCh:
 			break
 		case <-time.After(time.Second * 5):
-			t.Fatal("did not receive from scheduleStartCh as expected")
+			t.Fatal("did not receive from createdScheduleCh as expected")
 		}
 	})
 
@@ -558,6 +564,7 @@ func Test_TasksManager_addTask(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("SetBufferPeriod").Return().Once()
 		d.On("Task").Return(driverTask)
+		d.On("DestroyTask", mock.Anything).Return().Once()
 
 		// Create an error by already adding the task to the drivers list
 		tm.drivers.Add(taskName, d)
@@ -570,20 +577,10 @@ func Test_TasksManager_addTask(t *testing.T) {
 
 		// Confirm that this second driver was not added to drivers list
 		assert.Equal(t, 1, tm.drivers.Len())
-
-		// Confirm received from delete channel for cleanup
-		select {
-		case <-tm.scheduleStartCh:
-			t.Fatal("should not have received from scheduleStartCh")
-		case <-tm.deleteCh:
-			break
-		case <-time.After(time.Second * 5):
-			t.Fatal("did not receive from deleteCh as expected")
-		}
 	})
 }
 
-func Test_TasksManager_CheckApply(t *testing.T) {
+func Test_TasksManager_TaskRunNow(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -612,15 +609,6 @@ func Test_TasksManager_CheckApply(t *testing.T) {
 			nil,
 			"task_apply",
 			true,
-		},
-		{
-			"error creating new event",
-			true,
-			true,
-			nil,
-			nil,
-			"",
-			false,
 		},
 		{
 			"disabled task",
@@ -660,9 +648,10 @@ func Test_TasksManager_CheckApply(t *testing.T) {
 			drivers.Add(tc.taskName, d)
 
 			tm := newTestTasksManager()
-			ctx := context.Background()
+			tm.drivers = drivers
 
-			_, err := tm.checkApply(ctx, d, false, false)
+			ctx := context.Background()
+			err := tm.TaskRunNow(ctx, tc.taskName)
 			data := tm.state.GetTaskEvents(tc.taskName)
 			events := data[tc.taskName]
 
@@ -675,7 +664,7 @@ func Test_TasksManager_CheckApply(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, 1, len(events))
+			require.Len(t, events, 1)
 			e := events[0]
 			assert.Equal(t, tc.taskName, e.TaskName)
 			assert.False(t, e.StartTime.IsZero())
@@ -695,8 +684,8 @@ func Test_TasksManager_CheckApply(t *testing.T) {
 	}
 
 	t.Run("unrendered-scheduled-tasks", func(t *testing.T) {
-		// Test the behavior for once-mode and daemon-mode for the situation
-		// where a scheduled task's template did not render
+		// Test the behavior for the situation where a scheduled task's
+		// template did not render
 
 		tm := newTestTasksManager()
 
@@ -706,24 +695,107 @@ func Test_TasksManager_CheckApply(t *testing.T) {
 		d.On("RenderTemplate", mock.Anything).Return(false, nil)
 		tm.drivers.Add(schedTaskName, d)
 
-		// Once-mode - confirm no events are stored
+		// Daemon-mode - confirm an event is stored
 		ctx := context.Background()
-		_, err := tm.checkApply(ctx, d, false, true)
-		assert.NoError(t, err)
+		err := tm.TaskRunNow(ctx, schedTaskName)
+		require.NoError(t, err)
 		data := tm.state.GetTaskEvents(schedTaskName)
 		events := data[schedTaskName]
-		assert.Equal(t, 0, len(events))
+		assert.Len(t, events, 1)
+	})
 
-		// Daemon-mode - confirm an event is stored
-		_, err = tm.checkApply(ctx, d, false, false)
+	t.Run("marked-for-deletion", func(t *testing.T) {
+		// Tests that drivers marked for deletion are not run
+
+		// Confirms that other Run-type driver methods are not called
+		d := new(mocksD.Driver)
+		d.On("TemplateIDs").Return(nil)
+
+		tm := newTestTasksManager()
+		tm.drivers.Add(schedTaskName, d)
+
+		tm.drivers.MarkForDeletion(schedTaskName)
+
+		ctx := context.Background()
+		err := tm.TaskRunNow(ctx, schedTaskName)
 		assert.NoError(t, err)
-		data = tm.state.GetTaskEvents(schedTaskName)
-		events = data[schedTaskName]
-		assert.Equal(t, 1, len(events))
+		d.AssertExpectations(t)
+
+		// Confirm no event stored
+		data := tm.state.GetTaskEvents(schedTaskName)
+		events := data[schedTaskName]
+		assert.Empty(t, events)
+	})
+
+	t.Run("active-scheduled-tasks", func(t *testing.T) {
+		// Tests that active scheduled task drivers do not run
+
+		// Confirms that other Run-type driver methods are not called
+		d := new(mocksD.Driver)
+		d.On("TemplateIDs").Return(nil)
+		d.On("Task").Return(scheduledTestTask(t, schedTaskName))
+
+		tm := newTestTasksManager()
+		tm.drivers.Add(schedTaskName, d)
+
+		tm.drivers.SetActive(schedTaskName)
+
+		ctx := context.Background()
+		err := tm.TaskRunNow(ctx, schedTaskName)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "is active")
+		d.AssertExpectations(t)
+
+		// Confirm no event stored
+		data := tm.state.GetTaskEvents(schedTaskName)
+		events := data[schedTaskName]
+		assert.Empty(t, events)
+	})
+
+	t.Run("active-dynamic-task", func(t *testing.T) {
+		// Tests that active dynamic task drivers will wait for inactive
+
+		tm := newTestTasksManager()
+		tm.EnableTestMode()
+		tm.state.SetTask(validTaskConf)
+
+		ctx := context.Background()
+		d := new(mocksD.Driver)
+		d.On("Task").Return(enabledTestTask(t, validTaskName)).
+			On("TemplateIDs").Return(nil).
+			On("RenderTemplate", mock.Anything).Return(true, nil).
+			On("ApplyTask", ctx).Return(nil)
+		drivers := tm.drivers
+		drivers.Add(validTaskName, d)
+		drivers.SetActive(validTaskName)
+
+		// Attempt to run the active task
+		ch := make(chan error)
+		go func() {
+			err := tm.TaskRunNow(ctx, validTaskName)
+			ch <- err
+		}()
+
+		// Check that the task did not run while active
+		select {
+		case <-tm.taskNotify:
+			t.Fatal("task ran even though active")
+		case <-time.After(250 * time.Millisecond):
+			break
+		}
+
+		// Set task to inactive, wait for run to happen
+		drivers.SetInactive(validTaskName)
+		select {
+		case <-time.After(250 * time.Millisecond):
+			t.Fatal("task did not run after it became inactive")
+		case <-tm.taskNotify:
+			break
+		}
 	})
 }
 
-func Test_TasksManager_CheckApply_Store(t *testing.T) {
+func Test_TasksManager_TaskRunNow_Store(t *testing.T) {
 	t.Run("mult-checkapply-store", func(t *testing.T) {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(enabledTestTask(t, "task_a"))
@@ -741,12 +813,12 @@ func Test_TasksManager_CheckApply_Store(t *testing.T) {
 		tm.drivers.Add("task_b", disabledD)
 		ctx := context.Background()
 
-		tm.checkApply(ctx, d, false, false)
-		tm.checkApply(ctx, disabledD, false, false)
-		tm.checkApply(ctx, d, false, false)
-		tm.checkApply(ctx, d, false, false)
-		tm.checkApply(ctx, d, false, false)
-		tm.checkApply(ctx, disabledD, false, false)
+		tm.TaskRunNow(ctx, "task_a")
+		tm.TaskRunNow(ctx, "task_b")
+		tm.TaskRunNow(ctx, "task_a")
+		tm.TaskRunNow(ctx, "task_a")
+		tm.TaskRunNow(ctx, "task_a")
+		tm.TaskRunNow(ctx, "task_b")
 
 		taskStatuses := tm.state.GetTaskEvents("")
 
@@ -824,7 +896,7 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 	}
 
 	t.Run("scheduled_task", func(t *testing.T) {
-		// Tests that deleting a scheduled task sends a stop notification
+		// Tests that deleting a scheduled task sends a deleted notification
 
 		// Setup tm and drivers
 		scheduledDriver := new(mocksD.Driver)
@@ -833,22 +905,19 @@ func Test_TasksManager_deleteTask(t *testing.T) {
 		scheduledDriver.On("TemplateIDs").Return(nil)
 		tm := newTestTasksManager()
 		tm.drivers.Add(schedTaskName, scheduledDriver)
-		stopCh := make(chan struct{}, 1)
-		tm.scheduleStopChs[schedTaskName] = stopCh
+		tm.deletedScheduleCh = make(chan string, 1)
 
 		// Delete task
 		err := tm.deleteTask(ctx, schedTaskName)
 		assert.NoError(t, err)
 
-		// Verify the stop channel received message
+		// Verify the deleted schedule channel received message
 		select {
 		case <-time.After(1 * time.Second):
 			t.Fatal("scheduled task was not notified to stop")
-		case <-stopCh:
-			break // expected case
+		case name := <-tm.WatchDeletedScheduleTask():
+			assert.Equal(t, schedTaskName, name)
 		}
-		_, ok := tm.scheduleStopChs[schedTaskName]
-		assert.False(t, ok, "scheduled task stop channel still in map")
 	})
 
 	t.Run("active_task", func(t *testing.T) {
@@ -953,7 +1022,8 @@ func Test_TasksManager_waitForTaskInactive(t *testing.T) {
 	})
 }
 
-// mockDriver sets up a mock driver with the happy path for all methods
+// mockDriver sets up a mock driver with the happy path for task create and
+// update methods
 func mockDriver(ctx context.Context, d *mocksD.Driver, task *driver.Task) {
 	d.On("Task").Return(task).
 		On("InitTask", ctx).Return(nil).
@@ -968,8 +1038,7 @@ func newTestTasksManager() *TasksManager {
 		factory: &driverFactory{
 			logger: logging.NewNullLogger(),
 		},
-		drivers:         driver.NewDrivers(),
-		state:           state.NewInMemoryStore(nil),
-		scheduleStopChs: make(map[string](chan struct{})),
+		drivers: driver.NewDrivers(),
+		state:   state.NewInMemoryStore(nil),
 	}
 }
