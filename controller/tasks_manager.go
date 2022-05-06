@@ -40,9 +40,9 @@ type TasksManager struct {
 	// tests insight into which tasks were triggered and had completed
 	taskNotify chan string
 
-	// deleteTaskNotify is only initialized if EnableDeleteTestMode() is used.
+	// deletedTaskNotify is only initialized if EnableTaskDeletedNotify() is used.
 	// It provides tests insight into when a task has been deleted
-	deleteTaskNotify chan string
+	deletedTaskNotify chan string
 }
 
 // NewTasksManager configures a new tasks manager
@@ -451,13 +451,13 @@ func (tm *TasksManager) EnableTestMode() <-chan string {
 	return tm.taskNotify
 }
 
-// EnableDeleteTestMode is a helper for testing when a task has finished
-// deleting. Callers of this method must consume from deleteTaskNotify channel to
+// EnableTaskDeletedNotify is a helper for testing when a task has finished
+// deleting. Callers of this method must consume from deletedTaskNotify channel to
 // prevent the buffered channel from filling and causing a dead lock.
-func (tm *TasksManager) EnableDeleteTestMode() <-chan string {
+func (tm *TasksManager) EnableTaskDeletedNotify() <-chan string {
 	tasks := tm.state.GetAllTasks()
-	tm.deleteTaskNotify = make(chan string, tasks.Len())
-	return tm.deleteTaskNotify
+	tm.deletedTaskNotify = make(chan string, tasks.Len())
+	return tm.deletedTaskNotify
 }
 
 // WatchCreatedScheduleTasks returns a channel to inform any watcher that a new
@@ -629,8 +629,8 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 	tm.state.DeleteTask(name)
 	tm.state.DeleteTaskEvents(name)
 
-	if tm.deleteTaskNotify != nil {
-		tm.deleteTaskNotify <- name
+	if tm.deletedTaskNotify != nil {
+		tm.deletedTaskNotify <- name
 	}
 
 	logger.Debug("task deleted")

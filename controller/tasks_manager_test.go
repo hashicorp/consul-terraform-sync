@@ -286,7 +286,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 func Test_TasksManager_TaskDelete(t *testing.T) {
 	ctx := context.Background()
 	tm := newTestTasksManager()
-	deletedCh := tm.EnableDeleteTestMode()
+	deletedCh := tm.EnableTaskDeletedNotify()
 
 	t.Run("happy path", func(t *testing.T) {
 		drivers := driver.NewDrivers()
