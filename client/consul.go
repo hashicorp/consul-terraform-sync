@@ -214,12 +214,8 @@ func (c *ConsulClient) RegisterService(ctx context.Context, r *consulapi.AgentSe
 		return nil
 	}
 
-	var missingConsulACLError *MissingConsulACLError
 	err := c.retry.Do(ctx, f, desc)
 	if err != nil {
-		if errors.As(err, &missingConsulACLError) {
-			c.logger.Warn("Unable to register service, this is most likely caused by CTS missing an ACL with `service:write` policy")
-		}
 		return err
 	}
 
@@ -253,12 +249,8 @@ func (c *ConsulClient) DeregisterService(ctx context.Context, serviceID string) 
 		return nil
 	}
 
-	var missingConsulACLError *MissingConsulACLError
 	err := c.retry.Do(ctx, f, desc)
 	if err != nil {
-		if errors.As(err, &missingConsulACLError) {
-			c.logger.Warn("Unable to deregister service, this is most likely caused by CTS missing an ACL with `service:write` policy", "service_id", serviceID)
-		}
 		return err
 	}
 

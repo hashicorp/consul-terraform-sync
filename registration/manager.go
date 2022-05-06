@@ -125,8 +125,16 @@ func (m *SelfRegistrationManager) register(ctx context.Context) error {
 	// Ignore error and continue if due to a missing ACL
 	var missingConsulACLError *client.MissingConsulACLError
 	err := m.client.RegisterService(ctx, r)
-	if err != nil && !errors.As(err, &missingConsulACLError) {
-		logger.Error("error self-registering Consul-Terraform-Sync as a service with Consul", "error", err)
+	if err != nil {
+		baseErrMsg := "error self-registering Consul-Terraform-Sync as a service with Consul"
+		if errors.As(err, &missingConsulACLError) {
+			logger.Error(fmt.Sprintf("%s: "+
+				"configure CTS with an ACL including `service:write` or "+
+				"disable registration in configuration", baseErrMsg), "error", err)
+		} else {
+			logger.Error(baseErrMsg)
+		}
+
 		return err
 	}
 
@@ -142,8 +150,16 @@ func (m *SelfRegistrationManager) deregister(ctx context.Context) error {
 	// Ignore error and continue if due to a missing ACL
 	var missingConsulACLError *client.MissingConsulACLError
 	err := m.client.DeregisterService(ctx, m.service.id)
-	if err != nil && !errors.As(err, &missingConsulACLError) {
-		logger.Error("error deregistering Consul-Terraform-Sync from Consul", "error", err)
+	if err != nil {
+		baseErrMsg := "error deregistering Consul-Terraform-Sync from Consul"
+		if errors.As(err, &missingConsulACLError) {
+			logger.Error(fmt.Sprintf("%s: "+
+				"configure CTS with an ACL including `service:write` or "+
+				"disable registration in configuration", baseErrMsg), "error", err)
+		} else {
+			logger.Error(baseErrMsg, "error", err)
+		}
+
 		return err
 	}
 
