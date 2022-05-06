@@ -3,6 +3,8 @@ package registration
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"path"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -21,11 +23,11 @@ const (
 	defaultCheckStatus                    = consulapi.HealthCritical
 
 	// HTTP-specific check defaults
-	defaultEndpoint      = "/v1/health"
-	defaultMethod        = "GET"
-	defaultInterval      = "10s"
-	defaultTimeout       = "2s"
-	defaultTLSSkipVerify = true
+	defaultHealthEndpoint = "/v1/health"
+	defaultMethod         = "GET"
+	defaultInterval       = "10s"
+	defaultTimeout        = "2s"
+	defaultTLSSkipVerify  = true
 
 	logSystemName = "registration"
 )
@@ -74,8 +76,9 @@ func NewSelfRegistrationManager(conf *SelfRegistrationManagerConfig, client clie
 	}
 
 	var checks []*consulapi.AgentServiceCheck
-	checks = append(checks, defaultHTTPCheck(conf))
-
+	if *conf.SelfRegistration.DefaultCheck.Enabled {
+		checks = append(checks, defaultHTTPCheck(conf))
+	}
 	return &SelfRegistrationManager{
 		client: client,
 		logger: logger,
@@ -145,20 +148,39 @@ func (m *SelfRegistrationManager) deregister(ctx context.Context) error {
 }
 
 func defaultHTTPCheck(conf *SelfRegistrationManagerConfig) *consulapi.AgentServiceCheck {
-	var protocol string
-	if conf.TLSEnabled {
-		protocol = "https"
+	logger := logging.Global().Named(logSystemName)
+
+	// Determine base address for HTTP check
+	var address string
+	if conf.SelfRegistration.DefaultCheck.Address != nil && *conf.SelfRegistration.DefaultCheck.Address != "" {
+		address = *conf.SelfRegistration.DefaultCheck.Address
 	} else {
-		protocol = "http"
+		var protocol string
+		if conf.TLSEnabled {
+			protocol = "https"
+		} else {
+			protocol = "http"
+		}
+		address = fmt.Sprintf("%s://localhost:%d", protocol, conf.Port)
 	}
-	address := fmt.Sprintf("%s://localhost:%d%s", protocol, conf.Port, defaultEndpoint)
+
+	// Append path to health API endpoint
+	u, err := url.ParseRequestURI(address)
+	if err != nil {
+		// this should not fail since the address configuration should have
+		// been previously validated with this same ParseRequestURI method
+		return nil
+	}
+	u.Path = path.Join(u.Path, defaultHealthEndpoint)
+	http := u.String()
+	logger.Debug("creating default HTTP health check", "url", http)
 	return &consulapi.AgentServiceCheck{
 		Name:                           defaultCheckName,
 		CheckID:                        fmt.Sprintf("%s-health", conf.ID),
 		Notes:                          defaultCheckNotes,
 		DeregisterCriticalServiceAfter: defaultDeregisterCriticalServiceAfter,
 		Status:                         defaultCheckStatus,
-		HTTP:                           address,
+		HTTP:                           http,
 		Method:                         defaultMethod,
 		Interval:                       defaultInterval,
 		Timeout:                        defaultTimeout,

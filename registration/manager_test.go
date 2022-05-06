@@ -48,6 +48,9 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 				SelfRegistration: &config.SelfRegistrationConfig{
 					ServiceName: config.String("cts-service"),
 					Namespace:   config.String("ns-1"),
+					DefaultCheck: &config.DefaultCheckConfig{
+						Enabled: config.Bool(true),
+					},
 				},
 			},
 			&service{
@@ -123,6 +126,31 @@ func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 			},
 			&consulapi.AgentServiceCheck{
 				HTTP:                           httpsAddress,
+				Name:                           defaultCheckName,
+				CheckID:                        checkID,
+				Notes:                          defaultCheckNotes,
+				DeregisterCriticalServiceAfter: defaultDeregisterCriticalServiceAfter,
+				Status:                         defaultCheckStatus,
+				Method:                         defaultMethod,
+				Interval:                       defaultInterval,
+				Timeout:                        defaultTimeout,
+				TLSSkipVerify:                  defaultTLSSkipVerify,
+			},
+		},
+		{
+			"address_configured",
+			&SelfRegistrationManagerConfig{
+				ID:         id,
+				Port:       port,
+				TLSEnabled: true,
+				SelfRegistration: &config.SelfRegistrationConfig{
+					DefaultCheck: &config.DefaultCheckConfig{
+						Address: config.String("http://127.0.0.1:5885"),
+					},
+				},
+			},
+			&consulapi.AgentServiceCheck{
+				HTTP:                           "http://127.0.0.1:5885" + defaultHealthEndpoint,
 				Name:                           defaultCheckName,
 				CheckID:                        checkID,
 				Notes:                          defaultCheckNotes,
@@ -285,6 +313,9 @@ func TestSelfRegistrationManager_register(t *testing.T) {
 		Port: port,
 		SelfRegistration: &config.SelfRegistrationConfig{
 			Namespace: &ns,
+			DefaultCheck: &config.DefaultCheckConfig{
+				Enabled: config.Bool(true),
+			},
 		},
 	})
 	service := &service{
