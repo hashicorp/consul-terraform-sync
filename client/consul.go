@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -168,15 +167,12 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 		return nil
 	}
 
-	var nonEnterpriseConsulError *NonEnterpriseConsulError
 	err = c.retry.Do(ctx, f, desc)
 	if err != nil {
-		if errors.As(err, &nonEnterpriseConsulError) {
-			c.logger.Warn("Unable to get license, this is most likely caused by CTS connecting to OSS Consul")
-		}
+		return "", err
 	}
 
-	return license, err
+	return license, nil
 }
 
 // RegisterService registers a service through the Consul agent.
