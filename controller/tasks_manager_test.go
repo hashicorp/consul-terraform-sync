@@ -756,7 +756,7 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 		// Tests that active dynamic task drivers will wait for inactive
 
 		tm := newTestTasksManager()
-		tm.EnableTestMode()
+		tm.EnableTaskRanNotify()
 		tm.state.SetTask(validTaskConf)
 
 		ctx := context.Background()
@@ -778,7 +778,7 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 
 		// Check that the task did not run while active
 		select {
-		case <-tm.taskNotify:
+		case <-tm.ranTaskNotify:
 			t.Fatal("task ran even though active")
 		case <-time.After(250 * time.Millisecond):
 			break
@@ -789,7 +789,7 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 		select {
 		case <-time.After(250 * time.Millisecond):
 			t.Fatal("task did not run after it became inactive")
-		case <-tm.taskNotify:
+		case <-tm.ranTaskNotify:
 			break
 		}
 	})
@@ -842,8 +842,8 @@ func Test_ConditionMonitor_EnableTestMode(t *testing.T) {
 	tm := newTestTasksManager()
 	tm.state = s
 
-	// Test EnableTestMode
-	channel := tm.EnableTestMode()
+	// Test EnableTaskRanNotify
+	channel := tm.EnableTaskRanNotify()
 	assert.Equal(t, 2, cap(channel))
 	s.AssertExpectations(t)
 }

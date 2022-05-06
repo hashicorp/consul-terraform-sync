@@ -36,9 +36,9 @@ type TasksManager struct {
 	// should stop being monitored
 	deletedScheduleCh chan string
 
-	// taskNotify is only initialized if EnableTestMode() is used. It provides
-	// tests insight into which tasks were triggered and had completed
-	taskNotify chan string
+	// ranTaskNotify is only initialized if EnableTaskRanNotify() is used. It
+	// provides tests insight into which tasks were triggered and had completed
+	ranTaskNotify chan string
 
 	// deletedTaskNotify is only initialized if EnableTaskDeletedNotify() is used.
 	// It provides tests insight into when a task has been deleted
@@ -363,8 +363,8 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 			tm.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
 		}
 
-		if tm.taskNotify != nil {
-			tm.taskNotify <- taskName
+		if tm.ranTaskNotify != nil {
+			tm.ranTaskNotify <- taskName
 		}
 		return nil
 	}
@@ -424,8 +424,8 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 
 		tm.logger.Info("task completed", taskNameLogKey, taskName)
 
-		if tm.taskNotify != nil {
-			tm.taskNotify <- taskName
+		if tm.ranTaskNotify != nil {
+			tm.ranTaskNotify <- taskName
 		}
 	}
 
@@ -442,13 +442,13 @@ func (tm TasksManager) TaskByTemplate(tmplID string) (string, bool) {
 	return driver.Task().Name(), true
 }
 
-// EnableTestMode is a helper for testing which tasks were triggered and
-// executed. Callers of this method must consume from TaskNotify channel to
-// prevent the buffered channel from filling and causing a dead lock.
-func (tm *TasksManager) EnableTestMode() <-chan string {
+// EnableTaskRanNotify is a helper for testing which tasks were triggered and
+// finished executing. Callers of this method must consume from ranTaskNotify
+// channel to prevent the buffered channel from filling and causing a dead lock.
+func (tm *TasksManager) EnableTaskRanNotify() <-chan string {
 	tasks := tm.state.GetAllTasks()
-	tm.taskNotify = make(chan string, tasks.Len())
-	return tm.taskNotify
+	tm.ranTaskNotify = make(chan string, tasks.Len())
+	return tm.ranTaskNotify
 }
 
 // EnableTaskDeletedNotify is a helper for testing when a task has finished
@@ -581,8 +581,8 @@ func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
 		logger.Error("error storing event", "event", ev.GoString(), "error", err)
 	}
 
-	if tm.taskNotify != nil {
-		tm.taskNotify <- taskName
+	if tm.ranTaskNotify != nil {
+		tm.ranTaskNotify <- taskName
 	}
 
 	return err

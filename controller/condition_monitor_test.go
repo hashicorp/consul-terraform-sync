@@ -246,7 +246,7 @@ func Test_ConditionMonitor_Run_context_cancel(t *testing.T) {
 func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 	// Set up tm with two tasks
 	tm := newTestTasksManager()
-	completedTasksCh := tm.EnableTestMode()
+	completedTasksCh := tm.EnableTaskRanNotify()
 
 	for _, n := range []string{"task_a", "task_b"} {
 		d := new(mocksD.Driver)
@@ -329,7 +329,7 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	tm := newTestTasksManager()
 	tm.createdScheduleCh = make(chan string, 1)
-	tm.EnableTestMode()
+	tm.EnableTaskRanNotify()
 
 	// Set up condition monitor
 	cm := newTestConditionMonitor(tm)
@@ -356,7 +356,7 @@ func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	require.NoError(t, err)
 
 	select {
-	case n := <-tm.taskNotify:
+	case n := <-tm.ranTaskNotify:
 		assert.Equal(t, createdTaskName, n)
 	case <-time.After(5 * time.Second):
 		t.Fatal("scheduled task did not run")
