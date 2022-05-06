@@ -85,9 +85,10 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 
 func (m *meta) setHelpOptions() {
 	m.flags.VisitAll(func(f *flag.Flag) {
-		option := fmt.Sprintf("\t-%s %s\n  \t\t%s\n", f.Name, f.Value, f.Usage)
+		option := fmt.Sprintf("\t-%s %s\n  \t\t%s\n", f.Name, templateDefaultValue(f.Value), f.Usage)
 		m.helpOptions = append(m.helpOptions, option)
 	})
+
 	if len(m.helpOptions) == 0 {
 		m.helpOptions = append(m.helpOptions, "No options are currently available")
 	}
