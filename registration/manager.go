@@ -2,6 +2,7 @@ package registration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
@@ -120,11 +121,15 @@ func (m *SelfRegistrationManager) register(ctx context.Context) error {
 	}
 
 	logger.Info("self-registering Consul-Terraform-Sync as a service with Consul")
+
+	// Ignore error and continue if due to a missing ACL
+	var missingConsulACLError *client.MissingConsulACLError
 	err := m.client.RegisterService(ctx, r)
-	if err != nil {
-		logger.Error("error self-registering Consul-Terraform-Sync as a service with Consul")
+	if err != nil && !errors.As(err, &missingConsulACLError) {
+		logger.Error("error self-registering Consul-Terraform-Sync as a service with Consul", "error", err)
 		return err
 	}
+
 	logger.Info("Consul-Terraform-Sync registered as a service with Consul")
 	return nil
 }
@@ -133,11 +138,15 @@ func (m *SelfRegistrationManager) register(ctx context.Context) error {
 func (m *SelfRegistrationManager) deregister(ctx context.Context) error {
 	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
 	logger.Info("deregistering Consul-Terraform-Sync from Consul")
+
+	// Ignore error and continue if due to a missing ACL
+	var missingConsulACLError *client.MissingConsulACLError
 	err := m.client.DeregisterService(ctx, m.service.id)
-	if err != nil {
-		logger.Error("error deregistering Consul-Terraform-Sync from Consul")
+	if err != nil && !errors.As(err, &missingConsulACLError) {
+		logger.Error("error deregistering Consul-Terraform-Sync from Consul", "error", err)
 		return err
 	}
+
 	logger.Info("Consul-Terraform-Sync deregistered from Consul")
 	return nil
 }
