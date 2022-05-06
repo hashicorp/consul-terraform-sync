@@ -2,6 +2,7 @@ package registration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/consul-terraform-sync/client"
@@ -120,11 +121,23 @@ func (m *SelfRegistrationManager) register(ctx context.Context) error {
 	}
 
 	logger.Info("self-registering Consul-Terraform-Sync as a service with Consul")
+
+	// Ignore error and continue if due to a missing ACL
+	var missingConsulACLError *client.MissingConsulACLError
 	err := m.client.RegisterService(ctx, r)
 	if err != nil {
-		logger.Error("error self-registering Consul-Terraform-Sync as a service with Consul")
+		baseErrMsg := "error self-registering Consul-Terraform-Sync as a service with Consul"
+		if errors.As(err, &missingConsulACLError) {
+			logger.Error(fmt.Sprintf("%s: "+
+				"configure CTS with an ACL including `service:write` or "+
+				"disable registration in configuration", baseErrMsg), "error", err)
+		} else {
+			logger.Error(baseErrMsg)
+		}
+
 		return err
 	}
+
 	logger.Info("Consul-Terraform-Sync registered as a service with Consul")
 	return nil
 }
@@ -133,11 +146,23 @@ func (m *SelfRegistrationManager) register(ctx context.Context) error {
 func (m *SelfRegistrationManager) deregister(ctx context.Context) error {
 	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
 	logger.Info("deregistering Consul-Terraform-Sync from Consul")
+
+	// Ignore error and continue if due to a missing ACL
+	var missingConsulACLError *client.MissingConsulACLError
 	err := m.client.DeregisterService(ctx, m.service.id)
 	if err != nil {
-		logger.Error("error deregistering Consul-Terraform-Sync from Consul")
+		baseErrMsg := "error deregistering Consul-Terraform-Sync from Consul"
+		if errors.As(err, &missingConsulACLError) {
+			logger.Error(fmt.Sprintf("%s: "+
+				"configure CTS with an ACL including `service:write` or "+
+				"disable registration in configuration", baseErrMsg), "error", err)
+		} else {
+			logger.Error(baseErrMsg, "error", err)
+		}
+
 		return err
 	}
+
 	logger.Info("Consul-Terraform-Sync deregistered from Consul")
 	return nil
 }

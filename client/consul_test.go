@@ -85,27 +85,43 @@ func TestConsulClient_RegisterService(t *testing.T) {
 	t.Parallel()
 	path := "/v1/agent/service/register"
 
+	var nonRetryableError *retry.NonRetryableError
+	var missingConsulACLError *MissingConsulACLError
 	cases := []struct {
-		name      string
-		response  int
-		expectErr bool
+		name                string
+		responseCode        int
+		expectErr           bool
+		isNonRetryableError bool
+		isMissingAClError   bool
 	}{
 		{
-			"success",
-			http.StatusOK,
-			false,
+			name:         "success",
+			responseCode: http.StatusOK,
 		},
 		{
-			"errors",
-			http.StatusBadRequest,
-			true,
+			name:         "request limit reached error retryable",
+			responseCode: http.StatusTooManyRequests,
+			expectErr:    true,
+		},
+		{
+			name:                "bad request non retryable error",
+			responseCode:        http.StatusBadRequest,
+			expectErr:           true,
+			isNonRetryableError: true,
+		},
+		{
+			name:                "status forbidden non retryable and missing ACL error",
+			responseCode:        http.StatusForbidden,
+			expectErr:           true,
+			isNonRetryableError: true,
+			isMissingAClError:   true,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			intercepts := []*testutils.HttpIntercept{
-				{Path: path, ResponseStatusCode: tc.response},
+				{Path: path, ResponseStatusCode: tc.responseCode},
 			}
 			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
 			err := c.RegisterService(context.Background(), nil)
@@ -113,6 +129,9 @@ func TestConsulClient_RegisterService(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.Error(t, err)
+				// Verify the error types
+				assert.Equal(t, tc.isNonRetryableError, errors.As(err, &nonRetryableError))
+				assert.Equal(t, tc.isMissingAClError, errors.As(err, &missingConsulACLError))
 			}
 		})
 	}
@@ -123,27 +142,43 @@ func TestConsulClient_DeregisterService(t *testing.T) {
 	id := "cts-123"
 	path := fmt.Sprintf("/v1/agent/service/deregister/%s", id)
 
+	var nonRetryableError *retry.NonRetryableError
+	var missingConsulACLError *MissingConsulACLError
 	cases := []struct {
-		name      string
-		response  int
-		expectErr bool
+		name                string
+		responseCode        int
+		expectErr           bool
+		isNonRetryableError bool
+		isMissingAClError   bool
 	}{
 		{
-			"success",
-			http.StatusOK,
-			false,
+			name:         "success",
+			responseCode: http.StatusOK,
 		},
 		{
-			"errors",
-			http.StatusNotFound,
-			true,
+			name:         "request limit reached error retryable",
+			responseCode: http.StatusTooManyRequests,
+			expectErr:    true,
+		},
+		{
+			name:                "bad request non retryable error",
+			responseCode:        http.StatusBadRequest,
+			expectErr:           true,
+			isNonRetryableError: true,
+		},
+		{
+			name:                "status forbidden non retryable and missing ACL error",
+			responseCode:        http.StatusForbidden,
+			expectErr:           true,
+			isNonRetryableError: true,
+			isMissingAClError:   true,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			intercepts := []*testutils.HttpIntercept{
-				{Path: path, ResponseStatusCode: tc.response},
+				{Path: path, ResponseStatusCode: tc.responseCode},
 			}
 			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
 			err := c.DeregisterService(context.Background(), id)
@@ -151,6 +186,9 @@ func TestConsulClient_DeregisterService(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.Error(t, err)
+				// Verify the error types
+				assert.Equal(t, tc.isNonRetryableError, errors.As(err, &nonRetryableError))
+				assert.Equal(t, tc.isMissingAClError, errors.As(err, &missingConsulACLError))
 			}
 		})
 	}
@@ -180,6 +218,25 @@ func TestNonEnterpriseConsulError_Unwrap(t *testing.T) {
 
 	var otherErr testError
 	err := NonEnterpriseConsulError{Err: &otherErr}
+
+	// Assert that the wrapped error is still detectable
+	// errors.As is the preferred way to call the underlying Unwrap
+	assert.True(t, errors.As(&err, &terr))
+}
+
+func TestMissingConsulACLError_Error(t *testing.T) {
+	err := MissingConsulACLError{Err: errors.New("some error")}
+	var missingConsulACLError *MissingConsulACLError
+
+	assert.True(t, errors.As(&err, &missingConsulACLError))
+	assert.Equal(t, "missing required Consul ACL: some error", err.Error())
+}
+
+func TestMissingConsulACLError_Unwrap(t *testing.T) {
+	var terr *testError
+
+	var otherErr testError
+	err := MissingConsulACLError{Err: &otherErr}
 
 	// Assert that the wrapped error is still detectable
 	// errors.As is the preferred way to call the underlying Unwrap

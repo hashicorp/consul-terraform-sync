@@ -42,6 +42,23 @@ func (e *NonEnterpriseConsulError) Unwrap() error {
 	return e.Err
 }
 
+// MissingConsulACLError represents an error returned
+// if the error was due to not having the correct ACL for
+// accessing a Consul resource
+type MissingConsulACLError struct {
+	Err error
+}
+
+// Error returns an error string
+func (e *MissingConsulACLError) Error() string {
+	return fmt.Sprintf("missing required Consul ACL: %v", e.Err)
+}
+
+// Unwrap returns the underlying error
+func (e *MissingConsulACLError) Unwrap() error {
+	return e.Err
+}
+
 var _ ConsulClientInterface = (*ConsulClient)(nil)
 
 // ConsulClientInterface is an interface for a Consul Client
@@ -164,16 +181,34 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 
 // RegisterService registers a service through the Consul agent.
 func (c *ConsulClient) RegisterService(ctx context.Context, r *consulapi.AgentServiceRegistration) error {
-	desc := "AgentServiceRegister"
 	logger := c.logger
+	logger.Debug("registering service")
+
+	desc := "AgentServiceRegister"
+
 	if r != nil {
 		logger = logger.With("service_name", r.Name, "service_id", r.ID)
 	}
 
 	f := func(context.Context) error {
 		err := c.Agent().ServiceRegister(r)
+
+		// Process the error by wrapping it in the correct error types
 		if err != nil {
-			logger.Error("error registering service", "error", err)
+			statusCode := getResponseCodeFromError(ctx, err)
+
+			// If we get a StatusForbidden assume that this is because CTS
+			// does not have the correct ACLs to access this resource in Consul
+			// and wrap in the appropriate error
+			if statusCode == http.StatusForbidden {
+				err = &MissingConsulACLError{Err: err}
+			}
+
+			// non-retryable errors allows for termination of retries
+			if !isResponseCodeRetryable(statusCode) {
+				err = &retry.NonRetryableError{Err: err}
+			}
+
 			return err
 		}
 		return nil
@@ -181,7 +216,6 @@ func (c *ConsulClient) RegisterService(ctx context.Context, r *consulapi.AgentSe
 
 	err := c.retry.Do(ctx, f, desc)
 	if err != nil {
-		// TODO: Do not retry depending on error, log message about service:write rule on 403
 		return err
 	}
 
@@ -190,13 +224,26 @@ func (c *ConsulClient) RegisterService(ctx context.Context, r *consulapi.AgentSe
 
 // DeregisterService removes a service through the Consul agent.
 func (c *ConsulClient) DeregisterService(ctx context.Context, serviceID string) error {
+	c.logger.Debug("deregistering service")
 	desc := "AgentServiceDeregister"
 
 	f := func(context.Context) error {
 		err := c.Agent().ServiceDeregister(serviceID)
 		if err != nil {
-			c.logger.Error("error deregistering service", "error", err, "service_id", serviceID)
-			// TODO: Do not retry depending on error, log message about service:write rule on 403
+			statusCode := getResponseCodeFromError(ctx, err)
+
+			// If we get a StatusForbidden assume that this is because CTS
+			// does not have the correct ACLs to access this resource in Consul
+			// and wrap in the appropriate error
+			if statusCode == http.StatusForbidden {
+				err = &MissingConsulACLError{Err: err}
+			}
+
+			// non-retryable errors allows for termination of retries
+			if !isResponseCodeRetryable(statusCode) {
+				err = &retry.NonRetryableError{Err: err}
+			}
+
 			return err
 		}
 		return nil

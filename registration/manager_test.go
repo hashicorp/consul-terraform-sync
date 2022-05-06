@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
@@ -60,12 +61,12 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			client := new(mocks.ConsulClientInterface)
-			m := NewSelfRegistrationManager(tc.conf, client)
+			c := new(mocks.ConsulClientInterface)
+			m := NewSelfRegistrationManager(tc.conf, c)
 
 			// Verify general attributes
 			assert.NotNil(t, m)
-			assert.Equal(t, m.client, client)
+			assert.Equal(t, m.client, c)
 			assert.NotNil(t, m.logger)
 
 			// Verify service attributes and health check attributes
@@ -270,6 +271,19 @@ func TestSelfRegistrationManager_deregister(t *testing.T) {
 		assert.Error(t, err)
 		mockClient.AssertExpectations(t)
 	})
+
+	t.Run("error on deregister missing ACL", func(t *testing.T) {
+		mockClient := new(mocks.ConsulClientInterface)
+		mockClient.On("DeregisterService", mock.Anything, mock.Anything).
+			Return(&client.MissingConsulACLError{Err: errors.New("mock deregister error")})
+		manager.client = mockClient
+
+		err := manager.deregister(ctx)
+		assert.Error(t, err)
+		var missingConsulACLError *client.MissingConsulACLError
+		assert.ErrorAs(t, err, &missingConsulACLError)
+		mockClient.AssertExpectations(t)
+	})
 }
 
 func TestSelfRegistrationManager_register(t *testing.T) {
@@ -293,13 +307,14 @@ func TestSelfRegistrationManager_register(t *testing.T) {
 		checks:    []*consulapi.AgentServiceCheck{check},
 	}
 	testcases := []struct {
-		name      string
-		setup     func(*mocks.ConsulClientInterface)
-		expectErr bool
+		name              string
+		setup             func(*mocks.ConsulClientInterface)
+		expectErr         bool
+		isMissingACLError bool
 	}{
 		{
-			"success",
-			func(cMock *mocks.ConsulClientInterface) {
+			name: "success",
+			setup: func(cMock *mocks.ConsulClientInterface) {
 				cMock.On("RegisterService", mock.Anything,
 					// expect these values for the service registration request
 					&consulapi.AgentServiceRegistration{
@@ -312,14 +327,21 @@ func TestSelfRegistrationManager_register(t *testing.T) {
 					},
 				).Return(nil)
 			},
-			false,
 		},
 		{
-			"registration_errors",
-			func(cMock *mocks.ConsulClientInterface) {
+			name: "registration_errors",
+			setup: func(cMock *mocks.ConsulClientInterface) {
 				cMock.On("RegisterService", mock.Anything, mock.Anything).Return(errors.New("mock error"))
 			},
-			true,
+			expectErr: true,
+		},
+		{
+			name: "ignore_error_register_missing_ACL",
+			setup: func(cMock *mocks.ConsulClientInterface) {
+				cMock.On("RegisterService", mock.Anything, mock.Anything).Return(&client.MissingConsulACLError{Err: errors.New("mock error")})
+			},
+			expectErr:         true,
+			isMissingACLError: true,
 		},
 	}
 	for _, tc := range testcases {
@@ -339,6 +361,8 @@ func TestSelfRegistrationManager_register(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
+				var missingConsulACLError *client.MissingConsulACLError
+				assert.Equal(t, tc.isMissingACLError, errors.As(err, &missingConsulACLError))
 			}
 			mockClient.AssertExpectations(t)
 		})
