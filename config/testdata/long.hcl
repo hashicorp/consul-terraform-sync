@@ -52,7 +52,7 @@ consul {
     namespace = "test-ns"
     default_check {
       enabled = true
-      address = "cts"
+      address = "http://cts"
     }
   }
 }

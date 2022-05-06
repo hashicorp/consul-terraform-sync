@@ -1,6 +1,10 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"net/url"
+	"strings"
+)
 
 // DefaultCheckConfig is a configuration that controls whether to
 // create a default health check on the CTS service in Consul. It
@@ -60,6 +64,28 @@ func (c *DefaultCheckConfig) Finalize() {
 	if c.Address == nil {
 		c.Address = String("")
 	}
+}
+
+// Validate validates the values and required options. This method is recommended
+// to run after Finalize() to ensure the configuration is safe to proceed.
+func (c *DefaultCheckConfig) Validate() error {
+	if c == nil { // config not required, return early
+		return nil
+	}
+
+	if c.Address != nil && *c.Address != "" {
+		if !strings.HasPrefix(strings.ToLower(*c.Address), "http") {
+			// check specifically for the scheme since this can be a common error
+			return fmt.Errorf("default check address must include scheme (http or https)")
+		}
+
+		_, err := url.ParseRequestURI(*c.Address)
+		if err != nil {
+			return fmt.Errorf("error with address for default check: %s", err)
+		}
+	}
+
+	return nil
 }
 
 // GoString defines the printable version of this struct.

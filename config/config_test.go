@@ -62,7 +62,7 @@ var (
 				Namespace:   String("test-ns"),
 				DefaultCheck: &DefaultCheckConfig{
 					Enabled: Bool(true),
-					Address: String("cts"),
+					Address: String("http://cts"),
 				},
 			},
 		},

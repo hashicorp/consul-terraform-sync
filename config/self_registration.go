@@ -102,6 +102,22 @@ func (c *SelfRegistrationConfig) Finalize() {
 	}
 }
 
+// Validate validates the values and required options. This method is recommended
+// to run after Finalize() to ensure the configuration is safe to proceed.
+func (c *SelfRegistrationConfig) Validate() error {
+	if c == nil { // config not required, return early
+		return nil
+	}
+
+	if c.DefaultCheck != nil {
+		if err := c.DefaultCheck.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // GoString defines the printable version of this struct.
 func (c *SelfRegistrationConfig) GoString() string {
 	if c == nil {

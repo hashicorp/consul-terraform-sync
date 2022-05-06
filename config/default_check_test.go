@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultCheckConfig_Copy(t *testing.T) {
@@ -158,6 +159,70 @@ func TestDefaultCheckConfig_Finalize(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
+		})
+	}
+}
+
+func TestDefaultCheckConfig_Validate(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		c         *DefaultCheckConfig
+		expectErr bool
+	}{
+		{
+			"nil",
+			nil,
+			false,
+		},
+		{
+			"empty",
+			&DefaultCheckConfig{},
+			false,
+		},
+		{
+			"defaults",
+			&DefaultCheckConfig{
+				Enabled: Bool(true),
+				Address: String(""),
+			},
+			false,
+		},
+		{
+			"configured",
+			&DefaultCheckConfig{
+				Enabled: Bool(true),
+				Address: String("https://cts"),
+			},
+			false,
+		},
+		{
+			"invalid_no_scheme",
+			&DefaultCheckConfig{
+				Enabled: Bool(true),
+				Address: String("127.0.0.1"),
+			},
+			true,
+		},
+		{
+			"invalid_format",
+			&DefaultCheckConfig{
+				Enabled: Bool(true),
+				Address: String("http-not-a-uri"),
+			},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.c.Validate()
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

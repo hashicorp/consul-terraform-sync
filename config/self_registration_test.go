@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSelfRegistrationConfig_DefaultSelfRegistrationConfig(t *testing.T) {
@@ -231,6 +232,60 @@ func TestSelfRegistrationConfig_Finalize(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
+		})
+	}
+}
+
+func TestSelfRegistrationConfig_Validate(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		c         *SelfRegistrationConfig
+		expectErr bool
+	}{
+		{
+			"nil",
+			nil,
+			false,
+		},
+		{
+			"empty",
+			&SelfRegistrationConfig{},
+			false,
+		},
+		{
+			"configured",
+			&SelfRegistrationConfig{
+				Enabled:     Bool(true),
+				ServiceName: String("cts-service"),
+				Namespace:   String("ns-1"),
+				DefaultCheck: &DefaultCheckConfig{
+					Enabled: Bool(true),
+					Address: String("http://172.0.0.8:5000"),
+				},
+			},
+			false,
+		},
+		{
+			"invalid",
+			&SelfRegistrationConfig{
+				DefaultCheck: &DefaultCheckConfig{
+					Address: String("172.0.0.8:5000"),
+				},
+			},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.c.Validate()
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
