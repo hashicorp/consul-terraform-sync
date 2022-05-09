@@ -35,20 +35,20 @@ const (
 
 var defaultServiceTags = []string{"cts"}
 
-// SelfRegistrationManager handles the registration of Consul-Terraform-Sync as a service to Consul.
-type SelfRegistrationManager struct {
+// ServiceRegistrationManager handles the registration of Consul-Terraform-Sync as a service to Consul.
+type ServiceRegistrationManager struct {
 	client  client.ConsulClientInterface
 	service *service
 
 	logger logging.Logger
 }
 
-// SelfRegistrationManagerConfig defines the configurations needed to create a new SelfRegistrationManager.
-type SelfRegistrationManagerConfig struct {
-	ID               string
-	Port             int
-	TLSEnabled       bool
-	SelfRegistration *config.SelfRegistrationConfig
+// ServiceRegistrationManagerConfig defines the configurations needed to create a new ServiceRegistrationManager.
+type ServiceRegistrationManagerConfig struct {
+	ID                  string
+	Port                int
+	TLSEnabled          bool
+	ServiceRegistration *config.ServiceRegistrationConfig
 }
 
 type service struct {
@@ -61,26 +61,26 @@ type service struct {
 	checks []*consulapi.AgentServiceCheck
 }
 
-// NewSelfRegistrationManager creates a new SelfRegistrationManager object with the given configuration
+// NewServiceRegistrationManager creates a new ServiceRegistrationManager object with the given configuration
 // and Consul client. It sets default values where relevant, including a default HTTP check.
-func NewSelfRegistrationManager(conf *SelfRegistrationManagerConfig, client client.ConsulClientInterface) *SelfRegistrationManager {
+func NewServiceRegistrationManager(conf *ServiceRegistrationManagerConfig, client client.ConsulClientInterface) *ServiceRegistrationManager {
 	logger := logging.Global().Named(logSystemName)
 
 	name := config.DefaultServiceName
-	if conf.SelfRegistration.ServiceName != nil {
-		name = *conf.SelfRegistration.ServiceName
+	if conf.ServiceRegistration.ServiceName != nil {
+		name = *conf.ServiceRegistration.ServiceName
 	}
 
 	ns := defaultNamespace
-	if conf.SelfRegistration.Namespace != nil {
-		ns = *conf.SelfRegistration.Namespace
+	if conf.ServiceRegistration.Namespace != nil {
+		ns = *conf.ServiceRegistration.Namespace
 	}
 
 	var checks []*consulapi.AgentServiceCheck
-	if *conf.SelfRegistration.DefaultCheck.Enabled {
+	if *conf.ServiceRegistration.DefaultCheck.Enabled {
 		checks = append(checks, defaultHTTPCheck(conf))
 	}
-	return &SelfRegistrationManager{
+	return &ServiceRegistrationManager{
 		client: client,
 		logger: logger,
 		service: &service{
@@ -94,9 +94,9 @@ func NewSelfRegistrationManager(conf *SelfRegistrationManagerConfig, client clie
 	}
 }
 
-// Start starts the self-registration manager, which will register CTS as a service
+// Start starts the service registration manager, which will register CTS as a service
 // with Consul and deregister it if CTS is stopped.
-func (m *SelfRegistrationManager) Start(ctx context.Context) error {
+func (m *ServiceRegistrationManager) Start(ctx context.Context) error {
 	// Register CTS with Consul
 	err := m.register(ctx)
 	if err != nil {
@@ -113,7 +113,7 @@ func (m *SelfRegistrationManager) Start(ctx context.Context) error {
 }
 
 // register registers Consul-Terraform-Sync with Consul
-func (m *SelfRegistrationManager) register(ctx context.Context) error {
+func (m *ServiceRegistrationManager) register(ctx context.Context) error {
 	s := m.service
 	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
 	r := &consulapi.AgentServiceRegistration{
@@ -125,13 +125,13 @@ func (m *SelfRegistrationManager) register(ctx context.Context) error {
 		Namespace: s.namespace,
 	}
 
-	logger.Info("self-registering Consul-Terraform-Sync as a service with Consul")
+	logger.Info("registering Consul-Terraform-Sync as a service with Consul")
 
 	// Ignore error and continue if due to a missing ACL
 	var missingConsulACLError *client.MissingConsulACLError
 	err := m.client.RegisterService(ctx, r)
 	if err != nil {
-		baseErrMsg := "error self-registering Consul-Terraform-Sync as a service with Consul"
+		baseErrMsg := "error registering Consul-Terraform-Sync as a service with Consul"
 		if errors.As(err, &missingConsulACLError) {
 			logger.Error(fmt.Sprintf("%s: "+
 				"configure CTS with an ACL including `service:write` or "+
@@ -148,7 +148,7 @@ func (m *SelfRegistrationManager) register(ctx context.Context) error {
 }
 
 // deregister deregisters Consul-Terraform-Sync from Consul
-func (m *SelfRegistrationManager) deregister(ctx context.Context) error {
+func (m *ServiceRegistrationManager) deregister(ctx context.Context) error {
 	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
 	logger.Info("deregistering Consul-Terraform-Sync from Consul")
 
@@ -172,13 +172,13 @@ func (m *SelfRegistrationManager) deregister(ctx context.Context) error {
 	return nil
 }
 
-func defaultHTTPCheck(conf *SelfRegistrationManagerConfig) *consulapi.AgentServiceCheck {
+func defaultHTTPCheck(conf *ServiceRegistrationManagerConfig) *consulapi.AgentServiceCheck {
 	logger := logging.Global().Named(logSystemName)
 
 	// Determine base address for HTTP check
 	var address string
-	if conf.SelfRegistration.DefaultCheck.Address != nil && *conf.SelfRegistration.DefaultCheck.Address != "" {
-		address = *conf.SelfRegistration.DefaultCheck.Address
+	if conf.ServiceRegistration.DefaultCheck.Address != nil && *conf.ServiceRegistration.DefaultCheck.Address != "" {
+		address = *conf.ServiceRegistration.DefaultCheck.Address
 	} else {
 		var protocol string
 		if conf.TLSEnabled {

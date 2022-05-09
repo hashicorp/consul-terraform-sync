@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSelfRegistrationConfig_DefaultSelfRegistrationConfig(t *testing.T) {
+func TestServiceRegistrationConfig_DefaultServiceRegistrationConfig(t *testing.T) {
 	t.Parallel()
-	r := DefaultSelfRegistrationConfig()
-	expected := &SelfRegistrationConfig{
+	r := DefaultServiceRegistrationConfig()
+	expected := &ServiceRegistrationConfig{
 		Enabled:     Bool(true),
 		Namespace:   String(""),
 		ServiceName: String(DefaultServiceName),
@@ -22,15 +22,15 @@ func TestSelfRegistrationConfig_DefaultSelfRegistrationConfig(t *testing.T) {
 	assert.Equal(t, expected, r)
 }
 
-func TestSelfRegistrationConfig_Copy(t *testing.T) {
+func TestServiceRegistrationConfig_Copy(t *testing.T) {
 	t.Parallel()
 
-	finalizedConf := &SelfRegistrationConfig{}
+	finalizedConf := &ServiceRegistrationConfig{}
 	finalizedConf.Finalize()
 
 	cases := []struct {
 		name string
-		a    *SelfRegistrationConfig
+		a    *ServiceRegistrationConfig
 	}{
 		{
 			"nil",
@@ -38,7 +38,7 @@ func TestSelfRegistrationConfig_Copy(t *testing.T) {
 		},
 		{
 			"empty",
-			&SelfRegistrationConfig{},
+			&ServiceRegistrationConfig{},
 		},
 		{
 			"finalized",
@@ -46,7 +46,7 @@ func TestSelfRegistrationConfig_Copy(t *testing.T) {
 		},
 		{
 			"fully_configured",
-			&SelfRegistrationConfig{
+			&ServiceRegistrationConfig{
 				Enabled:     Bool(false),
 				ServiceName: String("cts-service"),
 				Namespace:   String("test"),
@@ -66,26 +66,26 @@ func TestSelfRegistrationConfig_Copy(t *testing.T) {
 	}
 }
 
-func TestSelfRegistrationConfig_Merge(t *testing.T) {
+func TestServiceRegistrationConfig_Merge(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name string
-		a    *SelfRegistrationConfig
-		b    *SelfRegistrationConfig
-		r    *SelfRegistrationConfig
+		a    *ServiceRegistrationConfig
+		b    *ServiceRegistrationConfig
+		r    *ServiceRegistrationConfig
 	}{
 		{
 			"nil_a",
 			nil,
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{},
 		},
 		{
 			"nil_b",
-			&SelfRegistrationConfig{},
+			&ServiceRegistrationConfig{},
 			nil,
-			&SelfRegistrationConfig{},
+			&ServiceRegistrationConfig{},
 		},
 		{
 			"nil_both",
@@ -95,105 +95,105 @@ func TestSelfRegistrationConfig_Merge(t *testing.T) {
 		},
 		{
 			"empty",
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{},
 		},
 		{
 			"enabled_overrides",
-			&SelfRegistrationConfig{Enabled: Bool(false)},
-			&SelfRegistrationConfig{Enabled: Bool(true)},
-			&SelfRegistrationConfig{Enabled: Bool(true)},
+			&ServiceRegistrationConfig{Enabled: Bool(false)},
+			&ServiceRegistrationConfig{Enabled: Bool(true)},
+			&ServiceRegistrationConfig{Enabled: Bool(true)},
 		},
 		{
 			"enabled_empty_one",
-			&SelfRegistrationConfig{Enabled: Bool(false)},
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{Enabled: Bool(false)},
+			&ServiceRegistrationConfig{Enabled: Bool(false)},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{Enabled: Bool(false)},
 		},
 		{
 			"enabled_empty_two",
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{Enabled: Bool(false)},
-			&SelfRegistrationConfig{Enabled: Bool(false)},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{Enabled: Bool(false)},
+			&ServiceRegistrationConfig{Enabled: Bool(false)},
 		},
 		{
 			"enabled_same",
-			&SelfRegistrationConfig{Enabled: Bool(false)},
-			&SelfRegistrationConfig{Enabled: Bool(false)},
-			&SelfRegistrationConfig{Enabled: Bool(false)},
+			&ServiceRegistrationConfig{Enabled: Bool(false)},
+			&ServiceRegistrationConfig{Enabled: Bool(false)},
+			&ServiceRegistrationConfig{Enabled: Bool(false)},
 		},
 		{
 			"namespace_overrides",
-			&SelfRegistrationConfig{Namespace: String("ns_a")},
-			&SelfRegistrationConfig{Namespace: String("ns_b")},
-			&SelfRegistrationConfig{Namespace: String("ns_b")},
+			&ServiceRegistrationConfig{Namespace: String("ns_a")},
+			&ServiceRegistrationConfig{Namespace: String("ns_b")},
+			&ServiceRegistrationConfig{Namespace: String("ns_b")},
 		},
 		{
 			"namespace_empty_one",
-			&SelfRegistrationConfig{Namespace: String("ns_a")},
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{Namespace: String("ns_a")},
+			&ServiceRegistrationConfig{Namespace: String("ns_a")},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{Namespace: String("ns_a")},
 		},
 		{
 			"namespace_empty_two",
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{Namespace: String("ns_a")},
-			&SelfRegistrationConfig{Namespace: String("ns_a")},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{Namespace: String("ns_a")},
+			&ServiceRegistrationConfig{Namespace: String("ns_a")},
 		},
 		{
 			"namespace_same",
-			&SelfRegistrationConfig{Namespace: String("ns_a")},
-			&SelfRegistrationConfig{Namespace: String("ns_a")},
-			&SelfRegistrationConfig{Namespace: String("ns_a")},
+			&ServiceRegistrationConfig{Namespace: String("ns_a")},
+			&ServiceRegistrationConfig{Namespace: String("ns_a")},
+			&ServiceRegistrationConfig{Namespace: String("ns_a")},
 		},
 		{
 			"service_name_overrides",
-			&SelfRegistrationConfig{ServiceName: String("service_a")},
-			&SelfRegistrationConfig{ServiceName: String("service_b")},
-			&SelfRegistrationConfig{ServiceName: String("service_b")},
+			&ServiceRegistrationConfig{ServiceName: String("service_a")},
+			&ServiceRegistrationConfig{ServiceName: String("service_b")},
+			&ServiceRegistrationConfig{ServiceName: String("service_b")},
 		},
 		{
 			"service_name_empty_one",
-			&SelfRegistrationConfig{ServiceName: String("service_a")},
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{ServiceName: String("service_a")},
+			&ServiceRegistrationConfig{ServiceName: String("service_a")},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{ServiceName: String("service_a")},
 		},
 		{
 			"service_name_empty_two",
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{ServiceName: String("service_a")},
-			&SelfRegistrationConfig{ServiceName: String("service_a")},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{ServiceName: String("service_a")},
+			&ServiceRegistrationConfig{ServiceName: String("service_a")},
 		},
 		{
 			"service_name_same",
-			&SelfRegistrationConfig{ServiceName: String("service_a")},
-			&SelfRegistrationConfig{ServiceName: String("service_a")},
-			&SelfRegistrationConfig{ServiceName: String("service_a")},
+			&ServiceRegistrationConfig{ServiceName: String("service_a")},
+			&ServiceRegistrationConfig{ServiceName: String("service_a")},
+			&ServiceRegistrationConfig{ServiceName: String("service_a")},
 		},
 		{
 			"default_check_overrides",
-			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(true)}},
-			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
-			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(true)}},
+			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
 		},
 		{
 			"default_check_empty_one",
-			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
 		},
 		{
 			"default_check_empty_two",
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
-			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
 		},
 		{
 			"default_check_same",
-			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
-			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
-			&SelfRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
+			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
 		},
 	}
 
@@ -205,18 +205,18 @@ func TestSelfRegistrationConfig_Merge(t *testing.T) {
 	}
 }
 
-func TestSelfRegistrationConfig_Finalize(t *testing.T) {
+func TestServiceRegistrationConfig_Finalize(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name string
-		i    *SelfRegistrationConfig
-		r    *SelfRegistrationConfig
+		i    *ServiceRegistrationConfig
+		r    *ServiceRegistrationConfig
 	}{
 		{
 			"empty",
-			&SelfRegistrationConfig{},
-			&SelfRegistrationConfig{
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{
 				Enabled:     Bool(true),
 				ServiceName: String(DefaultServiceName),
 				Namespace:   String(""),
@@ -236,12 +236,12 @@ func TestSelfRegistrationConfig_Finalize(t *testing.T) {
 	}
 }
 
-func TestSelfRegistrationConfig_Validate(t *testing.T) {
+func TestServiceRegistrationConfig_Validate(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name      string
-		c         *SelfRegistrationConfig
+		c         *ServiceRegistrationConfig
 		expectErr bool
 	}{
 		{
@@ -251,12 +251,12 @@ func TestSelfRegistrationConfig_Validate(t *testing.T) {
 		},
 		{
 			"empty",
-			&SelfRegistrationConfig{},
+			&ServiceRegistrationConfig{},
 			false,
 		},
 		{
 			"configured",
-			&SelfRegistrationConfig{
+			&ServiceRegistrationConfig{
 				Enabled:     Bool(true),
 				ServiceName: String("cts-service"),
 				Namespace:   String("ns-1"),
@@ -269,7 +269,7 @@ func TestSelfRegistrationConfig_Validate(t *testing.T) {
 		},
 		{
 			"invalid",
-			&SelfRegistrationConfig{
+			&ServiceRegistrationConfig{
 				DefaultCheck: &DefaultCheckConfig{
 					Address: String("172.0.0.8:5000"),
 				},
@@ -290,20 +290,20 @@ func TestSelfRegistrationConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestSelfRegistrationConfig_GoString(t *testing.T) {
+func TestServiceRegistrationConfig_GoString(t *testing.T) {
 	cases := []struct {
 		name     string
-		c        *SelfRegistrationConfig
+		c        *ServiceRegistrationConfig
 		expected string
 	}{
 		{
 			"nil",
 			nil,
-			"(*SelfRegistrationConfig)(nil)",
+			"(*ServiceRegistrationConfig)(nil)",
 		},
 		{
 			"fully_configured",
-			&SelfRegistrationConfig{
+			&ServiceRegistrationConfig{
 				Enabled:     Bool(true),
 				ServiceName: String("cts-service"),
 				Namespace:   String("test"),
@@ -312,7 +312,7 @@ func TestSelfRegistrationConfig_GoString(t *testing.T) {
 					Address: String("test"),
 				},
 			},
-			"&SelfRegistrationConfig{" +
+			"&ServiceRegistrationConfig{" +
 				"Enabled:true, " +
 				"ServiceName:cts-service, " +
 				"Namespace:test, " +

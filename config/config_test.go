@@ -56,7 +56,7 @@ var (
 				MaxIdleConnsPerHost: Int(100),
 				TLSHandshakeTimeout: TimeDuration(10 * time.Second),
 			},
-			SelfRegistration: &SelfRegistrationConfig{
+			ServiceRegistration: &ServiceRegistrationConfig{
 				Enabled:     Bool(true),
 				ServiceName: String("test-service"),
 				Namespace:   String("test-ns"),
