@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConsulConfig_Copy(t *testing.T) {
@@ -40,8 +41,13 @@ func TestConsulConfig_Copy(t *testing.T) {
 				TLS:         &TLSConfig{Enabled: Bool(true)},
 				Token:       String("abcd1234"),
 				SelfRegistration: &SelfRegistrationConfig{
-					Enabled:   Bool(false),
-					Namespace: String("test-ns"),
+					Enabled:     Bool(false),
+					ServiceName: String("test-service"),
+					Namespace:   String("test-ns"),
+					DefaultCheck: &DefaultCheckConfig{
+						Enabled: Bool(true),
+						Address: String("test"),
+					},
 				},
 			},
 		},
@@ -282,8 +288,13 @@ func TestConsulConfig_Finalize(t *testing.T) {
 					TLSHandshakeTimeout: TimeDuration(DefaultTLSHandshakeTimeout),
 				},
 				SelfRegistration: &SelfRegistrationConfig{
-					Enabled:   Bool(true),
-					Namespace: String(""),
+					Enabled:     Bool(true),
+					ServiceName: String(DefaultServiceName),
+					Namespace:   String(""),
+					DefaultCheck: &DefaultCheckConfig{
+						Enabled: Bool(true),
+						Address: String(""),
+					},
 				},
 			},
 		},
@@ -293,6 +304,49 @@ func TestConsulConfig_Finalize(t *testing.T) {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
 			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
+		})
+	}
+}
+
+func TestConsulConfig_Validate(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		c         *ConsulConfig
+		expectErr bool
+	}{
+		{
+			"nil",
+			nil,
+			false,
+		},
+		{
+			"empty",
+			&ConsulConfig{},
+			false,
+		},
+		{
+			"invalid",
+			&ConsulConfig{
+				SelfRegistration: &SelfRegistrationConfig{
+					DefaultCheck: &DefaultCheckConfig{
+						Address: String("172.0.0.8:5000"),
+					},
+				},
+			},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.c.Validate()
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

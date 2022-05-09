@@ -2,19 +2,30 @@ package config
 
 import "fmt"
 
+const (
+	DefaultServiceName = "Consul-Terraform-Sync"
+)
+
 // SelfRegistrationConfig is a configuration that controls how CTS will
 // self-register itself as a service with Consul.
 type SelfRegistrationConfig struct {
-	Enabled   *bool   `mapstructure:"enabled"`
-	Namespace *string `mapstructure:"namespace"`
+	Enabled      *bool               `mapstructure:"enabled"`
+	ServiceName  *string             `mapstructure:"service_name"`
+	Namespace    *string             `mapstructure:"namespace"`
+	DefaultCheck *DefaultCheckConfig `mapstructure:"default_check"`
 }
 
 // DefaultSelfRegistrationConfig returns a SelfRegistrationConfig with
 // default values.
 func DefaultSelfRegistrationConfig() *SelfRegistrationConfig {
 	return &SelfRegistrationConfig{
-		Enabled:   Bool(true),
-		Namespace: String(""),
+		Enabled:     Bool(true),
+		ServiceName: String(DefaultServiceName),
+		Namespace:   String(""),
+		DefaultCheck: &DefaultCheckConfig{
+			Enabled: Bool(true),
+			Address: String(""),
+		},
 	}
 }
 
@@ -26,7 +37,12 @@ func (c *SelfRegistrationConfig) Copy() *SelfRegistrationConfig {
 
 	var o SelfRegistrationConfig
 	o.Enabled = BoolCopy(c.Enabled)
+	o.ServiceName = StringCopy(c.ServiceName)
 	o.Namespace = StringCopy(c.Namespace)
+
+	if c.DefaultCheck != nil {
+		o.DefaultCheck = c.DefaultCheck.Copy()
+	}
 
 	return &o
 }
@@ -51,8 +67,16 @@ func (c *SelfRegistrationConfig) Merge(o *SelfRegistrationConfig) *SelfRegistrat
 		r.Enabled = BoolCopy(o.Enabled)
 	}
 
+	if o.ServiceName != nil {
+		r.ServiceName = StringCopy(o.ServiceName)
+	}
+
 	if o.Namespace != nil {
 		r.Namespace = StringCopy(o.Namespace)
+	}
+
+	if o.DefaultCheck != nil {
+		r.DefaultCheck = r.DefaultCheck.Merge(o.DefaultCheck)
 	}
 
 	return r
@@ -64,9 +88,34 @@ func (c *SelfRegistrationConfig) Finalize() {
 		c.Enabled = Bool(true)
 	}
 
+	if c.ServiceName == nil {
+		c.ServiceName = String(DefaultServiceName)
+	}
+
 	if c.Namespace == nil {
 		c.Namespace = String("")
 	}
+
+	if c.DefaultCheck == nil {
+		c.DefaultCheck = &DefaultCheckConfig{}
+		c.DefaultCheck.Finalize()
+	}
+}
+
+// Validate validates the values and required options. This method is recommended
+// to run after Finalize() to ensure the configuration is safe to proceed.
+func (c *SelfRegistrationConfig) Validate() error {
+	if c == nil { // config not required, return early
+		return nil
+	}
+
+	if c.DefaultCheck != nil {
+		if err := c.DefaultCheck.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // GoString defines the printable version of this struct.
@@ -77,9 +126,13 @@ func (c *SelfRegistrationConfig) GoString() string {
 
 	return fmt.Sprintf("&SelfRegistrationConfig{"+
 		"Enabled:%v, "+
-		"Namespace:%s"+
+		"ServiceName:%s, "+
+		"Namespace:%s, "+
+		"DefaultCheck: %s"+
 		"}",
 		BoolVal(c.Enabled),
+		StringVal(c.ServiceName),
 		StringVal(c.Namespace),
+		c.DefaultCheck.GoString(),
 	)
 }

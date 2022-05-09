@@ -48,7 +48,12 @@ consul {
   }
   self_registration {
     enabled = true
+    service_name = "test-service"
     namespace = "test-ns"
+    default_check {
+      enabled = true
+      address = "http://cts"
+    }
   }
 }
 

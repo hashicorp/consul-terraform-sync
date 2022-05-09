@@ -312,6 +312,10 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.Consul.Validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

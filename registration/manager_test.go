@@ -33,7 +33,7 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 				SelfRegistration: config.DefaultSelfRegistrationConfig(),
 			},
 			&service{
-				name:      defaultServiceName,
+				name:      config.DefaultServiceName,
 				tags:      defaultServiceTags,
 				id:        "cts-123",
 				port:      123,
@@ -41,17 +41,21 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 			},
 		},
 		{
-			"namespace",
+			"configured",
 			&SelfRegistrationManagerConfig{
 				ID:         "cts-123",
 				Port:       123,
 				TLSEnabled: false,
 				SelfRegistration: &config.SelfRegistrationConfig{
-					Namespace: config.String("ns-1"),
+					ServiceName: config.String("cts-service"),
+					Namespace:   config.String("ns-1"),
+					DefaultCheck: &config.DefaultCheckConfig{
+						Enabled: config.Bool(true),
+					},
 				},
 			},
 			&service{
-				name:      defaultServiceName,
+				name:      "cts-service",
 				tags:      defaultServiceTags,
 				id:        "cts-123",
 				port:      123,
@@ -134,6 +138,31 @@ func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 				TLSSkipVerify:                  defaultTLSSkipVerify,
 			},
 		},
+		{
+			"address_configured",
+			&SelfRegistrationManagerConfig{
+				ID:         id,
+				Port:       port,
+				TLSEnabled: true,
+				SelfRegistration: &config.SelfRegistrationConfig{
+					DefaultCheck: &config.DefaultCheckConfig{
+						Address: config.String("http://127.0.0.1:5885"),
+					},
+				},
+			},
+			&consulapi.AgentServiceCheck{
+				HTTP:                           "http://127.0.0.1:5885" + defaultHealthEndpoint,
+				Name:                           defaultCheckName,
+				CheckID:                        checkID,
+				Notes:                          defaultCheckNotes,
+				DeregisterCriticalServiceAfter: defaultDeregisterCriticalServiceAfter,
+				Status:                         defaultCheckStatus,
+				Method:                         defaultMethod,
+				Interval:                       defaultInterval,
+				Timeout:                        defaultTimeout,
+				TLSSkipVerify:                  defaultTLSSkipVerify,
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -146,9 +175,10 @@ func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 func TestSelfRegistrationManager_Start(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
+	name := "cts-service"
 	manager := &SelfRegistrationManager{
 		service: &service{
-			name: defaultServiceName,
+			name: name,
 			id:   id,
 		},
 		logger: logging.NewNullLogger(),
@@ -160,7 +190,7 @@ func TestSelfRegistrationManager_Start(t *testing.T) {
 		mockClient.On("RegisterService", mock.Anything,
 			&consulapi.AgentServiceRegistration{
 				ID:   id,
-				Name: defaultServiceName,
+				Name: name,
 			},
 		).Return(nil)
 		mockClient.On("DeregisterService", mock.Anything, id).Return(nil)
@@ -244,7 +274,7 @@ func TestSelfRegistrationManager_deregister(t *testing.T) {
 	ctx := context.Background()
 	manager := &SelfRegistrationManager{
 		service: &service{
-			name: defaultServiceName,
+			name: config.DefaultServiceName,
 			id:   id,
 		},
 		logger: logging.NewNullLogger(),
@@ -289,6 +319,7 @@ func TestSelfRegistrationManager_deregister(t *testing.T) {
 func TestSelfRegistrationManager_register(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
+	name := "cts-service"
 	port := 8558
 	ns := "ns-1"
 	check := defaultHTTPCheck(&SelfRegistrationManagerConfig{
@@ -296,10 +327,13 @@ func TestSelfRegistrationManager_register(t *testing.T) {
 		Port: port,
 		SelfRegistration: &config.SelfRegistrationConfig{
 			Namespace: &ns,
+			DefaultCheck: &config.DefaultCheckConfig{
+				Enabled: config.Bool(true),
+			},
 		},
 	})
 	service := &service{
-		name:      defaultServiceName,
+		name:      name,
 		tags:      defaultServiceTags,
 		port:      port,
 		id:        id,
@@ -319,7 +353,7 @@ func TestSelfRegistrationManager_register(t *testing.T) {
 					// expect these values for the service registration request
 					&consulapi.AgentServiceRegistration{
 						ID:        id,
-						Name:      defaultServiceName,
+						Name:      name,
 						Port:      port,
 						Namespace: ns,
 						Tags:      defaultServiceTags,
