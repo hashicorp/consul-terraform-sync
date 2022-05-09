@@ -435,18 +435,20 @@ func (tm TasksManager) TaskByTemplate(tmplID string) (string, bool) {
 	return driver.Task().Name(), true
 }
 
-// EnableTaskRanNotify is a helper for testing which tasks were triggered and
-// finished executing. Callers of this method must consume from ranTaskNotify
-// channel to prevent the buffered channel from filling and causing a dead lock.
+// EnableTaskRanNotify is a helper for enabling notifications when a task has
+// finished executing after being triggered. Callers of this method must consume
+// from ranTaskNotify channel to prevent the buffered channel from filling and
+// causing a dead lock. EnableTaskRanNotify is typically used for testing.
 func (tm *TasksManager) EnableTaskRanNotify() <-chan string {
 	tasks := tm.state.GetAllTasks()
 	tm.ranTaskNotify = make(chan string, tasks.Len())
 	return tm.ranTaskNotify
 }
 
-// EnableTaskDeletedNotify is a helper for testing when a task has finished
-// deleting. Callers of this method must consume from deletedTaskNotify channel to
-// prevent the buffered channel from filling and causing a dead lock.
+// EnableTaskDeletedNotify is a helper for enabling notifications when a task
+// has finished deleting. Callers of this method must consume from
+// deletedTaskNotify channel to prevent the buffered channel from filling and
+// causing a dead lock. EnableTaskDeletedNotify is typically used for testing.
 func (tm *TasksManager) EnableTaskDeletedNotify() <-chan string {
 	tasks := tm.state.GetAllTasks()
 	tm.deletedTaskNotify = make(chan string, tasks.Len())

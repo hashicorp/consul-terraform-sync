@@ -59,10 +59,10 @@ func (cm *ConditionMonitor) WatchDep(ctx context.Context) error {
 	}
 }
 
-// Run runs a continuous loop monitoring Consul catalog and, on changes, uses
-// the TasksManager to execute tasks to update network infrastructure
+// Run runs a continuous loop which monitors the Consul catalog. On changes, Run
+// uses the TasksManager to execute tasks to update network infrastructure.
 //
-// Blocking call runs the main Consul monitoring loop, which identifies triggers
+// The blocking call runs the main Consul monitoring loop, which identifies triggers
 // for dynamic tasks. Scheduled tasks use their own go routine to trigger on
 // schedule.
 func (cm *ConditionMonitor) Run(ctx context.Context) error {

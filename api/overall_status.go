@@ -84,10 +84,6 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		}
 
 		tasks := h.ctrl.Tasks(ctx)
-		if err != nil {
-			jsonErrorResponse(ctx, w, http.StatusInternalServerError, err)
-			return
-		}
 		for _, task := range tasks {
 			// look for any tasks that have a driver but no events
 			if _, ok := data[*task.Name]; !ok {

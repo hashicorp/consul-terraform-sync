@@ -825,7 +825,7 @@ func Test_TasksManager_TaskRunNow_Store(t *testing.T) {
 	})
 }
 
-func Test_ConditionMonitor_EnableTestMode(t *testing.T) {
+func Test_ConditionMonitor_EnableTaskRanNotify(t *testing.T) {
 	t.Parallel()
 
 	// Mock state store
