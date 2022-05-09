@@ -315,8 +315,10 @@ func (tm TasksManager) cleanupTask(ctx context.Context, d driver.Driver) {
 // This can occur because driver.RenderTemplate() may need to be called multiple
 // times before a template is ready to be applied.
 func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
+	logger := tm.logger.With(taskNameLogKey, taskName)
+
 	if tm.drivers.IsMarkedForDeletion(taskName) {
-		tm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+		logger.Trace("task is marked for deletion, skipping")
 		return nil
 	}
 
@@ -348,11 +350,11 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 		if task.IsScheduled() {
 			// Schedule tasks are specifically triggered and logged at INFO.
 			// Accompanying disabled log should be at same level
-			tm.logger.Info("skipping disabled scheduled task", taskNameLogKey, taskName)
+			logger.Info("skipping disabled scheduled task")
 		} else {
 			// Dynamic tasks are all triggered together on any dependency
 			// change so logs can be noisy
-			tm.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
+			logger.Trace("skipping disabled task")
 		}
 
 		if tm.ranTaskNotify != nil {
@@ -374,9 +376,9 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 	var storedErr error
 	storeEvent := func() {
 		ev.End(storedErr)
-		tm.logger.Trace("adding event", "event", ev.GoString())
+		logger.Trace("adding event", "event", ev.GoString())
 		if err := tm.state.AddTaskEvent(*ev); err != nil {
-			tm.logger.Error("error storing event", "event", ev.GoString())
+			logger.Error("error storing event", "event", ev.GoString())
 		}
 	}
 	ev.Start()
@@ -394,8 +396,7 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 			// We want to store an event even when a scheduled task did not
 			// render i.e. the task ran on schedule but there were no
 			// dependency changes so the template did not re-render
-			tm.logger.Info("scheduled task triggered but had no changes",
-				taskNameLogKey, taskName)
+			logger.Info("scheduled task triggered but had no changes")
 			defer storeEvent()
 		}
 		return nil
@@ -404,7 +405,7 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 	// rendering a template may take several cycles in order to completely fetch
 	// new data
 	if rendered {
-		tm.logger.Info("executing task", taskNameLogKey, taskName)
+		logger.Info("executing task")
 		defer storeEvent()
 
 		desc := fmt.Sprintf("ApplyTask %s", taskName)
@@ -414,7 +415,7 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 				taskName, storedErr)
 		}
 
-		tm.logger.Info("task completed", taskNameLogKey, taskName)
+		logger.Info("task completed")
 
 		if tm.ranTaskNotify != nil {
 			tm.ranTaskNotify <- taskName
@@ -473,6 +474,7 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 		return nil, err
 	}
 
+	// task config needs to be validated/finalized before retrieving task name
 	taskName := *taskConfig.Name
 	logger := tm.logger.With(taskNameLogKey, taskName)
 
