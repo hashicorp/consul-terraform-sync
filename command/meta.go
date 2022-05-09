@@ -59,11 +59,10 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 		fmt.Sprintf("[Deprecated] The port to use for the Consul-Terraform-Sync API server, "+
 			"\n\t\tit is preferred to use the %s field instead.", FlagHTTPAddr))
 
-	m.addr = m.flags.String(FlagHTTPAddr, api.DefaultURL, fmt.Sprintf("The `address` and port of the CTS daemon. The value can be an IP "+
-		"\n\t\taddress or DNS address, but it must also include the port. This can "+
-		"\n\t\talso be specified via the %s environment variable. The "+
-		"\n\t\tdefault value is %s. The scheme can also be set to "+
-		"\n\t\tHTTPS by including https in the provided address (eg. https://127.0.0.1:8558)", api.EnvAddress, api.DefaultURL))
+	m.addr = m.flags.String(FlagHTTPAddr, api.DefaultURL, fmt.Sprintf("The `address` and port of the CTS daemon. The value can be an IP address "+
+		"\n\t\tor DNS address, but it must also include the port. This can also be specified "+
+		"\n\t\tvia the %s environment variable. The scheme can also be set to HTTPS "+
+		"\n\t\tby including https in the provided address (eg. https://127.0.0.1:8558)", api.EnvAddress))
 
 	// Initialize TLS flags
 	m.tls.caPath = m.flags.String(FlagCAPath, "", fmt.Sprintf("Path to a directory of CA certificates to use for TLS when communicating "+
