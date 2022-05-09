@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"testing"
 	"time"
@@ -118,6 +119,27 @@ func registerConsulService(tb testing.TB, srv *testutil.TestServer,
 	}
 }
 
+func ListServices(tb testing.TB, srv *testutil.TestServer, filter string) map[string]testutil.TestService {
+	u := fmt.Sprintf("http://%s/v1/agent/services", srv.HTTPAddr)
+	if filter != "" {
+		params := url.Values{}
+		params.Add("filter", filter)
+		u = fmt.Sprintf("%s?%s", u, params.Encode())
+	}
+	resp := RequestHTTP(tb, http.MethodGet, u, "")
+
+	b, err := ioutil.ReadAll(resp.Body)
+	require.NoError(tb, err)
+	defer resp.Body.Close()
+
+	require.Equal(tb, resp.StatusCode, 200, string(b))
+
+	var services map[string]testutil.TestService
+	err = json.Unmarshal(b, &services)
+	require.NoError(tb, err)
+	return services
+}
+
 func serviceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string) bool {
 	u := fmt.Sprintf("http://%s/v1/agent/service/%s", srv.HTTPAddr, serviceID)
 	resp := RequestHTTP(tb, http.MethodGet, u, "")
@@ -142,6 +164,67 @@ func DeleteKV(tb testing.TB, srv *testutil.TestServer, key string) {
 	u := fmt.Sprintf("http://%s/v1/kv/%s", srv.HTTPAddr, key)
 	resp := RequestHTTP(tb, http.MethodDelete, u, "")
 	defer resp.Body.Close()
+}
+
+type Check struct {
+	CheckID     string
+	Name        string
+	Status      string
+	Notes       string
+	Output      string
+	ServiceID   string
+	ServiceName string
+	ServiceTags []string
+	Type        string
+}
+
+func ListChecks(tb testing.TB, srv *testutil.TestServer) map[string]Check {
+	u := fmt.Sprintf("http://%s/v1/agent/checks", srv.HTTPAddr)
+	resp := RequestHTTP(tb, http.MethodGet, u, "")
+
+	b, err := ioutil.ReadAll(resp.Body)
+	require.NoError(tb, err)
+	defer resp.Body.Close()
+
+	require.Equal(tb, resp.StatusCode, 200, string(b))
+
+	var checks map[string]Check
+	err = json.Unmarshal(b, &checks)
+	require.NoError(tb, err)
+	return checks
+}
+
+func WaitForCheckStatus(tb testing.TB, srv *testutil.TestServer, checkID, status string, wait time.Duration) (Check, error) {
+	polling := make(chan Check)
+	stopPolling := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-stopPolling:
+				return
+			default:
+				checks := ListChecks(tb, srv)
+				c, ok := checks[checkID]
+				if !ok {
+					// check does not exist but may exist eventually
+					continue
+				}
+				if c.Status == status {
+					polling <- c
+					return
+				}
+			}
+		}
+	}()
+
+	select {
+	case c := <-polling:
+		return c, nil
+	case <-time.After(wait):
+		close(stopPolling)
+		return Check{}, fmt.Errorf("timed out after waiting for %v for check %q to become %s",
+			wait, checkID, status)
+	}
 }
 
 // Generate service TestService entries.
