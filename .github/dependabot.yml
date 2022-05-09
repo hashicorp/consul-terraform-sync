@@ -1,0 +1,7 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    target-branch: "dependabot-test"
+    schedule:
+      interval: "daily"
