@@ -5,3 +5,5 @@ updates:
     target-branch: "dependabot-test"
     schedule:
       interval: "daily"
+      time: "17:00"
+      timezone: "America/Chicago"
