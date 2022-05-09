@@ -59,15 +59,14 @@ func (cm *ConditionMonitor) WatchDep(ctx context.Context) error {
 	}
 }
 
-// Run runs the controller in read-write mode by continuously monitoring Consul
-// catalog and using the driver to apply network infrastructure changes for
-// any work that have been updated.
+// Run runs a continuous loop monitoring Consul catalog and, on changes, uses
+// the TasksManager to execute tasks to update network infrastructure
 //
-// Blocking call runs the main consul monitoring loop, which identifies triggers
+// Blocking call runs the main Consul monitoring loop, which identifies triggers
 // for dynamic tasks. Scheduled tasks use their own go routine to trigger on
 // schedule.
 func (cm *ConditionMonitor) Run(ctx context.Context) error {
-	// Assumes buffer_period has been set by taskManager
+	// Assumes buffer_period was set by tasksManager when adding task to CTS
 
 	errCh := make(chan error)
 	if cm.watcherCh == nil {
@@ -128,7 +127,7 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 	}
 }
 
-// runDynamicTask will try to render the template and apply the task if necessary.
+// runDynamicTask will execute the task as necessary
 func (cm *ConditionMonitor) runDynamicTask(ctx context.Context, taskName string) error {
 	logger := cm.logger.With(taskNameLogKey, taskName)
 
@@ -191,7 +190,8 @@ func (cm *ConditionMonitor) runScheduledTask(ctx context.Context, taskName strin
 		select {
 		case <-time.After(waitTime):
 			if _, err := cm.tasksManager.Task(ctx, taskName); err != nil {
-				// Should not happen in the typical workflow, but stopping if in this state
+				// Should not happen in the typical workflow, but stopping if
+				// in this state
 				logger.Debug("scheduled task no longer exists")
 				logger.Info("stopping deleted scheduled task")
 				delete(cm.scheduleStopChs, taskName)
