@@ -100,6 +100,7 @@ func (m *ServiceRegistrationManager) Start(ctx context.Context) error {
 	// Register CTS with Consul
 	err := m.register(ctx)
 	if err != nil {
+		m.logger.Warn("CTS will continue without registering itself as a service with Consul")
 		return err
 	}
 
