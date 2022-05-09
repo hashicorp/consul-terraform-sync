@@ -1,7 +1,7 @@
 # Consul-Terraform-Sync [![Build Status](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/build.yml/badge.svg)](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/build.yml) [![CircleCI](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/main.svg?style=svg&circle-token=a88491ffa8b02149fc483c29c6b8b91ed771f5a5)](https://circleci.com/gh/hashicorp/consul-terraform-sync/tree/main)
 
 
-Consul-Terraform-Sync (just Sync from here on) is a service-oriented tool for managing network infrastructure near real-time. Sync runs as a daemon and integrates the network topology maintained by your Consul cluster with your network infrastructure to dynamically secure and connect services.
+Consul-Terraform-Sync (just CTS from here on) is a service-oriented tool for managing network infrastructure near real-time. CTS runs as a daemon and integrates the network topology maintained by your Consul cluster with your network infrastructure to dynamically secure and connect services.
 
 * Website: [consul.io/docs/nia](https://www.consul.io/docs/nia)
 
@@ -23,12 +23,12 @@ Knowing about our upcoming features and priorities helps our users plan. This re
 
 
 ## Installation
-Sync is a daemon that runs alongside [Consul](https://github.com/hashicorp/consul), similar to other Consul ecosystem tools like [Consul Template](https://github.com/hashicorp/consul-template). Sync is not included with the Consul binary and will need to be installed separately.
+CTS is a daemon that runs alongside [Consul](https://github.com/hashicorp/consul), similar to other Consul ecosystem tools like [Consul Template](https://github.com/hashicorp/consul-template). CTS is not included with the Consul binary and will need to be installed separately.
 
 ### Download
-To install Sync, find the appropriate package for your system and download it as a zip archive. Unzip the package to extract the binary named `consul-terraform-sync`. Move the consul-terraform-sync binary to a location available on your `$PATH`.
+To install CTS, find the appropriate package for your system and download it as a zip archive. Unzip the package to extract the binary named `consul-terraform-sync`. Move the consul-terraform-sync binary to a location available on your `$PATH`.
 
-  1. Download a pre-compiled, released version from the [Sync release page](https://releases.hashicorp.com/consul-terraform-sync/).
+  1. Download a pre-compiled, released version from the [CTS release page](https://releases.hashicorp.com/consul-terraform-sync/).
   1. Extract the binary using `unzip` or `tar`.
   1. Move the binary into `$PATH`.
 
@@ -40,11 +40,11 @@ $ mv consul-terraform-sync /usr/local/bin/consul-terraform-sync
 
 ### Build from Source
 
-You can also build Sync from source.
+You can also build CTS from source.
 
   1. Clone the repository to your local machine.
   1. Pick a [version](https://github.com/hashicorp/consul-terraform-sync/releases) or build from main.
-  1. Build Sync using the [Makefile](Makefile).
+  1. Build CTS using the [Makefile](Makefile).
   1. The `consul-terraform-sync` binary is now installed to `$GOPATH/bin`.
 
 ```shell
@@ -104,7 +104,7 @@ Options:
 
 ## Configuration
 
-[Documentation to configure Sync](https://consul.io/docs/nia/configuration)
+[Documentation to configure CTS](https://consul.io/docs/nia/configuration)
 
 ## Roadmap FAQs
 **Why did you build this public facing roadmap?**
