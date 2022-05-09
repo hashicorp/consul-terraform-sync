@@ -24,5 +24,5 @@ type Server interface {
 	// options can be changed and determine the location of sharable objects
 	// across packages
 	TaskUpdate(ctx context.Context, updateConf config.TaskConfig, runOp string) (bool, string, string, error)
-	Tasks(context.Context) ([]config.TaskConfig, error)
+	Tasks(context.Context) config.TaskConfigs
 }

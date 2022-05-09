@@ -83,7 +83,7 @@ func (h *overallStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 			}
 		}
 
-		tasks, err := h.ctrl.Tasks(ctx)
+		tasks := h.ctrl.Tasks(ctx)
 		if err != nil {
 			jsonErrorResponse(ctx, w, http.StatusInternalServerError, err)
 			return

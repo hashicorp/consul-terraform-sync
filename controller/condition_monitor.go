@@ -73,11 +73,8 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 	if cm.watcherCh == nil {
 		// Size of channel is the number of CTS tasks configured at initialization
 		// +10 for any additional tasks created during runtime. 10 arbitrarily chosen
-		tasks, err := cm.tasksManager.Tasks(ctx)
-		if err != nil {
-			return err
-		}
-		cm.watcherCh = make(chan string, len(tasks)+10)
+		tasks := cm.tasksManager.Tasks(ctx)
+		cm.watcherCh = make(chan string, tasks.Len()+10)
 	}
 	if cm.scheduleStopChs == nil {
 		cm.scheduleStopChs = make(map[string](chan struct{}))

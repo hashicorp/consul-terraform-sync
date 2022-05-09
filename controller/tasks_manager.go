@@ -90,17 +90,9 @@ func (tm *TasksManager) Task(_ context.Context, taskName string) (config.TaskCon
 	return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
 }
 
-func (tm *TasksManager) Tasks(_ context.Context) ([]config.TaskConfig, error) {
+func (tm *TasksManager) Tasks(_ context.Context) config.TaskConfigs {
 	// TODO handle ctx while waiting for state lock if it is currently active
-	tasks := tm.state.GetAllTasks()
-
-	// convert config.TaskConfigs => []config.TaskConfig
-	taskConfs := make([]config.TaskConfig, len(tasks))
-	for ix, taskConf := range tasks {
-		taskConfs[ix] = *taskConf
-	}
-
-	return taskConfs, nil
+	return tm.state.GetAllTasks()
 }
 
 func (tm *TasksManager) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {

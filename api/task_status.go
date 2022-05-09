@@ -128,15 +128,10 @@ func (h *taskStatusHandler) getTaskStatus(w http.ResponseWriter, r *http.Request
 	// if user requested all tasks and status filter applicable, check driver
 	// for tasks without events
 	if taskName == "" && (filter == "" || filter == StatusUnknown) {
-		tasks, err := h.ctrl.Tasks(ctx)
-		if err != nil {
-			logger.Trace("error getting tasks", "error", err)
-			jsonErrorResponse(ctx, w, http.StatusInternalServerError, err)
-			return
-		}
+		tasks := h.ctrl.Tasks(ctx)
 		for _, task := range tasks {
 			if _, ok := data[*task.Name]; !ok {
-				statuses[*task.Name] = makeTaskStatusUnknown(task)
+				statuses[*task.Name] = makeTaskStatusUnknown(*task)
 			}
 		}
 	}

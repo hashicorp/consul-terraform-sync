@@ -109,17 +109,17 @@ func TestStatus(t *testing.T) {
 	}
 
 	ctrl := new(mocks.Server)
-	var confs []config.TaskConfig
+	var confs config.TaskConfigs
 	for taskName, es := range events {
 		conf := createTaskConf(taskName, true)
-		confs = append(confs, conf)
+		confs = append(confs, &conf)
 		eventResp := map[string][]event.Event{
 			taskName: es,
 		}
 		ctrl.On("Task", mock.Anything, taskName).Return(conf, nil).
 			On("Events", mock.Anything, taskName).Return(eventResp, nil)
 	}
-	ctrl.On("Tasks", mock.Anything).Return(confs, nil)
+	ctrl.On("Tasks", mock.Anything).Return(confs)
 	ctrl.On("Events", mock.Anything, "").Return(events, nil)
 
 	// start up server
@@ -289,7 +289,7 @@ func TestWaitForTestReadiness(t *testing.T) {
 
 	t.Run("available", func(t *testing.T) {
 		ctrl := new(mocks.Server)
-		ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+		ctrl.On("Tasks", mock.Anything).Return(config.TaskConfigs{}).
 			On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
 
 		// start up server

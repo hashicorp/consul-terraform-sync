@@ -80,10 +80,10 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 		"critical_d": true,
 		"disabled_e": false,
 	}
-	confs := make([]config.TaskConfig, 0, len(taskSetup))
+	confs := make(config.TaskConfigs, 0, len(taskSetup))
 	for taskName, enabled := range taskSetup {
 		conf := createTaskConf(taskName, enabled)
-		confs = append(confs, conf)
+		confs = append(confs, &conf)
 	}
 
 	events := map[string][]event.Event{
@@ -93,7 +93,7 @@ func TestOverallStatus_ServeHTTP(t *testing.T) {
 		"critical_d": {{Success: false}, {Success: false}, {Success: true}},
 	}
 	ctrl.On("Events", mock.Anything, "").Return(events, nil).
-		On("Tasks", mock.Anything).Return(confs, nil)
+		On("Tasks", mock.Anything).Return(confs)
 
 	handler := newOverallStatusHandler(ctrl, "v1")
 

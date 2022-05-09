@@ -58,9 +58,9 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	}
 
 	ctrl := new(serverMocks.Server)
-	confs := make([]config.TaskConfig, 0, len(configs))
+	confs := make(config.TaskConfigs, 0, len(configs))
 	for taskName, conf := range configs {
-		confs = append(confs, conf)
+		confs = append(confs, &conf)
 		eventResp := make(map[string][]event.Event)
 		if es, ok := events[taskName]; ok {
 			eventResp[taskName] = es
@@ -71,7 +71,7 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	ctrl.On("Events", mock.Anything, "task_nonexistent").Return(nil, nil).
 		On("Task", mock.Anything, "task_nonexistent").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
 	ctrl.On("Events", mock.Anything, "").Return(events, nil)
-	ctrl.On("Tasks", mock.Anything).Return(confs, nil)
+	ctrl.On("Tasks", mock.Anything).Return(confs)
 
 	handler := newTaskStatusHandler(ctrl, "v1")
 

@@ -216,10 +216,10 @@ func (tr TaskRequest) String() string {
 
 type TasksResponse oapigen.TasksResponse
 
-func tasksResponseFromTaskConfigs(tcs []config.TaskConfig, requestID oapigen.RequestID) TasksResponse {
+func tasksResponseFromTaskConfigs(tcs config.TaskConfigs, requestID oapigen.RequestID) TasksResponse {
 	tasks := make([]oapigen.Task, len(tcs))
 	for i, tc := range tcs {
-		tasks[i] = oapigenTaskFromConfigTask(tc)
+		tasks[i] = oapigenTaskFromConfigTask(*tc)
 	}
 
 	return TasksResponse{

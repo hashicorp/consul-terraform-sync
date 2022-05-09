@@ -204,26 +204,19 @@ func (_m *Server) TaskUpdate(ctx context.Context, updateConf config.TaskConfig, 
 }
 
 // Tasks provides a mock function with given fields: _a0
-func (_m *Server) Tasks(_a0 context.Context) ([]config.TaskConfig, error) {
+func (_m *Server) Tasks(_a0 context.Context) config.TaskConfigs {
 	ret := _m.Called(_a0)
 
-	var r0 []config.TaskConfig
-	if rf, ok := ret.Get(0).(func(context.Context) []config.TaskConfig); ok {
+	var r0 config.TaskConfigs
+	if rf, ok := ret.Get(0).(func(context.Context) config.TaskConfigs); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]config.TaskConfig)
+			r0 = ret.Get(0).(config.TaskConfigs)
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(_a0)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // NewServer creates a new instance of Server. It also registers the testing.TB interface on the mock and a cleanup function to assert the mocks expectations.

@@ -80,12 +80,11 @@ func Test_TasksManager_Tasks(t *testing.T) {
 		s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
 		tm.state = s
 
-		actualConfs, err := tm.Tasks(ctx)
-		require.NoError(t, err)
+		actualConfs := tm.Tasks(ctx)
 
 		assert.Len(t, actualConfs, taskConfs.Len())
 		for ix, expectedConf := range taskConfs {
-			assert.Equal(t, *expectedConf, actualConfs[ix])
+			assert.Equal(t, expectedConf, actualConfs[ix])
 		}
 
 		s.AssertExpectations(t)
@@ -96,9 +95,8 @@ func Test_TasksManager_Tasks(t *testing.T) {
 		s.On("GetAllTasks", mock.Anything, mock.Anything).Return(config.TaskConfigs{})
 		tm.state = s
 
-		actualConfs, err := tm.Tasks(ctx)
-		require.NoError(t, err)
-		assert.Equal(t, []config.TaskConfig{}, actualConfs)
+		actualConfs := tm.Tasks(ctx)
+		assert.Equal(t, config.TaskConfigs{}, actualConfs)
 
 		s.AssertExpectations(t)
 	})
