@@ -78,10 +78,8 @@ func (cli *CLI) Run(args []string) int {
 		Commands:                   Commands(),
 		Autocomplete:               true,
 		AutocompleteNoDefaultFlags: true,
-		HelpFunc: cli.groupedHelpFunc(
-			mcli.BasicHelpFunc("cts"),
-		),
-		HelpWriter: tabwriter.NewWriter(os.Stdout, 0, 2, 4, ' ', tabwriter.AlignRight),
+		HelpFunc:                   help,
+		HelpWriter:                 tabwriter.NewWriter(os.Stdout, 0, 2, 4, ' ', tabwriter.AlignRight),
 	}
 
 	if subcommands.IsVersion() {
@@ -98,18 +96,19 @@ func (cli *CLI) Run(args []string) int {
 	return exitCode
 }
 
-func (cli *CLI) groupedHelpFunc(mcli.HelpFunc) mcli.HelpFunc {
-	return func(commands map[string]mcli.CommandFactory) string {
-		c := make(map[string]string)
-		for _, v := range commonCommands {
-			c[v] = printCommand(v, commands[v])
-		}
-
-		return helpFunc(c, "Usage CLI: consul-terraform-sync <command> [-help] [options]\n", nil)
+func help(commands map[string]mcli.CommandFactory) string {
+	c := make(map[string]string)
+	for _, v := range commonCommands {
+		c[v] = generateCommandHelp(v, commands[v])
 	}
+
+	return generateHelp(c, "Usage CLI: consul-terraform-sync <command> [-help] [options]\n", nil)
 }
 
-func helpFunc(commands map[string]string, usage string, omitFlags []string) string {
+// To support usage by the start command, this function takes a map[string]string and
+// allows for omission of flags. This functionality will not be needed once running CTS
+// without command arguments is deprecated in a future major release.
+func generateHelp(commands map[string]string, usage string, omitFlags []string) string {
 	var b bytes.Buffer
 	tw := tabwriter.NewWriter(&b, 0, 2, 4, ' ', tabwriter.AlignRight)
 
@@ -133,17 +132,18 @@ func helpFunc(commands map[string]string, usage string, omitFlags []string) stri
 	return strings.TrimSpace(b.String())
 }
 
-func printCommand(name string, cmdFn mcli.CommandFactory) string {
-	cmd, err := cmdFn()
+func generateCommandHelp(cmdName string, cmdFactory mcli.CommandFactory) string {
+	cmd, err := cmdFactory()
 	if err != nil {
-		panic(fmt.Sprintf("failed to load %q command: %s", name, err))
+		panic(fmt.Sprintf("failed to load %q command: %s", cmdName, err))
 	}
-	return fmt.Sprintf("%s\t%s\n", name, cmd.Synopsis())
+
+	return fmt.Sprintf("%s\t%s\n", cmdName, cmd.Synopsis())
 }
 
 // printFlags prints out select flags
 func printFlags(w io.Writer, f *flag.FlagSet, omitName []string) {
-	fmt.Fprintf(w, "Options:\n\n")
+	fmt.Fprintf(w, "Options:\n")
 	f.VisitAll(func(f *flag.Flag) {
 		switch f.Name {
 		case "h", "help":
@@ -162,8 +162,16 @@ func printFlags(w io.Writer, f *flag.FlagSet, omitName []string) {
 		}
 
 		if !isOmitName {
-			fmt.Fprintf(w, "\t-%s %s\n", f.Name, f.Value)
+			fmt.Fprintf(w, "\t-%s %s\n", f.Name, templateDefaultValue(f.Value))
 			fmt.Fprintf(w, "\t\t%s\n\n", f.Usage)
 		}
 	})
+}
+
+func templateDefaultValue(value flag.Value) string {
+	if value.String() != "" {
+		return fmt.Sprintf("[Default: %s]", value)
+	}
+
+	return ""
 }

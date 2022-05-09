@@ -69,11 +69,10 @@ Commands:
      task
 
 Options:
-
-    -autocomplete-install false
+    -autocomplete-install [Default: false]
         Install the autocomplete
 
-    -autocomplete-uninstall false
+    -autocomplete-uninstall [Default: false]
         Uninstall the autocomplete
 
     -config-dir 
@@ -88,7 +87,7 @@ Options:
         This option can be specified multiple times to load different 
         configuration files.
 
-    -inspect false
+    -inspect [Default: false]
         Run Consul-Terraform-Sync in Inspect mode to print the proposed state 
         changes for all tasks, and then exit. No changes are applied 
         in this mode.
@@ -98,7 +97,7 @@ Options:
         state changes for the task, and then exit. No changes are applied
         in this mode.
 
-    -once false
+    -once [Default: false]
         Render templates and run tasks once. Does not run the process 
         as a daemon and disables buffer periods.
 ```
