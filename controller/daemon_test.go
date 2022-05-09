@@ -140,7 +140,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	conf.Driver = driverConf
 	conf.Port = config.Int(port)
 	conf.Finalize()
-	conf.Consul.SelfRegistration.Enabled = config.Bool(false)
+	conf.Consul.ServiceRegistration.Enabled = config.Bool(false)
 
 	st := state.NewInMemoryStore(conf)
 

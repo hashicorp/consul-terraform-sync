@@ -100,8 +100,8 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 		}
 	}
 
-	var rm *registration.SelfRegistrationManager
-	if *conf.Consul.SelfRegistration.Enabled {
+	var rm *registration.ServiceRegistrationManager
+	if *conf.Consul.ServiceRegistration.Enabled {
 		// Expect one more long-running goroutine
 		exitBufLen++
 		exitCh = make(chan error, exitBufLen)
@@ -116,13 +116,13 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 			ctrl.consulClient = c
 		}
 
-		// Configure and start self-registration manager
-		rm = registration.NewSelfRegistrationManager(
-			&registration.SelfRegistrationManagerConfig{
-				ID:               *conf.ID,
-				Port:             *conf.Port,
-				TLSEnabled:       (conf.TLS != nil && *conf.TLS.Enabled),
-				SelfRegistration: conf.Consul.SelfRegistration,
+		// Configure and start service registration manager
+		rm = registration.NewServiceRegistrationManager(
+			&registration.ServiceRegistrationManagerConfig{
+				ID:                  *conf.ID,
+				Port:                *conf.Port,
+				TLSEnabled:          (conf.TLS != nil && *conf.TLS.Enabled),
+				ServiceRegistration: conf.Consul.ServiceRegistration,
 			},
 			ctrl.consulClient)
 

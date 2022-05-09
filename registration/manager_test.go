@@ -17,20 +17,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewSelfRegistrationManager(t *testing.T) {
+func TestNewServiceRegistrationManager(t *testing.T) {
 	t.Parallel()
 	testcases := []struct {
 		name            string
-		conf            *SelfRegistrationManagerConfig
+		conf            *ServiceRegistrationManagerConfig
 		expectedService *service
 	}{
 		{
 			"defaults",
-			&SelfRegistrationManagerConfig{
-				ID:               "cts-123",
-				Port:             123,
-				TLSEnabled:       false,
-				SelfRegistration: config.DefaultSelfRegistrationConfig(),
+			&ServiceRegistrationManagerConfig{
+				ID:                  "cts-123",
+				Port:                123,
+				TLSEnabled:          false,
+				ServiceRegistration: config.DefaultServiceRegistrationConfig(),
 			},
 			&service{
 				name:      config.DefaultServiceName,
@@ -42,11 +42,11 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 		},
 		{
 			"configured",
-			&SelfRegistrationManagerConfig{
+			&ServiceRegistrationManagerConfig{
 				ID:         "cts-123",
 				Port:       123,
 				TLSEnabled: false,
-				SelfRegistration: &config.SelfRegistrationConfig{
+				ServiceRegistration: &config.ServiceRegistrationConfig{
 					ServiceName: config.String("cts-service"),
 					Namespace:   config.String("ns-1"),
 					DefaultCheck: &config.DefaultCheckConfig{
@@ -66,7 +66,7 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := new(mocks.ConsulClientInterface)
-			m := NewSelfRegistrationManager(tc.conf, c)
+			m := NewServiceRegistrationManager(tc.conf, c)
 
 			// Verify general attributes
 			assert.NotNil(t, m)
@@ -83,7 +83,7 @@ func TestNewSelfRegistrationManager(t *testing.T) {
 	}
 }
 
-func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
+func TestServiceRegistrationManager_defaultHTTPCheck(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
 	port := 8558
@@ -93,16 +93,16 @@ func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 
 	testcases := []struct {
 		name     string
-		conf     *SelfRegistrationManagerConfig
+		conf     *ServiceRegistrationManagerConfig
 		expected *consulapi.AgentServiceCheck
 	}{
 		{
 			"tls_disabled",
-			&SelfRegistrationManagerConfig{
-				ID:               id,
-				Port:             port,
-				TLSEnabled:       false,
-				SelfRegistration: config.DefaultSelfRegistrationConfig(),
+			&ServiceRegistrationManagerConfig{
+				ID:                  id,
+				Port:                port,
+				TLSEnabled:          false,
+				ServiceRegistration: config.DefaultServiceRegistrationConfig(),
 			},
 			&consulapi.AgentServiceCheck{
 				HTTP:                           httpAddress,
@@ -119,11 +119,11 @@ func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 		},
 		{
 			"tls_enabled",
-			&SelfRegistrationManagerConfig{
-				ID:               id,
-				Port:             port,
-				TLSEnabled:       true,
-				SelfRegistration: config.DefaultSelfRegistrationConfig(),
+			&ServiceRegistrationManagerConfig{
+				ID:                  id,
+				Port:                port,
+				TLSEnabled:          true,
+				ServiceRegistration: config.DefaultServiceRegistrationConfig(),
 			},
 			&consulapi.AgentServiceCheck{
 				HTTP:                           httpsAddress,
@@ -140,11 +140,11 @@ func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 		},
 		{
 			"address_configured",
-			&SelfRegistrationManagerConfig{
+			&ServiceRegistrationManagerConfig{
 				ID:         id,
 				Port:       port,
 				TLSEnabled: true,
-				SelfRegistration: &config.SelfRegistrationConfig{
+				ServiceRegistration: &config.ServiceRegistrationConfig{
 					DefaultCheck: &config.DefaultCheckConfig{
 						Address: config.String("http://127.0.0.1:5885"),
 					},
@@ -172,11 +172,11 @@ func TestSelfRegistrationManager_defaultHTTPCheck(t *testing.T) {
 	}
 }
 
-func TestSelfRegistrationManager_Start(t *testing.T) {
+func TestServiceRegistrationManager_Start(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
 	name := "cts-service"
-	manager := &SelfRegistrationManager{
+	manager := &ServiceRegistrationManager{
 		service: &service{
 			name: name,
 			id:   id,
@@ -268,11 +268,11 @@ func TestSelfRegistrationManager_Start(t *testing.T) {
 	})
 }
 
-func TestSelfRegistrationManager_deregister(t *testing.T) {
+func TestServiceRegistrationManager_deregister(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
 	ctx := context.Background()
-	manager := &SelfRegistrationManager{
+	manager := &ServiceRegistrationManager{
 		service: &service{
 			name: config.DefaultServiceName,
 			id:   id,
@@ -316,16 +316,16 @@ func TestSelfRegistrationManager_deregister(t *testing.T) {
 	})
 }
 
-func TestSelfRegistrationManager_register(t *testing.T) {
+func TestServiceRegistrationManager_register(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
 	name := "cts-service"
 	port := 8558
 	ns := "ns-1"
-	check := defaultHTTPCheck(&SelfRegistrationManagerConfig{
+	check := defaultHTTPCheck(&ServiceRegistrationManagerConfig{
 		ID:   id,
 		Port: port,
-		SelfRegistration: &config.SelfRegistrationConfig{
+		ServiceRegistration: &config.ServiceRegistrationConfig{
 			Namespace: &ns,
 			DefaultCheck: &config.DefaultCheckConfig{
 				Enabled: config.Bool(true),
@@ -383,7 +383,7 @@ func TestSelfRegistrationManager_register(t *testing.T) {
 			mockClient := new(mocks.ConsulClientInterface)
 			tc.setup(mockClient)
 
-			m := &SelfRegistrationManager{
+			m := &ServiceRegistrationManager{
 				client:  mockClient,
 				service: service,
 				logger:  logging.NewNullLogger(),

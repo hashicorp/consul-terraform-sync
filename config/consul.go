@@ -37,18 +37,18 @@ type ConsulConfig struct {
 	// Transport configures the low-level network connection details.
 	Transport *TransportConfig `mapstructure:"transport"`
 
-	// SelfRegistration configures the self-registration as a service with Consul
-	SelfRegistration *SelfRegistrationConfig `mapstructure:"self_registration"`
+	// ServiceRegistration configures registering CTS as a service with Consul
+	ServiceRegistration *ServiceRegistrationConfig `mapstructure:"service_registration"`
 }
 
 // DefaultConsulConfig returns the default configuration struct
 func DefaultConsulConfig() *ConsulConfig {
 	return &ConsulConfig{
-		Auth:             DefaultAuthConfig(),
-		KVPath:           String(DefaultConsulKVPath),
-		TLS:              DefaultTLSConfig(),
-		Transport:        DefaultTransportConfig(),
-		SelfRegistration: DefaultSelfRegistrationConfig(),
+		Auth:                DefaultAuthConfig(),
+		KVPath:              String(DefaultConsulKVPath),
+		TLS:                 DefaultTLSConfig(),
+		Transport:           DefaultTransportConfig(),
+		ServiceRegistration: DefaultServiceRegistrationConfig(),
 	}
 }
 
@@ -80,8 +80,8 @@ func (c *ConsulConfig) Copy() *ConsulConfig {
 		o.Transport = c.Transport.Copy()
 	}
 
-	if c.SelfRegistration != nil {
-		o.SelfRegistration = c.SelfRegistration.Copy()
+	if c.ServiceRegistration != nil {
+		o.ServiceRegistration = c.ServiceRegistration.Copy()
 	}
 
 	return &o
@@ -133,8 +133,8 @@ func (c *ConsulConfig) Merge(o *ConsulConfig) *ConsulConfig {
 		r.Transport = r.Transport.Merge(o.Transport)
 	}
 
-	if o.SelfRegistration != nil {
-		r.SelfRegistration = r.SelfRegistration.Merge(o.SelfRegistration)
+	if o.ServiceRegistration != nil {
+		r.ServiceRegistration = r.ServiceRegistration.Merge(o.ServiceRegistration)
 	}
 
 	return r
@@ -182,10 +182,10 @@ func (c *ConsulConfig) Finalize() {
 	}
 	c.Transport.Finalize()
 
-	if c.SelfRegistration == nil {
-		c.SelfRegistration = DefaultSelfRegistrationConfig()
+	if c.ServiceRegistration == nil {
+		c.ServiceRegistration = DefaultServiceRegistrationConfig()
 	}
-	c.SelfRegistration.Finalize()
+	c.ServiceRegistration.Finalize()
 
 }
 
@@ -196,8 +196,8 @@ func (c *ConsulConfig) Validate() error {
 		return nil
 	}
 
-	if c.SelfRegistration != nil {
-		if err := c.SelfRegistration.Validate(); err != nil {
+	if c.ServiceRegistration != nil {
+		if err := c.ServiceRegistration.Validate(); err != nil {
 			return err
 		}
 	}
@@ -220,7 +220,7 @@ func (c *ConsulConfig) GoString() string {
 		"TLS:%s, "+
 		"Token:%s, "+
 		"Transport:%s, "+
-		"SelfRegistration:%s"+
+		"ServiceRegistration:%s"+
 		"}",
 		StringVal(c.Address),
 		c.Auth.GoString(),
@@ -229,7 +229,7 @@ func (c *ConsulConfig) GoString() string {
 		c.TLS.GoString(),
 		sensitiveGoString(c.Token),
 		c.Transport.GoString(),
-		c.SelfRegistration.GoString(),
+		c.ServiceRegistration.GoString(),
 	)
 }
 

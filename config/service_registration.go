@@ -6,19 +6,19 @@ const (
 	DefaultServiceName = "Consul-Terraform-Sync"
 )
 
-// SelfRegistrationConfig is a configuration that controls how CTS will
-// self-register itself as a service with Consul.
-type SelfRegistrationConfig struct {
+// ServiceRegistrationConfig is a configuration that controls how CTS will
+// register itself as a service with Consul.
+type ServiceRegistrationConfig struct {
 	Enabled      *bool               `mapstructure:"enabled"`
 	ServiceName  *string             `mapstructure:"service_name"`
 	Namespace    *string             `mapstructure:"namespace"`
 	DefaultCheck *DefaultCheckConfig `mapstructure:"default_check"`
 }
 
-// DefaultSelfRegistrationConfig returns a SelfRegistrationConfig with
+// DefaultServiceRegistrationConfig returns a ServiceRegistrationConfig with
 // default values.
-func DefaultSelfRegistrationConfig() *SelfRegistrationConfig {
-	return &SelfRegistrationConfig{
+func DefaultServiceRegistrationConfig() *ServiceRegistrationConfig {
+	return &ServiceRegistrationConfig{
 		Enabled:     Bool(true),
 		ServiceName: String(DefaultServiceName),
 		Namespace:   String(""),
@@ -30,12 +30,12 @@ func DefaultSelfRegistrationConfig() *SelfRegistrationConfig {
 }
 
 // Copy returns a deep copy of this configuration.
-func (c *SelfRegistrationConfig) Copy() *SelfRegistrationConfig {
+func (c *ServiceRegistrationConfig) Copy() *ServiceRegistrationConfig {
 	if c == nil {
 		return nil
 	}
 
-	var o SelfRegistrationConfig
+	var o ServiceRegistrationConfig
 	o.Enabled = BoolCopy(c.Enabled)
 	o.ServiceName = StringCopy(c.ServiceName)
 	o.Namespace = StringCopy(c.Namespace)
@@ -49,7 +49,7 @@ func (c *SelfRegistrationConfig) Copy() *SelfRegistrationConfig {
 
 // Merge combines all values in this configuration with the values in the other
 // configuration, with values in the other configuration taking precedence.
-func (c *SelfRegistrationConfig) Merge(o *SelfRegistrationConfig) *SelfRegistrationConfig {
+func (c *ServiceRegistrationConfig) Merge(o *ServiceRegistrationConfig) *ServiceRegistrationConfig {
 	if c == nil {
 		if o == nil {
 			return nil
@@ -83,7 +83,7 @@ func (c *SelfRegistrationConfig) Merge(o *SelfRegistrationConfig) *SelfRegistrat
 }
 
 // Finalize ensures that the receiver contains no nil pointers.
-func (c *SelfRegistrationConfig) Finalize() {
+func (c *ServiceRegistrationConfig) Finalize() {
 	if c.Enabled == nil {
 		c.Enabled = Bool(true)
 	}
@@ -104,7 +104,7 @@ func (c *SelfRegistrationConfig) Finalize() {
 
 // Validate validates the values and required options. This method is recommended
 // to run after Finalize() to ensure the configuration is safe to proceed.
-func (c *SelfRegistrationConfig) Validate() error {
+func (c *ServiceRegistrationConfig) Validate() error {
 	if c == nil { // config not required, return early
 		return nil
 	}
@@ -119,12 +119,12 @@ func (c *SelfRegistrationConfig) Validate() error {
 }
 
 // GoString defines the printable version of this struct.
-func (c *SelfRegistrationConfig) GoString() string {
+func (c *ServiceRegistrationConfig) GoString() string {
 	if c == nil {
-		return "(*SelfRegistrationConfig)(nil)"
+		return "(*ServiceRegistrationConfig)(nil)"
 	}
 
-	return fmt.Sprintf("&SelfRegistrationConfig{"+
+	return fmt.Sprintf("&ServiceRegistrationConfig{"+
 		"Enabled:%v, "+
 		"ServiceName:%s, "+
 		"Namespace:%s, "+
