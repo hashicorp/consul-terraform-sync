@@ -105,6 +105,9 @@ func help(commands map[string]mcli.CommandFactory) string {
 	return generateHelp(c, "Usage CLI: consul-terraform-sync <command> [-help] [options]\n", nil)
 }
 
+// To support usage by the start command, this function takes a map[string]string and 
+// allows for omission of flags. This functionality will not be needed once running CTS 
+// without command arguments is deprecated in a future major release.
 func generateHelp(commands map[string]string, usage string, omitFlags []string) string {
 	var b bytes.Buffer
 	tw := tabwriter.NewWriter(&b, 0, 2, 4, ' ', tabwriter.AlignRight)
