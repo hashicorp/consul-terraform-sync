@@ -13,8 +13,9 @@ import (
 	ctsVersion "github.com/hashicorp/consul-terraform-sync/version"
 	"github.com/hashicorp/go-checkpoint"
 	goVersion "github.com/hashicorp/go-version"
+	"github.com/hashicorp/hc-install/product"
+	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/terraform-exec/tfexec"
-	"github.com/hashicorp/terraform-exec/tfinstall"
 )
 
 const (
@@ -189,7 +190,12 @@ func installTerraform(ctx context.Context, conf *config.TerraformConfig) (*goVer
 	// Create path if one doesn't already exist
 	os.MkdirAll(*conf.Path, os.ModePerm)
 
-	installedPath, err := tfinstall.ExactVersion(v.String(), *conf.Path).ExecPath(ctx)
+	installer := &releases.ExactVersion{
+		Product:    product.Terraform,
+		Version:    v,
+		InstallDir: *conf.Path,
+	}
+	installedPath, err := installer.Install(ctx)
 	if err != nil {
 		return nil, err
 	}
