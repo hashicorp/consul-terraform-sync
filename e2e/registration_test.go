@@ -33,7 +33,7 @@ func TestE2E_ServiceRegistration_Defaults(t *testing.T) {
 	name := config.DefaultServiceName
 	ctsServices := getServiceInstancesByName(t, srv, name)
 	require.Equal(t, 1, len(ctsServices), "CTS service not registered as %s", name)
-	var service testutil.TestService
+	var service testutils.Service
 	for _, s := range ctsServices {
 		service = s
 	}
@@ -42,6 +42,7 @@ func TestE2E_ServiceRegistration_Defaults(t *testing.T) {
 	id := service.ID
 	assert.True(t, strings.HasPrefix(id, "cts-"),
 		"unexpected format for generated service ID %s", service.ID)
+	assert.Equal(t, name, service.Service)
 	assert.Equal(t, cts.Port(), service.Port)
 	assert.Equal(t, []string{"cts"}, service.Tags)
 
@@ -90,7 +91,7 @@ func TestE2E_ServiceRegistration_DeregisterWhenStopped(t *testing.T) {
 	assert.False(t, registered)
 }
 
-func getServiceInstancesByName(t testing.TB, srv *testutil.TestServer, serviceName string) map[string]testutil.TestService {
+func getServiceInstancesByName(t testing.TB, srv *testutil.TestServer, serviceName string) map[string]testutils.Service {
 	filter := fmt.Sprintf(`Service == "%s"`, serviceName)
 	return testutils.ListServices(t, srv, filter)
 }

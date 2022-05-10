@@ -3,6 +3,7 @@ package testutils
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -137,7 +138,7 @@ func waitForConsulService(tb testing.TB, srv *testutil.TestServer, serviceID str
 	}
 }
 
-func ListServices(tb testing.TB, srv *testutil.TestServer, filter string) map[string]testutil.TestService {
+func ListServices(tb testing.TB, srv *testutil.TestServer, filter string) map[string]Service {
 	u := fmt.Sprintf("http://%s/v1/agent/services", srv.HTTPAddr)
 	if filter != "" {
 		params := url.Values{}
@@ -152,7 +153,7 @@ func ListServices(tb testing.TB, srv *testutil.TestServer, filter string) map[st
 
 	require.Equal(tb, resp.StatusCode, 200, string(b))
 
-	var services map[string]testutil.TestService
+	var services map[string]Service
 	err = json.Unmarshal(b, &services)
 	require.NoError(tb, err)
 	return services
@@ -163,6 +164,31 @@ func ServiceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string
 	resp := RequestHTTP(tb, http.MethodGet, u, "")
 	defer resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
+}
+
+type Service struct {
+	ID      string
+	Service string
+	Tags    []string
+	Port    int
+}
+
+func GetService(tb testing.TB, srv *testutil.TestServer, serviceID string) (Service, error) {
+	u := fmt.Sprintf("http://%s/v1/agent/service/%s", srv.HTTPAddr, serviceID)
+	resp := RequestHTTP(tb, http.MethodGet, u, "")
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	require.NoError(tb, err)
+
+	if resp.StatusCode != 200 {
+		return Service{}, errors.New(string(b))
+	}
+
+	var service Service
+	err = json.Unmarshal(b, &service)
+	require.NoError(tb, err)
+	return service, nil
 }
 
 // Bulk add test data for seeding consul
