@@ -5,6 +5,7 @@ package testutils
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,8 +21,17 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/stretchr/testify/require"
 )
+
+type TLSConfig struct {
+	ClientCert     string
+	ClientKey      string
+	CACert         string
+	CAFile         string
+	VerifyIncoming bool
+}
 
 // FreePort finds the next free port incrementing upwards. Use for testing.
 func FreePort(t testing.TB) int {
@@ -165,6 +175,37 @@ func RequestHTTP(t testing.TB, method, url, body string) *http.Response {
 
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	return resp
+}
+
+// RequestHTTPS makes an https request using TLS. The caller is responsible for closing
+// the response.
+func RequestHTTPS(t testing.TB, method, url, body string, conf TLSConfig) *http.Response {
+	r := strings.NewReader(body)
+	req, err := http.NewRequest(method, url, r)
+	require.NoError(t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+
+	tlsClientConfig := &tls.Config{
+		InsecureSkipVerify: !conf.VerifyIncoming,
+	}
+
+	tlsCert, err := tls.LoadX509KeyPair(conf.ClientCert, conf.ClientKey)
+	require.NoError(t, err)
+	tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
+
+	rootConfig := &rootcerts.Config{
+		CAFile: conf.CAFile,
+	}
+
+	err = rootcerts.ConfigureTLS(tlsClientConfig, rootConfig)
+	require.NoError(t, err)
+
+	h := &http.Client{Transport: &http.Transport{TLSClientConfig: tlsClientConfig}}
+
+	resp, err := h.Do(req)
 	require.NoError(t, err)
 	return resp
 }
