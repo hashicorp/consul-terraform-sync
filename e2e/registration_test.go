@@ -4,7 +4,9 @@
 package e2e
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -96,6 +98,7 @@ service_registration {
 	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
 	err := cmd.Start()
 	require.NoError(t, err)
+	defer cmd.Process.Signal(os.Interrupt)
 	cts, err := api.NewClient(&api.ClientConfig{URL: address}, nil)
 	require.NoError(t, err)
 	err = cts.WaitForTestReadiness(defaultWaitForTestReadiness)
@@ -194,6 +197,54 @@ service_registration {
 
 	// Verify still not registered now that even more time has passed
 	registered = testutils.ServiceRegistered(t, srv, id)
+	assert.False(t, registered)
+}
+
+// TestE2E_ServiceRegistration_InitError tests that if the initial run
+// of all tasks fails, then CTS is not registered.
+func TestE2E_ServiceRegistration_InitError(t *testing.T) {
+	setParallelism(t)
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "registration_init_failure")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+	defer cleanup()
+
+	// Use a nonexistent module
+	id := "cts-01"
+	port := testutils.FreePort(t)
+	configPath := filepath.Join(tempDir, configFile)
+	config := baseConfig(tempDir).appendID(id).appendPort(port).
+		appendConsulBlock(srv).appendTerraformBlock().
+		appendModuleTask("failing_task", "./test_modules/failing_module")
+	config.write(t, configPath)
+
+	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	err := cmd.Start()
+	require.NoError(t, err)
+	defer cmd.Process.Signal(os.Interrupt)
+
+	// Wait until CTS has exited
+	exitCh := make(chan struct{})
+	go func() {
+		cmd.Wait()
+		exitCh <- struct{}{}
+	}()
+	select {
+	case <-exitCh:
+		break
+	case <-time.After(defaultWaitForTestReadiness):
+		t.Fatal("timed out waiting for CTS initialization to fail")
+	}
+
+	// Verify no attempt at registration and no service registered
+	output := buf.String()
+	assert.NotContains(t, output, "registering Consul-Terraform-Sync as a service with Consul")
+	registered := testutils.ServiceRegistered(t, srv, id)
 	assert.False(t, registered)
 }
 
