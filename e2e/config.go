@@ -37,7 +37,11 @@ func (c hclConfig) appendPort(port int) hclConfig {
 	return c.appendString(fmt.Sprintf("port = %d", port))
 }
 
-func (c hclConfig) appendConsulBlock(consul *testutil.TestServer) hclConfig {
+func (c hclConfig) appendConsulBlock(consul *testutil.TestServer, opts ...string) hclConfig {
+	var optsConfig string
+	if len(opts) > 0 {
+		optsConfig = strings.Join(opts, "\n")
+	}
 	return c.appendString(fmt.Sprintf(`
 consul {
   address = "%s"
@@ -45,8 +49,9 @@ consul {
     enabled = true
     ca_cert = "%s"
   }
+	%s
 }
-`, consul.HTTPSAddr, consul.Config.CertFile))
+`, consul.HTTPSAddr, consul.Config.CertFile, optsConfig))
 }
 
 func (c hclConfig) appendTLSBlock(config tlsConfig) hclConfig {
@@ -258,4 +263,8 @@ task {
 	}
 }
 `, disabledTaskName)
+}
+
+func (c hclConfig) appendID(id string) hclConfig {
+	return c.appendString(fmt.Sprintf("\nid = \"%s\"\n", id))
 }
