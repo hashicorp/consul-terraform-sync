@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -146,6 +147,51 @@ func TestE2E_ServiceRegistration_DeregisterWhenStopped(t *testing.T) {
 	// Stop CTS, check that service is deregistered
 	stop(t)
 	testutils.WaitForConsulServiceDeregistered(t, srv, id, defaultWaitForRegistration)
+	registered = testutils.ServiceRegistered(t, srv, id)
+	assert.False(t, registered)
+}
+
+// TestE2E_ServiceRegistration_RegistrationFailure tests that if CTS is unable
+// to register itself as a service, it will not exit.
+func TestE2E_ServiceRegistration_RegistrationFailure(t *testing.T) {
+	setParallelism(t)
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "registration_failure")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+	defer cleanup()
+
+	// Set namespace when using an OSS Consul to force error
+	rConfig := `
+service_registration {
+	namespace = "invalid"
+}`
+	id := "cts-01"
+	configPath := filepath.Join(tempDir, configFile)
+	config := baseConfig(tempDir).appendID(id).
+		appendConsulBlock(srv, rConfig).appendTerraformBlock().appendDBTask()
+	config.write(t, configPath)
+
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+	require.NoError(t, err)
+
+	// Should not be registered after CTS starts
+	time.Sleep(1 * time.Second)
+	registered := testutils.ServiceRegistered(t, srv, id)
+	assert.False(t, registered)
+
+	// Trigger a task, expect CTS to continue
+	now := time.Now()
+	apiInstance := testutil.TestService{ID: "api_new", Name: "api"}
+	testutils.RegisterConsulService(t, srv, apiInstance, defaultWaitForRegistration)
+	api.WaitForEvent(t, cts, dbTaskName, now, defaultWaitForEvent)
+	resourcesPath := filepath.Join(tempDir, dbTaskName, resourcesDir)
+	testutils.CheckFile(t, true, resourcesPath, "api_new.txt")
+
+	// Verify still not registered now that even more time has passed
 	registered = testutils.ServiceRegistered(t, srv, id)
 	assert.False(t, registered)
 }
