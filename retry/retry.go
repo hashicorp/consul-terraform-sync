@@ -60,7 +60,7 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 	if err == nil || r.maxRetry == 0 {
 		return err
 	} else if errors.As(err, &nonRetryableError) {
-		r.logger.Debug("received non-retryable error", "method", desc)
+		r.logger.Debug("received non-retryable error", "description", desc)
 		return err
 	}
 
