@@ -121,6 +121,7 @@ func waitForConsulService(tb testing.TB, srv *testutil.TestServer, serviceID str
 					polling <- struct{}{}
 					return
 				}
+				time.Sleep(100 * time.Millisecond)
 			}
 		}
 	}()
@@ -260,12 +261,14 @@ func WaitForConsulCheckStatus(tb testing.TB, srv *testutil.TestServer, checkID, 
 				c, ok := checks[checkID]
 				if !ok {
 					// check does not exist but may exist eventually
+					time.Sleep(100 * time.Millisecond)
 					continue
 				}
 				if c.Status == status {
 					polling <- c
 					return
 				}
+				time.Sleep(100 * time.Millisecond)
 			}
 		}
 	}()

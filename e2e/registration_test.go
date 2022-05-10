@@ -288,6 +288,7 @@ func waitForServiceByName(t testing.TB, srv *testutil.TestServer, serviceName st
 					polling <- struct{}{}
 					return
 				}
+				time.Sleep(100 * time.Millisecond)
 			}
 		}
 	}()
