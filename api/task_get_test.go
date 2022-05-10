@@ -73,9 +73,9 @@ func TestTaskLifeCycleHandler_GetTaskByName(t *testing.T) {
 func TestTaskLifeCycleHandler_GetAllTasks(t *testing.T) {
 	t.Parallel()
 
-	taskConfigs := []config.TaskConfig{
-		testTaskConfig,
-		testTaskConfig,
+	taskConfigs := config.TaskConfigs{
+		&testTaskConfig,
+		&testTaskConfig,
 	}
 
 	cases := []struct {
@@ -87,7 +87,7 @@ func TestTaskLifeCycleHandler_GetAllTasks(t *testing.T) {
 		{
 			name: "happy_path",
 			mockServer: func(ctrl *mocks.Server) {
-				ctrl.On("Tasks", mock.Anything).Return(taskConfigs, nil)
+				ctrl.On("Tasks", mock.Anything).Return(taskConfigs)
 			},
 			statusCode: http.StatusOK,
 			checkResponse: func(resp *httptest.ResponseRecorder) {
@@ -101,13 +101,6 @@ func TestTaskLifeCycleHandler_GetAllTasks(t *testing.T) {
 				assert.ElementsMatch(t, *expectedTasksResponse.Tasks, *actual.Tasks)
 
 			},
-		},
-		{
-			name: "parsing_error",
-			mockServer: func(ctrl *mocks.Server) {
-				ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, fmt.Errorf("DNE"))
-			},
-			statusCode: http.StatusInternalServerError,
 		},
 	}
 

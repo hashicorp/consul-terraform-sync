@@ -80,12 +80,11 @@ func Test_TasksManager_Tasks(t *testing.T) {
 		s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
 		tm.state = s
 
-		actualConfs, err := tm.Tasks(ctx)
-		require.NoError(t, err)
+		actualConfs := tm.Tasks(ctx)
 
 		assert.Len(t, actualConfs, taskConfs.Len())
 		for ix, expectedConf := range taskConfs {
-			assert.Equal(t, *expectedConf, actualConfs[ix])
+			assert.Equal(t, expectedConf, actualConfs[ix])
 		}
 
 		s.AssertExpectations(t)
@@ -96,9 +95,8 @@ func Test_TasksManager_Tasks(t *testing.T) {
 		s.On("GetAllTasks", mock.Anything, mock.Anything).Return(config.TaskConfigs{})
 		tm.state = s
 
-		actualConfs, err := tm.Tasks(ctx)
-		require.NoError(t, err)
-		assert.Equal(t, []config.TaskConfig{}, actualConfs)
+		actualConfs := tm.Tasks(ctx)
+		assert.Equal(t, config.TaskConfigs{}, actualConfs)
 
 		s.AssertExpectations(t)
 	})
@@ -286,7 +284,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 func Test_TasksManager_TaskDelete(t *testing.T) {
 	ctx := context.Background()
 	tm := newTestTasksManager()
-	deletedCh := tm.EnableDeleteTestMode()
+	deletedCh := tm.EnableTaskDeletedNotify()
 
 	t.Run("happy path", func(t *testing.T) {
 		drivers := driver.NewDrivers()
@@ -756,7 +754,7 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 		// Tests that active dynamic task drivers will wait for inactive
 
 		tm := newTestTasksManager()
-		tm.EnableTestMode()
+		tm.EnableTaskRanNotify()
 		tm.state.SetTask(validTaskConf)
 
 		ctx := context.Background()
@@ -778,7 +776,7 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 
 		// Check that the task did not run while active
 		select {
-		case <-tm.taskNotify:
+		case <-tm.ranTaskNotify:
 			t.Fatal("task ran even though active")
 		case <-time.After(250 * time.Millisecond):
 			break
@@ -789,7 +787,7 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 		select {
 		case <-time.After(250 * time.Millisecond):
 			t.Fatal("task did not run after it became inactive")
-		case <-tm.taskNotify:
+		case <-tm.ranTaskNotify:
 			break
 		}
 	})
@@ -827,7 +825,7 @@ func Test_TasksManager_TaskRunNow_Store(t *testing.T) {
 	})
 }
 
-func Test_ConditionMonitor_EnableTestMode(t *testing.T) {
+func Test_ConditionMonitor_EnableTaskRanNotify(t *testing.T) {
 	t.Parallel()
 
 	// Mock state store
@@ -842,8 +840,8 @@ func Test_ConditionMonitor_EnableTestMode(t *testing.T) {
 	tm := newTestTasksManager()
 	tm.state = s
 
-	// Test EnableTestMode
-	channel := tm.EnableTestMode()
+	// Test EnableTaskRanNotify
+	channel := tm.EnableTaskRanNotify()
 	assert.Equal(t, 2, cap(channel))
 	s.AssertExpectations(t)
 }

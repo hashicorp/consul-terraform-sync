@@ -17,12 +17,7 @@ func (h *TaskLifeCycleHandler) GetAllTasks(w http.ResponseWriter, r *http.Reques
 	logger.Trace("get all tasks request")
 
 	// Retrieve all tasks
-	taskConfigs, err := h.ctrl.Tasks(ctx)
-	if err != nil {
-		logger.Trace("error parsing tasks", "error", err)
-		sendError(w, r, http.StatusInternalServerError, err)
-		return
-	}
+	taskConfigs := h.ctrl.Tasks(ctx)
 
 	tasksResponse := tasksResponseFromTaskConfigs(taskConfigs, requestID)
 	writeResponse(w, r, http.StatusOK, tasksResponse)

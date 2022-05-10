@@ -152,7 +152,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	// Setup taskmanager
 	tm := newTestTasksManager()
 	tm.state = st
-	completedTasksCh := tm.EnableTestMode()
+	completedTasksCh := tm.EnableTaskRanNotify()
 	rw.tasksManager = tm
 
 	// Mock driver

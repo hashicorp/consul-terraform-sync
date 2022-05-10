@@ -36,13 +36,13 @@ type TasksManager struct {
 	// should stop being monitored
 	deletedScheduleCh chan string
 
-	// taskNotify is only initialized if EnableTestMode() is used. It provides
-	// tests insight into which tasks were triggered and had completed
-	taskNotify chan string
+	// ranTaskNotify is only initialized if EnableTaskRanNotify() is used. It
+	// provides tests insight into which tasks were triggered and had completed
+	ranTaskNotify chan string
 
-	// deleteTaskNotify is only initialized if EnableDeleteTestMode() is used.
+	// deletedTaskNotify is only initialized if EnableTaskDeletedNotify() is used.
 	// It provides tests insight into when a task has been deleted
-	deleteTaskNotify chan string
+	deletedTaskNotify chan string
 }
 
 // NewTasksManager configures a new tasks manager
@@ -90,17 +90,9 @@ func (tm *TasksManager) Task(_ context.Context, taskName string) (config.TaskCon
 	return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
 }
 
-func (tm *TasksManager) Tasks(_ context.Context) ([]config.TaskConfig, error) {
+func (tm *TasksManager) Tasks(_ context.Context) config.TaskConfigs {
 	// TODO handle ctx while waiting for state lock if it is currently active
-	tasks := tm.state.GetAllTasks()
-
-	// convert config.TaskConfigs => []config.TaskConfig
-	taskConfs := make([]config.TaskConfig, len(tasks))
-	for ix, taskConf := range tasks {
-		taskConfs[ix] = *taskConf
-	}
-
-	return taskConfs, nil
+	return tm.state.GetAllTasks()
 }
 
 func (tm *TasksManager) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
@@ -323,8 +315,10 @@ func (tm TasksManager) cleanupTask(ctx context.Context, d driver.Driver) {
 // This can occur because driver.RenderTemplate() may need to be called multiple
 // times before a template is ready to be applied.
 func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
+	logger := tm.logger.With(taskNameLogKey, taskName)
+
 	if tm.drivers.IsMarkedForDeletion(taskName) {
-		tm.logger.Trace("task is marked for deletion, skipping", taskNameLogKey, taskName)
+		logger.Trace("task is marked for deletion, skipping")
 		return nil
 	}
 
@@ -356,15 +350,15 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 		if task.IsScheduled() {
 			// Schedule tasks are specifically triggered and logged at INFO.
 			// Accompanying disabled log should be at same level
-			tm.logger.Info("skipping disabled scheduled task", taskNameLogKey, taskName)
+			logger.Info("skipping disabled scheduled task")
 		} else {
 			// Dynamic tasks are all triggered together on any dependency
 			// change so logs can be noisy
-			tm.logger.Trace("skipping disabled task", taskNameLogKey, taskName)
+			logger.Trace("skipping disabled task")
 		}
 
-		if tm.taskNotify != nil {
-			tm.taskNotify <- taskName
+		if tm.ranTaskNotify != nil {
+			tm.ranTaskNotify <- taskName
 		}
 		return nil
 	}
@@ -382,9 +376,9 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 	var storedErr error
 	storeEvent := func() {
 		ev.End(storedErr)
-		tm.logger.Trace("adding event", "event", ev.GoString())
+		logger.Trace("adding event", "event", ev.GoString())
 		if err := tm.state.AddTaskEvent(*ev); err != nil {
-			tm.logger.Error("error storing event", "event", ev.GoString())
+			logger.Error("error storing event", "event", ev.GoString())
 		}
 	}
 	ev.Start()
@@ -402,8 +396,7 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 			// We want to store an event even when a scheduled task did not
 			// render i.e. the task ran on schedule but there were no
 			// dependency changes so the template did not re-render
-			tm.logger.Info("scheduled task triggered but had no changes",
-				taskNameLogKey, taskName)
+			logger.Info("scheduled task triggered but had no changes")
 			defer storeEvent()
 		}
 		return nil
@@ -412,7 +405,7 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 	// rendering a template may take several cycles in order to completely fetch
 	// new data
 	if rendered {
-		tm.logger.Info("executing task", taskNameLogKey, taskName)
+		logger.Info("executing task")
 		defer storeEvent()
 
 		desc := fmt.Sprintf("ApplyTask %s", taskName)
@@ -422,10 +415,10 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 				taskName, storedErr)
 		}
 
-		tm.logger.Info("task completed", taskNameLogKey, taskName)
+		logger.Info("task completed")
 
-		if tm.taskNotify != nil {
-			tm.taskNotify <- taskName
+		if tm.ranTaskNotify != nil {
+			tm.ranTaskNotify <- taskName
 		}
 	}
 
@@ -442,22 +435,24 @@ func (tm TasksManager) TaskByTemplate(tmplID string) (string, bool) {
 	return driver.Task().Name(), true
 }
 
-// EnableTestMode is a helper for testing which tasks were triggered and
-// executed. Callers of this method must consume from TaskNotify channel to
-// prevent the buffered channel from filling and causing a dead lock.
-func (tm *TasksManager) EnableTestMode() <-chan string {
+// EnableTaskRanNotify is a helper for enabling notifications when a task has
+// finished executing after being triggered. Callers of this method must consume
+// from ranTaskNotify channel to prevent the buffered channel from filling and
+// causing a dead lock. EnableTaskRanNotify is typically used for testing.
+func (tm *TasksManager) EnableTaskRanNotify() <-chan string {
 	tasks := tm.state.GetAllTasks()
-	tm.taskNotify = make(chan string, tasks.Len())
-	return tm.taskNotify
+	tm.ranTaskNotify = make(chan string, tasks.Len())
+	return tm.ranTaskNotify
 }
 
-// EnableDeleteTestMode is a helper for testing when a task has finished
-// deleting. Callers of this method must consume from deleteTaskNotify channel to
-// prevent the buffered channel from filling and causing a dead lock.
-func (tm *TasksManager) EnableDeleteTestMode() <-chan string {
+// EnableTaskDeletedNotify is a helper for enabling notifications when a task
+// has finished deleting. Callers of this method must consume from
+// deletedTaskNotify channel to prevent the buffered channel from filling and
+// causing a dead lock. EnableTaskDeletedNotify is typically used for testing.
+func (tm *TasksManager) EnableTaskDeletedNotify() <-chan string {
 	tasks := tm.state.GetAllTasks()
-	tm.deleteTaskNotify = make(chan string, tasks.Len())
-	return tm.deleteTaskNotify
+	tm.deletedTaskNotify = make(chan string, tasks.Len())
+	return tm.deletedTaskNotify
 }
 
 // WatchCreatedScheduleTasks returns a channel to inform any watcher that a new
@@ -481,6 +476,7 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 		return nil, err
 	}
 
+	// task config needs to be validated/finalized before retrieving task name
 	taskName := *taskConfig.Name
 	logger := tm.logger.With(taskNameLogKey, taskName)
 
@@ -581,8 +577,8 @@ func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
 		logger.Error("error storing event", "event", ev.GoString(), "error", err)
 	}
 
-	if tm.taskNotify != nil {
-		tm.taskNotify <- taskName
+	if tm.ranTaskNotify != nil {
+		tm.ranTaskNotify <- taskName
 	}
 
 	return err
@@ -629,8 +625,8 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 	tm.state.DeleteTask(name)
 	tm.state.DeleteTaskEvents(name)
 
-	if tm.deleteTaskNotify != nil {
-		tm.deleteTaskNotify <- name
+	if tm.deletedTaskNotify != nil {
+		tm.deletedTaskNotify <- name
 	}
 
 	logger.Debug("task deleted")

@@ -177,6 +177,6 @@ func (ctrl *Daemon) Stop() {
 	ctrl.watcher.Stop()
 }
 
-func (ctrl *Daemon) EnableTestMode() <-chan string {
-	return ctrl.tasksManager.EnableTestMode()
+func (ctrl *Daemon) EnableTaskRanNotify() <-chan string {
+	return ctrl.tasksManager.EnableTaskRanNotify()
 }

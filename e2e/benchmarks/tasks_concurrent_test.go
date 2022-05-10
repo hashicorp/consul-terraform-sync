@@ -89,7 +89,7 @@ func benchmarkTasksConcurrent(b *testing.B, bConf benchmarkConfig) {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	defer ctxCancel()
 	ctrlStopped := make(chan error)
-	completedTasksCh := ctrl.EnableTestMode()
+	completedTasksCh := ctrl.EnableTaskRanNotify()
 
 	go func() {
 		ctrlStopped <- ctrl.Run(ctx)

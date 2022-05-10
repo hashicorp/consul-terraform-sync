@@ -48,7 +48,7 @@ func TestServe(t *testing.T) {
 			http.MethodGet,
 			"",
 			func(ctrl *mocks.Server) {
-				ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+				ctrl.On("Tasks", mock.Anything).Return(config.TaskConfigs{}).
 					On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
 			},
 			http.StatusOK,
@@ -60,7 +60,7 @@ func TestServe(t *testing.T) {
 			http.MethodGet,
 			"",
 			func(ctrl *mocks.Server) {
-				ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+				ctrl.On("Tasks", mock.Anything).Return(config.TaskConfigs{}).
 					On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
 			},
 			http.StatusOK,
@@ -207,7 +207,7 @@ func TestServe_LoggingExclusions(t *testing.T) {
 	logger := logging.NewTestLogger("TRACE", &buf)
 
 	ctrl := new(mocks.Server)
-	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil)
+	ctrl.On("Tasks", mock.Anything).Return(config.TaskConfigs{})
 
 	cfg := Config{
 		Port:       port,
@@ -305,7 +305,7 @@ func TestServeWithTLS(t *testing.T) {
 	defer cancel()
 
 	ctrl := new(mocks.Server)
-	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+	ctrl.On("Tasks", mock.Anything).Return(config.TaskConfigs{}).
 		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
 
 	for _, tc := range cases {
@@ -412,7 +412,7 @@ func TestServeWithMutualTLS(t *testing.T) {
 		CACert:         config.String(caCert),
 	}
 	ctrl := new(mocks.Server)
-	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+	ctrl.On("Tasks", mock.Anything).Return(config.TaskConfigs{}).
 		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
 	api, err := NewAPI(ctx, Config{
 		Controller: ctrl,
@@ -542,7 +542,7 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 		CAPath:         config.String(tmpDir),
 	}
 	ctrl := new(mocks.Server)
-	ctrl.On("Tasks", mock.Anything).Return([]config.TaskConfig{}, nil).
+	ctrl.On("Tasks", mock.Anything).Return(config.TaskConfigs{}).
 		On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
 	api, err := NewAPI(ctx, Config{
 		Controller: ctrl,
