@@ -259,3 +259,7 @@ task {
 }
 `, disabledTaskName)
 }
+
+func (c hclConfig) appendID(id string) hclConfig {
+	return c.appendString(fmt.Sprintf("\nid = \"%s\"\n", id))
+}

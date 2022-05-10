@@ -93,6 +93,18 @@ func registerConsulService(tb testing.TB, srv *testutil.TestServer,
 		return
 	}
 
+	WaitForConsulServiceRegistered(tb, srv, s.ID, wait)
+}
+
+func WaitForConsulServiceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string, wait time.Duration) {
+	waitForConsulService(tb, srv, serviceID, true, wait)
+}
+
+func WaitForConsulServiceDeregistered(tb testing.TB, srv *testutil.TestServer, serviceID string, wait time.Duration) {
+	waitForConsulService(tb, srv, serviceID, false, wait)
+}
+
+func waitForConsulService(tb testing.TB, srv *testutil.TestServer, serviceID string, expectRegister bool, wait time.Duration) {
 	polling := make(chan struct{})
 	stopPolling := make(chan struct{})
 	go func() {
@@ -101,7 +113,8 @@ func registerConsulService(tb testing.TB, srv *testutil.TestServer,
 			case <-stopPolling:
 				return
 			default:
-				if ok := serviceRegistered(tb, srv, s.ID); ok {
+				ok := ServiceRegistered(tb, srv, serviceID)
+				if ok == expectRegister {
 					polling <- struct{}{}
 					return
 				}
@@ -114,8 +127,13 @@ func registerConsulService(tb testing.TB, srv *testutil.TestServer,
 		return
 	case <-time.After(wait):
 		close(stopPolling)
-		tb.Fatalf("timed out after waiting for %v for service %q to register "+
-			"with Consul", wait, s.ID)
+		if expectRegister {
+			tb.Fatalf("timed out after waiting for %v for service %q to register "+
+				"with Consul", wait, serviceID)
+		} else {
+			tb.Fatalf("timed out after waiting for %v for service %q to deregister "+
+				"with Consul", wait, serviceID)
+		}
 	}
 }
 
@@ -140,7 +158,7 @@ func ListServices(tb testing.TB, srv *testutil.TestServer, filter string) map[st
 	return services
 }
 
-func serviceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string) bool {
+func ServiceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string) bool {
 	u := fmt.Sprintf("http://%s/v1/agent/service/%s", srv.HTTPAddr, serviceID)
 	resp := RequestHTTP(tb, http.MethodGet, u, "")
 	defer resp.Body.Close()

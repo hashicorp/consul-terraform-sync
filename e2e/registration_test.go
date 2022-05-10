@@ -5,9 +5,11 @@ package e2e
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	"github.com/hashicorp/consul/sdk/testutil"
@@ -56,6 +58,36 @@ func TestE2E_ServiceRegistration_Defaults(t *testing.T) {
 	assert.Equal(t, service.Tags, []string{"cts"})
 	url := fmt.Sprintf("http://localhost:%d/v1/health", cts.Port())
 	assert.Contains(t, check.Output, url)
+}
+
+func TestE2E_ServiceRegistration_DeregisterWhenStopped(t *testing.T) {
+	setParallelism(t)
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cts_stop_deregister")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+	defer cleanup()
+
+	id := "cts-01"
+	configPath := filepath.Join(tempDir, configFile)
+	config := baseConfig(tempDir).appendID(id).
+		appendConsulBlock(srv).appendTerraformBlock().appendDBTask()
+	config.write(t, configPath)
+
+	// Start CTS, verify that service is registered
+	cts, stop := api.StartCTS(t, configPath)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+	require.NoError(t, err)
+	testutils.WaitForConsulServiceRegistered(t, srv, id, defaultWaitForRegistration)
+	registered := testutils.ServiceRegistered(t, srv, id)
+	assert.True(t, registered)
+
+	// Stop CTS, check that service is deregistered
+	stop(t)
+	testutils.WaitForConsulServiceDeregistered(t, srv, id, defaultWaitForRegistration)
+	registered = testutils.ServiceRegistered(t, srv, id)
+	assert.False(t, registered)
 }
 
 func getServiceInstancesByName(t testing.TB, srv *testutil.TestServer, serviceName string) map[string]testutil.TestService {
