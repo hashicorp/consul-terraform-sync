@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"fmt"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -61,6 +62,63 @@ func TestE2E_ServiceRegistration_Defaults(t *testing.T) {
 	assert.Contains(t, check.Output, url)
 }
 
+func TestE2E_ServiceRegistration_Configured(t *testing.T) {
+	setParallelism(t)
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "configured_registration")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+	defer cleanup()
+
+	id := "cts-01"
+	serviceName := "cts"
+	port := testutils.FreePort(t)
+	address := fmt.Sprintf("http://127.0.0.1:%d", port)
+	rConfig := fmt.Sprintf(`
+service_registration {
+	enabled = true
+	service_name = "%s"
+	default_check {
+		enabled = true
+		address = "%s"
+	}
+}`, serviceName, address)
+
+	configPath := filepath.Join(tempDir, configFile)
+	config := baseConfig(tempDir).appendID(id).appendPort(port).
+		appendConsulBlock(srv, rConfig).appendTerraformBlock().appendDBTask()
+	config.write(t, configPath)
+
+	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
+	err := cmd.Start()
+	require.NoError(t, err)
+	cts, err := api.NewClient(&api.ClientConfig{URL: address}, nil)
+	require.NoError(t, err)
+	err = cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+	require.NoError(t, err)
+
+	testutils.WaitForConsulServiceRegistered(t, srv, id, defaultWaitForRegistration)
+	service, err := testutils.GetService(t, srv, id)
+	require.NoError(t, err, "service not registered")
+	expectedSrv := testutils.Service{
+		Service: serviceName,
+		ID:      id,
+		Port:    port,
+		Tags:    []string{"cts"},
+	}
+	assert.Equal(t, expectedSrv, service)
+
+	checkID := id + "-health"
+	check, err := testutils.WaitForCheckStatus(t, srv, checkID, "passing", defaultWaitForCheckUpdate)
+	require.NoError(t, err)
+	assert.Equal(t, id, check.ServiceID)
+	assert.Equal(t, serviceName, check.ServiceName)
+	url := fmt.Sprintf("%s/v1/health", address)
+	assert.Contains(t, check.Output, url)
+}
+
 func TestE2E_ServiceRegistration_DeregisterWhenStopped(t *testing.T) {
 	setParallelism(t)
 	srv := newTestConsulServer(t)
@@ -73,7 +131,8 @@ func TestE2E_ServiceRegistration_DeregisterWhenStopped(t *testing.T) {
 	id := "cts-01"
 	configPath := filepath.Join(tempDir, configFile)
 	config := baseConfig(tempDir).appendID(id).
-		appendConsulBlock(srv).appendTerraformBlock().appendDBTask()
+		appendConsulBlock(srv).appendTerraformBlock().
+		appendModuleTask("disabled_task", "mkam/hello/cts", "enabled = false")
 	config.write(t, configPath)
 
 	// Start CTS, verify that service is registered
