@@ -399,6 +399,68 @@ func TestE2E_TaskEndpoints_Delete(t *testing.T) {
 	validateServices(t, false, []string{"api"}, resourcesPath)
 }
 
+// TestE2E_HealthEndpoint tests the health endpoint. This
+// runs a Consul server and the CTS binary in daemon mode.
+// GET /v1/health
+func TestE2E_HealthEndpoint(t *testing.T) {
+	setParallelism(t)
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "health_endpoint")
+
+	clientTLSConfig := testutils.TLSConfig{
+		ClientCert:     defaultCTSClientCert,
+		ClientKey:      defaultCTSClientKey,
+		CAFile:         defaultCTSCACert,
+		VerifyIncoming: true,
+	}
+
+	cases := []struct {
+		name         string
+		isTLSEnabled bool
+	}{
+		{
+			name:         "happy path",
+			isTLSEnabled: false,
+		},
+		{
+			name:         "happy path tls",
+			isTLSEnabled: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var resp *http.Response
+
+			// Get Health
+			if tc.isTLSEnabled {
+				cts := ctsSetupTLS(t, srv, tempDir, dbTask(), defaultMTLSConfig())
+				u := fmt.Sprintf("https://localhost:%d/%s/health", cts.Port(), "v1")
+				resp = testutils.RequestHTTPS(t, http.MethodGet, u, "", clientTLSConfig)
+			} else {
+				cts := ctsSetup(t, srv, tempDir, dbTask())
+				u := fmt.Sprintf("http://localhost:%d/%s/health", cts.Port(), "v1")
+				resp = testutils.RequestHTTP(t, http.MethodGet, u, "")
+			}
+			defer resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+			// Decode response and check expected fields
+			var healthResp oapigen.HealthCheckResponse
+			decoder := json.NewDecoder(resp.Body)
+			err := decoder.Decode(&healthResp)
+			require.NoError(t, err)
+
+			assert.Nil(t, healthResp.Error)
+			assert.NotEmpty(t, healthResp.RequestId)
+		})
+	}
+}
+
 // TestE2E_TaskEndpoints_Delete_ActiveTask tests that a running task will not
 // be deleted until it is complete.
 //	DELETE/v1/tasks/:task_name
@@ -813,6 +875,58 @@ func TestE2E_TaskEndpoints_Get(t *testing.T) {
 	resp = testutils.RequestHTTP(t, http.MethodGet, u, "")
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+// TestE2E_TaskEndpoints_GetAll tests the Get Tasks API
+// It runs a Consul server and the CTS binary in daemon mode.
+// GET /v1/tasks
+func TestE2E_TaskEndpoints_GetAll(t *testing.T) {
+	setParallelism(t)
+
+	// 0. Start CTS with three tasks
+	// 1. Try retrieving all tasks and verify response payload
+
+	srv := testutils.NewTestConsulServer(t, testutils.TestConsulServerConfig{
+		HTTPSRelPath: "../testutils",
+	})
+	defer srv.Stop()
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "get_task_api")
+	module := "mkam/hello/cts"
+
+	// 0. Start CTS with three tasks
+	taskNames := []string{"get_all_1", "get_all_2", "get_all_3"}
+	tasks := make([]string, len(taskNames))
+	for i, name := range taskNames {
+		tasks[i] = moduleTaskConfig(name, module)
+	}
+
+	cts := ctsSetup(t, srv, tempDir, tasks...)
+
+	// 1. Check retrieving the existing tasks
+	u := fmt.Sprintf("http://localhost:%d/%s/tasks", cts.Port(), "v1")
+	resp := testutils.RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Parse response body
+	var r oapigen.TasksResponse
+	err := json.NewDecoder(resp.Body).Decode(&r)
+	require.NoError(t, err)
+	assert.NotEmpty(t, r.RequestId, "expected request ID in response")
+
+	// Verify basic task info in response
+	assert.NotNil(t, r.Tasks)
+	taskNamesToActualTask := make(map[string]oapigen.Task)
+	for _, task := range *r.Tasks {
+		taskNamesToActualTask[task.Name] = task
+	}
+
+	for _, taskName := range taskNames {
+		actualTask := taskNamesToActualTask[taskName]
+		assert.Equal(t, taskName, actualTask.Name, "name not expected value")
+		assert.Equal(t, module, actualTask.Module, "module not expected value")
+		assert.Empty(t, actualTask.TerraformVersion, "unexpected enterprise field value")
+	}
 }
 
 // checkEvents does some basic checks to loosely ensure returned events in
