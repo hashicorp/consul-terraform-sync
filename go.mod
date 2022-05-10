@@ -8,7 +8,6 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/agext/levenshtein v1.2.3 // indirect
-	github.com/andybalholm/crlf v0.0.0-20171020200849-670099aa064f // indirect
 	github.com/armon/go-metrics v0.3.6 // indirect
 	github.com/aws/aws-sdk-go v1.37.19 // indirect
 	github.com/deepmap/oapi-codegen v1.10.1
@@ -27,13 +26,12 @@ require (
 	github.com/hashicorp/go-getter v1.5.11
 	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-immutable-radix v1.3.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.4.0
-	github.com/hashicorp/hc-install v0.3.2 // indirect
+	github.com/hashicorp/hc-install v0.3.2
 	github.com/hashicorp/hcat v0.2.1-0.20220519190242-5b1deea3fce6
 	github.com/hashicorp/hcl v1.0.1-vault-2
 	github.com/hashicorp/hcl/v2 v2.8.2
