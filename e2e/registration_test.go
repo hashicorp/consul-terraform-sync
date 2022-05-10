@@ -76,6 +76,7 @@ func TestE2E_ServiceRegistration_Configured(t *testing.T) {
 	cleanup := testutils.MakeTempDir(t, tempDir)
 	defer cleanup()
 
+	// Configure CTS with a consul config that has service_registration block
 	id := "cts-01"
 	serviceName := "cts"
 	port := testutils.FreePort(t)
@@ -95,6 +96,7 @@ service_registration {
 		appendConsulBlock(srv, rConfig).appendTerraformBlock().appendDBTask()
 	config.write(t, configPath)
 
+	// Start CTS, using command directly since port has been preconfigured
 	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
 	err := cmd.Start()
 	require.NoError(t, err)
@@ -137,7 +139,8 @@ func TestE2E_ServiceRegistration_DeregisterWhenStopped(t *testing.T) {
 	configPath := filepath.Join(tempDir, configFile)
 	config := baseConfig(tempDir).appendID(id).
 		appendConsulBlock(srv).appendTerraformBlock().
-		appendModuleTask("disabled_task", "mkam/hello/cts", "enabled = false")
+		appendModuleTask("disabled_task", "mkam/hello/cts",
+			"enabled = false") // optimization since task running is not relevant to test
 	config.write(t, configPath)
 
 	// Start CTS, verify that service is registered
@@ -155,9 +158,9 @@ func TestE2E_ServiceRegistration_DeregisterWhenStopped(t *testing.T) {
 	assert.False(t, registered)
 }
 
-// TestE2E_ServiceRegistration_RegistrationSkipped tests scenarios where registration does
+// TestE2E_ServiceRegistration_Skipped tests scenarios where registration does
 // not happen, but CTS continues to run.
-func TestE2E_ServiceRegistration_RegistrationSkipped(t *testing.T) {
+func TestE2E_ServiceRegistration_Skipped(t *testing.T) {
 	setParallelism(t)
 	testcases := []struct {
 		name   string
@@ -230,7 +233,7 @@ func TestE2E_ServiceRegistration_InitError(t *testing.T) {
 	cleanup := testutils.MakeTempDir(t, tempDir)
 	defer cleanup()
 
-	// Use a nonexistent module
+	// Configure CTS with a task that will fail at runtime
 	id := "cts-01"
 	port := testutils.FreePort(t)
 	configPath := filepath.Join(tempDir, configFile)
@@ -239,6 +242,7 @@ func TestE2E_ServiceRegistration_InitError(t *testing.T) {
 		appendModuleTask("failing_task", "./test_modules/failing_module")
 	config.write(t, configPath)
 
+	// Start CTS, use command directly to be able to check logs
 	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
 	var buf bytes.Buffer
 	cmd.Stdout = &buf

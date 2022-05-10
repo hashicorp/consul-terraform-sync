@@ -217,7 +217,7 @@ func DeleteKV(tb testing.TB, srv *testutil.TestServer, key string) {
 	defer resp.Body.Close()
 }
 
-// ConsulService represents a Consul check with a subset of its attributes that are verified by the tests.
+// ConsulCheck represents a Consul check with a subset of its attributes that are verified by the tests.
 type ConsulCheck struct {
 	CheckID     string
 	Name        string

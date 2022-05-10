@@ -40,7 +40,7 @@ func (c hclConfig) appendPort(port int) hclConfig {
 func (c hclConfig) appendConsulBlock(consul *testutil.TestServer, opts ...string) hclConfig {
 	var optsConfig string
 	if len(opts) > 0 {
-		optsConfig = "\n" + strings.Join(opts, "\n")
+		optsConfig = strings.Join(opts, "\n")
 	}
 	return c.appendString(fmt.Sprintf(`
 consul {
