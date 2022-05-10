@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	taskSystemName = "task"
-	maxWaitTime    = 15 * time.Minute // 15 minutes
+	retrySystemName = "retry"
+	maxWaitTime     = 15 * time.Minute // 15 minutes
 )
 
 // NonRetryableError represents an error returned
@@ -24,7 +24,7 @@ type NonRetryableError struct {
 
 // Error returns an error string
 func (e *NonRetryableError) Error() string {
-	return fmt.Sprintf("this error is not retryable: %v", e.Err)
+	return e.Err.Error()
 }
 
 // Unwrap returns the underlying error
@@ -47,7 +47,7 @@ func NewRetry(maxRetry int, seed int64) Retry {
 	return Retry{
 		maxRetry: maxRetry,
 		random:   rand.New(rand.NewSource(seed)),
-		logger:   logging.Global().Named(taskSystemName),
+		logger:   logging.Global().Named(retrySystemName),
 	}
 }
 
@@ -60,7 +60,7 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 	if err == nil || r.maxRetry == 0 {
 		return err
 	} else if errors.As(err, &nonRetryableError) {
-		r.logger.Debug("received non retryable error")
+		r.logger.Debug("received non-retryable error", "method", desc)
 		return err
 	}
 

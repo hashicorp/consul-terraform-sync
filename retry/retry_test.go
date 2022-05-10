@@ -163,7 +163,7 @@ func TestRetry_WithNonRetryableError(t *testing.T) {
 			"non retryable error after enters retry loop",
 			2, // max retries is 2, but will exit due to non retryable error after first retry
 			1,
-			errors.New("retry attempt #1 failed 'this error is not retryable: error on 1'"),
+			errors.New("retry attempt #1 failed 'error on 1'"),
 		},
 	}
 
@@ -252,7 +252,7 @@ func TestNonRetryableError_Error(t *testing.T) {
 	var nonRetryableError *NonRetryableError
 
 	assert.True(t, errors.As(&err, &nonRetryableError))
-	assert.Equal(t, "this error is not retryable: some error", err.Error())
+	assert.Equal(t, "some error", err.Error())
 }
 
 func TestNonRetryableError_Unwrap(t *testing.T) {

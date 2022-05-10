@@ -138,7 +138,7 @@ func (m *ServiceRegistrationManager) register(ctx context.Context) error {
 				"configure CTS with an ACL including `service:write` or "+
 				"disable registration in configuration", baseErrMsg), "error", err)
 		} else {
-			logger.Error(baseErrMsg)
+			logger.Error(baseErrMsg, "error", err)
 		}
 
 		return err
