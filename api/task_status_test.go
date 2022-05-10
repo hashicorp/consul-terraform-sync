@@ -60,7 +60,8 @@ func TestTaskStatus_ServeHTTP(t *testing.T) {
 	ctrl := new(serverMocks.Server)
 	confs := make(config.TaskConfigs, 0, len(configs))
 	for taskName, conf := range configs {
-		confs = append(confs, &conf)
+		taskConf := conf // create a locally scoped var to avoid problems with pointer
+		confs = append(confs, &taskConf)
 		eventResp := make(map[string][]event.Event)
 		if es, ok := events[taskName]; ok {
 			eventResp[taskName] = es
