@@ -97,10 +97,12 @@ func registerConsulService(tb testing.TB, srv *testutil.TestServer,
 	WaitForConsulServiceRegistered(tb, srv, s.ID, wait)
 }
 
+// WaitForConsulServiceRegistered polls Consul until the given service is registered or the timeout is reached.
 func WaitForConsulServiceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string, wait time.Duration) {
 	waitForConsulService(tb, srv, serviceID, true, wait)
 }
 
+// WaitForConsulServiceDeregistered polls Consul until the given service is deregistered or the timeout is reached.
 func WaitForConsulServiceDeregistered(tb testing.TB, srv *testutil.TestServer, serviceID string, wait time.Duration) {
 	waitForConsulService(tb, srv, serviceID, false, wait)
 }
@@ -114,7 +116,7 @@ func waitForConsulService(tb testing.TB, srv *testutil.TestServer, serviceID str
 			case <-stopPolling:
 				return
 			default:
-				ok := ServiceRegistered(tb, srv, serviceID)
+				ok := ConsulServiceRegistered(tb, srv, serviceID)
 				if ok == expectRegister {
 					polling <- struct{}{}
 					return
@@ -138,7 +140,8 @@ func waitForConsulService(tb testing.TB, srv *testutil.TestServer, serviceID str
 	}
 }
 
-func ListServices(tb testing.TB, srv *testutil.TestServer, filter string) map[string]Service {
+// ListConsulServices returns a list of services registered with the Consul agent.
+func ListConsulServices(tb testing.TB, srv *testutil.TestServer, filter string) map[string]ConsulService {
 	u := fmt.Sprintf("http://%s/v1/agent/services", srv.HTTPAddr)
 	if filter != "" {
 		params := url.Values{}
@@ -153,27 +156,30 @@ func ListServices(tb testing.TB, srv *testutil.TestServer, filter string) map[st
 
 	require.Equal(tb, resp.StatusCode, 200, string(b))
 
-	var services map[string]Service
+	var services map[string]ConsulService
 	err = json.Unmarshal(b, &services)
 	require.NoError(tb, err)
 	return services
 }
 
-func ServiceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string) bool {
+// ConsulServiceRegistered returns whether the Consul service with the given ID is registered or not.
+func ConsulServiceRegistered(tb testing.TB, srv *testutil.TestServer, serviceID string) bool {
 	u := fmt.Sprintf("http://%s/v1/agent/service/%s", srv.HTTPAddr, serviceID)
 	resp := RequestHTTP(tb, http.MethodGet, u, "")
 	defer resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
 }
 
-type Service struct {
+// ConsulService represents a Consul service with a subset of its attributes that are verified by the tests.
+type ConsulService struct {
 	ID      string
 	Service string
 	Tags    []string
 	Port    int
 }
 
-func GetService(tb testing.TB, srv *testutil.TestServer, serviceID string) (Service, error) {
+// GetConsulService returns a service instance with the given ID from the Consul agent.
+func GetConsulService(tb testing.TB, srv *testutil.TestServer, serviceID string) (ConsulService, error) {
 	u := fmt.Sprintf("http://%s/v1/agent/service/%s", srv.HTTPAddr, serviceID)
 	resp := RequestHTTP(tb, http.MethodGet, u, "")
 	defer resp.Body.Close()
@@ -182,10 +188,10 @@ func GetService(tb testing.TB, srv *testutil.TestServer, serviceID string) (Serv
 	require.NoError(tb, err)
 
 	if resp.StatusCode != 200 {
-		return Service{}, errors.New(string(b))
+		return ConsulService{}, errors.New(string(b))
 	}
 
-	var service Service
+	var service ConsulService
 	err = json.Unmarshal(b, &service)
 	require.NoError(tb, err)
 	return service, nil
@@ -210,7 +216,8 @@ func DeleteKV(tb testing.TB, srv *testutil.TestServer, key string) {
 	defer resp.Body.Close()
 }
 
-type Check struct {
+// ConsulService represents a Consul check with a subset of its attributes that are verified by the tests.
+type ConsulCheck struct {
 	CheckID     string
 	Name        string
 	Status      string
@@ -222,7 +229,8 @@ type Check struct {
 	Type        string
 }
 
-func ListChecks(tb testing.TB, srv *testutil.TestServer) map[string]Check {
+// ListConsulChecks returns a list of checks from a Consul agent.
+func ListConsulChecks(tb testing.TB, srv *testutil.TestServer) map[string]ConsulCheck {
 	u := fmt.Sprintf("http://%s/v1/agent/checks", srv.HTTPAddr)
 	resp := RequestHTTP(tb, http.MethodGet, u, "")
 
@@ -232,14 +240,15 @@ func ListChecks(tb testing.TB, srv *testutil.TestServer) map[string]Check {
 
 	require.Equal(tb, resp.StatusCode, 200, string(b))
 
-	var checks map[string]Check
+	var checks map[string]ConsulCheck
 	err = json.Unmarshal(b, &checks)
 	require.NoError(tb, err)
 	return checks
 }
 
-func WaitForCheckStatus(tb testing.TB, srv *testutil.TestServer, checkID, status string, wait time.Duration) (Check, error) {
-	polling := make(chan Check)
+// WaitForConsulCheckStatus polls a Consul check until the check has the given status or the timeout is reached.
+func WaitForConsulCheckStatus(tb testing.TB, srv *testutil.TestServer, checkID, status string, wait time.Duration) (ConsulCheck, error) {
+	polling := make(chan ConsulCheck)
 	stopPolling := make(chan struct{})
 	go func() {
 		for {
@@ -247,7 +256,7 @@ func WaitForCheckStatus(tb testing.TB, srv *testutil.TestServer, checkID, status
 			case <-stopPolling:
 				return
 			default:
-				checks := ListChecks(tb, srv)
+				checks := ListConsulChecks(tb, srv)
 				c, ok := checks[checkID]
 				if !ok {
 					// check does not exist but may exist eventually
@@ -266,7 +275,7 @@ func WaitForCheckStatus(tb testing.TB, srv *testutil.TestServer, checkID, status
 		return c, nil
 	case <-time.After(wait):
 		close(stopPolling)
-		return Check{}, fmt.Errorf("timed out after waiting for %v for check %q to become %s",
+		return ConsulCheck{}, fmt.Errorf("timed out after waiting for %v for check %q to become %s",
 			wait, checkID, status)
 	}
 }

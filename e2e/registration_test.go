@@ -38,7 +38,7 @@ func TestE2E_ServiceRegistration_Defaults(t *testing.T) {
 	ctsServices, err := waitForServiceByName(t, srv, name)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(ctsServices), "unexpected number of CTS services in Consul")
-	var service testutils.Service
+	var service testutils.ConsulService
 	for _, s := range ctsServices {
 		service = s
 	}
@@ -53,7 +53,7 @@ func TestE2E_ServiceRegistration_Defaults(t *testing.T) {
 
 	// Verify health check for service
 	checkID := id + "-health"
-	check, err := testutils.WaitForCheckStatus(t, srv, checkID, "passing", defaultWaitForCheckUpdate)
+	check, err := testutils.WaitForConsulCheckStatus(t, srv, checkID, "passing", defaultWaitForCheckUpdate)
 	require.NoError(t, err)
 	assert.Equal(t, "http", check.Type)
 	assert.Equal(t, "CTS Health Status", check.Name)
@@ -105,9 +105,9 @@ service_registration {
 	require.NoError(t, err)
 
 	testutils.WaitForConsulServiceRegistered(t, srv, id, defaultWaitForRegistration)
-	service, err := testutils.GetService(t, srv, id)
+	service, err := testutils.GetConsulService(t, srv, id)
 	require.NoError(t, err, "service not registered")
-	expectedSrv := testutils.Service{
+	expectedSrv := testutils.ConsulService{
 		Service: serviceName,
 		ID:      id,
 		Port:    port,
@@ -116,7 +116,7 @@ service_registration {
 	assert.Equal(t, expectedSrv, service)
 
 	checkID := id + "-health"
-	check, err := testutils.WaitForCheckStatus(t, srv, checkID, "passing", defaultWaitForCheckUpdate)
+	check, err := testutils.WaitForConsulCheckStatus(t, srv, checkID, "passing", defaultWaitForCheckUpdate)
 	require.NoError(t, err)
 	assert.Equal(t, id, check.ServiceID)
 	assert.Equal(t, serviceName, check.ServiceName)
@@ -145,13 +145,13 @@ func TestE2E_ServiceRegistration_DeregisterWhenStopped(t *testing.T) {
 	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
 	testutils.WaitForConsulServiceRegistered(t, srv, id, defaultWaitForRegistration)
-	registered := testutils.ServiceRegistered(t, srv, id)
+	registered := testutils.ConsulServiceRegistered(t, srv, id)
 	assert.True(t, registered)
 
 	// Stop CTS, check that service is deregistered
 	stop(t)
 	testutils.WaitForConsulServiceDeregistered(t, srv, id, defaultWaitForRegistration)
-	registered = testutils.ServiceRegistered(t, srv, id)
+	registered = testutils.ConsulServiceRegistered(t, srv, id)
 	assert.False(t, registered)
 }
 
@@ -201,7 +201,7 @@ service_registration {
 
 			// Should not be registered after CTS starts
 			time.Sleep(1 * time.Second)
-			registered := testutils.ServiceRegistered(t, srv, id)
+			registered := testutils.ConsulServiceRegistered(t, srv, id)
 			assert.False(t, registered)
 
 			// Trigger a task, expect CTS to continue
@@ -213,7 +213,7 @@ service_registration {
 			testutils.CheckFile(t, true, resourcesPath, "api_new.txt")
 
 			// Verify still not registered now that even more time has passed
-			registered = testutils.ServiceRegistered(t, srv, id)
+			registered = testutils.ConsulServiceRegistered(t, srv, id)
 			assert.False(t, registered)
 		})
 	}
@@ -263,17 +263,17 @@ func TestE2E_ServiceRegistration_InitError(t *testing.T) {
 	// Verify no attempt at registration and no service registered
 	output := buf.String()
 	assert.NotContains(t, output, "registering Consul-Terraform-Sync as a service with Consul")
-	registered := testutils.ServiceRegistered(t, srv, id)
+	registered := testutils.ConsulServiceRegistered(t, srv, id)
 	assert.False(t, registered)
 }
 
-func getServiceInstancesByName(t testing.TB, srv *testutil.TestServer, serviceName string) map[string]testutils.Service {
+func getServiceInstancesByName(t testing.TB, srv *testutil.TestServer, serviceName string) map[string]testutils.ConsulService {
 	filter := fmt.Sprintf(`Service == "%s"`, serviceName)
-	return testutils.ListServices(t, srv, filter)
+	return testutils.ListConsulServices(t, srv, filter)
 }
 
-func waitForServiceByName(t testing.TB, srv *testutil.TestServer, serviceName string) (map[string]testutils.Service, error) {
-	var instances map[string]testutils.Service
+func waitForServiceByName(t testing.TB, srv *testutil.TestServer, serviceName string) (map[string]testutils.ConsulService, error) {
+	var instances map[string]testutils.ConsulService
 	polling := make(chan struct{})
 	stopPolling := make(chan struct{})
 	go func() {
