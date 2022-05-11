@@ -890,7 +890,7 @@ func TestE2E_TaskEndpoints_GetAll(t *testing.T) {
 		HTTPSRelPath: "../testutils",
 	})
 	defer srv.Stop()
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "get_task_api")
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "get_all_tasks_api")
 	module := "mkam/hello/cts"
 
 	// 0. Start CTS with three tasks
