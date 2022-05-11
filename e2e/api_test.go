@@ -901,6 +901,8 @@ func TestE2E_TaskEndpoints_GetAll(t *testing.T) {
 	}
 
 	cts := ctsSetup(t, srv, tempDir, tasks...)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+	require.NoError(t, err)
 
 	// 1. Check retrieving the existing tasks
 	u := fmt.Sprintf("http://localhost:%d/%s/tasks", cts.Port(), "v1")
@@ -910,7 +912,7 @@ func TestE2E_TaskEndpoints_GetAll(t *testing.T) {
 
 	// Parse response body
 	var r oapigen.TasksResponse
-	err := json.NewDecoder(resp.Body).Decode(&r)
+	err = json.NewDecoder(resp.Body).Decode(&r)
 	require.NoError(t, err)
 	assert.NotEmpty(t, r.RequestId, "expected request ID in response")
 
