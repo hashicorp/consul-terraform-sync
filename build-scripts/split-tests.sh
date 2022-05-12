@@ -49,6 +49,7 @@ fi
 
 list_tests "${build_tags}" "${package}" > "${all_tests_file}"
 mkdir -p "${chunks_dir}"
+cat "${all_tests_file}"
 split_list "${chunks_count}" "${all_tests_file}" "${chunks_dir}"
 join_lists "${chunks_dir}"
 
