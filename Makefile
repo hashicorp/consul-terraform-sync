@@ -56,7 +56,7 @@ test-setup-e2e: dev
 test-e2e-cirecleci: test-setup-e2e
 	@echo "==> Testing ${NAME} (e2e)"
 #	@go test ./e2e -race -count=1 -timeout=900s -tags=e2e ./... ${TESTARGS}
-	@bin/gotesplit ./e2e -- -tags=e2e -race -count=1 -timeout=900s ${TESTARGS}
+	@bin/gotesplit ./... -- -tags=e2e -race -count=1 -timeout=900s ${TESTARGS}
 .PHONY: test-e2e-cirecleci
 
 # test-e2e-local does e2e test setup and then runs the e2e tests
