@@ -71,7 +71,7 @@ jobs:
   e2e_tests:
     executor:
       name: go
-    resource_class: large
+    resource_class: medium+
     parallelism: 4
     steps:
       - checkout
