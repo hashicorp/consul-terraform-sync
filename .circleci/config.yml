@@ -72,7 +72,7 @@ jobs:
     executor:
       name: go
     resource_class: medium+
-    parallelism: 5
+    parallelism: 6
     steps:
       - checkout
       - restore_cache:
