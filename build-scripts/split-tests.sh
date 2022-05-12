@@ -6,7 +6,7 @@ function list_tests() {
     local build_tags=$1
     local pkg=$2
 
-    go test -build_tags="${build_tags}" -list . "${pkg}" | grep "^Test"
+    go test -tags="${build_tags}" -list . "${pkg}" | grep "^Test"
 }
 
 function split_list() {
@@ -20,6 +20,7 @@ function split_list() {
     total_lines=$(wc -l < "${input_file}")
     ((lines_per_file = (total_lines + chunks_count - 1) / chunks_count))
 
+    mkdir -p "${chunks_dir}"
     split -d -a 1 -l "${lines_per_file}" "${input_file}" "${output_dir}/chunk."
 }
 
@@ -48,8 +49,6 @@ if [ "${chunks_count}" -gt 10 ]; then
 fi
 
 list_tests "${build_tags}" "${package}" > "${all_tests_file}"
-mkdir -p "${chunks_dir}"
-cat "${all_tests_file}"
 split_list "${chunks_count}" "${all_tests_file}" "${chunks_dir}"
 join_lists "${chunks_dir}"
 
