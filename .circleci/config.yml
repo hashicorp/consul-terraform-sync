@@ -85,7 +85,6 @@ jobs:
       - run: |
           ./build-scripts/split-tests.sh e2e ./e2e "${CIRCLE_NODE_TOTAL}" ${PWD}/.build/chunks
       - run: |
-          echo ${CIRCLE_NODE_INDEX}
           CHUNK_INDEX=${CIRCLE_NODE_INDEX} make test-e2e-cirecleci
       - when:
           condition:
