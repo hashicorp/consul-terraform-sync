@@ -83,7 +83,6 @@ jobs:
           unzip consul.zip
           sudo cp consul /usr/local/bin/
       - run: |
-          mkdir -p ${PWD}/.build/chunks
           ./build-scripts/split-tests.sh e2e ./e2e "${CIRCLE_NODE_TOTAL}" ${PWD}/.build/chunks
       - run: |
           echo ${CIRCLE_NODE_INDEX}

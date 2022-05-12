@@ -25,6 +25,7 @@ function join_lists() {
   local chunks_dir=$1
   local joined
 
+  mkdir -p "${chunks_dir}"
   for f in "${chunks_dir}"/*; do
     joined=$(paste -sd '|' "${f}")
     printf "^(%s)$" "${joined}" > "${f}"
