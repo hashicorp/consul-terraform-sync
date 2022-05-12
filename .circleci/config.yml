@@ -83,10 +83,11 @@ jobs:
           unzip consul.zip
           sudo cp consul /usr/local/bin/
       - run: |
-          - mkdir -p .build/chunks
-          - ./build-scripts/split-tests.sh e2e ./e2e "${CIRCLE_NODE_TOTAL}" .build/chunks
+          mkdir -p .build/chunks
+          ./build-scripts/split-tests.sh e2e ./e2e "${CIRCLE_NODE_TOTAL}" .build/chunks
       - run: |
-          CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX} make test-e2e-cirecleci
+          echo ${CIRCLE_NODE_INDEX}
+          CHUNK_INDEX=${CIRCLE_NODE_INDEX} make test-e2e-cirecleci
       - when:
           condition:
             or:
