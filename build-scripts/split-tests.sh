@@ -27,7 +27,6 @@ function join_lists() {
   local chunks_dir=$1
   local joined
 
-  mkdir -p "${chunks_dir}"
   for f in "${chunks_dir}"/*; do
     joined=$(paste -sd '|' "${f}")
     printf "^(%s)$" "${joined}" > "${f}"
@@ -49,6 +48,7 @@ if [ "${chunks_count}" -gt 10 ]; then
 fi
 
 list_tests "${build_tags}" "${package}" > "${all_tests_file}"
+mkdir -p "${chunks_dir}"
 split_list "${chunks_count}" "${all_tests_file}" "${chunks_dir}"
 join_lists "${chunks_dir}"
 
