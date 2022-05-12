@@ -72,6 +72,7 @@ jobs:
     executor:
       name: go
     resource_class: medium+
+    parallelism: 4
     steps:
       - checkout
       - restore_cache:
@@ -81,6 +82,8 @@ jobs:
           curl -sLo consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
           unzip consul.zip
           sudo cp consul /usr/local/bin/
+      - run: |
+          curl -sfL https://raw.githubusercontent.com/Songmu/gotesplit/main/install.sh | sh -s
       - run: |
           make test-e2e-cirecleci
       - when:
