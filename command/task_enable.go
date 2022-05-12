@@ -87,7 +87,10 @@ func (c *taskEnableCommand) Synopsis() string {
 // options for this command. The map key for the Flags map should be the
 // complete flag such as "-foo" or "--foo".
 func (c *taskEnableCommand) AutocompleteFlags() complete.Flags {
-	return c.meta.autoCompleteFlags()
+	return mergeAutocompleteFlags(c.meta.autoCompleteFlags(),
+		complete.Flags{
+			fmt.Sprintf("-%s", FlagAutoApprove): complete.PredictNothing,
+		})
 }
 
 // AutocompleteArgs returns the argument predictor for this command.
