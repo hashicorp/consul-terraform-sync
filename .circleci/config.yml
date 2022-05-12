@@ -72,7 +72,7 @@ jobs:
     executor:
       name: go
     resource_class: medium+
-    parallelism: 4
+    parallelism: 5
     steps:
       - checkout
       - restore_cache:
@@ -83,9 +83,10 @@ jobs:
           unzip consul.zip
           sudo cp consul /usr/local/bin/
       - run: |
-          curl -sfL https://raw.githubusercontent.com/Songmu/gotesplit/main/install.sh | sh -s
+          mkdir -p .build/chunks
+          ./build-scripts/split-tests.sh e2e ./e2e "${CIRCLE_NODE_TOTAL}" .build/chunks
       - run: |
-          make test-e2e-cirecleci
+          CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX} make test-e2e-cirecleci
       - when:
           condition:
             or:
