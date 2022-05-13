@@ -28,6 +28,7 @@ const (
 	flagAutocompleteInstall   = "autocomplete-install"
 	flagAutocompleteUninstall = "autocomplete-uninstall"
 	flagClientType            = "client-type"
+	flagDeprecatedStartUp     = "deprecated-start-up"
 )
 
 // startCommand handles the `start` command
@@ -43,7 +44,11 @@ type startCommand struct {
 	autocompleteInstall   *bool
 	autocompleteUninstall *bool
 
-	isDefault bool
+	// isDeprecatedStartUp is set to true when 'start' is used because Consul-Terraform-Sync (CTS)
+	// CLI was not provided with a command, which is the deprecated way to run CTS as a Daemon.
+	// The flag is needed to change some behavior when CTS is started in this way,
+	// for example help messaging
+	isDeprecatedStartUp *bool
 
 	clientType *string
 }
@@ -52,7 +57,7 @@ func (c *startCommand) startFlags() *flag.FlagSet {
 	flags := flag.NewFlagSet(cmdStartName, flag.ContinueOnError)
 
 	var configFiles, inspectTasks config.FlagAppendSliceValue
-	var isInspect, isOnce, autocompleteInstall, autocompleteUninstall bool
+	var isInspect, isOnce, autocompleteInstall, autocompleteUninstall, isDeprecatedStartup bool
 	var clientType string
 
 	// Parse the flags
@@ -89,6 +94,14 @@ func (c *startCommand) startFlags() *flag.FlagSet {
 	flags.BoolVar(&autocompleteUninstall, flagAutocompleteUninstall, false, "Uninstall the autocomplete")
 	c.autocompleteUninstall = &autocompleteUninstall
 
+	// Automatically set by CTS when CTS is invoked without a command, and we are
+	// using `start` as a default. Not printed with -h, -help
+	flags.BoolVar(&isDeprecatedStartup, flagDeprecatedStartUp, false,
+		"Use only when running CTS without a command. "+
+			"\n\t\tSignals any different actions CTS should perform when "+
+			"\n\t\tthe start command is used as the default.")
+	c.isDeprecatedStartUp = &isDeprecatedStartup
+
 	// Development only flags. Not printed with -h, -help
 	flags.StringVar(&clientType, flagClientType, "",
 		"Use only when developing Consul-Terraform-Sync binary. "+
@@ -99,14 +112,13 @@ func (c *startCommand) startFlags() *flag.FlagSet {
 	return flags
 }
 
-func newStartCommand(m meta, isDefault bool) *startCommand {
+func newStartCommand(m meta) *startCommand {
 	c := &startCommand{
 		meta: m,
 	}
 	f := c.startFlags()
 	c.meta.flags = f
 	c.flags = f
-	c.isDefault = isDefault
 	return c
 }
 
@@ -121,9 +133,8 @@ func (c *startCommand) Help() string {
 	return generateHelp(nil, "Usage CLI: consul-terraform-sync start [-help] [options]\n", omitFlags)
 }
 
-// HelpDefault returns the usage when this command is used as the default command,
-// without explicitly selecting the `Start` command
-func (c *startCommand) HelpDefault() string {
+// HelpDeprecated returns the usage when this command is used because CTS was not invoked with a command
+func (c *startCommand) HelpDeprecated() string {
 
 	// Create a command factor for common commands
 	commands := make(map[string]string)
@@ -172,9 +183,9 @@ func (c *startCommand) Run(args []string) int {
 		return ExitCodeParseFlagsError
 	}
 
-	// If is default, pre
-	if len(*c.configFiles) == 0 && c.isDefault {
-		c.UI.Output(c.HelpDefault())
+	// If is isDeprecatedStartUp, provide different help messaging
+	if len(*c.configFiles) == 0 && *c.isDeprecatedStartUp {
+		c.UI.Output(c.HelpDeprecated())
 		return ExitCodeRequiredFlagsError
 	} else if len(*c.configFiles) == 0 {
 		c.UI.Error("unable to start consul-terraform-sync")
