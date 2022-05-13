@@ -11,12 +11,12 @@ import (
 )
 
 func TestStartCommand_Name(t *testing.T) {
-	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()})
 	assert.Equal(t, cmdStartName, cmd.Name())
 }
 
 func TestStartCommand_Help(t *testing.T) {
-	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()})
 
 	contains := []string{
 		"Usage CLI: consul-terraform-sync start [-help] [options]",
@@ -44,7 +44,7 @@ func TestStartCommand_Help(t *testing.T) {
 }
 
 func TestStartCommand_HelpDefault(t *testing.T) {
-	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()})
 
 	contains := []string{
 		"Usage CLI: consul-terraform-sync <command> [-help] [options]",
@@ -58,20 +58,20 @@ func TestStartCommand_HelpDefault(t *testing.T) {
 		"-once",
 	}
 
-	s := cmd.HelpDefault()
+	s := cmd.HelpDeprecated()
 	for _, c := range contains {
 		assert.Contains(t, s, c)
 	}
 }
 
 func TestStartCommand_Synopsis(t *testing.T) {
-	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()})
 	assert.Equal(t, "", cmd.Synopsis())
 }
 
 func TestStartCommand_AutocompleteFlags(t *testing.T) {
 	t.Parallel()
-	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()})
 
 	predictor := cmd.AutocompleteFlags()
 
@@ -80,9 +80,12 @@ func TestStartCommand_AutocompleteFlags(t *testing.T) {
 	res := predictor.Predict(args)
 
 	// Grab the list of flags from the Flag object
+	// We don't want to include the default flag explicitly in our comparison
 	flags := make([]string, 0)
 	cmd.flags.VisitAll(func(flag *flag.Flag) {
-		flags = append(flags, fmt.Sprintf("-%s", flag.Name))
+		if flag.Name != flagDeprecatedStartUp {
+			flags = append(flags, fmt.Sprintf("-%s", flag.Name))
+		}
 	})
 
 	// Verify that there is a prediction for each flag associated with the command
@@ -92,7 +95,7 @@ func TestStartCommand_AutocompleteFlags(t *testing.T) {
 }
 
 func TestStartCommand_AutocompleteArgs(t *testing.T) {
-	cmd := newStartCommand(meta{UI: cli.NewMockUi()}, false)
+	cmd := newStartCommand(meta{UI: cli.NewMockUi()})
 	c := cmd.AutocompleteArgs()
 	assert.Equal(t, complete.PredictNothing, c)
 }
