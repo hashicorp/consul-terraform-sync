@@ -322,7 +322,12 @@ type HttpIntercept struct {
 
 func NewHttpClient(t *testing.T, intercepts []*HttpIntercept) *http.Client {
 	f := func(req *http.Request) *http.Response {
-		intercept, err := find(intercepts, req.URL.Path)
+		path := req.URL.Path
+		query := req.URL.RawQuery
+		if query != "" {
+			path = fmt.Sprintf("%s?%s", path, query)
+		}
+		intercept, err := find(intercepts, path)
 		if err != nil {
 			return &http.Response{
 				StatusCode: http.StatusBadRequest,

@@ -49,7 +49,7 @@ func Test_GetLicense_API_Failure(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			path := "/v1/operator/license"
+			path := "/v1/operator/license?signed=1"
 
 			intercepts := []*testutils.HttpIntercept{
 				{Path: path, ResponseStatusCode: tc.responseCode},
@@ -68,7 +68,7 @@ func Test_GetLicense_API_Failure(t *testing.T) {
 
 func Test_GetLicense(t *testing.T) {
 	t.Parallel()
-	path := "/v1/operator/license"
+	path := "/v1/operator/license?signed=1"
 	expectedLicense := "foo"
 
 	intercepts := []*testutils.HttpIntercept{
@@ -140,7 +140,7 @@ func TestConsulClient_RegisterService(t *testing.T) {
 func TestConsulClient_DeregisterService(t *testing.T) {
 	t.Parallel()
 	id := "cts-123"
-	path := fmt.Sprintf("/v1/agent/service/deregister/%s", id)
+	defaultPath := fmt.Sprintf("/v1/agent/service/deregister/%s", id)
 
 	var nonRetryableError *retry.NonRetryableError
 	var missingConsulACLError *MissingConsulACLError
@@ -150,10 +150,18 @@ func TestConsulClient_DeregisterService(t *testing.T) {
 		expectErr           bool
 		isNonRetryableError bool
 		isMissingAClError   bool
+		path                string
+		query               *consulapi.QueryOptions
 	}{
 		{
 			name:         "success",
 			responseCode: http.StatusOK,
+		},
+		{
+			name:         "success_w_query",
+			responseCode: http.StatusOK,
+			path:         fmt.Sprintf("%s?ns=test-ns", defaultPath),
+			query:        &consulapi.QueryOptions{Namespace: "test-ns"},
 		},
 		{
 			name:         "request limit reached error retryable",
@@ -177,11 +185,18 @@ func TestConsulClient_DeregisterService(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Configure Consul client with intercepts
+			path := tc.path
+			if path == "" {
+				path = defaultPath
+			}
 			intercepts := []*testutils.HttpIntercept{
 				{Path: path, ResponseStatusCode: tc.responseCode},
 			}
 			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
-			err := c.DeregisterService(context.Background(), id)
+
+			// Deregister service
+			err := c.DeregisterService(context.Background(), id, tc.query)
 			if !tc.expectErr {
 				assert.NoError(t, err)
 			} else {
