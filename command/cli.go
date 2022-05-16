@@ -72,14 +72,33 @@ func NewCLI(out, err io.Writer) *CLI {
 // Run accepts a slice of arguments and returns an int representing the exit
 // status from the command.
 func (cli *CLI) Run(args []string) int {
+	processedArgs := args[1:]
+	// If the command is not the first argument, assume no command was provided. Prepend the
+	// start command and deprecated start up flag to use the start command with slightly different behavior.
+	// TODO: remove once running CTS without a command is removed
+	isDefault := false
+	if len(processedArgs) == 0 || strings.HasPrefix(processedArgs[0], "-") {
+		processedArgs = append([]string{cmdStartName, fmt.Sprintf("-%s", flagDeprecatedStartUp)}, processedArgs...)
+		isDefault = true
+	}
+
 	subcommands := &mcli.CLI{
 		Name:                       "consul-terraform-sync",
-		Args:                       args[1:],
+		Args:                       processedArgs,
 		Commands:                   Commands(),
 		Autocomplete:               true,
 		AutocompleteNoDefaultFlags: true,
 		HelpFunc:                   help,
 		HelpWriter:                 tabwriter.NewWriter(os.Stdout, 0, 2, 4, ' ', tabwriter.AlignRight),
+	}
+
+	// Check if the help flag has been specified, this allows us to provide a usage specific
+	// to the case where CTS runs without a command
+	// TODO: remove once running CTS without a command is removed
+	if subcommands.IsHelp() && isDefault {
+		s := startCommand{}
+		fmt.Fprint(cli.outStream, s.HelpDeprecated())
+		return ExitCodeOK
 	}
 
 	if subcommands.IsVersion() {

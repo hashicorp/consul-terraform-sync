@@ -47,10 +47,7 @@ func Commands() map[string]cli.CommandFactory {
 			return newTaskCreateCommand(m), nil
 		},
 		cmdStartName: func() (cli.Command, error) {
-			return newStartCommand(m, false), nil
-		},
-		"": func() (cli.Command, error) {
-			return newStartCommand(m, true), nil
+			return newStartCommand(m), nil
 		},
 	}
 
