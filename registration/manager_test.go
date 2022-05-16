@@ -193,7 +193,7 @@ func TestServiceRegistrationManager_Start(t *testing.T) {
 				Name: name,
 			},
 		).Return(nil)
-		mockClient.On("DeregisterService", mock.Anything, id).Return(nil)
+		mockClient.On("DeregisterService", mock.Anything, id, mock.Anything).Return(nil)
 		manager.client = mockClient
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -244,7 +244,7 @@ func TestServiceRegistrationManager_Start(t *testing.T) {
 		mockClient := new(mocks.ConsulClientInterface)
 		mockClient.On("RegisterService", mock.Anything, mock.Anything).
 			Return(nil)
-		mockClient.On("DeregisterService", mock.Anything, mock.Anything).
+		mockClient.On("DeregisterService", mock.Anything, mock.Anything, mock.Anything).
 			Return(errors.New("mock deregister error"))
 		manager.client = mockClient
 
@@ -283,7 +283,7 @@ func TestServiceRegistrationManager_deregister(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockClient := new(mocks.ConsulClientInterface)
-		mockClient.On("DeregisterService", ctx, id).Return(nil)
+		mockClient.On("DeregisterService", ctx, id, &consulapi.QueryOptions{}).Return(nil)
 		manager.client = mockClient
 
 		err := manager.deregister(ctx)
@@ -291,9 +291,29 @@ func TestServiceRegistrationManager_deregister(t *testing.T) {
 		mockClient.AssertExpectations(t)
 	})
 
+	t.Run("success with namespace", func(t *testing.T) {
+		mockClient := new(mocks.ConsulClientInterface)
+		mockClient.On("DeregisterService", ctx, id,
+			mock.MatchedBy(func(r *consulapi.QueryOptions) bool {
+				return r.Namespace == "test-ns"
+			})).Return(nil)
+		nsManager := &ServiceRegistrationManager{
+			service: &service{
+				name:      config.DefaultServiceName,
+				id:        id,
+				namespace: "test-ns",
+			},
+			logger: logging.NewNullLogger(),
+			client: mockClient,
+		}
+		err := nsManager.deregister(ctx)
+		assert.NoError(t, err)
+		mockClient.AssertExpectations(t)
+	})
+
 	t.Run("error on deregister", func(t *testing.T) {
 		mockClient := new(mocks.ConsulClientInterface)
-		mockClient.On("DeregisterService", mock.Anything, mock.Anything).
+		mockClient.On("DeregisterService", mock.Anything, mock.Anything, mock.Anything).
 			Return(errors.New("mock deregister error"))
 		manager.client = mockClient
 
@@ -304,7 +324,7 @@ func TestServiceRegistrationManager_deregister(t *testing.T) {
 
 	t.Run("error on deregister missing ACL", func(t *testing.T) {
 		mockClient := new(mocks.ConsulClientInterface)
-		mockClient.On("DeregisterService", mock.Anything, mock.Anything).
+		mockClient.On("DeregisterService", mock.Anything, mock.Anything, mock.Anything).
 			Return(&client.MissingConsulACLError{Err: errors.New("mock deregister error")})
 		manager.client = mockClient
 
