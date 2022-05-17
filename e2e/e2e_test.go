@@ -99,6 +99,45 @@ func TestE2EBasic(t *testing.T) {
 	_ = cleanup()
 }
 
+// TestE2EArgumentParsing runs the CTS binary and checks to ensure that
+// argument parsing works properly for both `=` and space-delimited argument values.
+// For example, both `--a=b` and `--a b` should be acceptable ways to specify args.
+func TestE2EArgumentParsing(t *testing.T) {
+	setParallelism(t)
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "argument_parsing")
+	cleanupTemp := testutils.MakeTempDir(t, tempDir)
+	defer cleanupTemp()
+
+	// Create an extra, empty directory that will be searched for config files.
+	// This is done because the `StartCTS` function always includes its own
+	// argument of `-config-file=` and we cannot reference the same files twice.
+	emptyDir := fmt.Sprintf("%s%s", tempDirPrefix, "argument_parsing_emptydir")
+	cleanupEmpty := testutils.MakeTempDir(t, emptyDir)
+	defer cleanupEmpty()
+
+	configPath := filepath.Join(tempDir, configFile)
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
+		appendDBTask().appendWebTask()
+	config.write(t, configPath)
+
+	// Execute CTS with these extra parameters to ensure they parse correctly.
+	testCases := [][]string{
+		{"start", "-config-dir", emptyDir, "-config-dir=" + emptyDir},
+		// TODO remove this line after the deprecated "default" implied subcommand is no longer supported.
+		{"-config-dir", emptyDir, "-config-dir=" + emptyDir},
+	}
+
+	for _, args := range testCases {
+		cts, stop := api.StartCTS(t, configPath, args...)
+		err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+		assert.NoError(t, err, "Execution failed for arguments: %v", args)
+		stop(t)
+	}
+}
+
 // TestE2ERestart runs the CTS binary in daemon mode and tests restarting
 // CTS results in no errors and can continue running based on the same config
 // and Consul storing state.
