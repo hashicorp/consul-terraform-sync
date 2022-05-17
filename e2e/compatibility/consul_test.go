@@ -48,7 +48,8 @@ func TestCompatibility_Consul(t *testing.T) {
 	// major minor version. v1.4.5 starts losing compatibility, details in
 	// comments. Theoretical compatible versions 0.1.0 GA:
 	consulVersions := []string{
-		"1.11.0-beta1",
+		"1.12.0",
+		"1.11.5",
 		"1.10.3",
 		"1.9.10",
 		"1.8.16",
