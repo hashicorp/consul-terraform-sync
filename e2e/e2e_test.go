@@ -123,7 +123,7 @@ func TestE2EArgumentParsing(t *testing.T) {
 		appendDBTask().appendWebTask()
 	config.write(t, configPath)
 
-	// Execute CTS with these extra parameters to ensure they parse correctly. For example:
+	// Execute CTS with these extra parameters to ensure they parse correctly.
 	testCases := [][]string{
 		{"start", "-config-dir", emptyDir, "-config-dir=" + emptyDir},
 		// TODO remove this line after the deprecated "default" implied subcommand is no longer supported.
