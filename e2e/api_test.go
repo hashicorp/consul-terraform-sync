@@ -456,7 +456,6 @@ func TestE2E_HealthEndpoint(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Nil(t, healthResp.Error)
-			assert.NotEmpty(t, healthResp.RequestId)
 		})
 	}
 }
