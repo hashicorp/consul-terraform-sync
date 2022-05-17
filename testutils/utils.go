@@ -313,6 +313,9 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req), nil
 }
 
+// HttpIntercept represents a mapping of a path to the response that the
+// HTTP client should return for requests to that path (including query
+// parameters).
 type HttpIntercept struct {
 	Path               string
 	RequestTest        func(*testing.T, *http.Request)
@@ -320,6 +323,8 @@ type HttpIntercept struct {
 	ResponseData       []byte
 }
 
+// NewHttpClient returns an HTTP client that returns mocked responses to specific
+// request paths based on the specified intercepts.
 func NewHttpClient(t *testing.T, intercepts []*HttpIntercept) *http.Client {
 	f := func(req *http.Request) *http.Response {
 		path := req.URL.Path

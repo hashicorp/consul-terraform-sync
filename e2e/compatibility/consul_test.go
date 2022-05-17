@@ -572,9 +572,7 @@ func getCheck(t *testing.T, checkID string, port int) (*capi.AgentCheck, error) 
 	require.NoError(t, err)
 
 	checks, err := client.Agent().Checks()
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 	c, ok := checks[checkID]
 	if !ok {
 		return nil, fmt.Errorf("check %s not registered", checkID)
