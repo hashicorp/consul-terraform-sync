@@ -74,8 +74,7 @@ type ErrorResponse struct {
 
 // HealthCheckResponse defines model for HealthCheckResponse.
 type HealthCheckResponse struct {
-	Error     *Error    `json:"error,omitempty"`
-	RequestId RequestID `json:"request_id"`
+	Error *Error `json:"error,omitempty"`
 }
 
 // The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.

@@ -39,7 +39,7 @@ func (hh *HealthHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	// use error type to determine if service is considered unhealthy and return
 	// a 503: service unavailable response if the system is unhealthy
 	status := http.StatusOK
-	resp := oapigen.HealthCheckResponse{RequestId: requestIDFromContext(r.Context())}
+	resp := oapigen.HealthCheckResponse{}
 
 	if err != nil {
 		resp.Error = &oapigen.Error{Message: err.Error()}
