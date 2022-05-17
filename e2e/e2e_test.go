@@ -107,14 +107,14 @@ func TestE2EArgumentParsing(t *testing.T) {
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
-	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cmd_parsing")
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "argument_parsing")
 	cleanupTemp := testutils.MakeTempDir(t, tempDir)
 	defer cleanupTemp()
 
 	// Create an extra, empty directory that will be searched for config files.
 	// This is done because the `StartCTS` function always includes its own
 	// argument of `-config-file=` and we cannot reference the same files twice.
-	emptyDir := fmt.Sprintf("%s%s", tempDirPrefix, "cmd_parsing_emptydir")
+	emptyDir := fmt.Sprintf("%s%s", tempDirPrefix, "argument_parsing_emptydir")
 	cleanupEmpty := testutils.MakeTempDir(t, emptyDir)
 	defer cleanupEmpty()
 
@@ -123,24 +123,19 @@ func TestE2EArgumentParsing(t *testing.T) {
 		appendDBTask().appendWebTask()
 	config.write(t, configPath)
 
-	// Execute CTS with these extra parameters to ensure they parse correctly:
-	// `-config-dir <empty-dir>`
-	// `-config-dir=<empty-dir>`
-	extraParams := []string{"-config-dir", emptyDir, "-config-dir=" + emptyDir}
+	// Execute CTS with these extra parameters to ensure they parse correctly. For example:
+	testCases := [][]string{
+		{"start", "-config-dir", emptyDir, "-config-dir=" + emptyDir},
+		// TODO remove this line after the deprecated "default" implied subcommand is no longer supported.
+		{"-config-dir", emptyDir, "-config-dir=" + emptyDir},
+	}
 
-	// Execute the command with no subcommand
-	// TODO remove this after the "default" command is no longer supported.
-	cts, stop := api.StartCTS(t, configPath, extraParams...)
-	defer stop(t)
-	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
-	require.NoError(t, err)
-
-	// Execute the command with the `start` subcommand
-	extraParams = append([]string{"start"}, extraParams...)
-	cts, stop = api.StartCTS(t, configPath, extraParams...)
-	defer stop(t)
-	err = cts.WaitForTestReadiness(defaultWaitForTestReadiness)
-	require.NoError(t, err)
+	for _, args := range testCases {
+		cts, stop := api.StartCTS(t, configPath, args...)
+		err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+		assert.NoError(t, err, "Execution failed for arguments: %v", args)
+		stop(t)
+	}
 }
 
 // TestE2ERestart runs the CTS binary in daemon mode and tests restarting
