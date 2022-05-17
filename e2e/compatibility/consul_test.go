@@ -87,6 +87,11 @@ func TestCompatibility_Consul(t *testing.T) {
 			"compat_node_values",
 			testNodeValuesCompatibility,
 		},
+		{
+			// cts registering itself as a service
+			"compat_cts_registration",
+			testCTSRegisteredCompatibility,
+		},
 	}
 
 	wd, err := os.Getwd()
@@ -464,6 +469,30 @@ func downloadConsul(t *testing.T, dst string, version string) string {
 	return filepath.Join(dst, "consul")
 }
 
+func testCTSRegisteredCompatibility(t *testing.T, tempDir string, port int) {
+	id := "cts-01"
+	config := baseConfig(tempDir, port) + nullTask() + fmt.Sprintf("\nid=\"%s\"", id)
+	configPath := filepath.Join(tempDir, configFile)
+	testutils.WriteFile(t, configPath, config)
+
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+	require.NoError(t, err)
+	time.Sleep(3 * time.Second) // extra wait for service registration
+
+	serviceName := "Consul-Terraform-Sync"
+	s, err := getService(t, id, port)
+	require.NoError(t, err, "CTS service not registered")
+	assert.Equal(t, serviceName, s.Service)
+
+	checkID := id + "-health"
+	check, err := getCheck(t, checkID, port)
+	require.NoError(t, err)
+	assert.Equal(t, id, check.ServiceID)
+	assert.Equal(t, serviceName, check.ServiceName)
+}
+
 // runConsul starts running a Consul binary that is in the current directory.
 // Returns a function that stops running Consul. Does not log to standard out.
 func runConsul(t *testing.T, execPath string, port int) func() {
@@ -523,6 +552,17 @@ func deregisterService(t *testing.T, serviceID string, port int) {
 	time.Sleep(8 * time.Second)
 }
 
+// getService returns a Consul service if it is registered
+func getService(t *testing.T, serviceID string, port int) (*capi.AgentService, error) {
+	conf := capi.DefaultConfig()
+	conf.Address = fmt.Sprintf("localhost:%d", port)
+	client, err := capi.NewClient(conf)
+	require.NoError(t, err)
+
+	s, _, err := client.Agent().Service(serviceID, nil)
+	return s, err
+}
+
 // registerCatalog registers an entity to running Consul binary + wait time
 func registerCatalog(t *testing.T, entity *capi.CatalogRegistration, port int) {
 	conf := capi.DefaultConfig()
@@ -535,6 +575,24 @@ func registerCatalog(t *testing.T, entity *capi.CatalogRegistration, port int) {
 
 	// wait a little for CTS to respond
 	time.Sleep(8 * time.Second)
+}
+
+// getCheck returns a Consul health check if it is registered
+func getCheck(t *testing.T, checkID string, port int) (*capi.AgentCheck, error) {
+	conf := capi.DefaultConfig()
+	conf.Address = fmt.Sprintf("localhost:%d", port)
+	client, err := capi.NewClient(conf)
+	require.NoError(t, err)
+
+	checks, err := client.Agent().Checks()
+	if err != nil {
+		return nil, err
+	}
+	c, ok := checks[checkID]
+	if !ok {
+		return nil, fmt.Errorf("check %s not registered", checkID)
+	}
+	return c, nil
 }
 
 func baseConfig(dir string, port int) string {
