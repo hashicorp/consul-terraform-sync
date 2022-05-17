@@ -17,13 +17,13 @@ type ConsulClientInterface struct {
 	mock.Mock
 }
 
-// DeregisterService provides a mock function with given fields: ctx, serviceID
-func (_m *ConsulClientInterface) DeregisterService(ctx context.Context, serviceID string) error {
-	ret := _m.Called(ctx, serviceID)
+// DeregisterService provides a mock function with given fields: ctx, serviceID, q
+func (_m *ConsulClientInterface) DeregisterService(ctx context.Context, serviceID string, q *api.QueryOptions) error {
+	ret := _m.Called(ctx, serviceID, q)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = rf(ctx, serviceID)
+	if rf, ok := ret.Get(0).(func(context.Context, string, *api.QueryOptions) error); ok {
+		r0 = rf(ctx, serviceID, q)
 	} else {
 		r0 = ret.Error(0)
 	}

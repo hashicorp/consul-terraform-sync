@@ -28,7 +28,7 @@ func Test_Daemon_Run_long(t *testing.T) {
 
 	mockConsul := new(mocksC.ConsulClientInterface)
 	mockConsul.On("RegisterService", mock.Anything, mock.Anything).Return(nil)
-	mockConsul.On("DeregisterService", mock.Anything, mock.Anything).Return(nil)
+	mockConsul.On("DeregisterService", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	ctl := Daemon{
 		once:         true,

@@ -153,9 +153,14 @@ func (m *ServiceRegistrationManager) deregister(ctx context.Context) error {
 	logger := m.logger.With("service_name", m.service.name, "id", m.service.id)
 	logger.Info("deregistering Consul-Terraform-Sync from Consul")
 
+	q := &consulapi.QueryOptions{}
+	if m.service.namespace != "" {
+		q.Namespace = m.service.namespace
+	}
+	err := m.client.DeregisterService(ctx, m.service.id, q)
+
 	// Ignore error and continue if due to a missing ACL
 	var missingConsulACLError *client.MissingConsulACLError
-	err := m.client.DeregisterService(ctx, m.service.id)
 	if err != nil {
 		baseErrMsg := "error deregistering Consul-Terraform-Sync from Consul"
 		if errors.As(err, &missingConsulACLError) {
