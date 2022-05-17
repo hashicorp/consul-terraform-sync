@@ -6,7 +6,6 @@ package compatibility
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -392,23 +391,11 @@ func testNodeValuesCompatibility(t *testing.T, tempDir string, port int) {
 		TaggedAddresses: taggedAddr,
 		NodeMeta:        meta,
 		Service:         &capi.AgentService{ID: "api1", Service: "api"},
-		Check: &capi.AgentCheck{
-			Node:      "node_name",
-			CheckID:   "1234",
-			Status:    "passing",
-			ServiceID: "api1",
-			Definition: capi.HealthCheckDefinition{
-				HTTP:     "http://www.consul.io",
-				Method:   http.MethodGet,
-				Interval: *capi.NewReadableDuration(1 * time.Second),
-			},
-		},
 	}
 	registerCatalog(t, entity, port)
 
 	// 2. modify node name
 	entity.Node = "node_name_update"
-	entity.Check.Node = "node_name_update"
 	registerCatalog(t, entity, port)
 	content = testutils.CheckFile(t, true, workingDir, tftmpl.TFVarsFilename)
 	assert.Contains(t, content, "node_name_update")
