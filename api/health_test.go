@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/health"
 	mockHealth "github.com/hashicorp/consul-terraform-sync/mocks/health"
@@ -17,7 +16,6 @@ import (
 
 func Test_HealthHandler_GetHealth(t *testing.T) {
 	t.Parallel()
-	reqID := uuid.NewString()
 
 	cases := []struct {
 		name        string
@@ -51,7 +49,6 @@ func Test_HealthHandler_GetHealth(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, path, nil)
 			require.NoError(t, err)
 
-			req = req.WithContext(requestIDWithContext(req.Context(), reqID))
 			rr := httptest.NewRecorder()
 
 			handler.GetHealth(rr, req)
@@ -61,7 +58,6 @@ func Test_HealthHandler_GetHealth(t *testing.T) {
 			assert.NoError(t, err)
 
 			assert.Equal(t, rr.Code, tc.statusCode)
-			assert.Equal(t, hcr.RequestId, oapigen.RequestID(reqID))
 			if tc.checkReturn != nil {
 				assert.NotNil(t, hcr.Error)
 				assert.NotEmpty(t, hcr.Error.Message)

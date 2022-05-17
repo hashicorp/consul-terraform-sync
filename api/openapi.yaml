@@ -527,8 +527,6 @@ components:
       type: object
       additionalProperties: false
       properties:
-        request_id:
-          $ref: '#/components/schemas/RequestID'
         error:
           $ref: '#/components/schemas/Error'
       required:
