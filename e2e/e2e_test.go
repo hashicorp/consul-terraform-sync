@@ -99,6 +99,50 @@ func TestE2EBasic(t *testing.T) {
 	_ = cleanup()
 }
 
+// TestE2EArgumentParsing runs the CTS binary and checks to ensure that
+// argument parsing works properly for both `=` and space-delimited argument values.
+// For example, both `--a=b` and `--a b` should be acceptable ways to specify args.
+func TestE2EArgumentParsing(t *testing.T) {
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cmd_parsing")
+	cleanupTemp := testutils.MakeTempDir(t, tempDir)
+
+	// Create an extra, empty directory that will be searched for config files.
+	// This is done because the `StartCTS` function always includes its own
+	// argument of `-config-file=` and we cannot reference the same files twice.
+	emptyDir := fmt.Sprintf("%s%s", tempDirPrefix, "cmd_parsing_emptydir")
+	cleanupEmpty := testutils.MakeTempDir(t, emptyDir)
+	defer cleanupEmpty()
+
+	configPath := filepath.Join(tempDir, configFile)
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().
+		appendDBTask().appendWebTask()
+	config.write(t, configPath)
+
+	// Execute CTS with these extra parameters to ensure they parse correctly:
+	// `-config-dir <empty-dir>`
+	// `-config-dir=<empty-dir>`
+	extraParams := []string{"-config-dir", emptyDir, "-config-dir=" + emptyDir}
+
+	// Execute the command with no subcommand
+	// TODO remove this after the "default" command is no longer supported.
+	cts, stop := api.StartCTS(t, configPath, extraParams...)
+	defer stop(t)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+	require.NoError(t, err)
+
+	// Execute the command with the `start` subcommand
+	extraParams = append([]string{"start"}, extraParams...)
+	cts, stop = api.StartCTS(t, configPath, extraParams...)
+	defer stop(t)
+	err = cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+	require.NoError(t, err)
+
+	_ = cleanupTemp()
+}
+
 // TestE2ERestart runs the CTS binary in daemon mode and tests restarting
 // CTS results in no errors and can continue running based on the same config
 // and Consul storing state.
