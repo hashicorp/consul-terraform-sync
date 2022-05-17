@@ -17,8 +17,8 @@ require (
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-test/deep v1.0.7 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
-	github.com/hashicorp/consul/api v1.8.1
-	github.com/hashicorp/consul/sdk v0.7.0
+	github.com/hashicorp/consul/api v1.12.0
+	github.com/hashicorp/consul/sdk v0.8.0
 	github.com/hashicorp/cronexpr v1.1.1
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.4
@@ -42,7 +42,6 @@ require (
 	github.com/hashicorp/vault/sdk v0.2.0 // indirect
 	github.com/klauspost/compress v1.11.7 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
-	github.com/miekg/dns v1.1.40 // indirect
 	github.com/mitchellh/cli v1.1.2
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
