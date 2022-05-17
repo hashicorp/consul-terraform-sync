@@ -103,11 +103,13 @@ func TestE2EBasic(t *testing.T) {
 // argument parsing works properly for both `=` and space-delimited argument values.
 // For example, both `--a=b` and `--a b` should be acceptable ways to specify args.
 func TestE2EArgumentParsing(t *testing.T) {
+	setParallelism(t)
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "cmd_parsing")
 	cleanupTemp := testutils.MakeTempDir(t, tempDir)
+	defer cleanupTemp()
 
 	// Create an extra, empty directory that will be searched for config files.
 	// This is done because the `StartCTS` function always includes its own
@@ -139,8 +141,6 @@ func TestE2EArgumentParsing(t *testing.T) {
 	defer stop(t)
 	err = cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
-
-	_ = cleanupTemp()
 }
 
 // TestE2ERestart runs the CTS binary in daemon mode and tests restarting
