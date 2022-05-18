@@ -1,6 +1,6 @@
 # Required var.services declaration
 variable "services" {
-  description = "Consul services monitored by Consul Terraform Sync"
+  description = "Consul services monitored by Consul-Terraform-Sync"
   # Optional attributes of services
   type = map(
     object({

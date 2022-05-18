@@ -2,7 +2,7 @@ package config
 
 import "fmt"
 
-// DriverConfig is the configuration for the Sync driver used to execute
+// DriverConfig is the configuration for the CTS driver used to execute
 // infrastructure updates.
 type DriverConfig struct {
 	consul *ConsulConfig

@@ -22,7 +22,7 @@ var tfVersionSensitive = goVersion.Must(goVersion.NewSemver("0.14.0"))
 var VariableServices = []byte(`
 # Service definition protocol v0
 variable "services" {
-  description = "Consul services monitored by Consul Terraform Sync"
+  description = "Consul services monitored by Consul-Terraform-Sync"
   type = map(
     object({
       id        = string

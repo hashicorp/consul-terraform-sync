@@ -57,12 +57,12 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	}
 
 	// tfexec does not support logging levels. This enables Terraform output to
-	// log within Sync logs. This is useful for debugging and development
+	// log within CTS logs. This is useful for debugging and development
 	// purposes. It may be difficult to work with log aggregators that expect
 	// uniform log format.
 	logger := logging.Global().Named(loggingSystemName).Named(tcliSubsystemName)
 	if config.Log {
-		logger.Info("Terraform logging is set, Terraform logs will output with Sync logs")
+		logger.Info("Terraform logging is set, Terraform logs will output with Consul-Terraform-Sync logs")
 		lg := log.New(log.Writer(), "", log.Flags())
 		tf.SetLogger(lg)
 		tf.SetStdout(log.Writer())

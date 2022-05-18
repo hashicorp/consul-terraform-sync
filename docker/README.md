@@ -45,7 +45,7 @@ Below is an example running the CLI to enable a task using Docker to a container
 $ docker exec -t cts consul-terraform-sync task enable task_a
 ==> Inspecting changes to resource if enabling 'task_a'...
 
-    Generating plan that Consul Terraform Sync will use Terraform to execute
+    Generating plan that Consul-Terraform-Sync will use Terraform to execute
 
 No changes. Your infrastructure matches the configuration.
 

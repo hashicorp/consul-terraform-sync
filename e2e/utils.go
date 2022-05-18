@@ -34,7 +34,7 @@ const (
 	// Terraform resources created from running consul-terraform-sync are stored
 	resourcesDir = "resources"
 
-	// configFile is the name of the sync config file
+	// configFile is the name of the cts config file
 	configFile = "config.hcl"
 
 	// liberal default times to wait
@@ -120,7 +120,7 @@ func newTestConsulServer(t *testing.T) *testutil.TestServer {
 	return srv
 }
 
-func runSyncStop(t *testing.T, configPath string, dur time.Duration) {
+func runAndStopCTS(t *testing.T, configPath string, dur time.Duration) {
 	cts, stop := api.StartCTS(t, configPath)
 	err := cts.WaitForTestReadiness(dur)
 	require.NoError(t, err)

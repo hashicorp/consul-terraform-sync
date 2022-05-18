@@ -148,7 +148,7 @@ func (h *Panos) commit(ctx context.Context) error {
 
 	c := commit.FirewallCommit{
 		Admins:      []string{h.adminUser},
-		Description: "Consul Terraform Sync Commit",
+		Description: "Consul-Terraform-Sync Commit",
 	}
 	tryCommit := func(ctx context.Context) error {
 		job, resp, err := h.client.Commit(c.Element(), "", nil)
