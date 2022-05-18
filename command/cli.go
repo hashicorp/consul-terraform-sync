@@ -73,11 +73,14 @@ func NewCLI(out, err io.Writer) *CLI {
 // status from the command.
 func (cli *CLI) Run(args []string) int {
 	processedArgs := args[1:]
-	// If the command is not the first argument, assume no command was provided. Prepend the
-	// start command and deprecated start up flag to use the start command with slightly different behavior.
+	// If the command is not the first argument, and version is not requested,
+	// assume no command was provided. Prepend the start command and deprecated start up flag to use the start command
+	// with slightly different behavior.
+	// This is a workaround introducing minimal changes to support CTS as a daemon without a command
+	// until its removal in a future major release
 	// TODO: remove once running CTS without a command is removed
 	isDefault := false
-	if len(processedArgs) == 0 || strings.HasPrefix(processedArgs[0], "-") {
+	if (len(processedArgs) == 0 || strings.HasPrefix(processedArgs[0], "-")) && !isVersion(processedArgs) {
 		processedArgs = append([]string{cmdStartName, fmt.Sprintf("-%s", flagDeprecatedStartUp)}, processedArgs...)
 		isDefault = true
 	}
@@ -85,11 +88,12 @@ func (cli *CLI) Run(args []string) int {
 	subcommands := &mcli.CLI{
 		Name:                       "consul-terraform-sync",
 		Args:                       processedArgs,
-		Commands:                   Commands(),
+		Commands:                   Commands(cli.outStream, cli.errStream),
 		Autocomplete:               true,
 		AutocompleteNoDefaultFlags: true,
 		HelpFunc:                   help,
-		HelpWriter:                 tabwriter.NewWriter(os.Stdout, 0, 2, 4, ' ', tabwriter.AlignRight),
+		HelpWriter:                 tabwriter.NewWriter(cli.outStream, 0, 2, 4, ' ', tabwriter.AlignRight),
+		ErrorWriter:                cli.errStream,
 	}
 
 	// Check if the help flag has been specified, this allows us to provide a usage specific
@@ -113,6 +117,15 @@ func (cli *CLI) Run(args []string) int {
 			strings.Join(args, " "), err)
 	}
 	return exitCode
+}
+
+func isVersion(args []string) bool {
+	for _, arg := range args {
+		if arg == "--version" || arg == "-version" || arg == "-v" {
+			return true
+		}
+	}
+	return false
 }
 
 func help(commands map[string]mcli.CommandFactory) string {

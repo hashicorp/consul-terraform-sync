@@ -1,6 +1,7 @@
 package command
 
 import (
+	"io"
 	"os"
 
 	"github.com/mitchellh/cli"
@@ -11,25 +12,26 @@ const (
 	errCreatingClient  = "Error: unable to create client"
 )
 
-func configureMeta() meta {
+func configureMeta(writer io.Writer, errorWriter io.Writer) meta {
 	return meta{
 		UI: &cli.PrefixedUi{
 			InfoPrefix:   "==> ",
 			OutputPrefix: "    ",
 			ErrorPrefix:  "==> ",
 			Ui: &cli.BasicUi{
-				Writer: os.Stdout,
-				Reader: os.Stdin,
+				Writer:      writer,
+				Reader:      os.Stdin,
+				ErrorWriter: errorWriter,
 			},
 		},
+		writer: writer,
 	}
 }
 
 // Commands returns the mapping of CLI commands for CTS. The meta
 // parameter lets you set meta options for all commands.
-func Commands() map[string]cli.CommandFactory {
-	// Disable logging, we want to control what is output
-	m := configureMeta()
+func Commands(writer io.Writer, errorWriter io.Writer) map[string]cli.CommandFactory {
+	m := configureMeta(writer, errorWriter)
 
 	// The command factory will use the run command as the default
 	// an empty string key ("") is interpreted as the default command

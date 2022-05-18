@@ -27,6 +27,7 @@ type taskDisableCommand struct {
 func newTaskDisableCommand(m meta) *taskDisableCommand {
 	logging.DisableLogging()
 	flags := m.defaultFlagSet(cmdTaskDisableName)
+	flags.SetOutput(m.writer)
 	return &taskDisableCommand{
 		meta:  m,
 		flags: flags,

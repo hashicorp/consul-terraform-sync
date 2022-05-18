@@ -124,17 +124,28 @@ func TestE2EArgumentParsing(t *testing.T) {
 	config.write(t, configPath)
 
 	// Execute CTS with these extra parameters to ensure they parse correctly.
-	testCases := [][]string{
-		{"start", "-config-dir", emptyDir, "-config-dir=" + emptyDir},
-		// TODO remove this line after the deprecated "default" implied subcommand is no longer supported.
-		{"-config-dir", emptyDir, "-config-dir=" + emptyDir},
+	testcases := []struct {
+		name string
+		args []string
+	}{
+		{
+			"with start command",
+			[]string{"start", "-config-dir", emptyDir, "-config-dir=" + emptyDir},
+		},
+		{
+			// TODO remove this line after the deprecated "default" implied subcommand is no longer supported.
+			"without start command",
+			[]string{"-config-dir", emptyDir, "-config-dir=" + emptyDir},
+		},
 	}
 
-	for _, args := range testCases {
-		cts, stop := api.StartCTS(t, configPath, args...)
-		err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
-		assert.NoError(t, err, "Execution failed for arguments: %v", args)
-		stop(t)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			cts, stop := api.StartCTS(t, configPath, tc.args...)
+			err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+			assert.NoError(t, err, "Execution failed for arguments: %v", tc.args)
+			stop(t)
+		})
 	}
 }
 

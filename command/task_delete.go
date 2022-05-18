@@ -26,6 +26,7 @@ type taskDeleteCommand struct {
 func newTaskDeleteCommand(m meta) *taskDeleteCommand {
 	logging.DisableLogging()
 	flags := m.defaultFlagSet(cmdTaskDeleteName)
+	flags.SetOutput(m.writer)
 	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of deleting a task")
 	return &taskDeleteCommand{
 		meta:        m,
