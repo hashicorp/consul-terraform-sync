@@ -33,6 +33,7 @@ type taskCreateCommand struct {
 func newTaskCreateCommand(m meta) *taskCreateCommand {
 	logging.DisableLogging()
 	flags := m.defaultFlagSet(cmdTaskCreateName)
+	flags.SetOutput(m.writer)
 	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of inspect plan")
 	f := flags.String(flagTaskFile, "", "[Required] A file containing the hcl or json definition of a task")
 	return &taskCreateCommand{
