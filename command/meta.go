@@ -3,6 +3,7 @@ package command
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"strings"
@@ -26,7 +27,8 @@ type meta struct {
 	port        *int
 	addr        *string
 
-	tls tls
+	tls    tls
+	writer io.Writer
 }
 
 type tls struct {
