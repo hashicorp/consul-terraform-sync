@@ -55,6 +55,7 @@ type startCommand struct {
 
 func (c *startCommand) startFlags() *flag.FlagSet {
 	flags := flag.NewFlagSet(cmdStartName, flag.ContinueOnError)
+	flags.SetOutput(c.meta.writer)
 
 	var configFiles, inspectTasks config.FlagAppendSliceValue
 	var isInspect, isOnce, autocompleteInstall, autocompleteUninstall, isDeprecatedStartup bool

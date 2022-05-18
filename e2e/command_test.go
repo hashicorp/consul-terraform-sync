@@ -908,3 +908,40 @@ func TestE2E_TaskCommand_Help(t *testing.T) {
 		})
 	}
 }
+
+func TestE2E_CommandlessFlags(t *testing.T) {
+	setParallelism(t)
+	cases := []struct {
+		name           string
+		flag           string
+		outputContains []string
+	}{
+		{
+			name: "help",
+			flag: "-help",
+			outputContains: []string{
+				"Usage CLI: consul-terraform-sync <command> [-help] [options]",
+				"Commands:",
+			},
+		},
+		{
+			name: "version",
+			flag: "-version",
+			outputContains: []string{
+				"consul-terraform-sync",
+				"Compatible with Terraform",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			output, err := runSubcommand(t, "", tc.flag)
+			assert.NoError(t, err)
+
+			for _, expect := range tc.outputContains {
+				assert.Contains(t, output, expect)
+			}
+		})
+	}
+}

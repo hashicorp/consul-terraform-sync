@@ -29,6 +29,7 @@ type taskEnableCommand struct {
 func newTaskEnableCommand(m meta) *taskEnableCommand {
 	logging.DisableLogging()
 	flags := m.defaultFlagSet(cmdTaskEnableName)
+	flags.SetOutput(m.writer)
 	a := flags.Bool(FlagAutoApprove, false, "Skip interactive approval of inspect plan")
 	return &taskEnableCommand{
 		meta:        m,
