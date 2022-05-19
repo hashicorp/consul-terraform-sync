@@ -35,28 +35,32 @@ dev:
 	@go install -ldflags "$(LD_FLAGS)" -tags '$(GOTAGS)'
 .PHONY: dev
 
-# test runs the test suite
+# test runs the unit tests
 test:
 	@echo "==> Testing ${NAME}"
 	@go test -count=1 -timeout=30s -cover ./... ${TESTARGS}
 .PHONY: test
 
-# test-integration runs the test suite and integration tests
-test-integration:
-	@echo "==> Testing ${NAME} (test suite & integration)"
-	@go test -count=1 -timeout=80s -tags=integration -cover ./... ${TESTARGS}
-.PHONY: test-all
+# test-unit-and-integration runs the unit and integration tests
+test-unit-and-integration:
+	@echo "==> Testing ${NAME} (unit & integration tests)"
+	@mkdir -p .build/test-results
+	@gotestsum --format testname --junitfile .build/test-results/unit-and-integration-tests.xml -- \
+		-count=1 -timeout=80s -tags=integration -cover ./... ${TESTARGS}
+.PHONY: test-unit-and-integration
 
 # test-setup-e2e sets up the sync binary and permissions to run in circle
 test-setup-e2e: dev
 	sudo mv ${GOPATH}/bin/consul-terraform-sync /usr/local/bin/consul-terraform-sync
 .PHONY: test-setup-e2e
 
-# test-e2e-cirecleci does e2e test setup and then runs the e2e tests
-test-e2e-cirecleci: test-setup-e2e
+# test-e2e-circleci does e2e test setup and then runs the e2e tests
+test-e2e-circleci: test-setup-e2e
 	@echo "==> Testing ${NAME} (e2e)"
-	@go test ./e2e -race -count=1 -timeout=900s -tags=e2e ./... ${TESTARGS}
-.PHONY: test-e2e-cirecleci
+	@echo "Tests regex: $(shell cat ".build/chunks/chunk.${CHUNK_INDEX}")"
+	@gotestsum --format testname --junitfile .build/test-results/e2e-tests-${CHUNK_INDEX}.xml -- \
+		./e2e -race -count=1 -timeout=600s -tags=e2e -run="$(shell cat ".build/chunks/chunk.${CHUNK_INDEX}")" ${TESTARGS}
+.PHONY: test-e2e-circleci
 
 # test-e2e-local does e2e test setup and then runs the e2e tests
 test-e2e-local: test-setup-e2e
@@ -76,7 +80,7 @@ test-benchmarks:
 	@go test -json ./e2e/benchmarks -timeout 2h -bench=. -tags e2e
 .PHONY: test-benchmarks
 
-# compile-weekly-tests is a check that our weekly-runned tests can compile. this
+# compile-weekly-tests is a check that our weekly-run tests can compile. this
 # will be called on a more frequent cadence than weekly
 compile-weekly-tests:
 	@echo "==> Running compile check for weekly tests for ${NAME}"
@@ -99,14 +103,11 @@ generate:
 
 go-fmt-check:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+.PHONY: go-fmt-check
 
 terraform-fmt-check:
 	@sh -c "'$(CURDIR)/scripts/terraformfmtcheck.sh'"
-
-# temp noop command to get build pipeline working
-dev-tree:
-	@true
-.PHONY: dev-tree
+.PHONY: terraform-fmt-check
 
 version:
 ifneq (,$(wildcard version/version_ent.go))
@@ -114,5 +115,4 @@ ifneq (,$(wildcard version/version_ent.go))
 else
 	@$(CURDIR)/build-scripts/version.sh version/version.go
 endif
-
 .PHONY: version
