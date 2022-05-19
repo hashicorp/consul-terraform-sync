@@ -140,7 +140,7 @@ func TestE2E_ServiceRegistration_DeregisterWhenStopped(t *testing.T) {
 	config := baseConfig(tempDir).appendID(id).
 		appendConsulBlock(srv).appendTerraformBlock().
 		appendModuleTask("disabled_task", "mkam/hello/cts",
-			"enabled = false") // optimization since task running is not relevant to test
+			"enabled = true")
 	config.write(t, configPath)
 
 	// Start CTS, verify that service is registered
@@ -223,7 +223,7 @@ service_registration {
 }
 
 // TestE2E_ServiceRegistration_InitError tests that if the initial run
-// of all tasks fails, then CTS is not registered.
+// of all tasks fails, then CTS is still registered.
 func TestE2E_ServiceRegistration_InitError(t *testing.T) {
 	setParallelism(t)
 	srv := newTestConsulServer(t)
@@ -264,11 +264,11 @@ func TestE2E_ServiceRegistration_InitError(t *testing.T) {
 		t.Fatal("timed out waiting for CTS initialization to fail")
 	}
 
-	// Verify no attempt at registration and no service registered
+	// Verify registration and deregistration occurred
 	output := buf.String()
-	assert.NotContains(t, output, "registering Consul-Terraform-Sync as a service with Consul")
+	assert.Contains(t, output, "registering Consul-Terraform-Sync as a service with Consul")
 	registered := testutils.ConsulServiceRegistered(t, srv, id)
-	assert.False(t, registered)
+	assert.True(t, registered)
 }
 
 func getServiceInstancesByName(t testing.TB, srv *testutil.TestServer, serviceName string) map[string]testutils.ConsulService {
