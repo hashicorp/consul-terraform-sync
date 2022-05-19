@@ -93,13 +93,6 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 		exitCh <- err
 	}()
 
-	// Run tasks once through once-mode
-	if !ctrl.once {
-		if err := ctrl.Once(ctx); err != nil {
-			return err
-		}
-	}
-
 	var rm *registration.ServiceRegistrationManager
 	if *conf.Consul.ServiceRegistration.Enabled {
 		// Expect one more long-running goroutine
@@ -130,6 +123,13 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 			rm.Start(ctx)
 			exitCh <- nil // registration errors are logged only
 		}()
+	}
+
+	// Run tasks once through once-mode
+	if !ctrl.once {
+		if err := ctrl.Once(ctx); err != nil {
+			return err
+		}
 	}
 
 	// Run tasks in long-running mode
