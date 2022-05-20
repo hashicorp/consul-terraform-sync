@@ -14,6 +14,7 @@ func TestServiceRegistrationConfig_DefaultServiceRegistrationConfig(t *testing.T
 		Enabled:     Bool(true),
 		Namespace:   String(""),
 		ServiceName: String(DefaultServiceName),
+		Address:     String(""),
 		DefaultCheck: &DefaultCheckConfig{
 			Enabled: Bool(true),
 			Address: String(""),
@@ -50,6 +51,7 @@ func TestServiceRegistrationConfig_Copy(t *testing.T) {
 				Enabled:     Bool(false),
 				ServiceName: String("cts-service"),
 				Namespace:   String("test"),
+				Address:     String("172.0.0.2"),
 				DefaultCheck: &DefaultCheckConfig{
 					Enabled: Bool(false),
 					Address: String("test"),
@@ -172,6 +174,30 @@ func TestServiceRegistrationConfig_Merge(t *testing.T) {
 			&ServiceRegistrationConfig{ServiceName: String("service_a")},
 		},
 		{
+			"address_overrides",
+			&ServiceRegistrationConfig{Address: String("address_a")},
+			&ServiceRegistrationConfig{Address: String("address_b")},
+			&ServiceRegistrationConfig{Address: String("address_b")},
+		},
+		{
+			"address_empty_one",
+			&ServiceRegistrationConfig{Address: String("address_a")},
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{Address: String("address_a")},
+		},
+		{
+			"address_empty_two",
+			&ServiceRegistrationConfig{},
+			&ServiceRegistrationConfig{Address: String("address_a")},
+			&ServiceRegistrationConfig{Address: String("address_a")},
+		},
+		{
+			"address_same",
+			&ServiceRegistrationConfig{Address: String("address_a")},
+			&ServiceRegistrationConfig{Address: String("address_a")},
+			&ServiceRegistrationConfig{Address: String("address_a")},
+		},
+		{
 			"default_check_overrides",
 			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(true)}},
 			&ServiceRegistrationConfig{DefaultCheck: &DefaultCheckConfig{Enabled: Bool(false)}},
@@ -219,6 +245,7 @@ func TestServiceRegistrationConfig_Finalize(t *testing.T) {
 			&ServiceRegistrationConfig{
 				Enabled:     Bool(true),
 				ServiceName: String(DefaultServiceName),
+				Address:     String(""),
 				Namespace:   String(""),
 				DefaultCheck: &DefaultCheckConfig{
 					Enabled: Bool(true),
@@ -259,6 +286,7 @@ func TestServiceRegistrationConfig_Validate(t *testing.T) {
 			&ServiceRegistrationConfig{
 				Enabled:     Bool(true),
 				ServiceName: String("cts-service"),
+				Address:     String("172.0.0.5"),
 				Namespace:   String("ns-1"),
 				DefaultCheck: &DefaultCheckConfig{
 					Enabled: Bool(true),
@@ -306,6 +334,7 @@ func TestServiceRegistrationConfig_GoString(t *testing.T) {
 			&ServiceRegistrationConfig{
 				Enabled:     Bool(true),
 				ServiceName: String("cts-service"),
+				Address:     String("172.0.0.5"),
 				Namespace:   String("test"),
 				DefaultCheck: &DefaultCheckConfig{
 					Enabled: Bool(false),
@@ -315,6 +344,7 @@ func TestServiceRegistrationConfig_GoString(t *testing.T) {
 			"&ServiceRegistrationConfig{" +
 				"Enabled:true, " +
 				"ServiceName:cts-service, " +
+				"Address:172.0.0.5, " +
 				"Namespace:test, " +
 				"DefaultCheck: &DefaultCheckConfig{Enabled:false, Address:test}" +
 				"}",
