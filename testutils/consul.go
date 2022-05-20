@@ -176,6 +176,7 @@ type ConsulService struct {
 	ID      string
 	Service string
 	Tags    []string
+	Address string
 	Port    int
 }
 

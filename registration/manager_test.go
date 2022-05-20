@@ -19,6 +19,11 @@ import (
 
 func TestNewServiceRegistrationManager(t *testing.T) {
 	t.Parallel()
+	id := "cts-123"
+	port := 123
+	serviceName := "cts"
+	serviceAddress := "172.1.2.3"
+	ns := "ns-1"
 	testcases := []struct {
 		name            string
 		conf            *ServiceRegistrationManagerConfig
@@ -27,39 +32,42 @@ func TestNewServiceRegistrationManager(t *testing.T) {
 		{
 			"defaults",
 			&ServiceRegistrationManagerConfig{
-				ID:                  "cts-123",
-				Port:                123,
+				ID:                  id,
+				Port:                port,
 				TLSEnabled:          false,
 				ServiceRegistration: config.DefaultServiceRegistrationConfig(),
 			},
 			&service{
 				name:      config.DefaultServiceName,
 				tags:      defaultServiceTags,
-				id:        "cts-123",
-				port:      123,
+				id:        id,
+				address:   "",
+				port:      port,
 				namespace: "",
 			},
 		},
 		{
 			"configured",
 			&ServiceRegistrationManagerConfig{
-				ID:         "cts-123",
-				Port:       123,
+				ID:         id,
+				Port:       port,
 				TLSEnabled: false,
 				ServiceRegistration: &config.ServiceRegistrationConfig{
-					ServiceName: config.String("cts-service"),
-					Namespace:   config.String("ns-1"),
+					ServiceName: &serviceName,
+					Address:     &serviceAddress,
+					Namespace:   &ns,
 					DefaultCheck: &config.DefaultCheckConfig{
 						Enabled: config.Bool(true),
 					},
 				},
 			},
 			&service{
-				name:      "cts-service",
+				name:      serviceName,
 				tags:      defaultServiceTags,
-				id:        "cts-123",
-				port:      123,
-				namespace: "ns-1",
+				id:        id,
+				address:   serviceAddress,
+				port:      port,
+				namespace: ns,
 			},
 		},
 	}

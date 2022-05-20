@@ -48,6 +48,7 @@ func TestE2E_ServiceRegistration_Defaults(t *testing.T) {
 	assert.True(t, strings.HasPrefix(id, "cts-"),
 		"unexpected format for generated service ID %s", service.ID)
 	assert.Equal(t, name, service.Service)
+	assert.Equal(t, "", service.Address)
 	assert.Equal(t, cts.Port(), service.Port)
 	assert.Equal(t, []string{"cts"}, service.Tags)
 
@@ -79,17 +80,19 @@ func TestE2E_ServiceRegistration_Configured(t *testing.T) {
 	// Configure CTS with a consul config that has service_registration block
 	id := "cts-01"
 	serviceName := "cts"
+	serviceAddress := "123.456.789"
 	port := testutils.FreePort(t)
-	address := fmt.Sprintf("http://127.0.0.1:%d", port)
+	checkAddress := fmt.Sprintf("http://127.0.0.1:%d", port)
 	rConfig := fmt.Sprintf(`
 service_registration {
 	enabled = true
 	service_name = "%s"
+	address = "%s"
 	default_check {
 		enabled = true
 		address = "%s"
 	}
-}`, serviceName, address)
+}`, serviceName, serviceAddress, checkAddress)
 
 	configPath := filepath.Join(tempDir, configFile)
 	config := baseConfig(tempDir).appendID(id).appendPort(port).
@@ -101,7 +104,7 @@ service_registration {
 	err := cmd.Start()
 	require.NoError(t, err)
 	defer cmd.Process.Signal(os.Interrupt)
-	cts, err := api.NewClient(&api.ClientConfig{URL: address}, nil)
+	cts, err := api.NewClient(&api.ClientConfig{URL: checkAddress}, nil)
 	require.NoError(t, err)
 	err = cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 	require.NoError(t, err)
@@ -112,6 +115,7 @@ service_registration {
 	expectedSrv := testutils.ConsulService{
 		Service: serviceName,
 		ID:      id,
+		Address: serviceAddress,
 		Port:    port,
 		Tags:    []string{"cts"},
 	}
@@ -122,7 +126,7 @@ service_registration {
 	require.NoError(t, err)
 	assert.Equal(t, id, check.ServiceID)
 	assert.Equal(t, serviceName, check.ServiceName)
-	url := fmt.Sprintf("%s/v1/health", address)
+	url := fmt.Sprintf("%s/v1/health", checkAddress)
 	assert.Contains(t, check.Output, url)
 }
 
