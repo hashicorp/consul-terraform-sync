@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/internal/decode"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/hcl"
 	"github.com/mitchellh/mapstructure"
 )
@@ -613,13 +612,14 @@ func antiboolFromEnv(list []string, def bool) *bool {
 	return Bool(def)
 }
 
-// generateID generates a UUID to be used as the ID for a CTS instance
+// generateID generates the default ID for a CTS instance in the format:
+// `cts-<hostname>`
 func generateID() (string, error) {
-	uuid, err := uuid.GenerateUUID()
+	host, err := os.Hostname()
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("cts-%s", uuid), nil
+	return fmt.Sprintf("cts-%s", host), nil
 }
 
 // serviceBlockLogMsg is the log message for deprecating the `service` block
