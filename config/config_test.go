@@ -60,6 +60,7 @@ var (
 				Enabled:     Bool(true),
 				ServiceName: String("test-service"),
 				Namespace:   String("test-ns"),
+				Address:     String("10.2.3.4"),
 				DefaultCheck: &DefaultCheckConfig{
 					Enabled: Bool(true),
 					Address: String("http://cts"),

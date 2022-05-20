@@ -55,6 +55,7 @@ type service struct {
 	name      string
 	id        string
 	tags      []string
+	address   string
 	port      int
 	namespace string
 
@@ -65,19 +66,20 @@ type service struct {
 // and Consul client. It sets default values where relevant, including a default HTTP check.
 func NewServiceRegistrationManager(conf *ServiceRegistrationManagerConfig, client client.ConsulClientInterface) *ServiceRegistrationManager {
 	logger := logging.Global().Named(logSystemName)
+	srConf := conf.ServiceRegistration
 
 	name := config.DefaultServiceName
-	if conf.ServiceRegistration.ServiceName != nil {
-		name = *conf.ServiceRegistration.ServiceName
+	if srConf.ServiceName != nil {
+		name = *srConf.ServiceName
 	}
 
 	ns := defaultNamespace
-	if conf.ServiceRegistration.Namespace != nil {
-		ns = *conf.ServiceRegistration.Namespace
+	if srConf.Namespace != nil {
+		ns = *srConf.Namespace
 	}
 
 	var checks []*consulapi.AgentServiceCheck
-	if *conf.ServiceRegistration.DefaultCheck.Enabled {
+	if *srConf.DefaultCheck.Enabled {
 		checks = append(checks, defaultHTTPCheck(conf))
 	}
 	return &ServiceRegistrationManager{
@@ -87,6 +89,7 @@ func NewServiceRegistrationManager(conf *ServiceRegistrationManagerConfig, clien
 			name:      name,
 			id:        conf.ID,
 			tags:      defaultServiceTags,
+			address:   *srConf.Address,
 			port:      conf.Port,
 			namespace: ns,
 			checks:    checks,
@@ -121,6 +124,7 @@ func (m *ServiceRegistrationManager) register(ctx context.Context) error {
 		ID:        s.id,
 		Name:      s.name,
 		Tags:      s.tags,
+		Address:   s.address,
 		Port:      s.port,
 		Checks:    s.checks,
 		Namespace: s.namespace,
