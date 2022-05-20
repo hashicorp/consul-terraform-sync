@@ -43,6 +43,7 @@ func TestConsulConfig_Copy(t *testing.T) {
 				ServiceRegistration: &ServiceRegistrationConfig{
 					Enabled:     Bool(false),
 					ServiceName: String("test-service"),
+					Address:     String("10.2.3.4"),
 					Namespace:   String("test-ns"),
 					DefaultCheck: &DefaultCheckConfig{
 						Enabled: Bool(true),
@@ -290,6 +291,7 @@ func TestConsulConfig_Finalize(t *testing.T) {
 				ServiceRegistration: &ServiceRegistrationConfig{
 					Enabled:     Bool(true),
 					ServiceName: String(DefaultServiceName),
+					Address:     String(""),
 					Namespace:   String(""),
 					DefaultCheck: &DefaultCheckConfig{
 						Enabled: Bool(true),

@@ -49,6 +49,7 @@ consul {
   service_registration {
     enabled = true
     service_name = "test-service"
+    address = "10.2.3.4"
     namespace = "test-ns"
     default_check {
       enabled = true

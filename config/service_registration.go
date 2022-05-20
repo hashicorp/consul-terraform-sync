@@ -11,6 +11,7 @@ const (
 type ServiceRegistrationConfig struct {
 	Enabled      *bool               `mapstructure:"enabled"`
 	ServiceName  *string             `mapstructure:"service_name"`
+	Address      *string             `mapstructure:"address"`
 	Namespace    *string             `mapstructure:"namespace"`
 	DefaultCheck *DefaultCheckConfig `mapstructure:"default_check"`
 }
@@ -22,6 +23,7 @@ func DefaultServiceRegistrationConfig() *ServiceRegistrationConfig {
 		Enabled:     Bool(true),
 		ServiceName: String(DefaultServiceName),
 		Namespace:   String(""),
+		Address:     String(""),
 		DefaultCheck: &DefaultCheckConfig{
 			Enabled: Bool(true),
 			Address: String(""),
@@ -38,6 +40,7 @@ func (c *ServiceRegistrationConfig) Copy() *ServiceRegistrationConfig {
 	var o ServiceRegistrationConfig
 	o.Enabled = BoolCopy(c.Enabled)
 	o.ServiceName = StringCopy(c.ServiceName)
+	o.Address = StringCopy(c.Address)
 	o.Namespace = StringCopy(c.Namespace)
 
 	if c.DefaultCheck != nil {
@@ -71,6 +74,10 @@ func (c *ServiceRegistrationConfig) Merge(o *ServiceRegistrationConfig) *Service
 		r.ServiceName = StringCopy(o.ServiceName)
 	}
 
+	if o.Address != nil {
+		r.Address = StringCopy(o.Address)
+	}
+
 	if o.Namespace != nil {
 		r.Namespace = StringCopy(o.Namespace)
 	}
@@ -90,6 +97,10 @@ func (c *ServiceRegistrationConfig) Finalize() {
 
 	if c.ServiceName == nil {
 		c.ServiceName = String(DefaultServiceName)
+	}
+
+	if c.Address == nil {
+		c.Address = String("")
 	}
 
 	if c.Namespace == nil {
@@ -127,11 +138,13 @@ func (c *ServiceRegistrationConfig) GoString() string {
 	return fmt.Sprintf("&ServiceRegistrationConfig{"+
 		"Enabled:%v, "+
 		"ServiceName:%s, "+
+		"Address:%s, "+
 		"Namespace:%s, "+
 		"DefaultCheck: %s"+
 		"}",
 		BoolVal(c.Enabled),
 		StringVal(c.ServiceName),
+		StringVal(c.Address),
 		StringVal(c.Namespace),
 		c.DefaultCheck.GoString(),
 	)
