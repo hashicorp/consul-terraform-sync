@@ -33,6 +33,7 @@ func Test_Daemon_Run_long(t *testing.T) {
 	ctl := Daemon{
 		once:         true,
 		consulClient: mockConsul,
+		logger:       logging.NewNullLogger(),
 	}
 
 	tm := newTestTasksManager()

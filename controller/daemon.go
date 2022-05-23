@@ -134,6 +134,7 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 
 	// Run tasks in long-running mode
 	go func() {
+		ctrl.logger.Info("start monitoring tasks")
 		err := ctrl.monitor.Run(ctx)
 		exitCh <- err
 	}()
