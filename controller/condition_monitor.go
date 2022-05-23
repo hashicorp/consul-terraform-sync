@@ -119,7 +119,7 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 			return err
 
 		case <-ctx.Done():
-			cm.logger.Info("stopping controller")
+			cm.logger.Info("stop monitoring tasks")
 			return ctx.Err()
 		}
 
