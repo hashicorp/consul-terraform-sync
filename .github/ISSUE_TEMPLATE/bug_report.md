@@ -11,7 +11,7 @@ assignees: ''
 A clear and concise description of what the bug is.
 
 ### Versions
-**Consul Terraform Sync**
+**Consul-Terraform-Sync**
 ```
 consul-terraform-sync v0.1.1 (4dc13b5)
 Compatible with Terraform >= 0.13.0, < 0.15

@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 // Runs benchmarks executing CTS in once mode with one task. The task uses the
@@ -41,7 +42,7 @@ func benchmarkInstances(b *testing.B, N int) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		require.NoError(b, runSyncOnce(path))
+		require.NoError(b, runCTSOnce(path))
 	}
 }
 
@@ -66,14 +67,14 @@ func benchmarkServices(b *testing.B, N int) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		require.NoError(b, runSyncOnce(path))
+		require.NoError(b, runCTSOnce(path))
 	}
 }
 
 // ----------------------------------------------------------------------------
 
 // Run CTS in once mode from the cli level
-func runSyncOnce(configPath string) error {
+func runCTSOnce(configPath string) error {
 	cli := command.NewCLI(os.Stdout, os.Stderr)
 	args := []string{"cts", "-once", fmt.Sprintf("--config-file=%s", configPath)}
 	exitCode := cli.Run(args)

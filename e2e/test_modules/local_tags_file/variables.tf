@@ -1,5 +1,5 @@
 variable "services" {
-  description = "Consul services monitored by Consul Terraform Sync"
+  description = "Consul services monitored by Consul-Terraform-Sync"
   type = map(
     object({
       id        = string
@@ -22,6 +22,6 @@ variable "services" {
 }
 
 variable "catalog_services" {
-  description = "Consul catalog service names and tags monitored by Consul Terraform Sync"
+  description = "Consul catalog service names and tags monitored by Consul-Terraform-Sync"
   type        = map(list(string))
 }

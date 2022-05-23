@@ -31,7 +31,7 @@ const (
 	filePathLogKey = "file_path"
 )
 
-// Config is used to configure Sync
+// Config is used to configure CTS
 type Config struct {
 	LogLevel   *string `mapstructure:"log_level"`
 	ClientType *string `mapstructure:"client_type"`

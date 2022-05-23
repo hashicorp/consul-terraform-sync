@@ -76,7 +76,7 @@ func isTFInstalled(tfPath string) bool {
 	}
 
 	// Check if terraform exists in $PATH to notify users about the new
-	// installation for Sync
+	// installation for CTS
 	path, err := exec.LookPath("terraform")
 	if err != nil {
 		return false
@@ -90,7 +90,7 @@ func isTFInstalled(tfPath string) bool {
 }
 
 // verifyInstalledTF checks if the installed Terraform is compatible with the
-// current architecture and is valid within Sync version constraints.
+// current architecture and is valid within CTS version constraints.
 func verifyInstalledTF(ctx context.Context, conf *config.TerraformConfig) (*goVersion.Version, bool, error) {
 	tfPath := *conf.Path
 
@@ -136,7 +136,7 @@ func verifyInstalledTF(ctx context.Context, conf *config.TerraformConfig) (*goVe
 }
 
 // isTFCompatible checks compatibility of the version of Terraform with the
-// features of Consul Terraform Sync
+// features of Consul-Terraform-Sync
 func isTFCompatible(conf *config.TerraformConfig, version *goVersion.Version) error {
 	// https://github.com/hashicorp/terraform/issues/23121
 	if _, ok := conf.Backend["pg"]; ok {
@@ -156,7 +156,7 @@ func isTFCompatible(conf *config.TerraformConfig, version *goVersion.Version) er
 
 // installTerraform attempts to install the latest version of Terraform into
 // the path. If the latest version is outside of the known supported range for
-//  Sync, the fall back version 0.13.5 is downloaded.
+// CTS, the fall back version 0.13.5 is downloaded.
 func installTerraform(ctx context.Context, conf *config.TerraformConfig) (*goVersion.Version, error) {
 	var v *goVersion.Version
 	logger := logging.Global().Named(logSystemName).Named(terraformSubsystemName)

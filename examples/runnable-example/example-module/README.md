@@ -1,6 +1,6 @@
-# Example Consul Terraform Sync Compatible Module
+# Example Consul-Terraform-Sync Compatible Module
 
-This is an example of a module that is compatible with Consul Terraform Sync, which means it contains a root module (`main.tf`) and a `services` input variable, as specified in `variables.tf`.
+This is an example of a module that is compatible with Consul-Terraform-Sync, which means it contains a root module (`main.tf`) and a `services` input variable, as specified in `variables.tf`.
 
 ## Features
 
@@ -19,7 +19,7 @@ This module writes to a file the name, id, and IP address for all the Consul ser
 |-------------------|----------|-------------|
 | test_key | false | Test metadata that is printed out for the service |
 
-**User Config for Consul Terraform Sync**
+**User Config for Consul-Terraform-Sync**
 
 example.hcl
 ```hcl

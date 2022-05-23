@@ -6,7 +6,7 @@ import (
 
 //go:generate mockery --name=Driver --filename=driver.go  --output=../mocks/driver
 
-// Driver describes the interface for using an Sync driver to carry out changes
+// Driver describes the interface for using an CTS driver to carry out changes
 // downstream to update network infrastructure.
 type Driver interface {
 	// InitTask initializes the task that the driver executes

@@ -45,7 +45,7 @@ var (
 	errIncompatibleTerraformBinary = fmt.Errorf("incompatible Terraform binary: %s", errSuggestion)
 )
 
-// Terraform is a Sync driver that uses the Terraform CLI to interface with
+// Terraform is a CTS driver that uses the Terraform CLI to interface with
 // low-level network infrastructure.
 type Terraform struct {
 	mu sync.RWMutex

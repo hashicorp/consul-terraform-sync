@@ -166,10 +166,10 @@ func TestE2ERestart(t *testing.T) {
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().appendDBTask()
 	config.write(t, configPath)
 
-	runSyncStop(t, configPath, defaultWaitForTestReadiness)
+	runAndStopCTS(t, configPath, defaultWaitForTestReadiness)
 
 	// rerun sync. confirm no errors e.g. recreating workspaces
-	runSyncStop(t, configPath, defaultWaitForTestReadiness)
+	runAndStopCTS(t, configPath, defaultWaitForTestReadiness)
 
 	_ = cleanup()
 }
@@ -275,8 +275,8 @@ func TestE2ELocalBackend(t *testing.T) {
 			"path configured",
 			"local_backend_path",
 			`backend "local" {
-				# Setting path is meaningless in Sync. TF only uses it for
-				# default workspace; Sync only uses non-default workspaces. This
+				# Setting path is meaningless in CTS. TF only uses it for
+				# default workspace; CTS only uses non-default workspaces. This
 				# value is overridden by the workspace directory for non-default
 				# workspaces.
 				path = "this-will-be-replaced-by-default-dir/terraform.tfstate"

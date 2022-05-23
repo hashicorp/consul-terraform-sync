@@ -14,7 +14,7 @@ const (
 	taskSubsystemName = "task"
 )
 
-// TaskConfig is the configuration for a Sync task. This block may be
+// TaskConfig is the configuration for a CTS task. This block may be
 // specified multiple times to configure multiple tasks.
 type TaskConfig struct {
 	// Description is a human readable text to describe the task.
@@ -28,7 +28,7 @@ type TaskConfig struct {
 	Providers []string `mapstructure:"providers"`
 
 	// DeprecatedServices is the list of service IDs or logical service names the task
-	// executes on. Sync monitors the Consul Catalog for changes to these
+	// executes on. CTS monitors the Consul Catalog for changes to these
 	// services and triggers the task to run. Any service value not explicitly
 	// defined by a `service` block with a matching ID is assumed to be a logical
 	// service name in the default namespace.
