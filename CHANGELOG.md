@@ -1,4 +1,4 @@
-## 0.6.0-beta1 (May 11, 2022)
+## 0.6.0 (May 25, 2022)
 
 KNOWN ISSUES:
 * Terraform driver requests to the Terraform CLI leaks go-routines which can lead to "error from kill" entries in logs [[GH-849](https://github.com/hashicorp/consul-terraform-sync/issues/849)]
