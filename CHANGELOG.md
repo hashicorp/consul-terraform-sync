@@ -1,4 +1,4 @@
-## 0.6.0-beta1 (May 11, 2022)
+## 0.6.0 (May 25, 2022)
 
 KNOWN ISSUES:
 * Terraform driver requests to the Terraform CLI leaks go-routines which can lead to "error from kill" entries in logs [[GH-849](https://github.com/hashicorp/consul-terraform-sync/issues/849)]
@@ -26,6 +26,7 @@ BUG FIXES:
 * Fix issue where the main function for running the CTS binary was only using a logger with default settings [[GH-789](https://github.com/hashicorp/consul-terraform-sync/issues/789)]
 * Fix issue where `syslog.enabled` was not automatically set to true when other `syslog` configs were configured [[GH-815](https://github.com/hashicorp/consul-terraform-sync/pull/815)]
 * Fix issue where deleting task run events used a read-lock instead of write-lock [[GH-787](https://github.com/hashicorp/consul-terraform-sync/pull/787)]
+* Fix issue where restarting Consul while CTS was running could cause the first service change to be ignored [[GH-884](https://github.com/hashicorp/consul-terraform-sync/issues/884)]
 
 DEPRECATIONS:
 * **(Enterprise Only)** Deprecate `terraform_version` task configuration in favor of `terraform_cloud_workspace.terraform_version` task configuration [[GH-790](https://github.com/hashicorp/consul-terraform-sync/issues/790)]
