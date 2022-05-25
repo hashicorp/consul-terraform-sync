@@ -6,3 +6,4 @@ e2e/benchmarks/sync-tasks
 
 # ignore builds
 /pkg
+.build/
