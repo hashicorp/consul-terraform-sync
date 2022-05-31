@@ -13,7 +13,7 @@ executors:
       GOPROXY: https://proxy.golang.org/
       GO_VERSION: 1.16
       CONSUL_VERSION: "1.10.3"
-      TERRAFORM_VERSION: "1.0.8"
+      TERRAFORM_VERSION: "1.2.1"
       VAULT_VERSION: "1.8.3"
       GOTESTSUM_VERSION: "1.8.1"
       E2E_TESTS_PARALLELISM: 4
