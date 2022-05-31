@@ -8,6 +8,7 @@ on:
       - main
       # Push events to branches matching refs/heads/release/**
       - 'release/**'
+      - lorna-go-yaml
 
 
 env:
