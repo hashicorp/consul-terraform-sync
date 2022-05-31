@@ -33,7 +33,7 @@ require (
 	github.com/hashicorp/go-version v1.4.0
 	github.com/hashicorp/hc-install v0.3.2
 	github.com/hashicorp/hcat v0.2.1-0.20220519190242-5b1deea3fce6
-	github.com/hashicorp/hcl v1.0.1-vault-2
+	github.com/hashicorp/hcl v1.0.1-vault
 	github.com/hashicorp/hcl/v2 v2.12.0
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/terraform-exec v0.16.1
