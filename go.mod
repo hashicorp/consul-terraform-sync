@@ -13,7 +13,7 @@ require (
 	github.com/deepmap/oapi-codegen v1.10.1
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/frankban/quicktest v1.11.0 // indirect
-	github.com/getkin/kin-openapi v0.94.0
+	github.com/getkin/kin-openapi v0.95.0
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-test/deep v1.0.7 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
