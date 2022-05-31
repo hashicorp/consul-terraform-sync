@@ -102,17 +102,13 @@ generate:
 .PHONY: generate
 
 go-fmt-check:
-	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+	@$(CURDIR)/build-scripts/gofmtcheck.sh
 .PHONY: go-fmt-check
 
 terraform-fmt-check:
-	@sh -c "'$(CURDIR)/scripts/terraformfmtcheck.sh'"
+	@$(CURDIR)/build-scripts/terraformfmtcheck.sh
 .PHONY: terraform-fmt-check
 
 version:
-ifneq (,$(wildcard version/version_ent.go))
-	@$(CURDIR)/build-scripts/version.sh version/version_ent.go
-else
 	@$(CURDIR)/build-scripts/version.sh version/version.go
-endif
 .PHONY: version
