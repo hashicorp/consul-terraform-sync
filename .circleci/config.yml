@@ -16,7 +16,7 @@ executors:
       TERRAFORM_VERSION: "1.0.8"
       VAULT_VERSION: "1.8.3"
       GOTESTSUM_VERSION: "1.8.1"
-      E2E_TESTS_PARALLELISM: 3
+      E2E_TESTS_PARALLELISM: 4
 
 commands:
   setup-consul:
@@ -60,6 +60,7 @@ jobs:
   unit-and-integration-tests:
     executor:
       name: go
+    resource_class: medium
     steps:
       - checkout
       - setup-consul
@@ -85,10 +86,25 @@ jobs:
       - setup-vault
       - run: go test -count=1 -timeout=80s -tags 'integration vault' ./... -run Vault
 
+  split-e2e-tests:
+    executor:
+      name: go
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Split E2E tests
+          command: |
+            ./build-scripts/list-tests.sh e2e ./e2e | ./build-scripts/split-lines.sh ${E2E_TESTS_PARALLELISM} .build/tests
+      - persist_to_workspace:
+          root: .build
+          paths:
+            - tests
+
   e2e-tests:
     executor:
       name: go
-    resource_class: medium+
+    resource_class: medium
     parameters:
       part_index:
         type: integer
@@ -96,11 +112,19 @@ jobs:
       - checkout
       - setup-consul
       - setup-gotestsum
+      - attach_workspace:
+          at: .build
+      - setup-terraform
       - run:
           name: E2E tests
+          environment:
+            TESTS_LIST_PATH: .build/tests/part.<< parameters.part_index >>
+            TESTS_REGEX_PATH: .build/regex/part.<< parameters.part_index >>
           command: |
-            ./build-scripts/split-tests.sh e2e ./e2e ${E2E_TESTS_PARALLELISM} ${PWD}/.build/chunks
-            CHUNK_INDEX=<< parameters.part_index >> make test-e2e-circleci
+            mkdir -p .build/regex
+            sudo cp terraform /home/circleci/project/e2e/terraform
+            cat ${TESTS_LIST_PATH} | ./build-scripts/make-tests-regex.sh > ${TESTS_REGEX_PATH}
+            TESTS_REGEX_PATH=${TESTS_REGEX_PATH} make test-e2e-circleci
       - store_test_results:
           path: .build/test-results
       - when:
@@ -169,6 +193,7 @@ jobs:
   compile-weekly-tests:
     executor:
       name: go
+    resource_class: small
     steps:
       - checkout
       - run:
@@ -188,6 +213,7 @@ jobs:
   go-checks:
     executor:
       name: go
+    resource_class: small
     steps:
       - checkout
       - run: make go-fmt-check
@@ -202,6 +228,7 @@ jobs:
   terraform-checks:
     executor:
       name: go
+    resource_class: small
     steps:
       - checkout
       - setup-terraform
@@ -214,11 +241,14 @@ workflows:
       - terraform-checks
       - compile-weekly-tests
       - unit-and-integration-tests
+      - split-e2e-tests
       - e2e-tests:
           name: "E2E Tests - Part: << matrix.part_index >>"
+          requires:
+            - split-e2e-tests
           matrix:
             parameters:
-              part_index: [ 0, 1, 2 ]
+              part_index: [ 0, 1, 2, 3 ]
 
   weekly-benchmarks:
     jobs:

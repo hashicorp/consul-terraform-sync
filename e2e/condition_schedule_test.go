@@ -280,7 +280,7 @@ func TestCondition_Schedule_Dynamic(t *testing.T) {
 // that the newly created task runs on a schedule, and that the
 // deleted tasks no longer run.
 func TestCondition_Schedule_CreateAndDeleteCLI(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
 
 	initTaskName := "init_scheduled_task"
 	initTask := fmt.Sprintf(scheduledServices, initTaskName)
@@ -390,7 +390,8 @@ func TestCondition_Schedule_CreateAndDeleteCLI(t *testing.T) {
 // TestCondition_Schedule_CreateCLICanceled tests if a task is not given
 // approval to be created, it will not run on a schedule.
 func TestCondition_Schedule_CreateCLICanceled(t *testing.T) {
-	t.Parallel()
+	setParallelism(t)
+
 	taskName := "scheduled_task_create_canceled"
 	createdTask := fmt.Sprintf(scheduledConsulKV, taskName)
 
