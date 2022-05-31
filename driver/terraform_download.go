@@ -171,6 +171,7 @@ func installTerraform(ctx context.Context, conf *config.TerraformConfig) (*goVer
 			v = goVersion.Must(goVersion.NewVersion(resp.CurrentVersion))
 		}
 	}
+
 	if v == nil || !ctsVersion.TerraformConstraint.Check(v) {
 		// Configured version shouldn't be invalid our outside of the constraint at
 		// this point if the configuration was validated.

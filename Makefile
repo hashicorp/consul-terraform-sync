@@ -57,9 +57,9 @@ test-setup-e2e: dev
 # test-e2e-circleci does e2e test setup and then runs the e2e tests
 test-e2e-circleci: test-setup-e2e
 	@echo "==> Testing ${NAME} (e2e)"
-	@echo "Tests regex: $(shell cat ".build/chunks/chunk.${CHUNK_INDEX}")"
-	@gotestsum --format testname --junitfile .build/test-results/e2e-tests-${CHUNK_INDEX}.xml -- \
-		./e2e -race -count=1 -timeout=600s -tags=e2e -run="$(shell cat ".build/chunks/chunk.${CHUNK_INDEX}")" ${TESTARGS}
+	@echo "Tests regex: $(shell cat "${TESTS_REGEX_PATH}")"
+	@gotestsum --format testname --junitfile .build/test-results/e2e-tests_$(shell date "+%F_%H-%M-%S").xml -- \
+		./e2e -race -count=1 -timeout=600s -tags=e2e -run="$(shell cat "${TESTS_REGEX_PATH}")" ${TESTARGS}
 .PHONY: test-e2e-circleci
 
 # test-e2e-local does e2e test setup and then runs the e2e tests

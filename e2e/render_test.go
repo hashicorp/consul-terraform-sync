@@ -21,6 +21,8 @@ import (
 //
 // issues GH-236 and GH-239
 func TestServicesRenderRace(t *testing.T) {
+	setParallelism(t)
+
 	const NumberOfServices = 100
 
 	srv := testutils.NewTestConsulServer(t,
