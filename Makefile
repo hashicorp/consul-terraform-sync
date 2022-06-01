@@ -77,7 +77,7 @@ test-compat: test-setup-e2e
 # test-benchmarks requires Terraform in the path of execution and Consul in $PATH.
 test-benchmarks:
 	@echo "==> Running benchmarks for ${NAME}"
-	@go test -json ./e2e/benchmarks -timeout 2h -bench=. -tags e2e
+	@go test -run Benchmark1Instance -json ./e2e/benchmarks -timeout 2h -bench=. -tags e2e
 .PHONY: test-benchmarks
 
 # compile-weekly-tests is a check that our weekly-run tests can compile. this
