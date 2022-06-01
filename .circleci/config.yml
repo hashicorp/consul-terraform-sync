@@ -173,22 +173,6 @@ jobs:
           name: Run benchmark suite
           no_output_timeout: << parameters.no_output_timeout >>
           command: make test-benchmarks | /usr/bin/tee /tmp/benchmarks.json
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
-      - run:
-          name: Output benchmark results
-          command: |
-            mkdir /tmp/benchmark_results
-            grep 'ns/op' /tmp/benchmarks.json | awk -F '"Output":"'  '{print $2}' | sort \
-              > /tmp/benchmark_results/results-${CIRCLE_SHA1}-${CIRCLE_BUILD_NUM}.txt
-            cat /tmp/benchmark_results/results-${CIRCLE_SHA1}-${CIRCLE_BUILD_NUM}.txt
-      - store_artifacts:
-          path: /tmp/benchmarks.json
-          destination: benchmarks.json
-      - store_artifacts:
-          path: /tmp/benchmark_results
-          destination: benchmark_results
 
   compile-weekly-tests:
     executor:
@@ -237,18 +221,7 @@ jobs:
 workflows:
   build-test:
     jobs:
-      - go-checks
-      - terraform-checks
-      - compile-weekly-tests
-      - unit-and-integration-tests
-      - split-e2e-tests
-      - e2e-tests:
-          name: "E2E Tests - Part: << matrix.part_index >>"
-          requires:
-            - split-e2e-tests
-          matrix:
-            parameters:
-              part_index: [ 0, 1, 2, 3 ]
+      - benchmarks
 
   weekly-benchmarks:
     jobs:
