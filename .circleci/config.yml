@@ -162,7 +162,7 @@ jobs:
       - setup-terraform
       - run:
           name: Copy terraform to benchmark directory
-          command: /bin/cp /usr/local/bin/terraform ./e2e/
+          command: /bin/cp /usr/local/bin/terraform ./e2e/benchmarks/
       - run:
           name: Version Check
           command: |
