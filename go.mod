@@ -62,5 +62,8 @@ require (
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	google.golang.org/genproto v0.0.0-20210222212404-3e1e516060db // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+
+	// v3.0 has a CVE. Force dependencies github.com/deepmap/oapi-codegen to
+	// use latest version of go-yaml
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
