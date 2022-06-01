@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -149,7 +150,11 @@ func generateConf(tb testing.TB, bConf benchmarkConfig) *config.Config {
 
 	conf.Finalize()
 	if conf.Driver.Terraform != nil {
-		conf.Driver.Terraform.Path = config.String("../../../")
+		pwd, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		conf.Driver.Terraform.Path = config.String(pwd)
 	}
 	return conf
 }
