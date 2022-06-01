@@ -58,4 +58,8 @@ require (
 	go.opencensus.io v0.22.6 // indirect
 	golang.org/x/oauth2 v0.0.0-20210220000619-9bb904979d93 // indirect
 	google.golang.org/genproto v0.0.0-20210222212404-3e1e516060db // indirect
+
+	// v3.0 has a CVE. Force dependencies github.com/deepmap/oapi-codegen to
+	// use latest version of go-yaml
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
