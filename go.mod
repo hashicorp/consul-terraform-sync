@@ -24,7 +24,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.4
 	github.com/hashicorp/go-checkpoint v0.5.0
-	github.com/hashicorp/go-getter v1.5.3
+	github.com/hashicorp/go-getter v1.6.1
 	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-immutable-radix v1.3.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
