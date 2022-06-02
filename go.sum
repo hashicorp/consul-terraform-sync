@@ -297,8 +297,9 @@ github.com/hashicorp/cronexpr v1.1.1/go.mod h1:P4wA0KBl9C5q2hABiMO7cp6jcIg96CDh1
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY2I=
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
-github.com/hashicorp/go-bexpr v0.1.4 h1:vyQpuKqqc+Ywb8tf6vZSlkf5qhYkgrNSWURtQggCfLE=
 github.com/hashicorp/go-bexpr v0.1.4/go.mod h1:ey7VZGNrY1PnLlYp6Nf3RLEizPo0B9W4yw2MnDkcK3M=
+github.com/hashicorp/go-bexpr v0.1.11 h1:6DqdA/KBjurGby9yTY0bmkathya0lfwF2SeuubCI7dY=
+github.com/hashicorp/go-bexpr v0.1.11/go.mod h1:f03lAo0duBlDIUMGCuad8oLcgejw4m7U+N8T+6Kz1AE=
 github.com/hashicorp/go-checkpoint v0.5.0 h1:MFYpPZCnQqQTE18jFwSII6eUQrD/oxMFp3mlgcqk5mU=
 github.com/hashicorp/go-checkpoint v0.5.0/go.mod h1:7nfLNL10NsxqO4iWuW6tWW0HjZuDrwkBuEQsVcpCOgg=
 github.com/hashicorp/go-cleanhttp v0.5.0/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
@@ -516,8 +517,9 @@ github.com/mitchellh/mapstructure v1.3.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RR
 github.com/mitchellh/mapstructure v1.3.2/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/mapstructure v1.4.1 h1:CpVNEelQCZBooIPDn+AR3NpivK/TIKU8bDxdASFVQag=
 github.com/mitchellh/mapstructure v1.4.1/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
-github.com/mitchellh/pointerstructure v1.1.0 h1:6RI+cKHSIOOuMhKALJyMIpGOHsmBGGwS0ZSMCPFn/jM=
 github.com/mitchellh/pointerstructure v1.1.0/go.mod h1:zoQzmW5t87ncZZuJWXEyhr0///POW/WQEeFG4RRVKEs=
+github.com/mitchellh/pointerstructure v1.2.1 h1:ZhBBeX8tSlRpu/FFhXH4RC4OJzFlqsQhoHZAz4x7TIw=
+github.com/mitchellh/pointerstructure v1.2.1/go.mod h1:BRAsLI5zgXmw97Lf6s25bs8ohIXc3tViBH44KcwB2g4=
 github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/mitchellh/reflectwalk v1.0.2 h1:G2LzWKi524PWgd3mLHV8Y5k7s6XUvT0Gef6zxSIeXaQ=
 github.com/mitchellh/reflectwalk v1.0.2/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
