@@ -25,7 +25,7 @@ $ consul agent -dev -config-dir=./consul.d
 
 Start Consul-Terraform-Sync using the provided config file.
 ```
-$ consul-terraform-sync -config-file=config.hcl
+$ consul-terraform-sync start -config-file=config.hcl
 ```
 
 Consul-Terraform-Sync will create a `sync-tasks/example-task` directory for the one example task specified in the config file and run the task.

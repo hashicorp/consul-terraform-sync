@@ -184,6 +184,19 @@ func (c *startCommand) Run(args []string) int {
 		return ExitCodeParseFlagsError
 	}
 
+	// TODO: Remove this after default subcommands are not supported.
+	// We have to check the length of the config files to ensure we don't print any message
+	// for the plain `consul-terraform-sync` command execution.
+	if len(*c.configFiles) != 0 && *c.isDeprecatedStartUp {
+		c.UI.Warn("====================================================")
+		c.UI.Warn("Warning: Usage of consul-terraform-sync without a subcommand is deprecated and will be removed in a future release. ")
+		c.UI.Warn("")
+		c.UI.Warn("Use `consul-terraform-sync start` instead. Or see `consul-terraform-sync start -help`.")
+		c.UI.Warn("")
+		c.UI.Warn("For additional help, view our documentation: https://www.consul.io/docs/nia/cli/start")
+		c.UI.Warn("====================================================")
+	}
+
 	// If is isDeprecatedStartUp, provide different help messaging
 	if len(*c.configFiles) == 0 && *c.isDeprecatedStartUp {
 		c.UI.Output(c.HelpDeprecated())
