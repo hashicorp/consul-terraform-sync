@@ -191,9 +191,9 @@ func (c *startCommand) Run(args []string) int {
 		c.UI.Warn("====================================================")
 		c.UI.Warn("Warning: Usage of consul-terraform-sync without a subcommand is deprecated and will be removed in a future release. ")
 		c.UI.Warn("")
-		c.UI.Warn("Use `consul-terraform-sync start` instead. Or see `consul-terraform-sync start -help`.")
+		c.UI.Warn("Use `consul-terraform-sync start` instead.")
 		c.UI.Warn("")
-		c.UI.Warn("For additional help, view our documentation: https://www.consul.io/docs/nia/cli/start")
+		c.UI.Warn("For additional information, use `consul-terraform-sync start -help` or view the documentation: https://www.consul.io/docs/nia/cli/start")
 		c.UI.Warn("====================================================")
 	}
 
