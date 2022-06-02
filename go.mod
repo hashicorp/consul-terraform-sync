@@ -10,7 +10,7 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/armon/go-metrics v0.3.6 // indirect
 	github.com/aws/aws-sdk-go v1.37.19 // indirect
-	github.com/deepmap/oapi-codegen v1.10.1
+	github.com/deepmap/oapi-codegen v1.11.0
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/frankban/quicktest v1.11.0 // indirect
 	github.com/getkin/kin-openapi v0.94.0
