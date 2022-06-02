@@ -141,7 +141,7 @@ func TestE2EArgumentParsing(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			cts, stop := api.StartCTS(t, configPath, tc.args...)
+			cts, stop := api.RunCTS(t, configPath, tc.args...)
 			err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
 			assert.NoError(t, err, "Execution failed for arguments: %v", tc.args)
 			stop(t)
