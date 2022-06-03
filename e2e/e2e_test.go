@@ -166,10 +166,10 @@ func TestE2ERestart(t *testing.T) {
 	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock().appendDBTask()
 	config.write(t, configPath)
 
-	runAndStopCTS(t, configPath, defaultWaitForTestReadiness)
+	startAndStopCTS(t, configPath, defaultWaitForTestReadiness)
 
 	// rerun sync. confirm no errors e.g. recreating workspaces
-	runAndStopCTS(t, configPath, defaultWaitForTestReadiness)
+	startAndStopCTS(t, configPath, defaultWaitForTestReadiness)
 
 	_ = cleanup()
 }
@@ -343,7 +343,7 @@ func TestE2EValidateError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
+	cmd := exec.CommandContext(ctx, "consul-terraform-sync", "start", fmt.Sprintf("--config-file=%s", configPath))
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
@@ -475,7 +475,7 @@ func TestE2EInspectMode(t *testing.T) {
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
 
-	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath),
+	cmd := exec.Command("consul-terraform-sync", "start", fmt.Sprintf("--config-file=%s", configPath),
 		api.CTSInspectFlag)
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
@@ -533,7 +533,7 @@ func TestE2E_OnceMode(t *testing.T) {
 	configPath := filepath.Join(tempDir, configFile)
 	config.write(t, configPath)
 
-	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath),
+	cmd := exec.Command("consul-terraform-sync", "start", fmt.Sprintf("--config-file=%s", configPath),
 		api.CTSOnceModeFlag)
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
@@ -835,7 +835,7 @@ func testInvalidTaskConfig(t *testing.T, testName, taskName, taskConfig, errMsg 
 		config.write(t, configPath)
 
 		out, err := runSubcommand(t, "",
-			fmt.Sprintf("-config-file=%s", configPath), "--once")
+			"start", fmt.Sprintf("-config-file=%s", configPath), "--once")
 
 		require.Error(t, err)
 		assert.Contains(t, out, errMsg)
