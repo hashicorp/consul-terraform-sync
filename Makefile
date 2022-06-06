@@ -72,6 +72,8 @@ test-e2e-local: test-setup-e2e
 test-compat: test-setup-e2e
 	@echo "==> Testing ${NAME} compatibility with Consul"
 	@go test ./e2e/compatibility -timeout 30m -tags=e2e -v -run TestCompatibility_Consul
+	@echo "==> Testing ${NAME} Terraform Downloads"
+	@go test ./e2e/compatibility -timeout 1m -tags=e2e -v -run TestCompatibility_TFDownload
 .PHONY: test-compat
 
 # test-benchmarks requires Terraform in the path of execution and Consul in $PATH.
