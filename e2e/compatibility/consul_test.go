@@ -52,9 +52,6 @@ func TestCompatibility_Consul(t *testing.T) {
 		"1.10.3",
 		"1.9.10",
 		"1.8.16",
-		"1.7.14",
-		"1.6.10",
-		"1.5.3",
 	}
 
 	cases := []struct {
