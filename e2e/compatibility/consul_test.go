@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api"
+	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	capi "github.com/hashicorp/consul/api"
@@ -52,9 +53,6 @@ func TestCompatibility_Consul(t *testing.T) {
 		"1.10.3",
 		"1.9.10",
 		"1.8.16",
-		"1.7.14",
-		"1.6.10",
-		"1.5.3",
 	}
 
 	cases := []struct {
@@ -458,9 +456,9 @@ func downloadConsul(t *testing.T, dst string, version string) string {
 
 func testCTSRegisteredCompatibility(t *testing.T, tempDir string, port int) {
 	id := "cts-01"
-	config := baseConfig(tempDir, port) + nullTask() + fmt.Sprintf("\nid=\"%s\"", id)
+	configContent := baseConfig(tempDir, port) + nullTask() + fmt.Sprintf("\nid=\"%s\"", id)
 	configPath := filepath.Join(tempDir, configFile)
-	testutils.WriteFile(t, configPath, config)
+	testutils.WriteFile(t, configPath, configContent)
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
@@ -468,7 +466,7 @@ func testCTSRegisteredCompatibility(t *testing.T, tempDir string, port int) {
 	require.NoError(t, err)
 	time.Sleep(3 * time.Second) // extra wait for service registration
 
-	serviceName := "Consul-Terraform-Sync"
+	serviceName := config.DefaultServiceName
 	s, err := getService(t, id, port)
 	require.NoError(t, err, "CTS service not registered")
 	assert.Equal(t, serviceName, s.Service)
