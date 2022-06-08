@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 )
 
@@ -17,7 +18,7 @@ func requestIDWithContext(ctx context.Context, requestID string) context.Context
 	// check to avoid unnecessary allocations around creating a copy of a
 	// logger.
 
-	reqID := oapigen.RequestID(requestID)
+	reqID := uuid.MustParse(requestID)
 	return context.WithValue(ctx, reqContextKey, reqID)
 }
 

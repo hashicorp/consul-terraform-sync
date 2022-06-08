@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
@@ -198,7 +199,7 @@ func TestTaskLifeCycleHandler_CreateTask_BadRequest(t *testing.T) {
 			err := decoder.Decode(&actual)
 			require.NoError(t, err)
 
-			expected := generateErrorResponse("", tc.message)
+			expected := generateErrorResponse(uuid.UUID{}.String(), tc.message)
 			assert.Equal(t, expected, actual)
 		})
 	}
@@ -222,7 +223,7 @@ func TestTaskLifeCycleHandler_CreateTask_InternalError(t *testing.T) {
 	err := decoder.Decode(&actual)
 	require.NoError(t, err)
 
-	expected := generateErrorResponse("", errMsg)
+	expected := generateErrorResponse(uuid.UUID{}.String(), errMsg)
 	assert.Equal(t, expected, actual)
 }
 
@@ -247,7 +248,7 @@ func generateErrorResponse(requestID, message string) oapigen.ErrorResponse {
 		Error: oapigen.Error{
 			Message: message,
 		},
-		RequestId: oapigen.RequestID(requestID),
+		RequestId: uuid.MustParse(requestID),
 	}
 
 	return errResp

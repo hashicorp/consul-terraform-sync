@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -95,11 +96,9 @@ func TestTaskLifeCycleHandler_GetAllTasks(t *testing.T) {
 				var actual oapigen.TasksResponse
 				err := decoder.Decode(&actual)
 				require.NoError(t, err)
-				expectedTasksResponse := tasksResponseFromTaskConfigs(taskConfigs, "")
 
-				assert.Equal(t, expectedTasksResponse.RequestId, actual.RequestId)
+				expectedTasksResponse := tasksResponseFromTaskConfigs(taskConfigs, uuid.UUID{})
 				assert.ElementsMatch(t, *expectedTasksResponse.Tasks, *actual.Tasks)
-
 			},
 		},
 	}

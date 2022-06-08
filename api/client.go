@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/go-rootcerts"
 )
 
-//go:generate mockery --name=httpClient  --structname=HttpClient --output=../mocks/api
+//go:generate mockery --name=httpClient --structname=HttpClient --output=../mocks/api
 
 const (
 	HTTPScheme  = "http"

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"testing"
 	"time"
 
@@ -875,7 +876,7 @@ func TestTaskRequest_ToRequestTaskConfig_Error(t *testing.T) {
 
 func TestTaskResponse_String(t *testing.T) {
 	resp := TaskResponse{
-		RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
+		RequestId: uuid.MustParse("e9926514-79b8-a8fc-8761-9b6aaccf1e15"),
 		Task: &oapigen.Task{
 			Name:    "task",
 			Module:  "path",
@@ -928,11 +929,11 @@ func TestTaskResponse_taskResponseFromTaskConfig(t *testing.T) {
 	}{
 		taskConfig: config.TaskConfig{},
 		expectedResponse: TaskResponse{
-			RequestId: "e9926514-79b8-a8fc-8761-9b6aaccf1e15",
+			RequestId: uuid.MustParse("e9926514-79b8-a8fc-8761-9b6aaccf1e15"),
 			Task:      &oapigen.Task{},
 		},
 	}
 
-	actual := taskResponseFromTaskConfig(tc.taskConfig, "e9926514-79b8-a8fc-8761-9b6aaccf1e15")
+	actual := taskResponseFromTaskConfig(tc.taskConfig, uuid.MustParse("e9926514-79b8-a8fc-8761-9b6aaccf1e15"))
 	assert.Equal(t, tc.expectedResponse, actual)
 }

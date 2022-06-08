@@ -1,5 +1,4 @@
-// testutils package contains some helper methods that are used in tests across
-// multiple packages
+// testutils package contains helper methods that are used in tests across multiple packages
 
 package testutils
 
@@ -45,27 +44,25 @@ func FreePort(t testing.TB) int {
 	return port
 }
 
-// MakeTempDir creates a directory in the current path for a test. Caller is
-// responsible for managing the uniqueness of the directory name. Returns a
-// function for the caller to delete the temporary directory.
+// MakeTempDir creates a directory in the current path for a test. Caller is responsible for managing the uniqueness
+// of the directory name. Returns a function for the caller to delete the temporary directory.
 func MakeTempDir(t testing.TB, tempDir string) func() error {
 	_, err := os.Stat(tempDir)
 	if !os.IsNotExist(err) {
-		logging.Global().Warn("temp dir was not cleared out after last test. "+
-			"Deleting.", "temp_dir", tempDir)
+		logging.Global().Warn("Deleting temp dir was not cleared out after last test", "temp_dir", tempDir)
 		err = os.RemoveAll(tempDir)
 		require.NoError(t, err)
 	}
-	os.Mkdir(tempDir, os.ModePerm)
+
+	_ = os.Mkdir(tempDir, os.ModePerm)
 
 	return func() error {
 		return os.RemoveAll(tempDir)
 	}
 }
 
-// FindFileMatches walks a root directory and returns a list of all files that match
-// a particular pattern string.
-// eg. If you want to find all files that end with .txt, pattern=*.txt
+// FindFileMatches walks a root directory and returns a list of all files that match a particular pattern string.
+// E.g. If you want to find all files that end with .txt, pattern=*.txt
 func FindFileMatches(t testing.TB, rootDir, pattern string) []string {
 	var matches []string
 	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
@@ -73,13 +70,16 @@ func FindFileMatches(t testing.TB, rootDir, pattern string) []string {
 		if info.IsDir() {
 			return nil
 		}
+
 		if matched, err := filepath.Match(pattern, filepath.Base(path)); err != nil {
 			require.NoError(t, err)
 		} else if matched {
 			matches = append(matches, path)
 		}
+
 		return nil
 	})
+
 	require.NoError(t, err)
 	return matches
 }
@@ -114,6 +114,7 @@ func CopyFile(t testing.TB, src, dst string) {
 			err = fmt.Errorf("non-regular destination file %s (%q)", destFI.Name(), destFI.Mode().String())
 			require.NoError(t, err)
 		}
+
 		if os.SameFile(sourceFI, destFI) {
 			return
 		}
@@ -123,14 +124,14 @@ func CopyFile(t testing.TB, src, dst string) {
 	require.NoError(t, err)
 }
 
-// CheckDir checks whether or not a directory exists. If it exists, returns the
-// file infos for further checking.
+// CheckDir checks whether a directory exists. If it exists, returns the file infos for further checking.
 func CheckDir(t testing.TB, exists bool, dir string) []os.FileInfo {
 	files, err := ioutil.ReadDir(dir)
 	if exists {
 		require.NoError(t, err)
 		return files
 	}
+
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no such file or directory")
 	return []os.FileInfo{}
@@ -145,9 +146,8 @@ func WriteFile(t testing.TB, path, content string) {
 	require.NoError(t, err)
 }
 
-// CheckFile checks whether a file exists or not. If it exists, returns the
-// contents for further checking. If path parameter already includes filename,
-// leave filename parameter as an empty string.
+// CheckFile checks whether a file exists or not. If it exists, returns the contents for further checking.
+// If path parameter already includes filename, leave filename parameter as an empty string.
 func CheckFile(t testing.TB, exists bool, path, filename string) string {
 	fp := filepath.Join(path, filename) // handles if filename is empty
 	// Check if file exists
@@ -158,6 +158,7 @@ func CheckFile(t testing.TB, exists bool, path, filename string) string {
 			fmt.Sprintf("unexpected error when file '%s' is not supposed to exist", filename))
 		return ""
 	}
+
 	require.NoError(t, err, fmt.Sprintf("file '%s' does not exist", filename))
 
 	// Return content of file if exists
@@ -166,8 +167,7 @@ func CheckFile(t testing.TB, exists bool, path, filename string) string {
 	return string(content)
 }
 
-// RequestHTTP makes an http request. The caller is responsible for closing
-// the response.
+// RequestHTTP makes an http request. The caller is responsible for closing the response.
 func RequestHTTP(t testing.TB, method, url, body string) *http.Response {
 	r := strings.NewReader(body)
 	req, err := http.NewRequest(method, url, r)
@@ -179,8 +179,7 @@ func RequestHTTP(t testing.TB, method, url, body string) *http.Response {
 	return resp
 }
 
-// RequestHTTPS makes an https request using TLS. The caller is responsible for closing
-// the response.
+// RequestHTTPS makes an https request using TLS. The caller is responsible for closing the response.
 func RequestHTTPS(t testing.TB, method, url, body string, conf TLSConfig) *http.Response {
 	r := strings.NewReader(body)
 	req, err := http.NewRequest(method, url, r)
@@ -196,10 +195,7 @@ func RequestHTTPS(t testing.TB, method, url, body string, conf TLSConfig) *http.
 	require.NoError(t, err)
 	tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
 
-	rootConfig := &rootcerts.Config{
-		CAFile: conf.CAFile,
-	}
-
+	rootConfig := &rootcerts.Config{CAFile: conf.CAFile}
 	err = rootcerts.ConfigureTLS(tlsClientConfig, rootConfig)
 	require.NoError(t, err)
 
@@ -210,8 +206,7 @@ func RequestHTTPS(t testing.TB, method, url, body string, conf TLSConfig) *http.
 	return resp
 }
 
-// RequestJSON encodes the body to JSON and makes an HTTP request. The caller is
-// responsible for closing the response.
+// RequestJSON encodes the body to JSON and makes an HTTP request. The caller is responsible for closing the response.
 func RequestJSON(t testing.TB, method, url string, body interface{}) *http.Response {
 	// Encode request body
 	var r bytes.Buffer
@@ -228,24 +223,23 @@ func RequestJSON(t testing.TB, method, url string, body interface{}) *http.Respo
 	return resp
 }
 
-// Setenv sets an environment variable to a value. Returns a reset function to
-// reset the environment variable back to the original state.
+// Setenv sets an environment variable to a value.
+// Returns a reset function to reset the environment variable back to the original state.
 func Setenv(envvar, value string) func() {
 	original, ok := os.LookupEnv(envvar)
-	os.Setenv(envvar, value)
+	_ = os.Setenv(envvar, value)
 
 	return func() {
 		if ok {
-			os.Setenv(envvar, original)
+			_ = os.Setenv(envvar, original)
 		} else {
-			os.Unsetenv(envvar)
+			_ = os.Unsetenv(envvar)
 		}
 	}
 }
 
 // Meets consul/sdk/testutil/TestingTB interface
-// Required for any initialization of the test consul server as it requires
-// one of these as an argument.
+// Required for any initialization of the test consul server as it requires one of these as an argument.
 var _ testutil.TestingTB = (*TestingTB)(nil)
 
 // TestingTB implements Consul's testutil.TestingTB
@@ -283,10 +277,9 @@ func (t *TestingTB) Cleanup(f func()) {
 	}
 }
 
-// copyFileContents copies the contents of the file named src to the file named
-// by dst. The file will be created if it does not already exist. If the
-// destination file exists, all it's contents will be replaced by the contents
-// of the source file.
+// copyFileContents copies the contents of the file named src to the file named by dst.
+// The file will be created if it does not already exist. If the destination file exists, all it's contents
+// will be replaced by the contents of the source file.
 func copyFileContents(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
@@ -313,9 +306,8 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req), nil
 }
 
-// HttpIntercept represents a mapping of a path to the response that the
-// HTTP client should return for requests to that path (including query
-// parameters).
+// HttpIntercept represents a mapping of a path to the response that the HTTP client should return for requests
+// to that path (including query parameters).
 type HttpIntercept struct {
 	Path               string
 	RequestTest        func(*testing.T, *http.Request)
@@ -323,8 +315,8 @@ type HttpIntercept struct {
 	ResponseData       []byte
 }
 
-// NewHttpClient returns an HTTP client that returns mocked responses to specific
-// request paths based on the specified intercepts.
+// NewHttpClient returns an HTTP client that returns mocked responses to specific request paths based
+// on the specified intercepts.
 func NewHttpClient(t *testing.T, intercepts []*HttpIntercept) *http.Client {
 	f := func(req *http.Request) *http.Response {
 		path := req.URL.Path
@@ -332,6 +324,7 @@ func NewHttpClient(t *testing.T, intercepts []*HttpIntercept) *http.Client {
 		if query != "" {
 			path = fmt.Sprintf("%s?%s", path, query)
 		}
+
 		intercept, err := find(intercepts, path)
 		if err != nil {
 			return &http.Response{
