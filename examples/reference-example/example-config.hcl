@@ -16,7 +16,7 @@ task {
   name = "my-task"
   description = "automate services for website X"
   module = "namespace/example/module"
-  version = "1.1.0"
+  version = "1.2.0"
   providers = ["myprovider"]
   condition "services" {
     names = ["web", "api"]

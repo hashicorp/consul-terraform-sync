@@ -15,7 +15,7 @@ ENV VERSION=$VERSION
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
 ARG TARGETOS TARGETARCH
 
-RUN apk add --no-cache dumb-init git
+RUN apk add --no-cache dumb-init git bash openssh
 
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}

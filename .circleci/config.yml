@@ -8,52 +8,37 @@ executors:
     docker:
       - image: docker.mirror.hashicorp.services/cimg/go:${GO_VERSION}
     environment:
-      CONSUL_VERSION: "1.10.3"
       GOMAXPROCS: 4
       GO111MODULE: "on"
       GOPROXY: https://proxy.golang.org/
       GO_VERSION: 1.16
-      TERRAFORM_VERSION: "1.0.8"
+      CONSUL_VERSION: "1.10.3"
+      TERRAFORM_VERSION: "1.2.1"
       VAULT_VERSION: "1.8.3"
+      GOTESTSUM_VERSION: "1.8.1"
+      E2E_TESTS_PARALLELISM: 4
 
-jobs:
-  unit_integration_tests:
-    executor:
-      name: go
+commands:
+  setup-consul:
     steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - ct-modcache-v2-{{ checksum "go.mod" }}
-      - run: |
-          curl -sLo consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
-          unzip consul.zip
-          sudo cp consul /usr/local/bin/
-      - run: |
-          make test-integration
-      - when:
-          condition:
-            or:
-              - equal: [ main, <<pipeline.git.branch>> ]
-              - matches: { pattern: "release/.+", value: <<pipeline.git.branch>> }
-          steps:
-            - slack/notify:
-                event: fail
-                template: basic_fail_1
-                branch_pattern: main,release/.+
-      - save_cache:
-          key: ct-modcache-v2-{{ checksum "go.mod" }}
-          paths:
-            - /go/pkg/mod
+      - run:
+          name: Install Consul
+          command: |
+            curl -sLo consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
+            unzip consul.zip
+            sudo cp consul /usr/local/bin/
 
-  vault_integration_tests:
-    executor:
-      name: go
+  setup-terraform:
     steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - ct-modcache-v2-{{ checksum "go.mod" }}
+      - run:
+          name: Install Terraform
+          command: |
+            curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+            unzip terraform.zip
+            sudo cp terraform /usr/local/bin/
+
+  setup-vault:
+    steps:
       - run:
           name: Install Vault
           command: |
@@ -61,28 +46,27 @@ jobs:
             unzip vault.zip
             sudo cp vault /usr/local/bin/
             vault version
-      - run: |
-          go test -count=1 -timeout=80s -tags 'integration vault' ./... -run Vault
-      - save_cache:
-          key: ct-modcache-v2-{{ checksum "go.mod" }}
-          paths:
-            - /go/pkg/mod
 
-  e2e_tests:
+  setup-gotestsum:
+    steps:
+      - run:
+          name: Install gotestsum
+          command: |
+            curl -sLo gotestsum.tar.gz https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz
+            tar -xzf gotestsum.tar.gz gotestsum
+            sudo cp gotestsum /usr/local/bin/
+
+jobs:
+  unit-and-integration-tests:
     executor:
       name: go
-    resource_class: medium+
+    resource_class: medium
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - ct-modcache-v2-{{ checksum "go.mod" }}
-      - run: |
-          curl -sLo consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
-          unzip consul.zip
-          sudo cp consul /usr/local/bin/
-      - run: |
-          make test-e2e-cirecleci
+      - setup-consul
+      - run: make test-unit-and-integration
+      - store_test_results:
+          path: .build/test-results
       - when:
           condition:
             or:
@@ -93,28 +77,76 @@ jobs:
                 event: fail
                 template: basic_fail_1
                 branch_pattern: main,release/.+
-      - save_cache:
-          key: ct-modcache-v2-{{ checksum "go.mod" }}
-          paths:
-            - /go/pkg/mod
 
-  consul_compatibility_tests:
+  vault-integration-tests:
     executor:
       name: go
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - ct-modcache-v2-{{ checksum "go.mod" }}
-      - run: |
-          make test-compat
+      - setup-vault
+      - run: go test -count=1 -timeout=80s -tags 'integration vault' ./... -run Vault
+
+  split-e2e-tests:
+    executor:
+      name: go
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Split E2E tests
+          command: |
+            ./build-scripts/list-tests.sh e2e ./e2e | ./build-scripts/split-lines.sh ${E2E_TESTS_PARALLELISM} .build/tests
+      - persist_to_workspace:
+          root: .build
+          paths:
+            - tests
+
+  e2e-tests:
+    executor:
+      name: go
+    resource_class: medium
+    parameters:
+      part_index:
+        type: integer
+    steps:
+      - checkout
+      - setup-consul
+      - setup-gotestsum
+      - attach_workspace:
+          at: .build
+      - setup-terraform
+      - run:
+          name: E2E tests
+          environment:
+            TESTS_LIST_PATH: .build/tests/part.<< parameters.part_index >>
+            TESTS_REGEX_PATH: .build/regex/part.<< parameters.part_index >>
+          command: |
+            mkdir -p .build/regex
+            sudo cp terraform /home/circleci/project/e2e/terraform
+            cat ${TESTS_LIST_PATH} | ./build-scripts/make-tests-regex.sh > ${TESTS_REGEX_PATH}
+            TESTS_REGEX_PATH=${TESTS_REGEX_PATH} make test-e2e-circleci
+      - store_test_results:
+          path: .build/test-results
+      - when:
+          condition:
+            or:
+              - equal: [ main, <<pipeline.git.branch>> ]
+              - matches: { pattern: "release/.+", value: <<pipeline.git.branch>> }
+          steps:
+            - slack/notify:
+                event: fail
+                template: basic_fail_1
+                branch_pattern: main,release/.+
+
+  consul-compatibility-tests:
+    executor:
+      name: go
+    steps:
+      - checkout
+      - run: make test-compat
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - save_cache:
-          key: ct-modcache-v2-{{ checksum "go.mod" }}
-          paths:
-            - /go/pkg/mod
 
   benchmarks:
     executor:
@@ -126,18 +158,8 @@ jobs:
         default: 30m
     steps:
       - checkout
-      - run:
-          name: Install Consul
-          command: |
-            curl -sLo consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
-            unzip consul.zip
-            sudo cp consul /usr/local/bin/
-      - run:
-          name: Install Terraform
-          command: |
-            curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-            unzip terraform.zip
-            sudo cp terraform /usr/local/bin/
+      - setup-consul
+      - setup-terraform
       - run:
           name: Copy terraform to benchmark directory
           command: /bin/cp /usr/local/bin/terraform ./e2e/
@@ -150,8 +172,7 @@ jobs:
       - run:
           name: Run benchmark suite
           no_output_timeout: << parameters.no_output_timeout >>
-          command:
-            make test-benchmarks | /usr/bin/tee /tmp/benchmarks.json
+          command: make test-benchmarks | /usr/bin/tee /tmp/benchmarks.json
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -160,7 +181,7 @@ jobs:
           command: |
             mkdir /tmp/benchmark_results
             grep 'ns/op' /tmp/benchmarks.json | awk -F '"Output":"'  '{print $2}' | sort \
-             > /tmp/benchmark_results/results-${CIRCLE_SHA1}-${CIRCLE_BUILD_NUM}.txt
+              > /tmp/benchmark_results/results-${CIRCLE_SHA1}-${CIRCLE_BUILD_NUM}.txt
             cat /tmp/benchmark_results/results-${CIRCLE_SHA1}-${CIRCLE_BUILD_NUM}.txt
       - store_artifacts:
           path: /tmp/benchmarks.json
@@ -169,18 +190,15 @@ jobs:
           path: /tmp/benchmark_results
           destination: benchmark_results
 
-  compile_weekly_tests:
+  compile-weekly-tests:
     executor:
       name: go
+    resource_class: small
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - ct-modcache-v2-{{ checksum "go.mod" }}
       - run:
           name: Check that weekly tests can compile
-          command:
-            make compile-weekly-tests
+          command: make compile-weekly-tests
       - when:
           condition:
             or:
@@ -191,19 +209,16 @@ jobs:
                 event: fail
                 template: basic_fail_1
                 branch_pattern: main,release/.+
-      - save_cache:
-          key: ct-modcache-v2-{{ checksum "go.mod" }}
-          paths:
-            - /go/pkg/mod
 
   go-checks:
     executor:
       name: go
+    resource_class: small
     steps:
       - checkout
       - run: make go-fmt-check
       - run:
-          name: verify go.mod and go.sum are correct
+          name: Verify go.mod and go.sum are correct
           command: |
             go mod tidy
             git diff --quiet && exit 0
@@ -213,30 +228,33 @@ jobs:
   terraform-checks:
     executor:
       name: go
+    resource_class: small
     steps:
       - checkout
-      - run:
-          name: Install Terraform
-          command: |
-            curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-            unzip terraform.zip
-            sudo cp terraform /usr/local/bin/
+      - setup-terraform
       - run: make terraform-fmt-check
 
 workflows:
-  version: 2
   build-test:
     jobs:
       - go-checks
       - terraform-checks
-      - compile_weekly_tests
-      - unit_integration_tests
-      - e2e_tests
+      - compile-weekly-tests
+      - unit-and-integration-tests
+      - split-e2e-tests
+      - e2e-tests:
+          name: "E2E Tests - Part: << matrix.part_index >>"
+          requires:
+            - split-e2e-tests
+          matrix:
+            parameters:
+              part_index: [ 0, 1, 2, 3 ]
+
   weekly-benchmarks:
     jobs:
-      - vault_integration_tests
       - benchmarks
-      - consul_compatibility_tests
+      - vault-integration-tests
+      - consul-compatibility-tests
     triggers:
       - schedule:
           # 02:10 UTC every Wednesday

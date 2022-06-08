@@ -13,8 +13,11 @@ import (
 	ctsVersion "github.com/hashicorp/consul-terraform-sync/version"
 	"github.com/hashicorp/go-checkpoint"
 	goVersion "github.com/hashicorp/go-version"
+	hcinstall "github.com/hashicorp/hc-install"
+	"github.com/hashicorp/hc-install/product"
+	"github.com/hashicorp/hc-install/releases"
+	"github.com/hashicorp/hc-install/src"
 	"github.com/hashicorp/terraform-exec/tfexec"
-	"github.com/hashicorp/terraform-exec/tfinstall"
 )
 
 const (
@@ -158,20 +161,21 @@ func isTFCompatible(conf *config.TerraformConfig, version *goVersion.Version) er
 // the path. If the latest version is outside of the known supported range for
 // CTS, the fall back version 0.13.5 is downloaded.
 func installTerraform(ctx context.Context, conf *config.TerraformConfig) (*goVersion.Version, error) {
-	var v *goVersion.Version
+	var tfVersion *goVersion.Version
 	logger := logging.Global().Named(logSystemName).Named(terraformSubsystemName)
 	if conf.Version != nil && *conf.Version != "" {
-		v = goVersion.Must(goVersion.NewVersion(*conf.Version))
+		tfVersion = goVersion.Must(goVersion.NewVersion(*conf.Version))
 	} else {
 		// Fetch the latest
 		resp, err := checkpoint.Check(&checkpoint.CheckParams{Product: "terraform"})
 		if err != nil {
 			logger.Error("error fetching Terraform versions from Checkpoint", "error", err)
 		} else if resp.CurrentVersion != "" {
-			v = goVersion.Must(goVersion.NewVersion(resp.CurrentVersion))
+			tfVersion = goVersion.Must(goVersion.NewVersion(resp.CurrentVersion))
 		}
 	}
-	if v == nil || !ctsVersion.TerraformConstraint.Check(v) {
+
+	if tfVersion == nil || !ctsVersion.TerraformConstraint.Check(tfVersion) {
 		// Configured version shouldn't be invalid our outside of the constraint at
 		// this point if the configuration was validated.
 		//
@@ -179,21 +183,29 @@ func installTerraform(ctx context.Context, conf *config.TerraformConfig) (*goVer
 		// version, so we will move forward with a safe fallback version.
 		logger.Warn("could not determine latest version of terraform using Checkpoint, fallback to fallback version",
 			"fallback_version", fallbackTFVersion)
-		v = goVersion.Must(goVersion.NewVersion(fallbackTFVersion))
+		tfVersion = goVersion.Must(goVersion.NewVersion(fallbackTFVersion))
 	}
 
-	if err := isTFCompatible(conf, v); err != nil {
+	if err := isTFCompatible(conf, tfVersion); err != nil {
 		return nil, err
 	}
 
 	// Create path if one doesn't already exist
-	os.MkdirAll(*conf.Path, os.ModePerm)
+	_ = os.MkdirAll(*conf.Path, os.ModePerm)
 
-	installedPath, err := tfinstall.ExactVersion(v.String(), *conf.Path).ExecPath(ctx)
+	installer := hcinstall.NewInstaller()
+	installedPath, err := installer.Ensure(ctx, []src.Source{
+		&releases.ExactVersion{
+			Product:    product.Terraform,
+			Version:    tfVersion,
+			InstallDir: *conf.Path,
+		},
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Debug("successfully installed terraform", "version", v.String(), "install_path", installedPath)
-	return v, nil
+	logger.Debug("successfully installed terraform", "version", tfVersion.String(), "install_path", installedPath)
+	return tfVersion, nil
 }

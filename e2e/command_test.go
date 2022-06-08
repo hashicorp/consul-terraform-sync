@@ -663,6 +663,8 @@ task {
 
 // TestE2E_CreateTaskCommand_NoTaskFileProvided tests creating a task with the CTS CLI when no Task File is provided
 func TestE2E_CreateTaskCommand_NoTaskFileProvided(t *testing.T) {
+	setParallelism(t)
+
 	srv := newTestConsulServer(t)
 	defer srv.Stop()
 	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "create_no_file_cmd")

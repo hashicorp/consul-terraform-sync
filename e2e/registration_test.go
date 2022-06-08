@@ -100,7 +100,7 @@ service_registration {
 	config.write(t, configPath)
 
 	// Start CTS, using command directly since port has been preconfigured
-	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
+	cmd := exec.Command("consul-terraform-sync", "start", fmt.Sprintf("--config-file=%s", configPath))
 	err := cmd.Start()
 	require.NoError(t, err)
 	defer cmd.Process.Signal(os.Interrupt)
@@ -247,7 +247,7 @@ func TestE2E_ServiceRegistration_InitError(t *testing.T) {
 	config.write(t, configPath)
 
 	// Start CTS, use command directly to be able to check logs
-	cmd := exec.Command("consul-terraform-sync", fmt.Sprintf("--config-file=%s", configPath))
+	cmd := exec.Command("consul-terraform-sync", "start", fmt.Sprintf("--config-file=%s", configPath))
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
