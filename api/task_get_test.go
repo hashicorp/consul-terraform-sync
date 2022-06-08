@@ -1,13 +1,14 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/server"
@@ -79,47 +80,28 @@ func TestTaskLifeCycleHandler_GetAllTasks(t *testing.T) {
 		&testTaskConfig,
 	}
 
-	cases := []struct {
-		name          string
-		mockServer    func(*mocks.Server)
-		statusCode    int
-		checkResponse func(*httptest.ResponseRecorder)
-	}{
-		{
-			name: "happy_path",
-			mockServer: func(ctrl *mocks.Server) {
-				ctrl.On("Tasks", mock.Anything).Return(taskConfigs)
-			},
-			statusCode: http.StatusOK,
-			checkResponse: func(resp *httptest.ResponseRecorder) {
-				decoder := json.NewDecoder(resp.Body)
-				var actual oapigen.TasksResponse
-				err := decoder.Decode(&actual)
-				require.NoError(t, err)
+	reqID := uuid.New()
 
-				expectedTasksResponse := tasksResponseFromTaskConfigs(taskConfigs, uuid.UUID{})
-				assert.ElementsMatch(t, *expectedTasksResponse.Tasks, *actual.Tasks)
-			},
-		},
-	}
+	ctrl := new(mocks.Server)
+	ctrl.On("Tasks", mock.Anything).Return(taskConfigs)
+	handler := NewTaskLifeCycleHandler(ctrl)
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := new(mocks.Server)
-			tc.mockServer(ctrl)
-			handler := NewTaskLifeCycleHandler(ctrl)
+	path := fmt.Sprintf("/v1/tasks")
+	ctx := requestIDWithContext(context.Background(), reqID.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, path, nil)
 
-			path := fmt.Sprintf("/v1/tasks")
-			req, err := http.NewRequest(http.MethodGet, path, nil)
-			require.NoError(t, err)
-			resp := httptest.NewRecorder()
+	require.NoError(t, err)
+	resp := httptest.NewRecorder()
 
-			handler.GetAllTasks(resp, req)
-			assert.Equal(t, tc.statusCode, resp.Code)
+	handler.GetAllTasks(resp, req)
+	assert.Equal(t, http.StatusOK, resp.Code)
 
-			if tc.checkResponse != nil {
-				tc.checkResponse(resp)
-			}
-		})
-	}
+	decoder := json.NewDecoder(resp.Body)
+	var actual oapigen.TasksResponse
+	err = decoder.Decode(&actual)
+	require.NoError(t, err)
+
+	expectedTasksResponse := tasksResponseFromTaskConfigs(taskConfigs, reqID)
+	assert.ElementsMatch(t, *expectedTasksResponse.Tasks, *actual.Tasks)
+	assert.ElementsMatch(t, expectedTasksResponse.RequestId, reqID)
 }
