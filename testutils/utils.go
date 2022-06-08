@@ -49,7 +49,7 @@ func FreePort(t testing.TB) int {
 func MakeTempDir(t testing.TB, tempDir string) func() error {
 	_, err := os.Stat(tempDir)
 	if !os.IsNotExist(err) {
-		logging.Global().Warn("Deleting temp dir was not cleared out after last test", "temp_dir", tempDir)
+		logging.Global().Warn("Deleting temp dir that was not cleared out after last test", "temp_dir", tempDir)
 		err = os.RemoveAll(tempDir)
 		require.NoError(t, err)
 	}
