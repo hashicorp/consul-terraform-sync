@@ -270,6 +270,9 @@ func (*TestingTB) Logf(string, ...interface{}) {}
 // Name implements Consul's testutil.TestingTB's Name()
 func (*TestingTB) Name() string { return "TestingTB" }
 
+// Fatalf implements Consul's testutil.TestingTB's Fatalf()
+func (*TestingTB) Fatalf(string, ...interface{}) {}
+
 // Cleanup implements Consul's testutil.TestingTB's Cleanup()
 func (t *TestingTB) Cleanup(f func()) {
 	t.Lock()

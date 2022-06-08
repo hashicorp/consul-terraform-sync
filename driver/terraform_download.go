@@ -191,7 +191,7 @@ func installTerraform(ctx context.Context, conf *config.TerraformConfig) (*goVer
 	}
 
 	// Create path if one doesn't already exist
-	os.MkdirAll(*conf.Path, os.ModePerm)
+	_ = os.MkdirAll(*conf.Path, os.ModePerm)
 
 	installer := hcinstall.NewInstaller()
 	installedPath, err := installer.Ensure(ctx, []src.Source{
