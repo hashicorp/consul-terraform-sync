@@ -1,3 +1,8 @@
+## 0.7.0 (Unreleased)
+
+IMPROVEMENTS:
+* Add `openssh` command to Docker image to support git over ssh for Terraform modules [[GH-940](https://github.com/hashicorp/consul-terraform-sync/issues/940)]
+
 ## 0.6.0 (May 25, 2022)
 
 KNOWN ISSUES:

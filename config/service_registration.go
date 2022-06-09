@@ -3,7 +3,7 @@ package config
 import "fmt"
 
 const (
-	DefaultServiceName = "Consul-Terraform-Sync"
+	DefaultServiceName = "consul-terraform-sync"
 )
 
 // ServiceRegistrationConfig is a configuration that controls how CTS will

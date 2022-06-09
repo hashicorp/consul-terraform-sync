@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/go-checkpoint"
 	goVersion "github.com/hashicorp/go-version"
 	hcinstall "github.com/hashicorp/hc-install"
-	"github.com/hashicorp/hc-install/fs"
 	"github.com/hashicorp/hc-install/product"
 	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/hc-install/src"
@@ -192,15 +191,10 @@ func installTerraform(ctx context.Context, conf *config.TerraformConfig) (*goVer
 	}
 
 	// Create path if one doesn't already exist
-	os.MkdirAll(*conf.Path, os.ModePerm)
+	_ = os.MkdirAll(*conf.Path, os.ModePerm)
 
 	installer := hcinstall.NewInstaller()
 	installedPath, err := installer.Ensure(ctx, []src.Source{
-		&fs.ExactVersion{
-			Product:    product.Terraform,
-			Version:    tfVersion,
-			ExtraPaths: []string{*conf.Path},
-		},
 		&releases.ExactVersion{
 			Product:    product.Terraform,
 			Version:    tfVersion,

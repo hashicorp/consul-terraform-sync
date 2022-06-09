@@ -120,7 +120,7 @@ func newTestConsulServer(t *testing.T) *testutil.TestServer {
 	return srv
 }
 
-func runAndStopCTS(t *testing.T, configPath string, dur time.Duration) {
+func startAndStopCTS(t *testing.T, configPath string, dur time.Duration) {
 	cts, stop := api.StartCTS(t, configPath)
 	err := cts.WaitForTestReadiness(dur)
 	require.NoError(t, err)
