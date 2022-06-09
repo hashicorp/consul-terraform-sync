@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
 	"github.com/mitchellh/cli"
@@ -65,7 +66,7 @@ func TestTaskDeleteCommand_AutocompleteArgs(t *testing.T) {
 			}
 
 			tasksResponse := oapigen.TasksResponse{
-				RequestId: "!@#$%^&*()?!abc",
+				RequestId: uuid.New(),
 				Tasks:     &tasks,
 			}
 

@@ -22,7 +22,7 @@ type TaskLifecycleClient struct {
 var _ oapigen.ClientWithResponsesInterface = (*TaskLifecycleClient)(nil)
 
 //go:generate mockery --recursive --name=ClientWithResponsesInterface --filename=oapigen_client.go --output=../mocks/api
-//go:generate oapi-codegen  -package oapigen -generate client -o oapigen/client.go openapi.yaml
+//go:generate oapi-codegen -package oapigen -old-config-style -generate client -o oapigen/client.go openapi.yaml
 
 // NewTaskLifecycleClient returns a client to make api requests
 func NewTaskLifecycleClient(c *ClientConfig, httpClient httpClient) (*TaskLifecycleClient, error) {
