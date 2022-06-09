@@ -8,25 +8,20 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/agext/levenshtein v1.2.3 // indirect
-	github.com/armon/go-metrics v0.3.6 // indirect
 	github.com/aws/aws-sdk-go v1.37.19 // indirect
 	github.com/deepmap/oapi-codegen v1.11.0
 	github.com/fatih/color v1.10.0 // indirect
-	github.com/frankban/quicktest v1.11.0 // indirect
 	github.com/getkin/kin-openapi v0.94.0
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-test/deep v1.0.7 // indirect
-	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/consul/api v1.13.0
 	github.com/hashicorp/consul/sdk v0.9.0
 	github.com/hashicorp/cronexpr v1.1.1
-	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.4
 	github.com/hashicorp/go-checkpoint v0.5.0
 	github.com/hashicorp/go-getter v1.6.1
 	github.com/hashicorp/go-hclog v0.16.2
-	github.com/hashicorp/go-immutable-radix v1.3.0 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
@@ -39,8 +34,7 @@ require (
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/terraform-exec v0.16.1
 	github.com/hashicorp/terraform-json v0.14.0
-	github.com/hashicorp/vault/api v1.1.0
-	github.com/hashicorp/vault/sdk v0.2.0 // indirect
+	github.com/hashicorp/vault/api v1.7.2
 	github.com/klauspost/compress v1.11.7 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/mitchellh/cli v1.1.2
