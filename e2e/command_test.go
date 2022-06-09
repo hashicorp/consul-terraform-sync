@@ -699,14 +699,13 @@ func TestE2E_CreateDeleteCreateTrigger(t *testing.T) {
 	defer srv.Stop()
 	cts := ctsSetup(t, srv, tempDir, dbTask())
 
-	runCreateDeleteCreateTrigger(t, srv, cts, tempDir, defaultWaitForEvent)
+	runCreateDeleteCreateTrigger(t, srv, cts, tempDir, "task_TestE2E_CreateDeleteCreateTrigger", defaultWaitForEvent)
 }
 
 func runCreateDeleteCreateTrigger(t *testing.T, srv *testutil.TestServer,
-	cts *api.Client, tempDir string, eventTimeout time.Duration) {
+	cts *api.Client, tempDir string, taskName string, eventTimeout time.Duration) {
 	// Write task config file
 	var taskConfig hclConfig
-	taskName := "new-task"
 	inputTask := fmt.Sprintf(`
 task {
   name           = "%s"
