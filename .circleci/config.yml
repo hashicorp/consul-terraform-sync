@@ -11,7 +11,7 @@ executors:
       GOMAXPROCS: 4
       GO111MODULE: "on"
       GOPROXY: https://proxy.golang.org/
-      GO_VERSION: 1.16
+      GO_VERSION: 1.18
       CONSUL_VERSION: "1.10.3"
       TERRAFORM_VERSION: "1.2.1"
       VAULT_VERSION: "1.8.3"
