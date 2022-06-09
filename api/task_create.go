@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
@@ -18,6 +19,9 @@ func (h *TaskLifeCycleHandler) CreateTask(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	logger := logging.FromContext(ctx).Named(createTaskSubsystemName)
 	logger.Trace("create task request received, reading request")
+
+	data, _ := ioutil.ReadAll(r.Body)
+	fmt.Println(string(data))
 
 	// Decode the task request
 	var req TaskRequest
