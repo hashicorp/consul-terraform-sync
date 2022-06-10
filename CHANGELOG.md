@@ -1,5 +1,8 @@
 ## 0.7.0 (Unreleased)
 
+BREAKING CHANGES:
+* Changed default value of `service_name` in service registration configuration from `Consul-Terraform-Sync` to `consul-terraform-sync` [[GH-946](https://github.com/hashicorp/consul-terraform-sync/issues/946)]
+
 IMPROVEMENTS:
 * Add `openssh` command to Docker image to support git over ssh for Terraform modules [[GH-940](https://github.com/hashicorp/consul-terraform-sync/issues/940)]
 * Upgrade Go to version 1.18 [[GH-951](https://github.com/hashicorp/consul-terraform-sync/issues/951)]
