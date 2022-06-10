@@ -65,8 +65,6 @@ jobs:
       - checkout
       - setup-consul
       - run: make test-unit-and-integration
-      - store_test_results:
-          path: .build/test-results
       - when:
           condition:
             or:
@@ -84,7 +82,7 @@ jobs:
     steps:
       - checkout
       - setup-vault
-      - run: go test -count=1 -timeout=80s -tags 'integration vault' ./... -run Vault
+      - run: make test-vault-integration
 
   split-e2e-tests:
     executor:
@@ -124,9 +122,7 @@ jobs:
             mkdir -p .build/regex
             sudo cp terraform /home/circleci/project/e2e/terraform
             cat ${TESTS_LIST_PATH} | ./build-scripts/make-tests-regex.sh > ${TESTS_REGEX_PATH}
-            TESTS_REGEX_PATH=${TESTS_REGEX_PATH} make test-e2e-circleci
-      - store_test_results:
-          path: .build/test-results
+            TESTS_REGEX_PATH=${TESTS_REGEX_PATH} make test-e2e-ci
       - when:
           condition:
             or:

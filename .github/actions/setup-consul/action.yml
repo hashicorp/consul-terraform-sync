@@ -1,0 +1,17 @@
+name: Setup Consul
+description: Action to setup Consul
+
+inputs:
+  version:
+    description: Consul version
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Consul
+      shell: bash
+      run: |
+        curl -sLo consul.zip https://releases.hashicorp.com/consul/${{ inputs.version }}/consul_${{ inputs.version }}_linux_amd64.zip
+        sudo unzip consul.zip -d /usr/local/bin/
+        consul version

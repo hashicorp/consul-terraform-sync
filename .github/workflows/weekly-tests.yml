@@ -1,0 +1,111 @@
+name: Weekly Tests
+
+on:
+  schedule:
+    - cron: '10 2 * * 3'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: 1.18
+  CONSUL_VERSION: 1.12.1
+  TERRAFORM_VERSION: 1.2.2
+  VAULT_VERSION: 1.10.3
+
+jobs:
+  compatability:
+    name: Compatability tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run compatability tests
+        run: |
+          make test-compat
+
+  vault-integration:
+    name: Vault integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: ./.github/actions/setup-vault
+        with:
+          version: ${{ env.VAULT_VERSION }}
+
+      - name: Run Vault integration tests
+        run: |
+          make test-vault-integration
+
+  benchmarks:
+    name: Benchmarks tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: ./.github/actions/setup-consul
+        with:
+          version: ${{ env.CONSUL_VERSION }}
+
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Copy Terraform to test workdir
+        run: |
+          cp /usr/local/bin/terraform ./e2e/benchmarks/
+
+      - name: Run benchmarks tests
+        run: |
+          mkdir -p .build
+          make test-benchmarks | tee .build/benchmarks-output.json
+
+      - name: Parse benchmarks output
+        run: |
+          grep 'ns/op' .build/benchmarks-output.json | \
+            jq -r .Output \
+            | sed 's/\t/ /g' \
+            | tr -s ' \n' \
+            | sed 's/ /,/g' \
+            | sort -r \
+            | tee .build/benchmarks-results-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.csv
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: benchmarks-results
+          path: .build/benchmarks-results*.csv
+
+  slack-notification:
+    name: Slack notification
+    if: ${{ failure() }}
+    needs:
+      - compatability
+      - vault-integration
+      - benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slack Workflow Notification
+        uses: Gamesight/slack-workflow-status@master
+        with:
+          repo_token: ${{secrets.GITHUB_TOKEN}}
+          slack_webhook_url: ${{secrets.SLACK_WEBHOOK_URL}}
