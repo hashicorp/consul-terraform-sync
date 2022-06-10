@@ -4,6 +4,7 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -360,8 +361,12 @@ func TestCondition_Schedule_CreateAndDeleteCLI(t *testing.T) {
 		require.NoError(t, err, fmt.Sprintf("command '%s' failed:\n %s", subcmd, out))
 		require.Contains(t, out, fmt.Sprintf("Task '%s' has been marked for deletion", n))
 
-		s := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", n)
-		resp := testutils.RequestHTTP(t, http.MethodGet, s, "")
+		url := fmt.Sprintf("http://localhost:%d/%s/status/tasks/%s", cts.Port(), "v1", n)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		// The delete action is performed async, so we might have to wait for it to complete.
+		resp, err := testutils.WaitForHttpStatusChange(ctx, 100*time.Millisecond, http.MethodGet, url, "", http.StatusOK, http.StatusNotFound)
+		require.NoError(t, err, "An error occurred while checking for the correct http status.")
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	}

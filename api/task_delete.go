@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/logging"
 )
 
-// DeleteTaskByName deletes an existing task and its events. Does not delete
-// if the task is active.
+// DeleteTaskByName deletes an existing task and its events asynchronously. Does not delete
+// until the task is inactive and not running.
 func (h *TaskLifeCycleHandler) DeleteTaskByName(w http.ResponseWriter, r *http.Request, name string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

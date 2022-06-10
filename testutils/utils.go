@@ -4,6 +4,7 @@ package testutils
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul/sdk/testutil"
@@ -307,6 +309,48 @@ type roundTripFunc func(req *http.Request) *http.Response
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req), nil
+}
+
+// WaitForHttpStatusChange performs a blocking http call every pollInterval and returns the response
+// whenever it encounters a StatusCode of newStatus. Any StatusCode other than oldStatus or newStatus
+// will return an error immediately. It is the caller's responsibility to:
+//  - prevent an infinite loop by eventually cancelling the context
+//  - close the response
+func WaitForHttpStatusChange(ctx context.Context, pollInterval time.Duration, method, url, body string, oldStatus, newStatus int) (*http.Response, error) {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+		req, err := http.NewRequestWithContext(ctx, method, url, strings.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			if resp != nil {
+				resp.Body.Close()
+			}
+			return nil, err
+		}
+		switch resp.StatusCode {
+		case newStatus:
+			return resp, nil
+		case oldStatus:
+			resp.Body.Close()
+			logging.Global().Warn("A test http call did not receive the expected status code. Waiting to retry.",
+				"statusCode", resp.StatusCode, "method", method, "url", url)
+			time.Sleep(pollInterval)
+			continue
+		default:
+			resp.Body.Close()
+			err := fmt.Errorf("Recieved unexpected StatusCode[%v] for http request [%v %v].",
+				resp.StatusCode, resp.Request.Method, resp.Request.URL)
+			return nil, err
+		}
+	}
 }
 
 // HttpIntercept represents a mapping of a path to the response that the HTTP client should return for requests
