@@ -15,7 +15,7 @@ fi
 build_tags=$1
 package_path=$2
 
-go test -tags="${build_tags}" -list . "${package_path}" | grep "^Test"
+go test -tags "${build_tags}" -list . "${package_path}" | grep "^Test"
 
 # ----------------- Clean up ------------------
 unset build_tags package_path
