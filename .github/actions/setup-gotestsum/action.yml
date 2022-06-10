@@ -1,0 +1,17 @@
+name: Setup gotestsum
+description: Action to setup gotestsum
+
+inputs:
+  version:
+    description: gotestsum version, defaults to latest version. You can specify a version of this format 'v<major>.<minor>.<patch>' (e.g. v1.8.1)
+    required: false
+    default: latest
+
+runs:
+  using: composite
+  steps:
+    - name: Setup gotestsum
+      shell: bash
+      run: |
+        go install gotest.tools/gotestsum@${{ inputs.version }}
+        gotestsum --version

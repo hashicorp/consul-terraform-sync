@@ -48,11 +48,11 @@ func TestCompatibility_Consul(t *testing.T) {
 	// major minor version. v1.4.5 starts losing compatibility, details in
 	// comments. Theoretical compatible versions 0.1.0 GA:
 	consulVersions := []string{
-		"1.12.0",
-		"1.11.5",
-		"1.10.3",
-		"1.9.10",
-		"1.8.16",
+		"1.12.1",
+		"1.11.6",
+		"1.10.11",
+		"1.9.17",
+		"1.8.19",
 	}
 
 	cases := []struct {

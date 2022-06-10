@@ -44,8 +44,7 @@ test:
 test-unit-and-integration:
 	@echo "==> Testing ${NAME} (unit & integration tests)"
 	@mkdir -p .build/test-results
-	@gotestsum --format testname --junitfile .build/test-results/unit-and-integration-tests.xml -- \
-		-count=1 -timeout=80s -tags=integration -cover ./... ${TESTARGS}
+	@gotestsum --format testname --jsonfile .build/test-results.json -- -count=1 -timeout=2m -tags=integration -cover ./... ${TESTARGS}
 .PHONY: test-unit-and-integration
 
 # test-setup-e2e sets up the CTS binary and permissions to run in circle
@@ -53,13 +52,13 @@ test-setup-e2e: dev
 	sudo mv ${GOPATH}/bin/consul-terraform-sync /usr/local/bin/consul-terraform-sync
 .PHONY: test-setup-e2e
 
-# test-e2e-circleci does e2e test setup and then runs the e2e tests
-test-e2e-circleci: test-setup-e2e
+# test-e2e-ci does e2e test setup and then runs the e2e tests in a CI environment
+test-e2e-ci: test-setup-e2e
 	@echo "==> Testing ${NAME} (e2e)"
 	@echo "Tests regex: $(shell cat "${TESTS_REGEX_PATH}")"
-	@gotestsum --format testname --junitfile .build/test-results/e2e-tests_$(shell date "+%F_%H-%M-%S").xml -- \
+	@gotestsum --format testname --jsonfile .build/test-results.json -- \
 		./e2e -race -count=1 -timeout=600s -tags=e2e -run="$(shell cat "${TESTS_REGEX_PATH}")" ${TESTARGS}
-.PHONY: test-e2e-circleci
+.PHONY: test-e2e-ci
 
 # test-e2e-local does e2e test setup and then runs the e2e tests
 test-e2e-local: test-setup-e2e
@@ -70,10 +69,16 @@ test-e2e-local: test-setup-e2e
 # test-compat sets up the CTS binary and then runs the compatibility tests
 test-compat: test-setup-e2e
 	@echo "==> Testing ${NAME} compatibility with Consul"
-	@go test ./e2e/compatibility -timeout 30m -tags=e2e -v -run TestCompatibility_Consul
+	@go test -count=1 -timeout 30m -tags 'e2e' -v ./e2e/compatibility -run TestCompatibility_Consul
 	@echo "==> Testing ${NAME} Terraform Downloads"
 	@go test ./e2e/compatibility -timeout 5m -tags=e2e -v -run TestCompatibility_TFDownload
 .PHONY: test-compat
+
+# test-vault-integration sets up the CTS binary and then runs Vault integration tests
+test-vault-integration: test-setup-e2e
+	@echo "==> Testing ${NAME} compatibility with Consul"
+	@go test -count=1 -timeout=80s -tags 'integration vault' -v ./... -run Vault
+.PHONY: test-vault-integration
 
 # test-benchmarks requires Terraform in the path of execution and Consul in $PATH.
 test-benchmarks:
