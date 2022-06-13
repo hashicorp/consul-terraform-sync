@@ -109,7 +109,7 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 	// Set up driver factory
 	tm.factory.initConf = conf
 	drivers := make(map[string]driver.Driver)
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
@@ -182,7 +182,7 @@ func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 
 	// Set up driver factory
 	tm.factory.initConf = conf
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
 		// Always return false on render template to mock what happens when
@@ -247,7 +247,7 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 	// Set up driver factory
 	tm.factory.initConf = conf
 	drivers := make(map[string]driver.Driver)
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := setupNewDriver(task)
 		drivers[task.Name()] = d
 		return d, nil
