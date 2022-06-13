@@ -16,9 +16,12 @@ import (
 	"github.com/hashicorp/hcat"
 )
 
+// driverFactoryFunc spawns an instance of a driver when executed.
+type driverFactoryFunc func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error)
+
 // driverFactory creates a driver for a task
 type driverFactory struct {
-	newDriver func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error)
+	newDriver driverFactoryFunc
 	watcher   templates.Watcher
 	resolver  templates.Resolver
 	logger    logging.Logger
@@ -68,7 +71,7 @@ func (f *driverFactory) Make(ctx context.Context, conf *config.Config,
 	taskName := *taskConf.Name
 	logger := f.logger.With(taskNameLogKey, taskName)
 
-	d, err := f.createNewTaskDriver(conf, taskConf)
+	d, err := f.createNewTaskDriver(ctx, conf, taskConf)
 	if err != nil {
 		logger.Error("error creating new task driver")
 		return nil, err
@@ -89,7 +92,7 @@ func (f *driverFactory) Make(ctx context.Context, conf *config.Config,
 	return d, nil
 }
 
-func (f *driverFactory) createNewTaskDriver(conf *config.Config, taskConfig config.TaskConfig) (driver.Driver, error) {
+func (f *driverFactory) createNewTaskDriver(ctx context.Context, conf *config.Config, taskConfig config.TaskConfig) (driver.Driver, error) {
 	logger := f.logger.With("task_name", *taskConfig.Name)
 	logger.Trace("creating new task driver")
 	task, err := newDriverTask(conf, &taskConfig, f.providers)
@@ -97,7 +100,7 @@ func (f *driverFactory) createNewTaskDriver(conf *config.Config, taskConfig conf
 		return nil, err
 	}
 
-	d, err := f.newDriver(conf, task, f.watcher)
+	d, err := f.newDriver(ctx, conf, task, f.watcher)
 	if err != nil {
 		return nil, err
 	}
@@ -140,8 +143,7 @@ func (f *driverFactory) loadProviderConfigs(ctx context.Context) ([]driver.Terra
 }
 
 // newDriverFunc is a constructor abstraction for all of supported drivers
-func newDriverFunc(conf *config.Config) (
-	func(conf *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error), error) {
+func newDriverFunc(conf *config.Config) (driverFactoryFunc, error) {
 	if conf.Driver.Terraform != nil {
 		return newTerraformDriver, nil
 	}
@@ -150,7 +152,7 @@ func newDriverFunc(conf *config.Config) (
 
 // newTerraformDriver maps user configuration to initialize a Terraform driver
 // for a task
-func newTerraformDriver(conf *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+func newTerraformDriver(ctx context.Context, conf *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 	tfConf := *conf.Driver.Terraform
 	return driver.NewTerraform(&driver.TerraformConfig{
 		Task:              task,
