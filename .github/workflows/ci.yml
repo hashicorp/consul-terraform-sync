@@ -121,7 +121,6 @@ jobs:
   e2e:
     name: E2E Tests
     needs:
-      - pre-job
       - e2e-split
     runs-on: ubuntu-latest
     strategy:
@@ -169,7 +168,6 @@ jobs:
     name: Slack notification
     if: ${{ failure() && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release')) }}
     needs:
-      - pre-job
       - checks
       - build
       - unit-and-integration
