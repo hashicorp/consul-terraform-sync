@@ -29,7 +29,7 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
     steps:
       - run: |
-          return 0
+          echo "Skip check ran successfully"
 
   checks:
     name: Checks
