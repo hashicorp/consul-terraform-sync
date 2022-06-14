@@ -36,7 +36,7 @@ func Test_GetLicense_API_Failure(t *testing.T) {
 		},
 		{
 			name:                "bad request non retryable error",
-			responseCode:        http.StatusBadRequest,
+			responseCode:        http.StatusInternalServerError,	// TODO: REVERT - Testing with intentional failure
 			isNonRetryableError: true,
 		},
 		{
