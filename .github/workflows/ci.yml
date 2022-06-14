@@ -3,13 +3,6 @@ name: CI
 on:
   workflow_dispatch:
   push:
-  pull_request:
-    types:
-      - opened
-      - reopened
-    branches:
-      - main
-      - 'releases/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
