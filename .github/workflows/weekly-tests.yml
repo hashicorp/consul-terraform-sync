@@ -98,7 +98,8 @@ jobs:
 
   slack-notification:
     name: Slack Notification
-    if: ${{ failure() }}
+    if: |
+      failure()
     needs:
       - compatability
       - vault-integration

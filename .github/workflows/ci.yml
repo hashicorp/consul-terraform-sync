@@ -3,6 +3,10 @@ name: CI
 on:
   workflow_dispatch:
   push:
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,9 +18,25 @@ env:
   TERRAFORM_VERSION: 1.2.2
 
 jobs:
+  skip-check:
+    name: Skip Check
+    runs-on: ubuntu-latest
+    # This job only runs if the action trigger is manual, a commit push, or a PR from a different repo (fork).
+    # Other jobs can check if this job ran successfully to determine if they should run as well.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+    steps:
+      - run: |
+          return 0
+
   checks:
     name: Checks
     runs-on: ubuntu-latest
+    needs:
+      - skip-check
+    if: needs.skip-check.result == 'success'
     steps:
       - uses: actions/checkout@v3
 
@@ -47,6 +67,9 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    needs:
+      - skip-check
+    if: needs.skip-check.result == 'success'
     steps:
       - uses: actions/checkout@v3
 
@@ -62,6 +85,9 @@ jobs:
   unit-and-integration:
     name: Unit and Integration Tests
     runs-on: ubuntu-latest
+    needs:
+      - skip-check
+    if: needs.skip-check.result == 'success'
     steps:
       - uses: actions/checkout@v3
 
@@ -93,6 +119,9 @@ jobs:
   e2e-split:
     name: E2E Tests Splitting
     runs-on: ubuntu-latest
+    needs:
+      - skip-check
+    if: needs.skip-check.result == 'success'
     env:
       E2E_TESTS_PARALLELISM: 4
     steps:
@@ -114,9 +143,11 @@ jobs:
 
   e2e:
     name: E2E Tests
-    needs:
-      - e2e-split
     runs-on: ubuntu-latest
+    needs:
+      - skip-check
+      - e2e-split
+    if: needs.skip-check.result == 'success'
     strategy:
       matrix:
         index: [0, 1, 2, 3]
@@ -160,8 +191,12 @@ jobs:
 
   slack-notification:
     name: Slack Notification
-    if: ${{ failure() && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release')) }}
+    if: |
+      needs.skip-check.result == 'success' &&
+      failure() &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release'))
     needs:
+      - skip-check
       - checks
       - build
       - unit-and-integration
@@ -171,5 +206,5 @@ jobs:
       - name: Slack Workflow Notification
         uses: Gamesight/slack-workflow-status@master
         with:
-          repo_token: ${{secrets.GITHUB_TOKEN}}
-          slack_webhook_url: ${{secrets.SLACK_WEBHOOK_URL}}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
