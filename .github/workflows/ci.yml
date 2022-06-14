@@ -159,7 +159,7 @@ jobs:
           test-results: .build/test-results.json
 
   slack-notification:
-    name: Slack notification
+    name: Slack Notification
     if: ${{ failure() && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release')) }}
     needs:
       - checks
