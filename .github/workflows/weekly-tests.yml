@@ -44,7 +44,8 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - uses: ./.github/actions/setup-vault
+      - name: Setup Vault
+        uses: ./.github/actions/setup-vault
         with:
           version: ${{ env.VAULT_VERSION }}
 
@@ -64,11 +65,13 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - uses: ./.github/actions/setup-consul
+      - name: Setup Consul
+        uses: ./.github/actions/setup-consul
         with:
           version: ${{ env.CONSUL_VERSION }}
 
-      - uses: hashicorp/setup-terraform@v2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
