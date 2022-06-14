@@ -9,6 +9,7 @@ on:
       - reopened
     branches:
       - main
+      - 'releases/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
