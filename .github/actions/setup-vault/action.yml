@@ -1,0 +1,17 @@
+name: Setup Vault
+description: Action to setup Vault
+
+inputs:
+  version:
+    description: Vault version
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install Vault
+      shell: bash
+      run: |
+        curl -sLo vault.zip https://releases.hashicorp.com/vault/${{ inputs.version }}/vault_${{ inputs.version }}_linux_amd64.zip
+        sudo unzip vault.zip -d /usr/local/bin/
+        vault version

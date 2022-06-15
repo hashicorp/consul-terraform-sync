@@ -157,7 +157,7 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	rw.tasksManager = tm
 
 	// Mock driver
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(task)
 		d.On("TemplateIDs").Return([]string{"{{tmpl}}"})

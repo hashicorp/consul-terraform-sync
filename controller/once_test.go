@@ -119,7 +119,7 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 
 	// Set up driver factory
 	tm.factory.initConf = conf
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(task).Times(4)
 		d.On("TemplateIDs").Return(nil)
@@ -178,7 +178,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 
 	// Set up driver factory
 	tm.factory.initConf = conf
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		return setupNewDriver(task), nil
 	}
 
@@ -242,7 +242,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 
 	// Set up driver factory
 	tm.factory.initConf = conf
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
 		// Always return false on render template to mock what happens when

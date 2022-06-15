@@ -33,7 +33,7 @@ require (
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/terraform-exec v0.16.1
 	github.com/hashicorp/terraform-json v0.14.0
-	github.com/hashicorp/vault/api v1.7.1
+	github.com/hashicorp/vault/api v1.7.2
 	github.com/klauspost/compress v1.11.7 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/mitchellh/cli v1.1.2

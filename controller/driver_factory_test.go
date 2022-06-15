@@ -78,7 +78,7 @@ func Test_driverFactory_Make(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		// Mock returned driver
 		d := new(mocksD.Driver)
-		f.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		f.newDriver = func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			d.On("InitTask", mock.Anything).Return(nil).Once()
 			return d, nil
 		}
@@ -94,7 +94,7 @@ func Test_driverFactory_Make(t *testing.T) {
 		// Mock returned driver
 		errStr := "init error"
 		d := new(mocksD.Driver)
-		f.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		f.newDriver = func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			d.On("InitTask", mock.Anything).Return(errors.New(errStr)).Once()
 			d.On("DestroyTask", mock.Anything).Return().Once()
 			return d, nil
