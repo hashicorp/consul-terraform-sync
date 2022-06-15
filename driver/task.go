@@ -69,7 +69,7 @@ type Task struct {
 	condition    config.ConditionConfig
 	moduleInputs config.ModuleInputConfigs
 	workingDir   string
-
+	logger       logging.Logger
 	// Enterprise
 	deprecatedTFVersion string
 	tfcWorkspace        config.TerraformCloudWorkspaceConfig

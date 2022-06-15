@@ -90,7 +90,7 @@ func TestRenderTemplate(t *testing.T) {
 			tmpl.On("Render", mock.Anything).Return(hcat.RenderResult{}, tc.renderErr).Once()
 
 			tf := &Terraform{
-				task:     &Task{name: "RenderTemplateTest", enabled: true, logger: logging.NewNullLogger()},
+				task:     &Task{name: "RenderTemplateTest", enabled: true},
 				resolver: r,
 				template: tmpl,
 				watcher:  new(mocksTmpl.Watcher),
@@ -199,7 +199,7 @@ func TestApplyTask(t *testing.T) {
 			c.On("Apply", ctx).Return(tc.applyReturn).Once()
 
 			tf := &Terraform{
-				task:      &Task{name: "ApplyTaskTest", enabled: true, logger: logging.NewNullLogger()},
+				task:      &Task{name: "ApplyTaskTest", enabled: true},
 				client:    c,
 				postApply: tc.postApply,
 				logger:    logging.NewNullLogger(),
@@ -316,8 +316,7 @@ func TestUpdateTask(t *testing.T) {
 			w.On("Register", mock.Anything).Return(nil).Once()
 			w.On("Clients").Return(nil).Once()
 			tf := &Terraform{
-				task: &Task{name: "test_task", enabled: tc.orig.Enabled, workingDir: tc.dirName,
-					logger: logging.NewNullLogger()},
+				task:     &Task{name: "test_task", enabled: tc.orig.Enabled, workingDir: tc.dirName},
 				client:   c,
 				resolver: r,
 				watcher:  w,
@@ -425,8 +424,7 @@ func TestUpdateTask(t *testing.T) {
 			w.On("Clients").Return(nil).Once()
 
 			tf := &Terraform{
-				task: &Task{name: "test_task", enabled: false, workingDir: tc.dirName,
-					logger: logging.NewNullLogger()},
+				task:     &Task{name: "test_task", enabled: false, workingDir: tc.dirName},
 				client:   c,
 				resolver: r,
 				watcher:  w,
@@ -510,14 +508,11 @@ func TestUpdateTask_Inspect(t *testing.T) {
 
 			// set some fields on task
 			tc.name = "task_a"
-			tc.task.logger = logging.NewNullLogger()
 			tc.task.workingDir = workingDir
 
 			copyTask := &Task{
-				name:       tc.task.Name(),
-				enabled:    tc.task.IsEnabled(),
-				logger:     tc.task.logger,
-				workingDir: tc.task.workingDir,
+				name:    tc.task.Name(),
+				enabled: tc.task.IsEnabled(),
 			}
 
 			_, err := tf.UpdateTask(ctx, tc.patch)
@@ -547,7 +542,6 @@ func TestSetBufferPeriod(t *testing.T) {
 					Min: 2 * time.Second,
 					Max: 5 * time.Second,
 				},
-				logger: logging.NewNullLogger(),
 			},
 		},
 		{
@@ -556,7 +550,6 @@ func TestSetBufferPeriod(t *testing.T) {
 			&Task{
 				enabled: false,
 				name:    "disabled_task",
-				logger:  logging.NewNullLogger(),
 			},
 		},
 		{
@@ -565,7 +558,6 @@ func TestSetBufferPeriod(t *testing.T) {
 			&Task{
 				enabled: true,
 				name:    "no_buf_period_task",
-				logger:  logging.NewNullLogger(),
 			},
 		},
 		{
@@ -574,7 +566,6 @@ func TestSetBufferPeriod(t *testing.T) {
 			&Task{
 				enabled: true,
 				name:    "task_a",
-				logger:  logging.NewNullLogger(),
 			},
 		},
 	}
@@ -733,8 +724,7 @@ func TestDisabledTask(t *testing.T) {
 		defer deleteTemp()
 
 		tf := &Terraform{
-			task: &Task{name: "disabled_task", enabled: false,
-				workingDir: dirName, logger: logging.NewNullLogger()},
+			task:       &Task{name: "disabled_task", enabled: false, workingDir: dirName},
 			client:     c,
 			fileReader: func(string) ([]byte, error) { return []byte{}, nil },
 			watcher:    w,
@@ -819,7 +809,7 @@ func TestInitTask(t *testing.T) {
 			w.On("Register", mock.Anything).Return(nil).Once()
 
 			tf := &Terraform{
-				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName, logger: logging.NewNullLogger(), module: tc.module},
+				task:       &Task{name: "InitTaskTest", enabled: true, workingDir: dirName, module: tc.module},
 				client:     c,
 				fileReader: func(string) ([]byte, error) { return []byte{}, nil },
 				watcher:    w,
