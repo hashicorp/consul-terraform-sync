@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/hcat"
 )
 
-//go:generate mockery --name=Template  --filename=template.go --output=../mocks/templates
+//go:generate mockery --name=Template  --filename=template.go --output=../mocks/templates --with-expecter
 //go:generate mockery --name=Resolver --filename=resolver.go --output=../mocks/templates
 //go:generate mockery --name=Watcher --filename=watcher.go --output=../mocks/templates
 

@@ -130,7 +130,6 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 
 		mockD := new(mocksD.Driver)
 		mockD.On("SetBufferPeriod").Return()
-		mockD.On("OverrideNotifier").Return()
 		mockDriver(ctx, mockD, driverTask)
 		tm.factory.newDriver = func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
@@ -196,7 +195,6 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockD := new(mocksD.Driver)
 		mockD.On("SetBufferPeriod").Return()
-		mockD.On("OverrideNotifier").Return()
 		task, err := driver.NewTask(driver.TaskConfig{
 			Enabled: true,
 			Name:    validTaskName,
@@ -226,7 +224,6 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 	t.Run("disabled task", func(t *testing.T) {
 		mockD := new(mocksD.Driver)
 		mockD.On("SetBufferPeriod").Return()
-		mockD.On("OverrideNotifier").Return()
 		task, err := driver.NewTask(driver.TaskConfig{
 			Enabled: false,
 			Name:    validTaskName,
@@ -261,7 +258,6 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		require.NoError(t, err)
 		mockD.On("Task").Return(task).
 			On("InitTask", ctx).Return(nil).
-			On("OverrideNotifier").Return().
 			On("RenderTemplate", mock.Anything).Return(true, nil).
 			On("ApplyTask", ctx).Return(fmt.Errorf("apply err"))
 		tm.state = state.NewInMemoryStore(conf)
@@ -874,7 +870,6 @@ func Test_TasksManager_TaskCreateAndRunAllowFail(t *testing.T) {
 		require.NoError(t, err)
 		mockD.On("Task").Return(task).
 			On("InitTask", ctx).Return(nil).
-			On("OverrideNotifier").Return().
 			On("RenderTemplate", mock.Anything).Return(true, nil).
 			On("ApplyTask", ctx).Return(fmt.Errorf("apply err")).
 			On("SetBufferPeriod").Return().Once().
