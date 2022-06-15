@@ -233,8 +233,8 @@ func TestFromPath(t *testing.T) {
 				Port:     Int(8503),
 				BufferPeriod: &BufferPeriodConfig{
 					Enabled: Bool(true),
-					Min:     TimeDuration(time.Duration(10 * time.Second)),
-					Max:     TimeDuration(time.Duration(30 * time.Second)),
+					Min:     TimeDuration(10 * time.Second),
+					Max:     TimeDuration(30 * time.Second),
 				},
 			},
 		}, {

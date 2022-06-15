@@ -33,7 +33,7 @@ func Test_Inspect_Run(t *testing.T) {
 			"one task",
 			1,
 			func(task *driver.Task) driver.Driver {
-				return inspectMockDriver(task, nil)
+				return inspectMockDriver(nil)
 			},
 			false,
 		},
@@ -41,7 +41,7 @@ func Test_Inspect_Run(t *testing.T) {
 			"multiple tasks",
 			10,
 			func(task *driver.Task) driver.Driver {
-				return inspectMockDriver(task, nil)
+				return inspectMockDriver(nil)
 			},
 			false,
 		},
@@ -51,9 +51,9 @@ func Test_Inspect_Run(t *testing.T) {
 			func(task *driver.Task) driver.Driver {
 				if task.Name() == "task_03" {
 					// Mock an error during apply for a task
-					return inspectMockDriver(task, expectedErr)
+					return inspectMockDriver(expectedErr)
 				}
-				return inspectMockDriver(task, nil)
+				return inspectMockDriver(nil)
 			},
 			true,
 		},
@@ -265,11 +265,11 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 }
 
 // inspectMockDriver mocks the driver with the methods needed for inspect-mode
-func inspectMockDriver(task *driver.Task, inspecTaskErr error) driver.Driver {
+func inspectMockDriver(inspectTaskErr error) driver.Driver {
 	d := new(mocksD.Driver)
 	d.On("RenderTemplate", mock.Anything).Return(true, nil)
 	d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
-	d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, inspecTaskErr)
+	d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, inspectTaskErr)
 	d.On("OverrideNotifier").Return().Once()
 	return d
 }

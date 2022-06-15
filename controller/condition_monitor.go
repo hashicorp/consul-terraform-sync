@@ -55,7 +55,7 @@ func (cm *ConditionMonitor) WatchDep(ctx context.Context) error {
 			// stop for context canceled
 			return ctx.Err()
 		}
-		cm.logDepSize(50, int64(ix))
+		cm.logDepSize(50, ix)
 	}
 }
 

@@ -20,7 +20,7 @@ func (c *NoConditionConfig) Copy() MonitorConfig {
 // configuration, with values in the other configuration taking precedence.
 // Maps and slices are merged, most other values are overwritten. Complex
 // structs define their own merge functionality.
-func (c *NoConditionConfig) Merge(o MonitorConfig) MonitorConfig {
+func (c *NoConditionConfig) Merge(_ MonitorConfig) MonitorConfig {
 	if c == nil {
 		return nil
 	}

@@ -119,7 +119,7 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 
 // TaskDelete marks an existing task that has been added to CTS for deletion
 // then asynchronously deletes the task.
-func (tm *TasksManager) TaskDelete(ctx context.Context, name string) error {
+func (tm *TasksManager) TaskDelete(_ context.Context, name string) error {
 	logger := tm.logger.With(taskNameLogKey, name)
 	if tm.drivers.IsMarkedForDeletion(name) {
 		logger.Debug("task is already marked for deletion")
@@ -428,11 +428,11 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 // TaskByTemplate returns the name of the task associated with a template id.
 // If no task is associated with the template id, returns false.
 func (tm TasksManager) TaskByTemplate(tmplID string) (string, bool) {
-	driver, ok := tm.drivers.GetTaskByTemplate(tmplID)
+	d, ok := tm.drivers.GetTaskByTemplate(tmplID)
 	if !ok {
 		return "", false
 	}
-	return driver.Task().Name(), true
+	return d.Task().Name(), true
 }
 
 // EnableTaskRanNotify is a helper for enabling notifications when a task has

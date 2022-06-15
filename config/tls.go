@@ -97,8 +97,7 @@ func (c *TLSConfig) Merge(o *TLSConfig) *TLSConfig {
 // Finalize ensures there no nil pointers.
 func (c *TLSConfig) Finalize() {
 	if c.Enabled == nil {
-		c.Enabled = Bool(false ||
-			StringPresent(c.Cert) ||
+		c.Enabled = Bool(StringPresent(c.Cert) ||
 			StringPresent(c.CACert) ||
 			StringPresent(c.CAPath) ||
 			StringPresent(c.Key) ||
@@ -128,8 +127,7 @@ func (c *TLSConfig) Finalize() {
 // FinalizeConsul resolves the configuration with environment variables for Consul.
 func (c *TLSConfig) FinalizeConsul() {
 	if c.Enabled == nil {
-		c.Enabled = Bool(false ||
-			StringPresent(c.Cert) ||
+		c.Enabled = Bool(StringPresent(c.Cert) ||
 			StringPresent(c.CACert) ||
 			StringPresent(c.CAPath) ||
 			StringPresent(c.Key) ||

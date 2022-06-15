@@ -152,7 +152,7 @@ func newDriverFunc(conf *config.Config) (driverFactoryFunc, error) {
 
 // newTerraformDriver maps user configuration to initialize a Terraform driver
 // for a task
-func newTerraformDriver(ctx context.Context, conf *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+func newTerraformDriver(_ context.Context, conf *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 	tfConf := *conf.Driver.Terraform
 	return driver.NewTerraform(&driver.TerraformConfig{
 		Task:              task,

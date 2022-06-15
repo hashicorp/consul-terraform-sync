@@ -36,7 +36,7 @@ func (t CatalogServicesTemplate) RendersVar() bool {
 	return t.RenderVar
 }
 
-func (m CatalogServicesTemplate) appendModuleAttribute(body *hclwrite.Body) {
+func (t CatalogServicesTemplate) appendModuleAttribute(body *hclwrite.Body) {
 	body.SetAttributeTraversal("catalog_services", hcl.Traversal{
 		hcl.TraverseRoot{Name: "var"},
 		hcl.TraverseAttr{Name: "catalog_services"},
