@@ -356,7 +356,7 @@ func TestNewDriverTask(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.conf.Finalize()
+			_ = tc.conf.Finalize()
 
 			var providerConfigs []driver.TerraformProviderBlock
 			if tc.conf != nil && tc.conf.TerraformProviders != nil {
@@ -368,7 +368,16 @@ func TestNewDriverTask(t *testing.T) {
 
 			tasks, err := newTestDriverTasks(tc.conf, providerConfigs)
 			assert.NoError(t, err)
-			assert.Equal(t, tc.tasks, tasks)
+
+			assert.Equal(t, len(tc.tasks), len(tasks))
+			for i := 0; i < len(tc.tasks); i++ {
+				expected := tc.tasks[i]
+				actual := tasks[i]
+
+				expected.SetLogger(nil)
+				actual.SetLogger(nil)
+				assert.Equal(t, expected, actual)
+			}
 		})
 	}
 }

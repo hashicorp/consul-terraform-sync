@@ -225,7 +225,7 @@ func (t *Task) Env() map[string]string {
 	return env
 }
 
-// ProviderNames returns the list of providers that the task has configured
+// Providers returns the list of providers that the task has configured
 func (t *Task) Providers() TerraformProviderBlocks {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -333,6 +333,10 @@ func (s Service) copy() Service {
 	cp := s
 	cp.UserDefinedMeta = meta
 	return cp
+}
+
+func (t *Task) SetLogger(logger logging.Logger) {
+	t.logger = logger
 }
 
 // configureRootModuleInput sets task values for the module input.
