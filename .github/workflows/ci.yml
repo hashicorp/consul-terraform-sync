@@ -137,6 +137,7 @@ jobs:
 
       - name: Split E2E tests
         run: |
+          set -euo pipefail
           ./build-scripts/list-tests.sh e2e ./e2e | ./build-scripts/split-lines.sh ${{ env.E2E_TESTS_PARALLELISM }} .build/tests
 
       - uses: actions/upload-artifact@v3
@@ -186,6 +187,7 @@ jobs:
 
       - name: Run E2E tests
         run: |
+          set -euo pipefail
           cat .build/tests/part.${{ matrix.index }} | ./build-scripts/make-tests-regex.sh > .build/regex
           TESTS_REGEX_PATH=.build/regex make test-e2e-ci
 
