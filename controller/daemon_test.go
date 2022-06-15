@@ -164,7 +164,6 @@ func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil)
-		d.On("OverrideNotifier").Return().Once()
 		d.On("SetBufferPeriod").Return().Once()
 		return d, nil
 	}

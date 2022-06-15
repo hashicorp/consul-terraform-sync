@@ -12,6 +12,14 @@ type Template struct {
 	mock.Mock
 }
 
+type Template_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *Template) EXPECT() *Template_Expecter {
+	return &Template_Expecter{mock: &_m.Mock}
+}
+
 // Execute provides a mock function with given fields: _a0
 func (_m *Template) Execute(_a0 hcat.Recaller) ([]byte, error) {
 	ret := _m.Called(_a0)
@@ -35,6 +43,29 @@ func (_m *Template) Execute(_a0 hcat.Recaller) ([]byte, error) {
 	return r0, r1
 }
 
+// Template_Execute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Execute'
+type Template_Execute_Call struct {
+	*mock.Call
+}
+
+// Execute is a helper method to define mock.On call
+//  - _a0 hcat.Recaller
+func (_e *Template_Expecter) Execute(_a0 interface{}) *Template_Execute_Call {
+	return &Template_Execute_Call{Call: _e.mock.On("Execute", _a0)}
+}
+
+func (_c *Template_Execute_Call) Run(run func(_a0 hcat.Recaller)) *Template_Execute_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(hcat.Recaller))
+	})
+	return _c
+}
+
+func (_c *Template_Execute_Call) Return(_a0 []byte, _a1 error) *Template_Execute_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // ID provides a mock function with given fields:
 func (_m *Template) ID() string {
 	ret := _m.Called()
@@ -49,6 +80,28 @@ func (_m *Template) ID() string {
 	return r0
 }
 
+// Template_ID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ID'
+type Template_ID_Call struct {
+	*mock.Call
+}
+
+// ID is a helper method to define mock.On call
+func (_e *Template_Expecter) ID() *Template_ID_Call {
+	return &Template_ID_Call{Call: _e.mock.On("ID")}
+}
+
+func (_c *Template_ID_Call) Run(run func()) *Template_ID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Template_ID_Call) Return(_a0 string) *Template_ID_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Notify provides a mock function with given fields: _a0
 func (_m *Template) Notify(_a0 interface{}) bool {
 	ret := _m.Called(_a0)
@@ -61,6 +114,29 @@ func (_m *Template) Notify(_a0 interface{}) bool {
 	}
 
 	return r0
+}
+
+// Template_Notify_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Notify'
+type Template_Notify_Call struct {
+	*mock.Call
+}
+
+// Notify is a helper method to define mock.On call
+//  - _a0 interface{}
+func (_e *Template_Expecter) Notify(_a0 interface{}) *Template_Notify_Call {
+	return &Template_Notify_Call{Call: _e.mock.On("Notify", _a0)}
+}
+
+func (_c *Template_Notify_Call) Run(run func(_a0 interface{})) *Template_Notify_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(interface{}))
+	})
+	return _c
+}
+
+func (_c *Template_Notify_Call) Return(_a0 bool) *Template_Notify_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Render provides a mock function with given fields: content
@@ -82,6 +158,29 @@ func (_m *Template) Render(content []byte) (hcat.RenderResult, error) {
 	}
 
 	return r0, r1
+}
+
+// Template_Render_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Render'
+type Template_Render_Call struct {
+	*mock.Call
+}
+
+// Render is a helper method to define mock.On call
+//  - content []byte
+func (_e *Template_Expecter) Render(content interface{}) *Template_Render_Call {
+	return &Template_Render_Call{Call: _e.mock.On("Render", content)}
+}
+
+func (_c *Template_Render_Call) Run(run func(content []byte)) *Template_Render_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].([]byte))
+	})
+	return _c
+}
+
+func (_c *Template_Render_Call) Return(_a0 hcat.RenderResult, _a1 error) *Template_Render_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 type mockConstructorTestingTNewTemplate interface {

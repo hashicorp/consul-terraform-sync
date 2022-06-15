@@ -63,12 +63,11 @@ type Terraform struct {
 	logClient bool
 	postApply handler.Handler
 
-	inited       bool
-	renderedOnce bool
+	inited bool
 
 	logger logging.Logger
 
-	overrider notifier.Overrider
+	onceNotifier *notifier.OnceNotifier
 }
 
 // TerraformConfig configures the Terraform driver
@@ -158,6 +157,13 @@ func (tf *Terraform) Task() *Task {
 	return tf.task
 }
 
+func (tf *Terraform) OnceDone() bool {
+	if tf.onceNotifier == nil {
+		return false
+	}
+	return tf.onceNotifier.OnceDone()
+}
+
 // InitTask initializes the task by creating the Terraform root module and related
 // files to execute on.
 func (tf *Terraform) InitTask(ctx context.Context) error {
@@ -210,17 +216,6 @@ func (tf *Terraform) TemplateIDs() []string {
 		return nil
 	}
 	return []string{tf.template.ID()}
-}
-
-func (tf *Terraform) OverrideNotifier() {
-	tf.mu.Lock()
-	defer tf.mu.Unlock()
-
-	if tf.overrider == nil {
-		return
-	}
-
-	tf.overrider.Override()
 }
 
 // RenderTemplate fetches data for the template. If the data is complete fetched,
@@ -344,7 +339,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 				return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to "+
 					"render template for task: %s", taskName, err)
 			}
-			if (result.Complete && !result.NoChange) || (result.Complete && result.NoChange && tf.renderedOnce) {
+			if (result.Complete && !result.NoChange) || (result.Complete && result.NoChange && tf.OnceDone()) {
 				// Continue if the template has completed or the template had already
 				// completed prior to enabling the task and there is no change.
 				break
@@ -464,7 +459,7 @@ func (tf *Terraform) renderTemplate() (hcat.ResolveEvent, error) {
 	// result.NoChange can occur when template rendering is forced even though
 	// there may be no dependency changes rather than naturally triggered
 	// e.g. when a task is re-enabled
-	if result.Complete && result.NoChange && tf.renderedOnce {
+	if result.Complete && result.NoChange && tf.OnceDone() {
 		tnlog.Trace("no changes detected for task")
 		return result, nil
 	}
@@ -479,7 +474,7 @@ func (tf *Terraform) renderTemplate() (hcat.ResolveEvent, error) {
 			return hcat.ResolveEvent{}, err
 		}
 		tnlog.Trace("template for task rendered", "rendered_template", rendered)
-		tf.renderedOnce = true
+		tf.onceNotifier.SetOnceDone()
 	}
 
 	return result, nil
@@ -622,81 +617,22 @@ func validateTemplate(t *hcat.Template, clients hcat.Looker) error {
 // setNotifier sets a notifier on the template to ensure only the condition's
 // monitored changes (and not the module input's changes) trigger the task.
 func (tf *Terraform) setNotifier(tmpl templates.Template) error {
-	tmplFuncTotal, err := tf.countTmplFunc()
-	if err != nil {
-		return err
-	}
-
+	var notifyTrigger notifier.TriggerCheck
 	switch tf.task.Condition().(type) {
 	case *config.ServicesConditionConfig:
-		tmpl := notifier.NewServices(tmpl, tmplFuncTotal)
-		tf.template = tmpl
-		tf.overrider = tmpl
+		notifyTrigger = notifier.TriggerCheckService
 	case *config.CatalogServicesConditionConfig:
-		tmpl := notifier.NewCatalogServicesRegistration(tmpl, tmplFuncTotal)
-		tf.template = tmpl
-		tf.overrider = tmpl
+		notifyTrigger = notifier.MakeTriggerCheckCatalogService()
 	case *config.ConsulKVConditionConfig:
-		tmpl := notifier.NewConsulKV(tmpl, tmplFuncTotal)
-		tf.template = tmpl
-		tf.overrider = tmpl
+		notifyTrigger = notifier.TriggerCheckConsulKV
 	case *config.ScheduleConditionConfig:
-		tmpl := notifier.NewSuppressNotification(tmpl, tmplFuncTotal)
-		tf.template = tmpl
-		tf.overrider = tmpl
+		notifyTrigger = notifier.TriggerCheckSuppress
 	default:
-		// services list
-		tmpl := notifier.NewServices(tmpl, tmplFuncTotal)
-		tf.template = tmpl
-		tf.overrider = tmpl
+		notifyTrigger = notifier.TriggerCheckService
 	}
+	tf.onceNotifier = notifier.NewOnceNotifier(notifyTrigger, tmpl)
+	tf.template = tf.onceNotifier
 	return nil
-}
-
-// countTmplFunc counts the number of template functions (tmplfunc) that are
-// added to the template file. Counts the tmplfunc needed by the task's
-// services field, condition block, and module_input blocks.
-func (tf *Terraform) countTmplFunc() (int, error) {
-	// Count tmplfuncs for the service variable separately. Currently services
-	// can only be configured in one of services field, condition "services",
-	// and module_input "services". Enforced by config validation
-	serviceCount := len(tf.task.Services())
-	nonServiceCount := 0
-
-	switch cond := tf.task.Condition().(type) {
-	case *config.CatalogServicesConditionConfig:
-		nonServiceCount++
-	case *config.ServicesConditionConfig:
-		if cond.Regexp != nil {
-			serviceCount = 1
-		} else {
-			serviceCount = len(cond.Names)
-		}
-	case *config.ConsulKVConditionConfig:
-		nonServiceCount++
-	default:
-		// no-op: condition block currently not required since services list
-		// can be used alternatively. enforced by config validation
-	}
-
-	for _, moduleInput := range tf.task.ModuleInputs() {
-		switch input := moduleInput.(type) {
-		case *config.ServicesModuleInputConfig:
-			// relies on config validation to restrict to one ServicesModuleInput
-			if input.Regexp != nil {
-				serviceCount = 1
-			} else {
-				serviceCount = len(input.Names)
-			}
-		case *config.ConsulKVModuleInputConfig:
-			nonServiceCount++
-		default:
-			return 0, fmt.Errorf("task %q has unsupported type of module_input "+
-				"block configuration %T", tf.task.name, input)
-		}
-	}
-
-	return serviceCount + nonServiceCount, nil
 }
 
 func (tf *Terraform) validateTask(ctx context.Context) error {

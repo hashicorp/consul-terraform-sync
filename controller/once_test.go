@@ -156,7 +156,6 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
 		d.On("ApplyTask", mock.Anything).Return(nil).Once()
-		d.On("OverrideNotifier").Return().Once()
 		// Last driver call takes 2 seconds
 		d.On("SetBufferPeriod").Return().After(2 * time.Second).Once()
 		return d, nil
@@ -316,7 +315,6 @@ func onceMockDriver(task *driver.Task, applyTaskErr error) driver.Driver {
 	d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 	d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
 	d.On("ApplyTask", mock.Anything).Return(applyTaskErr).Once()
-	d.On("OverrideNotifier").Return().Once()
 	d.On("SetBufferPeriod").Return().Once()
 	return d
 }

@@ -114,9 +114,6 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
 		d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, nil)
-		// Last driver call takes 2 seconds
-		d.On("OverrideNotifier").Return().After(2 * time.Second).Once()
-
 		drivers[task.Name()] = d
 
 		return d, nil
@@ -270,6 +267,5 @@ func inspectMockDriver(inspectTaskErr error) driver.Driver {
 	d.On("RenderTemplate", mock.Anything).Return(true, nil)
 	d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
 	d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, inspectTaskErr)
-	d.On("OverrideNotifier").Return().Once()
 	return d
 }
