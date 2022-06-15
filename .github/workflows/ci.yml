@@ -18,8 +18,8 @@ env:
   TERRAFORM_VERSION: 1.2.2
 
 jobs:
-  skip-check:
-    name: Skip Check
+  run-check:
+    name: Run-Check
     runs-on: ubuntu-latest
     # This job only runs if the action trigger is manual, a commit push, or a PR from a different repo (fork).
     # Other jobs can check if this job ran successfully to determine if they should run as well.
@@ -29,14 +29,14 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
     steps:
       - run: |
-          echo "Skip check ran successfully"
+          echo "Run-check job ran successfully"
 
   checks:
     name: Checks
     runs-on: ubuntu-latest
     needs:
-      - skip-check
-    if: needs.skip-check.result == 'success'
+      - run-check
+    if: needs.run-check.result == 'success'
     steps:
       - uses: actions/checkout@v3
 
@@ -68,8 +68,8 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     needs:
-      - skip-check
-    if: needs.skip-check.result == 'success'
+      - run-check
+    if: needs.run-check.result == 'success'
     steps:
       - uses: actions/checkout@v3
 
@@ -86,8 +86,8 @@ jobs:
     name: Unit and Integration Tests
     runs-on: ubuntu-latest
     needs:
-      - skip-check
-    if: needs.skip-check.result == 'success'
+      - run-check
+    if: needs.run-check.result == 'success'
     steps:
       - uses: actions/checkout@v3
 
@@ -123,8 +123,8 @@ jobs:
     name: E2E Tests Splitting
     runs-on: ubuntu-latest
     needs:
-      - skip-check
-    if: needs.skip-check.result == 'success'
+      - run-check
+    if: needs.run-check.result == 'success'
     env:
       E2E_TESTS_PARALLELISM: 4
     steps:
@@ -148,9 +148,9 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs:
-      - skip-check
+      - run-check
       - e2e-split
-    if: needs.skip-check.result == 'success'
+    if: needs.run-check.result == 'success'
     strategy:
       matrix:
         index: [0, 1, 2, 3]
@@ -198,11 +198,11 @@ jobs:
   slack-notification:
     name: Slack Notification
     if: |
-      needs.skip-check.result == 'success' &&
+      needs.run-check.result == 'success' &&
       failure() &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release'))
     needs:
-      - skip-check
+      - run-check
       - checks
       - build
       - unit-and-integration
