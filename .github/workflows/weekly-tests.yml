@@ -78,11 +78,13 @@ jobs:
 
       - name: Run benchmarks tests
         run: |
+          set -euo pipefail
           mkdir -p .build
           make test-benchmarks | tee .build/benchmarks-output.json
 
       - name: Parse benchmarks output
         run: |
+          set -euo pipefail
           grep 'ns/op' .build/benchmarks-output.json | \
             jq -r .Output \
             | sed 's/\t/ /g' \
