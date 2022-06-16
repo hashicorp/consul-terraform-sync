@@ -1103,7 +1103,7 @@ func TestGetServicesMetaData(t *testing.T) {
 			},
 			func() *tmplfunc.ServicesMeta {
 				sm := &tmplfunc.ServicesMeta{}
-				sm.SetMeta(meta)
+				_ = sm.SetMeta(meta)
 				return sm
 			},
 		},
@@ -1120,7 +1120,7 @@ func TestGetServicesMetaData(t *testing.T) {
 			},
 			func() *tmplfunc.ServicesMeta {
 				sm := &tmplfunc.ServicesMeta{}
-				sm.SetMeta(meta)
+				_ = sm.SetMeta(meta)
 				return sm
 			},
 		},
@@ -1137,7 +1137,7 @@ func TestGetServicesMetaData(t *testing.T) {
 			func() *tmplfunc.ServicesMeta {
 				sm := &tmplfunc.ServicesMeta{}
 				metaMap := map[string]map[string]string{"api": meta}
-				sm.SetMetaMap(metaMap)
+				_ = sm.SetMetaMap(metaMap)
 				return sm
 			},
 		},
@@ -1166,11 +1166,11 @@ func TestGetServicesMetaData(t *testing.T) {
 
 // testHandler returns a fake handler that can return an error or not on Do()
 func testHandler(err bool) handler.Handler {
-	config := map[string]interface{}{
+	c := map[string]interface{}{
 		"name": "1",
 		"err":  err,
 	}
 
-	h, _ := handler.NewFake(config)
+	h, _ := handler.NewFake(c)
 	return h
 }

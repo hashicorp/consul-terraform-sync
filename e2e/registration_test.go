@@ -95,9 +95,9 @@ service_registration {
 }`, serviceName, serviceAddress, checkAddress)
 
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig(tempDir).appendID(id).appendPort(port).
+	c := baseConfig(tempDir).appendID(id).appendPort(port).
 		appendConsulBlock(srv, rConfig).appendTerraformBlock().appendDBTask()
-	config.write(t, configPath)
+	c.write(t, configPath)
 
 	// Start CTS, using command directly since port has been preconfigured
 	cmd := exec.Command("consul-terraform-sync", "start", fmt.Sprintf("--config-file=%s", configPath))
@@ -141,11 +141,11 @@ func TestE2E_ServiceRegistration_DeregisterWhenStopped(t *testing.T) {
 
 	id := "cts-01"
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig(tempDir).appendID(id).
+	c := baseConfig(tempDir).appendID(id).
 		appendConsulBlock(srv).appendTerraformBlock().
 		appendModuleTask("disabled_task", "mkam/hello/cts",
 			"enabled = true")
-	config.write(t, configPath)
+	c.write(t, configPath)
 
 	// Start CTS, verify that service is registered
 	cts, stop := api.StartCTS(t, configPath)
@@ -197,9 +197,9 @@ service_registration {
 }`, tc.config)
 			id := "cts-01"
 			configPath := filepath.Join(tempDir, configFile)
-			config := baseConfig(tempDir).appendID(id).
+			c := baseConfig(tempDir).appendID(id).
 				appendConsulBlock(srv, rConfig).appendTerraformBlock().appendDBTask()
-			config.write(t, configPath)
+			c.write(t, configPath)
 
 			cts, stop := api.StartCTS(t, configPath)
 			defer stop(t)
@@ -241,10 +241,10 @@ func TestE2E_ServiceRegistration_InitError(t *testing.T) {
 	id := "cts-01"
 	port := testutils.FreePort(t)
 	configPath := filepath.Join(tempDir, configFile)
-	config := baseConfig(tempDir).appendID(id).appendPort(port).
+	c := baseConfig(tempDir).appendID(id).appendPort(port).
 		appendConsulBlock(srv).appendTerraformBlock().
 		appendModuleTask("failing_task", "./test_modules/failing_module")
-	config.write(t, configPath)
+	c.write(t, configPath)
 
 	// Start CTS, use command directly to be able to check logs
 	cmd := exec.Command("consul-terraform-sync", "start", fmt.Sprintf("--config-file=%s", configPath))

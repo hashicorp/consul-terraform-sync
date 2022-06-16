@@ -317,8 +317,8 @@ func TestBufferPeriodConfig_Validate(t *testing.T) {
 			"valid",
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
-				Min:     TimeDuration(time.Duration(10 * time.Second)),
-				Max:     TimeDuration(time.Duration(60 * time.Second)),
+				Min:     TimeDuration(10 * time.Second),
+				Max:     TimeDuration(60 * time.Second),
 			},
 			true,
 		},
@@ -326,8 +326,8 @@ func TestBufferPeriodConfig_Validate(t *testing.T) {
 			"min negative",
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
-				Min:     TimeDuration(time.Duration(-10 * time.Second)),
-				Max:     TimeDuration(time.Duration(5 * time.Second)),
+				Min:     TimeDuration(-10 * time.Second),
+				Max:     TimeDuration(5 * time.Second),
 			},
 			false,
 		},
@@ -335,8 +335,8 @@ func TestBufferPeriodConfig_Validate(t *testing.T) {
 			"max negative",
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
-				Min:     TimeDuration(time.Duration(5 * time.Second)),
-				Max:     TimeDuration(time.Duration(-10 * time.Second)),
+				Min:     TimeDuration(5 * time.Second),
+				Max:     TimeDuration(-10 * time.Second),
 			},
 			false,
 		},
@@ -344,8 +344,8 @@ func TestBufferPeriodConfig_Validate(t *testing.T) {
 			"min > max",
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
-				Min:     TimeDuration(time.Duration(5 * time.Second)),
-				Max:     TimeDuration(time.Duration(2 * time.Second)),
+				Min:     TimeDuration(5 * time.Second),
+				Max:     TimeDuration(2 * time.Second),
 			},
 			false,
 		},

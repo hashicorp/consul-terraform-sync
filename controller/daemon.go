@@ -114,7 +114,7 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 			&registration.ServiceRegistrationManagerConfig{
 				ID:                  *conf.ID,
 				Port:                *conf.Port,
-				TLSEnabled:          (conf.TLS != nil && *conf.TLS.Enabled),
+				TLSEnabled:          conf.TLS != nil && *conf.TLS.Enabled,
 				ServiceRegistration: conf.Consul.ServiceRegistration,
 			},
 			ctrl.consulClient)

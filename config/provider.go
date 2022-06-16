@@ -35,11 +35,11 @@ func (c *TerraformProviderConfigs) Copy() *TerraformProviderConfigs {
 
 	o := make(TerraformProviderConfigs, c.Len())
 	for i, t := range *c {
-		copy := make(TerraformProviderConfig)
+		tmp := make(TerraformProviderConfig)
 		for k, v := range *t {
-			copy[k] = v
+			tmp[k] = v
 		}
-		o[i] = &copy
+		o[i] = &tmp
 	}
 	return &o
 }

@@ -244,17 +244,17 @@ func TestTask_ProviderIDs(t *testing.T) {
 
 	cases := []struct {
 		name     string
-		task     Task
+		task     *Task
 		expected []string
 	}{
 		{
 			"no provider",
-			Task{},
+			&Task{},
 			[]string{},
 		},
 		{
 			"provider, no alias",
-			Task{
+			&Task{
 				providers: NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"local": map[string]interface{}{
@@ -267,7 +267,7 @@ func TestTask_ProviderIDs(t *testing.T) {
 		},
 		{
 			"provider, with alias",
-			Task{
+			&Task{
 				providers: NewTerraformProviderBlocks(
 					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
 						{"local": map[string]interface{}{
@@ -296,17 +296,17 @@ func TestTask_ServiceNames(t *testing.T) {
 
 	cases := []struct {
 		name     string
-		task     Task
+		task     *Task
 		expected []string
 	}{
 		{
 			"no services",
-			Task{},
+			&Task{},
 			[]string{},
 		},
 		{
 			"happy path",
-			Task{
+			&Task{
 				services: []Service{
 					{Name: "web"},
 					{Name: "api"},
@@ -380,12 +380,12 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 
 	cases := []struct {
 		name              string
-		task              Task
+		task              *Task
 		expectedTemplates []tftmpl.Template
 	}{
 		{
 			name: "templates: services list",
-			task: Task{
+			task: &Task{
 				services: []Service{
 					{
 						Name: "api",
@@ -415,7 +415,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 		},
 		{
 			name: "templates: services cond regex",
-			task: Task{
+			task: &Task{
 				condition: &config.ServicesConditionConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Regexp:     config.String("^web.*"),
@@ -438,7 +438,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 		},
 		{
 			name: "templates: services cond names",
-			task: Task{
+			task: &Task{
 				condition: &config.ServicesConditionConfig{
 					ServicesMonitorConfig: config.ServicesMonitorConfig{
 						Names:      []string{"api"},
@@ -461,7 +461,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 		},
 		{
 			name: "templates: catalog services condition",
-			task: Task{
+			task: &Task{
 				condition: &config.CatalogServicesConditionConfig{
 					CatalogServicesMonitorConfig: config.CatalogServicesMonitorConfig{
 						Regexp:           config.String("^web.*"),
@@ -484,7 +484,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 		},
 		{
 			name: "templates: consul kv condition",
-			task: Task{
+			task: &Task{
 				condition: &config.ConsulKVConditionConfig{
 					ConsulKVMonitorConfig: config.ConsulKVMonitorConfig{
 						Path:       config.String("/path/to/key"),
@@ -507,7 +507,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 		},
 		{
 			name: "templates: services module_input regex",
-			task: Task{
+			task: &Task{
 				moduleInputs: config.ModuleInputConfigs{
 					&config.ServicesModuleInputConfig{
 						ServicesMonitorConfig: config.ServicesMonitorConfig{
@@ -531,7 +531,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 		},
 		{
 			name: "templates: services module_input names",
-			task: Task{
+			task: &Task{
 				moduleInputs: config.ModuleInputConfigs{
 					&config.ServicesModuleInputConfig{
 						ServicesMonitorConfig: config.ServicesMonitorConfig{
@@ -554,7 +554,7 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 		},
 		{
 			name: "templates: multiple module_inputs",
-			task: Task{
+			task: &Task{
 				moduleInputs: config.ModuleInputConfigs{
 					&config.ServicesModuleInputConfig{
 						ServicesMonitorConfig: config.ServicesMonitorConfig{

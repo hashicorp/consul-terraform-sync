@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/api"
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 )
 
 const (
