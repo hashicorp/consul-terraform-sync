@@ -511,8 +511,9 @@ func TestUpdateTask_Inspect(t *testing.T) {
 			tc.task.workingDir = workingDir
 
 			copyTask := &Task{
-				name:    tc.task.Name(),
-				enabled: tc.task.IsEnabled(),
+				name:       tc.task.Name(),
+				enabled:    tc.task.IsEnabled(),
+				workingDir: tc.task.workingDir,
 			}
 
 			_, err := tf.UpdateTask(ctx, tc.patch)
