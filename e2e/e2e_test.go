@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -838,9 +839,9 @@ func testInvalidTaskConfig(t *testing.T, testName, taskName, taskConfig, errMsg 
 			"start", fmt.Sprintf("-config-file=%s", configPath), "--once")
 
 		require.Error(t, err)
-		fmt.Printf("\n\n__AJ__ OUTPUT:\n%s\n\n", out)                    // TODO remove troubleshooting
-		fmt.Printf("\n\n__AJ__ EXPECTED ERROR MESSAGE:\n%s\n\n", errMsg) // TODO remove troubleshooting
-		assert.Contains(t, out, errMsg)
+		fmt.Printf("\n\n__AJ__ OUTPUT:\n%s\n\n", out)                                   // TODO remove troubleshooting
+		fmt.Printf("\n\n__AJ__ EXPECTED ERROR MESSAGE:\n%s\n\n", strconv.Quote(errMsg)) // TODO remove troubleshooting
+		assert.Contains(t, out, strconv.Quote(errMsg))
 	})
 
 	// Create tasks via the CLI
