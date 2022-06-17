@@ -838,7 +838,8 @@ func testInvalidTaskConfig(t *testing.T, testName, taskName, taskConfig, errMsg 
 			"start", fmt.Sprintf("-config-file=%s", configPath), "--once")
 
 		require.Error(t, err)
-		fmt.Printf("\n\nOUTPUT:\n%s\n\n", out) // TODO remove troubleshooting
+		fmt.Printf("\n\n__AJ__ OUTPUT:\n%s\n\n", out)                    // TODO remove troubleshooting
+		fmt.Printf("\n\n__AJ__ EXPECTED ERROR MESSAGE:\n%s\n\n", errMsg) // TODO remove troubleshooting
 		assert.Contains(t, out, errMsg)
 	})
 
