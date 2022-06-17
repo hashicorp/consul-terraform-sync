@@ -432,12 +432,12 @@ func TestModuleInput_Services_InvalidQueries(t *testing.T) {
 		{
 			"namespace_with_oss_consul",
 			`namespace = "foo"`,
-			`Invalid query parameter: "ns"`,
+			`Invalid query parameter: \"ns\"`,
 		},
 		{
 			"filter",
 			`filter = "\"foo\" in Service.Bar"`,
-			`Selector "Service.Bar" is not valid`,
+			`Selector \"Service.Bar\" is not valid`,
 		},
 	}
 
