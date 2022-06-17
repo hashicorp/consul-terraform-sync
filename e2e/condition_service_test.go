@@ -245,7 +245,7 @@ func TestCondition_Services_InvalidQueries(t *testing.T) {
 		{
 			"namespace_with_oss_consul",
 			`namespace = "foo"`,
-			`Invalid query parameter: \"ns\"`,
+			`Invalid query parameter: "ns"`,
 		},
 	}
 
