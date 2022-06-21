@@ -50,6 +50,52 @@ func (_m *ConsulClientInterface) GetLicense(ctx context.Context, q *api.QueryOpt
 	return r0, r1
 }
 
+// Lock provides a mock function with given fields: l, stopCh
+func (_m *ConsulClientInterface) Lock(l *api.Lock, stopCh <-chan struct{}) (<-chan struct{}, error) {
+	ret := _m.Called(l, stopCh)
+
+	var r0 <-chan struct{}
+	if rf, ok := ret.Get(0).(func(*api.Lock, <-chan struct{}) <-chan struct{}); ok {
+		r0 = rf(l, stopCh)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan struct{})
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*api.Lock, <-chan struct{}) error); ok {
+		r1 = rf(l, stopCh)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// LockOpts provides a mock function with given fields: opts
+func (_m *ConsulClientInterface) LockOpts(opts *api.LockOptions) (*api.Lock, error) {
+	ret := _m.Called(opts)
+
+	var r0 *api.Lock
+	if rf, ok := ret.Get(0).(func(*api.LockOptions) *api.Lock); ok {
+		r0 = rf(opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*api.Lock)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*api.LockOptions) error); ok {
+		r1 = rf(opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // RegisterService provides a mock function with given fields: ctx, s
 func (_m *ConsulClientInterface) RegisterService(ctx context.Context, s *api.AgentServiceRegistration) error {
 	ret := _m.Called(ctx, s)
@@ -57,6 +103,64 @@ func (_m *ConsulClientInterface) RegisterService(ctx context.Context, s *api.Age
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, *api.AgentServiceRegistration) error); ok {
 		r0 = rf(ctx, s)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SessionCreate provides a mock function with given fields: ctx, se, q
+func (_m *ConsulClientInterface) SessionCreate(ctx context.Context, se *api.SessionEntry, q *api.WriteOptions) (string, *api.WriteMeta, error) {
+	ret := _m.Called(ctx, se, q)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context, *api.SessionEntry, *api.WriteOptions) string); ok {
+		r0 = rf(ctx, se, q)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 *api.WriteMeta
+	if rf, ok := ret.Get(1).(func(context.Context, *api.SessionEntry, *api.WriteOptions) *api.WriteMeta); ok {
+		r1 = rf(ctx, se, q)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*api.WriteMeta)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context, *api.SessionEntry, *api.WriteOptions) error); ok {
+		r2 = rf(ctx, se, q)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// SessionRenewPeriodic provides a mock function with given fields: initialTTL, id, q, doneCh
+func (_m *ConsulClientInterface) SessionRenewPeriodic(initialTTL string, id string, q *api.WriteOptions, doneCh <-chan struct{}) error {
+	ret := _m.Called(initialTTL, id, q, doneCh)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, *api.WriteOptions, <-chan struct{}) error); ok {
+		r0 = rf(initialTTL, id, q, doneCh)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Unlock provides a mock function with given fields: l
+func (_m *ConsulClientInterface) Unlock(l *api.Lock) error {
+	ret := _m.Called(l)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*api.Lock) error); ok {
+		r0 = rf(l)
 	} else {
 		r0 = ret.Error(0)
 	}
