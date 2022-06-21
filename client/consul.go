@@ -76,6 +76,7 @@ type ConsulClientInterface interface {
 	LockOpts(opts *consulapi.LockOptions) (*consulapi.Lock, error)
 	Lock(l *consulapi.Lock, stopCh <-chan struct{}) (<-chan struct{}, error)
 	Unlock(l *consulapi.Lock) error
+	KVGet(ctx context.Context, key string, q *consulapi.QueryOptions) (*consulapi.KVPair, *consulapi.QueryMeta, error)
 }
 
 // ConsulClient is a client to the Consul API
@@ -307,6 +308,42 @@ func (c *ConsulClient) Lock(l *consulapi.Lock, stopCh <-chan struct{}) (<-chan s
 // Unlock releases the given lock.
 func (c *ConsulClient) Unlock(l *consulapi.Lock) error {
 	return l.Unlock()
+}
+
+// KVGet fetches a Consul KV pair, retrying the request on server errors and rate limit errors.
+func (c *ConsulClient) KVGet(ctx context.Context, key string, q *consulapi.QueryOptions) (*consulapi.KVPair, *consulapi.QueryMeta, error) {
+	desc := "KVGet"
+	var kv *consulapi.KVPair
+	var meta *consulapi.QueryMeta
+	f := func(context.Context) error {
+		var err error
+		kv, meta, err = c.KV().Get(key, q)
+		if err != nil {
+			statusCode := getResponseCodeFromError(ctx, err)
+
+			// If we get a StatusForbidden assume that this is because CTS
+			// does not have the correct ACLs to access this resource in Consul
+			// and wrap in the appropriate error
+			if statusCode == http.StatusForbidden {
+				err = &MissingConsulACLError{Err: err}
+			}
+
+			// non-retryable errors allows for termination of retries
+			if !isResponseCodeRetryable(statusCode) {
+				err = &retry.NonRetryableError{Err: err}
+			}
+
+			return err
+		}
+		return nil
+	}
+
+	err := c.retry.Do(ctx, f, desc)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return kv, meta, err
 }
 
 func getResponseCodeFromError(ctx context.Context, err error) int {

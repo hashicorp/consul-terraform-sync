@@ -330,3 +330,84 @@ func TestSessionCreate(t *testing.T) {
 		})
 	}
 }
+
+func TestKVGet(t *testing.T) {
+	t.Parallel()
+
+	var nonRetryableError *retry.NonRetryableError
+	var missingConsulACLError *MissingConsulACLError
+	cases := []struct {
+		name                string
+		responseCode        int
+		responseBody        string
+		expectErr           bool
+		isNonRetryableError bool
+		isMissingAClError   bool
+		query               *consulapi.QueryOptions
+	}{
+		{
+			name:         "success",
+			responseCode: http.StatusOK,
+			responseBody: `[
+  {
+    "LockIndex": 0,
+    "Key": "test",
+    "Flags": 0,
+    "Value": "dGVzdA==",
+    "CreateIndex": 2154,
+    "ModifyIndex": 2154
+  }
+]`,
+		},
+		{
+			name:         "key_does_not_exist",
+			responseCode: http.StatusNotFound,
+			// do not expect error
+		},
+		{
+			name:                "non_retryable_error",
+			responseCode:        http.StatusBadRequest,
+			expectErr:           true,
+			isNonRetryableError: true,
+		},
+		{
+			name:         "retryable_error",
+			responseCode: http.StatusInternalServerError,
+			expectErr:    true,
+		},
+		{
+			name:                "acl_error",
+			responseCode:        http.StatusForbidden,
+			expectErr:           true,
+			isNonRetryableError: true,
+			isMissingAClError:   true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			key := "test"
+			// Configure Consul client with intercepts
+			intercepts := []*testutils.HttpIntercept{
+				{
+					Path:               "/v1/kv/" + key,
+					ResponseStatusCode: tc.responseCode,
+					ResponseData:       []byte(tc.responseBody),
+				},
+			}
+			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+
+			// Get KV pair
+			_, meta, err := c.KVGet(context.Background(), key, nil)
+			if !tc.expectErr {
+				require.NoError(t, err)
+				assert.NotNil(t, meta)
+			} else {
+				assert.Error(t, err)
+				// Verify the error types
+				assert.Equal(t, tc.isNonRetryableError, errors.As(err, &nonRetryableError))
+				assert.Equal(t, tc.isMissingAClError, errors.As(err, &missingConsulACLError))
+			}
+		})
+	}
+}

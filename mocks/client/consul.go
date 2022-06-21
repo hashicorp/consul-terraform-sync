@@ -50,6 +50,38 @@ func (_m *ConsulClientInterface) GetLicense(ctx context.Context, q *api.QueryOpt
 	return r0, r1
 }
 
+// KVGet provides a mock function with given fields: ctx, key, q
+func (_m *ConsulClientInterface) KVGet(ctx context.Context, key string, q *api.QueryOptions) (*api.KVPair, *api.QueryMeta, error) {
+	ret := _m.Called(ctx, key, q)
+
+	var r0 *api.KVPair
+	if rf, ok := ret.Get(0).(func(context.Context, string, *api.QueryOptions) *api.KVPair); ok {
+		r0 = rf(ctx, key, q)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*api.KVPair)
+		}
+	}
+
+	var r1 *api.QueryMeta
+	if rf, ok := ret.Get(1).(func(context.Context, string, *api.QueryOptions) *api.QueryMeta); ok {
+		r1 = rf(ctx, key, q)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*api.QueryMeta)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context, string, *api.QueryOptions) error); ok {
+		r2 = rf(ctx, key, q)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
 // Lock provides a mock function with given fields: l, stopCh
 func (_m *ConsulClientInterface) Lock(l *api.Lock, stopCh <-chan struct{}) (<-chan struct{}, error) {
 	ret := _m.Called(l, stopCh)
