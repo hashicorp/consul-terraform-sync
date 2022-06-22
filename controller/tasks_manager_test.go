@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
-	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
+	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/state"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
@@ -401,10 +401,11 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		// add to state
-		tm.state.SetTask(config.TaskConfig{
+		err = tm.state.SetTask(config.TaskConfig{
 			Name:    &taskName,
 			Enabled: config.Bool(false),
 		})
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		updateConf := config.TaskConfig{
 			Name:    config.String(taskName),
@@ -438,10 +439,11 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		// add to state
-		tm.state.SetTask(config.TaskConfig{
+		err = tm.state.SetTask(config.TaskConfig{
 			Name:    &taskName,
 			Enabled: config.Bool(false),
 		})
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		updateConf := config.TaskConfig{
 			Name:    &taskName,
@@ -474,10 +476,11 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		// add to state
-		tm.state.SetTask(config.TaskConfig{
+		err = tm.state.SetTask(config.TaskConfig{
 			Name:    &taskName,
 			Enabled: config.Bool(false),
 		})
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		updateConf := config.TaskConfig{
 			Name:    &taskName,
@@ -755,7 +758,8 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 
 		tm := newTestTasksManager()
 		tm.EnableTaskRanNotify()
-		tm.state.SetTask(validTaskConf)
+		err := tm.state.SetTask(validTaskConf)
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
