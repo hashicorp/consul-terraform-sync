@@ -143,7 +143,7 @@ func (s *InMemoryStore) DeleteTaskEvents(taskName string) error {
 }
 
 // AddTaskEvent adds an event to the store for the task configured in the
-// event. The returned error will always be nil.
+// event.
 func (s *InMemoryStore) AddTaskEvent(event event.Event) error {
 	return s.events.Add(event)
 }
