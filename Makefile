@@ -104,7 +104,7 @@ clean:
 # requires installing https://github.com/vektra/mockery &
 # https://github.com/deepmap/oapi-codegen
 generate:
-	go generate ./...
+	go generate -tags '$(GOTAGS)' ./...
 .PHONY: generate
 
 go-fmt-check:
