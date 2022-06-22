@@ -38,7 +38,7 @@ func Test_eventStorage_Add(t *testing.T) {
 				events := storage.events[tc.event.TaskName]
 				assert.Len(t, events, 1)
 				e := events[0]
-				assert.Equal(t, tc.event, *e)
+				assert.Equal(t, tc.event, e)
 			}
 		})
 	}
