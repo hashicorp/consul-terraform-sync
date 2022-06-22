@@ -80,7 +80,8 @@ func (s *InMemoryStore) GetTask(taskName string) (config.TaskConfig, bool) {
 }
 
 // SetTask adds a new task configuration or does a patch update to an
-// existing task configuration with the same name
+// existing task configuration with the same name. The returned error
+// will always be nil.
 func (s *InMemoryStore) SetTask(newTaskConf config.TaskConfig) error {
 	s.conf.mu.Lock()
 	defer s.conf.mu.Unlock()
@@ -106,7 +107,8 @@ func (s *InMemoryStore) SetTask(newTaskConf config.TaskConfig) error {
 	return nil
 }
 
-// DeleteTask deletes the task config if it exists
+// DeleteTask deletes the task config if it exists.
+// The returned error will always be nil.
 func (s *InMemoryStore) DeleteTask(taskName string) error {
 	s.conf.mu.Lock()
 	defer s.conf.mu.Unlock()
@@ -134,13 +136,14 @@ func (s *InMemoryStore) GetTaskEvents(taskName string) map[string][]event.Event 
 }
 
 // DeleteTaskEvents deletes all the events for a given task
+// The returned error will always be nil.
 func (s *InMemoryStore) DeleteTaskEvents(taskName string) error {
 	s.events.Delete(taskName)
 	return nil
 }
 
 // AddTaskEvent adds an event to the store for the task configured in the
-// event
+// event. The returned error will always be nil.
 func (s *InMemoryStore) AddTaskEvent(event event.Event) error {
 	return s.events.Add(event)
 }
