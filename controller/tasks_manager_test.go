@@ -525,7 +525,7 @@ func Test_TasksManager_addTask(t *testing.T) {
 
 		// Mock state
 		s := new(mocksS.Store)
-		s.On("SetTask", mock.Anything).Return().Once()
+		s.On("SetTask", mock.Anything).Return(nil).Once()
 		tm.state = s
 
 		// Test addTask
