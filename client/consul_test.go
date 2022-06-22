@@ -362,7 +362,7 @@ func TestKVGet(t *testing.T) {
 		{
 			name:         "key_does_not_exist",
 			responseCode: http.StatusNotFound,
-			// do not expect error
+			// do not expect error since KV().Get() does not error
 		},
 		{
 			name:                "non_retryable_error",

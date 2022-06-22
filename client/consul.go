@@ -183,14 +183,13 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 
 // RegisterService registers a service through the Consul agent.
 func (c *ConsulClient) RegisterService(ctx context.Context, r *consulapi.AgentServiceRegistration) error {
-	logger := c.logger
-	logger.Debug("registering service")
-
 	desc := "AgentServiceRegister"
 
+	logger := c.logger
 	if r != nil {
 		logger = logger.With("service_name", r.Name, "service_id", r.ID)
 	}
+	logger.Debug("registering service")
 
 	f := func(context.Context) error {
 		err := c.Agent().ServiceRegister(r)
@@ -226,7 +225,7 @@ func (c *ConsulClient) RegisterService(ctx context.Context, r *consulapi.AgentSe
 
 // DeregisterService removes a service through the Consul agent.
 func (c *ConsulClient) DeregisterService(ctx context.Context, serviceID string, q *consulapi.QueryOptions) error {
-	c.logger.Debug("deregistering service")
+	c.logger.Debug("deregistering service", "service_id", serviceID)
 	desc := "AgentServiceDeregister"
 
 	f := func(context.Context) error {
@@ -261,6 +260,7 @@ func (c *ConsulClient) DeregisterService(ctx context.Context, serviceID string, 
 
 // SessionCreate initializes a new session, retrying creation requests on server errors and rate limit errors.
 func (c *ConsulClient) SessionCreate(ctx context.Context, se *consulapi.SessionEntry, q *consulapi.WriteOptions) (string, *consulapi.WriteMeta, error) {
+	c.logger.Debug("creating session")
 	desc := "SessionCreate"
 	var id string
 	var meta *consulapi.WriteMeta
@@ -312,6 +312,7 @@ func (c *ConsulClient) Unlock(l *consulapi.Lock) error {
 
 // KVGet fetches a Consul KV pair, retrying the request on server errors and rate limit errors.
 func (c *ConsulClient) KVGet(ctx context.Context, key string, q *consulapi.QueryOptions) (*consulapi.KVPair, *consulapi.QueryMeta, error) {
+	c.logger.Debug("getting KV pair", "key", key)
 	desc := "KVGet"
 	var kv *consulapi.KVPair
 	var meta *consulapi.QueryMeta
