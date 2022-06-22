@@ -71,6 +71,12 @@ type ConsulClientInterface interface {
 	GetLicense(ctx context.Context, q *consulapi.QueryOptions) (string, error)
 	RegisterService(ctx context.Context, s *consulapi.AgentServiceRegistration) error
 	DeregisterService(ctx context.Context, serviceID string, q *consulapi.QueryOptions) error
+	SessionCreate(ctx context.Context, se *consulapi.SessionEntry, q *consulapi.WriteOptions) (string, *consulapi.WriteMeta, error)
+	SessionRenewPeriodic(initialTTL string, id string, q *consulapi.WriteOptions, doneCh <-chan struct{}) error
+	LockOpts(opts *consulapi.LockOptions) (*consulapi.Lock, error)
+	Lock(l *consulapi.Lock, stopCh <-chan struct{}) (<-chan struct{}, error)
+	Unlock(l *consulapi.Lock) error
+	KVGet(ctx context.Context, key string, q *consulapi.QueryOptions) (*consulapi.KVPair, *consulapi.QueryMeta, error)
 }
 
 // ConsulClient is a client to the Consul API
@@ -177,14 +183,13 @@ func (c *ConsulClient) GetLicense(ctx context.Context, q *consulapi.QueryOptions
 
 // RegisterService registers a service through the Consul agent.
 func (c *ConsulClient) RegisterService(ctx context.Context, r *consulapi.AgentServiceRegistration) error {
-	logger := c.logger
-	logger.Debug("registering service")
-
 	desc := "AgentServiceRegister"
 
+	logger := c.logger
 	if r != nil {
 		logger = logger.With("service_name", r.Name, "service_id", r.ID)
 	}
+	logger.Debug("registering service")
 
 	f := func(context.Context) error {
 		err := c.Agent().ServiceRegister(r)
@@ -220,7 +225,7 @@ func (c *ConsulClient) RegisterService(ctx context.Context, r *consulapi.AgentSe
 
 // DeregisterService removes a service through the Consul agent.
 func (c *ConsulClient) DeregisterService(ctx context.Context, serviceID string, q *consulapi.QueryOptions) error {
-	c.logger.Debug("deregistering service")
+	c.logger.Debug("deregistering service", "service_id", serviceID)
 	desc := "AgentServiceDeregister"
 
 	f := func(context.Context) error {
@@ -251,6 +256,95 @@ func (c *ConsulClient) DeregisterService(ctx context.Context, serviceID string, 
 	}
 
 	return nil
+}
+
+// SessionCreate initializes a new session, retrying creation requests on server errors and rate limit errors.
+func (c *ConsulClient) SessionCreate(ctx context.Context, se *consulapi.SessionEntry, q *consulapi.WriteOptions) (string, *consulapi.WriteMeta, error) {
+	c.logger.Debug("creating session")
+	desc := "SessionCreate"
+	var id string
+	var meta *consulapi.WriteMeta
+	f := func(context.Context) error {
+		var err error
+		id, meta, err = c.Session().Create(se, q)
+		if err != nil {
+			statusCode := getResponseCodeFromError(ctx, err)
+
+			// If we get a StatusForbidden assume that this is because CTS
+			// does not have the correct ACLs to access this resource in Consul
+			// and wrap in the appropriate error
+			if statusCode == http.StatusForbidden {
+				err = &MissingConsulACLError{Err: err}
+			}
+
+			// non-retryable errors allows for termination of retries
+			if !isResponseCodeRetryable(statusCode) {
+				err = &retry.NonRetryableError{Err: err}
+			}
+
+			return err
+		}
+		return nil
+	}
+
+	err := c.retry.Do(ctx, f, desc)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return id, meta, err
+}
+
+// SessionRenewPeriodic renews a session on a given cadence.
+func (c *ConsulClient) SessionRenewPeriodic(initialTTL string, id string, q *consulapi.WriteOptions, doneCh <-chan struct{}) error {
+	return c.Session().RenewPeriodic(initialTTL, id, q, doneCh)
+}
+
+// Lock attempts to acquire the given lock.
+func (c *ConsulClient) Lock(l *consulapi.Lock, stopCh <-chan struct{}) (<-chan struct{}, error) {
+	return l.Lock(stopCh)
+}
+
+// Unlock releases the given lock.
+func (c *ConsulClient) Unlock(l *consulapi.Lock) error {
+	return l.Unlock()
+}
+
+// KVGet fetches a Consul KV pair, retrying the request on server errors and rate limit errors.
+func (c *ConsulClient) KVGet(ctx context.Context, key string, q *consulapi.QueryOptions) (*consulapi.KVPair, *consulapi.QueryMeta, error) {
+	c.logger.Debug("getting KV pair", "key", key)
+	desc := "KVGet"
+	var kv *consulapi.KVPair
+	var meta *consulapi.QueryMeta
+	f := func(context.Context) error {
+		var err error
+		kv, meta, err = c.KV().Get(key, q)
+		if err != nil {
+			statusCode := getResponseCodeFromError(ctx, err)
+
+			// If we get a StatusForbidden assume that this is because CTS
+			// does not have the correct ACLs to access this resource in Consul
+			// and wrap in the appropriate error
+			if statusCode == http.StatusForbidden {
+				err = &MissingConsulACLError{Err: err}
+			}
+
+			// non-retryable errors allows for termination of retries
+			if !isResponseCodeRetryable(statusCode) {
+				err = &retry.NonRetryableError{Err: err}
+			}
+
+			return err
+		}
+		return nil
+	}
+
+	err := c.retry.Do(ctx, f, desc)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return kv, meta, err
 }
 
 func getResponseCodeFromError(ctx context.Context, err error) int {

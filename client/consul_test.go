@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/testutils"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_GetLicense_API_Failure(t *testing.T) {
@@ -264,4 +265,149 @@ type testError struct {
 // Error returns an error string
 func (e *testError) Error() string {
 	return "this is a test error"
+}
+
+func TestSessionCreate(t *testing.T) {
+	t.Parallel()
+
+	var nonRetryableError *retry.NonRetryableError
+	var missingConsulACLError *MissingConsulACLError
+	cases := []struct {
+		name                string
+		responseCode        int
+		expectErr           bool
+		isNonRetryableError bool
+		isMissingAClError   bool
+	}{
+		{
+			name:         "success",
+			responseCode: http.StatusOK,
+		},
+		{
+			name:         "retryable_error",
+			responseCode: http.StatusInternalServerError,
+			expectErr:    true,
+		},
+		{
+			name:                "non_retryable_error",
+			responseCode:        http.StatusBadRequest,
+			expectErr:           true,
+			isNonRetryableError: true,
+		},
+		{
+			name:                "acl_error",
+			responseCode:        http.StatusForbidden,
+			expectErr:           true,
+			isNonRetryableError: true,
+			isMissingAClError:   true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Configure Consul client with intercepts
+			intercepts := []*testutils.HttpIntercept{
+				{
+					Path:               "/v1/session/create",
+					ResponseStatusCode: tc.responseCode,
+					ResponseData:       []byte(`{"ID": "adf4238a-882b-9ddc-4a9d-5b6758e4159e"}`),
+				},
+			}
+			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+
+			// Create session
+			id, meta, err := c.SessionCreate(context.Background(), &consulapi.SessionEntry{}, nil)
+			if !tc.expectErr {
+				require.NoError(t, err)
+				assert.NotEmpty(t, id)
+				assert.NotNil(t, meta)
+			} else {
+				assert.Error(t, err)
+				// Verify the error types
+				assert.Equal(t, tc.isNonRetryableError, errors.As(err, &nonRetryableError))
+				assert.Equal(t, tc.isMissingAClError, errors.As(err, &missingConsulACLError))
+			}
+		})
+	}
+}
+
+func TestKVGet(t *testing.T) {
+	t.Parallel()
+
+	var nonRetryableError *retry.NonRetryableError
+	var missingConsulACLError *MissingConsulACLError
+	cases := []struct {
+		name                string
+		responseCode        int
+		responseBody        string
+		expectErr           bool
+		isNonRetryableError bool
+		isMissingAClError   bool
+		query               *consulapi.QueryOptions
+	}{
+		{
+			name:         "success",
+			responseCode: http.StatusOK,
+			responseBody: `[
+  {
+    "LockIndex": 0,
+    "Key": "test",
+    "Flags": 0,
+    "Value": "dGVzdA==",
+    "CreateIndex": 2154,
+    "ModifyIndex": 2154
+  }
+]`,
+		},
+		{
+			name:         "key_does_not_exist",
+			responseCode: http.StatusNotFound,
+			// do not expect error since KV().Get() does not error
+		},
+		{
+			name:                "non_retryable_error",
+			responseCode:        http.StatusBadRequest,
+			expectErr:           true,
+			isNonRetryableError: true,
+		},
+		{
+			name:         "retryable_error",
+			responseCode: http.StatusInternalServerError,
+			expectErr:    true,
+		},
+		{
+			name:                "acl_error",
+			responseCode:        http.StatusForbidden,
+			expectErr:           true,
+			isNonRetryableError: true,
+			isMissingAClError:   true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			key := "test"
+			// Configure Consul client with intercepts
+			intercepts := []*testutils.HttpIntercept{
+				{
+					Path:               "/v1/kv/" + key,
+					ResponseStatusCode: tc.responseCode,
+					ResponseData:       []byte(tc.responseBody),
+				},
+			}
+			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+
+			// Get KV pair
+			_, meta, err := c.KVGet(context.Background(), key, nil)
+			if !tc.expectErr {
+				require.NoError(t, err)
+				assert.NotNil(t, meta)
+			} else {
+				assert.Error(t, err)
+				// Verify the error types
+				assert.Equal(t, tc.isNonRetryableError, errors.As(err, &nonRetryableError))
+				assert.Equal(t, tc.isMissingAClError, errors.As(err, &missingConsulACLError))
+			}
+		})
+	}
 }
