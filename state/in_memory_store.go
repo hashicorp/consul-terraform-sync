@@ -81,7 +81,7 @@ func (s *InMemoryStore) GetTask(taskName string) (config.TaskConfig, bool) {
 
 // SetTask adds a new task configuration or does a patch update to an
 // existing task configuration with the same name
-func (s *InMemoryStore) SetTask(newTaskConf config.TaskConfig) {
+func (s *InMemoryStore) SetTask(newTaskConf config.TaskConfig) error {
 	s.conf.mu.Lock()
 	defer s.conf.mu.Unlock()
 
@@ -97,32 +97,34 @@ func (s *InMemoryStore) SetTask(newTaskConf config.TaskConfig) {
 			// patch update the existing task
 			updatedTaskConf := taskConf.Merge(&newTaskConf)
 			(*taskConfs)[ix] = updatedTaskConf
-			return
+			return nil
 		}
 	}
 
 	// add as a new task
 	*taskConfs = append(*taskConfs, &newTaskConf)
+	return nil
 }
 
 // DeleteTask deletes the task config if it exists
-func (s *InMemoryStore) DeleteTask(taskName string) {
+func (s *InMemoryStore) DeleteTask(taskName string) error {
 	s.conf.mu.Lock()
 	defer s.conf.mu.Unlock()
 
 	taskConfs := s.conf.Tasks
 	if taskConfs == nil {
 		// expect nil only for testing
-		return
+		return nil
 	}
 
 	for ix, taskConf := range *taskConfs {
 		if config.StringVal(taskConf.Name) == taskName {
 			// delete it
 			*taskConfs = append((*taskConfs)[:ix], (*taskConfs)[ix+1:]...)
-			return
+			return nil
 		}
 	}
+	return nil
 }
 
 // GetTaskEvents returns all the events for a task. If no task name is
@@ -132,8 +134,9 @@ func (s *InMemoryStore) GetTaskEvents(taskName string) map[string][]event.Event 
 }
 
 // DeleteTaskEvents deletes all the events for a given task
-func (s *InMemoryStore) DeleteTaskEvents(taskName string) {
+func (s *InMemoryStore) DeleteTaskEvents(taskName string) error {
 	s.events.Delete(taskName)
+	return nil
 }
 
 // AddTaskEvent adds an event to the store for the task configured in the

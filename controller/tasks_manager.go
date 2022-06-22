@@ -195,7 +195,10 @@ func (tm *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskCo
 
 	if runOp != driver.RunOptionInspect {
 		// Only update state if the update is not inspect type
-		tm.state.SetTask(updateConf)
+		if err := tm.state.SetTask(updateConf); err != nil {
+			logger.Error("error while setting task state", "error", err)
+			return false, "", "", err
+		}
 	}
 
 	patch := driver.PatchTask{
@@ -285,7 +288,10 @@ func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Tas
 		return config.TaskConfig{}, err
 	}
 
-	tm.state.SetTask(conf)
+	if err = tm.state.SetTask(conf); err != nil {
+		tm.cleanupTask(ctx, d)
+		return config.TaskConfig{}, err
+	}
 
 	if d.Task().IsScheduled() {
 		tm.createdScheduleCh <- name
@@ -622,8 +628,14 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 	}
 
 	// Delete task from state only after driver successfully deleted
-	tm.state.DeleteTask(name)
-	tm.state.DeleteTaskEvents(name)
+	if err = tm.state.DeleteTask(name); err != nil {
+		logger.Error("error while deleting task state", "error", err)
+		return err
+	}
+	if err = tm.state.DeleteTaskEvents(name); err != nil {
+		logger.Error("error while deleting task events state", "error", err)
+		return err
+	}
 
 	if tm.deletedTaskNotify != nil {
 		tm.deletedTaskNotify <- name
