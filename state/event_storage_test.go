@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/state/event"
@@ -175,6 +176,78 @@ func Test_eventStorage_Delete(t *testing.T) {
 			storage.Delete(tc.input)
 			after := storage.Read("")
 			assert.Equal(t, tc.expected, after)
+		})
+	}
+}
+
+func Test_eventStorage_Set(t *testing.T) {
+
+	makeEvents := func(taskName string, numEvents int) []event.Event {
+		events := make([]event.Event, numEvents)
+		for i := range events {
+			events[i].TaskName = taskName
+			events[i].ID = fmt.Sprintf("%v-%v", taskName, i)
+		}
+		return events
+	}
+
+	cases := []struct {
+		name         string
+		inputTask    string
+		inputValues  []event.Event
+		initialState map[string][]event.Event
+		expected     map[string][]event.Event
+	}{
+		{
+			"set with no existing data",
+			"1",
+			[]event.Event{
+				{TaskName: "1"},
+				{TaskName: "1"},
+				{TaskName: "1"},
+			},
+			map[string][]event.Event{},
+			map[string][]event.Event{
+				"1": {{TaskName: "1"}, {TaskName: "1"}, {TaskName: "1"}},
+			},
+		},
+		{
+			"set with existing data",
+			"1",
+			[]event.Event{
+				{TaskName: "1", ID: "i1-1"},
+				{TaskName: "1", ID: "i1-2"},
+			},
+			map[string][]event.Event{
+				"1": {{TaskName: "1", ID: "i1"}},
+				"2": {{TaskName: "2", ID: "i2"}},
+			},
+			map[string][]event.Event{
+				"1": {{TaskName: "1", ID: "i1-1"}, {TaskName: "1", ID: "i1-2"}},
+				"2": {{TaskName: "2", ID: "i2"}},
+			},
+		},
+		{
+			"set and exceed limit",
+			"1",
+			makeEvents("1", defaultEventCountLimit+1),
+			map[string][]event.Event{},
+			map[string][]event.Event{
+				"1": makeEvents("1", defaultEventCountLimit),
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			storage := newEventStorage()
+			storage.events = tc.initialState
+			storage.Set(tc.inputTask, tc.inputValues)
+			after := storage.Read("")
+			assert.Equal(t, tc.expected, after)
+			for _, v := range after {
+				assert.LessOrEqual(t, len(v), storage.limit)
+			}
 		})
 	}
 }
