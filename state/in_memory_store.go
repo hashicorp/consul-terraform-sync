@@ -147,3 +147,8 @@ func (s *InMemoryStore) DeleteTaskEvents(taskName string) error {
 func (s *InMemoryStore) AddTaskEvent(event event.Event) error {
 	return s.events.Add(event)
 }
+
+// setTaskEvents sets all the events for a given task.
+func (s *InMemoryStore) setTaskEvents(taskName string, events []event.Event) {
+	s.events.Set(taskName, events)
+}

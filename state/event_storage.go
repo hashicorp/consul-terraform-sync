@@ -78,3 +78,14 @@ func (s *eventStorage) Delete(taskName string) {
 		delete(s.events, taskName)
 	}
 }
+
+// Set overwrites all events for a task name.
+// Any events exceeding the configured limit will be removed.
+func (s *eventStorage) Set(taskName string, events []event.Event) {
+	if len(events) > s.limit {
+		events = events[0:s.limit]
+	}
+	eventsCopy := make([]event.Event, len(events))
+	copy(eventsCopy, events)
+	s.events[taskName] = eventsCopy
+}

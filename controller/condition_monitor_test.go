@@ -206,7 +206,8 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 
 		// Wait for scheduled task to start cadence, then remove task from state
 		time.Sleep(1 * time.Second)
-		tm.state.DeleteTask(schedTaskName)
+		err = tm.state.DeleteTask(schedTaskName)
+		require.NoError(t, err, "unexpected error while deleting task state")
 
 		select {
 		case <-errCh:
