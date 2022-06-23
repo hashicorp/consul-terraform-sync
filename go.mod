@@ -32,7 +32,7 @@ require (
 	github.com/hashicorp/hcl v1.0.1-vault-2
 	github.com/hashicorp/hcl/v2 v2.12.0
 	github.com/hashicorp/logutils v1.0.0
-	github.com/hashicorp/terraform-exec v0.16.1
+	github.com/hashicorp/terraform-exec v0.17.0
 	github.com/hashicorp/terraform-json v0.14.0
 	github.com/hashicorp/vault/api v1.7.2
 	github.com/klauspost/compress v1.11.7 // indirect
