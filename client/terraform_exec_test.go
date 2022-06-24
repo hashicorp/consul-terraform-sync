@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/hc-install/product"
 	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/hc-install/src"
+	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,17 +45,13 @@ func Test_TerraformExec_Leak(t *testing.T) {
 		_ = os.Remove("terraform")
 	}()
 
-	tfClient, err := NewTerraformCLI(&TerraformCLIConfig{
-		ExecPath:   ".",
-		WorkingDir: ".",
-	})
-	require.NoError(t, err)
+	tf, err := tfexec.NewTerraform(".", ".")
 
 	before := runtime.NumGoroutine()
 
 	// Mimics CTS calling terraform
-	tfClient.Init(ctx)
-	tfClient.Apply(ctx)
+	tf.Init(ctx)
+	tf.Apply(ctx)
 
 	after := runtime.NumGoroutine()
 	assert.Equal(t, before, after, "the number of goroutines after the terraform "+
