@@ -22,6 +22,8 @@ const (
 	RunOptionInspect = "inspect"
 )
 
+var logger = logging.Global().Named(logSystemName)
+
 // PatchTask holds the information to patch update a task. It will only include
 // fields that we support updating at this time
 type PatchTask struct {
@@ -67,7 +69,6 @@ type Task struct {
 	condition    config.ConditionConfig
 	moduleInputs config.ModuleInputConfigs
 	workingDir   string
-	logger       logging.Logger
 
 	// Enterprise
 	deprecatedTFVersion string
@@ -138,7 +139,6 @@ func NewTask(conf TaskConfig) (*Task, error) {
 		condition:    conf.Condition,
 		moduleInputs: conf.ModuleInputs,
 		workingDir:   conf.WorkingDir,
-		logger:       logging.Global().Named(logSystemName),
 
 		// Enterprise
 		deprecatedTFVersion: conf.DeprecatedTFVersion,
@@ -225,7 +225,7 @@ func (t *Task) Env() map[string]string {
 	return env
 }
 
-// ProviderNames returns the list of providers that the task has configured
+// Providers returns the list of providers that the task has configured
 func (t *Task) Providers() TerraformProviderBlocks {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -372,7 +372,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 		}
 		templates = append(templates, template)
 
-		t.logger.Trace("services list template configured", "template_type",
+		logger.Trace("services list template configured", "template_type",
 			fmt.Sprintf("%T", template))
 	}
 
@@ -419,7 +419,7 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 
 	if condition != nil {
 		templates = append(templates, condition)
-		t.logger.Trace("condition block template configured", "template_type",
+		logger.Trace("condition block template configured", "template_type",
 			fmt.Sprintf("%T", condition))
 	}
 
@@ -464,9 +464,10 @@ func (t *Task) configureRootModuleInput(input *tftmpl.RootModuleInputData) error
 		// store the newly created template's type for logging
 		tmplTypes[ix] = fmt.Sprintf("%T", moduleInputs[ix])
 	}
+
 	if len(moduleInputs) > 0 {
 		templates = append(templates, moduleInputs...)
-		t.logger.Trace("module_input block(s) template configured",
+		logger.Trace("module_input block(s) template configured",
 			"template_types", strings.Join(tmplTypes, ", "))
 	}
 

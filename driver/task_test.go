@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/consul-terraform-sync/client"
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/client"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
@@ -595,8 +594,6 @@ func TestTask_configureRootModuleInput(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.task.logger = logging.NewNullLogger()
-
 			input := &tftmpl.RootModuleInputData{}
 			err := tc.task.configureRootModuleInput(input)
 			assert.NoError(t, err)

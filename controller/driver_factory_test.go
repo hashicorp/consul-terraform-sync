@@ -356,7 +356,7 @@ func TestNewDriverTask(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.conf.Finalize()
+			_ = tc.conf.Finalize()
 
 			var providerConfigs []driver.TerraformProviderBlock
 			if tc.conf != nil && tc.conf.TerraformProviders != nil {
