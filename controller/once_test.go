@@ -85,6 +85,73 @@ func Test_Once_Run_Terraform(t *testing.T) {
 	}
 }
 
+func Test_Once_Run_Terraform(t *testing.T) {
+	t.Parallel()
+
+	expectedErr := errors.New("test error")
+
+	testCases := []struct {
+		name           string
+		numTasks       int
+		setupNewDriver func(*driver.Task) driver.Driver
+		expectErr      bool
+	}{
+		{
+			"consecutive one task",
+			1,
+			func(task *driver.Task) driver.Driver {
+				return onceMockDriver(task, nil)
+			},
+			false,
+		},
+		{
+			"consecutive multiple tasks",
+			10,
+			func(task *driver.Task) driver.Driver {
+				return onceMockDriver(task, nil)
+			},
+			false,
+		},
+		{
+			"consecutive error",
+			5,
+			func(task *driver.Task) driver.Driver {
+				if task.Name() == "task_03" {
+					// Mock an error during apply for a task
+					return onceMockDriver(task, expectedErr)
+				}
+				return onceMockDriver(task, nil)
+			},
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			driverConf := &config.DriverConfig{
+				Terraform: &config.TerraformConfig{},
+			}
+
+			mockDrivers, err := testOnce(t, tc.numTasks, driverConf, tc.setupNewDriver)
+			if tc.expectErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), expectedErr.Error(),
+					"unexpected error in Once")
+
+				//task 00, 01, 02 should have been created before 03 errored
+				assert.Len(t, mockDrivers, 3)
+			} else {
+				require.NoError(t, err)
+				assert.Len(t, mockDrivers, tc.numTasks)
+			}
+
+			for _, mockD := range mockDrivers {
+				mockD.AssertExpectations(t)
+			}
+		})
+	}
+}
+
 func Test_Once_Run_WatchDep_errors_Terraform(t *testing.T) {
 	// Mock the situation where WatchDep WaitCh errors which can cause
 	// driver.RenderTemplate() to always returns false. Confirm on WatchDep
