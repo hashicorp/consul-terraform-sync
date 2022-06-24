@@ -45,7 +45,7 @@ func Test_Once_Run_Terraform(t *testing.T) {
 				return onceMockDriver(task, nil)
 			}
 
-			mockDrivers, err := testOnce(t, tc.numTasks, driverConf, setupNewDriver)
+			mockDrivers, err := testOnce(t, tc.numTasks, driverConf, false, setupNewDriver)
 			require.NoError(t, err)
 			assert.Len(t, mockDrivers, tc.numTasks)
 
@@ -57,15 +57,24 @@ func Test_Once_Run_Terraform(t *testing.T) {
 }
 
 func Test_Once_Run_Terraform_errors(t *testing.T) {
+	// Checks test cases where an error occurs. However, Run() itself may
+	// not return an error i.e. when we allow an error to fail silently
+
 	t.Parallel()
 
 	expectedErr := errors.New("test error")
 
 	testCases := []struct {
-		name string
+		name         string
+		failSilently bool
 	}{
 		{
-			"consecutive error",
+			"consecutive fail-silently",
+			true,
+		},
+		{
+			"consecutive fail-fast",
+			false,
 		},
 	}
 
@@ -83,13 +92,21 @@ func Test_Once_Run_Terraform_errors(t *testing.T) {
 				return onceMockDriver(task, nil)
 			}
 
-			mockDrivers, err := testOnce(t, 5, driverConf, setupNewDriver)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), expectedErr.Error(),
-				"unexpected error in Once")
+			mockDrivers, err := testOnce(t, 5, driverConf, tc.failSilently, setupNewDriver)
 
-			//task 00, 01, 02 should have been created before 03 errored
-			assert.Len(t, mockDrivers, 3)
+			if tc.failSilently {
+				require.NoError(t, err)
+
+				// all drivers should have been created even if 03 errored
+				assert.Len(t, mockDrivers, 5)
+			} else {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), expectedErr.Error(),
+					"unexpected error in Once")
+
+				// task 00, 01, 02 should have been created before 03 errored
+				assert.Len(t, mockDrivers, 3)
+			}
 
 			for _, mockD := range mockDrivers {
 				mockD.AssertExpectations(t)
@@ -172,7 +189,7 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 
 // testOnce test running once-mode. Returns the mocked drivers for the caller
 // to assert expectations
-func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
+func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig, failSilently bool,
 	setupNewDriver func(*driver.Task) driver.Driver) ([]*mocksD.Driver, error) {
 
 	conf := multipleTaskConfig(numTasks)
@@ -180,8 +197,9 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	ss := state.NewInMemoryStore(conf)
 
 	ctrl := Once{
-		logger: logging.NewNullLogger(),
-		state:  ss,
+		logger:       logging.NewNullLogger(),
+		state:        ss,
+		failSilently: failSilently,
 	}
 
 	// Set up tasks manager
