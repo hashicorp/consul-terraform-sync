@@ -850,6 +850,51 @@ func Test_ConditionMonitor_EnableTaskRanNotify(t *testing.T) {
 	s.AssertExpectations(t)
 }
 
+func Test_TasksManager_TaskFailSilently(t *testing.T) {
+	// TaskFailSilently is similar to TaskCreateAndRun but with modified error
+	// handling. This tests what hasn't been tested in Test_TasksManager_TaskCreate
+	ctx := context.Background()
+
+	tm := newTestTasksManager()
+	tm.factory.watcher = new(mocksTmpl.Watcher)
+
+	conf := &config.Config{
+		BufferPeriod: config.DefaultBufferPeriodConfig(),
+		WorkingDir:   config.String(config.DefaultWorkingDir),
+		Driver:       config.DefaultDriverConfig(),
+	}
+
+	t.Run("run error", func(t *testing.T) {
+		mockD := new(mocksD.Driver)
+		task, err := driver.NewTask(driver.TaskConfig{
+			Enabled: true,
+			Name:    validTaskName,
+		})
+		require.NoError(t, err)
+		mockD.On("Task").Return(task).
+			On("InitTask", ctx).Return(nil).
+			On("OverrideNotifier").Return().
+			On("RenderTemplate", mock.Anything).Return(true, nil).
+			On("ApplyTask", ctx).Return(fmt.Errorf("apply err")).
+			On("SetBufferPeriod").Return().Once().
+			On("TemplateIDs").Return(nil).Once()
+
+		tm.state = state.NewInMemoryStore(conf)
+		tm.drivers = driver.NewDrivers()
+		tm.factory.newDriver = func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+			return mockD, nil
+		}
+
+		tm.TaskFailSilently(ctx, validTaskConf)
+
+		_, ok := tm.drivers.Get(validTaskName)
+		assert.True(t, ok, "driver is added even if run is unsuccessful")
+
+		events := tm.state.GetTaskEvents(validTaskName)
+		assert.Len(t, events, 1, "event is stored even on failed run")
+	})
+}
+
 func Test_TasksManager_deleteTask(t *testing.T) {
 	ctx := context.Background()
 	mockD := new(mocksD.Driver)
