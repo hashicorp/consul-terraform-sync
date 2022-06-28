@@ -850,9 +850,10 @@ func Test_ConditionMonitor_EnableTaskRanNotify(t *testing.T) {
 	s.AssertExpectations(t)
 }
 
-func Test_TasksManager_TaskFailSilently(t *testing.T) {
-	// TaskFailSilently is similar to TaskCreateAndRun but with modified error
-	// handling. This tests what hasn't been tested in Test_TasksManager_TaskCreate
+func Test_TasksManager_TaskCreateAndRunAllowFail(t *testing.T) {
+	// TaskCreateAndRunAllowFail is similar to TaskCreateAndRun but with
+	// modified error handling. This tests what hasn't been tested in
+	// Test_TasksManager_TaskCreate
 	ctx := context.Background()
 
 	tm := newTestTasksManager()
@@ -885,7 +886,7 @@ func Test_TasksManager_TaskFailSilently(t *testing.T) {
 			return mockD, nil
 		}
 
-		tm.TaskFailSilently(ctx, validTaskConf)
+		tm.TaskCreateAndRunAllowFail(ctx, validTaskConf)
 
 		_, ok := tm.drivers.Get(validTaskName)
 		assert.True(t, ok, "driver is added even if run is unsuccessful")

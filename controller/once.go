@@ -24,7 +24,7 @@ type Once struct {
 	monitor      *ConditionMonitor
 
 	// When true, does not handle errors beyond logging. Otherwise fails fast.
-	failSilently bool
+	allowFail bool
 }
 
 // NewOnce configures and initializes a new Once controller
@@ -51,7 +51,7 @@ func NewOnce(conf *config.Config) (*Once, error) {
 		tasksManager: tm,
 		watcher:      watcher,
 		monitor:      NewConditionMonitor(tm, watcher),
-		failSilently: false,
+		allowFail:    false,
 	}, nil
 }
 
@@ -110,8 +110,8 @@ func (ctrl *Once) onceConsecutive(ctx context.Context) error {
 			taskName := *task.Name
 			ctrl.logger.Info("running task once", taskNameLogKey, taskName)
 
-			if ctrl.failSilently {
-				ctrl.tasksManager.TaskFailSilently(ctx, *task)
+			if ctrl.allowFail {
+				ctrl.tasksManager.TaskCreateAndRunAllowFail(ctx, *task)
 				continue
 			}
 
@@ -122,7 +122,7 @@ func (ctrl *Once) onceConsecutive(ctx context.Context) error {
 		}
 	}
 
-	if ctrl.failSilently {
+	if ctrl.allowFail {
 		ctrl.logger.Info("attempted to run all tasks once")
 	} else {
 		ctrl.logger.Info("all tasks completed once")

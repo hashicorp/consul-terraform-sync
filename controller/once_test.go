@@ -58,18 +58,18 @@ func Test_Once_Run_Terraform(t *testing.T) {
 
 func Test_Once_Run_Terraform_errors(t *testing.T) {
 	// Checks test cases where an error occurs. However, Run() itself may
-	// not return an error i.e. when we allow an error to fail silently
+	// not return an error i.e. when we log the error and move on
 
 	t.Parallel()
 
 	expectedErr := errors.New("test error")
 
 	testCases := []struct {
-		name         string
-		failSilently bool
+		name      string
+		allowFail bool
 	}{
 		{
-			"consecutive fail-silently",
+			"consecutive allow-fail",
 			true,
 		},
 		{
@@ -92,9 +92,9 @@ func Test_Once_Run_Terraform_errors(t *testing.T) {
 				return onceMockDriver(task, nil)
 			}
 
-			mockDrivers, err := testOnce(t, 5, driverConf, tc.failSilently, setupNewDriver)
+			mockDrivers, err := testOnce(t, 5, driverConf, tc.allowFail, setupNewDriver)
 
-			if tc.failSilently {
+			if tc.allowFail {
 				require.NoError(t, err)
 
 				// all drivers should have been created even if 03 errored
@@ -189,7 +189,7 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 
 // testOnce test running once-mode. Returns the mocked drivers for the caller
 // to assert expectations
-func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig, failSilently bool,
+func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig, allowFail bool,
 	setupNewDriver func(*driver.Task) driver.Driver) ([]*mocksD.Driver, error) {
 
 	conf := multipleTaskConfig(numTasks)
@@ -197,9 +197,9 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig, failS
 	ss := state.NewInMemoryStore(conf)
 
 	ctrl := Once{
-		logger:       logging.NewNullLogger(),
-		state:        ss,
-		failSilently: failSilently,
+		logger:    logging.NewNullLogger(),
+		state:     ss,
+		allowFail: allowFail,
 	}
 
 	// Set up tasks manager

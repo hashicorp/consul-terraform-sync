@@ -215,13 +215,14 @@ func (tm *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskCo
 	return plan.ChangesPresent, plan.Plan, "", nil
 }
 
-// TaskFailSilently creates, runs, and adds a new task. It expects that this
-// task is highly unlikely to error because it has previously been created and
-// run before. Therefore it does not handle the error beyond logging.
+// TaskCreateAndRunAllowFail creates, runs, and adds a new task. It expects that
+// this task is highly unlikely to error because it has previously been created
+// and run before. Therefore it allows failure and does not handle error beyond
+// logging
 //
 // This method is used when we do not want the caller to error and exit when
 // creating, running, and adding a new task.
-func (tm *TasksManager) TaskFailSilently(ctx context.Context, taskConfig config.TaskConfig) {
+func (tm *TasksManager) TaskCreateAndRunAllowFail(ctx context.Context, taskConfig config.TaskConfig) {
 	logger := tm.logger.With(taskNameLogKey, *taskConfig.Name)
 
 	actionSteps := `
