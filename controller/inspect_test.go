@@ -100,10 +100,11 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 	// Mock watcher
 	waitErrCh := make(chan error)
 	var waitErrChRc <-chan error = waitErrCh
+	// Submit nil to the channel in a different goroutine to prevent deadlock.
 	go func() { waitErrCh <- nil }()
 	w := new(mocksTmpl.Watcher)
 	w.On("WaitCh", mock.Anything).Return(waitErrChRc)
-	w.On("Size").Return(5)
+	w.On("Size").Maybe().Return(5)
 	cm.watcher = w
 
 	// Set up driver factory
@@ -119,17 +120,17 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 		return d, nil
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
 	go func() {
+		// Cancel context before first task execution.
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
 		err := ctrl.Run(ctx)
+		assert.Error(t, err)
 		if err != nil {
 			errCh <- err
 		}
 	}()
-	// Cancel context after 1 second (during first task)
-	time.Sleep(time.Second)
-	cancel()
 
 	select {
 	case err := <-errCh:
