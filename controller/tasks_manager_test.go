@@ -891,7 +891,9 @@ func Test_TasksManager_TaskFailSilently(t *testing.T) {
 		assert.True(t, ok, "driver is added even if run is unsuccessful")
 
 		events := tm.state.GetTaskEvents(validTaskName)
-		assert.Len(t, events, 1, "event is stored even on failed run")
+		taskEvents := events[validTaskName]
+		require.Len(t, taskEvents, 1, "event is stored even on failed run")
+		assert.False(t, taskEvents[0].Success, "event should have failed")
 	})
 }
 
