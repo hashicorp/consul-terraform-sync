@@ -110,7 +110,7 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 		return config.TaskConfig{}, err
 	}
 
-	if err := tm.runNewTask(ctx, d); err != nil {
+	if err := tm.runNewTask(ctx, d, false); err != nil {
 		return config.TaskConfig{}, err
 	}
 
@@ -213,6 +213,43 @@ func (tm *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskCo
 	}
 
 	return plan.ChangesPresent, plan.Plan, "", nil
+}
+
+// TaskCreateAndRunAllowFail creates, runs, and adds a new task. It expects that
+// this task is highly unlikely to error because it has previously been created
+// and run before. Therefore it allows failure and does not handle error beyond
+// logging
+//
+// This method is used when we do not want the caller to error and exit when
+// creating, running, and adding a new task.
+func (tm *TasksManager) TaskCreateAndRunAllowFail(ctx context.Context, taskConfig config.TaskConfig) {
+	logger := tm.logger.With(taskNameLogKey, *taskConfig.Name)
+
+	actionSteps := `
+Please investigate this error. This may require re-creating the task using the
+Create Task API / CLI. https://www.consul.io/docs/nia/cli/task#task-create
+`
+
+	d, err := tm.createTask(ctx, taskConfig)
+	if err != nil {
+		logger.Error(fmt.Sprintf("error creating driver for task.%s", actionSteps),
+			"error", err)
+		return
+	}
+
+	if err := tm.runNewTask(ctx, d, true); err != nil {
+		// Expects that this task has run successfully before and any error is
+		// intermittent and next run will succeed
+		logger.Error("error while running task once after creation. will still "+
+			"add task to CTS", "error", err)
+	}
+
+	if _, err := tm.addTask(ctx, d); err != nil {
+		logger.Error(fmt.Sprintf("error adding task to CTS.%s", actionSteps),
+			"error", err)
+	}
+
+	logger.Info("task was created and run successfully")
 }
 
 func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
@@ -547,7 +584,9 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 //
 // Stores an event in the state that should be cleaned up if the task is not
 // added to CTS.
-func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
+func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver,
+	allowApplyErr bool) error {
+
 	task := d.Task()
 	taskName := task.Name()
 	logger := tm.logger.With(taskNameLogKey, taskName)
@@ -572,7 +611,9 @@ func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
 	err = d.ApplyTask(ctx)
 	if err != nil {
 		logger.Error("error applying task", "error", err)
-		return err
+		if !allowApplyErr {
+			return err
+		}
 	}
 
 	// Store event if apply was successful and task will be created
