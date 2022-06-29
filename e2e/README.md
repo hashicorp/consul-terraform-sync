@@ -36,7 +36,7 @@ The benchmark tests require Consul and Terraform installed.
 - `consul` found in `$PATH`
 - `terraform` in the `./e2e` directory
 
-The benchmark tests are ran weekly in CircleCI from the main branch.
+The benchmark tests are run weekly in GitHub Actions from the main branch.
 
 ## Run
 
