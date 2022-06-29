@@ -13,7 +13,7 @@ const defaultEventCountLimit = 5
 type eventStorage struct {
 	mu *sync.RWMutex
 
-	events map[string][]*event.Event // taskname => events
+	events map[string][]event.Event // taskname => events
 	limit  int
 }
 
@@ -21,7 +21,7 @@ type eventStorage struct {
 func newEventStorage() *eventStorage {
 	return &eventStorage{
 		mu:     &sync.RWMutex{},
-		events: make(map[string][]*event.Event),
+		events: make(map[string][]event.Event),
 		limit:  defaultEventCountLimit,
 	}
 }
@@ -36,7 +36,7 @@ func (s *eventStorage) Add(e event.Event) error {
 	defer s.mu.Unlock()
 
 	events := s.events[e.TaskName]
-	events = append([]*event.Event{&e}, events...) // prepend
+	events = append([]event.Event{e}, events...) // prepend
 	if len(events) > s.limit {
 		events = events[:len(events)-1]
 	}
@@ -51,7 +51,7 @@ func (s *eventStorage) Read(taskName string) map[string][]event.Event {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	data := make(map[string][]*event.Event)
+	data := make(map[string][]event.Event)
 	if taskName != "" {
 		if e, ok := s.events[taskName]; ok {
 			data[taskName] = e
@@ -63,9 +63,7 @@ func (s *eventStorage) Read(taskName string) map[string][]event.Event {
 	ret := make(map[string][]event.Event)
 	for k, v := range data {
 		events := make([]event.Event, len(v))
-		for ix, e := range v {
-			events[ix] = *e
-		}
+		copy(events, v)
 		ret[k] = events
 	}
 	return ret
@@ -79,4 +77,15 @@ func (s *eventStorage) Delete(taskName string) {
 	if taskName != "" {
 		delete(s.events, taskName)
 	}
+}
+
+// Set overwrites all events for a task name.
+// Any events exceeding the configured limit will be removed.
+func (s *eventStorage) Set(taskName string, events []event.Event) {
+	if len(events) > s.limit {
+		events = events[0:s.limit]
+	}
+	eventsCopy := make([]event.Event, len(events))
+	copy(eventsCopy, events)
+	s.events[taskName] = eventsCopy
 }

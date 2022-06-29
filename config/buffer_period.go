@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	DefaultBufferPeriodMin = time.Duration(5 * time.Second)
-	DefaultBufferPeriodMax = time.Duration(4 * DefaultBufferPeriodMin)
+	DefaultBufferPeriodMin = 5 * time.Second
+	DefaultBufferPeriodMax = 4 * DefaultBufferPeriodMin
 )
 
 // BufferPeriodConfig is the min and max duration to buffer changes for tasks

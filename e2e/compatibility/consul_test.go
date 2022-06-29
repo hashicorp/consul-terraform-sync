@@ -137,9 +137,9 @@ func TestCompatibility_Consul(t *testing.T) {
 //	  separator, flags)
 //  - Session API (Destroy, Create)
 func testConsulBackendCompatibility(t *testing.T, tempDir string, port int) {
-	config := baseConfig(tempDir, port) + nullTask()
+	c := baseConfig(tempDir, port) + nullTask()
 	configPath := filepath.Join(tempDir, configFile)
-	testutils.WriteFile(t, configPath, config)
+	testutils.WriteFile(t, configPath, c)
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
@@ -158,10 +158,10 @@ func testConsulBackendCompatibility(t *testing.T, tempDir string, port int) {
 // remove service instances and confirm that CTS task execution and resource
 // creation is successful.
 func testServiceInstanceCompatibility(t *testing.T, tempDir string, port int) {
-	config := baseConfig(tempDir, port) + basicTask("db_task", "db", "api") +
+	c := baseConfig(tempDir, port) + basicTask("db_task", "db", "api") +
 		basicTask("web_task", "api", "web")
 	configPath := filepath.Join(tempDir, configFile)
-	testutils.WriteFile(t, configPath, config)
+	testutils.WriteFile(t, configPath, c)
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
@@ -224,9 +224,9 @@ func testServiceInstanceCompatibility(t *testing.T, tempDir string, port int) {
 // registering a new service instance (tested elsewhere). Modifying Name results
 // in registering a new service (unrelated scenario for this particular test).
 func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
-	config := baseConfig(tempDir, port) + nullTask()
+	c := baseConfig(tempDir, port) + nullTask()
 	configPath := filepath.Join(tempDir, configFile)
-	testutils.WriteFile(t, configPath, config)
+	testutils.WriteFile(t, configPath, c)
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
@@ -316,10 +316,10 @@ func testServiceValuesCompatibility(t *testing.T, tempDir string, port int) {
 // Not tested: Namespace querying (Enterprise), Datacenter querying (manually
 // tested since it requires setting up at least 2 datacenters)
 func testTagQueryCompatibility(t *testing.T, tempDir string, port int) {
-	config := baseConfig(tempDir, port) + basicTask("redis_task", "redis",
+	c := baseConfig(tempDir, port) + basicTask("redis_task", "redis",
 		"db", `filter = "\"v1\" in Service.Tags"`)
 	configPath := filepath.Join(tempDir, configFile)
-	testutils.WriteFile(t, configPath, config)
+	testutils.WriteFile(t, configPath, c)
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)
@@ -355,9 +355,9 @@ func testTagQueryCompatibility(t *testing.T, tempDir string, port int) {
 // Tested node-related values: Node name, node id, node address, tagged address,
 // and node meta. Node datacenter not tested.
 func testNodeValuesCompatibility(t *testing.T, tempDir string, port int) {
-	config := baseConfig(tempDir, port) + nullTask()
+	c := baseConfig(tempDir, port) + nullTask()
 	configPath := filepath.Join(tempDir, configFile)
-	testutils.WriteFile(t, configPath, config)
+	testutils.WriteFile(t, configPath, c)
 
 	cts, stop := api.StartCTS(t, configPath)
 	defer stop(t)

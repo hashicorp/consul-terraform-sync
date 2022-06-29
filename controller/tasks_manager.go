@@ -110,7 +110,7 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 		return config.TaskConfig{}, err
 	}
 
-	if err := tm.runNewTask(ctx, d); err != nil {
+	if err := tm.runNewTask(ctx, d, false); err != nil {
 		return config.TaskConfig{}, err
 	}
 
@@ -119,7 +119,7 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 
 // TaskDelete marks an existing task that has been added to CTS for deletion
 // then asynchronously deletes the task.
-func (tm *TasksManager) TaskDelete(ctx context.Context, name string) error {
+func (tm *TasksManager) TaskDelete(_ context.Context, name string) error {
 	logger := tm.logger.With(taskNameLogKey, name)
 	if tm.drivers.IsMarkedForDeletion(name) {
 		logger.Debug("task is already marked for deletion")
@@ -195,7 +195,10 @@ func (tm *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskCo
 
 	if runOp != driver.RunOptionInspect {
 		// Only update state if the update is not inspect type
-		tm.state.SetTask(updateConf)
+		if err := tm.state.SetTask(updateConf); err != nil {
+			logger.Error("error while setting task state", "error", err)
+			return false, "", "", err
+		}
 	}
 
 	patch := driver.PatchTask{
@@ -210,6 +213,43 @@ func (tm *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskCo
 	}
 
 	return plan.ChangesPresent, plan.Plan, "", nil
+}
+
+// TaskCreateAndRunAllowFail creates, runs, and adds a new task. It expects that
+// this task is highly unlikely to error because it has previously been created
+// and run before. Therefore it allows failure and does not handle error beyond
+// logging
+//
+// This method is used when we do not want the caller to error and exit when
+// creating, running, and adding a new task.
+func (tm *TasksManager) TaskCreateAndRunAllowFail(ctx context.Context, taskConfig config.TaskConfig) {
+	logger := tm.logger.With(taskNameLogKey, *taskConfig.Name)
+
+	actionSteps := `
+Please investigate this error. This may require re-creating the task using the
+Create Task API / CLI. https://www.consul.io/docs/nia/cli/task#task-create
+`
+
+	d, err := tm.createTask(ctx, taskConfig)
+	if err != nil {
+		logger.Error(fmt.Sprintf("error creating driver for task.%s", actionSteps),
+			"error", err)
+		return
+	}
+
+	if err := tm.runNewTask(ctx, d, true); err != nil {
+		// Expects that this task has run successfully before and any error is
+		// intermittent and next run will succeed
+		logger.Error("error while running task once after creation. will still "+
+			"add task to CTS", "error", err)
+	}
+
+	if _, err := tm.addTask(ctx, d); err != nil {
+		logger.Error(fmt.Sprintf("error adding task to CTS.%s", actionSteps),
+			"error", err)
+	}
+
+	logger.Info("task was created and run successfully")
 }
 
 func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
@@ -285,7 +325,10 @@ func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Tas
 		return config.TaskConfig{}, err
 	}
 
-	tm.state.SetTask(conf)
+	if err = tm.state.SetTask(conf); err != nil {
+		tm.cleanupTask(ctx, d)
+		return config.TaskConfig{}, err
+	}
 
 	if d.Task().IsScheduled() {
 		tm.createdScheduleCh <- name
@@ -428,11 +471,11 @@ func (tm *TasksManager) TaskRunNow(ctx context.Context, taskName string) error {
 // TaskByTemplate returns the name of the task associated with a template id.
 // If no task is associated with the template id, returns false.
 func (tm TasksManager) TaskByTemplate(tmplID string) (string, bool) {
-	driver, ok := tm.drivers.GetTaskByTemplate(tmplID)
+	d, ok := tm.drivers.GetTaskByTemplate(tmplID)
 	if !ok {
 		return "", false
 	}
-	return driver.Task().Name(), true
+	return d.Task().Name(), true
 }
 
 // EnableTaskRanNotify is a helper for enabling notifications when a task has
@@ -541,7 +584,9 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 //
 // Stores an event in the state that should be cleaned up if the task is not
 // added to CTS.
-func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
+func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver,
+	allowApplyErr bool) error {
+
 	task := d.Task()
 	taskName := task.Name()
 	logger := tm.logger.With(taskNameLogKey, taskName)
@@ -566,7 +611,9 @@ func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver) error {
 	err = d.ApplyTask(ctx)
 	if err != nil {
 		logger.Error("error applying task", "error", err)
-		return err
+		if !allowApplyErr {
+			return err
+		}
 	}
 
 	// Store event if apply was successful and task will be created
@@ -622,8 +669,14 @@ func (tm *TasksManager) deleteTask(ctx context.Context, name string) error {
 	}
 
 	// Delete task from state only after driver successfully deleted
-	tm.state.DeleteTask(name)
-	tm.state.DeleteTaskEvents(name)
+	if err = tm.state.DeleteTask(name); err != nil {
+		logger.Error("error while deleting task state", "error", err)
+		return err
+	}
+	if err = tm.state.DeleteTaskEvents(name); err != nil {
+		logger.Error("error while deleting task events state", "error", err)
+		return err
+	}
 
 	if tm.deletedTaskNotify != nil {
 		tm.deletedTaskNotify <- name

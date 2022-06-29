@@ -65,9 +65,7 @@ func (c *AuthConfig) Merge(o *AuthConfig) *AuthConfig {
 // Finalize ensures there no nil pointers.
 func (c *AuthConfig) Finalize() {
 	if c.Enabled == nil {
-		c.Enabled = Bool(false ||
-			StringPresent(c.Username) ||
-			StringPresent(c.Password))
+		c.Enabled = Bool(StringPresent(c.Username) || StringPresent(c.Password))
 	}
 
 	if c.Username == nil {

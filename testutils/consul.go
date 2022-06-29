@@ -320,7 +320,7 @@ func generateServices(n int, namefmt, idfmt fmtFunc) []testutil.TestService {
 			Name:    namefmt(i),
 			ID:      idfmt(i),
 			Address: "127.0.0.2",
-			Port:    int(baseport + i),
+			Port:    baseport + i,
 			Tags:    []string{},
 		}
 	}

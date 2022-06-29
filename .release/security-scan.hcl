@@ -1,13 +1,17 @@
 container {
-	dependencies = true
-	alpine_secdb = false
-	secrets      = true
+  dependencies = true
+  alpine_secdb = false
+  secrets      = true
 }
 
 binary {
-	secrets      = true
-	go_modules   = true
-	osv          = true
-	oss_index    = true
-	nvd          = false
+  go_modules = true
+  osv        = true
+  oss_index  = true
+  nvd        = false
+  secrets {
+    matchers {
+      known = ["tfc", "hcp", "tfe", "github", "artifactory", "slack", "aws", "google", "azure"]
+    }
+  }
 }

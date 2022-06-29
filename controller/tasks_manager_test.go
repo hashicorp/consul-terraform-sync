@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/driver"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	mocksD "github.com/hashicorp/consul-terraform-sync/mocks/driver"
-	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/store"
+	mocksS "github.com/hashicorp/consul-terraform-sync/mocks/state"
 	mocksTmpl "github.com/hashicorp/consul-terraform-sync/mocks/templates"
 	"github.com/hashicorp/consul-terraform-sync/state"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
@@ -132,7 +132,7 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 		mockD.On("SetBufferPeriod").Return()
 		mockD.On("OverrideNotifier").Return()
 		mockDriver(ctx, mockD, driverTask)
-		tm.factory.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.factory.newDriver = func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -164,7 +164,7 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 		mockD.On("InitTask", mock.Anything).Return(fmt.Errorf("init err"))
 		mockD.On("DestroyTask", mock.Anything).Return()
 		tm.drivers = driver.NewDrivers()
-		tm.factory.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.factory.newDriver = func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -205,7 +205,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		mockDriver(ctx, mockD, task)
 		tm.state = state.NewInMemoryStore(conf)
 		tm.drivers = driver.NewDrivers()
-		tm.factory.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.factory.newDriver = func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -235,7 +235,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 		mockDriver(ctx, mockD, task)
 		tm.state = state.NewInMemoryStore(conf)
 		tm.drivers = driver.NewDrivers()
-		tm.factory.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.factory.newDriver = func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -266,7 +266,7 @@ func Test_TasksManager_TaskCreateAndRun(t *testing.T) {
 			On("ApplyTask", ctx).Return(fmt.Errorf("apply err"))
 		tm.state = state.NewInMemoryStore(conf)
 		tm.drivers = driver.NewDrivers()
-		tm.factory.newDriver = func(*config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+		tm.factory.newDriver = func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
 			return mockD, nil
 		}
 
@@ -401,10 +401,11 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		// add to state
-		tm.state.SetTask(config.TaskConfig{
+		err = tm.state.SetTask(config.TaskConfig{
 			Name:    &taskName,
 			Enabled: config.Bool(false),
 		})
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		updateConf := config.TaskConfig{
 			Name:    config.String(taskName),
@@ -438,10 +439,11 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		// add to state
-		tm.state.SetTask(config.TaskConfig{
+		err = tm.state.SetTask(config.TaskConfig{
 			Name:    &taskName,
 			Enabled: config.Bool(false),
 		})
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		updateConf := config.TaskConfig{
 			Name:    &taskName,
@@ -474,10 +476,11 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		// add to state
-		tm.state.SetTask(config.TaskConfig{
+		err = tm.state.SetTask(config.TaskConfig{
 			Name:    &taskName,
 			Enabled: config.Bool(false),
 		})
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		updateConf := config.TaskConfig{
 			Name:    &taskName,
@@ -522,7 +525,7 @@ func Test_TasksManager_addTask(t *testing.T) {
 
 		// Mock state
 		s := new(mocksS.Store)
-		s.On("SetTask", mock.Anything).Return().Once()
+		s.On("SetTask", mock.Anything).Return(nil).Once()
 		tm.state = s
 
 		// Test addTask
@@ -755,7 +758,8 @@ func Test_TasksManager_TaskRunNow(t *testing.T) {
 
 		tm := newTestTasksManager()
 		tm.EnableTaskRanNotify()
-		tm.state.SetTask(validTaskConf)
+		err := tm.state.SetTask(validTaskConf)
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
@@ -844,6 +848,54 @@ func Test_ConditionMonitor_EnableTaskRanNotify(t *testing.T) {
 	channel := tm.EnableTaskRanNotify()
 	assert.Equal(t, 2, cap(channel))
 	s.AssertExpectations(t)
+}
+
+func Test_TasksManager_TaskCreateAndRunAllowFail(t *testing.T) {
+	// TaskCreateAndRunAllowFail is similar to TaskCreateAndRun but with
+	// modified error handling. This tests what hasn't been tested in
+	// Test_TasksManager_TaskCreate
+	ctx := context.Background()
+
+	tm := newTestTasksManager()
+	tm.factory.watcher = new(mocksTmpl.Watcher)
+
+	conf := &config.Config{
+		BufferPeriod: config.DefaultBufferPeriodConfig(),
+		WorkingDir:   config.String(config.DefaultWorkingDir),
+		Driver:       config.DefaultDriverConfig(),
+	}
+
+	t.Run("run error", func(t *testing.T) {
+		mockD := new(mocksD.Driver)
+		task, err := driver.NewTask(driver.TaskConfig{
+			Enabled: true,
+			Name:    validTaskName,
+		})
+		require.NoError(t, err)
+		mockD.On("Task").Return(task).
+			On("InitTask", ctx).Return(nil).
+			On("OverrideNotifier").Return().
+			On("RenderTemplate", mock.Anything).Return(true, nil).
+			On("ApplyTask", ctx).Return(fmt.Errorf("apply err")).
+			On("SetBufferPeriod").Return().Once().
+			On("TemplateIDs").Return(nil).Once()
+
+		tm.state = state.NewInMemoryStore(conf)
+		tm.drivers = driver.NewDrivers()
+		tm.factory.newDriver = func(context.Context, *config.Config, *driver.Task, templates.Watcher) (driver.Driver, error) {
+			return mockD, nil
+		}
+
+		tm.TaskCreateAndRunAllowFail(ctx, validTaskConf)
+
+		_, ok := tm.drivers.Get(validTaskName)
+		assert.True(t, ok, "driver is added even if run is unsuccessful")
+
+		events := tm.state.GetTaskEvents(validTaskName)
+		taskEvents := events[validTaskName]
+		require.Len(t, taskEvents, 1, "event is stored even on failed run")
+		assert.False(t, taskEvents[0].Success, "event should have failed")
+	})
 }
 
 func Test_TasksManager_deleteTask(t *testing.T) {

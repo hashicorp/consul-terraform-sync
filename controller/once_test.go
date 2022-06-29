@@ -21,41 +21,17 @@ import (
 func Test_Once_Run_Terraform(t *testing.T) {
 	t.Parallel()
 
-	expectedErr := errors.New("test error")
-
 	testCases := []struct {
-		name           string
-		numTasks       int
-		setupNewDriver func(*driver.Task) driver.Driver
-		expectErr      bool
+		name     string
+		numTasks int
 	}{
 		{
 			"consecutive one task",
 			1,
-			func(task *driver.Task) driver.Driver {
-				return onceMockDriver(task, nil)
-			},
-			false,
 		},
 		{
 			"consecutive multiple tasks",
 			10,
-			func(task *driver.Task) driver.Driver {
-				return onceMockDriver(task, nil)
-			},
-			false,
-		},
-		{
-			"consecutive error",
-			5,
-			func(task *driver.Task) driver.Driver {
-				if task.Name() == "task_03" {
-					// Mock an error during apply for a task
-					return onceMockDriver(task, expectedErr)
-				}
-				return onceMockDriver(task, nil)
-			},
-			true,
 		},
 	}
 
@@ -65,17 +41,71 @@ func Test_Once_Run_Terraform(t *testing.T) {
 				Terraform: &config.TerraformConfig{},
 			}
 
-			mockDrivers, err := testOnce(t, tc.numTasks, driverConf, tc.setupNewDriver)
-			if tc.expectErr {
+			setupNewDriver := func(task *driver.Task) driver.Driver {
+				return onceMockDriver(task, nil)
+			}
+
+			mockDrivers, err := testOnce(t, tc.numTasks, driverConf, false, setupNewDriver)
+			require.NoError(t, err)
+			assert.Len(t, mockDrivers, tc.numTasks)
+
+			for _, mockD := range mockDrivers {
+				mockD.AssertExpectations(t)
+			}
+		})
+	}
+}
+
+func Test_Once_Run_Terraform_errors(t *testing.T) {
+	// Checks test cases where an error occurs. However, Run() itself may
+	// not return an error i.e. when we log the error and move on
+
+	t.Parallel()
+
+	expectedErr := errors.New("test error")
+
+	testCases := []struct {
+		name      string
+		allowFail bool
+	}{
+		{
+			"consecutive allow-fail",
+			true,
+		},
+		{
+			"consecutive fail-fast",
+			false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			driverConf := &config.DriverConfig{
+				Terraform: &config.TerraformConfig{},
+			}
+
+			setupNewDriver := func(task *driver.Task) driver.Driver {
+				if task.Name() == "task_03" {
+					// Mock an error during apply for a task
+					return onceMockDriver(task, expectedErr)
+				}
+				return onceMockDriver(task, nil)
+			}
+
+			mockDrivers, err := testOnce(t, 5, driverConf, tc.allowFail, setupNewDriver)
+
+			if tc.allowFail {
+				require.NoError(t, err)
+
+				// all drivers should have been created even if 03 errored
+				assert.Len(t, mockDrivers, 5)
+			} else {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), expectedErr.Error(),
 					"unexpected error in Once")
 
-				//task 00, 01, 02 should have been created before 03 errored
+				// task 00, 01, 02 should have been created before 03 errored
 				assert.Len(t, mockDrivers, 3)
-			} else {
-				require.NoError(t, err)
-				assert.Len(t, mockDrivers, tc.numTasks)
 			}
 
 			for _, mockD := range mockDrivers {
@@ -119,7 +149,7 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 
 	// Set up driver factory
 	tm.factory.initConf = conf
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("Task").Return(task).Times(4)
 		d.On("TemplateIDs").Return(nil)
@@ -159,7 +189,7 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 
 // testOnce test running once-mode. Returns the mocked drivers for the caller
 // to assert expectations
-func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
+func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig, allowFail bool,
 	setupNewDriver func(*driver.Task) driver.Driver) ([]*mocksD.Driver, error) {
 
 	conf := multipleTaskConfig(numTasks)
@@ -167,8 +197,9 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 	ss := state.NewInMemoryStore(conf)
 
 	ctrl := Once{
-		logger: logging.NewNullLogger(),
-		state:  ss,
+		logger:    logging.NewNullLogger(),
+		state:     ss,
+		allowFail: allowFail,
 	}
 
 	// Set up tasks manager
@@ -178,7 +209,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig,
 
 	// Set up driver factory
 	tm.factory.initConf = conf
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		return setupNewDriver(task), nil
 	}
 
@@ -242,7 +273,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 
 	// Set up driver factory
 	tm.factory.initConf = conf
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
 		// Always return false on render template to mock what happens when

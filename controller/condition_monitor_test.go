@@ -33,7 +33,8 @@ var (
 func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 	t.Run("simple-success", func(t *testing.T) {
 		tm := newTestTasksManager()
-		tm.state.SetTask(validTaskConf)
+		err := tm.state.SetTask(validTaskConf)
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		ctx := context.Background()
 		d := new(mocksD.Driver)
@@ -44,14 +45,15 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		tm.drivers.Add(validTaskName, d)
 
 		cm := newTestConditionMonitor(tm)
-		err := cm.runDynamicTask(ctx, validTaskName)
+		err = cm.runDynamicTask(ctx, validTaskName)
 		assert.NoError(t, err)
 		d.AssertExpectations(t)
 	})
 
 	t.Run("apply-error", func(t *testing.T) {
 		tm := newTestTasksManager()
-		tm.state.SetTask(validTaskConf)
+		err := tm.state.SetTask(validTaskConf)
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		testErr := fmt.Errorf("could not apply: %s", "test")
 		d := new(mocksD.Driver)
@@ -62,14 +64,15 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		tm.drivers.Add(validTaskName, d)
 
 		cm := newTestConditionMonitor(tm)
-		err := cm.runDynamicTask(context.Background(), validTaskName)
+		err = cm.runDynamicTask(context.Background(), validTaskName)
 		assert.Contains(t, err.Error(), testErr.Error())
 		d.AssertExpectations(t)
 	})
 
 	t.Run("skip-scheduled-tasks", func(t *testing.T) {
 		tm := newTestTasksManager()
-		tm.state.SetTask(schedTaskConf)
+		err := tm.state.SetTask(schedTaskConf)
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		d := new(mocksD.Driver)
 		d.On("TemplateIDs").Return(nil)
@@ -77,7 +80,7 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 		tm.drivers.Add(schedTaskName, d)
 
 		cm := newTestConditionMonitor(tm)
-		err := cm.runDynamicTask(context.Background(), schedTaskName)
+		err = cm.runDynamicTask(context.Background(), schedTaskName)
 		assert.Error(t, err)
 		d.AssertExpectations(t)
 	})
@@ -86,7 +89,8 @@ func Test_ConditionMonitor_runDynamicTask(t *testing.T) {
 func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 	t.Run("happy-path", func(t *testing.T) {
 		tm := newTestTasksManager()
-		tm.state.SetTask(schedTaskConf)
+		err := tm.state.SetTask(schedTaskConf)
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		d := new(mocksD.Driver)
 		d.On("Task").Return(scheduledTestTask(t, schedTaskName)).Once()
@@ -121,7 +125,8 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 
 	t.Run("dynamic-task-errors", func(t *testing.T) {
 		tm := newTestTasksManager()
-		tm.state.SetTask(validTaskConf)
+		err := tm.state.SetTask(validTaskConf)
+		require.NoError(t, err, "unexpected error while setting task state")
 		// No calls to driver are made
 
 		cm := newTestConditionMonitor(tm)
@@ -149,7 +154,8 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 	t.Run("stop-scheduled-task", func(t *testing.T) {
 		// Tests that signaling to the stop channel stops the function
 		tm := newTestTasksManager()
-		tm.state.SetTask(schedTaskConf)
+		err := tm.state.SetTask(schedTaskConf)
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		d := new(mocksD.Driver)
 		d.On("TemplateIDs").Return(nil)
@@ -179,7 +185,8 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 	t.Run("deleted-scheduled-task", func(t *testing.T) {
 		// Tests that a scheduled task stops if it no longer is in the state
 		tm := newTestTasksManager()
-		tm.state.SetTask(schedTaskConf)
+		err := tm.state.SetTask(schedTaskConf)
+		require.NoError(t, err, "unexpected error while setting task state")
 
 		cm := newTestConditionMonitor(tm)
 
@@ -199,7 +206,8 @@ func Test_ConditionMonitor_runScheduledTask(t *testing.T) {
 
 		// Wait for scheduled task to start cadence, then remove task from state
 		time.Sleep(1 * time.Second)
-		tm.state.DeleteTask(schedTaskName)
+		err = tm.state.DeleteTask(schedTaskName)
+		require.NoError(t, err, "unexpected error while deleting task state")
 
 		select {
 		case <-errCh:
@@ -259,7 +267,8 @@ func Test_ConditionMonitor_Run_ActiveTask(t *testing.T) {
 
 		conf := validTaskConf
 		conf.Name = config.String(n)
-		tm.state.SetTask(conf)
+		err := tm.state.SetTask(conf)
+		require.NoError(t, err, "unexpected error while setting task state")
 	}
 
 	// Set up condition monitor

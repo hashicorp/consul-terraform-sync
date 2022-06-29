@@ -168,11 +168,11 @@ func (tf *Terraform) InitTask(ctx context.Context) error {
 }
 
 // DestroyTask destroys task dependencies so that it is safe for deletion
-func (tf *Terraform) DestroyTask(ctx context.Context) {
+func (tf *Terraform) DestroyTask(_ context.Context) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 
-	tf.deregisterTemplate(ctx)
+	tf.deregisterTemplate()
 }
 
 // SetBufferPeriod sets the buffer period for the task. Do not set this when
@@ -227,7 +227,7 @@ func (tf *Terraform) OverrideNotifier() {
 // renders the template. Rendering a template for the first time may take several
 // cycles to load all the dependencies asynchronously. Returns a boolean whether
 // the template was rendered
-func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
+func (tf *Terraform) RenderTemplate(_ context.Context) (bool, error) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 	taskName := tf.task.Name()
@@ -238,8 +238,8 @@ func (tf *Terraform) RenderTemplate(ctx context.Context) (bool, error) {
 	}
 
 	tf.logger.Trace("checking dependency changes for task", taskNameLogKey, taskName)
-	re, err := tf.renderTemplate(ctx)
-	return (re.Complete && !re.NoChange), err
+	re, err := tf.renderTemplate()
+	return re.Complete && !re.NoChange, err
 }
 
 // InspectTask inspects for any differences pertaining to the task between
@@ -257,7 +257,7 @@ func (tf *Terraform) InspectTask(ctx context.Context) (InspectPlan, error) {
 	}
 
 	plan, err := tf.inspectTask(ctx, true)
-	tf.deregisterTemplate(ctx)
+	tf.deregisterTemplate()
 	return plan, err
 }
 
@@ -339,7 +339,7 @@ func (tf *Terraform) UpdateTask(ctx context.Context, patch PatchTask) (InspectPl
 		}
 
 		for {
-			result, err := tf.renderTemplate(ctx)
+			result, err := tf.renderTemplate()
 			if err != nil {
 				return InspectPlan{}, fmt.Errorf("Error updating task '%s'. Unable to "+
 					"render template for task: %s", taskName, err)
@@ -443,12 +443,12 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 }
 
 // deregisterTemplate attempts to deregister the hashicat template
-func (tf *Terraform) deregisterTemplate(ctx context.Context) {
+func (tf *Terraform) deregisterTemplate() {
 	tf.watcher.Deregister(tf.template)
 }
 
 // renderTemplate attempts to render the hashicat template
-func (tf *Terraform) renderTemplate(ctx context.Context) (hcat.ResolveEvent, error) {
+func (tf *Terraform) renderTemplate() (hcat.ResolveEvent, error) {
 	taskName := tf.task.Name()
 
 	// log the task name with each log

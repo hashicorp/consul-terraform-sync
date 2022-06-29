@@ -33,7 +33,7 @@ func Test_Inspect_Run(t *testing.T) {
 			"one task",
 			1,
 			func(task *driver.Task) driver.Driver {
-				return inspectMockDriver(task, nil)
+				return inspectMockDriver(nil)
 			},
 			false,
 		},
@@ -41,7 +41,7 @@ func Test_Inspect_Run(t *testing.T) {
 			"multiple tasks",
 			10,
 			func(task *driver.Task) driver.Driver {
-				return inspectMockDriver(task, nil)
+				return inspectMockDriver(nil)
 			},
 			false,
 		},
@@ -51,9 +51,9 @@ func Test_Inspect_Run(t *testing.T) {
 			func(task *driver.Task) driver.Driver {
 				if task.Name() == "task_03" {
 					// Mock an error during apply for a task
-					return inspectMockDriver(task, expectedErr)
+					return inspectMockDriver(expectedErr)
 				}
-				return inspectMockDriver(task, nil)
+				return inspectMockDriver(nil)
 			},
 			true,
 		},
@@ -109,7 +109,7 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 	// Set up driver factory
 	tm.factory.initConf = conf
 	drivers := make(map[string]driver.Driver)
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
@@ -182,7 +182,7 @@ func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 
 	// Set up driver factory
 	tm.factory.initConf = conf
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil)
 		// Always return false on render template to mock what happens when
@@ -247,7 +247,7 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 	// Set up driver factory
 	tm.factory.initConf = conf
 	drivers := make(map[string]driver.Driver)
-	tm.factory.newDriver = func(c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
+	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := setupNewDriver(task)
 		drivers[task.Name()] = d
 		return d, nil
@@ -265,11 +265,11 @@ func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) d
 }
 
 // inspectMockDriver mocks the driver with the methods needed for inspect-mode
-func inspectMockDriver(task *driver.Task, inspecTaskErr error) driver.Driver {
+func inspectMockDriver(inspectTaskErr error) driver.Driver {
 	d := new(mocksD.Driver)
 	d.On("RenderTemplate", mock.Anything).Return(true, nil)
 	d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
-	d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, inspecTaskErr)
+	d.On("InspectTask", mock.Anything).Return(driver.InspectPlan{}, inspectTaskErr)
 	d.On("OverrideNotifier").Return().Once()
 	return d
 }

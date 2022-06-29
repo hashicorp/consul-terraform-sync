@@ -92,8 +92,7 @@ func (c *CTSTLSConfig) Merge(o *CTSTLSConfig) *CTSTLSConfig {
 // Finalize ensures there no nil pointers.
 func (c *CTSTLSConfig) Finalize() {
 	if c.Enabled == nil {
-		c.Enabled = Bool(false ||
-			StringPresent(c.Cert) ||
+		c.Enabled = Bool(StringPresent(c.Cert) ||
 			StringPresent(c.CACert) ||
 			StringPresent(c.CAPath) ||
 			StringPresent(c.Key) ||
@@ -139,7 +138,7 @@ func (c *CTSTLSConfig) GoString() string {
 	)
 }
 
-// Validates TLS configuration for serving the CTS API
+// Validate validates TLS configuration for serving the CTS API
 func (c *CTSTLSConfig) Validate() error {
 	if c == nil { // config not required, return early
 		return nil
