@@ -54,7 +54,7 @@ func TestE2E_MetaCommandErrors(t *testing.T) {
 		{
 			"missing required arguments",
 			[]string{},
-			"Error: this command requires one argument",
+			"__AJ__ INTENTIONALLY FAIL", // TODO revert after testing
 		},
 		{
 			"connect using wrong scheme",

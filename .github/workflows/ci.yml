@@ -153,6 +153,7 @@ jobs:
       - e2e-split
     if: needs.run-check.result == 'success'
     strategy:
+      fail-fast: false
       matrix:
         index: [0, 1, 2, 3]
     steps:
