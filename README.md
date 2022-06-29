@@ -10,7 +10,7 @@ Consul-Terraform-Sync (CTS) is a service-oriented tool for managing network infr
 
 ## Community Support
 
-If you have questions about how `consul-terraform-sync` works, its capabilities, or anything other than a bug or feature request (use GitHub's issue tracker for those), please see our community support resources.
+If you have questions about how `consul-terraform-sync` works, its capabilities or anything other than a bug or feature request (use GitHub's issue tracker for those), please see our community support resources.
 
 Community portal: [discuss.hashicorp.com](https://discuss.hashicorp.com/tags/c/consul/29/consul-terraform-sync)
 
