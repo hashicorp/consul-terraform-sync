@@ -113,9 +113,9 @@ task {
 
 	t.Run("deregister service", func(t *testing.T) {
 		// Deregister service
+		now := time.Now()
 		testutils.DeregisterConsulService(t, srv, "api_new")
 		fullWait := defaultWaitForRegistration + defaultWaitForEvent
-		now := time.Now()
 		api.WaitForEvent(t, cts, apiTaskName, now, fullWait)
 		api.WaitForEvent(t, cts, dbTaskName, now, fullWait)
 		api.WaitForEvent(t, cts, webTaskName, now, fullWait)
