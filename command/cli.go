@@ -116,6 +116,7 @@ func (cli *CLI) Run(args []string) int {
 		fmt.Fprintf(cli.errStream, "Error running the CLI command '%s': %s",
 			strings.Join(args, " "), err)
 	}
+
 	return exitCode
 }
 
@@ -125,6 +126,7 @@ func isVersion(args []string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -161,7 +163,8 @@ func generateHelp(commands map[string]string, usage string, omitFlags []string) 
 
 	tw.Flush()
 
-	return strings.TrimSpace(b.String())
+	helpOutput := strings.TrimSpace(b.String()) + "\n"
+	return helpOutput
 }
 
 func generateCommandHelp(cmdName string, cmdFactory mcli.CommandFactory) string {
