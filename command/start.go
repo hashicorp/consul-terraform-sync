@@ -136,12 +136,12 @@ func (c *startCommand) Help() string {
 
 // HelpDeprecated returns the usage when this command is used because CTS was not invoked with a command
 func (c *startCommand) HelpDeprecated() string {
-
 	// Create a command factor for common commands
 	commands := make(map[string]string)
 	for _, v := range commonCommands {
 		commands[v] = fmt.Sprintf("%s\t\n", v)
 	}
+
 	return generateHelp(commands, "Usage CLI: consul-terraform-sync <command> [-help] [options]\n", nil)
 }
 
