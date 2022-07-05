@@ -1,13 +1,17 @@
 package controller
 
 import (
+	"encoding/json"
+	"fmt"
 	"math/rand"
+	"reflect"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/retry"
 	"github.com/hashicorp/hcat"
+	"github.com/hashicorp/hcat/events"
 )
 
 const (
@@ -63,6 +67,7 @@ func newWatcher(conf *config.Config, maxRetries int) (*hcat.Watcher, error) {
 		Clients:         clients,
 		Cache:           hcat.NewStore(),
 		ConsulRetryFunc: wr.retryConsul,
+		EventHandler:    newWatcherEventHandler(logging.Global().Named(hcatLogSystemName)),
 	}), nil
 }
 
@@ -123,4 +128,41 @@ func setVaultClient(clients *hcat.ClientSet, conf *config.Config) error {
 	}
 
 	return clients.AddVault(vault)
+}
+
+func newWatcherEventHandler(logger logging.Logger) events.EventHandler {
+	return func(e events.Event) {
+		// Log events at different log levels based on the type
+		var level logging.Level
+		switch e.(type) {
+		case events.Trace:
+			// Only show hcat Trace events when trace logging is enabled.
+			level = logging.Trace
+		default:
+			// Everything else is shown when debug is enabled.
+			level = logging.Debug
+		}
+
+		// Default to emitting the go format for the event.
+		event := fmt.Sprintf("%+v", e)
+
+		// If the output log level is Trace, then emit the json format for the event.
+		// This could be very large in certain circumstances, because it displays
+		// nested data structures.
+		if logger.IsTrace() {
+			b, err := json.Marshal(e)
+			if err != nil {
+				logger.Warn("Unexpected error marshalling event to json", "error", err, "event", e)
+				return
+			}
+			event = string(b)
+		}
+
+		// Emit the log and include the type name, if possible.
+		tName := "nil"
+		if t := reflect.TypeOf(e); t != nil {
+			tName = t.Name()
+		}
+		logger.Log(level, "event received", "type", tName, "event", event)
+	}
 }
