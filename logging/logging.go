@@ -17,8 +17,19 @@ var Levels = []string{"TRACE", "DEBUG", "INFO", "WARN", "ERR"}
 // it is set by the Setup() function and is shared with all other setup variations (i.e. SetupLocal())
 var LogLevel = ""
 
+// Alias the hclog levels so that the hclog package doesn't need to be exposed for `logger.Log(...)` calls.
+type Level = hclog.Level
+
 const (
 	defaultLogLevel = "INFO"
+
+	NoLevel Level = hclog.NoLevel
+	Trace   Level = hclog.Trace
+	Debug   Level = hclog.Debug
+	Info    Level = hclog.Info
+	Warn    Level = hclog.Warn
+	Error   Level = hclog.Error
+	Off     Level = hclog.Off
 )
 
 // Logger is a type alias for hclog.Logger
