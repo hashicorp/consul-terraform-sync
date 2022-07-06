@@ -79,9 +79,8 @@ func (s *InMemoryStore) GetTask(taskName string) (config.TaskConfig, bool) {
 	return config.TaskConfig{}, false
 }
 
-// SetTask adds a new task configuration or does a patch update to an
-// existing task configuration with the same name. The returned error
-// will always be nil.
+// SetTask adds a new task configuration or overwrites an existing task
+// configuration with the same name. The returned error will always be nil.
 func (s *InMemoryStore) SetTask(newTaskConf config.TaskConfig) error {
 	s.conf.mu.Lock()
 	defer s.conf.mu.Unlock()
@@ -95,15 +94,15 @@ func (s *InMemoryStore) SetTask(newTaskConf config.TaskConfig) error {
 
 	for ix, taskConf := range *taskConfs {
 		if config.StringVal(taskConf.Name) == newTaskName {
-			// patch update the existing task
-			updatedTaskConf := taskConf.Merge(&newTaskConf)
+			// overwrite the existing task
+			updatedTaskConf := newTaskConf.Copy()
 			(*taskConfs)[ix] = updatedTaskConf
 			return nil
 		}
 	}
 
 	// add as a new task
-	*taskConfs = append(*taskConfs, &newTaskConf)
+	*taskConfs = append(*taskConfs, newTaskConf.Copy())
 	return nil
 }
 
