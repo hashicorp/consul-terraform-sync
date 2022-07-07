@@ -99,6 +99,36 @@ func TestE2EBasic(t *testing.T) {
 	_ = cleanup()
 }
 
+// TestE2ENoTasks runs the CTS binary in daemon mode with a configuration with no
+// tasks
+// 1. Verifies that CTS starts without issue
+// 2. Verifies that a CTS can handle task lifecycle operations
+func TestE2ENoTasks(t *testing.T) {
+	setParallelism(t)
+
+	srv := newTestConsulServer(t)
+	defer srv.Stop()
+
+	tempDir := fmt.Sprintf("%s%s", tempDirPrefix, "no_tasks")
+	cleanup := testutils.MakeTempDir(t, tempDir)
+	// no defer to delete directory: only delete at end of test if no errors
+
+	configPath := filepath.Join(tempDir, configFile)
+	config := baseConfig(tempDir).appendConsulBlock(srv).appendTerraformBlock()
+	config.write(t, configPath)
+
+	// Start CTS and wait for once mode to complete, verify there are no errors
+	cts, stop := api.StartCTS(t, configPath)
+	defer stop(t)
+	err := cts.WaitForTestReadiness(defaultWaitForTestReadiness)
+	require.NoError(t, err)
+
+	// Verify that CTS can handle task lifecycle operations
+	runCreateDeleteCreateTrigger(t, srv, cts, tempDir, "task_TestE2E_CreateDeleteCreateTrigger", defaultWaitForEvent)
+
+	_ = cleanup()
+}
+
 // TestE2EArgumentParsing runs the CTS binary and checks to ensure that
 // argument parsing works properly for both `=` and space-delimited argument values.
 // For example, both `--a=b` and `--a b` should be acceptable ways to specify args.
