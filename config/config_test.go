@@ -439,6 +439,12 @@ func TestConfig_Validate(t *testing.T) {
 	*validMultiTask.TerraformProviders = append(*validMultiTask.TerraformProviders,
 		&TerraformProviderConfig{"Y": map[string]interface{}{}})
 
+	validNilTasks := longConfig.Copy()
+	*validNilTasks.Tasks = nil
+
+	validEmptyTasks := longConfig.Copy()
+	*validEmptyTasks.Tasks = TaskConfigs{}
+
 	cases := []struct {
 		name    string
 		i       *Config
@@ -459,6 +465,14 @@ func TestConfig_Validate(t *testing.T) {
 		}, {
 			"multi-task valid",
 			validMultiTask.Copy(),
+			true,
+		}, {
+			"nil tasks valid",
+			validNilTasks.Copy(),
+			true,
+		}, {
+			"empty tasks valid",
+			validEmptyTasks.Copy(),
 			true,
 		}, {
 			"empty provider",

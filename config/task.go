@@ -518,7 +518,8 @@ func (c *TaskConfigs) Finalize(bp *BufferPeriodConfig, wd string) {
 // Validate validates the values and nested values of the configuration struct
 func (c *TaskConfigs) Validate() error {
 	if c == nil || len(*c) == 0 {
-		return fmt.Errorf("missing tasks configuration")
+		// Acceptable for a list of task configurations to be empty
+		return nil
 	}
 
 	unique := make(map[string]bool)

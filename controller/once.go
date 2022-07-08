@@ -61,6 +61,14 @@ func (ctrl *Once) Init(ctx context.Context) error {
 }
 
 func (ctrl *Once) Run(ctx context.Context) error {
+	// Check if tasks are configured, if none are configured
+	// exit early
+	tasks := ctrl.state.GetAllTasks()
+	if tasks == nil || len(tasks) == 0 {
+		ctrl.logger.Info("no tasks configured")
+		return nil
+	}
+
 	ctrl.logger.Info("executing all tasks once through")
 
 	// Stop watching dependencies after once-ing tasks ends

@@ -928,7 +928,7 @@ func TestTasksConfig_Validate(t *testing.T) {
 		{
 			name:    "nil",
 			i:       nil,
-			isValid: false,
+			isValid: true,
 		}, {
 			name: "one task",
 			i: []*TaskConfig{
