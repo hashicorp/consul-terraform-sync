@@ -64,6 +64,11 @@ func moduleInputToTypeFunc() mapstructure.DecodeHookFunc {
 			return decodeModuleInputToType(c, &config)
 		}
 
+		if c, ok := moduleInputs[intentionsType]; ok {
+			var config IntentionsModuleInputConfig
+			return decodeModuleInputToType(c, &config)
+		}
+
 		return nil, fmt.Errorf("unsupported module_input type: %v", data)
 	}
 }
