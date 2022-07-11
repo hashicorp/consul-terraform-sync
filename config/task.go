@@ -2,12 +2,17 @@ package config
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
+	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
+	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
 const (
@@ -50,12 +55,12 @@ type TaskConfig struct {
 	// VarFiles is a list of paths to files containing variables for the
 	// task. For the Terraform driver, these are files ending in `.tfvars` and
 	// are used as Terraform input variables passed as arguments to the Terraform
-	// module. Variables are loaded in the same order as they appear in the order
-	// of the files. Duplicate variables are overwritten with the later value.
+	// module. VarFiles are read into the Variables map in the same order they appear in the file.
 	VarFiles []string `mapstructure:"variable_files"`
 
-	// TODO: Not supported by config file yet
-	// TODO: Add validation
+	// Variables are loaded in the same order as they appear in the map.
+	// Duplicate variables are overwritten with the later value.
+	// No validation is performed on the Variables, as this is not set by the configuration
 	Variables map[string]string
 
 	// Version is the module version for the task to use. The latest version
@@ -240,10 +245,10 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 	return r
 }
 
-// Finalize ensures there no nil pointers.
-func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
+// Finalize ensures there are no nil pointers.
+func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) error {
 	if c == nil {
-		return
+		return nil
 	}
 	logger := logging.Global().Named(logSystemName).Named(taskSubsystemName)
 
@@ -283,8 +288,10 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 		c.VarFiles = []string{}
 	}
 
-	if c.Variables == nil {
-		c.Variables = make(map[string]string)
+	// Finalize the Variables
+	err := c.SetVariables()
+	if err != nil {
+		return err
 	}
 
 	if c.Version == nil {
@@ -344,6 +351,36 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) {
 	if c.WorkingDir == nil {
 		c.WorkingDir = String(filepath.Join(wd, *c.Name))
 	}
+
+	return nil
+}
+
+// SetVariables sets the task variables map with values read from a configured variables file.
+// Field values read in from the file will overwrite the same fields if they exist already within
+// the config Variables. This function is called by Finalize and does not need to be called explicitly
+// in most cases
+func (c *TaskConfig) SetVariables() error {
+	// For now it is not expected that c.Variables will exist since
+	// we don't support setting it via configuration explicitly. Check anyways
+	if c.Variables == nil {
+		c.Variables = make(map[string]string)
+	}
+
+	if len(c.VarFiles) > 0 {
+		for _, vf := range c.VarFiles {
+			f, err := os.Open(vf)
+			if err != nil {
+				return err
+			}
+
+			err = readToVariablesMap(vf, f, c.Variables)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // Validate validates the values and required options. This method is recommended
@@ -396,8 +433,6 @@ func (c *TaskConfig) Validate() error {
 		}
 		pNames[name] = true
 	}
-
-	// TODO validate c.Variables
 
 	if err := c.BufferPeriod.Validate(); err != nil {
 		return err
@@ -505,14 +540,19 @@ func (c *TaskConfigs) Merge(o *TaskConfigs) *TaskConfigs {
 
 // Finalize ensures the configuration has no nil pointers and sets default
 // values.
-func (c *TaskConfigs) Finalize(bp *BufferPeriodConfig, wd string) {
+func (c *TaskConfigs) Finalize(bp *BufferPeriodConfig, wd string) error {
 	if c == nil {
 		*c = *DefaultTaskConfigs()
 	}
 
 	for _, t := range *c {
-		t.Finalize(bp, wd)
+		err := t.Finalize(bp, wd)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 // Validate validates the values and nested values of the configuration struct
@@ -604,6 +644,32 @@ func (c *TaskConfig) validateCondition() error {
 				"task_name", StringVal(c.Name), "error", err)
 		return err
 	}
+	return nil
+}
+
+func readToVariablesMap(filename string, reader io.Reader, variables map[string]string) error {
+	// Load all variables from passed in variable files before
+	// converting to map[string]string
+	loadedVars := make(hcltmpl.Variables)
+	tfvars, err := tftmpl.LoadModuleVariables(filename, reader)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range tfvars {
+		loadedVars[k] = v
+	}
+
+	// Value can be anything so marshal it to equivalent json
+	// and store json as the string value in the map
+	for k, v := range loadedVars {
+		b, err := ctyjson.Marshal(v, v.Type())
+		if err != nil {
+			return err
+		}
+		variables[k] = string(b)
+	}
+
 	return nil
 }
 
