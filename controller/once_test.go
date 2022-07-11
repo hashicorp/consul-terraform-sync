@@ -128,6 +128,39 @@ func Test_Once_Run_WatchDep_errors_Terraform(t *testing.T) {
 	testOnceWatchDepErrors(t, driverConf)
 }
 
+func Test_Once_Run_No_Tasks(t *testing.T) {
+	t.Parallel()
+
+	// Create a configuration, do not include any tasks
+	conf := &config.Config{}
+	ss := state.NewInMemoryStore(conf)
+
+	ctrl := Once{
+		logger: logging.NewNullLogger(),
+		state:  ss,
+	}
+
+	err := ctrl.Run(context.Background())
+	require.NoError(t, err)
+}
+
+func Test_Once_Stop(t *testing.T) {
+	t.Parallel()
+
+	// Craee moock watcher
+	w := new(mocksTmpl.Watcher)
+	w.On("Stop").Return(mock.Anything).Once()
+
+	ctrl := Once{
+		logger:  logging.NewNullLogger(),
+		watcher: w,
+	}
+
+	// Assert that the watcher is called once and only once
+	ctrl.Stop()
+	mock.AssertExpectationsForObjects(t, w)
+}
+
 func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 	// - Controller will try to create and run 5 tasks
 	// - Mock a task to take 2 seconds to create and run

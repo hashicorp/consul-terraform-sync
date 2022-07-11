@@ -6,6 +6,7 @@ BREAKING CHANGES:
 IMPROVEMENTS:
 * Add `openssh` command to Docker image to support git over ssh for Terraform modules [[GH-940](https://github.com/hashicorp/consul-terraform-sync/issues/940)]
 * Upgrade Go to version 1.18 [[GH-951](https://github.com/hashicorp/consul-terraform-sync/issues/951)]
+* Support for CTS running as a daemon without an initial configured task [[GH-986](https://github.com/hashicorp/consul-terraform-sync/pull/986)]
 
 ## 0.6.0 (May 25, 2022)
 
