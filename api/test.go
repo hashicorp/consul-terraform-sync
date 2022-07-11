@@ -45,9 +45,13 @@ func StartCTSSecure(t *testing.T, configPath string, tlsConfig TLSConfig, opts .
 	return configureCTS(t, HTTPSScheme, configPath, tlsConfig, opts...)
 }
 
-func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSConfig, opts ...string) (*Client, func(t *testing.T)) {
+// CTSCommand constructs the command to start CTS, sets the command to output to a buffer, and
+// modifies the configuration file to use a free port for the CTS API. It does not execute the
+// command.
+func CTSCommand(t *testing.T, configPath string, opts ...string) (*exec.Cmd, bytes.Buffer, int) {
 	opts = append(opts, fmt.Sprintf("--config-file=%s", configPath))
 	cmd := exec.Command("consul-terraform-sync", opts...)
+
 	// capture logging to output on error
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
@@ -55,15 +59,6 @@ func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSC
 	// uncomment to see all logs
 	// cmd.Stdout = os.Stdout
 	// cmd.Stderr = os.Stderr
-
-	// run CTS in once-mode
-	for _, opt := range opts {
-		if opt == CTSOnceModeFlag || opt == CTSInspectFlag {
-			err := cmd.Run() // blocking
-			require.NoError(t, err, buf.String())
-			return nil, func(t *testing.T) {}
-		}
-	}
 
 	// Grab port for API when CTS is running as a daemon and append to config file
 	port := testutils.FreePort(t)
@@ -74,10 +69,23 @@ func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSC
 	err = f.Close()
 	require.NoError(t, err)
 
-	// start CTS regularly
-	err = cmd.Start()
-	require.NoError(t, err)
+	return cmd, buf, port
+}
 
+func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSConfig, opts ...string) (*Client, func(t *testing.T)) {
+	cmd, buf, port := CTSCommand(t, configPath, opts...)
+
+	// run CTS in once-mode
+	for _, opt := range opts {
+		if opt == CTSOnceModeFlag || opt == CTSInspectFlag {
+			err := cmd.Run() // blocking
+			require.NoError(t, err, buf.String())
+			return nil, func(t *testing.T) {}
+		}
+	}
+
+	// start CTS regularly
+	err := cmd.Start()
 	require.NoError(t, err)
 
 	clientConfig := &ClientConfig{
