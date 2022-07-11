@@ -242,7 +242,10 @@ task {
 				return
 			}
 			require.NoError(t, err)
-			config.Finalize()
+
+			err = config.Finalize()
+			require.NoError(t, err)
+
 			err = config.Validate()
 			require.NoError(t, err)
 

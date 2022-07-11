@@ -137,10 +137,11 @@ func Test_Daemon_Run_once_long_Terraform(t *testing.T) {
 
 func testOnceThenLong(t *testing.T, driverConf *config.DriverConfig) {
 	port := testutils.FreePort(t)
-	conf := singleTaskConfig()
+	conf := singleTaskConfig(t)
 	conf.Driver = driverConf
 	conf.Port = config.Int(port)
-	conf.Finalize()
+	err := conf.Finalize()
+	require.NoError(t, err)
 	conf.Consul.ServiceRegistration.Enabled = config.Bool(false)
 
 	st := state.NewInMemoryStore(conf)

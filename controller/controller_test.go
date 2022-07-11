@@ -35,9 +35,10 @@ func TestNewControllers(t *testing.T) {
 			"happy path",
 			false,
 			func() *config.Config {
-				conf := singleTaskConfig()
+				conf := singleTaskConfig(t)
 				conf.Consul.Address = &addr
-				conf.Finalize()
+				err = conf.Finalize()
+				require.NoError(t, err)
 				return conf
 			},
 		},
@@ -46,7 +47,7 @@ func TestNewControllers(t *testing.T) {
 			true,
 			func() *config.Config {
 				// Consul address not set
-				return singleTaskConfig()
+				return singleTaskConfig(t)
 			},
 		},
 		{
@@ -54,7 +55,8 @@ func TestNewControllers(t *testing.T) {
 			true,
 			func() *config.Config {
 				conf := config.DefaultConfig()
-				conf.Finalize()
+				err = conf.Finalize()
+				require.NoError(t, err)
 				// override driver config
 				conf.Driver = &config.DriverConfig{}
 				return conf

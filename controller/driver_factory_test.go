@@ -21,7 +21,7 @@ import (
 func Test_driverFactory_Init(t *testing.T) {
 	t.Parallel()
 
-	conf := singleTaskConfig()
+	conf := singleTaskConfig(t)
 
 	cases := []struct {
 		name        string
@@ -61,7 +61,7 @@ func Test_driverFactory_Init(t *testing.T) {
 func Test_driverFactory_Make(t *testing.T) {
 	t.Parallel()
 
-	conf := singleTaskConfig()
+	conf := singleTaskConfig(t)
 	taskConf := *(*conf.Tasks)[0]
 
 	// Mock watcher

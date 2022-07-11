@@ -134,7 +134,7 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 	// - Cancel context after 1 second. Confirm only 1 task created and run
 	t.Parallel()
 
-	conf := multipleTaskConfig(5)
+	conf := multipleTaskConfig(t, 5)
 	ss := state.NewInMemoryStore(conf)
 
 	ctrl := Once{
@@ -191,7 +191,7 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig, allowFail bool,
 	setupNewDriver func(*driver.Task) driver.Driver) ([]*mocksD.Driver, error) {
 
-	conf := multipleTaskConfig(numTasks)
+	conf := multipleTaskConfig(t, numTasks)
 	conf.Driver = driverConf
 	ss := state.NewInMemoryStore(conf)
 
@@ -239,7 +239,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig, allow
 }
 
 func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
-	conf := singleTaskConfig()
+	conf := singleTaskConfig(t)
 
 	if driverConf != nil {
 		conf.Driver = driverConf

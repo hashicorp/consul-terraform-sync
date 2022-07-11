@@ -13,7 +13,8 @@ func TestTaskConfig_Copy(t *testing.T) {
 	t.Parallel()
 
 	finalizedConf := &TaskConfig{}
-	finalizedConf.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+	err := finalizedConf.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+	require.NoError(t, err)
 
 	cases := []struct {
 		name string

@@ -39,7 +39,8 @@ func Test_TasksManager_Task(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		taskConf := validTaskConf
-		taskConf.Finalize(config.DefaultBufferPeriodConfig(), "path")
+		err := taskConf.Finalize(config.DefaultBufferPeriodConfig(), "path")
+		require.NoError(t, err)
 
 		s := new(mocksS.Store)
 		s.On("GetTask", mock.Anything).Return(taskConf, true)
@@ -74,7 +75,8 @@ func Test_TasksManager_Tasks(t *testing.T) {
 			{Name: config.String("task_a")},
 			{Name: config.String("task_b")},
 		}
-		taskConfs.Finalize(config.DefaultBufferPeriodConfig(), config.DefaultWorkingDir)
+		err := taskConfs.Finalize(config.DefaultBufferPeriodConfig(), config.DefaultWorkingDir)
+		require.NoError(t, err)
 
 		s := new(mocksS.Store)
 		s.On("GetAllTasks", mock.Anything, mock.Anything).Return(taskConfs)
@@ -108,7 +110,9 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 		BufferPeriod: config.DefaultBufferPeriodConfig(),
 		WorkingDir:   config.String(config.DefaultWorkingDir),
 	}
-	conf.Finalize()
+	err := conf.Finalize()
+	require.NoError(t, err)
+
 	tm := newTestTasksManager()
 	tm.factory.watcher = new(mocksTmpl.Watcher)
 	tm.state = state.NewInMemoryStore(conf)
@@ -320,7 +324,8 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 	t.Parallel()
 
 	conf := &config.Config{}
-	conf.Finalize()
+	err := conf.Finalize()
+	require.NoError(t, err)
 	ctx := context.Background()
 	tm := newTestTasksManager()
 	tm.state = state.NewInMemoryStore(conf)
@@ -336,7 +341,8 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 				},
 			},
 		}
-		taskConf.Finalize(conf.BufferPeriod, *conf.WorkingDir)
+		err = taskConf.Finalize(conf.BufferPeriod, *conf.WorkingDir)
+		require.NoError(t, err)
 		task, err := newDriverTask(conf, &taskConf, nil)
 		require.NoError(t, err)
 

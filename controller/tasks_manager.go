@@ -513,7 +513,11 @@ func (tm TasksManager) WatchDeletedScheduleTask() <-chan string {
 // createTask creates and initializes a singular task from configuration
 func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskConfig) (driver.Driver, error) {
 	conf := tm.state.GetConfig()
-	taskConfig.Finalize(conf.BufferPeriod, *conf.WorkingDir)
+	if err := taskConfig.Finalize(conf.BufferPeriod, *conf.WorkingDir); err != nil {
+		tm.logger.Trace("invalid config to create task", "error", err)
+		return nil, err
+	}
+
 	if err := taskConfig.Validate(); err != nil {
 		tm.logger.Trace("invalid config to create task", "error", err)
 		return nil, err
