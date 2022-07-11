@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -75,54 +74,9 @@ func TestRequest_TaskRequestFromTaskConfig(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := TaskRequestFromTaskConfig(tc.taskConfig)
-			assert.NoError(t, err)
+			actual := TaskRequestFromTaskConfig(tc.taskConfig)
 			assert.Equal(t, tc.expectedRequest, actual)
 		})
-	}
-}
-
-func TestRequest_readToVariablesMap(t *testing.T) {
-	// Simulate input multiple "files" and check various hcl supported types
-	inputTFVars := map[string][]byte{
-		"simple.tfvars": []byte("singleKey = \"value\""),
-		"complex.tfvars": []byte(`
-b = true
-key = "some_key"
-num = 10
-obj = {
-  argStr = "value"
-  argNum = 10
-  argList = ["l", "i", "s", "t"]
-  argMap = {}
-}
-l = [1, 2, 3]
-tup = ["abc", 123, true]`),
-	}
-	expectedMap := map[string]string{
-		"singleKey": "\"value\"",
-		"key":       "\"some_key\"",
-		"b":         "true",
-		"num":       "10",
-		"obj":       "{\"argList\":[\"l\",\"i\",\"s\",\"t\"],\"argMap\":{},\"argNum\":10,\"argStr\":\"value\"}",
-		"l":         "[1,2,3]",
-		"tup":       "[\"abc\",123,true]",
-	}
-
-	// Length should equal number of fields in inputTFVars
-	expectedLength := 7
-
-	m := make(map[string]string)
-
-	for k, v := range inputTFVars {
-		err := readToVariablesMap(k, bytes.NewReader(v), m)
-		assert.NoError(t, err)
-	}
-
-	assert.Equal(t, expectedLength, len(m))
-
-	for k := range expectedMap {
-		assert.Equal(t, m[k], expectedMap[k])
 	}
 }
 

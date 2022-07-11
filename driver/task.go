@@ -61,7 +61,7 @@ type Task struct {
 	providerInfo map[string]interface{}  // driver.required_provider config info
 	services     []Service
 	module       string
-	variables    hcltmpl.Variables // loaded variables from varFiles
+	variables    hcltmpl.Variables // loaded variables
 	version      string
 	bufferPeriod *BufferPeriod // nil when disabled
 	condition    config.ConditionConfig
@@ -83,7 +83,6 @@ type TaskConfig struct {
 	ProviderInfo map[string]interface{}
 	Services     []Service
 	Module       string
-	VarFiles     []string
 	Variables    map[string]string
 	Version      string
 	BufferPeriod *BufferPeriod
@@ -99,20 +98,6 @@ type TaskConfig struct {
 func NewTask(conf TaskConfig) (*Task, error) {
 	// Load all variables from passed in variable files
 	loadedVars := make(hcltmpl.Variables)
-	for _, vf := range conf.VarFiles {
-		f, err := os.Open(vf)
-		if err != nil {
-			return nil, err
-		}
-		tfvars, err := tftmpl.LoadModuleVariables(vf, f)
-		if err != nil {
-			return nil, err
-		}
-
-		for k, v := range tfvars {
-			loadedVars[k] = v
-		}
-	}
 
 	// Load all variables from passed in variables map
 	tfvars, err := tftmpl.ParseModuleVariablesFromMap(conf.Variables)

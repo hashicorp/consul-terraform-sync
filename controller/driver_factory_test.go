@@ -215,7 +215,6 @@ func TestNewDriverTask(t *testing.T) {
 				},
 				Services:     []driver.Service{},
 				Module:       "path",
-				VarFiles:     []string{},
 				Condition:    config.EmptyConditionConfig(),
 				ModuleInputs: *config.DefaultModuleInputConfigs(),
 				BufferPeriod: &driver.BufferPeriod{
@@ -285,7 +284,6 @@ func TestNewDriverTask(t *testing.T) {
 				},
 				Services:     []driver.Service{},
 				Module:       "path",
-				VarFiles:     []string{},
 				Condition:    config.EmptyConditionConfig(),
 				ModuleInputs: *config.DefaultModuleInputConfigs(),
 				BufferPeriod: &driver.BufferPeriod{
@@ -340,7 +338,6 @@ func TestNewDriverTask(t *testing.T) {
 				ProviderInfo: map[string]interface{}{},
 				Services:     []driver.Service{},
 				Module:       "path",
-				VarFiles:     []string{},
 				Condition:    config.EmptyConditionConfig(),
 				ModuleInputs: *config.DefaultModuleInputConfigs(),
 				BufferPeriod: &driver.BufferPeriod{
@@ -356,7 +353,8 @@ func TestNewDriverTask(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.conf.Finalize()
+			err := tc.conf.Finalize()
+			require.NoError(t, err)
 
 			var providerConfigs []driver.TerraformProviderBlock
 			if tc.conf != nil && tc.conf.TerraformProviders != nil {
