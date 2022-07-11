@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTaskConfig_Copy(t *testing.T) {
@@ -508,9 +509,9 @@ func TestTaskConfig_Finalize(t *testing.T) {
 		r    *TaskConfig
 	}{
 		{
-			"empty",
-			&TaskConfig{},
-			&TaskConfig{
+			name: "empty",
+			i:    &TaskConfig{},
+			r: &TaskConfig{
 				Description:         String(""),
 				Name:                String(""),
 				Providers:           []string{},
@@ -529,11 +530,11 @@ func TestTaskConfig_Finalize(t *testing.T) {
 			},
 		},
 		{
-			"with_name",
-			&TaskConfig{
+			name: "with_name",
+			i: &TaskConfig{
 				Name: String("task"),
 			},
-			&TaskConfig{
+			r: &TaskConfig{
 				Description:         String(""),
 				Name:                String("task"),
 				Providers:           []string{},
@@ -552,12 +553,12 @@ func TestTaskConfig_Finalize(t *testing.T) {
 			},
 		},
 		{
-			"with_schedule_condition",
-			&TaskConfig{
+			name: "with_schedule_condition",
+			i: &TaskConfig{
 				Name:      String("task"),
 				Condition: &ScheduleConditionConfig{},
 			},
-			&TaskConfig{
+			r: &TaskConfig{
 				Description:         String(""),
 				Name:                String("task"),
 				Providers:           []string{},
@@ -580,8 +581,8 @@ func TestTaskConfig_Finalize(t *testing.T) {
 			},
 		},
 		{
-			"with_services_module_input",
-			&TaskConfig{
+			name: "with_services_module_input",
+			i: &TaskConfig{
 				Name:      String("task"),
 				Condition: &ScheduleConditionConfig{},
 				ModuleInputs: &ModuleInputConfigs{
@@ -589,7 +590,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 						ServicesMonitorConfig{Regexp: String("^api$")}},
 				},
 			},
-			&TaskConfig{
+			r: &TaskConfig{
 				Description:         String(""),
 				Name:                String("task"),
 				Providers:           []string{},
@@ -619,14 +620,93 @@ func TestTaskConfig_Finalize(t *testing.T) {
 					}}},
 			},
 		},
+		{
+			name: "with_actual_var_file",
+			i:    &TaskConfig{VarFiles: []string{"testdata/simple.tfvars", "testdata/complex.tfvars"}},
+			r: &TaskConfig{
+				Description:        String(""),
+				Name:               String(""),
+				Providers:          []string{},
+				DeprecatedServices: []string{},
+				Module:             String(""),
+				VarFiles:           []string{"testdata/simple.tfvars", "testdata/complex.tfvars"},
+				Variables: map[string]string{
+					"singleKey": "\"value\"",
+					"key":       "\"some_key\"",
+					"b":         "true",
+					"num":       "10",
+					"obj":       "{\"argList\":[\"l\",\"i\",\"s\",\"t\"],\"argMap\":{},\"argNum\":10,\"argStr\":\"value\"}",
+					"l":         "[1,2,3]",
+					"tup":       "[\"abc\",123,true]",
+				},
+				Version:             String(""),
+				DeprecatedTFVersion: String(""),
+				TFCWorkspace:        DefaultTerraformCloudWorkspaceConfig(),
+				BufferPeriod:        DefaultBufferPeriodConfig(),
+				Enabled:             Bool(true),
+				Condition:           EmptyConditionConfig(),
+				WorkingDir:          String("sync-tasks"),
+				ModuleInputs:        DefaultModuleInputConfigs(),
+			},
+		},
+		{
+			name: "with_actual_var_file_and_variables_existing",
+			i: &TaskConfig{
+				VarFiles: []string{"testdata/simple.tfvars", "testdata/complex.tfvars"},
+				Variables: map[string]string{
+					"singleKey": "\"value\"",
+					"key":       "\"some_key\"",
+					"b":         "false", // This key should be overwritten
+					"num":       "10",
+					"obj":       "{\"argList\":[\"l\",\"i\",\"s\",\"t\"],\"argMap\":{},\"argNum\":10,\"argStr\":\"value\"}",
+					"l":         "[1,2,3]",
+					"tup":       "[\"abc\",123,true]",
+					"newValue":  "42", // This value does not exist in VarFiles, and is expected to exist
+				},
+			},
+			r: &TaskConfig{
+				Description:        String(""),
+				Name:               String(""),
+				Providers:          []string{},
+				DeprecatedServices: []string{},
+				Module:             String(""),
+				VarFiles:           []string{"testdata/simple.tfvars", "testdata/complex.tfvars"},
+				Variables: map[string]string{
+					"singleKey": "\"value\"",
+					"key":       "\"some_key\"",
+					"b":         "true",
+					"num":       "10",
+					"obj":       "{\"argList\":[\"l\",\"i\",\"s\",\"t\"],\"argMap\":{},\"argNum\":10,\"argStr\":\"value\"}",
+					"l":         "[1,2,3]",
+					"tup":       "[\"abc\",123,true]",
+					"newValue":  "42",
+				},
+				Version:             String(""),
+				DeprecatedTFVersion: String(""),
+				TFCWorkspace:        DefaultTerraformCloudWorkspaceConfig(),
+				BufferPeriod:        DefaultBufferPeriodConfig(),
+				Enabled:             Bool(true),
+				Condition:           EmptyConditionConfig(),
+				WorkingDir:          String("sync-tasks"),
+				ModuleInputs:        DefaultModuleInputConfigs(),
+			},
+		},
 	}
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+			err := tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+			require.NoError(t, err)
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}
+}
+
+func TestTaskConfig_Finalize_Error(t *testing.T) {
+	taskConfig := &TaskConfig{VarFiles: []string{"nonExistantFile.tfvars"}}
+
+	err := taskConfig.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+	require.Error(t, err)
 }
 
 func TestTaskConfig_Finalize_DeprecatedSource(t *testing.T) {
@@ -666,7 +746,8 @@ func TestTaskConfig_Finalize_DeprecatedSource(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+			err := tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expected, *tc.i.Module)
 		})
 	}
@@ -774,7 +855,8 @@ func TestTaskConfig_Finalize_DeprecatedSourceInputs(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+			err := tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expected, tc.i.ModuleInputs)
 		})
 	}

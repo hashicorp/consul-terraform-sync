@@ -1,0 +1,1 @@
+singleKey = "value"
