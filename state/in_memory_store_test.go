@@ -308,7 +308,9 @@ func Test_InMemoryStore_SetTask(t *testing.T) {
 			err = tc.expected.Finalize(bp, wd)
 			require.NoError(t, err)
 
-			store.SetTask(tc.input)
+			if err := store.SetTask(tc.input); err != nil {
+				assert.NoError(t, err, "unexpected error while setting task state")
+			}
 			assert.Equal(t, tc.expected, *store.conf.Tasks)
 		})
 	}
@@ -411,7 +413,9 @@ func Test_InMemoryStore_DeleteTaskEvents(t *testing.T) {
 				events: events,
 			}
 
-			store.DeleteTaskEvents(tc.taskName)
+			if err = store.DeleteTaskEvents(tc.taskName); err != nil {
+				assert.NoError(t, err, "unexpected error while deleting task events")
+			}
 			// confirm task's events deleted
 			actual := events.Read(tc.taskName)
 			_, exists := actual[tc.taskName]

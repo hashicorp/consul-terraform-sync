@@ -24,6 +24,7 @@ const defaultTFBackendKVPath = "consul-terraform-sync/terraform"
 // TestConsulServerConfig configures a test Consul server
 type TestConsulServerConfig struct {
 	HTTPSRelPath string
+	PortHTTP     int // random port will be generated if unset
 	PortHTTPS    int // random port will be generated if unset
 }
 
@@ -49,6 +50,10 @@ func NewTestConsulServer(tb testing.TB, config TestConsulServerConfig) *testutil
 				c.VerifyIncomingHTTPS = false
 				c.CertFile = certFile
 				c.KeyFile = keyFile
+			}
+
+			if config.PortHTTP != 0 {
+				c.Ports.HTTP = config.PortHTTP
 			}
 
 			if config.PortHTTPS != 0 {
