@@ -249,7 +249,10 @@ func (c *Config) Finalize() error {
 	if c.Tasks == nil {
 		c.Tasks = DefaultTaskConfigs()
 	}
-	c.Tasks.Finalize(c.BufferPeriod, *c.WorkingDir)
+	err := c.Tasks.Finalize(c.BufferPeriod, *c.WorkingDir)
+	if err != nil {
+		return err
+	}
 
 	if c.DeprecatedServices == nil {
 		c.DeprecatedServices = DefaultServiceConfigs()

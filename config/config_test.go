@@ -315,7 +315,8 @@ func TestConfig_Copy(t *testing.T) {
 	t.Parallel()
 
 	finalizedConf := &Config{}
-	finalizedConf.Finalize()
+	err := finalizedConf.Finalize()
+	require.NoError(t, err)
 
 	cases := []struct {
 		name string
@@ -395,7 +396,8 @@ func TestConfig_Finalize(t *testing.T) {
 	(*expected.DeprecatedServices)[1].CTSUserDefinedMeta = map[string]string{}
 
 	c := longConfig.Copy()
-	c.Finalize()
+	err := c.Finalize()
+	require.NoError(t, err)
 
 	// Verify that ID is not nil, then hardcode since we don't know what
 	// the exact genenerated value would be. Allows us to still use
@@ -574,8 +576,10 @@ func TestConfig_validateDynamicConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.Finalize()
-			err := tc.i.validateDynamicConfigs()
+			err := tc.i.Finalize()
+			require.NoError(t, err)
+
+			err = tc.i.validateDynamicConfigs()
 			if tc.isValid {
 				assert.NoError(t, err)
 			} else {
@@ -669,8 +673,10 @@ func TestConfig_BufferPeriod(t *testing.T) {
 			}
 
 			// replicate config processing in cts cli
-			config.Finalize()
-			err := config.Validate()
+			err := config.Finalize()
+			require.NoError(t, err)
+
+			err = config.Validate()
 			require.NoError(t, err)
 
 			// confirm task-level buf period as expected

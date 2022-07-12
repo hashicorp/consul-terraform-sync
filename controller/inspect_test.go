@@ -80,7 +80,7 @@ func Test_Inspect_Run_context_cancel(t *testing.T) {
 
 	t.Parallel()
 
-	conf := multipleTaskConfig(5)
+	conf := multipleTaskConfig(t, 5)
 	ss := state.NewInMemoryStore(conf)
 
 	ctrl := Inspect{
@@ -151,7 +151,7 @@ func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 	// error, that creating/running tasks does not hang and exits.
 	t.Parallel()
 
-	conf := singleTaskConfig()
+	conf := singleTaskConfig(t)
 
 	ss := state.NewInMemoryStore(conf)
 
@@ -216,7 +216,7 @@ func Test_Inspect_Run_WatchDep_errors(t *testing.T) {
 
 func testInspect(t *testing.T, numTasks int, setupNewDriver func(*driver.Task) driver.Driver) error {
 
-	conf := multipleTaskConfig(numTasks)
+	conf := multipleTaskConfig(t, numTasks)
 	ss := state.NewInMemoryStore(conf)
 
 	ctrl := Inspect{

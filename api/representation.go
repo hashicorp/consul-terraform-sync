@@ -2,15 +2,10 @@ package api
 
 import (
 	"encoding/json"
-	"io"
-	"os"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/config"
-	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
-	"github.com/hashicorp/consul-terraform-sync/templates/tftmpl"
-	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
 // TaskRequest is a wrapper around the generated TaskRequest
@@ -18,50 +13,9 @@ import (
 type TaskRequest oapigen.TaskRequest
 
 // TaskRequestFromTaskConfig converts a taskRequest object to a Config TaskConfig object.
-func TaskRequestFromTaskConfig(tc config.TaskConfig) (TaskRequest, error) {
-	if len(tc.VarFiles) > 0 {
-		tc.Variables = make(map[string]string)
-		for _, vf := range tc.VarFiles {
-			f, err := os.Open(vf)
-			if err != nil {
-				return TaskRequest{}, err
-			}
-
-			err = readToVariablesMap(vf, f, tc.Variables)
-			if err != nil {
-				return TaskRequest{}, err
-			}
-		}
-	}
-
+func TaskRequestFromTaskConfig(tc config.TaskConfig) TaskRequest {
 	t := oapigenTaskFromConfigTask(tc)
-	return TaskRequest{Task: t}, nil
-}
-
-func readToVariablesMap(filename string, reader io.Reader, variables map[string]string) error {
-	// Load all variables from passed in variable files before
-	// converting to map[string]string
-	loadedVars := make(hcltmpl.Variables)
-	tfvars, err := tftmpl.LoadModuleVariables(filename, reader)
-	if err != nil {
-		return err
-	}
-
-	for k, v := range tfvars {
-		loadedVars[k] = v
-	}
-
-	// Value can be anything so marshal it to equivalent json
-	// and store json as the string value in the map
-	for k, v := range loadedVars {
-		b, err := ctyjson.Marshal(v, v.Type())
-		if err != nil {
-			return err
-		}
-		variables[k] = string(b)
-	}
-
-	return nil
+	return TaskRequest{Task: t}
 }
 
 // ToTaskConfig converts a TaskRequest object to a Config TaskConfig object.

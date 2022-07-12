@@ -155,7 +155,10 @@ func TestModuleInput_DecodeConfig_Success(t *testing.T) {
 			// replicate decoding process used by cts cli
 			config, err := decodeConfig([]byte(tc.config), testFileName)
 			require.NoError(t, err)
-			config.Finalize()
+
+			err = config.Finalize()
+			require.NoError(t, err)
+
 			err = config.Validate()
 			require.NoError(t, err)
 

@@ -128,13 +128,46 @@ func Test_Once_Run_WatchDep_errors_Terraform(t *testing.T) {
 	testOnceWatchDepErrors(t, driverConf)
 }
 
+func Test_Once_Run_No_Tasks(t *testing.T) {
+	t.Parallel()
+
+	// Create a configuration, do not include any tasks
+	conf := &config.Config{}
+	ss := state.NewInMemoryStore(conf)
+
+	ctrl := Once{
+		logger: logging.NewNullLogger(),
+		state:  ss,
+	}
+
+	err := ctrl.Run(context.Background())
+	require.NoError(t, err)
+}
+
+func Test_Once_Stop(t *testing.T) {
+	t.Parallel()
+
+	// Craee moock watcher
+	w := new(mocksTmpl.Watcher)
+	w.On("Stop").Return(mock.Anything).Once()
+
+	ctrl := Once{
+		logger:  logging.NewNullLogger(),
+		watcher: w,
+	}
+
+	// Assert that the watcher is called once and only once
+	ctrl.Stop()
+	mock.AssertExpectationsForObjects(t, w)
+}
+
 func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 	// - Controller will try to create and run 5 tasks
 	// - Mock a task to take 2 seconds to create and run
 	// - Cancel context after 1 second. Confirm only 1 task created and run
 	t.Parallel()
 
-	conf := multipleTaskConfig(5)
+	conf := multipleTaskConfig(t, 5)
 	ss := state.NewInMemoryStore(conf)
 
 	ctrl := Once{
@@ -191,7 +224,7 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig, allowFail bool,
 	setupNewDriver func(*driver.Task) driver.Driver) ([]*mocksD.Driver, error) {
 
-	conf := multipleTaskConfig(numTasks)
+	conf := multipleTaskConfig(t, numTasks)
 	conf.Driver = driverConf
 	ss := state.NewInMemoryStore(conf)
 
@@ -239,7 +272,7 @@ func testOnce(t *testing.T, numTasks int, driverConf *config.DriverConfig, allow
 }
 
 func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
-	conf := singleTaskConfig()
+	conf := singleTaskConfig(t)
 
 	if driverConf != nil {
 		conf.Driver = driverConf

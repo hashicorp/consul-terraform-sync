@@ -158,14 +158,10 @@ func (c *taskCreateCommand) Run(args []string) int {
 		return ExitCodeError
 	}
 
+	// We don't want to finalize the config, since nil values provide valuable information to the
+	// API. Therefore, explicitly set the variables in case variables files were provided
 	taskConfig := taskConfigs[0]
-
-	// Check if task config provided is using the deprecated fields
-	if err = handleDeprecations(c.UI, taskConfig); err != nil {
-		return ExitCodeError
-	}
-
-	taskReq, err := api.TaskRequestFromTaskConfig(*taskConfig)
+	err = taskConfig.SetVariables()
 	if err != nil {
 		c.UI.Error(errCreatingRequest)
 		c.UI.Output(fmt.Sprintf("task '%s' is invalid", taskFile))
@@ -175,6 +171,13 @@ func (c *taskCreateCommand) Run(args []string) int {
 		return ExitCodeError
 	}
 
+	// Check if task config provided is using the deprecated fields
+	if err = handleDeprecations(c.UI, taskConfig); err != nil {
+		return ExitCodeError
+	}
+
+	// Convert the task config to a request
+	taskReq := api.TaskRequestFromTaskConfig(*taskConfig)
 	client, err := c.meta.taskLifecycleClient()
 	if err != nil {
 		c.UI.Error(errCreatingClient)

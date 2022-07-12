@@ -60,7 +60,8 @@ func TestServicesRenderRace(t *testing.T) {
 			WorkingDir: config.String(tempDir),
 		}}
 	conf.Consul.Address = config.String(srv.HTTPAddr)
-	conf.Finalize()
+	err := conf.Finalize()
+	require.NoError(t, err)
 	path, err := filepath.Abs("./")
 	require.NoError(t, err)
 	conf.Driver.Terraform.Path = config.String(path)

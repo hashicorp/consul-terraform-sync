@@ -482,7 +482,7 @@ func Test_ConditionMonitor_WatchDep_context_cancel(t *testing.T) {
 }
 
 // singleTaskConfig returns a happy path config that has a single task
-func singleTaskConfig() *config.Config {
+func singleTaskConfig(t *testing.T) *config.Config {
 	c := &config.Config{
 		Consul: &config.ConsulConfig{
 			Address: config.String("consul-example.com"),
@@ -513,11 +513,12 @@ func singleTaskConfig() *config.Config {
 		},
 	}
 
-	c.Finalize()
+	err := c.Finalize()
+	require.NoError(t, err)
 	return c
 }
 
-func multipleTaskConfig(numTasks int) *config.Config {
+func multipleTaskConfig(t *testing.T, numTasks int) *config.Config {
 	tasks := make(config.TaskConfigs, numTasks)
 	for i := 0; i < numTasks; i++ {
 		tasks[i] = &config.TaskConfig{
@@ -531,7 +532,8 @@ func multipleTaskConfig(numTasks int) *config.Config {
 		}
 	}
 	c := &config.Config{Tasks: &tasks}
-	c.Finalize()
+	err := c.Finalize()
+	require.NoError(t, err)
 	return c
 }
 

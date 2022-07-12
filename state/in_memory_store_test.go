@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_NewInMemoryStore(t *testing.T) {
@@ -51,7 +52,8 @@ func Test_NewInMemoryStore(t *testing.T) {
 
 	t.Run("stored config is dereferenced", func(t *testing.T) {
 		finalizedConf := config.DefaultConfig()
-		finalizedConf.Finalize()
+		err := finalizedConf.Finalize()
+		require.NoError(t, err)
 		actual := NewInMemoryStore(finalizedConf)
 
 		// Confirm that input and stored config have same values
@@ -91,7 +93,8 @@ func Test_InMemoryStore_GetConfig(t *testing.T) {
 
 	t.Run("returned config is dereferenced", func(t *testing.T) {
 		finalizedConf := config.DefaultConfig()
-		finalizedConf.Finalize()
+		err := finalizedConf.Finalize()
+		require.NoError(t, err)
 		store := NewInMemoryStore(finalizedConf)
 
 		actual := store.GetConfig()
@@ -133,7 +136,8 @@ func Test_InMemoryStore_GetAllTasks(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.input.Finalize()
+			err := tc.input.Finalize()
+			require.NoError(t, err)
 			store := NewInMemoryStore(&tc.input)
 			actual := store.GetAllTasks()
 
@@ -148,7 +152,8 @@ func Test_InMemoryStore_GetAllTasks(t *testing.T) {
 				{Name: config.String("task_a")},
 			},
 		}
-		finalizedConf.Finalize()
+		err := finalizedConf.Finalize()
+		require.NoError(t, err)
 		store := NewInMemoryStore(finalizedConf)
 
 		actual := store.GetAllTasks()
@@ -208,7 +213,8 @@ func Test_InMemoryStore_GetTask(t *testing.T) {
 				{Name: config.String("task_a")},
 			},
 		}
-		finalizedConf.Finalize()
+		err := finalizedConf.Finalize()
+		require.NoError(t, err)
 		store := NewInMemoryStore(finalizedConf)
 
 		actual, exists := store.GetTask("task_a")
@@ -290,14 +296,17 @@ func Test_InMemoryStore_SetTask(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.stateConf.Finalize()
+			err := tc.stateConf.Finalize()
+			require.NoError(t, err)
 			store := NewInMemoryStore(tc.stateConf)
 
 			// finalize the task configs
 			bp := tc.stateConf.BufferPeriod
 			wd := config.StringVal(tc.stateConf.WorkingDir)
-			tc.input.Finalize(bp, wd)
-			tc.expected.Finalize(bp, wd)
+			err = tc.input.Finalize(bp, wd)
+			require.NoError(t, err)
+			err = tc.expected.Finalize(bp, wd)
+			require.NoError(t, err)
 
 			store.SetTask(tc.input)
 			assert.Equal(t, tc.expected, *store.conf.Tasks)

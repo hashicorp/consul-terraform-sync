@@ -3,24 +3,22 @@ package tftmpl
 import (
 	"testing"
 
-	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAppendRootTerraformBlock_backend(t *testing.T) {
-	consulBackend, err := config.DefaultTerraformBackend(&config.ConsulConfig{
-		Address: config.String("consul.example.com"),
-		TLS: &config.TLSConfig{
-			Enabled: config.Bool(true),
-			CACert:  config.String("ca_cert"),
-			Cert:    config.String("cert"),
-			Key:     config.String("key"),
-		},
-	})
-	require.NoError(t, err)
+	backend := map[string]interface{}{
+		"address":   "consul.example.com",
+		"ca_file":   "ca_cert",
+		"cert_file": "cert",
+		"gzip":      true,
+		"key_file":  "key",
+		"path":      "consul-terraform-sync/terraform",
+		"scheme":    "https",
+	}
+	consulBackend := map[string]interface{}{"consul": backend}
 
 	testCases := []struct {
 		name       string
