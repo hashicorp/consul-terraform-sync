@@ -445,7 +445,16 @@ func TestModuleInputConfigs_Merge(t *testing.T) {
 			&ModuleInputConfigs{},
 		},
 		{
-			"happy_path_different_type",
+			"happy_path_different_type_one",
+			&ModuleInputConfigs{&ServicesModuleInputConfig{}},
+			&ModuleInputConfigs{&ConsulKVModuleInputConfig{}},
+			&ModuleInputConfigs{
+				&ServicesModuleInputConfig{},
+				&ConsulKVModuleInputConfig{},
+			},
+		},
+		{
+			"happy_path_different_type_two",
 			&ModuleInputConfigs{&ServicesModuleInputConfig{}},
 			&ModuleInputConfigs{&IntentionsModuleInputConfig{}},
 			&ModuleInputConfigs{
