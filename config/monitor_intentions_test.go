@@ -170,7 +170,7 @@ func TestIntentionsMonitorConfig_Merge(t *testing.T) {
 			&IntentionsMonitorConfig{SourceServices: &IntentionsServicesConfig{Regexp: String("same")}},
 		},
 		{
-			"regexp_empty_same",
+			"regexp_same_merge",
 			&IntentionsMonitorConfig{SourceServices: &IntentionsServicesConfig{Regexp: String("same")}},
 			&IntentionsMonitorConfig{SourceServices: &IntentionsServicesConfig{Regexp: String("same")}},
 			&IntentionsMonitorConfig{SourceServices: &IntentionsServicesConfig{Regexp: String("same")}},
