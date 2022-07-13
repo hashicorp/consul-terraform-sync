@@ -15,6 +15,14 @@ type ConsulClientInterface struct {
 	mock.Mock
 }
 
+type ConsulClientInterface_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *ConsulClientInterface) EXPECT() *ConsulClientInterface_Expecter {
+	return &ConsulClientInterface_Expecter{mock: &_m.Mock}
+}
+
 // DeregisterService provides a mock function with given fields: ctx, serviceID, q
 func (_m *ConsulClientInterface) DeregisterService(ctx context.Context, serviceID string, q *api.QueryOptions) error {
 	ret := _m.Called(ctx, serviceID, q)
@@ -27,6 +35,31 @@ func (_m *ConsulClientInterface) DeregisterService(ctx context.Context, serviceI
 	}
 
 	return r0
+}
+
+// ConsulClientInterface_DeregisterService_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeregisterService'
+type ConsulClientInterface_DeregisterService_Call struct {
+	*mock.Call
+}
+
+// DeregisterService is a helper method to define mock.On call
+//  - ctx context.Context
+//  - serviceID string
+//  - q *api.QueryOptions
+func (_e *ConsulClientInterface_Expecter) DeregisterService(ctx interface{}, serviceID interface{}, q interface{}) *ConsulClientInterface_DeregisterService_Call {
+	return &ConsulClientInterface_DeregisterService_Call{Call: _e.mock.On("DeregisterService", ctx, serviceID, q)}
+}
+
+func (_c *ConsulClientInterface_DeregisterService_Call) Run(run func(ctx context.Context, serviceID string, q *api.QueryOptions)) *ConsulClientInterface_DeregisterService_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(*api.QueryOptions))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_DeregisterService_Call) Return(_a0 error) *ConsulClientInterface_DeregisterService_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // GetLicense provides a mock function with given fields: ctx, q
@@ -48,6 +81,30 @@ func (_m *ConsulClientInterface) GetLicense(ctx context.Context, q *api.QueryOpt
 	}
 
 	return r0, r1
+}
+
+// ConsulClientInterface_GetLicense_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetLicense'
+type ConsulClientInterface_GetLicense_Call struct {
+	*mock.Call
+}
+
+// GetLicense is a helper method to define mock.On call
+//  - ctx context.Context
+//  - q *api.QueryOptions
+func (_e *ConsulClientInterface_Expecter) GetLicense(ctx interface{}, q interface{}) *ConsulClientInterface_GetLicense_Call {
+	return &ConsulClientInterface_GetLicense_Call{Call: _e.mock.On("GetLicense", ctx, q)}
+}
+
+func (_c *ConsulClientInterface_GetLicense_Call) Run(run func(ctx context.Context, q *api.QueryOptions)) *ConsulClientInterface_GetLicense_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*api.QueryOptions))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_GetLicense_Call) Return(_a0 string, _a1 error) *ConsulClientInterface_GetLicense_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // KVGet provides a mock function with given fields: ctx, key, q
@@ -82,6 +139,31 @@ func (_m *ConsulClientInterface) KVGet(ctx context.Context, key string, q *api.Q
 	return r0, r1, r2
 }
 
+// ConsulClientInterface_KVGet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'KVGet'
+type ConsulClientInterface_KVGet_Call struct {
+	*mock.Call
+}
+
+// KVGet is a helper method to define mock.On call
+//  - ctx context.Context
+//  - key string
+//  - q *api.QueryOptions
+func (_e *ConsulClientInterface_Expecter) KVGet(ctx interface{}, key interface{}, q interface{}) *ConsulClientInterface_KVGet_Call {
+	return &ConsulClientInterface_KVGet_Call{Call: _e.mock.On("KVGet", ctx, key, q)}
+}
+
+func (_c *ConsulClientInterface_KVGet_Call) Run(run func(ctx context.Context, key string, q *api.QueryOptions)) *ConsulClientInterface_KVGet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(*api.QueryOptions))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_KVGet_Call) Return(_a0 *api.KVPair, _a1 *api.QueryMeta, _a2 error) *ConsulClientInterface_KVGet_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
 // Lock provides a mock function with given fields: l, stopCh
 func (_m *ConsulClientInterface) Lock(l *api.Lock, stopCh <-chan struct{}) (<-chan struct{}, error) {
 	ret := _m.Called(l, stopCh)
@@ -103,6 +185,30 @@ func (_m *ConsulClientInterface) Lock(l *api.Lock, stopCh <-chan struct{}) (<-ch
 	}
 
 	return r0, r1
+}
+
+// ConsulClientInterface_Lock_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Lock'
+type ConsulClientInterface_Lock_Call struct {
+	*mock.Call
+}
+
+// Lock is a helper method to define mock.On call
+//  - l *api.Lock
+//  - stopCh <-chan struct{}
+func (_e *ConsulClientInterface_Expecter) Lock(l interface{}, stopCh interface{}) *ConsulClientInterface_Lock_Call {
+	return &ConsulClientInterface_Lock_Call{Call: _e.mock.On("Lock", l, stopCh)}
+}
+
+func (_c *ConsulClientInterface_Lock_Call) Run(run func(l *api.Lock, stopCh <-chan struct{})) *ConsulClientInterface_Lock_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*api.Lock), args[1].(<-chan struct{}))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_Lock_Call) Return(_a0 <-chan struct{}, _a1 error) *ConsulClientInterface_Lock_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // LockOpts provides a mock function with given fields: opts
@@ -128,6 +234,29 @@ func (_m *ConsulClientInterface) LockOpts(opts *api.LockOptions) (*api.Lock, err
 	return r0, r1
 }
 
+// ConsulClientInterface_LockOpts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LockOpts'
+type ConsulClientInterface_LockOpts_Call struct {
+	*mock.Call
+}
+
+// LockOpts is a helper method to define mock.On call
+//  - opts *api.LockOptions
+func (_e *ConsulClientInterface_Expecter) LockOpts(opts interface{}) *ConsulClientInterface_LockOpts_Call {
+	return &ConsulClientInterface_LockOpts_Call{Call: _e.mock.On("LockOpts", opts)}
+}
+
+func (_c *ConsulClientInterface_LockOpts_Call) Run(run func(opts *api.LockOptions)) *ConsulClientInterface_LockOpts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*api.LockOptions))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_LockOpts_Call) Return(_a0 *api.Lock, _a1 error) *ConsulClientInterface_LockOpts_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // RegisterService provides a mock function with given fields: ctx, s
 func (_m *ConsulClientInterface) RegisterService(ctx context.Context, s *api.AgentServiceRegistration) error {
 	ret := _m.Called(ctx, s)
@@ -140,6 +269,30 @@ func (_m *ConsulClientInterface) RegisterService(ctx context.Context, s *api.Age
 	}
 
 	return r0
+}
+
+// ConsulClientInterface_RegisterService_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegisterService'
+type ConsulClientInterface_RegisterService_Call struct {
+	*mock.Call
+}
+
+// RegisterService is a helper method to define mock.On call
+//  - ctx context.Context
+//  - s *api.AgentServiceRegistration
+func (_e *ConsulClientInterface_Expecter) RegisterService(ctx interface{}, s interface{}) *ConsulClientInterface_RegisterService_Call {
+	return &ConsulClientInterface_RegisterService_Call{Call: _e.mock.On("RegisterService", ctx, s)}
+}
+
+func (_c *ConsulClientInterface_RegisterService_Call) Run(run func(ctx context.Context, s *api.AgentServiceRegistration)) *ConsulClientInterface_RegisterService_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*api.AgentServiceRegistration))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_RegisterService_Call) Return(_a0 error) *ConsulClientInterface_RegisterService_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // SessionCreate provides a mock function with given fields: ctx, se, q
@@ -172,6 +325,31 @@ func (_m *ConsulClientInterface) SessionCreate(ctx context.Context, se *api.Sess
 	return r0, r1, r2
 }
 
+// ConsulClientInterface_SessionCreate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SessionCreate'
+type ConsulClientInterface_SessionCreate_Call struct {
+	*mock.Call
+}
+
+// SessionCreate is a helper method to define mock.On call
+//  - ctx context.Context
+//  - se *api.SessionEntry
+//  - q *api.WriteOptions
+func (_e *ConsulClientInterface_Expecter) SessionCreate(ctx interface{}, se interface{}, q interface{}) *ConsulClientInterface_SessionCreate_Call {
+	return &ConsulClientInterface_SessionCreate_Call{Call: _e.mock.On("SessionCreate", ctx, se, q)}
+}
+
+func (_c *ConsulClientInterface_SessionCreate_Call) Run(run func(ctx context.Context, se *api.SessionEntry, q *api.WriteOptions)) *ConsulClientInterface_SessionCreate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*api.SessionEntry), args[2].(*api.WriteOptions))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_SessionCreate_Call) Return(_a0 string, _a1 *api.WriteMeta, _a2 error) *ConsulClientInterface_SessionCreate_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
 // SessionRenewPeriodic provides a mock function with given fields: initialTTL, id, q, doneCh
 func (_m *ConsulClientInterface) SessionRenewPeriodic(initialTTL string, id string, q *api.WriteOptions, doneCh <-chan struct{}) error {
 	ret := _m.Called(initialTTL, id, q, doneCh)
@@ -186,6 +364,32 @@ func (_m *ConsulClientInterface) SessionRenewPeriodic(initialTTL string, id stri
 	return r0
 }
 
+// ConsulClientInterface_SessionRenewPeriodic_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SessionRenewPeriodic'
+type ConsulClientInterface_SessionRenewPeriodic_Call struct {
+	*mock.Call
+}
+
+// SessionRenewPeriodic is a helper method to define mock.On call
+//  - initialTTL string
+//  - id string
+//  - q *api.WriteOptions
+//  - doneCh <-chan struct{}
+func (_e *ConsulClientInterface_Expecter) SessionRenewPeriodic(initialTTL interface{}, id interface{}, q interface{}, doneCh interface{}) *ConsulClientInterface_SessionRenewPeriodic_Call {
+	return &ConsulClientInterface_SessionRenewPeriodic_Call{Call: _e.mock.On("SessionRenewPeriodic", initialTTL, id, q, doneCh)}
+}
+
+func (_c *ConsulClientInterface_SessionRenewPeriodic_Call) Run(run func(initialTTL string, id string, q *api.WriteOptions, doneCh <-chan struct{})) *ConsulClientInterface_SessionRenewPeriodic_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string), args[2].(*api.WriteOptions), args[3].(<-chan struct{}))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_SessionRenewPeriodic_Call) Return(_a0 error) *ConsulClientInterface_SessionRenewPeriodic_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Unlock provides a mock function with given fields: l
 func (_m *ConsulClientInterface) Unlock(l *api.Lock) error {
 	ret := _m.Called(l)
@@ -198,6 +402,29 @@ func (_m *ConsulClientInterface) Unlock(l *api.Lock) error {
 	}
 
 	return r0
+}
+
+// ConsulClientInterface_Unlock_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Unlock'
+type ConsulClientInterface_Unlock_Call struct {
+	*mock.Call
+}
+
+// Unlock is a helper method to define mock.On call
+//  - l *api.Lock
+func (_e *ConsulClientInterface_Expecter) Unlock(l interface{}) *ConsulClientInterface_Unlock_Call {
+	return &ConsulClientInterface_Unlock_Call{Call: _e.mock.On("Unlock", l)}
+}
+
+func (_c *ConsulClientInterface_Unlock_Call) Run(run func(l *api.Lock)) *ConsulClientInterface_Unlock_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*api.Lock))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_Unlock_Call) Return(_a0 error) *ConsulClientInterface_Unlock_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 type mockConstructorTestingTNewConsulClientInterface interface {
