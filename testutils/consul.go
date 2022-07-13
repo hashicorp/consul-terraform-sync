@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/testutils/sdk"
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -92,7 +91,7 @@ func registerConsulService(tb testing.TB, srv *testutil.TestServer,
 	defer resp.Body.Close()
 
 	if health != nil {
-		sdk.AddCheck(srv, tb, s.ID, s.ID, *health)
+		srv.AddCheck(tb, s.ID, s.ID, *health)
 	}
 
 	if wait.Seconds() == 0 {
@@ -301,18 +300,6 @@ func TestServices(n int) []testutil.TestService {
 		})
 }
 
-// Generate service instance TestService entries.
-// Services with different IDs but with the same name.
-func TestInstances(n int) []testutil.TestService {
-	return generateServices(n,
-		func(i int) string {
-			return fmt.Sprintf("svc-name-common")
-		},
-		func(i int) string {
-			return fmt.Sprintf("svc-id-%d", i)
-		})
-}
-
 // shorter name for the formatting functions
 type fmtFunc func(i int) string
 
@@ -330,6 +317,16 @@ func generateServices(n int, namefmt, idfmt fmtFunc) []testutil.TestService {
 		}
 	}
 	return services
+}
+
+// CheckStateFile checks statefile in the default Terraform backend ConsulKV.
+func CheckStateFile(t *testing.T, consulAddr, taskname string) {
+	u := fmt.Sprintf("http://%s/v1/kv/%s-env:%s", consulAddr,
+		defaultTFBackendKVPath, taskname)
+	resp := RequestHTTP(t, http.MethodGet, u, "")
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode, "Unable to find statefile"+
+		" in Consul KV")
 }
 
 // ---------------------------------------------------------------------------
@@ -366,14 +363,4 @@ func ShowMeHealth(t testing.TB, srv *testutil.TestServer, svcName string) {
 	resp.Body.Close()
 
 	fmt.Println(string(b))
-}
-
-// CheckStateFile checks statefile in the default Terraform backend ConsulKV.
-func CheckStateFile(t *testing.T, consulAddr, taskname string) {
-	u := fmt.Sprintf("http://%s/v1/kv/%s-env:%s", consulAddr,
-		defaultTFBackendKVPath, taskname)
-	resp := RequestHTTP(t, http.MethodGet, u, "")
-	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode, "Unable to find statefile"+
-		" in Consul KV")
 }

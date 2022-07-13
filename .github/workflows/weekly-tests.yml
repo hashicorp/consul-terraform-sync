@@ -53,54 +53,6 @@ jobs:
         run: |
           make test-vault-integration
 
-  benchmarks:
-    name: Benchmarks Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 150
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Setup Consul
-        uses: ./.github/actions/setup-consul
-        with:
-          version: ${{ env.CONSUL_VERSION }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Copy Terraform to test workdir
-        run: |
-          cp /usr/local/bin/terraform ./e2e/benchmarks/
-
-      - name: Run benchmarks tests
-        run: |
-          set -euo pipefail
-          mkdir -p .build
-          make test-benchmarks | tee .build/benchmarks-output.json
-
-      - name: Parse benchmarks output
-        run: |
-          set -euo pipefail
-          grep 'ns/op' .build/benchmarks-output.json | \
-            jq -r .Output \
-            | sed 's/\t/ /g' \
-            | tr -s ' \n' \
-            | sed 's/ /,/g' \
-            | sort -r \
-            | tee .build/benchmarks-results-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.csv
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: benchmarks-results
-          path: .build/benchmarks-results*.csv
-
   slack-notification:
     name: Slack Notification
     if: |
@@ -108,7 +60,6 @@ jobs:
     needs:
       - compatability
       - vault-integration
-      - benchmarks
     runs-on: ubuntu-latest
     steps:
       - name: Slack Workflow Notification
