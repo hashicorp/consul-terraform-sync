@@ -85,6 +85,7 @@ func (c *IntentionsServicesConfig) Validate() error {
 			"configured. If both are needed, consider including the list of " +
 			"names as part of the regex or creating separate tasks")
 	}
+
 	if !namesConfigured && !regexConfigured {
 		return fmt.Errorf("either the regexp or names field must be configured")
 	}
