@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"context"
 	"testing"
 
 	mocks "github.com/hashicorp/consul-terraform-sync/mocks/templates"
@@ -160,12 +161,14 @@ func TestDrivers_GetTaskByTemplate(t *testing.T) {
 
 func TestDrivers_Reset(t *testing.T) {
 	d := NewDrivers()
+	w := mocks.NewWatcher(t)
+	w.EXPECT().Deregister(mock.Anything).Return()
 	driverType := "terraform"
-	terraform := new(Terraform)
+	terraform := &Terraform{watcher: w}
 	d.drivers[driverType] = terraform
 	d.active.Store(driverType, struct{}{})
 
-	d.Reset()
+	d.Reset(context.Background())
 	_, ok := d.drivers[driverType]
 	assert.False(t, ok)
 
