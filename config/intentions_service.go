@@ -116,14 +116,8 @@ func (c *IntentionsServicesConfig) GoString() string {
 	}
 
 	if len(c.Names) > 0 {
-		return fmt.Sprintf(
-			"Names:%s",
-			c.Names,
-		)
+		return fmt.Sprintf("Names:%s",c.Names,)
 	} else {
-		return fmt.Sprintf(
-			"Regexp:%s",
-			StringVal(c.Regexp),
-		)
+		return fmt.Sprintf("Regexp:%s",StringVal(c.Regexp),)
 	}
 }
