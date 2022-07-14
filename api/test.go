@@ -48,7 +48,7 @@ func StartCTSSecure(t *testing.T, configPath string, tlsConfig TLSConfig, opts .
 // CTSCommand constructs the command to start CTS, sets the command to output to a buffer, and
 // modifies the configuration file to use a free port for the CTS API. It does not execute the
 // command.
-func CTSCommand(t *testing.T, configPath string, opts ...string) (*exec.Cmd, bytes.Buffer, int) {
+func CTSCommand(t *testing.T, configPath string, opts ...string) (*exec.Cmd, *bytes.Buffer, int) {
 	opts = append(opts, fmt.Sprintf("--config-file=%s", configPath))
 	cmd := exec.Command("consul-terraform-sync", opts...)
 
@@ -69,7 +69,7 @@ func CTSCommand(t *testing.T, configPath string, opts ...string) (*exec.Cmd, byt
 	err = f.Close()
 	require.NoError(t, err)
 
-	return cmd, buf, port
+	return cmd, &buf, port
 }
 
 func configureCTS(t *testing.T, scheme string, configPath string, tlsConfig TLSConfig, opts ...string) (*Client, func(t *testing.T)) {
