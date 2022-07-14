@@ -125,6 +125,5 @@ func (c *IntentionsServicesConfig) GoString() string {
 			"Regexp:%s",
 			StringVal(c.Regexp),
 		)
-
 	}
 }
