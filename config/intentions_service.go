@@ -120,7 +120,6 @@ func (c *IntentionsServicesConfig) GoString() string {
 			"Names:%s",
 			c.Names,
 		)
-
 	} else {
 		return fmt.Sprintf(
 			"Regexp:%s",
