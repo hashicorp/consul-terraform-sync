@@ -33,8 +33,7 @@ type Daemon struct {
 
 	consulClient client.ConsulClientInterface
 
-	// whether or not the tasks have gone through once-mode. intended to be used
-	// by benchmarks to run once-mode separately
+	// indicates whether the tasks have gone through once-mode or not
 	once bool
 }
 
@@ -155,8 +154,7 @@ func (ctrl *Daemon) Run(ctx context.Context) error {
 	}
 }
 
-// Once runs the tasks once. Intended to only be called by Run() or outside of
-// Run() for the case of benchmarks
+// Once runs the tasks once. Intended to only be called by Run()
 func (ctrl *Daemon) Once(ctx context.Context) error {
 	once := Once{
 		logger:       ctrl.logger,

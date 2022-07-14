@@ -12,10 +12,6 @@ import (
 
 var (
 	_ Controller = (*Inspect)(nil)
-
-	// MuteInspectController is used to toggle muting the InspectController
-	// from forcing Terraform output, useful for benchmarks
-	MuteInspectController bool
 )
 
 // Inspect is the controller to run in inspect mode
@@ -114,15 +110,13 @@ func (ctrl *Inspect) inspectConsecutive(ctx context.Context) error {
 				return err
 			}
 
-			if !MuteInspectController {
-				// output plan to console
-				if url != "" {
-					ctrl.logger.Info("inspection results", taskNameLogKey,
-						taskName, "plan", plan, "url", url)
-				} else {
-					ctrl.logger.Info("inspection results", taskNameLogKey,
-						taskName, "plan", plan)
-				}
+			// output plan to console
+			if url != "" {
+				ctrl.logger.Info("inspection results", taskNameLogKey,
+					taskName, "plan", plan, "url", url)
+			} else {
+				ctrl.logger.Info("inspection results", taskNameLogKey,
+					taskName, "plan", plan)
 			}
 
 			ctrl.logger.Info("inspected task", taskNameLogKey, taskName)
