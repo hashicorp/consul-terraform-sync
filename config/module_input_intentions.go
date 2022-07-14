@@ -73,6 +73,7 @@ func (c *IntentionsModuleInputConfig) Validate() error {
 	if c == nil { // config not required, return early
 		return nil
 	}
+
 	if err := c.IntentionsMonitorConfig.Validate(); err != nil {
 		return fmt.Errorf("error validating `module_input \"intentions\"`: %s", err)
 	}
