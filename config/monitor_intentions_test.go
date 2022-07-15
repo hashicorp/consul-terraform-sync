@@ -440,7 +440,7 @@ func TestIntentionsMonitorConfig_GoString(t *testing.T) {
 				},
 			},
 			"&IntentionsMonitorConfig{Datacenter:dc, Namespace:namespace, " +
-				"Source Services Regexp:^web.*, Destination Services Regexp:^api.*}",
+				"Source Services: Regexp:^web.*, Destination Services: Regexp:^api.*}",
 		},
 		{
 			"names_fully_configured",
@@ -455,7 +455,7 @@ func TestIntentionsMonitorConfig_GoString(t *testing.T) {
 				},
 			},
 			"&IntentionsMonitorConfig{Datacenter:dc, Namespace:namespace, " +
-				"Source Services Names:[servicea], Destination Services Names:[serviceb]}",
+				"Source Services: Names:[servicea], Destination Services: Names:[serviceb]}",
 		},
 	}
 
