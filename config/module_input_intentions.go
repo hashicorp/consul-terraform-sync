@@ -86,6 +86,9 @@ func (c *IntentionsModuleInputConfig) GoString() string {
 		return "(*IntentionsModuleInputConfig)(nil)"
 	}
 
-	return fmt.Sprintf("&IntentionsModuleInputConfig{"+ "%s"+ "}", c.IntentionsMonitorConfig.GoString(),
+	return fmt.Sprintf("&IntentionsModuleInputConfig{"+
+		"%s"+
+		"}",
+		c.IntentionsMonitorConfig.GoString(),
 	)
 }

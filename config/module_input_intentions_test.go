@@ -256,8 +256,8 @@ func TestIntentionsModuleInputConfig_TestGoString(t *testing.T) {
 				"&IntentionsMonitorConfig{" +
 				"Datacenter:dc, " +
 				"Namespace:namespace, " +
-				"Source Services Regexp:^web.*, " +
-				"Destination Services Regexp:^api.*" +
+				"Source Services: Regexp:^web.*, " +
+				"Destination Services: Regexp:^api.*" +
 				"}" +
 				"}",
 		},

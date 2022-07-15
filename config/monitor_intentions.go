@@ -141,8 +141,8 @@ func (c *IntentionsMonitorConfig) GoString() string {
 	return fmt.Sprintf("&IntentionsMonitorConfig{"+
 		"Datacenter:%s, "+
 		"Namespace:%s, "+
-		"Source Services %s, "+
-		"Destination Services %s"+
+		"Source Services: %s, "+
+		"Destination Services: %s"+
 		"}",
 		StringVal(c.Datacenter),
 		StringVal(c.Namespace),
