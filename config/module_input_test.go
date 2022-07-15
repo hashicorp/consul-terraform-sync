@@ -659,7 +659,7 @@ func TestModuleInputConfigs_GoString(t *testing.T) {
 				"Recurse:false, Datacenter:, Namespace:, }}, " +
 				"&IntentionsModuleInputConfig{&IntentionsMonitorConfig" +
 				"{Datacenter:datacenter, Namespace:namespace, " +
-				"Source Services Regexp:^web.*, Destination Services Regexp:^api.*}}}",
+				"Source Services: Regexp:^web.*, Destination Services: Regexp:^api.*}}}",
 		},
 	}
 
