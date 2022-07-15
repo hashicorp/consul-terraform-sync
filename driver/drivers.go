@@ -88,13 +88,14 @@ func (d *Drivers) GetTaskByTemplate(tmplID string) (Driver, bool) {
 	return driver, ok
 }
 
-func (d *Drivers) Reset() {
+func (d *Drivers) Reset(ctx context.Context) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	for k := range d.drivers {
-		delete(d.drivers, k)
-		d.active.Delete(k)
+	for taskName, driver := range d.drivers {
+		driver.DestroyTask(ctx)
+		delete(d.drivers, taskName)
+		d.active.Delete(taskName)
 	}
 }
 

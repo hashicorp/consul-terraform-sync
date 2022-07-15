@@ -16,9 +16,40 @@ type Watcher struct {
 	mock.Mock
 }
 
+type Watcher_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *Watcher) EXPECT() *Watcher_Expecter {
+	return &Watcher_Expecter{mock: &_m.Mock}
+}
+
 // BufferReset provides a mock function with given fields: _a0
 func (_m *Watcher) BufferReset(_a0 hcat.Notifier) {
 	_m.Called(_a0)
+}
+
+// Watcher_BufferReset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BufferReset'
+type Watcher_BufferReset_Call struct {
+	*mock.Call
+}
+
+// BufferReset is a helper method to define mock.On call
+//  - _a0 hcat.Notifier
+func (_e *Watcher_Expecter) BufferReset(_a0 interface{}) *Watcher_BufferReset_Call {
+	return &Watcher_BufferReset_Call{Call: _e.mock.On("BufferReset", _a0)}
+}
+
+func (_c *Watcher_BufferReset_Call) Run(run func(_a0 hcat.Notifier)) *Watcher_BufferReset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(hcat.Notifier))
+	})
+	return _c
+}
+
+func (_c *Watcher_BufferReset_Call) Return() *Watcher_BufferReset_Call {
+	_c.Call.Return()
+	return _c
 }
 
 // Buffering provides a mock function with given fields: _a0
@@ -33,6 +64,29 @@ func (_m *Watcher) Buffering(_a0 hcat.Notifier) bool {
 	}
 
 	return r0
+}
+
+// Watcher_Buffering_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Buffering'
+type Watcher_Buffering_Call struct {
+	*mock.Call
+}
+
+// Buffering is a helper method to define mock.On call
+//  - _a0 hcat.Notifier
+func (_e *Watcher_Expecter) Buffering(_a0 interface{}) *Watcher_Buffering_Call {
+	return &Watcher_Buffering_Call{Call: _e.mock.On("Buffering", _a0)}
+}
+
+func (_c *Watcher_Buffering_Call) Run(run func(_a0 hcat.Notifier)) *Watcher_Buffering_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(hcat.Notifier))
+	})
+	return _c
+}
+
+func (_c *Watcher_Buffering_Call) Return(_a0 bool) *Watcher_Buffering_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Clients provides a mock function with given fields:
@@ -51,6 +105,28 @@ func (_m *Watcher) Clients() hcat.Looker {
 	return r0
 }
 
+// Watcher_Clients_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Clients'
+type Watcher_Clients_Call struct {
+	*mock.Call
+}
+
+// Clients is a helper method to define mock.On call
+func (_e *Watcher_Expecter) Clients() *Watcher_Clients_Call {
+	return &Watcher_Clients_Call{Call: _e.mock.On("Clients")}
+}
+
+func (_c *Watcher_Clients_Call) Run(run func()) *Watcher_Clients_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Watcher_Clients_Call) Return(_a0 hcat.Looker) *Watcher_Clients_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Complete provides a mock function with given fields: _a0
 func (_m *Watcher) Complete(_a0 hcat.Notifier) bool {
 	ret := _m.Called(_a0)
@@ -65,6 +141,29 @@ func (_m *Watcher) Complete(_a0 hcat.Notifier) bool {
 	return r0
 }
 
+// Watcher_Complete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Complete'
+type Watcher_Complete_Call struct {
+	*mock.Call
+}
+
+// Complete is a helper method to define mock.On call
+//  - _a0 hcat.Notifier
+func (_e *Watcher_Expecter) Complete(_a0 interface{}) *Watcher_Complete_Call {
+	return &Watcher_Complete_Call{Call: _e.mock.On("Complete", _a0)}
+}
+
+func (_c *Watcher_Complete_Call) Run(run func(_a0 hcat.Notifier)) *Watcher_Complete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(hcat.Notifier))
+	})
+	return _c
+}
+
+func (_c *Watcher_Complete_Call) Return(_a0 bool) *Watcher_Complete_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Deregister provides a mock function with given fields: ns
 func (_m *Watcher) Deregister(ns ...hcat.Notifier) {
 	_va := make([]interface{}, len(ns))
@@ -76,9 +175,62 @@ func (_m *Watcher) Deregister(ns ...hcat.Notifier) {
 	_m.Called(_ca...)
 }
 
+// Watcher_Deregister_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Deregister'
+type Watcher_Deregister_Call struct {
+	*mock.Call
+}
+
+// Deregister is a helper method to define mock.On call
+//  - ns ...hcat.Notifier
+func (_e *Watcher_Expecter) Deregister(ns ...interface{}) *Watcher_Deregister_Call {
+	return &Watcher_Deregister_Call{Call: _e.mock.On("Deregister",
+		append([]interface{}{}, ns...)...)}
+}
+
+func (_c *Watcher_Deregister_Call) Run(run func(ns ...hcat.Notifier)) *Watcher_Deregister_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]hcat.Notifier, len(args)-0)
+		for i, a := range args[0:] {
+			if a != nil {
+				variadicArgs[i] = a.(hcat.Notifier)
+			}
+		}
+		run(variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Watcher_Deregister_Call) Return() *Watcher_Deregister_Call {
+	_c.Call.Return()
+	return _c
+}
+
 // MarkForSweep provides a mock function with given fields: notifier
 func (_m *Watcher) MarkForSweep(notifier hcat.IDer) {
 	_m.Called(notifier)
+}
+
+// Watcher_MarkForSweep_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkForSweep'
+type Watcher_MarkForSweep_Call struct {
+	*mock.Call
+}
+
+// MarkForSweep is a helper method to define mock.On call
+//  - notifier hcat.IDer
+func (_e *Watcher_Expecter) MarkForSweep(notifier interface{}) *Watcher_MarkForSweep_Call {
+	return &Watcher_MarkForSweep_Call{Call: _e.mock.On("MarkForSweep", notifier)}
+}
+
+func (_c *Watcher_MarkForSweep_Call) Run(run func(notifier hcat.IDer)) *Watcher_MarkForSweep_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(hcat.IDer))
+	})
+	return _c
+}
+
+func (_c *Watcher_MarkForSweep_Call) Return() *Watcher_MarkForSweep_Call {
+	_c.Call.Return()
+	return _c
 }
 
 // Recaller provides a mock function with given fields: _a0
@@ -95,6 +247,29 @@ func (_m *Watcher) Recaller(_a0 hcat.Notifier) hcat.Recaller {
 	}
 
 	return r0
+}
+
+// Watcher_Recaller_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Recaller'
+type Watcher_Recaller_Call struct {
+	*mock.Call
+}
+
+// Recaller is a helper method to define mock.On call
+//  - _a0 hcat.Notifier
+func (_e *Watcher_Expecter) Recaller(_a0 interface{}) *Watcher_Recaller_Call {
+	return &Watcher_Recaller_Call{Call: _e.mock.On("Recaller", _a0)}
+}
+
+func (_c *Watcher_Recaller_Call) Run(run func(_a0 hcat.Notifier)) *Watcher_Recaller_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(hcat.Notifier))
+	})
+	return _c
+}
+
+func (_c *Watcher_Recaller_Call) Return(_a0 hcat.Recaller) *Watcher_Recaller_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Register provides a mock function with given fields: ns
@@ -117,6 +292,36 @@ func (_m *Watcher) Register(ns ...hcat.Notifier) error {
 	return r0
 }
 
+// Watcher_Register_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Register'
+type Watcher_Register_Call struct {
+	*mock.Call
+}
+
+// Register is a helper method to define mock.On call
+//  - ns ...hcat.Notifier
+func (_e *Watcher_Expecter) Register(ns ...interface{}) *Watcher_Register_Call {
+	return &Watcher_Register_Call{Call: _e.mock.On("Register",
+		append([]interface{}{}, ns...)...)}
+}
+
+func (_c *Watcher_Register_Call) Run(run func(ns ...hcat.Notifier)) *Watcher_Register_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]hcat.Notifier, len(args)-0)
+		for i, a := range args[0:] {
+			if a != nil {
+				variadicArgs[i] = a.(hcat.Notifier)
+			}
+		}
+		run(variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Watcher_Register_Call) Return(_a0 error) *Watcher_Register_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // SetBufferPeriod provides a mock function with given fields: min, max, tmplIDs
 func (_m *Watcher) SetBufferPeriod(min time.Duration, max time.Duration, tmplIDs ...string) {
 	_va := make([]interface{}, len(tmplIDs))
@@ -127,6 +332,38 @@ func (_m *Watcher) SetBufferPeriod(min time.Duration, max time.Duration, tmplIDs
 	_ca = append(_ca, min, max)
 	_ca = append(_ca, _va...)
 	_m.Called(_ca...)
+}
+
+// Watcher_SetBufferPeriod_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetBufferPeriod'
+type Watcher_SetBufferPeriod_Call struct {
+	*mock.Call
+}
+
+// SetBufferPeriod is a helper method to define mock.On call
+//  - min time.Duration
+//  - max time.Duration
+//  - tmplIDs ...string
+func (_e *Watcher_Expecter) SetBufferPeriod(min interface{}, max interface{}, tmplIDs ...interface{}) *Watcher_SetBufferPeriod_Call {
+	return &Watcher_SetBufferPeriod_Call{Call: _e.mock.On("SetBufferPeriod",
+		append([]interface{}{min, max}, tmplIDs...)...)}
+}
+
+func (_c *Watcher_SetBufferPeriod_Call) Run(run func(min time.Duration, max time.Duration, tmplIDs ...string)) *Watcher_SetBufferPeriod_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]string, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(string)
+			}
+		}
+		run(args[0].(time.Duration), args[1].(time.Duration), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Watcher_SetBufferPeriod_Call) Return() *Watcher_SetBufferPeriod_Call {
+	_c.Call.Return()
+	return _c
 }
 
 // Size provides a mock function with given fields:
@@ -143,14 +380,81 @@ func (_m *Watcher) Size() int {
 	return r0
 }
 
+// Watcher_Size_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Size'
+type Watcher_Size_Call struct {
+	*mock.Call
+}
+
+// Size is a helper method to define mock.On call
+func (_e *Watcher_Expecter) Size() *Watcher_Size_Call {
+	return &Watcher_Size_Call{Call: _e.mock.On("Size")}
+}
+
+func (_c *Watcher_Size_Call) Run(run func()) *Watcher_Size_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Watcher_Size_Call) Return(_a0 int) *Watcher_Size_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Stop provides a mock function with given fields:
 func (_m *Watcher) Stop() {
 	_m.Called()
 }
 
+// Watcher_Stop_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Stop'
+type Watcher_Stop_Call struct {
+	*mock.Call
+}
+
+// Stop is a helper method to define mock.On call
+func (_e *Watcher_Expecter) Stop() *Watcher_Stop_Call {
+	return &Watcher_Stop_Call{Call: _e.mock.On("Stop")}
+}
+
+func (_c *Watcher_Stop_Call) Run(run func()) *Watcher_Stop_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Watcher_Stop_Call) Return() *Watcher_Stop_Call {
+	_c.Call.Return()
+	return _c
+}
+
 // Sweep provides a mock function with given fields: notifier
 func (_m *Watcher) Sweep(notifier hcat.IDer) {
 	_m.Called(notifier)
+}
+
+// Watcher_Sweep_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Sweep'
+type Watcher_Sweep_Call struct {
+	*mock.Call
+}
+
+// Sweep is a helper method to define mock.On call
+//  - notifier hcat.IDer
+func (_e *Watcher_Expecter) Sweep(notifier interface{}) *Watcher_Sweep_Call {
+	return &Watcher_Sweep_Call{Call: _e.mock.On("Sweep", notifier)}
+}
+
+func (_c *Watcher_Sweep_Call) Run(run func(notifier hcat.IDer)) *Watcher_Sweep_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(hcat.IDer))
+	})
+	return _c
+}
+
+func (_c *Watcher_Sweep_Call) Return() *Watcher_Sweep_Call {
+	_c.Call.Return()
+	return _c
 }
 
 // WaitCh provides a mock function with given fields: _a0
@@ -169,6 +473,29 @@ func (_m *Watcher) WaitCh(_a0 context.Context) <-chan error {
 	return r0
 }
 
+// Watcher_WaitCh_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WaitCh'
+type Watcher_WaitCh_Call struct {
+	*mock.Call
+}
+
+// WaitCh is a helper method to define mock.On call
+//  - _a0 context.Context
+func (_e *Watcher_Expecter) WaitCh(_a0 interface{}) *Watcher_WaitCh_Call {
+	return &Watcher_WaitCh_Call{Call: _e.mock.On("WaitCh", _a0)}
+}
+
+func (_c *Watcher_WaitCh_Call) Run(run func(_a0 context.Context)) *Watcher_WaitCh_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *Watcher_WaitCh_Call) Return(_a0 <-chan error) *Watcher_WaitCh_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Watch provides a mock function with given fields: _a0, _a1
 func (_m *Watcher) Watch(_a0 context.Context, _a1 chan string) error {
 	ret := _m.Called(_a0, _a1)
@@ -181,6 +508,30 @@ func (_m *Watcher) Watch(_a0 context.Context, _a1 chan string) error {
 	}
 
 	return r0
+}
+
+// Watcher_Watch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Watch'
+type Watcher_Watch_Call struct {
+	*mock.Call
+}
+
+// Watch is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 chan string
+func (_e *Watcher_Expecter) Watch(_a0 interface{}, _a1 interface{}) *Watcher_Watch_Call {
+	return &Watcher_Watch_Call{Call: _e.mock.On("Watch", _a0, _a1)}
+}
+
+func (_c *Watcher_Watch_Call) Run(run func(_a0 context.Context, _a1 chan string)) *Watcher_Watch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(chan string))
+	})
+	return _c
+}
+
+func (_c *Watcher_Watch_Call) Return(_a0 error) *Watcher_Watch_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 type mockConstructorTestingTNewWatcher interface {
