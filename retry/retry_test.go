@@ -189,60 +189,74 @@ func TestRetry_WithNonRetryableError(t *testing.T) {
 	}
 }
 
-func TestWaitTime(t *testing.T) {
+func TestWaitTimeCalculator_WaitTime(t *testing.T) {
 	t.Parallel()
 
+	maxWaitTimeConfigured := 10 * time.Second
 	cases := []struct {
-		name      string
-		attempt   int
-		minReturn time.Duration
-		maxReturn time.Duration
+		name        string
+		attempt     int
+		minReturn   time.Duration
+		maxReturn   time.Duration
+		maxWaitTime time.Duration
 	}{
 		{
-			"first attempt",
-			0,
-			1 * time.Second,
-			time.Duration(1.5 * float64(time.Second)),
+			name:        "first attempt",
+			minReturn:   1 * time.Second,
+			maxReturn:   time.Duration(1.5 * float64(time.Second)),
+			maxWaitTime: DefaultMaxWaitTime,
 		},
 		{
-			"second attempt",
-			1,
-			2 * time.Second,
-			3 * time.Second,
+			name:        "second attempt",
+			attempt:     1,
+			minReturn:   2 * time.Second,
+			maxReturn:   3 * time.Second,
+			maxWaitTime: DefaultMaxWaitTime,
 		},
 		{
-			"third attempt",
-			2,
-			4 * time.Second,
-			6 * time.Second,
+			name:        "third attempt",
+			attempt:     2,
+			minReturn:   4 * time.Second,
+			maxReturn:   6 * time.Second,
+			maxWaitTime: DefaultMaxWaitTime,
 		},
 		{
-			"maximum attempt before max wait time",
-			9,
-			8 * time.Minute,
-			13 * time.Minute,
+			name:        "maximum attempt before max wait time",
+			attempt:     9,
+			minReturn:   8 * time.Minute,
+			maxReturn:   13 * time.Minute,
+			maxWaitTime: DefaultMaxWaitTime,
 		},
 		{
-			"minimum attempt max wait time",
-			10,
-			maxWaitTime,
-			maxWaitTime,
+			name:        "minimum attempt default max wait time",
+			attempt:     10,
+			minReturn:   DefaultMaxWaitTime,
+			maxReturn:   DefaultMaxWaitTime,
+			maxWaitTime: DefaultMaxWaitTime,
 		},
 		{
-			"high number attempt max wait time",
-			20000000000,
-			maxWaitTime,
-			maxWaitTime,
+			name:        "high number attempt default max wait time",
+			attempt:     20000000000,
+			minReturn:   DefaultMaxWaitTime,
+			maxReturn:   DefaultMaxWaitTime,
+			maxWaitTime: DefaultMaxWaitTime,
+		},
+		{
+			name:        "configured max wait time",
+			attempt:     20000000000,
+			minReturn:   maxWaitTimeConfigured,
+			maxReturn:   maxWaitTimeConfigured,
+			maxWaitTime: maxWaitTimeConfigured,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			random := rand.New(rand.NewSource(time.Now().UnixNano()))
-			a := WaitTime(tc.attempt, random)
+			wt := WaitTime(tc.attempt, random, tc.maxWaitTime)
 
-			assert.GreaterOrEqual(t, a, tc.minReturn)
-			assert.LessOrEqual(t, a, tc.maxReturn)
+			assert.GreaterOrEqual(t, wt, tc.minReturn)
+			assert.LessOrEqual(t, wt, tc.maxReturn)
 		})
 	}
 }

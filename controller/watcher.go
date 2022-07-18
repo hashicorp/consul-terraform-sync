@@ -73,7 +73,7 @@ func newWatcher(conf *config.Config, maxRetries int) (*hcat.Watcher, error) {
 
 type watcherRetry struct {
 	maxRetries int
-	waitFunc   func(attempt int, random *rand.Rand) time.Duration
+	waitFunc   func(attempt int, random *rand.Rand, maxWaitTime time.Duration) time.Duration
 }
 
 // retryConsul will be used by hashicat watcher to retry polling Consul for
@@ -91,7 +91,7 @@ func (wr watcherRetry) retryConsul(retryCount int) (bool, time.Duration) {
 	}
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	wait := wr.waitFunc(retryCount, random) // max wait time of retry.maxWaitTime minutes
+	wait := wr.waitFunc(retryCount, random, retry.DefaultMaxWaitTime) // max wait time of retry.maxWaitTime minutes
 	logger.Debug("couldn't connect with Consul. Waiting to retry",
 		"wait_duration", wait, "attempt_number", retryCount+1)
 	return true, wait
