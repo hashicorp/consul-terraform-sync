@@ -109,7 +109,9 @@ task {
 			"schedule: happy path",
 			false,
 			&ScheduleConditionConfig{
-				Cron: String("* * * * * * *"),
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("* * * * * * *"),
+				},
 			},
 			"config.hcl",
 			`

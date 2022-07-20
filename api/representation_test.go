@@ -257,7 +257,11 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 		{
 			name: "with_schedule_condition",
 			taskConfig: config.TaskConfig{
-				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+				Condition: &config.ScheduleConditionConfig{
+					ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+						Cron: config.String("*/10 * * * * * *"),
+					},
+				},
 			},
 			expected: oapigen.Task{
 				Condition: oapigen.Condition{
@@ -375,7 +379,11 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			name: "services_field_to_module_input",
 			taskConfig: config.TaskConfig{
 				DeprecatedServices: []string{"api", "web"},
-				Condition:          &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+				Condition: &config.ScheduleConditionConfig{
+					ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+						Cron: config.String("*/10 * * * * * *"),
+					},
+				},
 			},
 			expected: oapigen.Task{
 				ModuleInput: &oapigen.ModuleInput{
@@ -399,7 +407,11 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 						},
 					},
 				},
-				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+				Condition: &config.ScheduleConditionConfig{
+					ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+						Cron: config.String("*/10 * * * * * *"),
+					},
+				},
 			},
 			expected: oapigen.Task{
 				ModuleInput: &oapigen.ModuleInput{
@@ -697,8 +709,12 @@ func TestTaskRequest_ToTaskConfig(t *testing.T) {
 						},
 					},
 				},
-				Module:    config.String("path"),
-				Condition: &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+				Module: config.String("path"),
+				Condition: &config.ScheduleConditionConfig{
+					ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+						Cron: config.String("*/10 * * * * * *"),
+					},
+				},
 			},
 		},
 		{
@@ -727,7 +743,9 @@ func TestTaskRequest_ToTaskConfig(t *testing.T) {
 				Name:   config.String("task"),
 				Module: config.String("path"),
 				Condition: &config.ScheduleConditionConfig{
-					Cron: config.String("*/10 * * * * * *"),
+					ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+						Cron: config.String("*/10 * * * * * *"),
+					},
 				},
 				ModuleInputs: &config.ModuleInputConfigs{
 					&config.ServicesModuleInputConfig{
@@ -770,7 +788,9 @@ func TestTaskRequest_ToTaskConfig(t *testing.T) {
 				Name:   config.String("task"),
 				Module: config.String("path"),
 				Condition: &config.ScheduleConditionConfig{
-					Cron: config.String("*/10 * * * * * *"),
+					ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+						Cron: config.String("*/10 * * * * * *"),
+					},
 				},
 				ModuleInputs: &config.ModuleInputConfigs{
 					&config.ServicesModuleInputConfig{

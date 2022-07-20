@@ -14,10 +14,10 @@ import (
 // TerraformCloudWorkspaceConfig is an enterprise-only configuration that controls
 // workspace attributes that are specific to a task.
 type TerraformCloudWorkspaceConfig struct {
-	ExecutionMode    *string `mapstructure:"execution_mode"`
-	AgentPoolID      *string `mapstructure:"agent_pool_id"`
-	AgentPoolName    *string `mapstructure:"agent_pool_name"`
-	TerraformVersion *string `mapstructure:"terraform_version"`
+	ExecutionMode    *string `mapstructure:"execution_mode" json:"execution_mode"`
+	AgentPoolID      *string `mapstructure:"agent_pool_id" json:"agent_pool_id"`
+	AgentPoolName    *string `mapstructure:"agent_pool_name" json:"agent_pool_name"`
+	TerraformVersion *string `mapstructure:"terraform_version" json:"terraform_version"`
 }
 
 func DefaultTerraformCloudWorkspaceConfig() *TerraformCloudWorkspaceConfig {

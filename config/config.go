@@ -31,6 +31,21 @@ const (
 	filePathLogKey = "file_path"
 )
 
+var (
+	DecodeJsonHook = mapstructure.ComposeDecodeHookFunc(
+		conditionToTypeFunc(),
+		moduleInputToTypeFunc(),
+		mapstructure.StringToTimeDurationHookFunc(),
+		decode.HookTranslateKeys,
+	)
+	DecodeHclHook = mapstructure.ComposeDecodeHookFunc(
+		conditionToTypeFunc(),
+		moduleInputToTypeFunc(),
+		decode.HookWeakDecodeFromSlice,
+		mapstructure.StringToTimeDurationHookFunc(),
+		decode.HookTranslateKeys)
+)
+
 // Config is used to configure CTS
 type Config struct {
 	LogLevel   *string `mapstructure:"log_level"`
@@ -424,20 +439,10 @@ func decodeConfig(content []byte, file string) (*Config, error) {
 	switch format {
 	case "json":
 		err = json.Unmarshal(content, &raw)
-		decodeHook = mapstructure.ComposeDecodeHookFunc(
-			conditionToTypeFunc(),
-			moduleInputToTypeFunc(),
-			mapstructure.StringToTimeDurationHookFunc(),
-			decode.HookTranslateKeys,
-		)
+		decodeHook = DecodeJsonHook
 	case "hcl":
 		err = hcl.Decode(&raw, string(content))
-		decodeHook = mapstructure.ComposeDecodeHookFunc(
-			conditionToTypeFunc(),
-			moduleInputToTypeFunc(),
-			decode.HookWeakDecodeFromSlice,
-			mapstructure.StringToTimeDurationHookFunc(),
-			decode.HookTranslateKeys)
+		decodeHook = DecodeHclHook
 	default:
 		return nil, fmt.Errorf("invalid format: %s", format)
 	}

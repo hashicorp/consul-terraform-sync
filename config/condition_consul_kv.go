@@ -12,11 +12,11 @@ var _ ConditionConfig = (*ConsulKVConditionConfig)(nil)
 // of type 'consul-kv'. A consul-kv condition is triggered by changes
 // that occur to consul key-values.
 type ConsulKVConditionConfig struct {
-	ConsulKVMonitorConfig `mapstructure:",squash"`
+	ConsulKVMonitorConfig `mapstructure:",squash" json:"consul-kv"`
 
 	// UseAsModuleInput was previously named SourceIncludesVar - deprecated v0.5
-	UseAsModuleInput            *bool `mapstructure:"use_as_module_input"`
-	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var"`
+	UseAsModuleInput            *bool `mapstructure:"use_as_module_input" json:"use_as_module_input"`
+	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var" json:"source_includes_var"`
 }
 
 // Copy returns a deep copy of this configuration.

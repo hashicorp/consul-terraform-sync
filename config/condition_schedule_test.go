@@ -31,7 +31,9 @@ func TestScheduleConditionConfig_Copy(t *testing.T) {
 		{
 			"fully_configured",
 			&ScheduleConditionConfig{
-				Cron: String("* * * * * * *"),
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("* * * * * * *"),
+				},
 			},
 		},
 	}
@@ -84,27 +86,67 @@ func TestScheduleConditionConfig_Merge(t *testing.T) {
 		},
 		{
 			"cron_overrides",
-			&ScheduleConditionConfig{Cron: String("same")},
-			&ScheduleConditionConfig{Cron: String("different")},
-			&ScheduleConditionConfig{Cron: String("different")},
+			&ScheduleConditionConfig{
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("same"),
+				},
+			},
+			&ScheduleConditionConfig{
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("different"),
+				},
+			},
+			&ScheduleConditionConfig{
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("different"),
+				},
+			},
 		},
 		{
 			"cron_empty_one",
-			&ScheduleConditionConfig{Cron: String("same")},
+			&ScheduleConditionConfig{
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("same"),
+				},
+			},
 			&ScheduleConditionConfig{},
-			&ScheduleConditionConfig{Cron: String("same")},
+			&ScheduleConditionConfig{
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("same"),
+				},
+			},
 		},
 		{
 			"cron_empty_two",
 			&ScheduleConditionConfig{},
-			&ScheduleConditionConfig{Cron: String("same")},
-			&ScheduleConditionConfig{Cron: String("same")},
+			&ScheduleConditionConfig{
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("same"),
+				},
+			},
+			&ScheduleConditionConfig{
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("same"),
+				},
+			},
 		},
 		{
 			"cron_empty_same",
-			&ScheduleConditionConfig{Cron: String("same")},
-			&ScheduleConditionConfig{Cron: String("same")},
-			&ScheduleConditionConfig{Cron: String("same")},
+			&ScheduleConditionConfig{
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("same"),
+				},
+			},
+			&ScheduleConditionConfig{
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("same"),
+				},
+			},
+			&ScheduleConditionConfig{
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("same"),
+				},
+			},
 		},
 	}
 
@@ -138,16 +180,22 @@ func TestScheduleConditionConfig_Finalize(t *testing.T) {
 			"empty",
 			&ScheduleConditionConfig{},
 			&ScheduleConditionConfig{
-				Cron: String(""),
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String(""),
+				},
 			},
 		},
 		{
 			"cron_configured",
 			&ScheduleConditionConfig{
-				Cron: String("* * * * *"),
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("* * * * *"),
+				},
 			},
 			&ScheduleConditionConfig{
-				Cron: String("* * * * *"),
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("* * * * *"),
+				},
 			},
 		},
 	}
@@ -177,7 +225,9 @@ func TestScheduleConditionConfig_Validate(t *testing.T) {
 			"valid_cron",
 			false,
 			&ScheduleConditionConfig{
-				Cron: String("* * * * * * *"),
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("* * * * * * *"),
+				},
 			},
 		},
 		{
@@ -189,7 +239,9 @@ func TestScheduleConditionConfig_Validate(t *testing.T) {
 			"invalid_cron",
 			true,
 			&ScheduleConditionConfig{
-				Cron: String("invalid"),
+				ScheduleMonitorConfig: ScheduleMonitorConfig{
+					Cron: String("invalid"),
+				},
 			},
 		},
 	}

@@ -106,7 +106,11 @@ func TestHandleDeprecations_Errors(t *testing.T) {
 			name: "invalid_services_field_with_schedule_con",
 			inputTask: config.TaskConfig{
 				DeprecatedServices: []string{"web"},
-				Condition:          &config.ScheduleConditionConfig{Cron: config.String("*/10 * * * * * *")},
+				Condition: &config.ScheduleConditionConfig{
+					ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+						Cron: config.String("*/10 * * * * * *"),
+					},
+				},
 			},
 			outputContains: []string{
 				"Error: unable to create request",

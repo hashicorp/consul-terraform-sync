@@ -10,10 +10,17 @@ const scheduleType = "schedule"
 
 var _ ConditionConfig = (*ScheduleConditionConfig)(nil)
 
+// ScheduleMonitorConfig exists purely to allow json / hcl conversions
+// to work seamlessly by encoding and decoding under the "schedule" name.
+// It should not be treated as a standalone module input.
+type ScheduleMonitorConfig struct {
+	Cron *string `mapstructure:"cron" json:"cron"`
+}
+
 // ScheduleConditionConfig configures a condition configuration block of type
 // 'schedule'. A schedule condition is triggered by a configured cron schedule
 type ScheduleConditionConfig struct {
-	Cron *string `mapstructure:"cron"`
+	ScheduleMonitorConfig `mapstructure:",squash" json:"schedule"`
 }
 
 func (c *ScheduleConditionConfig) VariableType() string {

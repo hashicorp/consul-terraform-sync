@@ -12,11 +12,11 @@ var _ ConditionConfig = (*ServicesConditionConfig)(nil)
 // 'services'. This is the default type of condition. A services condition is
 // triggered when changes occur to the task's services.
 type ServicesConditionConfig struct {
-	ServicesMonitorConfig `mapstructure:",squash"`
+	ServicesMonitorConfig `mapstructure:",squash" json:"services"`
 
 	// UseAsModuleInput was previously named SourceIncludesVar - deprecated v0.5
-	UseAsModuleInput            *bool `mapstructure:"use_as_module_input"`
-	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var"`
+	UseAsModuleInput            *bool `mapstructure:"use_as_module_input" json:"use_as_module_input"`
+	DeprecatedSourceIncludesVar *bool `mapstructure:"source_includes_var" json:"source_includes_var"`
 }
 
 // Copy returns a deep copy of this configuration.

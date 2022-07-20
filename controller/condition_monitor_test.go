@@ -25,7 +25,9 @@ var (
 		Name:    config.String(schedTaskName),
 		Module:  config.String("module"),
 		Condition: &config.ScheduleConditionConfig{
-			Cron: config.String("*/3 * * * * * *"),
+			ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+				Cron: config.String("*/3 * * * * * *"),
+			},
 		},
 	}
 )
@@ -561,7 +563,9 @@ func scheduledTestTask(tb testing.TB, name string) *driver.Task {
 		Description: "runs every 3 seconds",
 		Enabled:     true,
 		Condition: &config.ScheduleConditionConfig{
-			Cron: config.String("*/3 * * * * * *"),
+			ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+				Cron: config.String("*/3 * * * * * *"),
+			},
 		},
 	})
 	require.NoError(tb, err)

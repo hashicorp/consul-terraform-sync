@@ -10,7 +10,7 @@ var _ ModuleInputConfig = (*ServicesModuleInputConfig)(nil)
 // type 'services'. Data about the services monitored will be used as input for
 // the module variables.
 type ServicesModuleInputConfig struct {
-	ServicesMonitorConfig `mapstructure:",squash"`
+	ServicesMonitorConfig `mapstructure:",squash" json:"services"`
 }
 
 // Copy returns a deep copy of this configuration.

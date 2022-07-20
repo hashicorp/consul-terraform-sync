@@ -10,7 +10,7 @@ var _ ModuleInputConfig = (*ConsulKVModuleInputConfig)(nil)
 // type 'consul-kv'. The consul key-values will be used as input for the
 // module variables.
 type ConsulKVModuleInputConfig struct {
-	ConsulKVMonitorConfig `mapstructure:",squash"`
+	ConsulKVMonitorConfig `mapstructure:",squash" json:"consul-kv"`
 }
 
 // Copy returns a deep copy of this configuration.
