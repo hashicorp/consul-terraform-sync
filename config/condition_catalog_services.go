@@ -10,7 +10,7 @@ var _ ConditionConfig = (*CatalogServicesConditionConfig)(nil)
 // of type 'catalog-services'. A catalog-services condition is triggered by changes
 // that occur to services in the catalog-services api.
 type CatalogServicesConditionConfig struct {
-	CatalogServicesMonitorConfig `mapstructure:",squash"`
+	CatalogServicesMonitorConfig `mapstructure:",squash" json:"catalog-services"`
 }
 
 // Copy returns a deep copy of this configuration.

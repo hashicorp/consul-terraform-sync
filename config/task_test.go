@@ -575,8 +575,12 @@ func TestTaskConfig_Finalize(t *testing.T) {
 					Min:     TimeDuration(0 * time.Second),
 					Max:     TimeDuration(0 * time.Second),
 				},
-				Enabled:      Bool(true),
-				Condition:    &ScheduleConditionConfig{String("")},
+				Enabled: Bool(true),
+				Condition: &ScheduleConditionConfig{
+					ScheduleMonitorConfig: ScheduleMonitorConfig{
+						String(""),
+					},
+				},
 				WorkingDir:   String("sync-tasks/task"),
 				ModuleInputs: DefaultModuleInputConfigs(),
 			},
@@ -607,8 +611,12 @@ func TestTaskConfig_Finalize(t *testing.T) {
 					Min:     TimeDuration(0 * time.Second),
 					Max:     TimeDuration(0 * time.Second),
 				},
-				Enabled:    Bool(true),
-				Condition:  &ScheduleConditionConfig{String("")},
+				Enabled: Bool(true),
+				Condition: &ScheduleConditionConfig{
+					ScheduleMonitorConfig: ScheduleMonitorConfig{
+						String(""),
+					},
+				},
 				WorkingDir: String("sync-tasks/task"),
 				ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{
 					ServicesMonitorConfig{

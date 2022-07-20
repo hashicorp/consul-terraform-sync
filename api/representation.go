@@ -111,7 +111,9 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 		tc.Condition = cond
 	} else if tr.Task.Condition.Schedule != nil {
 		tc.Condition = &config.ScheduleConditionConfig{
-			Cron: &tr.Task.Condition.Schedule.Cron,
+			ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+				Cron: &tr.Task.Condition.Schedule.Cron,
+			},
 		}
 	}
 

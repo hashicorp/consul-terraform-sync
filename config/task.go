@@ -23,14 +23,14 @@ const (
 // specified multiple times to configure multiple tasks.
 type TaskConfig struct {
 	// Description is a human readable text to describe the task.
-	Description *string `mapstructure:"description"`
+	Description *string `mapstructure:"description" json:"description"`
 
 	// Name is the unique name of the task.
-	Name *string `mapstructure:"name"`
+	Name *string `mapstructure:"name" json:"name"`
 
 	// Providers is the list of provider names the task is dependent on. This is
 	// used to map provider configuration to the task.
-	Providers []string `mapstructure:"providers"`
+	Providers []string `mapstructure:"providers" json:"providers"`
 
 	// DeprecatedServices is the list of service IDs or logical service names the task
 	// executes on. CTS monitors the Consul Catalog for changes to these
@@ -39,61 +39,61 @@ type TaskConfig struct {
 	// service name in the default namespace.
 	// - Deprecated in 0.5. Use names field of `condition "services"` and
 	// `module_input "services"` instead
-	DeprecatedServices []string `mapstructure:"services"`
+	DeprecatedServices []string `mapstructure:"services" json:"services"`
 
 	// Module is the path to fetch the Terraform Module (local or remote).
 	// Previously named Source - Deprecated in 0.5
-	Module           *string `mapstructure:"module"`
-	DeprecatedSource *string `mapstructure:"source"`
+	Module           *string `mapstructure:"module" json:"module"`
+	DeprecatedSource *string `mapstructure:"source" json:"source"`
 
 	// ModuleInputs defines the Consul objects (e.g. services, kv) whose values
 	// are provided as the task module's input variables.
 	// Previously named SourceInput - Deprecated in 0.5
-	ModuleInputs           *ModuleInputConfigs `mapstructure:"module_input"`
-	DeprecatedSourceInputs *ModuleInputConfigs `mapstructure:"source_input"`
+	ModuleInputs           *ModuleInputConfigs `mapstructure:"module_input" json:"module_input"`
+	DeprecatedSourceInputs *ModuleInputConfigs `mapstructure:"source_input" json:"source_input"`
 
 	// VarFiles is a list of paths to files containing variables for the
 	// task. For the Terraform driver, these are files ending in `.tfvars` and
 	// are used as Terraform input variables passed as arguments to the Terraform
 	// module. VarFiles are read into the Variables map in the same order they appear in the file.
-	VarFiles []string `mapstructure:"variable_files"`
+	VarFiles []string `mapstructure:"variable_files" json:"variable_files"`
 
 	// Variables are loaded in the same order as they appear in the map.
 	// Duplicate variables are overwritten with the later value.
 	// No validation is performed on the Variables, as this is not set by the configuration
-	Variables map[string]string
+	Variables map[string]string `mapstructure:"variables" json:"variables"`
 
 	// Version is the module version for the task to use. The latest version
 	// will be used as the default if omitted.
-	Version *string `mapstructure:"version"`
+	Version *string `mapstructure:"version" json:"version"`
 
 	// The Terraform client version to use for the task when configured with CTS
 	// enterprise and the Terraform Cloud driver. This option is not supported
 	// when using CTS OSS or the Terraform driver.
 	// - Deprecated in 0.6. Use `terraform_cloud_workspace.terraform_version` instead
-	DeprecatedTFVersion *string `mapstructure:"terraform_version"`
+	DeprecatedTFVersion *string `mapstructure:"terraform_version" json:"terraform_version"`
 
 	// The workspace configurations to use for the task when configured with CTS
 	// enterprise and the Terraform Cloud driver. This option is not supported
 	// when using CTS OSS or the Terraform driver.
-	TFCWorkspace *TerraformCloudWorkspaceConfig `mapstructure:"terraform_cloud_workspace"`
+	TFCWorkspace *TerraformCloudWorkspaceConfig `mapstructure:"terraform_cloud_workspace" json:"terraform_cloud_workspace"`
 
 	// BufferPeriod configures per-task buffer timers.
-	BufferPeriod *BufferPeriodConfig `mapstructure:"buffer_period"`
+	BufferPeriod *BufferPeriodConfig `mapstructure:"buffer_period" json:"buffer_period"`
 
 	// Enabled determines if the task is enabled or not. Enabled by default.
 	// If not enabled, this task will not make any changes to resources.
-	Enabled *bool `mapstructure:"enabled"`
+	Enabled *bool `mapstructure:"enabled" json:"enabled"`
 
 	// Condition optionally configures a single run condition under which the
 	// task will start executing
-	Condition ConditionConfig `mapstructure:"condition"`
+	Condition ConditionConfig `mapstructure:"condition" json:"condition"`
 
 	// The local working directory for CTS to manage Terraform configuration
 	// files and artifacts that are generated for the task. The default option
 	// will create a child directory with the task name in the global working
 	// directory.
-	WorkingDir *string `mapstructure:"working_dir"`
+	WorkingDir *string `mapstructure:"working_dir" json:"working_dir"`
 }
 
 // TaskConfigs is a collection of TaskConfig
