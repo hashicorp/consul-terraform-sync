@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/consul-terraform-sync/api"
 	"github.com/hashicorp/consul-terraform-sync/config"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/consul-terraform-sync/retry"
@@ -19,6 +18,8 @@ import (
 const (
 	ConsulDefaultMaxRetry = 8 // to be consistent with hcat retries
 	consulSubsystemName   = "consul"
+
+	clientErrorResponseCategory = 4 // category for http status codes from 400-499
 )
 
 var regexUnexpectedResponseCode = regexp.MustCompile("Unexpected response code: ([0-9]{3})")
@@ -370,10 +371,18 @@ func getResponseCodeFromError(ctx context.Context, err error) int {
 func isResponseCodeRetryable(statusCode int) bool {
 	// 400 response codes are not useful to retry
 	// with exception to 429, `too many requests` which may be useful for retries
-	if api.CheckStatusCodeCategory(api.ClientErrorResponseCategory, statusCode) && statusCode != http.StatusTooManyRequests {
+	if checkStatusCodeCategory(clientErrorResponseCategory, statusCode) && statusCode != http.StatusTooManyRequests {
 		return false
 	}
 
 	// Default to retry
 	return true
+}
+
+func checkStatusCodeCategory(category int, statusCode int) bool {
+	var i int
+	for i = statusCode; i >= 10; i = i / 10 {
+	}
+
+	return category == i
 }

@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/go-uuid"
 )
 
+//go:generate mockery --name=Interceptor --filename=middleware.go --output=../mocks/api --tags=enterprise --with-expecter
+
 const (
 	timeFormat = "2006-01-02T15:04:05.000Z0700"
 )
@@ -129,4 +131,35 @@ func withSwaggerValidate(next http.Handler) http.Handler {
 
 	f := middleware.OapiRequestValidator(swagger)
 	return f(next)
+}
+
+// Interceptor is an interface for determining when a request needs to be intercepted
+// and how that request handled instead.
+type Interceptor interface {
+	ShouldIntercept(*http.Request) bool
+	Intercept(http.ResponseWriter, *http.Request)
+}
+
+type interceptMiddleware struct {
+	i Interceptor
+}
+
+func newInterceptMiddleware(i Interceptor) *interceptMiddleware {
+	return &interceptMiddleware{
+		i: i,
+	}
+}
+
+// withIntercept will intercept the request if the given condition is met
+// and apply custom logic to the request instead. It will not serve the request
+// to the next handler. If the condition is not met, then it will continue
+// to serve the request to the next handler without any modifications.
+func (im interceptMiddleware) withIntercept(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if im.i.ShouldIntercept(r) {
+			im.i.Intercept(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
