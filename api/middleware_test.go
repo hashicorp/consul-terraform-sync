@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	mocks "github.com/hashicorp/consul-terraform-sync/mocks/api"
 )
 
 func TestWithSwaggerValidate(t *testing.T) {
@@ -214,4 +216,51 @@ func runValidationMiddlewarePost(t *testing.T, expectedStatus int, request, meth
 	require.Equal(t, expectedStatus, resp.Code)
 
 	return resp
+}
+
+func TestWithIntercept(t *testing.T) {
+	t.Parallel()
+
+	req, err := http.NewRequest(http.MethodPost, "/v1/anything", strings.NewReader(""))
+	require.NoError(t, err)
+	resp := httptest.NewRecorder()
+
+	t.Run("true", func(t *testing.T) {
+		// Setup mocks
+		mock := mocks.NewInterceptor(t)
+		mock.EXPECT().ShouldIntercept(req).Return(true).Once()
+		mock.EXPECT().Intercept(resp, req).Return().Once()
+
+		// Setup next handler, don't expect it to be called
+		nextHandler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			t.Fatalf("next handler should not have been served")
+		})
+
+		// Serve request with middleware
+		im := &interceptMiddleware{
+			i: mock,
+		}
+		handler := im.withIntercept(nextHandler)
+		handler.ServeHTTP(resp, req)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		// Setup mocks
+		mock := mocks.NewInterceptor(t)
+		mock.EXPECT().ShouldIntercept(req).Return(false).Once()
+
+		// Setup next handler, expect it to be called
+		nextCalled := false
+		nextHandler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			nextCalled = true
+		})
+
+		// Serve request with middleware
+		im := &interceptMiddleware{
+			i: mock,
+		}
+		handler := im.withIntercept(nextHandler)
+		handler.ServeHTTP(resp, req)
+		assert.True(t, nextCalled, "expected next handler to be served")
+	})
 }

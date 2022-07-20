@@ -69,11 +69,13 @@ type API struct {
 	tls     *config.CTSTLSConfig
 }
 
+// Config is used to configure the API
 type Config struct {
-	Port       int
-	TLS        *config.CTSTLSConfig
-	Controller Server
-	Health     health.Checker
+	Port        int
+	TLS         *config.CTSTLSConfig
+	Controller  Server
+	Health      health.Checker
+	Interceptor Interceptor
 }
 
 // NewAPI create a new API object
@@ -102,6 +104,11 @@ func NewAPI(ctx context.Context, conf Config) (*API, error) {
 	r.Route(fmt.Sprintf("/%s", defaultAPIVersion), func(r chi.Router) {
 		lm := newLoggingMiddleware(nil, logger)
 		r.Use(lm.withLogging)
+		if conf.Interceptor != nil {
+			im := newInterceptMiddleware(conf.Interceptor)
+			r.Use(im.withIntercept)
+		}
+
 		// Legacy Endpoints
 		// retrieve overall status
 		r.Mount(fmt.Sprintf("/%s", overallStatusPath),
@@ -123,6 +130,10 @@ func NewAPI(ctx context.Context, conf Config) (*API, error) {
 		r.Use(lm.withLogging)
 		r.Use(withPlaintextErrorToJson)
 		r.Use(withSwaggerValidate)
+		if conf.Interceptor != nil {
+			im := newInterceptMiddleware(conf.Interceptor)
+			r.Use(im.withIntercept)
+		}
 
 		// Generated Endpoints
 		server := Handlers{
