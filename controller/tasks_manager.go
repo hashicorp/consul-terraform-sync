@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/consul-terraform-sync/state/event"
 	"github.com/hashicorp/consul-terraform-sync/templates"
 	"github.com/pkg/errors"
-	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
 var tasksManagerSystemName = "tasksmanager"
@@ -96,16 +95,16 @@ func (tm *TasksManager) Tasks(_ context.Context) config.TaskConfigs {
 }
 
 func (tm *TasksManager) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
-	d, err := tm.createTask(ctx, taskConfig)
+	tc, d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
 		return config.TaskConfig{}, err
 	}
 
-	return tm.addTask(ctx, d)
+	return tm.addTask(ctx, *tc, d)
 }
 
 func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
-	d, err := tm.createTask(ctx, taskConfig)
+	tc, d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
 		return config.TaskConfig{}, err
 	}
@@ -114,7 +113,7 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 		return config.TaskConfig{}, err
 	}
 
-	return tm.addTask(ctx, d)
+	return tm.addTask(ctx, *tc, d)
 }
 
 // TaskDelete marks an existing task that has been added to CTS for deletion
@@ -136,7 +135,7 @@ func (tm *TasksManager) TaskDelete(_ context.Context, name string) error {
 
 // TaskInspect creates and inspects a temporary task that is not added to the drivers list.
 func (tm *TasksManager) TaskInspect(ctx context.Context, taskConfig config.TaskConfig) (bool, string, string, error) {
-	d, err := tm.createTask(ctx, taskConfig)
+	_, d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
 		return false, "", "", err
 	}
@@ -230,7 +229,7 @@ Please investigate this error. This may require re-creating the task using the
 Create Task API / CLI. https://www.consul.io/docs/nia/cli/task#task-create
 `
 
-	d, err := tm.createTask(ctx, taskConfig)
+	tc, d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
 		logger.Error(fmt.Sprintf("error creating driver for task.%s", actionSteps),
 			"error", err)
@@ -244,64 +243,12 @@ Create Task API / CLI. https://www.consul.io/docs/nia/cli/task#task-create
 			"add task to CTS", "error", err)
 	}
 
-	if _, err := tm.addTask(ctx, d); err != nil {
+	if _, err := tm.addTask(ctx, *tc, d); err != nil {
 		logger.Error(fmt.Sprintf("error adding task to CTS.%s", actionSteps),
 			"error", err)
 	}
 
 	logger.Info("task was created and run successfully")
-}
-
-func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
-	vars := make(map[string]string)
-
-	// value can be anything so marshal it to equivalent json
-	// and store json as the string value in the map
-	for k, v := range t.Variables() {
-		b, err := ctyjson.Marshal(v, v.Type())
-		if err != nil {
-			return config.TaskConfig{}, err
-		}
-		vars[k] = string(b)
-	}
-
-	var bpConf config.BufferPeriodConfig
-	bp, ok := t.BufferPeriod()
-	if ok {
-		bpConf = config.BufferPeriodConfig{
-			Enabled: config.Bool(true),
-			Max:     config.TimeDuration(bp.Max),
-			Min:     config.TimeDuration(bp.Min),
-		}
-	} else {
-		bpConf = config.BufferPeriodConfig{
-			Enabled: config.Bool(false),
-			Max:     config.TimeDuration(0),
-			Min:     config.TimeDuration(0),
-		}
-	}
-
-	inputs := t.ModuleInputs()
-	tfcWs := t.TFCWorkspace()
-
-	return config.TaskConfig{
-		Description:        config.String(t.Description()),
-		Name:               config.String(t.Name()),
-		Enabled:            config.Bool(t.IsEnabled()),
-		Providers:          t.ProviderIDs(),
-		DeprecatedServices: t.ServiceNames(),
-		Module:             config.String(t.Module()),
-		Variables:          vars, // TODO: omit or safe to return?
-		Version:            config.String(t.Version()),
-		BufferPeriod:       &bpConf,
-		Condition:          t.Condition(),
-		ModuleInputs:       &inputs,
-		WorkingDir:         config.String(t.WorkingDir()),
-
-		// Enterprise
-		DeprecatedTFVersion: config.String(t.DeprecatedTFVersion()),
-		TFCWorkspace:        &tfcWs,
-	}, nil
 }
 
 // addTask handles the necessary steps to add a task for CTS to monitor and run.
@@ -310,7 +257,7 @@ func configFromDriverTask(t *driver.Task) (config.TaskConfig, error) {
 // Assumes that the task driver has already been successfully created. On any
 // error, the task will be cleaned up. Returns a copy of the added task's
 // config
-func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.TaskConfig, error) {
+func (tm TasksManager) addTask(ctx context.Context, tc config.TaskConfig, d driver.Driver) (config.TaskConfig, error) {
 	d.SetBufferPeriod()
 
 	name := d.Task().Name()
@@ -319,13 +266,7 @@ func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Tas
 		return config.TaskConfig{}, err
 	}
 
-	conf, err := configFromDriverTask(d.Task())
-	if err != nil {
-		tm.cleanupTask(ctx, d)
-		return config.TaskConfig{}, err
-	}
-
-	if err = tm.state.SetTask(conf); err != nil {
+	if err := tm.state.SetTask(tc); err != nil {
 		tm.cleanupTask(ctx, d)
 		return config.TaskConfig{}, err
 	}
@@ -334,7 +275,7 @@ func (tm TasksManager) addTask(ctx context.Context, d driver.Driver) (config.Tas
 		tm.createdScheduleCh <- name
 	}
 
-	return conf, nil
+	return tc, nil
 }
 
 // cleanupTask cleans up a newly created task that has not yet been added to CTS
@@ -511,17 +452,21 @@ func (tm TasksManager) WatchDeletedScheduleTask() <-chan string {
 }
 
 // createTask creates and initializes a singular task from configuration
-func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskConfig) (driver.Driver, error) {
+func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskConfig) (*config.TaskConfig, driver.Driver, error) {
 	conf := tm.state.GetConfig()
-	if err := taskConfig.Finalize(conf.BufferPeriod, *conf.WorkingDir); err != nil {
+	if err := taskConfig.Finalize(); err != nil {
 		tm.logger.Trace("invalid config to create task", "error", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err := taskConfig.Validate(); err != nil {
 		tm.logger.Trace("invalid config to create task", "error", err)
-		return nil, err
+		return nil, nil, err
 	}
+
+	// Create a copy of the valid config, which was used to construct the driver in the factory.
+	// This should be the reusable clone that is acceptable to persist to storage.
+	validConfig := taskConfig.Copy()
 
 	// task config needs to be validated/finalized before retrieving task name
 	taskName := *taskConfig.Name
@@ -530,25 +475,25 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 	// Check if task exists, if it does, do not create again
 	if _, ok := tm.drivers.Get(taskName); ok {
 		logger.Trace("task already exists")
-		return nil, fmt.Errorf("task with name %s already exists", taskName)
+		return nil, nil, fmt.Errorf("task with name %s already exists", taskName)
 	}
 
 	d, err := tm.factory.Make(ctx, &conf, taskConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	timeout := time.After(1 * time.Minute)
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, nil, ctx.Err()
 		case <-timeout:
 			logger.Error("timed out rendering template")
 			// Cleanup the task
 			d.DestroyTask(ctx)
 			logger.Debug("task destroyed", "task_name", *taskConfig.Name)
-			return nil, fmt.Errorf("error initializing task")
+			return nil, nil, fmt.Errorf("error initializing task")
 		default:
 		}
 		ok, err := d.RenderTemplate(ctx)
@@ -557,11 +502,11 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 			// Cleanup the task
 			d.DestroyTask(ctx)
 			logger.Debug("task destroyed", "task_name", *taskConfig.Name)
-			return nil, err
+			return nil, nil, err
 		}
 		if ok {
 			// Once template rendering is finished, return
-			return d, nil
+			return validConfig, d, nil
 		}
 		time.Sleep(50 * time.Millisecond) // waiting because cannot block on a dependency change
 	}

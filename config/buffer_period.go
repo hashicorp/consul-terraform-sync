@@ -78,12 +78,12 @@ func (c *BufferPeriodConfig) Merge(o *BufferPeriodConfig) *BufferPeriodConfig {
 }
 
 // Finalize ensures that the receiver contains no nil pointers. For nil pointers,
-// Finalize sets these values using the passed in "parent" BufferPeriodConfig
-// along with using other defaults where necessary.
-//
-// Example parent param: global-level buffer period uses default values,
-// task-level buffer period uses the global-level buffer period
-func (c *BufferPeriodConfig) Finalize(parent *BufferPeriodConfig) {
+// Finalize sets default values where necessary
+func (c *BufferPeriodConfig) Finalize() {
+	c.inheritParentConfig(DefaultBufferPeriodConfig())
+}
+
+func (c *BufferPeriodConfig) inheritParentConfig(parent *BufferPeriodConfig) {
 	// if disabled, fill in zero values
 	if c.Enabled != nil && !*c.Enabled {
 		c.Min = TimeDuration(0 * time.Second)
@@ -114,6 +114,10 @@ func (c *BufferPeriodConfig) Finalize(parent *BufferPeriodConfig) {
 
 	if c.Max == nil {
 		c.Max = TimeDuration(4 * *c.Min)
+	}
+
+	if *c.Min > *c.Max {
+		*c.Max = *c.Min
 	}
 }
 

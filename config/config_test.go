@@ -379,12 +379,9 @@ func TestConfig_Finalize(t *testing.T) {
 	(*expected.Tasks)[0].TFCWorkspace = DefaultTerraformCloudWorkspaceConfig()
 	(*expected.Tasks)[0].VarFiles = []string{}
 	(*expected.Tasks)[0].Version = String("")
-	(*expected.Tasks)[0].BufferPeriod = &BufferPeriodConfig{}
-	(*expected.Tasks)[0].BufferPeriod.Enabled = Bool(true)
-	(*expected.Tasks)[0].BufferPeriod.Min = TimeDuration(20 * time.Second)
-	(*expected.Tasks)[0].BufferPeriod.Max = TimeDuration(60 * time.Second)
+	(*expected.Tasks)[0].BufferPeriod = nil
 	(*expected.Tasks)[0].Variables = map[string]string{}
-	(*expected.Tasks)[0].WorkingDir = String("working/task")
+	(*expected.Tasks)[0].WorkingDir = nil
 	(*expected.DeprecatedServices)[0].ID = String("serviceA")
 	(*expected.DeprecatedServices)[0].Namespace = String("")
 	(*expected.DeprecatedServices)[0].Datacenter = String("")
@@ -607,11 +604,7 @@ func TestConfig_BufferPeriod(t *testing.T) {
 				Max:     TimeDuration(3 * time.Second),
 			},
 			nil,
-			&BufferPeriodConfig{
-				Enabled: Bool(true),
-				Min:     TimeDuration(1 * time.Second),
-				Max:     TimeDuration(3 * time.Second),
-			},
+			nil,
 		},
 		{
 			"only task-level configured",
@@ -649,7 +642,7 @@ func TestConfig_BufferPeriod(t *testing.T) {
 			"neither configured",
 			nil,
 			nil,
-			DefaultBufferPeriodConfig(),
+			nil,
 		},
 	}
 

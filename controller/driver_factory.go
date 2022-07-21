@@ -173,17 +173,24 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 		return nil, nil
 	}
 
-	meta := conf.DeprecatedServices.CTSUserDefinedMeta(taskConfig.DeprecatedServices)
-	services := make([]driver.Service, len(taskConfig.DeprecatedServices))
-	for si, service := range taskConfig.DeprecatedServices {
+	// Inherit configuration from the parent config before using task config
+	// This will not alter the original configuration
+	tc := taskConfig.InheritParentConfig(*conf.WorkingDir, *conf.BufferPeriod)
+	if err := tc.ValidateForDriver(); err != nil {
+		return nil, err
+	}
+
+	meta := conf.DeprecatedServices.CTSUserDefinedMeta(tc.DeprecatedServices)
+	services := make([]driver.Service, len(tc.DeprecatedServices))
+	for si, service := range tc.DeprecatedServices {
 		services[si] = getService(conf.DeprecatedServices, service, meta)
 	}
 
 	tfConf := conf.Driver.Terraform
 
-	providers := make(driver.TerraformProviderBlocks, len(taskConfig.Providers))
+	providers := make(driver.TerraformProviderBlocks, len(tc.Providers))
 	providerInfo := make(map[string]interface{})
-	for pi, providerID := range taskConfig.Providers {
+	for pi, providerID := range tc.Providers {
 		providers[pi] = getProvider(providerConfigs, providerID)
 
 		// This is Terraform specific to pass version and source info for
@@ -197,33 +204,34 @@ func newDriverTask(conf *config.Config, taskConfig *config.TaskConfig,
 	}
 
 	var bp *driver.BufferPeriod // nil if disabled
-	if *taskConfig.BufferPeriod.Enabled {
+	if *tc.BufferPeriod.Enabled {
 		bp = &driver.BufferPeriod{
-			Min: *taskConfig.BufferPeriod.Min,
-			Max: *taskConfig.BufferPeriod.Max,
+			Min: *tc.BufferPeriod.Min,
+			Max: *tc.BufferPeriod.Max,
 		}
 	}
 
 	task, err := driver.NewTask(driver.TaskConfig{
-		Description:  *taskConfig.Description,
-		Name:         *taskConfig.Name,
-		Enabled:      *taskConfig.Enabled,
+		Description:  *tc.Description,
+		Name:         *tc.Name,
+		Enabled:      *tc.Enabled,
 		Env:          buildTaskEnv(conf, providers.Env()),
 		Providers:    providers,
 		ProviderInfo: providerInfo,
 		Services:     services,
-		Module:       *taskConfig.Module,
-		Version:      *taskConfig.Version,
-		Variables:    taskConfig.Variables,
+		Module:       *tc.Module,
+		Version:      *tc.Version,
+		Variables:    tc.Variables,
 		BufferPeriod: bp,
-		Condition:    taskConfig.Condition,
-		ModuleInputs: *taskConfig.ModuleInputs,
-		WorkingDir:   *taskConfig.WorkingDir,
+		Condition:    tc.Condition,
+		ModuleInputs: *tc.ModuleInputs,
+		WorkingDir:   *tc.WorkingDir,
 
 		// Enterprise
-		DeprecatedTFVersion: *taskConfig.DeprecatedTFVersion,
-		TFCWorkspace:        *taskConfig.TFCWorkspace,
+		DeprecatedTFVersion: *tc.DeprecatedTFVersion,
+		TFCWorkspace:        *tc.TFCWorkspace,
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("error initializing task %s: %s", *taskConfig.Name, err)
 	}

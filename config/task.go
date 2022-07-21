@@ -246,7 +246,7 @@ func (c *TaskConfig) Merge(o *TaskConfig) *TaskConfig {
 }
 
 // Finalize ensures there are no nil pointers.
-func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) error {
+func (c *TaskConfig) Finalize() error {
 	if c == nil {
 		return nil
 	}
@@ -307,25 +307,6 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) error {
 		c.DeprecatedTFVersion = String("")
 	}
 
-	bp := globalBp
-	if _, ok := c.Condition.(*ScheduleConditionConfig); ok {
-		// disable buffer_period for schedule condition
-		if c.BufferPeriod != nil {
-			logger.Warn("disabling buffer_period for schedule condition. "+
-				"overriding buffer_period configured for this task",
-				"task_name", StringVal(c.Name), "buffer_period", c.BufferPeriod.GoString())
-		}
-		bp = &BufferPeriodConfig{
-			Enabled: Bool(false),
-			Min:     TimeDuration(0 * time.Second),
-			Max:     TimeDuration(0 * time.Second),
-		}
-	}
-	if c.BufferPeriod == nil {
-		c.BufferPeriod = bp
-	}
-	c.BufferPeriod.Finalize(bp)
-
 	if c.Enabled == nil {
 		c.Enabled = Bool(true)
 	}
@@ -348,11 +329,43 @@ func (c *TaskConfig) Finalize(globalBp *BufferPeriodConfig, wd string) error {
 	}
 	c.ModuleInputs.Finalize()
 
-	if c.WorkingDir == nil {
-		c.WorkingDir = String(filepath.Join(wd, *c.Name))
+	// Scheduled conditions should never have buffer periods configured, since they are
+	// triggered through a different flow.
+	_, isScheduleCondition := c.Condition.(*ScheduleConditionConfig)
+	if isScheduleCondition {
+		// disable buffer_period for schedule condition
+		if c.BufferPeriod != nil {
+			logger.Warn("disabling buffer_period for schedule condition. "+
+				"overriding buffer_period configured for this task",
+				"task_name", StringVal(c.Name), "buffer_period", c.BufferPeriod.GoString())
+		}
+		c.BufferPeriod = &BufferPeriodConfig{
+			Enabled: Bool(false),
+			Min:     TimeDuration(0 * time.Second),
+			Max:     TimeDuration(0 * time.Second),
+		}
 	}
 
 	return nil
+}
+
+// InheritParentConfig takes in parent configuration parameters and uses them to
+// determine values when Task configuration is not set. It returns a copy of the
+// configuration so the receiver is not mutated
+func (c *TaskConfig) InheritParentConfig(parentWorkDir string, parentBufferPeriod BufferPeriodConfig) *TaskConfig {
+	conf := c.Copy()
+
+	if conf.WorkingDir == nil {
+		conf.WorkingDir = String(filepath.Join(parentWorkDir, *conf.Name))
+	}
+
+	if conf.BufferPeriod == nil {
+		conf.BufferPeriod = parentBufferPeriod.Copy()
+	}
+
+	conf.BufferPeriod.inheritParentConfig(&parentBufferPeriod)
+
+	return conf
 }
 
 // SetVariables sets the task variables map with values read from a configured variables file.
@@ -434,10 +447,6 @@ func (c *TaskConfig) Validate() error {
 		pNames[name] = true
 	}
 
-	if err := c.BufferPeriod.Validate(); err != nil {
-		return err
-	}
-
 	if !isConditionNil(c.Condition) {
 		if err := c.Condition.Validate(); err != nil {
 			return err
@@ -448,6 +457,26 @@ func (c *TaskConfig) Validate() error {
 		return err
 	}
 
+	return nil
+}
+
+// ValidateForDriver validates all remaining values and required options that were not checked during
+// the normal Validate() call. This method is recommended to run after:
+//  - Finalize()
+//  - Validate()
+//  - InheritParentConfig()
+// It is intended to indicate whether a task is safe to be converted into a driver for execution.
+func (c *TaskConfig) ValidateForDriver() error {
+	if err := c.BufferPeriod.Validate(); err != nil {
+		return err
+	}
+	if c.BufferPeriod == nil {
+		// This should not be possible, but check anyway.
+		return fmt.Errorf("missing bufferperiod configuration on task")
+	}
+	if c.WorkingDir == nil {
+		return fmt.Errorf("missing workingdir configuration on task")
+	}
 	return nil
 }
 
@@ -540,13 +569,13 @@ func (c *TaskConfigs) Merge(o *TaskConfigs) *TaskConfigs {
 
 // Finalize ensures the configuration has no nil pointers and sets default
 // values.
-func (c *TaskConfigs) Finalize(bp *BufferPeriodConfig, wd string) error {
+func (c *TaskConfigs) Finalize() error {
 	if c == nil {
 		*c = *DefaultTaskConfigs()
 	}
 
 	for _, t := range *c {
-		err := t.Finalize(bp, wd)
+		err := t.Finalize()
 		if err != nil {
 			return err
 		}

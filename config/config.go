@@ -259,12 +259,12 @@ func (c *Config) Finalize() error {
 	if c.BufferPeriod == nil {
 		c.BufferPeriod = DefaultBufferPeriodConfig()
 	}
-	c.BufferPeriod.Finalize(DefaultBufferPeriodConfig())
+	c.BufferPeriod.Finalize()
 
 	if c.Tasks == nil {
 		c.Tasks = DefaultTaskConfigs()
 	}
-	err := c.Tasks.Finalize(c.BufferPeriod, *c.WorkingDir)
+	err := c.Tasks.Finalize()
 	if err != nil {
 		return err
 	}

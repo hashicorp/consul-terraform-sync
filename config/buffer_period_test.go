@@ -12,7 +12,7 @@ func TestBufferPeriodConfig_Copy(t *testing.T) {
 	t.Parallel()
 
 	finalizedConf := &BufferPeriodConfig{}
-	finalizedConf.Finalize(DefaultBufferPeriodConfig())
+	finalizedConf.Finalize()
 
 	cases := []struct {
 		name string
@@ -165,31 +165,15 @@ func TestBufferPeriodConfig_Finalize(t *testing.T) {
 	cases := []struct {
 		name string
 		i    *BufferPeriodConfig
-		p    *BufferPeriodConfig
 		r    *BufferPeriodConfig
 	}{
 		{
-			"empty input, parent enabled",
+			"empty input, default values",
 			&BufferPeriodConfig{},
-			DefaultBufferPeriodConfig(),
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(5 * time.Second),
 				Max:     TimeDuration(20 * time.Second),
-			},
-		},
-		{
-			"empty input, parent disabled",
-			&BufferPeriodConfig{},
-			&BufferPeriodConfig{
-				Enabled: Bool(false),
-				Min:     TimeDuration(0 * time.Second),
-				Max:     TimeDuration(0 * time.Second),
-			},
-			&BufferPeriodConfig{
-				Enabled: Bool(false),
-				Min:     TimeDuration(0 * time.Second),
-				Max:     TimeDuration(0 * time.Second),
 			},
 		},
 		{
@@ -197,7 +181,6 @@ func TestBufferPeriodConfig_Finalize(t *testing.T) {
 			&BufferPeriodConfig{
 				Enabled: Bool(false),
 			},
-			DefaultBufferPeriodConfig(),
 			&BufferPeriodConfig{
 				Enabled: Bool(false),
 				Min:     TimeDuration(0 * time.Second),
@@ -205,38 +188,20 @@ func TestBufferPeriodConfig_Finalize(t *testing.T) {
 			},
 		},
 		{
-			"enabled input, enabled parent",
+			"enabled input, default values",
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
 			},
-			DefaultBufferPeriodConfig(),
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(5 * time.Second),
 				Max:     TimeDuration(20 * time.Second)},
 		},
 		{
-			"enabled input, disabled parent",
-			&BufferPeriodConfig{
-				Enabled: Bool(true),
-			},
-			&BufferPeriodConfig{
-				Enabled: Bool(false),
-				Min:     TimeDuration(0 * time.Second),
-				Max:     TimeDuration(0 * time.Second),
-			},
-			&BufferPeriodConfig{
-				Enabled: Bool(true),
-				Min:     TimeDuration(5 * time.Second),
-				Max:     TimeDuration(20 * time.Second),
-			},
-		},
-		{
 			"only min input",
 			&BufferPeriodConfig{
 				Min: TimeDuration(10 * time.Second),
 			},
-			DefaultBufferPeriodConfig(),
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(10 * time.Second),
@@ -248,7 +213,6 @@ func TestBufferPeriodConfig_Finalize(t *testing.T) {
 			&BufferPeriodConfig{
 				Max: TimeDuration(50 * time.Second),
 			},
-			DefaultBufferPeriodConfig(),
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(5 * time.Second),
@@ -256,30 +220,24 @@ func TestBufferPeriodConfig_Finalize(t *testing.T) {
 			},
 		},
 		{
-			"input enabled and parent enabled fully configured",
+			"min greater than max",
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
-				Min:     TimeDuration(20 * time.Second),
-				Max:     TimeDuration(50 * time.Second),
+				Min:     TimeDuration(100 * time.Second),
+				Max:     TimeDuration(1 * time.Second),
 			},
-			DefaultBufferPeriodConfig(),
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
-				Min:     TimeDuration(20 * time.Second),
-				Max:     TimeDuration(50 * time.Second),
+				Min:     TimeDuration(100 * time.Second),
+				Max:     TimeDuration(100 * time.Second),
 			},
 		},
 		{
-			"input enabled and parent disabled fully configured",
+			"fully configured",
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
 				Min:     TimeDuration(20 * time.Second),
 				Max:     TimeDuration(50 * time.Second),
-			},
-			&BufferPeriodConfig{
-				Enabled: Bool(false),
-				Min:     TimeDuration(1 * time.Second),
-				Max:     TimeDuration(5 * time.Second),
 			},
 			&BufferPeriodConfig{
 				Enabled: Bool(true),
@@ -291,7 +249,7 @@ func TestBufferPeriodConfig_Finalize(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tc.i.Finalize(tc.p)
+			tc.i.Finalize()
 			assert.Equal(t, tc.r, tc.i)
 		})
 	}

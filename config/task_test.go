@@ -9,11 +9,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var emptyBufferPeriodConfig = &BufferPeriodConfig{
+	Enabled: Bool(false),
+	Min:     TimeDuration(0 * time.Second),
+	Max:     TimeDuration(0 * time.Second),
+}
+
 func TestTaskConfig_Copy(t *testing.T) {
 	t.Parallel()
 
 	finalizedConf := &TaskConfig{}
-	err := finalizedConf.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+	err := finalizedConf.Finalize()
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -523,10 +529,10 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Version:             String(""),
 				DeprecatedTFVersion: String(""),
 				TFCWorkspace:        DefaultTerraformCloudWorkspaceConfig(),
-				BufferPeriod:        DefaultBufferPeriodConfig(),
+				BufferPeriod:        nil,
 				Enabled:             Bool(true),
 				Condition:           EmptyConditionConfig(),
-				WorkingDir:          String("sync-tasks"),
+				WorkingDir:          nil,
 				ModuleInputs:        DefaultModuleInputConfigs(),
 			},
 		},
@@ -546,10 +552,10 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Version:             String(""),
 				DeprecatedTFVersion: String(""),
 				TFCWorkspace:        DefaultTerraformCloudWorkspaceConfig(),
-				BufferPeriod:        DefaultBufferPeriodConfig(),
+				BufferPeriod:        nil,
 				Enabled:             Bool(true),
 				Condition:           EmptyConditionConfig(),
-				WorkingDir:          String("sync-tasks/task"),
+				WorkingDir:          nil,
 				ModuleInputs:        DefaultModuleInputConfigs(),
 			},
 		},
@@ -570,18 +576,14 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Version:             String(""),
 				DeprecatedTFVersion: String(""),
 				TFCWorkspace:        DefaultTerraformCloudWorkspaceConfig(),
-				BufferPeriod: &BufferPeriodConfig{
-					Enabled: Bool(false),
-					Min:     TimeDuration(0 * time.Second),
-					Max:     TimeDuration(0 * time.Second),
-				},
-				Enabled: Bool(true),
+				BufferPeriod:        emptyBufferPeriodConfig,
+				Enabled:             Bool(true),
 				Condition: &ScheduleConditionConfig{
 					ScheduleMonitorConfig: ScheduleMonitorConfig{
 						String(""),
 					},
 				},
-				WorkingDir:   String("sync-tasks/task"),
+				WorkingDir:   nil,
 				ModuleInputs: DefaultModuleInputConfigs(),
 			},
 		},
@@ -606,18 +608,14 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Version:             String(""),
 				DeprecatedTFVersion: String(""),
 				TFCWorkspace:        DefaultTerraformCloudWorkspaceConfig(),
-				BufferPeriod: &BufferPeriodConfig{
-					Enabled: Bool(false),
-					Min:     TimeDuration(0 * time.Second),
-					Max:     TimeDuration(0 * time.Second),
-				},
-				Enabled: Bool(true),
+				BufferPeriod:        emptyBufferPeriodConfig,
+				Enabled:             Bool(true),
 				Condition: &ScheduleConditionConfig{
 					ScheduleMonitorConfig: ScheduleMonitorConfig{
 						String(""),
 					},
 				},
-				WorkingDir: String("sync-tasks/task"),
+				WorkingDir: nil,
 				ModuleInputs: &ModuleInputConfigs{&ServicesModuleInputConfig{
 					ServicesMonitorConfig{
 						Regexp:             String("^api$"),
@@ -651,10 +649,10 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Version:             String(""),
 				DeprecatedTFVersion: String(""),
 				TFCWorkspace:        DefaultTerraformCloudWorkspaceConfig(),
-				BufferPeriod:        DefaultBufferPeriodConfig(),
+				BufferPeriod:        nil,
 				Enabled:             Bool(true),
 				Condition:           EmptyConditionConfig(),
-				WorkingDir:          String("sync-tasks"),
+				WorkingDir:          nil,
 				ModuleInputs:        DefaultModuleInputConfigs(),
 			},
 		},
@@ -693,10 +691,10 @@ func TestTaskConfig_Finalize(t *testing.T) {
 				Version:             String(""),
 				DeprecatedTFVersion: String(""),
 				TFCWorkspace:        DefaultTerraformCloudWorkspaceConfig(),
-				BufferPeriod:        DefaultBufferPeriodConfig(),
+				BufferPeriod:        nil,
 				Enabled:             Bool(true),
 				Condition:           EmptyConditionConfig(),
-				WorkingDir:          String("sync-tasks"),
+				WorkingDir:          nil,
 				ModuleInputs:        DefaultModuleInputConfigs(),
 			},
 		},
@@ -704,7 +702,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			err := tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+			err := tc.i.Finalize()
 			require.NoError(t, err)
 			assert.Equal(t, tc.r, tc.i)
 		})
@@ -714,7 +712,7 @@ func TestTaskConfig_Finalize(t *testing.T) {
 func TestTaskConfig_Finalize_Error(t *testing.T) {
 	taskConfig := &TaskConfig{VarFiles: []string{"nonExistantFile.tfvars"}}
 
-	err := taskConfig.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+	err := taskConfig.Finalize()
 	require.Error(t, err)
 }
 
@@ -755,7 +753,7 @@ func TestTaskConfig_Finalize_DeprecatedSource(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			err := tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+			err := tc.i.Finalize()
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, *tc.i.Module)
 		})
@@ -864,7 +862,7 @@ func TestTaskConfig_Finalize_DeprecatedSourceInputs(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.i.Finalize(DefaultBufferPeriodConfig(), DefaultWorkingDir)
+			err := tc.i.Finalize()
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, tc.i.ModuleInputs)
 		})
@@ -1006,6 +1004,112 @@ func TestTaskConfig_Validate(t *testing.T) {
 			} else {
 				assert.Error(t, err)
 			}
+		})
+	}
+}
+
+func TestTaskConfig_InheritParentConfig(t *testing.T) {
+	cases := []struct {
+		name               string
+		parentWorkingDir   string
+		parentBufferPeriod BufferPeriodConfig
+		inputTaskConfig    *TaskConfig
+		expectedTaskConfig *TaskConfig
+	}{
+		{
+			name:             "input values set",
+			parentWorkingDir: "path/to/parent",
+			parentBufferPeriod: BufferPeriodConfig{
+				Enabled: Bool(false),
+				Max:     TimeDuration(0 * time.Second),
+				Min:     TimeDuration(0 * time.Second),
+			},
+			inputTaskConfig: &TaskConfig{
+				WorkingDir: String("path"),
+				BufferPeriod: &BufferPeriodConfig{
+					Enabled: Bool(true),
+					Max:     TimeDuration(3 * time.Second),
+					Min:     TimeDuration(3 * time.Second),
+				},
+			},
+			expectedTaskConfig: &TaskConfig{
+				WorkingDir: String("path"),
+				BufferPeriod: &BufferPeriodConfig{
+					Enabled: Bool(true),
+					Max:     TimeDuration(3 * time.Second),
+					Min:     TimeDuration(3 * time.Second),
+				},
+			},
+		},
+		{
+			name:             "empty input, parent enabled",
+			parentWorkingDir: "path/to/parent",
+			parentBufferPeriod: BufferPeriodConfig{
+				Enabled: Bool(true),
+				Max:     TimeDuration(4 * time.Second),
+				Min:     TimeDuration(4 * time.Second),
+			},
+			inputTaskConfig: &TaskConfig{},
+			expectedTaskConfig: &TaskConfig{
+				WorkingDir: String("path/to/parent"),
+				BufferPeriod: &BufferPeriodConfig{
+					Enabled: Bool(true),
+					Max:     TimeDuration(4 * time.Second),
+					Min:     TimeDuration(4 * time.Second),
+				},
+			},
+		},
+		{
+			name:             "empty input, parent bp disabled",
+			parentWorkingDir: "",
+			parentBufferPeriod: BufferPeriodConfig{
+				Enabled: Bool(false),
+				Min:     TimeDuration(0 * time.Second),
+				Max:     TimeDuration(0 * time.Second),
+			},
+			inputTaskConfig: &TaskConfig{},
+			expectedTaskConfig: &TaskConfig{
+				WorkingDir: String(""),
+				BufferPeriod: &BufferPeriodConfig{
+					Enabled: Bool(false),
+					Min:     TimeDuration(0 * time.Second),
+					Max:     TimeDuration(0 * time.Second),
+				},
+			},
+		},
+		{
+			name:             "input no bp min parent disabled",
+			parentWorkingDir: "path/to/parent",
+			parentBufferPeriod: BufferPeriodConfig{
+				Enabled: Bool(false),
+				Min:     TimeDuration(0 * time.Second),
+				Max:     TimeDuration(0 * time.Second),
+			},
+			inputTaskConfig: &TaskConfig{
+				BufferPeriod: &BufferPeriodConfig{
+					Enabled: Bool(true),
+					Max:     TimeDuration(5 * time.Second),
+				},
+			},
+			expectedTaskConfig: &TaskConfig{
+				WorkingDir: String("path/to/parent"),
+				BufferPeriod: &BufferPeriodConfig{
+					Enabled: Bool(true),
+					Min:     TimeDuration(DefaultBufferPeriodMin),
+					Max:     TimeDuration(5 * time.Second),
+				},
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.inputTaskConfig.Finalize()
+			require.NoError(t, err)
+			err = tc.expectedTaskConfig.Finalize()
+			require.NoError(t, err)
+
+			actualTaskConfig := tc.inputTaskConfig.InheritParentConfig(tc.parentWorkingDir, tc.parentBufferPeriod)
+			assert.Equal(t, tc.expectedTaskConfig, actualTaskConfig)
 		})
 	}
 }
@@ -1192,6 +1296,62 @@ func TestTaskConfig_validateCondition(t *testing.T) {
 			tc.i.Module = String("path")
 
 			err := tc.i.validateCondition()
+			if tc.isValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestTaskConfig_ValidateForDriver(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		c       *TaskConfig
+		isValid bool
+	}{
+		{
+			"valid",
+			&TaskConfig{
+				WorkingDir:   String("not-nil"),
+				BufferPeriod: DefaultBufferPeriodConfig(),
+			},
+			true,
+		},
+		{
+			"missing_workdir",
+			&TaskConfig{
+				BufferPeriod: DefaultBufferPeriodConfig(),
+			},
+			false,
+		},
+		{
+			"missing_bufferperiod",
+			&TaskConfig{
+				WorkingDir: String("not-nil"),
+			},
+			false,
+		},
+		{
+			"invalid_bufferperiod",
+			&TaskConfig{
+				WorkingDir: String("not-nil"),
+				BufferPeriod: &BufferPeriodConfig{
+					Enabled: Bool(true),
+					Min:     TimeDuration(10 * time.Second),
+					Max:     TimeDuration(1 * time.Second),
+				},
+			},
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.c.ValidateForDriver()
 			if tc.isValid {
 				assert.NoError(t, err)
 			} else {
