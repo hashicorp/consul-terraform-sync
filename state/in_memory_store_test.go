@@ -301,11 +301,9 @@ func Test_InMemoryStore_SetTask(t *testing.T) {
 			store := NewInMemoryStore(tc.stateConf)
 
 			// finalize the task configs
-			bp := tc.stateConf.BufferPeriod
-			wd := config.StringVal(tc.stateConf.WorkingDir)
-			err = tc.input.Finalize(bp, wd)
+			err = tc.input.Finalize()
 			require.NoError(t, err)
-			err = tc.expected.Finalize(bp, wd)
+			err = tc.expected.Finalize()
 			require.NoError(t, err)
 
 			if err := store.SetTask(tc.input); err != nil {

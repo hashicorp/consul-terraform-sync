@@ -357,13 +357,25 @@ func Test_ConditionMonitor_Run_ScheduledTasks(t *testing.T) {
 	go cm.Run(ctx)
 
 	createdTaskName := "created_scheduled_task"
+	testTask := scheduledTestTask(t, createdTaskName)
+	taskConfig := config.TaskConfig{
+		Name:        &createdTaskName,
+		Description: config.String("runs every 3 seconds"),
+		Enabled:     config.Bool(true),
+		Condition: &config.ScheduleConditionConfig{
+			ScheduleMonitorConfig: config.ScheduleMonitorConfig{
+				Cron: config.String("*/3 * * * * * *"),
+			},
+		},
+	}
+
 	createdDriver := new(mocksD.Driver)
-	createdDriver.On("Task").Return(scheduledTestTask(t, createdTaskName)).
+	createdDriver.On("Task").Return(testTask).
 		On("TemplateIDs").Return([]string{"tmpl_b"}).
 		On("RenderTemplate", mock.Anything).Return(true, nil).
 		On("ApplyTask", mock.Anything).Return(nil).
 		On("SetBufferPeriod")
-	_, err := tm.addTask(ctx, createdDriver)
+	_, err := tm.addTask(ctx, taskConfig, createdDriver)
 	require.NoError(t, err)
 
 	select {

@@ -184,7 +184,7 @@ func Test_Once_onceConsecutive_context_canceled(t *testing.T) {
 	tm.factory.initConf = conf
 	tm.factory.newDriver = func(ctx context.Context, c *config.Config, task *driver.Task, w templates.Watcher) (driver.Driver, error) {
 		d := new(mocksD.Driver)
-		d.On("Task").Return(task).Times(4)
+		d.On("Task").Return(task).Times(3)
 		d.On("TemplateIDs").Return(nil)
 		d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()
 		d.On("InitTask", mock.Anything, mock.Anything).Return(nil).Once()
@@ -342,7 +342,7 @@ func testOnceWatchDepErrors(t *testing.T, driverConf *config.DriverConfig) {
 // onceMockDriver mocks the driver with the methods needed for once-mode
 func onceMockDriver(task *driver.Task, applyTaskErr error) driver.Driver {
 	d := new(mocksD.Driver)
-	d.On("Task").Return(task).Times(4)
+	d.On("Task").Return(task).Times(3)
 	d.On("TemplateIDs").Return(nil)
 	d.On("RenderTemplate", mock.Anything).Return(false, nil).Once()
 	d.On("RenderTemplate", mock.Anything).Return(true, nil).Once()

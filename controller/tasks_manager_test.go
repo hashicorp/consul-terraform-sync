@@ -39,7 +39,7 @@ func Test_TasksManager_Task(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		taskConf := validTaskConf
-		err := taskConf.Finalize(config.DefaultBufferPeriodConfig(), "path")
+		err := taskConf.Finalize()
 		require.NoError(t, err)
 
 		s := new(mocksS.Store)
@@ -75,7 +75,7 @@ func Test_TasksManager_Tasks(t *testing.T) {
 			{Name: config.String("task_a")},
 			{Name: config.String("task_b")},
 		}
-		err := taskConfs.Finalize(config.DefaultBufferPeriodConfig(), config.DefaultWorkingDir)
+		err := taskConfs.Finalize()
 		require.NoError(t, err)
 
 		s := new(mocksS.Store)
@@ -141,9 +141,9 @@ func Test_TasksManager_TaskCreate(t *testing.T) {
 
 		actual, err := tm.TaskCreate(ctx, taskConf)
 		assert.NoError(t, err)
-		conf, err := configFromDriverTask(driverTask)
-		assert.NoError(t, err)
-		assert.Equal(t, conf, actual)
+		expected := taskConf.Copy()
+		assert.NoError(t, expected.Finalize())
+		assert.Equal(t, *expected, actual)
 
 		// Basic check that task was added
 		_, ok := tm.drivers.Get(validTaskName)
@@ -341,7 +341,7 @@ func Test_TasksManager_TaskUpdate(t *testing.T) {
 				},
 			},
 		}
-		err = taskConf.Finalize(conf.BufferPeriod, *conf.WorkingDir)
+		err = taskConf.Finalize()
 		require.NoError(t, err)
 		task, err := newDriverTask(conf, &taskConf, nil)
 		require.NoError(t, err)
@@ -511,9 +511,10 @@ func Test_TasksManager_addTask(t *testing.T) {
 	tm.createdScheduleCh = make(chan string, 1)
 
 	t.Run("success", func(t *testing.T) {
+		taskName := "task_a"
 		// Set up driver's task object
 		driverTask, err := driver.NewTask(driver.TaskConfig{
-			Name:      "task_a",
+			Name:      taskName,
 			Condition: &config.ScheduleConditionConfig{},
 		})
 		require.NoError(t, err)
@@ -532,11 +533,11 @@ func Test_TasksManager_addTask(t *testing.T) {
 
 		// Test addTask
 		ctx := context.Background()
-		taskConf, err := tm.addTask(ctx, d)
+		taskConf, err := tm.addTask(ctx, config.TaskConfig{Name: &taskName}, d)
 		require.NoError(t, err)
 
 		// Basic check of returned conf
-		assert.Equal(t, "task_a", *taskConf.Name)
+		assert.Equal(t, taskName, *taskConf.Name)
 
 		// Confirm driver added to drivers list
 		assert.Equal(t, tm.drivers.Len(), 1)
@@ -574,7 +575,7 @@ func Test_TasksManager_addTask(t *testing.T) {
 
 		// Test addTask
 		ctx := context.Background()
-		_, err = tm.addTask(ctx, d)
+		_, err = tm.addTask(ctx, config.TaskConfig{Name: &taskName}, d)
 		require.Error(t, err)
 		d.AssertExpectations(t)
 
