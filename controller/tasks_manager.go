@@ -71,14 +71,19 @@ func (tm *TasksManager) Init(ctx context.Context) error {
 	return tm.factory.Init(ctx)
 }
 
+// Config returns the config from the TasksManager's state store
 func (tm *TasksManager) Config() config.Config {
 	return tm.state.GetConfig()
 }
 
+// Events takes as an argument a task name and returns the associated event list map from the
+// TasksManager's state store
 func (tm *TasksManager) Events(_ context.Context, taskName string) (map[string][]event.Event, error) {
 	return tm.state.GetTaskEvents(taskName), nil
 }
 
+// Task takes as an argument a task name and returns the associated TaskConfig object
+// from the TasksManager's state store
 func (tm *TasksManager) Task(_ context.Context, taskName string) (config.TaskConfig, error) {
 	// TODO handle ctx while waiting for state lock if it is currently active
 	conf, ok := tm.state.GetTask(taskName)
@@ -89,11 +94,14 @@ func (tm *TasksManager) Task(_ context.Context, taskName string) (config.TaskCon
 	return config.TaskConfig{}, fmt.Errorf("a task with name '%s' does not exist or has not been initialized yet", taskName)
 }
 
+// Tasks returns all tasks which exist in the TaskManager's state store
 func (tm *TasksManager) Tasks(_ context.Context) config.TaskConfigs {
 	// TODO handle ctx while waiting for state lock if it is currently active
 	return tm.state.GetAllTasks()
 }
 
+// TaskCreate creates a new task and adds it to the managed tasks
+// Note: This will not run the task after creation, see TaskCreateAndRun for this behavior
 func (tm *TasksManager) TaskCreate(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
 	tc, d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
@@ -103,6 +111,7 @@ func (tm *TasksManager) TaskCreate(ctx context.Context, taskConfig config.TaskCo
 	return tm.addTask(ctx, *tc, d)
 }
 
+// TaskCreateAndRun creates a new task and then runs it. If successful it then adds the task to the managed tasks.
 func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.TaskConfig) (config.TaskConfig, error) {
 	tc, d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
@@ -144,8 +153,11 @@ func (tm *TasksManager) TaskInspect(ctx context.Context, taskConfig config.TaskC
 	return plan.ChangesPresent, plan.Plan, plan.URL, err
 }
 
+// TaskUpdate patches a managed task with the provided configuration.
+// If runOp is set to runtimeNow it will immediately run before completing the update, otherwise it will perform
+// the update without running.
+// Note: Currently only changes to the enabled state of the task are supported
 func (tm *TasksManager) TaskUpdate(ctx context.Context, updateConf config.TaskConfig, runOp string) (bool, string, string, error) {
-	// Only enabled changes are supported at this time
 	if updateConf.Enabled == nil {
 		return false, "", "", nil
 	}
