@@ -350,9 +350,15 @@ func TestServiceRegistrationManager_register(t *testing.T) {
 	name := "cts-service"
 	port := 8558
 	ns := "ns-1"
+
+	tags := make([]string, 0, 3)
+	tags = append(tags, defaultServiceTags...)
+	tags = append(tags, "one", "two")
+
 	check := defaultHTTPCheck(&ServiceRegistrationManagerConfig{
 		ID:   id,
 		Port: port,
+		Tags: []string{"one", "two"},
 		ServiceRegistration: &config.ServiceRegistrationConfig{
 			Namespace: &ns,
 			DefaultCheck: &config.DefaultCheckConfig{
@@ -362,7 +368,7 @@ func TestServiceRegistrationManager_register(t *testing.T) {
 	})
 	service := &service{
 		name:      name,
-		tags:      defaultServiceTags,
+		tags:      tags,
 		port:      port,
 		id:        id,
 		namespace: ns,
@@ -384,7 +390,7 @@ func TestServiceRegistrationManager_register(t *testing.T) {
 						Name:      name,
 						Port:      port,
 						Namespace: ns,
-						Tags:      defaultServiceTags,
+						Tags:      tags,
 						Checks:    consulapi.AgentServiceChecks{check},
 					},
 				).Return(nil)
