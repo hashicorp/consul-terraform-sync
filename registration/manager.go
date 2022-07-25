@@ -48,6 +48,7 @@ type ServiceRegistrationManagerConfig struct {
 	ID                  string
 	Port                int
 	TLSEnabled          bool
+	Tags                []string
 	ServiceRegistration *config.ServiceRegistrationConfig
 }
 
@@ -82,13 +83,18 @@ func NewServiceRegistrationManager(conf *ServiceRegistrationManagerConfig, clien
 	if *srConf.DefaultCheck.Enabled {
 		checks = append(checks, defaultHTTPCheck(conf))
 	}
+
+	tags := make([]string, 0, len(defaultServiceTags)+len(conf.Tags))
+	tags = append(tags, defaultServiceTags...)
+	tags = append(tags, conf.Tags...)
+
 	return &ServiceRegistrationManager{
 		client: client,
 		logger: logger,
 		service: &service{
 			name:      name,
 			id:        conf.ID,
-			tags:      defaultServiceTags,
+			tags:      tags,
 			address:   *srConf.Address,
 			port:      conf.Port,
 			namespace: ns,
