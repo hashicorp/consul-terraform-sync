@@ -9,6 +9,9 @@ IMPROVEMENTS:
 * Support for CTS running as a daemon without an initial configured task [[GH-986](https://github.com/hashicorp/consul-terraform-sync/pull/986)]
 * **(Enterprise Only)** Add automatic retries for failed Terraform Cloud requests [[GH-448](https://github.com/hashicorp/consul-terraform-sync/issues/448)]
 
+BUG FIXES:
+* Fix issue where endpoint response objects represent configuration in a working form (e.g. with defaults, transformations, etc.), rather than responding with the configuration exactly as configured [[GH-1000](https://github.com/hashicorp/consul-terraform-sync/issues/1000)]
+
 ## 0.6.0 (May 25, 2022)
 
 KNOWN ISSUES:
