@@ -155,6 +155,7 @@ func (m *ServiceRegistrationManager) register(ctx context.Context) error {
 	}
 
 	logger.Info("Consul-Terraform-Sync registered as a service with Consul")
+	logger.Info("to view registered services, navigate to the Services section in the Consul UI")
 	return nil
 }
 
