@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-terraform-sync/config"
@@ -68,7 +69,6 @@ func (cm *ConditionMonitor) WatchDep(ctx context.Context) error {
 func (cm *ConditionMonitor) Run(ctx context.Context) error {
 	// Assumes buffer_period was set by tasksManager when adding task to CTS
 
-	errCh := make(chan error)
 	if cm.watcherCh == nil {
 		// Size of channel is the number of CTS tasks configured at initialization
 		// +10 for any additional tasks created during runtime. 10 arbitrarily chosen
@@ -78,7 +78,13 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 	if cm.scheduleStopChs == nil {
 		cm.scheduleStopChs = make(map[string](chan struct{}))
 	}
+
+	// This wait prevents timing issues where repeated calls to Run()
+	// and cancelling a context would have overlapping Watch calls.
+	var waitForWatchCancel sync.WaitGroup
+	waitForWatchCancel.Add(1)
 	go func() {
+		defer waitForWatchCancel.Done()
 		for {
 			cm.logger.Trace("starting template dependency monitoring")
 			err := cm.watcher.Watch(ctx, cm.watcherCh)
@@ -102,6 +108,10 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 			go cm.runDynamicTask(ctx, taskName) // errors are logged for now
 
 		case taskName := <-cm.tasksManager.WatchCreatedScheduleTasks():
+			// Cancel existing goroutines before creating the new scheduled task.
+			if stopCh, ok := cm.scheduleStopChs[taskName]; ok && stopCh != nil {
+				stopCh <- struct{}{}
+			}
 			// Run newly created scheduled tasks
 			stopCh := make(chan struct{}, 1)
 			cm.scheduleStopChs[taskName] = stopCh
@@ -115,11 +125,14 @@ func (cm *ConditionMonitor) Run(ctx context.Context) error {
 			}
 			delete(cm.scheduleStopChs, taskName)
 
-		case err := <-errCh:
-			return err
-
 		case <-ctx.Done():
 			cm.logger.Info("stop monitoring tasks")
+			waitForWatchCancel.Wait()
+
+			// Delete all stop channels. They do not need to be notified, since the shared-context is closed.
+			for taskName := range cm.scheduleStopChs {
+				delete(cm.scheduleStopChs, taskName)
+			}
 			return ctx.Err()
 		}
 
