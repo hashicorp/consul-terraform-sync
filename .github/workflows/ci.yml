@@ -20,7 +20,7 @@ env:
 jobs:
   run-check:
     name: Run-Check
-    runs-on: [ubuntu-latest, linux, medium]
+    runs-on: [custom, linux, medium]
     # This job only runs if the action trigger is manual, a commit push, or a PR from a different repo (fork).
     # Other jobs can check if this job ran successfully to determine if they should run as well.
     if: |
@@ -33,7 +33,7 @@ jobs:
 
   checks:
     name: Checks
-    runs-on: [ubuntu-latest, linux, medium]
+    runs-on: [custom, linux, medium]
     needs:
       - run-check
     if: needs.run-check.result == 'success'
@@ -66,7 +66,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: [ubuntu-latest, linux, medium]
+    runs-on: [custom, linux, medium]
     needs:
       - run-check
     if: needs.run-check.result == 'success'
@@ -84,7 +84,7 @@ jobs:
 
   unit-and-integration:
     name: Unit and Integration Tests
-    runs-on: [ubuntu-latest, linux, medium]
+    runs-on: [custom, linux, medium]
     needs:
       - run-check
     if: needs.run-check.result == 'success'
@@ -121,7 +121,7 @@ jobs:
 
   e2e-split:
     name: E2E Tests Splitting
-    runs-on: [ubuntu-latest, linux, medium]
+    runs-on: [custom, linux, medium]
     needs:
       - run-check
     if: needs.run-check.result == 'success'
@@ -147,7 +147,7 @@ jobs:
 
   e2e:
     name: E2E Tests
-    runs-on: [ubuntu-latest, linux, medium]
+    runs-on: [custom, linux, medium]
     needs:
       - run-check
       - e2e-split
@@ -210,7 +210,7 @@ jobs:
       - build
       - unit-and-integration
       - e2e
-    runs-on: [ubuntu-latest, linux, medium]
+    runs-on: [custom, linux, medium]
     steps:
       - name: Slack Workflow Notification
         uses: Gamesight/slack-workflow-status@master
