@@ -118,11 +118,28 @@ func (tm *TasksManager) TaskCreateAndRun(ctx context.Context, taskConfig config.
 		return config.TaskConfig{}, err
 	}
 
-	if err := tm.runNewTask(ctx, d, false); err != nil {
+	ev, err := tm.runNewTask(ctx, d, false)
+
+	if err != nil {
 		return config.TaskConfig{}, err
 	}
 
-	return tm.addTask(ctx, *tc, d)
+	addedConf, err := tm.addTask(ctx, *tc, d)
+	if err != nil {
+		return config.TaskConfig{}, nil
+	}
+
+	// Store event from runNewTask now that the task has been successfully added
+	if ev != nil {
+		logger := tm.logger.With(taskNameLogKey, *taskConfig.Name)
+		logger.Trace("adding event", "event", ev.GoString())
+		if err := tm.state.AddTaskEvent(*ev); err != nil {
+			// only log error since creating a task occurred successfully by now
+			logger.Error("error storing event", "event", ev.GoString(), "error", err)
+		}
+	}
+
+	return addedConf, err
 }
 
 // TaskDelete marks an existing task that has been added to CTS for deletion
@@ -248,7 +265,9 @@ Create Task API / CLI. https://www.consul.io/docs/nia/cli/task#task-create
 		return
 	}
 
-	if err := tm.runNewTask(ctx, d, true); err != nil {
+	ev, err := tm.runNewTask(ctx, d, true)
+
+	if err != nil {
 		// Expects that this task has run successfully before and any error is
 		// intermittent and next run will succeed
 		logger.Error("error while running task once after creation. will still "+
@@ -258,6 +277,15 @@ Create Task API / CLI. https://www.consul.io/docs/nia/cli/task#task-create
 	if _, err := tm.addTask(ctx, *tc, d); err != nil {
 		logger.Error(fmt.Sprintf("error adding task to CTS.%s", actionSteps),
 			"error", err)
+	}
+
+	// Store event from runNewTask now that the task has been successfully added
+	if ev != nil {
+		logger.Trace("adding event", "event", ev.GoString())
+		if err := tm.state.AddTaskEvent(*ev); err != nil {
+			// only log error since creating a task occurred successfully by now
+			logger.Error("error storing event", "event", ev.GoString(), "error", err)
+		}
 	}
 
 	logger.Info("task was created and run successfully")
@@ -535,14 +563,14 @@ func (tm *TasksManager) createTask(ctx context.Context, taskConfig config.TaskCo
 // Stores an event in the state that should be cleaned up if the task is not
 // added to CTS.
 func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver,
-	allowApplyErr bool) error {
+	allowApplyErr bool) (*event.Event, error) {
 
 	task := d.Task()
 	taskName := task.Name()
 	logger := tm.logger.With(taskNameLogKey, taskName)
 	if !task.IsEnabled() {
 		logger.Trace("skipping disabled task")
-		return nil
+		return nil, nil
 	}
 
 	// Create new event for task run
@@ -553,7 +581,7 @@ func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver,
 	})
 	if err != nil {
 		logger.Error("error initializing run task event", "error", err)
-		return err
+		return nil, err
 	}
 	ev.Start()
 
@@ -562,23 +590,17 @@ func (tm *TasksManager) runNewTask(ctx context.Context, d driver.Driver,
 	if err != nil {
 		logger.Error("error applying task", "error", err)
 		if !allowApplyErr {
-			return err
+			return nil, err
 		}
 	}
 
-	// Store event if apply was successful and task will be created
 	ev.End(err)
-	logger.Trace("adding event", "event", ev.GoString())
-	if err := tm.state.AddTaskEvent(*ev); err != nil {
-		// only log error since creating a task occurred successfully by now
-		logger.Error("error storing event", "event", ev.GoString(), "error", err)
-	}
 
 	if tm.ranTaskNotify != nil {
 		tm.ranTaskNotify <- taskName
 	}
 
-	return err
+	return ev, err
 }
 
 // deleteTask deletes an existing task that has been added to CTS. If a task is
