@@ -56,7 +56,7 @@ test-setup-e2e: dev
 test-e2e-ci: test-setup-e2e
 	@echo "==> Testing ${NAME} (e2e)"
 	@echo "Tests regex: $(shell cat "${TESTS_REGEX_PATH}")"
-	@gotestsum --format testname --jsonfile .build/test-results.json -- \
+	@GOMAXPROCS=8 gotestsum --format testname --jsonfile .build/test-results.json -- \
 		./e2e -race -count=1 -timeout=600s -tags=e2e -run="$(shell cat "${TESTS_REGEX_PATH}")" ${TESTARGS}
 .PHONY: test-e2e-ci
 
