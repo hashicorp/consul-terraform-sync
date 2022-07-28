@@ -46,6 +46,12 @@ Upgrade to Consul Enterprise to enable CTS Enterprise features.`, err)
 
 'license' is a Consul-Terraform-Sync (CTS) Enterprise configuration.`, err)
 
+		case "high_availability":
+			return fmt.Errorf(`%s
+
+High availability is a Consul-Terraform-Sync (CTS) Enterprise feature.
+Upgrade to Consul Enterprise to enable CTS Enterprise features.`, err)
+
 		}
 	}
 	return err
