@@ -51,6 +51,10 @@ func conditionToTypeFunc() mapstructure.DecodeHookFunc {
 			conditions = json
 		}
 
+		if c, ok := conditions[noConditionType]; ok {
+			var config NoConditionConfig
+			return decodeConditionToType(c, &config)
+		}
 		if c, ok := conditions[catalogServicesType]; ok {
 			var config CatalogServicesConditionConfig
 			return decodeConditionToType(c, &config)

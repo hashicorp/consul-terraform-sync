@@ -1,8 +1,16 @@
 package config
 
-// NoConditionConfig is used to set a non-null value to a task's condition
+const noConditionType = "no-condition"
+
+var _ ConditionConfig = (*NoConditionConfig)(nil)
+
+// NoConditionMonitorConfig is used to set a non-null value to a task's condition
 // configuration block when it is unconfigured.
-type NoConditionConfig struct{}
+type NoConditionMonitorConfig struct{}
+
+type NoConditionConfig struct {
+	NoConditionMonitorConfig `mapstructure:",squash" json:"no-condition"`
+}
 
 func (c *NoConditionConfig) VariableType() string {
 	return ""
