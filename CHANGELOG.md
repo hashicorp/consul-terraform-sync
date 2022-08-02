@@ -4,6 +4,7 @@ BREAKING CHANGES:
 * Changed default value of `service_name` in service registration configuration from `Consul-Terraform-Sync` to `consul-terraform-sync` [[GH-946](https://github.com/hashicorp/consul-terraform-sync/issues/946)]
 
 FEATURES:
+* **(Enterprise Only)** Support for high availability redundancy [[GH-1015](https://github.com/hashicorp/consul-terraform-sync/issues/1015)]
 * Support for Terraform v1.2 [[GH-917](https://github.com/hashicorp/consul-terraform-sync/pull/917)]
 
 IMPROVEMENTS:
