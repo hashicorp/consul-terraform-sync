@@ -59,8 +59,8 @@ func NewTasksManager(conf *config.Config, state state.Store, watcher templates.W
 		state:             state,
 		drivers:           driver.NewDrivers(),
 		retry:             retry.NewRetry(defaultRetry, time.Now().UnixNano()),
-		createdScheduleCh: make(chan string, 10), // arbitrarily chosen size
-		deletedScheduleCh: make(chan string, 10), // arbitrarily chosen size
+		createdScheduleCh: make(chan string, 100), // arbitrarily chosen size
+		deletedScheduleCh: make(chan string, 100), // arbitrarily chosen size
 	}, nil
 }
 
