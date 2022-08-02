@@ -254,9 +254,9 @@ func (tm *TasksManager) TaskCreateAndRunAllowFail(ctx context.Context, taskConfi
 	logger := tm.logger.With(taskNameLogKey, *taskConfig.Name)
 
 	actionSteps := `
-Please investigate this error. This may require re-creating the task using the
-Create Task API / CLI. https://www.consul.io/docs/nia/cli/task#task-create
-`
+
+Please investigate this error. This may require manual intervention to fix and
+then restarting the instance for changes to take effect`
 
 	tc, d, err := tm.createTask(ctx, taskConfig)
 	if err != nil {
