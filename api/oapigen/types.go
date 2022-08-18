@@ -77,10 +77,26 @@ type HealthCheckResponse struct {
 	Error *Error `json:"error,omitempty"`
 }
 
+// IntentionsModuleInput defines model for IntentionsModuleInput.
+type IntentionsModuleInput struct {
+	CtsUserDefinedMeta *IntentionsModuleInput_CtsUserDefinedMeta `json:"cts_user_defined_meta,omitempty"`
+	Datacenter         *string                                   `json:"datacenter,omitempty"`
+	Filter             *string                                   `json:"filter,omitempty"`
+	Names              *[]string                                 `json:"names,omitempty"`
+	Namespace          *string                                   `json:"namespace,omitempty"`
+	Regexp             *string                                   `json:"regexp,omitempty"`
+}
+
+// IntentionsModuleInput_CtsUserDefinedMeta defines model for IntentionsModuleInput.CtsUserDefinedMeta.
+type IntentionsModuleInput_CtsUserDefinedMeta struct {
+	AdditionalProperties map[string]string `json:"-"`
+}
+
 // The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.
 type ModuleInput struct {
-	ConsulKv *ConsulKVModuleInput `json:"consul_kv,omitempty"`
-	Services *ServicesModuleInput `json:"services,omitempty"`
+	ConsulKv   *ConsulKVModuleInput   `json:"consul_kv,omitempty"`
+	Intentions *IntentionsModuleInput `json:"intentions,omitempty"`
+	Services   *ServicesModuleInput   `json:"services,omitempty"`
 }
 
 // RequestID defines model for RequestID.
@@ -274,6 +290,59 @@ func (a *CatalogServicesCondition_NodeMeta) UnmarshalJSON(b []byte) error {
 
 // Override default JSON handling for CatalogServicesCondition_NodeMeta to handle AdditionalProperties
 func (a CatalogServicesCondition_NodeMeta) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for IntentionsModuleInput_CtsUserDefinedMeta. Returns the specified
+// element and whether it was found
+func (a IntentionsModuleInput_CtsUserDefinedMeta) Get(fieldName string) (value string, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for IntentionsModuleInput_CtsUserDefinedMeta
+func (a *IntentionsModuleInput_CtsUserDefinedMeta) Set(fieldName string, value string) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]string)
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for IntentionsModuleInput_CtsUserDefinedMeta to handle AdditionalProperties
+func (a *IntentionsModuleInput_CtsUserDefinedMeta) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]string)
+		for fieldName, fieldBuf := range object {
+			var fieldVal string
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for IntentionsModuleInput_CtsUserDefinedMeta to handle AdditionalProperties
+func (a IntentionsModuleInput_CtsUserDefinedMeta) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 

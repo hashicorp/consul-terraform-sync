@@ -450,7 +450,7 @@ components:
         cts_user_defined_meta:
           type: object
           additionalProperties:
-            type: string
+            type: string        
     ConsulKVModuleInput:
       type: object
       additionalProperties: false
