@@ -1,16 +1,16 @@
 FROM alpine:3 as default
 
-# NAME and VERSION are the name of the software in releases.hashicorp.com
-# and the version to download. Example: NAME=consul VERSION=1.2.3.
+# NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
+# and the version to download. Example: NAME=consul PRODUCT_VERSION=1.2.3.
 ARG NAME=consul-terraform-sync
-ARG VERSION
+ARG PRODUCT_VERSION
 
 LABEL maintainer="Consul Team <consul@hashicorp.com>"
-LABEL version=$VERSION
+LABEL version=$PRODUCT_VERSION
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
-ENV VERSION=$VERSION
+ENV VERSION=$PRODUCT_VERSION
 
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
 ARG TARGETOS TARGETARCH
