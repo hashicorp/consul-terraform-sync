@@ -16,6 +16,7 @@ func HCLMap(meta *ServicesMeta) template.FuncMap {
 	tmplFuncs := tfunc.FuncMapConsulV1()
 	tmplFuncs["catalogServicesRegistration"] = catalogServicesRegistrationFunc
 	tmplFuncs["servicesRegex"] = servicesRegexFunc
+	tmplFuncs["intentions"] = intentionsFunc
 	tmplFuncs["indent"] = tfunc.Helpers()["indent"]
 	tmplFuncs["subtract"] = tfunc.Math()["subtract"]
 	tmplFuncs["joinStrings"] = joinStringsFunc
