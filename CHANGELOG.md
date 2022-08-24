@@ -1,4 +1,4 @@
-## 0.7.0 (Unreleased)
+## 0.7.0 (August 29, 2022)
 
 BREAKING CHANGES:
 * Changed default value of `service_name` in service registration configuration from `Consul-Terraform-Sync` to `consul-terraform-sync` [[GH-946](https://github.com/hashicorp/consul-terraform-sync/issues/946)]
@@ -11,10 +11,12 @@ IMPROVEMENTS:
 * Add `openssh` command to Docker image to support git over ssh for Terraform modules [[GH-940](https://github.com/hashicorp/consul-terraform-sync/issues/940)]
 * Upgrade Go to version 1.18 [[GH-951](https://github.com/hashicorp/consul-terraform-sync/issues/951)]
 * Support for CTS running as a daemon without an initial configured task [[GH-986](https://github.com/hashicorp/consul-terraform-sync/pull/986)]
+* Enhanced logging for watcher events providing greater insight on changes to Consul [[GH-895](https://github.com/hashicorp/consul-terraform-sync/issues/895)]  
 * **(Enterprise Only)** Add automatic retries for failed Terraform Cloud requests [[GH-448](https://github.com/hashicorp/consul-terraform-sync/issues/448)]
 
 BUG FIXES:
 * Fix issue where endpoint response objects represent configuration in a working form (e.g. with defaults, transformations, etc.), rather than responding with the configuration exactly as configured [[GH-1000](https://github.com/hashicorp/consul-terraform-sync/issues/1000)]
+* Fix issue where Terraform driver requests to the Terraform CLI leaked go-routines which could lead to "error from kill" entries in logs [[GH-849](https://github.com/hashicorp/consul-terraform-sync/issues/849)]
 
 ## 0.6.0 (May 25, 2022)
 
