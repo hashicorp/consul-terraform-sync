@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -410,4 +411,244 @@ func TestKVGet(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConsulClient_QueryServices(t *testing.T) {
+	t.Parallel()
+	path := "/v1/agent/services"
+
+	var nonRetryableError *retry.NonRetryableError
+	var missingConsulACLError *MissingConsulACLError
+	cases := []struct {
+		name                string
+		responseCode        int
+		responseBody        string
+		expectedServices    []*consulapi.AgentService
+		expectErr           bool
+		isNonRetryableError bool
+		isMissingAClError   bool
+	}{
+		{
+			name:             "success_empty",
+			responseCode:     http.StatusOK,
+			expectErr:        false,
+			responseBody:     makeAgentQueryServicesResponse(),
+			expectedServices: []*consulapi.AgentService{},
+		},
+		{
+			name:             "success_single",
+			responseCode:     http.StatusOK,
+			expectErr:        false,
+			responseBody:     makeAgentQueryServicesResponse(makeService("foo", "foo-1")),
+			expectedServices: []*consulapi.AgentService{{Service: "foo", ID: "foo-1"}},
+		},
+		{
+			name:         "success_multiple",
+			responseCode: http.StatusOK,
+			expectErr:    false,
+			responseBody: makeAgentQueryServicesResponse(makeService("foo", "foo-1"),
+				makeService("bar", "bar-1")),
+			expectedServices: []*consulapi.AgentService{
+				{Service: "foo", ID: "foo-1"},
+				{Service: "bar", ID: "bar-1"},
+			},
+		},
+		{
+			name:         "request limit reached error retryable",
+			responseCode: http.StatusTooManyRequests,
+			expectErr:    true,
+		},
+		{
+			name:                "bad request non retryable error",
+			responseCode:        http.StatusBadRequest,
+			expectErr:           true,
+			isNonRetryableError: true,
+		},
+		{
+			name:                "status forbidden non retryable and missing ACL error",
+			responseCode:        http.StatusForbidden,
+			expectErr:           true,
+			isNonRetryableError: true,
+			isMissingAClError:   true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			intercepts := []*testutils.HttpIntercept{
+				{Path: path, ResponseStatusCode: tc.responseCode, ResponseData: []byte(tc.responseBody)},
+			}
+			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+			services, err := c.QueryServices(context.Background(), "", nil)
+			if !tc.expectErr {
+				assert.NoError(t, err)
+
+				assert.NotNil(t, services)
+				assert.ElementsMatch(t, tc.expectedServices, services)
+			} else {
+				assert.Error(t, err)
+				// Verify the error types
+				assert.Equal(t, tc.isNonRetryableError, errors.As(err, &nonRetryableError))
+				assert.Equal(t, tc.isMissingAClError, errors.As(err, &missingConsulACLError))
+
+				assert.Nil(t, services)
+			}
+		})
+	}
+}
+
+func TestConsulClient_GetHealthChecks(t *testing.T) {
+	t.Parallel()
+	pathPrefix := "/v1/health/checks"
+
+	var nonRetryableError *retry.NonRetryableError
+	var missingConsulACLError *MissingConsulACLError
+	cases := []struct {
+		name                 string
+		responseCode         int
+		responseBody         string
+		expectedHealthChecks consulapi.HealthChecks
+		expectErr            bool
+		serviceName          string
+		isNonRetryableError  bool
+		isMissingAClError    bool
+	}{
+		{
+			name:                 "success_empty",
+			responseCode:         http.StatusOK,
+			expectErr:            false,
+			responseBody:         makeHealthCheckResponse(),
+			expectedHealthChecks: []*consulapi.HealthCheck{},
+		},
+		{
+			name:         "success_single",
+			responseCode: http.StatusOK,
+			expectErr:    false,
+			responseBody: makeHealthCheckResponse(makeHealthCheck("foo", "foo-01", "passing")),
+			expectedHealthChecks: []*consulapi.HealthCheck{
+				{
+					ServiceName: "foo",
+					ServiceID:   "foo-01",
+					Status:      "passing",
+				},
+			},
+		},
+		{
+			name:         "success_single_service_multiple_instances",
+			responseCode: http.StatusOK,
+			expectErr:    false,
+			responseBody: makeHealthCheckResponse(makeHealthCheck("foo", "foo-01", "passing"),
+				makeHealthCheck("foo", "foo-02", "passing")),
+			expectedHealthChecks: []*consulapi.HealthCheck{
+				{
+					ServiceName: "foo",
+					ServiceID:   "foo-01",
+					Status:      "passing",
+				},
+				{
+					ServiceName: "foo",
+					ServiceID:   "foo-02",
+					Status:      "passing",
+				},
+			},
+		},
+		{
+			name:         "success_multiple_services_multiple_instances",
+			responseCode: http.StatusOK,
+			expectErr:    false,
+			responseBody: makeHealthCheckResponse(makeHealthCheck("foo", "foo-01", "passing"),
+				makeHealthCheck("bar", "bar-01", "passing")),
+			expectedHealthChecks: []*consulapi.HealthCheck{
+				{
+					ServiceName: "foo",
+					ServiceID:   "foo-01",
+					Status:      "passing",
+				},
+				{
+					ServiceName: "bar",
+					ServiceID:   "bar-01",
+					Status:      "passing",
+				},
+			},
+		},
+		{
+			name:         "request limit reached error retryable",
+			responseCode: http.StatusTooManyRequests,
+			expectErr:    true,
+		},
+		{
+			name:                "bad request non retryable error",
+			responseCode:        http.StatusBadRequest,
+			expectErr:           true,
+			isNonRetryableError: true,
+		},
+		{
+			name:                "status forbidden non retryable and missing ACL error",
+			responseCode:        http.StatusForbidden,
+			expectErr:           true,
+			isNonRetryableError: true,
+			isMissingAClError:   true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			intercepts := []*testutils.HttpIntercept{
+				{
+					Path:               fmt.Sprintf("%s/%s", pathPrefix, tc.serviceName),
+					ResponseStatusCode: tc.responseCode,
+					ResponseData:       []byte(tc.responseBody),
+				},
+			}
+			c := newTestConsulClient(t, testutils.NewHttpClient(t, intercepts), 1)
+			healthChecks, err := c.GetHealthChecks(context.Background(), tc.serviceName, nil)
+			if !tc.expectErr {
+				assert.NotNil(t, healthChecks)
+				assert.NoError(t, err)
+
+				assert.NotNil(t, healthChecks)
+				assert.ElementsMatch(t, tc.expectedHealthChecks, healthChecks)
+			} else {
+				assert.Error(t, err)
+				// Verify the error types
+				assert.Equal(t, tc.isNonRetryableError, errors.As(err, &nonRetryableError))
+				assert.Equal(t, tc.isMissingAClError, errors.As(err, &missingConsulACLError))
+
+				assert.Nil(t, healthChecks)
+			}
+		})
+	}
+}
+
+func makeService(name, id string) *consulapi.AgentService {
+	return &consulapi.AgentService{
+		ID:      id,
+		Service: name,
+	}
+}
+
+func makeAgentQueryServicesResponse(services ...*consulapi.AgentService) string {
+	m := make(map[string]*consulapi.AgentService)
+	for _, service := range services {
+		m[service.ID] = service
+	}
+
+	bytes, _ := json.Marshal(m)
+	return string(bytes)
+}
+
+func makeHealthCheck(serviceName, serviceId, status string) *consulapi.HealthCheck {
+	return &consulapi.HealthCheck{
+		ServiceName: serviceName,
+		ServiceID:   serviceId,
+		Status:      status,
+	}
+}
+
+func makeHealthCheckResponse(healthChecks ...*consulapi.HealthCheck) string {
+	hc := make([]*consulapi.HealthCheck, 0, len(healthChecks))
+	hc = append(hc, healthChecks...)
+	bytes, _ := json.Marshal(hc)
+
+	return string(bytes)
 }

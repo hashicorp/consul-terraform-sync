@@ -36,6 +36,16 @@ type CatalogServicesCondition_NodeMeta struct {
 	AdditionalProperties map[string]string `json:"-"`
 }
 
+// ClusterStatusResponse defines model for ClusterStatusResponse.
+type ClusterStatusResponse struct {
+	// the name of the CTS cluster
+	ClusterName string `json:"cluster_name"`
+
+	// the list of CTS instances which are part of this cluster
+	Members   []Member  `json:"members"`
+	RequestId RequestID `json:"request_id"`
+}
+
 // The condition on which to trigger the task to execute. If the task has the deprecated services field configured as a module input, it is represented here as condition.services.
 type Condition struct {
 	CatalogServices *CatalogServicesCondition `json:"catalog_services,omitempty"`
@@ -75,6 +85,24 @@ type ErrorResponse struct {
 // HealthCheckResponse defines model for HealthCheckResponse.
 type HealthCheckResponse struct {
 	Error *Error `json:"error,omitempty"`
+}
+
+// Member defines model for Member.
+type Member struct {
+	// the address if this instance is the CTS leader, empty otherwise
+	Address *string `json:"address,omitempty"`
+
+	// the health status of the cts instance
+	Healthy bool `json:"healthy"`
+
+	// the id of the CTS instance
+	Id string `json:"id"`
+
+	// boolean true if CTS instance is a cluster leader, false otherwise
+	Leader bool `json:"leader"`
+
+	// the service name of the CTS instance
+	ServiceName string `json:"service_name"`
 }
 
 // The additional module input(s) that the tasks provides to the Terraform module on execution. If the task has the deprecated services field configured as a module input, it is represented here as module_input.services.

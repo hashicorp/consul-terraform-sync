@@ -71,11 +71,12 @@ type API struct {
 
 // Config is used to configure the API
 type Config struct {
-	Port        int
-	TLS         *config.CTSTLSConfig
-	Controller  Server
-	Health      health.Checker
-	Interceptor Interceptor
+	Port          int
+	TLS           *config.CTSTLSConfig
+	Controller    Server
+	Health        health.Checker
+	Interceptor   Interceptor
+	StatusHandler StatusHandler
 }
 
 // NewAPI create a new API object
@@ -139,6 +140,7 @@ func NewAPI(ctx context.Context, conf Config) (*API, error) {
 		server := Handlers{
 			TaskLifeCycleHandler: NewTaskLifeCycleHandler(api.ctrl),
 			HealthHandler:        NewHealthHandler(api.health),
+			StatusHandler:        statusHandlerFactory(conf.StatusHandler),
 		}
 
 		oapigen.HandlerFromMux(server, r)
@@ -249,4 +251,14 @@ func getTaskName(reqPath, apiPath, version string) (string, error) {
 	}
 
 	return taskName, nil
+}
+
+// statusHandlerFactory returns the passed in status handler if it is not nil
+// otherwise returns the default status handler
+func statusHandlerFactory(sh StatusHandler) StatusHandler {
+	if sh != nil {
+		return sh
+	}
+
+	return &StatusHandlerDefault{}
 }

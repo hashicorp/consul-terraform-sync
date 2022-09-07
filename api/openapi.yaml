@@ -22,6 +22,28 @@ servers:
       port:
         default: '8558'
 paths:
+  /v1/status/cluster:
+    get:
+      summary: Gets cluster status when CTS is configured with high availability
+      operationId: getClusterStatus
+      tags:
+        - status
+        - enterprise
+      description: CTS Enterprise Only. Checks the current status of the CTS cluster and returns a list of cluster members and their associated metadata
+      responses:
+        '200':
+          description: Status of cluster members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterStatusResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /v1/health:
     get:
       summary: Gets health status
@@ -170,6 +192,36 @@ paths:
 
 components:
   schemas:
+    ClusterStatusResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        cluster_name:
+          description: the name of the CTS cluster
+          type: string
+          example: cluster-a
+        members:
+          description: the list of CTS instances which are part of this cluster
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+          example:
+            - id: cts-01
+              service_name: consul-terraform-sync
+              healthy: true
+              leader: true
+              address: cts-01.example.com
+            - id: cts-02
+              service_name: consul-terraform-sync
+              healthy: false
+              leader: false
+        request_id:
+          $ref: '#/components/schemas/RequestID'
+      required:
+        - cluster_name
+        - members
+        - request_id
+
     TaskRequest:
       type: object
       additionalProperties: false
@@ -228,6 +280,36 @@ components:
         - error
         - request_id
 
+    Member:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          description: the id of the CTS instance
+          type: string
+          example: cts-01
+        service_name:
+          description: the service name of the CTS instance
+          type: string
+          example: consul-terraform-sync
+        healthy:
+          description: the health status of the cts instance
+          type: boolean
+          example: true
+        leader:
+          description: boolean true if CTS instance is a cluster leader, false otherwise
+          type: boolean
+          example: true
+        address:
+          description: the address if this instance is the CTS leader, empty otherwise
+          type: string
+          example: cts-01.example.com
+      required:
+        - id
+        - service_name
+        - healthy
+        - leader
+
     Task:
       type: object
       additionalProperties: false
@@ -268,12 +350,11 @@ components:
         module_input:
           $ref: '#/components/schemas/ModuleInput'
         terraform_version:
-           type: string
-           description: Deprecated, use task.terraform_cloud_workspace.terraform_version instead. Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest compatible version if not set.
-           example: "1.0.0"
+          type: string
+          description: Deprecated, use task.terraform_cloud_workspace.terraform_version instead. Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest compatible version if not set.
+          example: "1.0.0"
         terraform_cloud_workspace:
           $ref: '#/components/schemas/TerraformCloudWorkspace'
-
       required:
         - name
         - module
@@ -489,9 +570,9 @@ components:
           example: "test_agent_pool"
           description: Enterprise only. Name of agent pool to set for the Terraform Cloud workspace associated with the task when the execution mode is "agent". Either agent_pool_id or agent_pool_name is required if execution mode is "agent". If both are set, then agent_pool_id takes precedence.
         terraform_version:
-           type: string
-           description: Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest compatible version if not set.
-           example: "1.0.0"
+          type: string
+          description: Enterprise only. The version of Terraform to use for the Terraform Cloud workspace associated with the task. This is only available when used with the Terraform Cloud driver. Defaults to the latest compatible version if not set.
+          example: "1.0.0"
 
     Run:
       type: object
