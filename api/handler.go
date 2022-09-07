@@ -20,6 +20,7 @@ const (
 type Handlers struct {
 	*TaskLifeCycleHandler
 	*HealthHandler
+	StatusHandler
 }
 
 //go:generate oapi-codegen -package oapigen -old-config-style -generate types -o oapigen/types.go openapi.yaml

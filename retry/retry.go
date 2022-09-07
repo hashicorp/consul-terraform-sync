@@ -86,6 +86,9 @@ func (r Retry) Do(ctx context.Context, f func(context.Context) error, desc strin
 		select {
 		case <-ctx.Done():
 			logger.Info("stopping retry", "description", desc)
+			if errs != nil {
+				return fmt.Errorf("%v: %v", ctx.Err(), errs)
+			}
 			return ctx.Err()
 		case <-interval.C:
 			attempt++
