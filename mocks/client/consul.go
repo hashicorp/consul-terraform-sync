@@ -62,6 +62,54 @@ func (_c *ConsulClientInterface_DeregisterService_Call) Return(_a0 error) *Consu
 	return _c
 }
 
+// GetHealthChecks provides a mock function with given fields: ctx, serviceName, q
+func (_m *ConsulClientInterface) GetHealthChecks(ctx context.Context, serviceName string, q *api.QueryOptions) (api.HealthChecks, error) {
+	ret := _m.Called(ctx, serviceName, q)
+
+	var r0 api.HealthChecks
+	if rf, ok := ret.Get(0).(func(context.Context, string, *api.QueryOptions) api.HealthChecks); ok {
+		r0 = rf(ctx, serviceName, q)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(api.HealthChecks)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, *api.QueryOptions) error); ok {
+		r1 = rf(ctx, serviceName, q)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ConsulClientInterface_GetHealthChecks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetHealthChecks'
+type ConsulClientInterface_GetHealthChecks_Call struct {
+	*mock.Call
+}
+
+// GetHealthChecks is a helper method to define mock.On call
+//  - ctx context.Context
+//  - serviceName string
+//  - q *api.QueryOptions
+func (_e *ConsulClientInterface_Expecter) GetHealthChecks(ctx interface{}, serviceName interface{}, q interface{}) *ConsulClientInterface_GetHealthChecks_Call {
+	return &ConsulClientInterface_GetHealthChecks_Call{Call: _e.mock.On("GetHealthChecks", ctx, serviceName, q)}
+}
+
+func (_c *ConsulClientInterface_GetHealthChecks_Call) Run(run func(ctx context.Context, serviceName string, q *api.QueryOptions)) *ConsulClientInterface_GetHealthChecks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(*api.QueryOptions))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_GetHealthChecks_Call) Return(_a0 api.HealthChecks, _a1 error) *ConsulClientInterface_GetHealthChecks_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // GetLicense provides a mock function with given fields: ctx, q
 func (_m *ConsulClientInterface) GetLicense(ctx context.Context, q *api.QueryOptions) (string, error) {
 	ret := _m.Called(ctx, q)
@@ -253,6 +301,54 @@ func (_c *ConsulClientInterface_LockOpts_Call) Run(run func(opts *api.LockOption
 }
 
 func (_c *ConsulClientInterface_LockOpts_Call) Return(_a0 *api.Lock, _a1 error) *ConsulClientInterface_LockOpts_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+// QueryServices provides a mock function with given fields: ctx, filter, q
+func (_m *ConsulClientInterface) QueryServices(ctx context.Context, filter string, q *api.QueryOptions) ([]*api.AgentService, error) {
+	ret := _m.Called(ctx, filter, q)
+
+	var r0 []*api.AgentService
+	if rf, ok := ret.Get(0).(func(context.Context, string, *api.QueryOptions) []*api.AgentService); ok {
+		r0 = rf(ctx, filter, q)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*api.AgentService)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, *api.QueryOptions) error); ok {
+		r1 = rf(ctx, filter, q)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ConsulClientInterface_QueryServices_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'QueryServices'
+type ConsulClientInterface_QueryServices_Call struct {
+	*mock.Call
+}
+
+// QueryServices is a helper method to define mock.On call
+//  - ctx context.Context
+//  - filter string
+//  - q *api.QueryOptions
+func (_e *ConsulClientInterface_Expecter) QueryServices(ctx interface{}, filter interface{}, q interface{}) *ConsulClientInterface_QueryServices_Call {
+	return &ConsulClientInterface_QueryServices_Call{Call: _e.mock.On("QueryServices", ctx, filter, q)}
+}
+
+func (_c *ConsulClientInterface_QueryServices_Call) Run(run func(ctx context.Context, filter string, q *api.QueryOptions)) *ConsulClientInterface_QueryServices_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(*api.QueryOptions))
+	})
+	return _c
+}
+
+func (_c *ConsulClientInterface_QueryServices_Call) Return(_a0 []*api.AgentService, _a1 error) *ConsulClientInterface_QueryServices_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }

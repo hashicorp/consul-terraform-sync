@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,6 +28,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testCustomErrorMessage = "custom error message"
+)
+
 func TestServe(t *testing.T) {
 	t.Parallel()
 
@@ -34,44 +39,42 @@ func TestServe(t *testing.T) {
 	// remove request_id from response to simplify testing
 	re := regexp.MustCompile(`"request_id":"(\w|-)+",?`)
 	cases := []struct {
-		name       string
-		path       string
-		method     string
-		body       string
-		mock       func(*mocks.Server)
-		statusCode int
-		respBody   string
+		name          string
+		path          string
+		method        string
+		body          string
+		mock          func(*mocks.Server)
+		statusCode    int
+		respBody      string
+		statusHandler StatusHandler
 	}{
 		{
-			"overall status",
-			"status",
-			http.MethodGet,
-			"",
-			func(ctrl *mocks.Server) {
+			name:   "overall status",
+			path:   "status",
+			method: http.MethodGet,
+			mock: func(ctrl *mocks.Server) {
 				ctrl.On("Tasks", mock.Anything).Return(config.TaskConfigs{}).
 					On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
 			},
-			http.StatusOK,
-			`{"task_summary":{"status":{"successful":0,"errored":0,"critical":0,"unknown":0},"enabled":{"true":0,"false":0}}}
+			statusCode: http.StatusOK,
+			respBody: `{"task_summary":{"status":{"successful":0,"errored":0,"critical":0,"unknown":0},"enabled":{"true":0,"false":0}}}
 `,
 		}, {
-			"task status: all",
-			"status/tasks",
-			http.MethodGet,
-			"",
-			func(ctrl *mocks.Server) {
+			name:   "task status: all",
+			path:   "status/tasks",
+			method: http.MethodGet,
+			mock: func(ctrl *mocks.Server) {
 				ctrl.On("Tasks", mock.Anything).Return(config.TaskConfigs{}).
 					On("Events", mock.Anything, "").Return(map[string][]event.Event{}, nil)
 			},
-			http.StatusOK,
-			`{}
+			statusCode: http.StatusOK,
+			respBody: `{}
 `,
 		}, {
-			"task status: single",
-			"status/tasks/task_b",
-			http.MethodGet,
-			"",
-			func(ctrl *mocks.Server) {
+			name:   "task status: single",
+			path:   "status/tasks/task_b",
+			method: http.MethodGet,
+			mock: func(ctrl *mocks.Server) {
 				taskName := "task_b"
 				ctrl.On("Task", mock.Anything, taskName).Return(config.TaskConfig{
 					Name:    &taskName,
@@ -79,14 +82,14 @@ func TestServe(t *testing.T) {
 				}, nil).
 					On("Events", mock.Anything, taskName).Return(map[string][]event.Event{}, nil)
 			},
-			http.StatusOK,
-			`{"task_b":{"task_name":"task_b","status":"unknown","enabled":true,"events_url":"","providers":null,"services":null}}
+			statusCode: http.StatusOK,
+			respBody: `{"task_b":{"task_name":"task_b","status":"unknown","enabled":true,"events_url":"","providers":null,"services":null}}
 `,
 		}, {
-			"create task",
-			"tasks",
-			http.MethodPost,
-			`{
+			name:   "create task",
+			path:   "tasks",
+			method: http.MethodPost,
+			body: `{
 	"task": {
 		"name": "task_b",
 		"module": "module",
@@ -100,7 +103,7 @@ func TestServe(t *testing.T) {
 		"enabled": true
 	}
 }`,
-			func(ctrl *mocks.Server) {
+			mock: func(ctrl *mocks.Server) {
 				taskConf := config.TaskConfig{
 					Name:    config.String("task_b"),
 					Enabled: config.Bool(true),
@@ -114,31 +117,48 @@ func TestServe(t *testing.T) {
 				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
 				ctrl.On("TaskCreate", mock.Anything, taskConf).Return(taskConf, nil)
 			},
-			http.StatusCreated,
-			`{"task":{"condition":{"services":{"cts_user_defined_meta":{},"names":["api"]}},"enabled":true,"module":"module","name":"task_b"}}
+			statusCode: http.StatusCreated,
+			respBody: `{"task":{"condition":{"services":{"cts_user_defined_meta":{},"names":["api"]}},"enabled":true,"module":"module","name":"task_b"}}
 `,
 		}, {
-			"delete task",
-			"tasks/task_b",
-			http.MethodDelete,
-			"",
-			func(ctrl *mocks.Server) {
+			name:   "delete task",
+			path:   "tasks/task_b",
+			method: http.MethodDelete,
+			mock: func(ctrl *mocks.Server) {
 				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskDelete", mock.Anything, "task_b").Return(nil)
 			},
-			http.StatusAccepted,
-			"{}\n",
+			statusCode: http.StatusAccepted,
+			respBody:   "{}\n",
 		}, {
-			"update task (patch)",
-			"tasks/task_b",
-			http.MethodPatch,
-			`{"enabled": true}`,
-			func(ctrl *mocks.Server) {
+			name:   "update task (patch)",
+			path:   "tasks/task_b",
+			method: http.MethodPatch,
+			body:   `{"enabled": true}`,
+			mock: func(ctrl *mocks.Server) {
 				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, nil)
 				ctrl.On("TaskUpdate", mock.Anything, mock.Anything, "").Return(true, "", "", nil)
 			},
-			http.StatusOK,
-			"{}\n",
+			statusCode: http.StatusOK,
+			respBody:   "{}\n",
+		}, {
+			name:       "default status handler",
+			path:       "status/cluster",
+			method:     http.MethodGet,
+			mock:       func(ctrl *mocks.Server) {},
+			statusCode: http.StatusMethodNotAllowed,
+			respBody: fmt.Sprintf(`{"error":{"message":"%s"},}
+`, haNotAvailableError),
+		},
+		{
+			name:          "custom status handler",
+			path:          "status/cluster",
+			method:        http.MethodGet,
+			mock:          func(ctrl *mocks.Server) {},
+			statusCode:    http.StatusMethodNotAllowed,
+			statusHandler: statusHandlerMock{},
+			respBody: fmt.Sprintf(`{"error":{"message":"%s"},}
+`, testCustomErrorMessage),
 		},
 	}
 	for _, tc := range cases {
@@ -149,8 +169,9 @@ func TestServe(t *testing.T) {
 			ctrl := new(mocks.Server)
 			tc.mock(ctrl)
 			api, err := NewAPI(ctx, Config{
-				Controller: ctrl,
-				Port:       port,
+				Controller:    ctrl,
+				Port:          port,
+				StatusHandler: tc.statusHandler,
 			})
 			require.NoError(t, err)
 			go api.Serve(ctx)
@@ -753,4 +774,15 @@ func TestGetTaskName(t *testing.T) {
 			assert.Equal(t, tc.expected, actual)
 		})
 	}
+}
+
+type statusHandlerMock struct {
+	StatusHandlerDefault
+}
+
+// GetClusterStatus is a mocked version of GetClusterStatus that writes out an
+// error response always
+func (statusHandlerMock) GetClusterStatus(w http.ResponseWriter, r *http.Request) {
+	err := errors.New(testCustomErrorMessage)
+	sendError(w, r, http.StatusMethodNotAllowed, err)
 }

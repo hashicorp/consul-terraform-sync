@@ -78,6 +78,8 @@ type ConsulClientInterface interface {
 	Lock(l *consulapi.Lock, stopCh <-chan struct{}) (<-chan struct{}, error)
 	Unlock(l *consulapi.Lock) error
 	KVGet(ctx context.Context, key string, q *consulapi.QueryOptions) (*consulapi.KVPair, *consulapi.QueryMeta, error)
+	QueryServices(ctx context.Context, filter string, q *consulapi.QueryOptions) ([]*consulapi.AgentService, error)
+	GetHealthChecks(ctx context.Context, serviceName string, q *consulapi.QueryOptions) (consulapi.HealthChecks, error)
 }
 
 // ConsulClient is a client to the Consul API
@@ -345,7 +347,81 @@ func (c *ConsulClient) KVGet(ctx context.Context, key string, q *consulapi.Query
 		return nil, nil, err
 	}
 
-	return kv, meta, err
+	return kv, meta, nil
+}
+
+// QueryServices returns a subset of the locally registered services that match the given filter
+// expression and QueryOptions.
+func (c *ConsulClient) QueryServices(ctx context.Context, filter string, opts *consulapi.QueryOptions) ([]*consulapi.AgentService, error) {
+	desc := "AgentQueryServices"
+
+	logger := c.logger
+	logger.Debug("querying services")
+
+	var servicesMap map[string]*consulapi.AgentService
+	f := func(context.Context) error {
+		var err error
+		servicesMap, err = c.Agent().ServicesWithFilterOpts(filter, opts)
+		return wrapError(ctx, err)
+	}
+
+	err := c.retry.Do(ctx, f, desc)
+	if err != nil {
+		return nil, err
+	}
+
+	// map values to slice
+	services := make([]*consulapi.AgentService, 0, len(servicesMap))
+	for _, s := range servicesMap {
+		services = append(services, s)
+	}
+
+	return services, nil
+}
+
+// GetHealthChecks is used to return the health checks associated with a service
+func (c *ConsulClient) GetHealthChecks(ctx context.Context, serviceName string, opts *consulapi.QueryOptions) (consulapi.HealthChecks, error) {
+	desc := "HealthChecks"
+
+	logger := c.logger
+	logger.Debug("querying health checks")
+
+	var healthChecks consulapi.HealthChecks
+	f := func(context.Context) error {
+		var err error
+		healthChecks, _, err = c.Health().Checks(serviceName, opts)
+		return wrapError(ctx, err)
+	}
+
+	err := c.retry.Do(ctx, f, desc)
+	if err != nil {
+		return nil, err
+	}
+
+	return healthChecks, nil
+}
+
+// wrapError processes the error by wrapping it in the correct error types
+func wrapError(ctx context.Context, err error) error {
+	if err != nil {
+		statusCode := getResponseCodeFromError(ctx, err)
+
+		// If we get a StatusForbidden assume that this is because CTS
+		// does not have the correct ACLs to access this resource in Consul
+		// and wrap in the appropriate error
+		if statusCode == http.StatusForbidden {
+			err = &MissingConsulACLError{Err: err}
+		}
+
+		// non-retryable errors allows for termination of retries
+		if !isResponseCodeRetryable(statusCode) {
+			err = &retry.NonRetryableError{Err: err}
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func getResponseCodeFromError(ctx context.Context, err error) int {
