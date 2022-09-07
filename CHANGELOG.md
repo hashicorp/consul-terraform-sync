@@ -1,4 +1,4 @@
-## 0.7.0 (August 29, 2022)
+## 0.7.0 (September 8, 2022)
 
 BREAKING CHANGES:
 * Changed default value of `service_name` in service registration configuration from `Consul-Terraform-Sync` to `consul-terraform-sync` [[GH-946](https://github.com/hashicorp/consul-terraform-sync/issues/946)]
