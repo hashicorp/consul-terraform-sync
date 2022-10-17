@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/deepmap/oapi-codegen v1.11.0
-	github.com/getkin/kin-openapi v0.94.0
+	github.com/getkin/kin-openapi v0.106.0
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/consul/api v1.13.0
@@ -39,6 +39,11 @@ require (
 )
 
 require (
+	github.com/invopop/yaml v0.1.0 // indirect
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
+)
+
+require (
 	cloud.google.com/go v0.78.0 // indirect
 	cloud.google.com/go/storage v1.13.0 // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
@@ -55,7 +60,6 @@ require (
 	github.com/cenkalti/backoff/v3 v3.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.10.0 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/swag v0.21.1 // indirect
 	github.com/go-test/deep v1.0.7 // indirect
