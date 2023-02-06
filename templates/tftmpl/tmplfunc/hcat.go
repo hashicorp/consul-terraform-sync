@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Code here is copied over from hcat's (https://github.com/hashicorp/hcat)
 // internal dependency package that is used for creating custom template
 // functions for CTS
