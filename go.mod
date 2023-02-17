@@ -3,7 +3,7 @@ module github.com/hashicorp/consul-terraform-sync
 go 1.18
 
 require (
-	github.com/PaloAltoNetworks/pango v0.5.1
+	github.com/PaloAltoNetworks/pango v0.10.2
 	github.com/deepmap/oapi-codegen v1.11.0
 	github.com/getkin/kin-openapi v0.94.0
 	github.com/go-chi/chi/v5 v5.0.7
