@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "local_file" "address" {
   depends_on = [local_file.greeting_services]
   for_each   = var.services
