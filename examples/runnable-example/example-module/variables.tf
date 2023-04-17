@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # Required var.services declaration
 variable "services" {
   description = "Consul services monitored by Consul-Terraform-Sync"

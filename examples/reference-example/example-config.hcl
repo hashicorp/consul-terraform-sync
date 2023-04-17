@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 #
 # WARNING: This configuration file should only be used as an example for
 # reference. Values in this configuration are nonsensical with the purpose of

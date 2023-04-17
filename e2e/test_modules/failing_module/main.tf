@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "local_file" "bar" {
   content  = data.local_file.foo.content
   filename = "resources/bar.txt"
