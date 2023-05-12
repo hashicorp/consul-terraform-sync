@@ -139,7 +139,9 @@ func (d *RootModuleInputData) init() {
 
 // InitRootModule generates the root module and writes the following files to
 // disk.
-//   always: main.tf, variables.tf, terraform.tfvars.tmpl
+//
+//	always: main.tf, variables.tf, terraform.tfvars.tmpl
+//
 // conditionally: variables.module.tf, providers.tfvars
 func InitRootModule(input *RootModuleInputData) error {
 	input.init()
