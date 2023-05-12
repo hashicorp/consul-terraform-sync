@@ -12,10 +12,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: 1.18
-  CONSUL_VERSION: 1.12.1
-  TERRAFORM_VERSION: 1.2.2
-  VAULT_VERSION: 1.10.3
+  GO_VERSION: 1.20
+  CONSUL_VERSION: 1.15.2
+  TERRAFORM_VERSION: 1.4.6
+  VAULT_VERSION: 1.13.2
 
 jobs:
   compatability:
