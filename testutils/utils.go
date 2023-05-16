@@ -266,6 +266,9 @@ func (*TestingTB) Failed() bool { return false }
 // Logf implements Consul's testutil.TestingTB's Logf()
 func (*TestingTB) Logf(string, ...interface{}) {}
 
+// Helper implements Consul's testutil.TestingTB's Helper()
+func (*TestingTB) Helper() {}
+
 // Name implements Consul's testutil.TestingTB's Name()
 func (*TestingTB) Name() string { return "TestingTB" }
 
