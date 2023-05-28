@@ -741,8 +741,8 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 	err := json.NewDecoder(resp.Body).Decode(&errorResponse)
 	require.NoError(t, err)
 
-	assert.Contains(t, errorResponse.Error.Message, `request body has an error: doesn't match the schema: `+
-		`Error at "/task/module": Field must be set to string or not be present`)
+	assert.Contains(t, errorResponse.Error.Message, `request body has an error: doesn't match schema`+
+		` #/components/schemas/TaskRequest: Error at "/task/module": value must be a string`)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	// Check that the task has not been created
