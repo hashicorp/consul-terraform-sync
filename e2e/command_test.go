@@ -9,7 +9,6 @@ package e2e
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -631,7 +630,7 @@ task {
 			// If required by test case, verify contents of generated variables file
 			for _, v := range tc.tfVarsFiles {
 				expectedFilePath := filepath.Join(tempDir, taskName, "variables.auto.tfvars")
-				b, err := ioutil.ReadFile(expectedFilePath)
+				b, err := os.ReadFile(expectedFilePath)
 				require.NoError(t, err)
 				assert.Contains(t, string(b), v)
 			}
