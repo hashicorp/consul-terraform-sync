@@ -8,7 +8,7 @@ package hcltmpl
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
@@ -77,8 +77,8 @@ func TestLoadDynamicConfig_ConsulKV(t *testing.T) {
 	srv, err := testutil.NewTestServerConfigT(tb,
 		func(c *testutil.TestServerConfig) {
 			c.LogLevel = "warn"
-			c.Stdout = ioutil.Discard
-			c.Stderr = ioutil.Discard
+			c.Stdout = io.Discard
+			c.Stderr = io.Discard
 		})
 	require.NoError(t, err)
 	clients := hcat.NewClientSet()
