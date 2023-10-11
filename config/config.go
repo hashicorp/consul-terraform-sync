@@ -6,7 +6,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -489,7 +488,7 @@ func fromFile(path string) (*Config, error) {
 	}
 
 	logger := logging.Global().Named(logSystemName)
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		logger.Error("failed reading config file from disk", filePathLogKey, path)
 		return nil, err
@@ -533,7 +532,7 @@ func fromPath(path string) (*Config, error) {
 	}
 
 	// Ensure the given filepath has at least one config file
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		logger.Error("failed listing directory", filePathLogKey, path)
 		return nil, err
@@ -591,7 +590,7 @@ func stringFromEnv(list []string, def string) *string {
 
 func stringFromFile(list []string, def string) *string {
 	for _, s := range list {
-		c, err := ioutil.ReadFile(s)
+		c, err := os.ReadFile(s)
 		if err == nil {
 			return String(strings.TrimSpace(string(c)))
 		}
