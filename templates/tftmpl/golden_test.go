@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"flag"
 	"io"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/consul-terraform-sync/templates/hcltmpl"
@@ -514,7 +514,7 @@ func TestNewFiles(t *testing.T) {
 func checkGoldenFile(t *testing.T, goldenFile string, actual string) {
 	// update golden files if necessary
 	if *update {
-		if err := ioutil.WriteFile(goldenFile, []byte(actual), 0644); err != nil {
+		if err := os.WriteFile(goldenFile, []byte(actual), 0644); err != nil {
 			require.NoError(t, err)
 		}
 	}
