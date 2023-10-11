@@ -11,9 +11,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -354,7 +354,7 @@ func TestServeWithTLS(t *testing.T) {
 			tlsConf := &tls.Config{}
 			if tc.clientCACert != "" {
 				caCertPool := x509.NewCertPool()
-				caCert, err := ioutil.ReadFile(tc.clientCACert)
+				caCert, err := os.ReadFile(tc.clientCACert)
 				require.NoError(t, err)
 				caCertPool.AppendCertsFromPEM(caCert)
 				tlsConf = &tls.Config{
@@ -549,11 +549,11 @@ func TestServeWithMutualTLS_MultipleCA(t *testing.T) {
 	cleanup := testutils.MakeTempDir(t, tmpDir)
 	defer cleanup()
 	for _, src := range caFiles {
-		input, err := ioutil.ReadFile(src)
+		input, err := os.ReadFile(src)
 		file := filepath.Base(src)
 		dest := filepath.Join(tmpDir, file)
 		require.NoError(t, err)
-		err = ioutil.WriteFile(dest, input, 0644)
+		err = os.WriteFile(dest, input, 0644)
 		require.NoError(t, err)
 	}
 

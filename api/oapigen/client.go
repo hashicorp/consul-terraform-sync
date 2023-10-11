@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -671,7 +670,7 @@ func (c *ClientWithResponses) GetTaskByNameWithResponse(ctx context.Context, nam
 
 // ParseGetHealthResponse parses an HTTP response from a GetHealthWithResponse call
 func ParseGetHealthResponse(rsp *http.Response) (*GetHealthResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -704,7 +703,7 @@ func ParseGetHealthResponse(rsp *http.Response) (*GetHealthResponse, error) {
 
 // ParseGetClusterStatusResponse parses an HTTP response from a GetClusterStatusWithResponse call
 func ParseGetClusterStatusResponse(rsp *http.Response) (*GetClusterStatusResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -737,7 +736,7 @@ func ParseGetClusterStatusResponse(rsp *http.Response) (*GetClusterStatusRespons
 
 // ParseGetAllTasksResponse parses an HTTP response from a GetAllTasksWithResponse call
 func ParseGetAllTasksResponse(rsp *http.Response) (*GetAllTasksResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -770,7 +769,7 @@ func ParseGetAllTasksResponse(rsp *http.Response) (*GetAllTasksResponse, error) 
 
 // ParseCreateTaskResponse parses an HTTP response from a CreateTaskWithResponse call
 func ParseCreateTaskResponse(rsp *http.Response) (*CreateTaskResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -810,7 +809,7 @@ func ParseCreateTaskResponse(rsp *http.Response) (*CreateTaskResponse, error) {
 
 // ParseDeleteTaskByNameResponse parses an HTTP response from a DeleteTaskByNameWithResponse call
 func ParseDeleteTaskByNameResponse(rsp *http.Response) (*DeleteTaskByNameResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -843,7 +842,7 @@ func ParseDeleteTaskByNameResponse(rsp *http.Response) (*DeleteTaskByNameRespons
 
 // ParseGetTaskByNameResponse parses an HTTP response from a GetTaskByNameWithResponse call
 func ParseGetTaskByNameResponse(rsp *http.Response) (*GetTaskByNameResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
