@@ -201,7 +201,7 @@ func (d *servicesRegexQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	// Without this delay, CatalogServices may have services that are not yet
 	// propagated to HealthServices as healthy services since services are initially
 	// set as critical. https://www.consul.io/docs/discovery/checks#initial-health-check-status
-	time.Sleep(1 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	var services []*dep.HealthService
 	for _, s := range matchServices {
