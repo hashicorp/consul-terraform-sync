@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package version
 
 import (
@@ -21,7 +24,7 @@ var (
 	//
 	// Version must conform to the format expected by
 	// github.com/hashicorp/go-version for tests to work.
-	Version = "0.7.0"
+	Version = "0.7.1"
 
 	// VersionPrerelease is a pre-release marker for the version. If this is ""
 	// (empty string) then it means that it is a final release. Otherwise, this
