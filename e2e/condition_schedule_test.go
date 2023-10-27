@@ -120,7 +120,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			//    scheduled time. Check resources are created.
 
 			port := cts.Port()
-			taskSchedule := 10 * time.Second
+			taskSchedule := 20 * time.Second
 			scheduledWait := taskSchedule + 7*time.Second // buffer for task to execute
 
 			// 0. Confirm at least one event for once-mode
