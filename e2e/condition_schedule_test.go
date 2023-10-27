@@ -69,8 +69,8 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	condition "schedule" {
 		cron = "*/10 * * * * * *"
 	}
-}
-`, taskName)
+	}
+	`, taskName)
 	moduleInputServices := fmt.Sprintf(scheduledServices, taskName)
 	moduleInputConsulKV := fmt.Sprintf(scheduledConsulKV, taskName)
 
@@ -121,7 +121,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 
 			port := cts.Port()
 			taskSchedule := 10 * time.Second
-			scheduledWait := taskSchedule + 57*time.Second // buffer for task to execute
+			scheduledWait := taskSchedule + 7*time.Second // buffer for task to execute
 
 			// 0. Confirm at least one event for once-mode
 			eventCountBase := eventCount(t, taskName, port)
@@ -157,6 +157,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			// check scheduled task did not trigger immediately and ran only on schedule
 			api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
 			checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
+			time.Sleep(20 * time.Second)
 
 			// confirm service resources created
 			resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
