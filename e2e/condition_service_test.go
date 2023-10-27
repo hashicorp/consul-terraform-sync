@@ -212,7 +212,7 @@ func testServicesCondition(t *testing.T, tc servicesConditionTest) {
 	now = time.Now()
 	service = testutil.TestService{ID: "api-web-3", Name: "api-web", Tags: []string{"tag_a"}}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	time.Sleep(defaultWaitForNoEvent)
+	time.Sleep(defaultWaitForTestReadiness)
 	eventCountNow = eventCount(t, tc.taskName, cts.Port())
 	require.Equal(t, eventCountExpected, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
