@@ -223,7 +223,7 @@ func testModuleInputBasic(t *testing.T, tc moduleInputTest) {
 	tc.srv.SetKVString(t, "key", "value")
 	tc.srv.SetKVString(t, "key/recurse", "value-recurse")
 
-	time.Sleep(defaultWaitForNoEvent)
+	time.Sleep(defaultWaitForTestReadiness)
 	testutils.CheckDir(t, false, resourcesPath)
 
 	// 2. Register "web" service to trigger condition. Confirm that
