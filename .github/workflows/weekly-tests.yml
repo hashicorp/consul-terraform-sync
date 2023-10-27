@@ -28,7 +28,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: latest
 
       - name: Run compatability tests
         run: |
@@ -44,7 +44,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: latest
 
       - name: Setup Vault
         uses: ./.github/actions/setup-vault
