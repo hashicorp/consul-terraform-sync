@@ -301,7 +301,7 @@ func TestCondition_Schedule_CreateAndDeleteCLI(t *testing.T) {
 	cts := ctsSetup(t, srv, tempDir, initTask)
 
 	taskSchedule := 10 * time.Second
-	scheduledWait := taskSchedule + 27*time.Second // buffer for task to execute
+	scheduledWait := taskSchedule + 7*time.Second // buffer for task to execute
 
 	// Create a scheduled task with the CLI and a task file
 	var taskConfig hclConfig
