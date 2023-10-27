@@ -1,6 +1,6 @@
 module github.com/hashicorp/consul-terraform-sync
 
-go 1.18
+go 1.20.10
 
 require (
 	github.com/PaloAltoNetworks/pango v0.5.1
