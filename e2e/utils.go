@@ -47,7 +47,7 @@ const (
 	defaultWaitForCheckUpdate   = 15 * time.Second
 
 	// liberal wait time to ensure event doesn't happen
-	defaultWaitForNoEvent = 15 * time.Second
+	defaultWaitForNoEvent = 6 * time.Second
 
 	// default TLS
 	defaultCTSClientCert = "../testutils/certs/localhost_leaf_cert.pem"
