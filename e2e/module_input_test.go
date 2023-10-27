@@ -394,7 +394,7 @@ func TestModuleInput_ConsulKVCondition(t *testing.T) {
 			service := testutil.TestService{ID: "api", Name: "api"}
 			testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
 
-			time.Sleep(defaultWaitForNoEvent)
+			time.Sleep(defaultWaitForTestReadiness)
 			testutils.CheckDir(t, false, resourcesPath)
 
 			// 2. Register kv pair to trigger condition. Confirm that
