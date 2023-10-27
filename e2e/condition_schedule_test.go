@@ -157,7 +157,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			// check scheduled task did not trigger immediately and ran only on schedule
 			api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
 			checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
-			time.Sleep(20 * time.Second)
+			time.Sleep(defaultWaitForTestReadiness)
 
 			// confirm service resources created
 			resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
@@ -348,6 +348,8 @@ func TestCondition_Schedule_CreateAndDeleteCLI(t *testing.T) {
 	// check scheduled task did not trigger immediately and ran only on schedule
 	api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
 	checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
+
+	time.Sleep(defaultWaitForTestReadiness)
 
 	// confirm resources created
 	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
