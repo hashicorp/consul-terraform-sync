@@ -32,14 +32,14 @@ func TestAppendRootTerraformBlock_backend(t *testing.T) {
 			"nil",
 			nil,
 			`terraform {
-  required_version = ">= 0.13.0, < 1.3.0"
+  required_version = ">= 0.13.0, <= 1.6.2"
 }
 `,
 		}, {
 			"empty",
 			map[string]interface{}{"empty": map[string]interface{}{}},
 			`terraform {
-  required_version = ">= 0.13.0, < 1.3.0"
+  required_version = ">= 0.13.0, <= 1.6.2"
   backend "empty" {
   }
 }
@@ -48,7 +48,7 @@ func TestAppendRootTerraformBlock_backend(t *testing.T) {
 			"invalid structure",
 			map[string]interface{}{"invalid": "unexpected type"},
 			`terraform {
-  required_version = ">= 0.13.0, < 1.3.0"
+  required_version = ">= 0.13.0, <= 1.6.2"
 }
 `,
 		}, {
@@ -57,7 +57,7 @@ func TestAppendRootTerraformBlock_backend(t *testing.T) {
 				"path": "relative/path/to/terraform.tfstate",
 			}},
 			`terraform {
-  required_version = ">= 0.13.0, < 1.3.0"
+  required_version = ">= 0.13.0, <= 1.6.2"
   backend "local" {
     path = "relative/path/to/terraform.tfstate"
   }
@@ -67,7 +67,7 @@ func TestAppendRootTerraformBlock_backend(t *testing.T) {
 			"consul",
 			consulBackend,
 			`terraform {
-  required_version = ">= 0.13.0, < 1.3.0"
+  required_version = ">= 0.13.0, <= 1.6.2"
   backend "consul" {
     address   = "consul.example.com"
     ca_file   = "ca_cert"
@@ -85,7 +85,7 @@ func TestAppendRootTerraformBlock_backend(t *testing.T) {
 				"conn_str": "postgres://user:pass@db.example.com/terraform_backend",
 			}},
 			`terraform {
-  required_version = ">= 0.13.0, < 1.3.0"
+  required_version = ">= 0.13.0, <= 1.6.2"
   backend "pg" {
     conn_str = "postgres://user:pass@db.example.com/terraform_backend"
   }
