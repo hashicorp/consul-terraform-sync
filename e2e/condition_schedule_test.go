@@ -44,7 +44,7 @@ const (
 	condition "schedule" {
 		cron = "*/10 * * * * * *"
 	}
-	module_input "services"{
+	module_input "services" {
 		regexp = "^web.*|^api.*"
 	}
 }`
@@ -69,8 +69,8 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 	condition "schedule" {
 		cron = "*/10 * * * * * *"
 	}
-}
-`, taskName)
+	}
+	`, taskName)
 	moduleInputServices := fmt.Sprintf(scheduledServices, taskName)
 	moduleInputConsulKV := fmt.Sprintf(scheduledConsulKV, taskName)
 
@@ -157,6 +157,7 @@ func TestCondition_Schedule_Basic(t *testing.T) {
 			// check scheduled task did not trigger immediately and ran only on schedule
 			api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
 			checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
+			time.Sleep(defaultWaitForTestReadiness)
 
 			// confirm service resources created
 			resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)
@@ -347,6 +348,8 @@ func TestCondition_Schedule_CreateAndDeleteCLI(t *testing.T) {
 	// check scheduled task did not trigger immediately and ran only on schedule
 	api.WaitForEvent(t, cts, taskName, registerTime, scheduledWait)
 	checkScheduledRun(t, taskName, registerTime, taskSchedule, port)
+
+	time.Sleep(defaultWaitForTestReadiness)
 
 	// confirm resources created
 	resourcesPath := filepath.Join(tempDir, taskName, resourcesDir)

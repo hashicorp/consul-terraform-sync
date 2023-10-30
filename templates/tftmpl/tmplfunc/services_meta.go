@@ -10,10 +10,10 @@ import (
 // ServicesMeta holds the user-defined metadata for the services of a task.
 // From task configuration, metadata is provided to a task's services in one
 // of two ways:
-// 1. map of metadata: a map of service-name to metadata so that each service
-//    has its own unique metadata
-// 2. metadata: a set of metadata is shared across all services that a task is
-//    configured with
+//  1. map of metadata: a map of service-name to metadata so that each service
+//     has its own unique metadata
+//  2. metadata: a set of metadata is shared across all services that a task is
+//     configured with
 type ServicesMeta struct {
 	// Deprecated in 0.5
 	// When this happens: when task.services field and associated
