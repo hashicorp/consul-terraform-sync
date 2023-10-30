@@ -188,7 +188,7 @@ func testServicesCondition(t *testing.T, tc servicesConditionTest) {
 	now := time.Now()
 	service = testutil.TestService{ID: "api-web-1", Name: "api-web"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, tc.taskName, now, defaultWaitForEvent)
+	api.WaitForEvent(t, cts, tc.taskName, now, defaultWaitForTestReadiness)
 	eventCountNow = eventCount(t, tc.taskName, cts.Port())
 	eventCountExpected++
 	require.Equal(t, eventCountExpected, eventCountNow,
@@ -201,7 +201,7 @@ func testServicesCondition(t *testing.T, tc servicesConditionTest) {
 	now = time.Now()
 	service = testutil.TestService{ID: "api-web-2", Name: "api-web"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, tc.taskName, now, defaultWaitForEvent)
+	api.WaitForEvent(t, cts, tc.taskName, now, defaultWaitForTestReadiness)
 	eventCountNow = eventCount(t, tc.taskName, cts.Port())
 	eventCountExpected++
 	require.Equal(t, eventCountExpected, eventCountNow,
@@ -212,7 +212,7 @@ func testServicesCondition(t *testing.T, tc servicesConditionTest) {
 	now = time.Now()
 	service = testutil.TestService{ID: "api-web-3", Name: "api-web", Tags: []string{"tag_a"}}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	time.Sleep(defaultWaitForNoEvent)
+	time.Sleep(defaultWaitForTestReadiness)
 	eventCountNow = eventCount(t, tc.taskName, cts.Port())
 	require.Equal(t, eventCountExpected, eventCountNow,
 		"change in event count. task was unexpectedly triggered")
@@ -340,7 +340,7 @@ func TestConditionServices_SuppressTriggers_SharedDependencies(t *testing.T) {
 	now := time.Now()
 	service := testutil.TestService{ID: "api-test", Name: "api-test"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, taskName, now, defaultWaitForEvent)
+	api.WaitForEvent(t, cts, taskName, now, defaultWaitForTestReadiness)
 	count = eventCount(t, taskName, cts.Port())
 	expectedCount++
 	assert.Equal(t, expectedCount, count, "unexpected event count")
@@ -351,7 +351,7 @@ func TestConditionServices_SuppressTriggers_SharedDependencies(t *testing.T) {
 	now = time.Now()
 	service = testutil.TestService{ID: "web", Name: "web"}
 	testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
-	api.WaitForEvent(t, cts, initTaskName, now, defaultWaitForEvent)
+	api.WaitForEvent(t, cts, initTaskName, now, defaultWaitForTestReadiness)
 	initCount := eventCount(t, initTaskName, cts.Port())
 	assert.Equal(t, 2, initCount, "unexpected event count")
 	initResources := filepath.Join(tempDir, initTaskName, resourcesDir)

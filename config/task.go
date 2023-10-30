@@ -465,9 +465,10 @@ func (c *TaskConfig) Validate() error {
 
 // ValidateForDriver validates all remaining values and required options that were not checked during
 // the normal Validate() call. This method is recommended to run after:
-//  - Finalize()
-//  - Validate()
-//  - InheritParentConfig()
+//   - Finalize()
+//   - Validate()
+//   - InheritParentConfig()
+//
 // It is intended to indicate whether a task is safe to be converted into a driver for execution.
 func (c *TaskConfig) ValidateForDriver() error {
 	if err := c.BufferPeriod.Validate(); err != nil {
@@ -643,9 +644,10 @@ func FilterTasks(tasks *TaskConfigs, names []string) (*TaskConfigs, error) {
 }
 
 // validateCondition validates condition block taking into account services list
-// - ensure task is configured with a condition (condition block or services
-//   list)
-// - if services list is configured, condition block's monitored variable type
+//   - ensure task is configured with a condition (condition block or services
+//     list)
+//   - if services list is configured, condition block's monitored variable type
+//
 // cannot be services
 //
 // Note: checking that a condition block's monitored variable type is different

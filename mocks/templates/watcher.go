@@ -35,7 +35,7 @@ type Watcher_BufferReset_Call struct {
 }
 
 // BufferReset is a helper method to define mock.On call
-//  - _a0 hcat.Notifier
+//   - _a0 hcat.Notifier
 func (_e *Watcher_Expecter) BufferReset(_a0 interface{}) *Watcher_BufferReset_Call {
 	return &Watcher_BufferReset_Call{Call: _e.mock.On("BufferReset", _a0)}
 }
@@ -72,7 +72,7 @@ type Watcher_Buffering_Call struct {
 }
 
 // Buffering is a helper method to define mock.On call
-//  - _a0 hcat.Notifier
+//   - _a0 hcat.Notifier
 func (_e *Watcher_Expecter) Buffering(_a0 interface{}) *Watcher_Buffering_Call {
 	return &Watcher_Buffering_Call{Call: _e.mock.On("Buffering", _a0)}
 }
@@ -147,7 +147,7 @@ type Watcher_Complete_Call struct {
 }
 
 // Complete is a helper method to define mock.On call
-//  - _a0 hcat.Notifier
+//   - _a0 hcat.Notifier
 func (_e *Watcher_Expecter) Complete(_a0 interface{}) *Watcher_Complete_Call {
 	return &Watcher_Complete_Call{Call: _e.mock.On("Complete", _a0)}
 }
@@ -181,7 +181,7 @@ type Watcher_Deregister_Call struct {
 }
 
 // Deregister is a helper method to define mock.On call
-//  - ns ...hcat.Notifier
+//   - ns ...hcat.Notifier
 func (_e *Watcher_Expecter) Deregister(ns ...interface{}) *Watcher_Deregister_Call {
 	return &Watcher_Deregister_Call{Call: _e.mock.On("Deregister",
 		append([]interface{}{}, ns...)...)}
@@ -216,7 +216,7 @@ type Watcher_MarkForSweep_Call struct {
 }
 
 // MarkForSweep is a helper method to define mock.On call
-//  - notifier hcat.IDer
+//   - notifier hcat.IDer
 func (_e *Watcher_Expecter) MarkForSweep(notifier interface{}) *Watcher_MarkForSweep_Call {
 	return &Watcher_MarkForSweep_Call{Call: _e.mock.On("MarkForSweep", notifier)}
 }
@@ -255,7 +255,7 @@ type Watcher_Recaller_Call struct {
 }
 
 // Recaller is a helper method to define mock.On call
-//  - _a0 hcat.Notifier
+//   - _a0 hcat.Notifier
 func (_e *Watcher_Expecter) Recaller(_a0 interface{}) *Watcher_Recaller_Call {
 	return &Watcher_Recaller_Call{Call: _e.mock.On("Recaller", _a0)}
 }
@@ -298,7 +298,7 @@ type Watcher_Register_Call struct {
 }
 
 // Register is a helper method to define mock.On call
-//  - ns ...hcat.Notifier
+//   - ns ...hcat.Notifier
 func (_e *Watcher_Expecter) Register(ns ...interface{}) *Watcher_Register_Call {
 	return &Watcher_Register_Call{Call: _e.mock.On("Register",
 		append([]interface{}{}, ns...)...)}
@@ -340,9 +340,9 @@ type Watcher_SetBufferPeriod_Call struct {
 }
 
 // SetBufferPeriod is a helper method to define mock.On call
-//  - min time.Duration
-//  - max time.Duration
-//  - tmplIDs ...string
+//   - min time.Duration
+//   - max time.Duration
+//   - tmplIDs ...string
 func (_e *Watcher_Expecter) SetBufferPeriod(min interface{}, max interface{}, tmplIDs ...interface{}) *Watcher_SetBufferPeriod_Call {
 	return &Watcher_SetBufferPeriod_Call{Call: _e.mock.On("SetBufferPeriod",
 		append([]interface{}{min, max}, tmplIDs...)...)}
@@ -440,7 +440,7 @@ type Watcher_Sweep_Call struct {
 }
 
 // Sweep is a helper method to define mock.On call
-//  - notifier hcat.IDer
+//   - notifier hcat.IDer
 func (_e *Watcher_Expecter) Sweep(notifier interface{}) *Watcher_Sweep_Call {
 	return &Watcher_Sweep_Call{Call: _e.mock.On("Sweep", notifier)}
 }
@@ -479,7 +479,7 @@ type Watcher_WaitCh_Call struct {
 }
 
 // WaitCh is a helper method to define mock.On call
-//  - _a0 context.Context
+//   - _a0 context.Context
 func (_e *Watcher_Expecter) WaitCh(_a0 interface{}) *Watcher_WaitCh_Call {
 	return &Watcher_WaitCh_Call{Call: _e.mock.On("WaitCh", _a0)}
 }
@@ -516,8 +516,8 @@ type Watcher_Watch_Call struct {
 }
 
 // Watch is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 chan string
+//   - _a0 context.Context
+//   - _a1 chan string
 func (_e *Watcher_Expecter) Watch(_a0 interface{}, _a1 interface{}) *Watcher_Watch_Call {
 	return &Watcher_Watch_Call{Call: _e.mock.On("Watch", _a0, _a1)}
 }

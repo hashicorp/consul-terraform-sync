@@ -3,6 +3,10 @@
 BUG FIXES:
 * Fix issue with re registration of services with checks not triggering task [[GH-1067](https://github.com/hashicorp/consul-terraform-sync/pull/1067)]
 
+FEATURES:
+* Go version bump to 1.21.10 [[GH-1067](https://github.com/hashicorp/consul-terraform-sync/pull/1067)]
+* Support for Terraform v1.6.2 [[GH-1067](https://github.com/hashicorp/consul-terraform-sync/pull/1067)]
+
 ## 0.7.0 (September 8, 2022)
 
 BREAKING CHANGES:

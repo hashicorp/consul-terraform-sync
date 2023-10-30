@@ -43,9 +43,9 @@ type ConsulClientInterface_DeregisterService_Call struct {
 }
 
 // DeregisterService is a helper method to define mock.On call
-//  - ctx context.Context
-//  - serviceID string
-//  - q *api.QueryOptions
+//   - ctx context.Context
+//   - serviceID string
+//   - q *api.QueryOptions
 func (_e *ConsulClientInterface_Expecter) DeregisterService(ctx interface{}, serviceID interface{}, q interface{}) *ConsulClientInterface_DeregisterService_Call {
 	return &ConsulClientInterface_DeregisterService_Call{Call: _e.mock.On("DeregisterService", ctx, serviceID, q)}
 }
@@ -91,9 +91,9 @@ type ConsulClientInterface_GetHealthChecks_Call struct {
 }
 
 // GetHealthChecks is a helper method to define mock.On call
-//  - ctx context.Context
-//  - serviceName string
-//  - q *api.QueryOptions
+//   - ctx context.Context
+//   - serviceName string
+//   - q *api.QueryOptions
 func (_e *ConsulClientInterface_Expecter) GetHealthChecks(ctx interface{}, serviceName interface{}, q interface{}) *ConsulClientInterface_GetHealthChecks_Call {
 	return &ConsulClientInterface_GetHealthChecks_Call{Call: _e.mock.On("GetHealthChecks", ctx, serviceName, q)}
 }
@@ -137,8 +137,8 @@ type ConsulClientInterface_GetLicense_Call struct {
 }
 
 // GetLicense is a helper method to define mock.On call
-//  - ctx context.Context
-//  - q *api.QueryOptions
+//   - ctx context.Context
+//   - q *api.QueryOptions
 func (_e *ConsulClientInterface_Expecter) GetLicense(ctx interface{}, q interface{}) *ConsulClientInterface_GetLicense_Call {
 	return &ConsulClientInterface_GetLicense_Call{Call: _e.mock.On("GetLicense", ctx, q)}
 }
@@ -193,9 +193,9 @@ type ConsulClientInterface_KVGet_Call struct {
 }
 
 // KVGet is a helper method to define mock.On call
-//  - ctx context.Context
-//  - key string
-//  - q *api.QueryOptions
+//   - ctx context.Context
+//   - key string
+//   - q *api.QueryOptions
 func (_e *ConsulClientInterface_Expecter) KVGet(ctx interface{}, key interface{}, q interface{}) *ConsulClientInterface_KVGet_Call {
 	return &ConsulClientInterface_KVGet_Call{Call: _e.mock.On("KVGet", ctx, key, q)}
 }
@@ -241,8 +241,8 @@ type ConsulClientInterface_Lock_Call struct {
 }
 
 // Lock is a helper method to define mock.On call
-//  - l *api.Lock
-//  - stopCh <-chan struct{}
+//   - l *api.Lock
+//   - stopCh <-chan struct{}
 func (_e *ConsulClientInterface_Expecter) Lock(l interface{}, stopCh interface{}) *ConsulClientInterface_Lock_Call {
 	return &ConsulClientInterface_Lock_Call{Call: _e.mock.On("Lock", l, stopCh)}
 }
@@ -288,7 +288,7 @@ type ConsulClientInterface_LockOpts_Call struct {
 }
 
 // LockOpts is a helper method to define mock.On call
-//  - opts *api.LockOptions
+//   - opts *api.LockOptions
 func (_e *ConsulClientInterface_Expecter) LockOpts(opts interface{}) *ConsulClientInterface_LockOpts_Call {
 	return &ConsulClientInterface_LockOpts_Call{Call: _e.mock.On("LockOpts", opts)}
 }
@@ -334,9 +334,9 @@ type ConsulClientInterface_QueryServices_Call struct {
 }
 
 // QueryServices is a helper method to define mock.On call
-//  - ctx context.Context
-//  - filter string
-//  - q *api.QueryOptions
+//   - ctx context.Context
+//   - filter string
+//   - q *api.QueryOptions
 func (_e *ConsulClientInterface_Expecter) QueryServices(ctx interface{}, filter interface{}, q interface{}) *ConsulClientInterface_QueryServices_Call {
 	return &ConsulClientInterface_QueryServices_Call{Call: _e.mock.On("QueryServices", ctx, filter, q)}
 }
@@ -373,8 +373,8 @@ type ConsulClientInterface_RegisterService_Call struct {
 }
 
 // RegisterService is a helper method to define mock.On call
-//  - ctx context.Context
-//  - s *api.AgentServiceRegistration
+//   - ctx context.Context
+//   - s *api.AgentServiceRegistration
 func (_e *ConsulClientInterface_Expecter) RegisterService(ctx interface{}, s interface{}) *ConsulClientInterface_RegisterService_Call {
 	return &ConsulClientInterface_RegisterService_Call{Call: _e.mock.On("RegisterService", ctx, s)}
 }
@@ -427,9 +427,9 @@ type ConsulClientInterface_SessionCreate_Call struct {
 }
 
 // SessionCreate is a helper method to define mock.On call
-//  - ctx context.Context
-//  - se *api.SessionEntry
-//  - q *api.WriteOptions
+//   - ctx context.Context
+//   - se *api.SessionEntry
+//   - q *api.WriteOptions
 func (_e *ConsulClientInterface_Expecter) SessionCreate(ctx interface{}, se interface{}, q interface{}) *ConsulClientInterface_SessionCreate_Call {
 	return &ConsulClientInterface_SessionCreate_Call{Call: _e.mock.On("SessionCreate", ctx, se, q)}
 }
@@ -466,10 +466,10 @@ type ConsulClientInterface_SessionRenewPeriodic_Call struct {
 }
 
 // SessionRenewPeriodic is a helper method to define mock.On call
-//  - initialTTL string
-//  - id string
-//  - q *api.WriteOptions
-//  - doneCh <-chan struct{}
+//   - initialTTL string
+//   - id string
+//   - q *api.WriteOptions
+//   - doneCh <-chan struct{}
 func (_e *ConsulClientInterface_Expecter) SessionRenewPeriodic(initialTTL interface{}, id interface{}, q interface{}, doneCh interface{}) *ConsulClientInterface_SessionRenewPeriodic_Call {
 	return &ConsulClientInterface_SessionRenewPeriodic_Call{Call: _e.mock.On("SessionRenewPeriodic", initialTTL, id, q, doneCh)}
 }
@@ -506,7 +506,7 @@ type ConsulClientInterface_Unlock_Call struct {
 }
 
 // Unlock is a helper method to define mock.On call
-//  - l *api.Lock
+//   - l *api.Lock
 func (_e *ConsulClientInterface_Expecter) Unlock(l interface{}) *ConsulClientInterface_Unlock_Call {
 	return &ConsulClientInterface_Unlock_Call{Call: _e.mock.On("Unlock", l)}
 }
