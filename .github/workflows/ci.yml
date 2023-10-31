@@ -17,7 +17,7 @@ concurrency:
 env:
   GO_VERSION: 1.20.10
   CONSUL_VERSION: 1.12.1
-  TERRAFORM_VERSION: 1.2.2
+  TERRAFORM_VERSION: 1.6.2
 
 jobs:
   run-check:
