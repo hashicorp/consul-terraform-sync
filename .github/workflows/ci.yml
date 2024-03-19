@@ -8,16 +8,16 @@ on:
   pull_request:
     branches:
       - main
-      - 'release/**'
+      - "release/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  GO_VERSION: 1.20.10
+  GO_VERSION: 1.21.8
   CONSUL_VERSION: 1.12.1
-  TERRAFORM_VERSION: 1.6.2
+  TERRAFORM_VERSION: 1.7.5
 
 jobs:
   run-check:
@@ -107,7 +107,7 @@ jobs:
           version: ${{ env.CONSUL_VERSION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
@@ -175,7 +175,7 @@ jobs:
           version: ${{ env.CONSUL_VERSION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 

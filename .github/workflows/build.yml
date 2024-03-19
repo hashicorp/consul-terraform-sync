@@ -9,8 +9,7 @@ on:
       # Push events on main branch
       - main
       # Push events to branches matching refs/heads/release/**
-      - 'release/**'
-
+      - "release/**"
 
 env:
   PKG_NAME: "consul-terraform-sync"
@@ -29,14 +28,14 @@ jobs:
         run: |
           make version
           echo "::set-output name=product-version::$(make version)"
-  
+
   generate-metadata-file:
     needs: get-product-version
     runs-on: ubuntu-latest
     outputs:
       filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
     steps:
-      - name: 'Checkout directory'
+      - name: "Checkout directory"
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
       - name: Generate metadata file
         id: generate-metadata-file
@@ -57,7 +56,7 @@ jobs:
       ldflags: ${{ steps.generate-ld-flags.outputs.ldflags }}
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
-      - name: 'Generate ld flags'
+      - name: "Generate ld flags"
         id: generate-ld-flags
         run: |
           project="$(go list -m)"
@@ -71,15 +70,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - {go: "1.20.10", goos: "linux", goarch: "386"}
-          - {go: "1.20.10", goos: "linux", goarch: "amd64"}
-          - {go: "1.20.10", goos: "linux", goarch: "arm"}
-          - {go: "1.20.10", goos: "linux", goarch: "arm64"}
-          - {go: "1.20.10", goos: "freebsd", goarch: "386"}
-          - {go: "1.20.10", goos: "freebsd", goarch: "amd64"}
-          - {go: "1.20.10", goos: "windows", goarch: "386"}
-          - {go: "1.20.10", goos: "windows", goarch: "amd64"}
-          - {go: "1.20.10", goos: "solaris", goarch: "amd64"}
+          - { go: "1.21.8", goos: "linux", goarch: "386" }
+          - { go: "1.21.8", goos: "linux", goarch: "amd64" }
+          - { go: "1.21.8", goos: "linux", goarch: "arm" }
+          - { go: "1.21.8", goos: "linux", goarch: "arm64" }
+          - { go: "1.21.8", goos: "freebsd", goarch: "386" }
+          - { go: "1.21.8", goos: "freebsd", goarch: "amd64" }
+          - { go: "1.21.8", goos: "windows", goarch: "386" }
+          - { go: "1.21.8", goos: "windows", goarch: "amd64" }
+          - { go: "1.21.8", goos: "solaris", goarch: "amd64" }
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
@@ -147,7 +146,7 @@ jobs:
       matrix:
         goos: [darwin]
         goarch: ["amd64"]
-        go: ["1.20.10"]
+        go: ["1.21.8"]
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
@@ -166,7 +165,7 @@ jobs:
           go-version: ${{ matrix.go }}
 
       - name: Build
-        env: 
+        env:
           GO_TAGS: "${{ env.GO_TAGS }} netcgo"
         run: |
           mkdir dist out
