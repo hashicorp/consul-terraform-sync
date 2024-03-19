@@ -12,7 +12,7 @@
 # Description: automate services for website X
 
 terraform {
-  required_version = ">= 0.13.0, <= 1.6.2"
+  required_version = ">= 0.13.0, <= 1.7.5"
   required_providers {
     myprovider = {
       source  = "namespace/myprovider"
