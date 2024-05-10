@@ -40,10 +40,10 @@ jobs:
       - run-check
     if: needs.run-check.result == 'success'
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Set up Go
-        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -73,10 +73,10 @@ jobs:
       - run-check
     if: needs.run-check.result == 'success'
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Set up Go
-        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -91,10 +91,10 @@ jobs:
       - run-check
     if: needs.run-check.result == 'success'
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Set up Go
-        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -117,7 +117,7 @@ jobs:
 
       - name: Annotate tests
         if: always()
-        uses: guyarb/golang-test-annotations@f54c4b21ff43e36adfe5fb7e6a31be8e2512abf4 # v0.5.1
+        uses: guyarb/golang-test-annotations@2941118d7ef622b1b3771d1ff6eae9e90659eb26 # v0.8.0
         with:
           test-results: .build/test-results.json
 
@@ -130,10 +130,10 @@ jobs:
     env:
       E2E_TESTS_PARALLELISM: 4
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Set up Go
-        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -142,7 +142,7 @@ jobs:
           set -euo pipefail
           ./build-scripts/list-tests.sh e2e ./e2e | ./build-scripts/split-lines.sh ${{ env.E2E_TESTS_PARALLELISM }} .build/tests
 
-      - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: e2e-tests-parts
           path: .build/tests/
@@ -159,10 +159,10 @@ jobs:
       matrix:
         index: [0, 1, 2, 3]
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Set up Go
-        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -181,9 +181,10 @@ jobs:
 
       - name: Move Terraform to work directory
         run: |
-          cp /usr/local/bin/terraform ./e2e/
+          # TERRAFORM_CLI_PATH is provided as an output of the setup-terraform action
+          cp ${{ env.TERRAFORM_CLI_PATH }}/terraform ./e2e/
 
-      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+      - uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
         with:
           name: e2e-tests-parts
           path: .build/tests/
@@ -196,7 +197,7 @@ jobs:
 
       - name: Annotate tests
         if: always()
-        uses: guyarb/golang-test-annotations@f54c4b21ff43e36adfe5fb7e6a31be8e2512abf4 # v0.5.1
+        uses: guyarb/golang-test-annotations@2941118d7ef622b1b3771d1ff6eae9e90659eb26 # v0.8.0
         with:
           test-results: .build/test-results.json
 
@@ -215,7 +216,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Slack Workflow Notification
-        uses: Gamesight/slack-workflow-status@26a36836c887f260477432e4314ec3490a84f309 # master
+        uses: Gamesight/slack-workflow-status@68bf00d0dbdbcb206c278399aa1ef6c14f74347a # v1.3.0
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
