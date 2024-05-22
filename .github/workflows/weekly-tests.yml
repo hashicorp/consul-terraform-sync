@@ -8,11 +8,11 @@ on:
     - cron: "10 2 * * 3"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: true
 
 env:
-  GO_VERSION: 1.21.8
+  GO_VERSION: 1.22.3
   CONSUL_VERSION: 1.12.1
   TERRAFORM_VERSION: 1.7.5
   VAULT_VERSION: 1.10.3
