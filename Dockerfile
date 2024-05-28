@@ -10,10 +10,12 @@ ARG PRODUCT_VERSION
 
 LABEL maintainer="Consul Team <consul@hashicorp.com>"
 LABEL version=$PRODUCT_VERSION
+LABEL licenses="MPL-2.0"
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
 ENV VERSION=$PRODUCT_VERSION
+ENV PRODUCT_NAME=$NAME
 
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
 ARG TARGETOS TARGETARCH
@@ -24,6 +26,7 @@ RUN apk add --no-cache dumb-init git bash openssh
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
 COPY dist/$TARGETOS/$TARGETARCH/consul-terraform-sync /bin/consul-terraform-sync
+COPY LICENSE /usr/share/doc/$PRODUCT_NAME/LICENSE.txt
 
 ### Added for CTS
 RUN mkdir -p /consul-terraform-sync/config \
