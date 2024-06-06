@@ -98,6 +98,7 @@ jobs:
           LD_FLAGS: ${{ needs.set-ld-flags.outputs.ldflags }}
         run: |
           mkdir dist out
+          cp LICENSE dist/LICENSE.txt
           go build -o dist/ \
             -ldflags "${{ env.LD_FLAGS }}" \
             -tags "${{ env.GO_TAGS }}"
@@ -106,6 +107,13 @@ jobs:
         with:
           name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+
+      - name: Copy license file
+        env:
+          LICENSE_DIR: ".release/linux/package/usr/share/doc/${{ env.PKG_NAME }}"
+        run: |
+          mkdir -p "$LICENSE_DIR"
+          cp LICENSE "$LICENSE_DIR/LICENSE.txt"
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
@@ -121,6 +129,7 @@ jobs:
           binary: "dist/${{ env.PKG_NAME }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
+          config_dir: ".release/linux/package"
 
       - name: Set Package Names
         if: ${{ matrix.goos == 'linux' }}
@@ -169,6 +178,7 @@ jobs:
           GO_TAGS: "${{ env.GO_TAGS }} netcgo"
         run: |
           mkdir dist out
+          cp LICENSE dist/LICENSE.txt
           go build -o dist/ \
             -ldflags "${{ env.LD_FLAGS }}" \
             -tags "${{ env.GO_TAGS }}"
