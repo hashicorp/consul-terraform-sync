@@ -5,7 +5,7 @@ package tmplfunc
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"regexp"
 	"sort"
 	"testing"
@@ -155,8 +155,8 @@ func TestServicesRegexQuery_Fetch(t *testing.T) {
 		func(c *testutil.TestServerConfig) {
 			c.Bootstrap = false
 			c.LogLevel = "warn"
-			c.Stdout = ioutil.Discard
-			c.Stderr = ioutil.Discard
+			c.Stdout = io.Discard
+			c.Stderr = io.Discard
 			c.NodeMeta = nodeMeta
 		})
 	consulSrv2 := &dep.HealthService{
@@ -175,8 +175,8 @@ func TestServicesRegexQuery_Fetch(t *testing.T) {
 			c.Datacenter = "dc2"
 			c.Bootstrap = true
 			c.LogLevel = "warn"
-			c.Stdout = ioutil.Discard
-			c.Stderr = ioutil.Discard
+			c.Stdout = io.Discard
+			c.Stderr = io.Discard
 		})
 	require.NoError(t, err, "failed to start consul server 3")
 	defer srv3.Stop()
