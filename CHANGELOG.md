@@ -1,3 +1,7 @@
+## UNRELEASED
+FEATURES:
+* Go version bump to 1.22.4
+
 ## 0.7.1 (October 26, 2023)
 
 BUG FIXES:
