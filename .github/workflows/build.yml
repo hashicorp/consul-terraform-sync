@@ -80,6 +80,7 @@ jobs:
           - { go: "1.22.4", goos: "windows", goarch: "amd64" }
           - { go: "1.22.4", goos: "solaris", goarch: "amd64" }
           - { go: "1.22.4", goos: "darwin", goarch: "amd64" }
+          - { go: "1.22.4", goos: "darwin", goarch: "arm64" }
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
