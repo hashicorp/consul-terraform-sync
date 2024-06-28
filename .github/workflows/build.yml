@@ -79,6 +79,7 @@ jobs:
           - { go: "1.22.4", goos: "windows", goarch: "386" }
           - { go: "1.22.4", goos: "windows", goarch: "amd64" }
           - { go: "1.22.4", goos: "solaris", goarch: "amd64" }
+          - { go: "1.22.4", goos: "darwin", goarch: "amd64" }
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
@@ -109,6 +110,7 @@ jobs:
           path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
       - name: Copy license file
+        if: ${{ matrix.goos == 'linux' }}
         env:
           LICENSE_DIR: ".release/linux/package/usr/share/doc/${{ env.PKG_NAME }}"
         run: |
@@ -147,46 +149,6 @@ jobs:
         with:
           name: ${{ env.DEB_PACKAGE }}
           path: out/${{ env.DEB_PACKAGE }}
-
-  build-darwin:
-    needs: [get-product-version, set-ld-flags]
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        goos: [darwin]
-        goarch: ["amd64"]
-        go: ["1.22.4"]
-      fail-fast: true
-
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
-      LD_FLAGS: ${{ needs.set-ld-flags.outputs.ldflags }}
-
-    steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
-
-      - name: Setup go
-        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
-        with:
-          go-version: ${{ matrix.go }}
-
-      - name: Build
-        env:
-          GO_TAGS: "${{ env.GO_TAGS }} netcgo"
-        run: |
-          mkdir dist out
-          cp LICENSE dist/LICENSE.txt
-          go build -o dist/ \
-            -ldflags "${{ env.LD_FLAGS }}" \
-            -tags "${{ env.GO_TAGS }}"
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
-      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
   build-docker:
     name: Docker ${{ matrix.arch }} build
