@@ -7,3 +7,4 @@ e2e/tmp_*
 # ignore builds
 /pkg
 .build/
+.idea
