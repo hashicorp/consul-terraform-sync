@@ -63,7 +63,7 @@ func Test_NewInMemoryStore(t *testing.T) {
 		assert.Equal(t, *finalizedConf, actual.conf.Config)
 
 		// Confrm that input and stored config reference different objects
-		assert.NotSame(t, finalizedConf, actual.conf.Config)
+		assert.NotSame(t, finalizedConf, &actual.conf.Config)
 
 		// Confrm that input and stored config fields reference different objects
 		assert.NotSame(t, finalizedConf.Tasks, actual.conf.Tasks)
@@ -107,7 +107,7 @@ func Test_InMemoryStore_GetConfig(t *testing.T) {
 		assert.Equal(t, storedConf, actual)
 
 		// Confirm returned config references different object from stored
-		assert.NotSame(t, storedConf, actual)
+		assert.NotSame(t, &storedConf, &actual)
 
 		// Confirm returned config field reference different object from stored
 		assert.NotSame(t, storedConf.Port, actual.Port)
@@ -166,10 +166,10 @@ func Test_InMemoryStore_GetAllTasks(t *testing.T) {
 		assert.Equal(t, *storedConf, actual)
 
 		// Confirm returned config references different object from stored
-		assert.NotSame(t, storedConf, actual)
+		assert.NotSame(t, storedConf, &actual)
 
 		// Confirm returned config field reference different object from stored
-		assert.NotSame(t, (*storedConf)[0], actual[0])
+		assert.NotSame(t, &(*storedConf)[0], &actual[0])
 	})
 }
 

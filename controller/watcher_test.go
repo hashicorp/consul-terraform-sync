@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"regexp"
+	"strconv"
 	"testing"
 	"time"
 
@@ -81,7 +83,7 @@ func Test_newWatcherEventHandler(t *testing.T) {
 		findString func(v any) string
 		event      events.Event
 	}{
-		{"TRACE", true, toJson, events.Trace{ID: "logged"}},
+		{"TRACE", true, toJson, events.Trace{ID: "logged", Message: ""}},
 		{"DEBUG", false, toGo, events.Trace{ID: "not logged"}},
 		{"TRACE", true, toJson, events.NoNewData{ID: "logged"}},
 		{"DEBUG", true, toGo, events.NewData{ID: "logged"}},
@@ -90,16 +92,31 @@ func Test_newWatcherEventHandler(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		var buf bytes.Buffer
-		logger := logging.NewTestLogger(tc.logLevel, &buf)
-		handler := newWatcherEventHandler(logger)
-		handler(tc.event)
-		toFind := tc.findString(tc.event)
-		if tc.shouldLog {
-			assert.Contains(t, buf.String(), toFind)
-		} else {
-			assert.NotContains(t, buf.String(), toFind)
-			assert.Equal(t, "", buf.String())
-		}
+		t.Run(tc.logLevel, func(t *testing.T) {
+			var buf bytes.Buffer
+			logger := logging.NewTestLogger(tc.logLevel, &buf)
+			handler := newWatcherEventHandler(logger)
+			handler(tc.event)
+
+			logOutput := buf.String()
+			toFind := tc.findString(tc.event)
+
+			if tc.shouldLog {
+				var jsonObj map[string]any
+				if err := json.Unmarshal([]byte(toFind), &jsonObj); err == nil {
+					matches := regexp.MustCompile(`event="({.*})"`).FindStringSubmatch(logOutput)
+					require.NotNil(t, matches, "Log output did not contain JSON event")
+
+					jsonStr, err := strconv.Unquote(`"` + matches[1] + `"`)
+					require.NoError(t, err, "Failed to unescape JSON string")
+
+					assert.JSONEq(t, toFind, jsonStr, "Extracted JSON does not match expected")
+				} else {
+					assert.Contains(t, logOutput, toFind, "Expected non-JSON event representation in log")
+				}
+			} else {
+				assert.Empty(t, logOutput, "Expected no log output, but got: %s", logOutput)
+			}
+		})
 	}
 }
