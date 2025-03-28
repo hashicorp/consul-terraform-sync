@@ -1,6 +1,8 @@
 module github.com/hashicorp/consul-terraform-sync
 
-go 1.20
+go 1.23.0
+
+toolchain go1.23.7
 
 require (
 	github.com/PaloAltoNetworks/pango v0.5.1
@@ -38,7 +40,7 @@ require (
 	github.com/zclconf/go-cty v1.10.0
 )
 
-require golang.org/x/net v0.17.0 // indirect
+require golang.org/x/net v0.36.0 // indirect
 
 require (
 	cloud.google.com/go/compute v1.19.1 // indirect
@@ -111,15 +113,15 @@ require (
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
 	google.golang.org/api v0.114.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 
