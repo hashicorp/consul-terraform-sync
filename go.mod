@@ -2,8 +2,6 @@ module github.com/hashicorp/consul-terraform-sync
 
 go 1.23.0
 
-toolchain go1.23.7
-
 require (
 	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/deepmap/oapi-codegen v1.11.0
@@ -46,7 +44,7 @@ require (
 	cloud.google.com/go/compute v1.19.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v0.13.0 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/grpc v1.56.3 // indirect
