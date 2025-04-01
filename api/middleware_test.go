@@ -56,7 +56,7 @@ func TestWithSwaggerValidate(t *testing.T) {
 				}
 			}`,
 			statusCode: http.StatusBadRequest,
-			message:    "request body has an error: doesn't match the schema: Error at \"/task/condition\": property \"condition\" is missing\n",
+			message:    "request body has an error: doesn't match schema #/components/schemas/TaskRequest: Error at \"/task/condition\": property \"condition\" is missing\n",
 		},
 		{
 			name: "invalid field",
@@ -75,7 +75,7 @@ func TestWithSwaggerValidate(t *testing.T) {
 				}
 			}`,
 			statusCode: http.StatusBadRequest,
-			message:    "request body has an error: doesn't match the schema: Error at \"/task\": property \"services\" is unsupported\n",
+			message:    "request body has an error: doesn't match schema #/components/schemas/TaskRequest: Error at \"/task\": property \"services\" is unsupported\n",
 		},
 		{
 			name: "invalid condition services field",
@@ -94,7 +94,7 @@ func TestWithSwaggerValidate(t *testing.T) {
 				}
 			}`,
 			statusCode: http.StatusBadRequest,
-			message:    "request body has an error: doesn't match the schema: Error at \"/task/condition/services\": property \"source_includes_var\" is unsupported\n",
+			message:    "request body has an error: doesn't match schema #/components/schemas/TaskRequest: Error at \"/task/condition/services\": property \"source_includes_var\" is unsupported\n",
 		},
 		{
 			name: "invalid condition kv field",
@@ -118,7 +118,7 @@ func TestWithSwaggerValidate(t *testing.T) {
 				}
 			}`,
 			statusCode: http.StatusBadRequest,
-			message:    "request body has an error: doesn't match the schema: Error at \"/task/condition/consul_kv\": property \"source_includes_var\" is unsupported\n",
+			message:    "request body has an error: doesn't match schema #/components/schemas/TaskRequest: Error at \"/task/condition/consul_kv\": property \"source_includes_var\" is unsupported\n",
 		},
 		{
 			name: "invalid condition catalog services field",
@@ -142,7 +142,7 @@ func TestWithSwaggerValidate(t *testing.T) {
 				}
 			}`,
 			statusCode: http.StatusBadRequest,
-			message:    "request body has an error: doesn't match the schema: Error at \"/task/condition/catalog_services\": property \"source_includes_var\" is unsupported\n",
+			message:    "request body has an error: doesn't match schema #/components/schemas/TaskRequest: Error at \"/task/condition/catalog_services\": property \"source_includes_var\" is unsupported\n",
 		},
 		{
 			name: "invalid module input consul kv field",
@@ -166,7 +166,7 @@ func TestWithSwaggerValidate(t *testing.T) {
 				}
 			}`,
 			statusCode: http.StatusBadRequest,
-			message:    "request body has an error: doesn't match the schema: Error at \"/task/module_input/consul_kv\": property \"invalid_field\" is unsupported\n",
+			message:    "request body has an error: doesn't match schema #/components/schemas/TaskRequest: Error at \"/task/module_input/consul_kv\": property \"invalid_field\" is unsupported\n",
 		},
 		{
 			name: "invalid module input services field",
@@ -192,7 +192,7 @@ func TestWithSwaggerValidate(t *testing.T) {
 				}
 			}`,
 			statusCode: http.StatusBadRequest,
-			message:    "request body has an error: doesn't match the schema: Error at \"/task/module_input/services\": property \"invalid_field\" is unsupported\n",
+			message:    "request body has an error: doesn't match schema #/components/schemas/TaskRequest: Error at \"/task/module_input/services\": property \"invalid_field\" is unsupported\n",
 		},
 	}
 

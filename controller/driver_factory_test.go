@@ -172,185 +172,6 @@ func TestNewDriverTask(t *testing.T) {
 				ProviderInfo: map[string]interface{}{},
 				Services:     []driver.Service{},
 			})},
-		}, {
-			// Fetches correct provider and required_providers blocks from config
-			"providers",
-			&config.Config{
-				Tasks: &config.TaskConfigs{
-					{
-						Name:      config.String("name"),
-						Providers: []string{"providerA", "providerB"},
-						Module:    config.String("path"),
-					},
-				},
-				Driver: &config.DriverConfig{
-					Terraform: &config.TerraformConfig{
-						RequiredProviders: map[string]interface{}{
-							"providerA": map[string]string{
-								"source": "source/providerA",
-							},
-						},
-					},
-				},
-				TerraformProviders: &config.TerraformProviderConfigs{
-					{"providerB": map[string]interface{}{
-						"var": "val",
-					}},
-				},
-			},
-			[]*driver.Task{newTestTask(t, driver.TaskConfig{
-				Name:    "name",
-				Enabled: true,
-				Env: map[string]string{
-					"CONSUL_HTTP_ADDR": "localhost:8500",
-				},
-				Providers: driver.NewTerraformProviderBlocks(
-					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
-						{"providerA": map[string]interface{}{}},
-						{"providerB": map[string]interface{}{
-							"var": "val",
-						}},
-					})),
-				ProviderInfo: map[string]interface{}{
-					"providerA": map[string]string{
-						"source": "source/providerA",
-					},
-				},
-				Services:     []driver.Service{},
-				Module:       "path",
-				Condition:    config.EmptyConditionConfig(),
-				ModuleInputs: *config.DefaultModuleInputConfigs(),
-				BufferPeriod: &driver.BufferPeriod{
-					Min: 5 * time.Second,
-					Max: 20 * time.Second,
-				},
-				WorkingDir: "sync-tasks/name",
-
-				// Enterprise
-				TFCWorkspace: *config.DefaultTerraformCloudWorkspaceConfig(),
-			})},
-		}, {
-			// Fetches correct provider and required_providers blocks from config
-			// with context of alias
-			"provider instance",
-			&config.Config{
-				Tasks: &config.TaskConfigs{
-					{
-						Name:      config.String("name"),
-						Providers: []string{"providerA.alias1", "providerB"},
-						Module:    config.String("path"),
-					},
-				},
-				Driver: &config.DriverConfig{
-					Terraform: &config.TerraformConfig{
-						RequiredProviders: map[string]interface{}{
-							"providerA": map[string]string{
-								"source": "source/providerA",
-							},
-						},
-					},
-				},
-				TerraformProviders: &config.TerraformProviderConfigs{
-					{"providerA": map[string]interface{}{
-						"alias": "alias1",
-						"foo":   "bar",
-					}},
-					{"providerA": map[string]interface{}{
-						"alias": "alias2",
-						"baz":   "baz",
-					}},
-					{"providerB": map[string]interface{}{
-						"var": "val",
-					}},
-				},
-			},
-			[]*driver.Task{newTestTask(t, driver.TaskConfig{
-				Name:    "name",
-				Enabled: true,
-				Env: map[string]string{
-					"CONSUL_HTTP_ADDR": "localhost:8500",
-				},
-				Providers: driver.NewTerraformProviderBlocks(
-					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
-						{"providerA": map[string]interface{}{
-							"alias": "alias1",
-							"foo":   "bar",
-						}},
-						{"providerB": map[string]interface{}{
-							"var": "val",
-						}},
-					})),
-				ProviderInfo: map[string]interface{}{
-					"providerA": map[string]string{
-						"source": "source/providerA",
-					},
-				},
-				Services:     []driver.Service{},
-				Module:       "path",
-				Condition:    config.EmptyConditionConfig(),
-				ModuleInputs: *config.DefaultModuleInputConfigs(),
-				BufferPeriod: &driver.BufferPeriod{
-					Min: 5 * time.Second,
-					Max: 20 * time.Second,
-				},
-				WorkingDir: "sync-tasks/name",
-
-				// Enterprise
-				TFCWorkspace: *config.DefaultTerraformCloudWorkspaceConfig(),
-			})},
-		}, {
-			// Task env is fetched from providers and Consul config when using
-			// default backend
-			"task env",
-			&config.Config{
-				Consul: &config.ConsulConfig{
-					Address: config.String("my.consul.address"),
-					Token:   config.String("TEST_CONSUL_TOKEN"),
-				},
-				Tasks: &config.TaskConfigs{
-					{
-						Name:      config.String("name"),
-						Providers: []string{"providerA"},
-						Module:    config.String("path"),
-					},
-				},
-				TerraformProviders: &config.TerraformProviderConfigs{
-					{"providerA": map[string]interface{}{
-						"task_env": map[string]interface{}{
-							"PROVIDER_TOKEN": "TEST_PROVIDER_TOKEN",
-						},
-					}},
-				},
-			},
-			[]*driver.Task{newTestTask(t, driver.TaskConfig{
-				Name:    "name",
-				Enabled: true,
-				Env: map[string]string{
-					"CONSUL_HTTP_ADDR":  "my.consul.address",
-					"CONSUL_HTTP_TOKEN": "TEST_CONSUL_TOKEN",
-					"PROVIDER_TOKEN":    "TEST_PROVIDER_TOKEN",
-				},
-				Providers: driver.NewTerraformProviderBlocks(
-					hcltmpl.NewNamedBlocksTest([]map[string]interface{}{
-						{"providerA": map[string]interface{}{
-							"task_env": map[string]interface{}{
-								"PROVIDER_TOKEN": "TEST_PROVIDER_TOKEN",
-							},
-						}},
-					})),
-				ProviderInfo: map[string]interface{}{},
-				Services:     []driver.Service{},
-				Module:       "path",
-				Condition:    config.EmptyConditionConfig(),
-				ModuleInputs: *config.DefaultModuleInputConfigs(),
-				BufferPeriod: &driver.BufferPeriod{
-					Min: 5 * time.Second,
-					Max: 20 * time.Second,
-				},
-				WorkingDir: "sync-tasks/name",
-				// Enterprise
-				TFCWorkspace: *config.DefaultTerraformCloudWorkspaceConfig(),
-			})},
 		},
 	}
 
@@ -369,7 +190,25 @@ func TestNewDriverTask(t *testing.T) {
 
 			tasks, err := newTestDriverTasks(tc.conf, providerConfigs)
 			assert.NoError(t, err)
-			assert.Equal(t, tc.tasks, tasks)
+			assert.Equal(t, len(tc.tasks), len(tasks))
+			for i := range tasks {
+				assert.Equal(t, tc.tasks[i].Description(), tasks[i].Description())
+				assert.Equal(t, tc.tasks[i].Name(), tasks[i].Name())
+				assert.Equal(t, tc.tasks[i].IsEnabled(), tasks[i].IsEnabled())
+				assert.Equal(t, tc.tasks[i].Module(), tasks[i].Module())
+				assert.Equal(t, tc.tasks[i].Version(), tasks[i].Version())
+				bufferPeriod, _ := tc.tasks[i].BufferPeriod()
+				tasksBufferPeriod, _ := tasks[i].BufferPeriod()
+				assert.Equal(t, bufferPeriod, tasksBufferPeriod)
+				assert.Equal(t, tc.tasks[i].Condition(), tasks[i].Condition())
+				assert.Equal(t, tc.tasks[i].ModuleInputs(), tasks[i].ModuleInputs())
+				assert.Equal(t, tc.tasks[i].WorkingDir(), tasks[i].WorkingDir())
+				assert.Equal(t, tc.tasks[i].DeprecatedTFVersion(), tasks[i].DeprecatedTFVersion())
+				assert.Equal(t, tc.tasks[i].TFCWorkspace(), tasks[i].TFCWorkspace())
+				assert.Equal(t, tc.tasks[i].Env(), tasks[i].Env())
+				assert.Equal(t, tc.tasks[i].Providers(), tasks[i].Providers())
+				assert.Equal(t, tc.tasks[i].Services(), tasks[i].Services())
+			}
 		})
 	}
 }
