@@ -34,8 +34,10 @@ var (
 // Health API query only.
 //
 // Endpoints:
-//   /v1/catalog/services
-//   /v1/health/service/:service
+//
+//	/v1/catalog/services
+//	/v1/health/service/:service
+//
 // Template: {{ servicesRegex regexp=<regex> <options> ... }}
 func servicesRegexFunc(recall hcat.Recaller) interface{} {
 	return func(opts ...string) ([]*dep.HealthService, error) {

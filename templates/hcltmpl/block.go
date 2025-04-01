@@ -16,10 +16,10 @@ type Variables map[string]cty.Value
 // NamedBlock represents an HCL block with one label and an arbitrary number of
 // attributes of varying types.
 //
-// 	block "name" {
+//	block "name" {
 //		attr = "str"
 //		count = 10
-// 	}
+//	}
 type NamedBlock struct {
 	Name      string
 	Variables Variables

@@ -32,8 +32,8 @@ type Interceptor_Intercept_Call struct {
 }
 
 // Intercept is a helper method to define mock.On call
-//  - _a0 http.ResponseWriter
-//  - _a1 *http.Request
+//   - _a0 http.ResponseWriter
+//   - _a1 *http.Request
 func (_e *Interceptor_Expecter) Intercept(_a0 interface{}, _a1 interface{}) *Interceptor_Intercept_Call {
 	return &Interceptor_Intercept_Call{Call: _e.mock.On("Intercept", _a0, _a1)}
 }
@@ -70,7 +70,7 @@ type Interceptor_ShouldIntercept_Call struct {
 }
 
 // ShouldIntercept is a helper method to define mock.On call
-//  - _a0 *http.Request
+//   - _a0 *http.Request
 func (_e *Interceptor_Expecter) ShouldIntercept(_a0 interface{}) *Interceptor_ShouldIntercept_Call {
 	return &Interceptor_ShouldIntercept_Call{Call: _e.mock.On("ShouldIntercept", _a0)}
 }

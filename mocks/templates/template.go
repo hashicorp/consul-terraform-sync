@@ -49,7 +49,7 @@ type Template_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//  - _a0 hcat.Recaller
+//   - _a0 hcat.Recaller
 func (_e *Template_Expecter) Execute(_a0 interface{}) *Template_Execute_Call {
 	return &Template_Execute_Call{Call: _e.mock.On("Execute", _a0)}
 }
@@ -122,7 +122,7 @@ type Template_Notify_Call struct {
 }
 
 // Notify is a helper method to define mock.On call
-//  - _a0 interface{}
+//   - _a0 interface{}
 func (_e *Template_Expecter) Notify(_a0 interface{}) *Template_Notify_Call {
 	return &Template_Notify_Call{Call: _e.mock.On("Notify", _a0)}
 }
@@ -166,7 +166,7 @@ type Template_Render_Call struct {
 }
 
 // Render is a helper method to define mock.On call
-//  - content []byte
+//   - content []byte
 func (_e *Template_Expecter) Render(content interface{}) *Template_Render_Call {
 	return &Template_Render_Call{Call: _e.mock.On("Render", content)}
 }
