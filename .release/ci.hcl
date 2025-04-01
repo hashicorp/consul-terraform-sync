@@ -19,7 +19,8 @@ project "consul-terraform-sync" {
       "release/0.4.x",
       "release/0.5.x",
       "release/0.6.x",
-      "release/0.7.x"
+      "release/0.7.x",
+      "release/0.7.1",
     ]
   }
 }
