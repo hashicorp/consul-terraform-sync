@@ -21,7 +21,7 @@ var _ hcatQuery = (*catalogServicesRegistrationQuery)(nil)
 // services. It queries the Catalog List Services API and supports the query
 // parameters dc, ns, and node-meta. It also adds an additional layer of
 // custom functionality on the API response:
-//  - Adds regex filtering on service name option e.g. "regexp=api"
+//   - Adds regex filtering on service name option e.g. "regexp=api"
 //
 // Endpoint: /v1/catalog/services
 // Template: {{ catalogServicesRegistration  <filter options> ... }}

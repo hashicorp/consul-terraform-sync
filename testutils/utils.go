@@ -317,8 +317,8 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 // WaitForHttpStatusChange performs a blocking http call every pollInterval and returns the response
 // whenever it encounters a StatusCode of newStatus. Any StatusCode other than oldStatus or newStatus
 // will return an error immediately. It is the caller's responsibility to:
-//  - prevent an infinite loop by eventually cancelling the context
-//  - close the response
+//   - prevent an infinite loop by eventually cancelling the context
+//   - close the response
 func WaitForHttpStatusChange(ctx context.Context, pollInterval time.Duration, method, url, body string, oldStatus, newStatus int) (*http.Response, error) {
 	for {
 		select {
