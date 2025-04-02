@@ -1,3 +1,21 @@
+## 0.7.2 (April 2, 2025)
+
+SECURITY:
+*  Fix CVE GO-2024-3333 in golang.org/x/net@v0.17.0
+*  Fix CVE GO-2024-2631 in gopkg.in/square/go-jose.v2@v2.5.1
+*  Fix CVE GO-2024-2611 in google.golang.org/protobuf@v1.30.0
+*  Fix CVE GO-2025-3487 in golang.org/x/crypto@v0.14.0
+*  Fix CVE GO-2023-2402 in golang.org/x/crypto@v0.14.0
+*  Fix CVE GHSA-qxp5-gwg8-xv66 in golang.org/x/net@v0.17.0
+*  Fix CVE GO-2025-3503 in golang.org/x/net@v0.17.0
+*  Fix CVE GO-2024-2687 in golang.org/x/net@v0.17.0
+*  Fix CVE GHSA-c5q2-7r4c-mv6g in gopkg.in/square/go-jose.v2@v2.5.1
+*  Fix CVE GHSA-v778-237x-gjrc in golang.org/x/crypto@v0.14.0
+*  Fix CVE GO-2024-3321 in golang.org/x/crypto@v0.14.0
+*  Fix CVE GHSA-4v7x-pqxf-cx7m in golang.org/x/net@v0.17.0
+*  Fix CVE GHSA-45x7-px36-x8w8 in golang.org/x/crypto@v0.14.0
+*  Fix CVE GHSA-8r3f-844c-mc37 in google.golang.org/protobuf@v1.30.0
+
 ## 0.7.1 (October 26, 2023)
 
 BUG FIXES:
