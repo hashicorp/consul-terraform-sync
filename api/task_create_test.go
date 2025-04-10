@@ -236,10 +236,10 @@ func generateExpectedResponse(t *testing.T, req string) oapigen.TaskResponse {
 	require.NoError(t, err)
 
 	// Set cts_user_defined_meta to an empty map if nil
-	services := treq.Task.Condition.Services
-	if services != nil && services.CtsUserDefinedMeta == nil {
-		services.CtsUserDefinedMeta = &oapigen.ServicesCondition_CtsUserDefinedMeta{}
-	}
+	//services := treq.Task.Condition.Services
+	//if services != nil && services.CtsUserDefinedMeta == nil {
+	//	services.CtsUserDefinedMeta = &map[string]string{}
+	//}
 
 	return oapigen.TaskResponse{
 		Task: &treq.Task,
