@@ -26,8 +26,8 @@ type Handlers struct {
 	StatusHandler
 }
 
-//go:generate oapi-codegen -package oapigen -old-config-style -generate types -o oapigen/types.go openapi.yaml
-//go:generate oapi-codegen -package oapigen -old-config-style -generate chi-server,spec -o oapigen/server.go openapi.yaml
+//go:generate go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -package oapigen -old-config-style -generate types -o oapigen/types.go openapi.yaml
+//go:generate go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -package oapigen -old-config-style -generate chi-server,spec -o oapigen/server.go openapi.yaml
 
 // writeResponse sets headers and JSON encodes the response body in the response writer
 func writeResponse(w http.ResponseWriter, r *http.Request, code int, resp interface{}) {

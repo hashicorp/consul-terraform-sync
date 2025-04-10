@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"time"
 
-	middleware "github.com/deepmap/oapi-codegen/pkg/chi-middleware"
 	"github.com/hashicorp/consul-terraform-sync/api/oapigen"
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/go-uuid"
+	middleware "github.com/oapi-codegen/nethttp-middleware"
 )
 
 //go:generate mockery --name=Interceptor --filename=middleware.go --output=../mocks/api --tags=enterprise --with-expecter

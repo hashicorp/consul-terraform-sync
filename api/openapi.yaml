@@ -448,6 +448,7 @@ components:
           type: object
           additionalProperties:
             type: string
+            nullable: true
         use_as_module_input:
           type: boolean
           default: true

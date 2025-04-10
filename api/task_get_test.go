@@ -103,7 +103,6 @@ func TestTaskLifeCycleHandler_GetAllTasks(t *testing.T) {
 	var actual oapigen.TasksResponse
 	err = decoder.Decode(&actual)
 	require.NoError(t, err)
-
 	expectedTasksResponse := tasksResponseFromTaskConfigs(taskConfigs, reqID)
 	assert.ElementsMatch(t, *expectedTasksResponse.Tasks, *actual.Tasks)
 	assert.ElementsMatch(t, expectedTasksResponse.RequestId, reqID)

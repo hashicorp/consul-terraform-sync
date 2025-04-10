@@ -158,14 +158,12 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			expected: oapigen.Task{
 				Condition: oapigen.Condition{
 					Services: &oapigen.ServicesCondition{
-						Regexp:     config.String("^web.*"),
-						Datacenter: config.String("dc"),
-						Namespace:  config.String("ns"),
-						Filter:     config.String("filter"),
-						CtsUserDefinedMeta: &oapigen.ServicesCondition_CtsUserDefinedMeta{
-							AdditionalProperties: map[string]string{"key": "value"},
-						},
-						UseAsModuleInput: config.Bool(false),
+						Regexp:             config.String("^web.*"),
+						Datacenter:         config.String("dc"),
+						Namespace:          config.String("ns"),
+						Filter:             config.String("filter"),
+						CtsUserDefinedMeta: &map[string]*string{"key": config.String("value")},
+						UseAsModuleInput:   config.Bool(false),
 					},
 				},
 			},
@@ -187,14 +185,12 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			expected: oapigen.Task{
 				Condition: oapigen.Condition{
 					Services: &oapigen.ServicesCondition{
-						Names:      &[]string{"api", "web"},
-						Datacenter: config.String(""),
-						Namespace:  config.String(""),
-						Filter:     config.String(""),
-						CtsUserDefinedMeta: &oapigen.ServicesCondition_CtsUserDefinedMeta{
-							AdditionalProperties: map[string]string{},
-						},
-						UseAsModuleInput: config.Bool(false),
+						Names:              &[]string{"api", "web"},
+						Datacenter:         config.String(""),
+						Namespace:          config.String(""),
+						Filter:             config.String(""),
+						CtsUserDefinedMeta: &map[string]*string{},
+						UseAsModuleInput:   config.Bool(false),
 					},
 				},
 			},
@@ -222,11 +218,9 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 						UseAsModuleInput: config.Bool(true),
 						Datacenter:       config.String("dc2"),
 						Namespace:        config.String("ns2"),
-						NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
-							AdditionalProperties: map[string]string{
-								"key1": "value1",
-								"key2": "value2",
-							},
+						NodeMeta: &map[string]string{
+							"key1": "value1",
+							"key2": "value2",
 						},
 					},
 				},
@@ -298,13 +292,11 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			expected: oapigen.Task{
 				ModuleInput: &oapigen.ModuleInput{
 					Services: &oapigen.ServicesModuleInput{
-						Regexp:     config.String("^api$"),
-						Datacenter: config.String("dc"),
-						Namespace:  config.String("ns"),
-						Filter:     config.String("filter"),
-						CtsUserDefinedMeta: &oapigen.ServicesModuleInput_CtsUserDefinedMeta{
-							AdditionalProperties: map[string]string{"key": "value"},
-						},
+						Regexp:             config.String("^api$"),
+						Datacenter:         config.String("dc"),
+						Namespace:          config.String("ns"),
+						Filter:             config.String("filter"),
+						CtsUserDefinedMeta: &map[string]string{"key": "value"},
 					},
 					ConsulKv: &oapigen.ConsulKVModuleInput{
 						Path:       "fake-path",
@@ -337,13 +329,11 @@ func TestRequest_oapigenTaskFromConfigTask(t *testing.T) {
 			expected: oapigen.Task{
 				ModuleInput: &oapigen.ModuleInput{
 					Services: &oapigen.ServicesModuleInput{
-						Names:      &[]string{"api"},
-						Datacenter: config.String("dc"),
-						Namespace:  config.String("ns"),
-						Filter:     config.String("filter"),
-						CtsUserDefinedMeta: &oapigen.ServicesModuleInput_CtsUserDefinedMeta{
-							AdditionalProperties: map[string]string{"key": "value"},
-						},
+						Names:              &[]string{"api"},
+						Datacenter:         config.String("dc"),
+						Namespace:          config.String("ns"),
+						Filter:             config.String("filter"),
+						CtsUserDefinedMeta: &map[string]string{"key": "value"},
 					},
 				},
 			},
@@ -594,11 +584,9 @@ func TestTaskRequest_ToTaskConfig(t *testing.T) {
 							UseAsModuleInput: config.Bool(true),
 							Datacenter:       config.String("dc2"),
 							Namespace:        config.String("ns2"),
-							NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
-								AdditionalProperties: map[string]string{
-									"key1": "value1",
-									"key2": "value2",
-								},
+							NodeMeta: &map[string]string{
+								"key1": "value1",
+								"key2": "value2",
 							},
 						},
 					},
@@ -870,11 +858,9 @@ func TestTaskResponse_String(t *testing.T) {
 					UseAsModuleInput: config.Bool(true),
 					Datacenter:       config.String("dc2"),
 					Namespace:        config.String("ns2"),
-					NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
-						AdditionalProperties: map[string]string{
-							"key1": "value1",
-							"key2": "value2",
-						},
+					NodeMeta: &map[string]string{
+						"key1": "value1",
+						"key2": "value2",
 					},
 				},
 			},
