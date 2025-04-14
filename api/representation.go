@@ -51,7 +51,7 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 				input.Names = *tr.Task.ModuleInput.Services.Names
 			}
 			if tr.Task.ModuleInput.Services.CtsUserDefinedMeta != nil {
-				input.CTSUserDefinedMeta = tr.Task.ModuleInput.Services.CtsUserDefinedMeta.AdditionalProperties
+				input.CTSUserDefinedMeta = *tr.Task.ModuleInput.Services.CtsUserDefinedMeta
 			}
 			inputs = append(inputs, input)
 		}
@@ -86,7 +86,7 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 		}
 		if tr.Task.Condition.Services.CtsUserDefinedMeta != nil {
 			cond.ServicesMonitorConfig.CTSUserDefinedMeta =
-				tr.Task.Condition.Services.CtsUserDefinedMeta.AdditionalProperties
+				convertMapPtrToValue(tr.Task.Condition.Services.CtsUserDefinedMeta)
 		}
 		tc.Condition = cond
 	} else if tr.Task.Condition.ConsulKv != nil {
@@ -109,7 +109,7 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 			},
 		}
 		if tr.Task.Condition.CatalogServices.NodeMeta != nil {
-			cond.NodeMeta = tr.Task.Condition.CatalogServices.NodeMeta.AdditionalProperties
+			cond.NodeMeta = *tr.Task.Condition.CatalogServices.NodeMeta
 		}
 		tc.Condition = cond
 	} else if tr.Task.Condition.Schedule != nil {
@@ -147,7 +147,7 @@ func (tr TaskRequest) ToTaskConfig() (config.TaskConfig, error) {
 
 	if tr.Task.Variables != nil {
 		tc.Variables = make(map[string]string)
-		for k, v := range tr.Task.Variables.AdditionalProperties {
+		for k, v := range *tr.Task.Variables {
 			tc.Variables[k] = v
 		}
 	}
@@ -220,9 +220,12 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	}
 
 	if tc.Variables != nil {
-		task.Variables = &oapigen.VariableMap{
-			AdditionalProperties: tc.Variables,
+		varMap := make(oapigen.VariableMap)
+		for k, v := range tc.Variables {
+			varMap[k] = v
 		}
+		task.Variables = &varMap
+
 	}
 
 	if tc.Providers != nil {
@@ -236,23 +239,19 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 			case *config.ServicesModuleInputConfig:
 				if len(input.Names) > 0 {
 					task.ModuleInput.Services = &oapigen.ServicesModuleInput{
-						Names:      &input.Names,
-						Datacenter: input.Datacenter,
-						Namespace:  input.Namespace,
-						Filter:     input.Filter,
-						CtsUserDefinedMeta: &oapigen.ServicesModuleInput_CtsUserDefinedMeta{
-							AdditionalProperties: input.CTSUserDefinedMeta,
-						},
+						Names:              &input.Names,
+						Datacenter:         input.Datacenter,
+						Namespace:          input.Namespace,
+						Filter:             input.Filter,
+						CtsUserDefinedMeta: &input.CTSUserDefinedMeta,
 					}
 				} else {
 					task.ModuleInput.Services = &oapigen.ServicesModuleInput{
-						Regexp:     input.Regexp,
-						Datacenter: input.Datacenter,
-						Namespace:  input.Namespace,
-						Filter:     input.Filter,
-						CtsUserDefinedMeta: &oapigen.ServicesModuleInput_CtsUserDefinedMeta{
-							AdditionalProperties: input.CTSUserDefinedMeta,
-						},
+						Regexp:             input.Regexp,
+						Datacenter:         input.Datacenter,
+						Namespace:          input.Namespace,
+						Filter:             input.Filter,
+						CtsUserDefinedMeta: &input.CTSUserDefinedMeta,
 					}
 				}
 			case *config.ConsulKVModuleInputConfig:
@@ -269,13 +268,11 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	switch cond := tc.Condition.(type) {
 	case *config.ServicesConditionConfig:
 		services := &oapigen.ServicesCondition{
-			Datacenter: cond.Datacenter,
-			Namespace:  cond.Namespace,
-			Filter:     cond.Filter,
-			CtsUserDefinedMeta: &oapigen.ServicesCondition_CtsUserDefinedMeta{
-				AdditionalProperties: cond.CTSUserDefinedMeta,
-			},
-			UseAsModuleInput: cond.UseAsModuleInput,
+			Datacenter:         cond.Datacenter,
+			Namespace:          cond.Namespace,
+			Filter:             cond.Filter,
+			CtsUserDefinedMeta: convertMapValueToPtr(cond.CTSUserDefinedMeta),
+			UseAsModuleInput:   cond.UseAsModuleInput,
 		}
 		if len(cond.Names) > 0 {
 			services.Names = &cond.Names
@@ -289,9 +286,7 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 			UseAsModuleInput: cond.UseAsModuleInput,
 			Datacenter:       cond.Datacenter,
 			Namespace:        cond.Namespace,
-			NodeMeta: &oapigen.CatalogServicesCondition_NodeMeta{
-				AdditionalProperties: cond.NodeMeta,
-			},
+			NodeMeta:         &cond.NodeMeta,
 		}
 	case *config.ConsulKVConditionConfig:
 		task.Condition.ConsulKv = &oapigen.ConsulKVCondition{
@@ -355,4 +350,31 @@ func oapigenTaskFromConfigTask(tc config.TaskConfig) oapigen.Task {
 	}
 
 	return task
+}
+
+// Helper function to convert *map[string]*string to map[string]string
+func convertMapPtrToValue(input *map[string]*string) map[string]string {
+	if input == nil {
+		return nil
+	}
+	result := make(map[string]string)
+	for k, v := range *input {
+		if v != nil {
+			result[k] = *v
+		}
+	}
+	return result
+}
+
+// Helper function to convert map[string]string to *map[string]*string
+func convertMapValueToPtr(input map[string]string) *map[string]*string {
+	if input == nil {
+		return nil
+	}
+	result := make(map[string]*string)
+	for k, v := range input {
+		val := v
+		result[k] = &val
+	}
+	return &result
 }
