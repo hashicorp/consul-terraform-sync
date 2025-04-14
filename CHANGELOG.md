@@ -1,3 +1,10 @@
+## 0.7.3 (April 14, 2025)
+
+SECURITY:
+*  Fix CVE GO-2024-2947 in github.com/hashicorp/go-retryablehttp@v0.7.0
+*  Fix CVE GHSA-v6v8-xj6m-xwqh in github.com/hashicorp/go-retryablehttp@v0.7.0
+*  Fix CVE GO-2025-3533 in github.com/getkin/kin-openapi@v0.94.0
+
 ## 0.7.2 (April 2, 2025)
 
 SECURITY:
