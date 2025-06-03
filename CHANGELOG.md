@@ -1,3 +1,7 @@
+## 0.7.4 (June 3, 2025)
+SECURITY:
+* fixed CVE GO-2025-3595 in golang.org/x/net@v0.36.0
+
 ## 0.7.2 (April 2, 2025)
 
 SECURITY:
