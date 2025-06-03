@@ -1,7 +1,7 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-FROM alpine:3 as default
+FROM alpine:3.22.0 as default
 
 # NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
 # and the version to download. Example: NAME=consul PRODUCT_VERSION=1.2.3.

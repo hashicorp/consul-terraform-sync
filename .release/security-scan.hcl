@@ -11,9 +11,6 @@ container {
   triage {
     suppress {
       vulnerabilities = [
-        "GHSA-v6v8-xj6m-xwqh", # github.com/hashicorp/go-retryablehttp@v0.7.0
-        "GO-2024-2947", # github.com/hashicorp/go-retryablehttp@v0.7.0
-        "GO-2025-3533" # github.com/getkin/kin-openapi@v0.94.0
       ]
     }
   }
@@ -35,9 +32,6 @@ binary {
   triage {
     suppress {
       vulnerabilities = [
-        "GHSA-v6v8-xj6m-xwqh", # github.com/hashicorp/go-retryablehttp@v0.7.0
-        "GO-2024-2947", # github.com/hashicorp/go-retryablehttp@v0.7.0
-        "GO-2025-3533" # github.com/getkin/kin-openapi@v0.94.0
       ]
     }
   }
