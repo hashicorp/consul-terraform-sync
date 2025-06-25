@@ -1,11 +1,11 @@
 module github.com/hashicorp/consul-terraform-sync
 
-go 1.23.8
+go 1.23.10
 
 require (
 	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/getkin/kin-openapi v0.131.0
-	github.com/go-chi/chi/v5 v5.0.7
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/google/uuid v1.5.0
 	github.com/hashicorp/consul/api v1.13.0
 	github.com/hashicorp/consul/sdk v0.9.0
