@@ -106,7 +106,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/ulikunitz/xz v0.5.10 // indirect
+	github.com/ulikunitz/xz v0.5.14 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
