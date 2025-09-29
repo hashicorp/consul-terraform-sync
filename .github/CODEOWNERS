@@ -1,6 +1,7 @@
 # default PR reviews to the team
 * @hashicorp/consul-selfmanage-maintainers @hashicorp/team-consul-core
 
+
 # release configuration
 /.release/                              @hashicorp/team-selfmanaged-releng @hashicorp/consul-selfmanage-maintainers
 /.github/workflows/build.yml            @hashicorp/team-selfmanaged-releng @hashicorp/consul-selfmanage-maintainers
