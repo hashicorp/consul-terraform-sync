@@ -155,7 +155,7 @@ func generateHelp(commands map[string]string, usage string, omitFlags []string) 
 		fmt.Fprintf(tw, "\nCommands:\n")
 
 		for _, v := range commonCommands {
-			fmt.Fprintf(tw, commands[v])
+			fmt.Fprintf(tw, "%s", commands[v])
 		}
 	}
 
