@@ -159,6 +159,9 @@ func TestServicesRegexQuery_Fetch(t *testing.T) {
 			c.Stderr = ioutil.Discard
 			c.NodeMeta = nodeMeta
 		})
+	require.NoError(t, err, "failed to start consul server 2")
+	defer srv2.Stop()
+
 	consulSrv2 := &dep.HealthService{
 		Name:     "consul",
 		ID:       "consul",
@@ -166,9 +169,6 @@ func TestServicesRegexQuery_Fetch(t *testing.T) {
 		NodeID:   srv2.Config.NodeID,
 		Node:     srv2.Config.NodeName,
 	}
-
-	require.NoError(t, err, "failed to start consul server 2")
-	defer srv2.Stop()
 
 	srv3, err := testutil.NewTestServerConfigT(tb,
 		func(c *testutil.TestServerConfig) {
@@ -180,6 +180,7 @@ func TestServicesRegexQuery_Fetch(t *testing.T) {
 		})
 	require.NoError(t, err, "failed to start consul server 3")
 	defer srv3.Stop()
+
 	consulSrv3 := &dep.HealthService{
 		Name:     "consul",
 		ID:       "consul",

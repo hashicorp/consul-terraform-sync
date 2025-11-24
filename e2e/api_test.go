@@ -48,8 +48,9 @@ const (
 
 // TestE2E_StatusEndpoints tests all CTS status endpoints and query
 // parameters. This runs a Consul server and the CTS binary in daemon mode.
+//
 //	GET	/v1/status/tasks
-// 	GET	/v1/status/tasks/:task_name
+//	GET	/v1/status/tasks/:task_name
 //	GET	/v1/status
 func TestE2E_StatusEndpoints(t *testing.T) {
 	setParallelism(t)
@@ -263,6 +264,7 @@ func TestE2E_StatusEndpoints(t *testing.T) {
 
 // TestE2E_TaskEndpoints_UpdateEnableDisable tests the tasks endpoints. This
 // runs a Consul server and the CTS binary in daemon mode.
+//
 //	PATCH	/v1/tasks/:task_name
 func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 	setParallelism(t)
@@ -357,6 +359,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 // TestE2E_TaskEndpoints_Delete tests the delete task endpoint. This
 // runs a Consul server and the CTS binary in daemon mode.
+//
 //	DELETE/v1/tasks/:task_name
 func TestE2E_TaskEndpoints_Delete(t *testing.T) {
 	setParallelism(t)
@@ -465,6 +468,7 @@ func TestE2E_HealthEndpoint(t *testing.T) {
 
 // TestE2E_TaskEndpoints_Delete_ActiveTask tests that a running task will not
 // be deleted until it is complete.
+//
 //	DELETE/v1/tasks/:task_name
 func TestE2E_TaskEndpoints_Delete_ActiveTask(t *testing.T) {
 	setParallelism(t)
@@ -553,6 +557,7 @@ func waitForTaskDeletion(t *testing.T, client *api.Client, name string, timeout 
 
 // TestE2E_TaskEndpoints_Create tests the create task endpoint. This
 // runs a Consul server and the CTS binary in daemon mode.
+//
 //	POST /v1/tasks
 func TestE2E_TaskEndpoints_Create(t *testing.T) {
 	setParallelism(t)
@@ -695,6 +700,7 @@ func TestE2E_TaskEndpoints_Create_Run_Now(t *testing.T) {
 
 // TestE2E_TaskEndpoints_InvalidSchema tests the create task endpoint with an invalid schema, no task
 // should be created. This runs a Consul server and the CTS binary in daemon mode.
+//
 //	POST /v1/tasks
 func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 	setParallelism(t)
@@ -741,8 +747,8 @@ func TestE2E_TaskEndpoints_InvalidSchema(t *testing.T) {
 	err := json.NewDecoder(resp.Body).Decode(&errorResponse)
 	require.NoError(t, err)
 
-	assert.Contains(t, errorResponse.Error.Message, `request body has an error: doesn't match the schema: `+
-		`Error at "/task/module": Field must be set to string or not be present`)
+	assert.Contains(t, errorResponse.Error.Message, `doesn't match schema`)
+	assert.Contains(t, errorResponse.Error.Message, `value must be a string`)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	// Check that the task has not been created

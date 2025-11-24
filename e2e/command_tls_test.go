@@ -402,7 +402,7 @@ func TestE2E_CommandMTLSErrors(t *testing.T) {
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
 				dbTaskName,
 			},
-			"bad certificate",
+			"certificate required",
 		},
 		{
 			"ssl verify disabled and no cert key pair provided",
@@ -411,7 +411,7 @@ func TestE2E_CommandMTLSErrors(t *testing.T) {
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "false"),
 				dbTaskName,
 			},
-			"bad certificate",
+			"certificate required",
 		},
 	}
 

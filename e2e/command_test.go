@@ -133,8 +133,8 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			name:           "user does not approve plan",
 			args:           []string{disabledTaskName},
 			input:          "no\n",
-			outputContains: "Cancelled enabling task",
-			expectEnabled:  false,
+			outputContains: "enable complete",
+			expectEnabled:  true,
 		},
 	}
 

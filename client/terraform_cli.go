@@ -203,7 +203,7 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 	}
 
 	if !output.Valid {
-		return fmt.Errorf(sb.String())
+		return fmt.Errorf("%s", sb.String())
 	}
 
 	if sb.Len() > 0 {
