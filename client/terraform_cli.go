@@ -4,21 +4,17 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/hashicorp/consul-terraform-sync/logging"
 	"github.com/hashicorp/terraform-exec/tfexec"
-	tfjson "github.com/hashicorp/terraform-json"
 )
 
 var (
@@ -172,53 +168,30 @@ func (t *TerraformCLI) Plan(ctx context.Context) (bool, error) {
 	return t.tf.Plan(ctx)
 }
 
-// terraformValidateJSON represents the JSON output structure from terraform validate -json
-type terraformValidateJSON struct {
-	Valid       bool                      `json:"valid"`
-	Diagnostics []terraformDiagnosticJSON `json:"diagnostics"`
-}
-
-type terraformDiagnosticJSON struct {
-	Severity string `json:"severity"`
-	Summary  string `json:"summary"`
-	Detail   string `json:"detail"`
-}
-
 // Validate verifies the generated configuration files
 func (t *TerraformCLI) Validate(ctx context.Context) error {
 	output, err := t.tf.Validate(ctx)
-
-	if output == nil {
-		if err != nil {
-			return err
-		}
-		return errors.New("terraform validate returned nil output with no error")
+	if err != nil {
+		return err
 	}
 
-	// Use diagnostics from terraform-exec output
-	diagnostics := output.Diagnostics
-
-	// Fallback: If diagnostics are empty but validation failed, parse JSON directly
-	// This handles CI environments where terraform-exec doesn't populate diagnostics
-	if (err != nil || !output.Valid) && len(diagnostics) == 0 {
-		if directDiags := t.parseValidateJSON(ctx); len(directDiags) > 0 {
-			diagnostics = directDiags
-		}
-	}
-
-	// Build custom error messages from diagnostics
 	var sb strings.Builder
-	for _, d := range diagnostics {
+	for _, d := range output.Diagnostics {
 		sb.WriteByte('\n')
-		if strings.Contains(d.Detail, "services") && strings.Contains(d.Detail, "not expected") && !strings.Contains(d.Detail, "catalog_services") {
+		switch d.Detail {
+		case `An argument named "services" is not expected here.`:
 			fmt.Fprintf(&sb, `module for task "%s" is missing the "services" variable`, t.workspace)
-		} else if strings.Contains(d.Detail, "catalog_services") && strings.Contains(d.Detail, "not expected") {
-			fmt.Fprintf(&sb, `module for task "%s" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false`, t.workspace)
-		} else {
+		case `An argument named "catalog_services" is not expected here.`:
+			fmt.Fprintf(
+				&sb,
+				`module for task "%s" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false`,
+				t.workspace)
+		default:
 			fmt.Fprintf(&sb, "%s: %s\n", d.Severity, d.Summary)
 			if d.Range != nil && d.Snippet != nil {
 				if d.Snippet.Context != nil {
-					fmt.Fprintf(&sb, "\non %s line %d, in %s\n", d.Range.Filename, d.Range.Start.Line, *d.Snippet.Context)
+					fmt.Fprintf(&sb, "\non %s line %d, in %s\n",
+						d.Range.Filename, d.Range.Start.Line, *d.Snippet.Context)
 				} else {
 					fmt.Fprintf(&sb, "\non %s line %d\n", d.Range.Filename, d.Range.Start.Line)
 				}
@@ -229,13 +202,7 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 		sb.WriteByte('\n')
 	}
 
-	if err != nil || !output.Valid {
-		if sb.Len() == 0 {
-			if err != nil {
-				return err
-			}
-			return errors.New("terraform validate failed but no diagnostics were provided")
-		}
+	if !output.Valid {
 		return fmt.Errorf("%s", sb.String())
 	}
 
@@ -244,34 +211,6 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// parseValidateJSON runs terraform validate -json and parses output directly
-// Used as fallback when terraform-exec doesn't populate diagnostics
-func (t *TerraformCLI) parseValidateJSON(ctx context.Context) []tfjson.Diagnostic {
-	cmd := exec.CommandContext(ctx, "terraform", "validate", "-json", "-no-color")
-	cmd.Dir = t.workingDir
-
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &bytes.Buffer{}
-
-	_ = cmd.Run() // Ignore error, check JSON output
-
-	var result terraformValidateJSON
-	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
-		return nil
-	}
-
-	var diagnostics []tfjson.Diagnostic
-	for _, d := range result.Diagnostics {
-		diagnostics = append(diagnostics, tfjson.Diagnostic{
-			Severity: tfjson.DiagnosticSeverity(d.Severity),
-			Summary:  d.Summary,
-			Detail:   d.Detail,
-		})
-	}
-	return diagnostics
 }
 
 // GoString defines the printable version of this struct.
