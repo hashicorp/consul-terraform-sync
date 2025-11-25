@@ -172,9 +172,21 @@ func (t *TerraformCLI) Plan(ctx context.Context) (bool, error) {
 func (t *TerraformCLI) Validate(ctx context.Context) error {
 	output, err := t.tf.Validate(ctx)
 
-	if err != nil && output == nil {
-		return err
+	// If output is completely nil, we can't parse diagnostics
+	if output == nil {
+		t.logger.Error("terraform validate returned nil output", "error", err)
+		if err != nil {
+			return err
+		}
+		return errors.New("terraform validate returned nil output with no error")
 	}
+
+	// Log diagnostic count for debugging - using ERROR to ensure it appears in CI logs
+	t.logger.Error("DIAG_DEBUG: terraform validate completed",
+		"valid", output.Valid,
+		"diagnostic_count", len(output.Diagnostics),
+		"has_error", err != nil)
+
 	// Note: We don't return early on err because output still contains diagnostics
 	// that we want to parse and format with custom error messages
 
@@ -207,6 +219,16 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 
 	// Return formatted error if validation failed or if there were errors
 	if err != nil || !output.Valid {
+		t.logger.Error("DIAG_DEBUG: formatting error", "sb_length", sb.Len(), "err_not_nil", err != nil, "output_valid", output.Valid)
+		if sb.Len() == 0 {
+			// No diagnostics were captured, return raw error if available
+			t.logger.Error("DIAG_DEBUG: sb is empty, returning raw error")
+			if err != nil {
+				return err
+			}
+			return errors.New("terraform validate failed but no diagnostics were provided")
+		}
+		t.logger.Error("DIAG_DEBUG: returning formatted error", "error_text", sb.String())
 		return fmt.Errorf("%s", sb.String())
 	}
 
