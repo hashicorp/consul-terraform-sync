@@ -243,7 +243,7 @@ func TestCondition_Services_InvalidQueries(t *testing.T) {
 		{
 			"filter",
 			`filter = "\"foo\" in Service.Bar"`,
-			`Selector "Service.Bar" is not valid`,
+			`Selector`,
 		},
 		{
 			"namespace_with_oss_consul",

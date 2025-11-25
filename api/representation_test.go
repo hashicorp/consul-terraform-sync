@@ -52,7 +52,7 @@ func TestTaskRequest_String(t *testing.T) {
 
 	actual := fmt.Sprintf("%s", req)
 	expected := `{"task":{"buffer_period":{"enabled":true,"max":"0s","min":"0s"},` +
-		`"condition":{"services":{"names":["web","api"]}},` +
+		`"condition":{"services":{"cts_user_defined_meta":null,"names":["web","api"]}},` +
 		`"description":"Writes the service name, id, and IP address to a file",` +
 		`"enabled":true,"module":"./example-module","name":"new-example-task",` +
 		`"providers":["local"]}}`
@@ -878,7 +878,7 @@ func TestTaskResponse_String(t *testing.T) {
 		`"condition":{"catalog_services":{"datacenter":"dc2","namespace":"ns2",` +
 		`"node_meta":{"key1":"value1","key2":"value2"},"regexp":".*",` +
 		`"use_as_module_input":true}},"enabled":true,"module":"path",` +
-		`"module_input":{"services":{"regexp":""}},"name":"task",` +
+		`"module_input":{"services":{"cts_user_defined_meta":null,"regexp":""}},"name":"task",` +
 		`"version":""}}`
 	require.Equal(t, expected, actual)
 }
