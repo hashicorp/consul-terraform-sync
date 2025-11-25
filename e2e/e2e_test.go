@@ -391,15 +391,29 @@ func TestE2EValidateError(t *testing.T) {
 	select {
 	case err := <-errCh:
 		require.Error(t, err)
+		// Small delay to ensure stdout/stderr are fully flushed to buffer
+		time.Sleep(100 * time.Millisecond)
 	case <-time.After(defaultWaitForTestReadiness):
 		t.Log(buf.String())
 		t.Fatal(fmt.Sprintf("TestE2EValidateError should not take more than %s",
 			defaultWaitForTestReadiness))
 	}
 
-	assert.Contains(t, buf.String(), fmt.Sprintf(`module for task "%s" is missing the "services" variable`, taskName))
+	bufStr := buf.String()
+	t.Logf("Buffer length: %d bytes", len(bufStr))
+	t.Logf("Buffer contains 'terraform validate failed': %v", strings.Contains(bufStr, "terraform validate failed"))
+	t.Logf("Buffer contains 'missing': %v", strings.Contains(bufStr, "missing"))
+	
+	// Log last 500 chars to see what's at the end
+	if len(bufStr) > 500 {
+		t.Logf("Last 500 chars of buffer: %s", bufStr[len(bufStr)-500:])
+	} else {
+		t.Logf("Full buffer: %s", bufStr)
+	}
+
+	assert.Contains(t, bufStr, fmt.Sprintf(`module for task "%s" is missing the "services" variable`, taskName))
 	require.Contains(t,
-		buf.String(),
+		bufStr,
 		fmt.Sprintf(`module for task "%s" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false`,
 			taskName))
 	_ = cleanup()
