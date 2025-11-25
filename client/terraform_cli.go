@@ -171,9 +171,12 @@ func (t *TerraformCLI) Plan(ctx context.Context) (bool, error) {
 // Validate verifies the generated configuration files
 func (t *TerraformCLI) Validate(ctx context.Context) error {
 	output, err := t.tf.Validate(ctx)
-	if err != nil {
+
+	if err != nil && output == nil {
 		return err
 	}
+	// Note: We don't return early on err because output still contains diagnostics
+	// that we want to parse and format with custom error messages
 
 	var sb strings.Builder
 	for _, d := range output.Diagnostics {
@@ -202,7 +205,8 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 		sb.WriteByte('\n')
 	}
 
-	if !output.Valid {
+	// Return formatted error if validation failed or if there were errors
+	if err != nil || !output.Valid {
 		return fmt.Errorf("%s", sb.String())
 	}
 

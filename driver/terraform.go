@@ -434,6 +434,7 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 
 	// validate workspace
 	if err := tf.validateTask(ctx); err != nil {
+		tf.logger.Error("error validating workspace for task", taskNameLogKey, taskName, "error", err)
 		return err
 	}
 
