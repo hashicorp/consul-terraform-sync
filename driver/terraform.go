@@ -642,6 +642,8 @@ func (tf *Terraform) setNotifier(tmpl templates.Template) error {
 func (tf *Terraform) validateTask(ctx context.Context) error {
 	err := tf.client.Validate(ctx)
 	if err != nil {
+		// Log the validation error message so it appears in captured output
+		tf.logger.Error("terraform validate failed", "error", err.Error())
 		return err
 	}
 	return nil
