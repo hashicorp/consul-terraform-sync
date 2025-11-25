@@ -178,15 +178,15 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 	var sb strings.Builder
 	for _, d := range output.Diagnostics {
 		sb.WriteByte('\n')
-		switch d.Detail {
-		case `An argument named "services" is not expected here.`:
+		// Check for specific error patterns using substring matching to handle formatting variations
+		if strings.Contains(d.Detail, "services") && strings.Contains(d.Detail, "not expected") && !strings.Contains(d.Detail, "catalog_services") {
 			fmt.Fprintf(&sb, `module for task "%s" is missing the "services" variable`, t.workspace)
-		case `An argument named "catalog_services" is not expected here.`:
+		} else if strings.Contains(d.Detail, "catalog_services") && strings.Contains(d.Detail, "not expected") {
 			fmt.Fprintf(
 				&sb,
 				`module for task "%s" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false`,
 				t.workspace)
-		default:
+		} else {
 			fmt.Fprintf(&sb, "%s: %s\n", d.Severity, d.Summary)
 			if d.Range != nil && d.Snippet != nil {
 				if d.Snippet.Context != nil {
