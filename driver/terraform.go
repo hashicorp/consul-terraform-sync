@@ -434,7 +434,6 @@ func (tf *Terraform) initTask(ctx context.Context) error {
 
 	// validate workspace
 	if err := tf.validateTask(ctx); err != nil {
-		tf.logger.Error("error validating workspace for task", taskNameLogKey, taskName, "error", err)
 		return err
 	}
 
@@ -642,8 +641,6 @@ func (tf *Terraform) setNotifier(tmpl templates.Template) error {
 func (tf *Terraform) validateTask(ctx context.Context) error {
 	err := tf.client.Validate(ctx)
 	if err != nil {
-		// Log the validation error message so it appears in captured output
-		tf.logger.Error("terraform validate failed", "error", err.Error())
 		return err
 	}
 	return nil

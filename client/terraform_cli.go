@@ -171,37 +171,22 @@ func (t *TerraformCLI) Plan(ctx context.Context) (bool, error) {
 // Validate verifies the generated configuration files
 func (t *TerraformCLI) Validate(ctx context.Context) error {
 	output, err := t.tf.Validate(ctx)
-
-	// If output is completely nil, we can't parse diagnostics
-	if output == nil {
-		t.logger.Error("terraform validate returned nil output", "error", err)
-		if err != nil {
-			return err
-		}
-		return errors.New("terraform validate returned nil output with no error")
+	if err != nil {
+		return err
 	}
-
-	// Log diagnostic count for debugging - using ERROR to ensure it appears in CI logs
-	t.logger.Error("DIAG_DEBUG: terraform validate completed",
-		"valid", output.Valid,
-		"diagnostic_count", len(output.Diagnostics),
-		"has_error", err != nil)
-
-	// Note: We don't return early on err because output still contains diagnostics
-	// that we want to parse and format with custom error messages
 
 	var sb strings.Builder
 	for _, d := range output.Diagnostics {
 		sb.WriteByte('\n')
-		// Check for specific error patterns using substring matching to handle formatting variations
-		if strings.Contains(d.Detail, "services") && strings.Contains(d.Detail, "not expected") && !strings.Contains(d.Detail, "catalog_services") {
+		switch d.Detail {
+		case `An argument named "services" is not expected here.`:
 			fmt.Fprintf(&sb, `module for task "%s" is missing the "services" variable`, t.workspace)
-		} else if strings.Contains(d.Detail, "catalog_services") && strings.Contains(d.Detail, "not expected") {
+		case `An argument named "catalog_services" is not expected here.`:
 			fmt.Fprintf(
 				&sb,
 				`module for task "%s" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false`,
 				t.workspace)
-		} else {
+		default:
 			fmt.Fprintf(&sb, "%s: %s\n", d.Severity, d.Summary)
 			if d.Range != nil && d.Snippet != nil {
 				if d.Snippet.Context != nil {
@@ -217,18 +202,7 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 		sb.WriteByte('\n')
 	}
 
-	// Return formatted error if validation failed or if there were errors
-	if err != nil || !output.Valid {
-		t.logger.Error("DIAG_DEBUG: formatting error", "sb_length", sb.Len(), "err_not_nil", err != nil, "output_valid", output.Valid)
-		if sb.Len() == 0 {
-			// No diagnostics were captured, return raw error if available
-			t.logger.Error("DIAG_DEBUG: sb is empty, returning raw error")
-			if err != nil {
-				return err
-			}
-			return errors.New("terraform validate failed but no diagnostics were provided")
-		}
-		t.logger.Error("DIAG_DEBUG: returning formatted error", "error_text", sb.String())
+	if !output.Valid {
 		return fmt.Errorf("%s", sb.String())
 	}
 
