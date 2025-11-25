@@ -16,7 +16,7 @@ concurrency:
 
 env:
   CONSUL_VERSION: 1.12.1
-  TERRAFORM_VERSION: 1.8.5
+  TERRAFORM_VERSION: 1.7.5
   GO_VERSION: 1.23.10
 
 jobs:
