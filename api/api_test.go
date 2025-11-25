@@ -118,11 +118,11 @@ func TestServe(t *testing.T) {
 						UseAsModuleInput: config.Bool(true),
 					},
 				}
-				ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
-				ctrl.On("TaskCreate", mock.Anything, taskConf).Return(taskConf, nil)
-			},
-			statusCode: http.StatusCreated,
-			respBody: `{"task":{"condition":{"services":{"names":["api"],"use_as_module_input":true}},"enabled":true,"module":"module","name":"task_b"}}
+			ctrl.On("Task", mock.Anything, "task_b").Return(config.TaskConfig{}, fmt.Errorf("DNE"))
+			ctrl.On("TaskCreate", mock.Anything, taskConf).Return(taskConf, nil)
+		},
+		statusCode: http.StatusCreated,
+		respBody: `{"task":{"condition":{"services":{"cts_user_defined_meta":null,"names":["api"],"use_as_module_input":true}},"enabled":true,"module":"module","name":"task_b"}}
 `,
 		}, {
 			name:   "delete task",
