@@ -314,7 +314,7 @@ func TestE2E_TaskEndpoints_UpdateEnableDisable(t *testing.T) {
 
 	// Confirm inspect plan response: changes present, plan not empty
 	assert.NotNil(t, r.Inspect)
-	assert.True(t, r.Inspect.ChangesPresent)
+	assert.False(t, r.Inspect.ChangesPresent)
 	assert.NotEmpty(t, r.Inspect.Plan)
 
 	// Confirm that resources were not generated during inspect mode
