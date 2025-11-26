@@ -4,11 +4,13 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -32,6 +34,7 @@ const (
 // to execute Terraform cli commands
 type TerraformCLI struct {
 	tf         terraformExec
+	execPath   string
 	workingDir string
 	workspace  string
 	logger     logging.Logger
@@ -58,6 +61,7 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	if err != nil {
 		return nil, err
 	}
+	execPath := tfPath
 
 	// tfexec does not support logging levels. This enables Terraform output to
 	// log within CTS logs. This is useful for debugging and development
@@ -87,6 +91,7 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 
 	client := &TerraformCLI{
 		tf:         tf,
+		execPath:   execPath,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
 		logger:     logger,
@@ -171,6 +176,39 @@ func (t *TerraformCLI) Plan(ctx context.Context) (bool, error) {
 // Validate verifies the generated configuration files
 func (t *TerraformCLI) Validate(ctx context.Context) error {
 	output, err := t.tf.Validate(ctx)
+
+	// Handle case where terraform-exec returns error with empty diagnostics
+	// This happens with terraform-exec v0.17.0 + Terraform 1.7.5 on Linux
+	if err != nil && (output == nil || len(output.Diagnostics) == 0) {
+		// Run terraform validate again to capture stderr with error details
+		cmd := exec.CommandContext(ctx, t.execPath, "validate", "-no-color")
+		cmd.Dir = t.workingDir
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		if cmdErr := cmd.Run(); cmdErr != nil {
+			stderrStr := stderr.String()
+			// Parse stderr for CTS-specific error messages - check ALL patterns
+			var sb strings.Builder
+			if strings.Contains(stderrStr, `An argument named "services" is not expected here`) {
+				sb.WriteString("\nmodule for task \"")
+				sb.WriteString(t.workspace)
+				sb.WriteString("\" is missing the \"services\" variable\n")
+			}
+			if strings.Contains(stderrStr, `An argument named "catalog_services" is not expected here`) {
+				sb.WriteString("\nmodule for task \"")
+				sb.WriteString(t.workspace)
+				sb.WriteString("\" is missing the \"catalog_services\" variable, add to module or set \"use_as_module_input\" to false\n")
+			}
+			// If we found CTS-specific errors, return them
+			if sb.Len() > 0 {
+				return fmt.Errorf("%s", sb.String())
+			}
+			// Return original error if we can't parse it
+			return err
+		}
+	}
+
 	if err != nil {
 		return err
 	}
