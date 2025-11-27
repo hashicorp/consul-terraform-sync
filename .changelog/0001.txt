@@ -1,19 +1,16 @@
-```release-note:improvement
-Go version bump to 1.23.8 for E2E test stability
-Updated CI workflow to use Go 1.23.10 consistently across all test environments
-```
-
 ```release-note:security
-security: Suppressed [GO-2025-4013](https://pkg.go.dev/vuln/GO-2025-4013) (DSA public key panic)   
-security: Suppressed [GO-2025-4012](https://pkg.go.dev/vuln/GO-2025-4012) (Cookie parsing memory exhaustion)   
-security: Suppressed [GO-2025-4011](https://pkg.go.dev/vuln/GO-2025-4011) (DER payload parsing memory exhaustion)   
-security: Suppressed [GO-2025-4010](https://pkg.go.dev/vuln/GO-2025-4010) (IPv6 hostname validation bypass)   
-security: Suppressed [GO-2025-4009](https://pkg.go.dev/vuln/GO-2025-4009) (PEM parsing quadratic complexity)   
-security: Suppressed [GO-2025-4008](https://pkg.go.dev/vuln/GO-2025-4008) (ALPN negotiation error)   
-security: Suppressed [GO-2025-4007](https://pkg.go.dev/vuln/GO-2025-4007) (Name constraints quadratic complexity)   
-security: Suppressed [GO-2025-3956](https://pkg.go.dev/vuln/GO-2025-3956) (LookPath unexpected paths on Windows)   
-```
+deps: Upgraded golang.org/x/crypto from v0.38.0 to v0.45.0 for security fixes (GO-2025-4134, GO-2025-4135)
+deps: Upgraded golang.org/x/net from v0.40.0 to v0.47.0
+deps: Upgraded golang.org/x/sys from v0.33.0 to v0.38.0
+deps: Upgraded golang.org/x/text from v0.25.0 to v0.31.0
+build: Go version set to 1.24.0 in go.mod
 
 ```release-note:bug
-Fixed E2E test assertions for schema validation error messages to handle OpenAPI library format changes
+client: Enhanced Terraform validation to capture all errors from stderr when JSON diagnostics are empty, not just first match
+e2e: Fixed TestE2EValidateError to properly capture terraform validation errors from stderr
+e2e: Fixed TestE2E_EnableTaskCommand race conditions by removing unreliable event count checks
+e2e: Updated test expectations for ChangesPresent flag behavior when templates pre-render for disabled tasks
+api: Fixed OpenAPI schema nullable field definitions and test assertions
+api: Fixed unit test assertions to expect null fields in JSON output instead of omitted fields
+command: Fixed format string issue in CLI help generation
 ```
