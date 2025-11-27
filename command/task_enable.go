@@ -178,15 +178,8 @@ func (c *taskEnableCommand) Run(args []string) int {
 
 	c.UI.Output(resp.Inspect.Plan)
 
-	// Request user approval before enabling (unless auto-approve is set)
-	if !*c.autoApprove {
-		if exitCode, approved := c.meta.requestUserApprovalEnable(taskName); !approved {
-			return exitCode
-		}
-	}
-
 	if !resp.Inspect.ChangesPresent {
-		// enable the task but no need to run it now (no changes to apply)
+		// enable the task but no need to run it now
 		_, err = client.Task().Update(taskName, api.UpdateTaskConfig{
 			Enabled: config.Bool(true)}, nil)
 		if err != nil {
@@ -199,6 +192,12 @@ func (c *taskEnableCommand) Run(args []string) int {
 
 		c.UI.Info(fmt.Sprintf("'%s' enable complete!", taskName))
 		return ExitCodeOK
+	}
+
+	if !*c.autoApprove {
+		if exitCode, approved := c.meta.requestUserApprovalEnable(taskName); !approved {
+			return exitCode
+		}
 	}
 
 	c.UI.Info(fmt.Sprintf("Enabling and running '%s'...\n", taskName))
