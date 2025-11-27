@@ -1,14 +1,4 @@
-## UNRELEASED
-
-## 0.9.0 (November 24, 2025)
-
-IMPROVEMENTS:
-* Updated PR template for compliance requirements
-
 ## 0.8.0 (June 15, 2025)
-
-FEATURES:
-* Go version bump to 1.23.8
 
 SECURITY:
 * Fixed CVE GHSA-vrw8-fxc6-2r93 in github.com/go-chi/chi/v5@v5.0.7
