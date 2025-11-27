@@ -133,8 +133,8 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			name:           "user does not approve plan",
 			args:           []string{disabledTaskName},
 			input:          "no\n",
-			outputContains: "enable complete!",
-			expectEnabled:  true,
+			outputContains: "Cancelled enabling task",
+			expectEnabled:  false,
 		},
 	}
 
@@ -151,7 +151,6 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			// driver which can cause issues for tests that modifies the disabled tasks
 			// too soon. Add manual wait.
 			time.Sleep(defaultWaitForTestReadiness)
-
 
 			subcmd := []string{"task", "enable",
 				fmt.Sprintf("-%s=%d", command.FlagPort, cts.Port()),
@@ -171,6 +170,27 @@ func TestE2E_EnableTaskCommand(t *testing.T) {
 			assert.Equal(t, tc.expectEnabled, status.Enabled)
 
 			// Skipping event checks - they fail when templates pre-render (ChangesPresent=false)
+			// if !tc.expectEnabled {
+			// 	// only check for events if we expect the task to be enabled
+			// 	return
+			// }
+
+			// check that there was an initial event
+			// eventCountBase := 1
+			// eventCountNow := eventCount(t, disabledTaskName, cts.Port())
+			// require.Equal(t, eventCountBase, eventCountNow,
+			// 	"event count did not increment once. task was not triggered as expected")
+
+			// // make a change in Consul and confirm a new event is triggered
+			// now := time.Now()
+			// service := testutil.TestService{ID: "api-1", Name: "api"}
+			// testutils.RegisterConsulService(t, srv, service, defaultWaitForRegistration)
+			// api.WaitForEvent(t, cts, disabledTaskName, now, defaultWaitForEvent)
+			// eventCountNow = eventCount(t, disabledTaskName, cts.Port())
+			// require.Equal(t, eventCountBase+1, eventCountNow,
+			// 	"event count did not increment once. task was not triggered as expected")
+			// resourcesPath := filepath.Join(tempDir, disabledTaskName, resourcesDir)
+			// validateServices(t, true, []string{"api", "api-1", "web"}, resourcesPath)
 		})
 	}
 }

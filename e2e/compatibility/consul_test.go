@@ -135,10 +135,10 @@ func TestCompatibility_Consul(t *testing.T) {
 // default backend of CTS, so we need to ensure backwards compatibility
 //
 // From research, the following Consul features are used:
-//  - Consul KV API (GET, PUT, DELETE)
-//  - Consul KV API query parameters (cas, consistent, wait, acquire, key,
-//	  separator, flags)
-//  - Session API (Destroy, Create)
+//   - Consul KV API (GET, PUT, DELETE)
+//   - Consul KV API query parameters (cas, consistent, wait, acquire, key,
+//     separator, flags)
+//   - Session API (Destroy, Create)
 func testConsulBackendCompatibility(t *testing.T, tempDir string, port int) {
 	c := baseConfig(tempDir, port) + nullTask()
 	configPath := filepath.Join(tempDir, configFile)

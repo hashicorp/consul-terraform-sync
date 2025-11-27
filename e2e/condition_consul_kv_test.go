@@ -416,7 +416,8 @@ func TestConditionConsulKV_InvalidQueries(t *testing.T) {
 
 // TestConditionConsulKV_SuppressTriggers_SharedDependencies tests that a
 // task created with a consul-kv condition that shares a dependencies with
-//  an existing task only triggers on a Consul KV change.
+//
+//	an existing task only triggers on a Consul KV change.
 //
 // https://github.com/hashicorp/consul-terraform-sync/issues/704
 func TestConditionConsulKV_SuppressTriggers_SharedDependencies(t *testing.T) {

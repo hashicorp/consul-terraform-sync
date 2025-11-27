@@ -29,11 +29,11 @@ import (
 
 // TestE2EBasic runs the CTS binary in daemon mode with a configuration with 2
 // tasks and a test module that writes IP addresses to disk. Tests that CTS:
-// 1. executes the 2 tasks upon startup
-// 2. correct module resources are created for services ("api", "web", "db")
-// 3. verifies Terraform statefiles are written to Consul KV, the default
-//    Terraformfor backend for CTS for each task.
-// 4. Consul catalog changes trigger correct tasks
+//  1. executes the 2 tasks upon startup
+//  2. correct module resources are created for services ("api", "web", "db")
+//  3. verifies Terraform statefiles are written to Consul KV, the default
+//     Terraformfor backend for CTS for each task.
+//  4. Consul catalog changes trigger correct tasks
 func TestE2EBasic(t *testing.T) {
 	// Note: no t.Parallel() for this particular test. Choosing this test to run 'first'
 	// since e2e test running simultaneously will download Terraform into shared
@@ -403,7 +403,7 @@ func TestE2EValidateError(t *testing.T) {
 	t.Logf("Buffer length: %d bytes", len(bufStr))
 	t.Logf("Buffer contains 'terraform validate failed': %v", strings.Contains(bufStr, "terraform validate failed"))
 	t.Logf("Buffer contains 'missing': %v", strings.Contains(bufStr, "missing"))
-	
+
 	// Log last 500 chars to see what's at the end
 	if len(bufStr) > 500 {
 		t.Logf("Last 500 chars of buffer: %s", bufStr[len(bufStr)-500:])
@@ -423,10 +423,10 @@ func TestE2EValidateError(t *testing.T) {
 // service instances. It runs Consul registered with a critical service instance
 // and CTS in once-mode and checks the terraform.tfvars contents to see whats
 // included/excluded. It checks the following behavior:
-// 1. By default, CTS only includes passing service instances (checked by
-//    confirming in terraform.tfvars)
-// 2. CTS can include non-passing service instances through additional
-//    configuration
+//  1. By default, CTS only includes passing service instances (checked by
+//     confirming in terraform.tfvars)
+//  2. CTS can include non-passing service instances through additional
+//     configuration
 func TestE2E_FilterStatus(t *testing.T) {
 	setParallelism(t)
 
@@ -621,13 +621,13 @@ func TestE2E_OnceMode(t *testing.T) {
 // deprecated fields still work in v0.5.0 until removal.
 //
 // Deprecations to remove in v0.8.0
-//  - "source_input" => "module_input"
-//  - "source_includes_var" => "use_as_module_input"
+//   - "source_input" => "module_input"
+//   - "source_includes_var" => "use_as_module_input"
 //
 // Deprecations to remove in a future major release after v0.8.0
-//  - "source" => "module"
-//  - "services" => "condition "services"" or "module_input "services""
-//  - "service" block => "condition "services"" or "module_input "services""
+//   - "source" => "module"
+//   - "services" => "condition "services"" or "module_input "services""
+//   - "service" block => "condition "services"" or "module_input "services""
 func TestE2E_ConfigStreamlining_Deprecations(t *testing.T) {
 	setParallelism(t)
 
