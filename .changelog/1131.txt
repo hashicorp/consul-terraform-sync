@@ -7,12 +7,5 @@ build: Go version set to 1.24.0 in go.mod
 ```
 
 ```release-note:bug
-client: Enhanced Terraform validation error capture to include stderr when JSON diagnostics are empty, improved error formatting with cmdErr and stderr context
-e2e: Fixed TestE2EValidateError to properly capture terraform validation errors from stderr
-e2e: Fixed TestE2E_EnableTaskCommand race conditions by removing unreliable event count checks
-e2e: Fixed TestE2E_TaskEndpoints_UpdateEnableDisable to correctly expect ChangesPresent as false when disabled tasks pre-render templates
-api: Fixed TestUpdateTask_EnableDisable to correctly assert ChangesPresent as false in inspect response
-e2e: Added -auto-approve flag to task enable commands in TLS/MTLS tests to prevent hanging on approval prompts
-e2e: Updated TLS error message expectations for Go 1.24.0 ("certificate required" instead of "bad certificate")
-e2e: Skipped TestE2E_EnableTaskCommand "user does not approve plan" test case pending PM/team decision on expected behavior when ChangesPresent is false
+client: Enhanced Terraform validation error capture to include stderr when JSON diagnostics are empty
 ```

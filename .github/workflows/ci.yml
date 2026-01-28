@@ -15,9 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CONSUL_VERSION: 1.12.1
-  TERRAFORM_VERSION: 1.7.5
-  GO_VERSION: 1.23.10
+  CONSUL_VERSION: 1.21.2
+  TERRAFORM_VERSION: 1.14.3
+  VAULT_VERSION: 1.21.2
+  GO_VERSION: 1.25.5
 
 jobs:
   run-check:
