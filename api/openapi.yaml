@@ -446,10 +446,8 @@ components:
           example: "default"
         cts_user_defined_meta:
           type: object
-          nullable: true
           additionalProperties:
             type: string
-            nullable: true
         use_as_module_input:
           type: boolean
           default: true
@@ -469,7 +467,6 @@ components:
           example: "default"
         node_meta:
           type: object
-          nullable: true
           additionalProperties:
             type: string
           example:
@@ -536,7 +533,6 @@ components:
           example: "default"
         cts_user_defined_meta:
           type: object
-          nullable: true
           additionalProperties:
             type: string
     ConsulKVModuleInput:
