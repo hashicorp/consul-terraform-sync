@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CONSUL_VERSION: 1.21.2
+  CONSUL_VERSION: 1.22.3
   TERRAFORM_VERSION: 1.14.3
   VAULT_VERSION: 1.21.2
   GO_VERSION: 1.25.5

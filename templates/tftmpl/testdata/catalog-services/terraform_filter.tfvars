@@ -35,7 +35,7 @@ services = {
     }
     node_meta = {
       consul-network-segment = ""
-      consul-version         = "1.21.2"
+      consul-version         = "1.22.3"
       k                      = "v"
     }
     cts_user_defined_meta = {}
@@ -62,7 +62,7 @@ services = {
     }
     node_meta = {
       consul-network-segment = ""
-      consul-version         = "1.21.2"
+      consul-version         = "1.22.3"
     }
     cts_user_defined_meta = {}
   },
