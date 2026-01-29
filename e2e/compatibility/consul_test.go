@@ -51,9 +51,8 @@ func TestCompatibility_Consul(t *testing.T) {
 	// major minor version. v1.4.5 starts losing compatibility, details in
 	// comments. Theoretical compatible versions 0.1.0 GA:
 	consulVersions := []string{
-		"1.12.1",
-		"1.11.6",
-		"1.10.11",
+		"1.22.3",
+		"1.20.6",
 	}
 
 	cases := []struct {
@@ -98,7 +97,6 @@ func TestCompatibility_Consul(t *testing.T) {
 	for i := range consulVersions {
 		cv := consulVersions[i]
 		t.Run(cv, func(t *testing.T) {
-			t.Parallel()
 
 			tempDir := filepath.Join(wd, fmt.Sprint(tempDirPrefix, strings.ReplaceAll(t.Name(), "/", "_")))
 			cleanup := testutils.MakeTempDir(t, tempDir)
@@ -479,6 +477,27 @@ func testCTSRegisteredCompatibility(t *testing.T, tempDir string, port int) {
 	assert.Equal(t, serviceName, check.ServiceName)
 }
 
+// waitForConsulReady waits for Consul to be ready by polling the leader endpoint
+func waitForConsulReady(t *testing.T, port int) {
+	conf := capi.DefaultConfig()
+	conf.Address = fmt.Sprintf("localhost:%d", port)
+	client, err := capi.NewClient(conf)
+	require.NoError(t, err)
+
+	// Poll for up to 60 seconds (increased for parallel test runs)
+	maxAttempts := 120
+	for i := 0; i < maxAttempts; i++ {
+		leader, err := client.Status().Leader()
+		if err == nil && leader != "" {
+			// Wait a bit more for Consul to be fully ready
+			time.Sleep(2 * time.Second)
+			return
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	require.Fail(t, fmt.Sprintf("Consul on port %d failed to become ready within timeout", port))
+}
+
 // runConsul starts running a Consul binary that is in the current directory.
 // Returns a function that stops running Consul. Does not log to standard out.
 func runConsul(t *testing.T, execPath string, port int) func() {
@@ -499,8 +518,8 @@ func runConsul(t *testing.T, execPath string, port int) func() {
 	err := cmd.Start()
 	require.NoError(t, err)
 
-	// wait a little for Consul to get fully started up
-	time.Sleep(3 * time.Second)
+	// wait for Consul to be ready by checking leader endpoint
+	waitForConsulReady(t, port)
 
 	return func() {
 		cmd := exec.Command(execPath, "leave",
