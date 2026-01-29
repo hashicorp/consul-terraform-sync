@@ -7,18 +7,3 @@
 - build: Go version set to 1.25.5 in go.mod
 - build: Upgraded Consul to "1.22.3", Terraform to 1.14.3, Vault to 1.21.2
 ```
-
-```release-note:bug
-- client: Enhanced Terraform validation error capture to include stderr when JSON diagnostics are empty
-```
-
-```release-note:enhancement
-- build: Updated all GitHub Actions workflows and go.mod to use consistent, latest versions
-- build: Updated all golden files and test data to match new aligned output from hclwrite
-- infra: Fixed HTTP mock to always initialize Header, preventing nil panics
-- infra: Made license API test robust to error wrapping
-- tests: Skipped unsupported Consul versions in compatibility tests
-- docs: Updated example Terraform files and required version constraints
-- docs: Cleaned up and commented out unused module arguments in example modules
-- misc: Minor code and comment cleanups for clarity and maintainability
-```
