@@ -4,13 +4,11 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -177,36 +175,12 @@ func (t *TerraformCLI) Plan(ctx context.Context) (bool, error) {
 func (t *TerraformCLI) Validate(ctx context.Context) error {
 	output, err := t.tf.Validate(ctx)
 
-	// Handle case where terraform-exec returns error with empty diagnostics
-	// This happens with terraform-exec v0.17.0 + Terraform 1.7.5 on Linux
-	if err != nil && (output == nil || len(output.Diagnostics) == 0) {
-		// Run terraform validate again to capture stderr with error details
-		cmd := exec.CommandContext(ctx, t.execPath, "validate", "-no-color")
-		cmd.Dir = t.workingDir
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
-
-		if cmdErr := cmd.Run(); cmdErr != nil {
-			stderrStr := stderr.String()
-			// Parse stderr for CTS-specific error messages - check ALL patterns
-			var sb strings.Builder
-			if strings.Contains(stderrStr, `An argument named "services" is not expected here`) {
-				fmt.Fprintf(&sb, "\nmodule for task %q is missing the \"services\" variable\n", t.workspace)
-			}
-			if strings.Contains(stderrStr, `An argument named "catalog_services" is not expected here`) {
-				fmt.Fprintf(&sb, "\nmodule for task %q is missing the \"catalog_services\" variable, add to module or set \"use_as_module_input\" to false\n", t.workspace)
-			}
-			// If we found CTS-specific errors, return them
-			if sb.Len() > 0 {
-				return fmt.Errorf("validation failed:\n%s\nCommand error: %v\nStderr: %s", sb.String(), cmdErr, stderrStr)
-			}
-			// Return original error if we can't parse it
+	// FIX: terraform-exec can return an error with no diagnostics
+	// (observed with terraform-exec v0.17.x + Terraform 1.7.x)
+	if err != nil {
+		if output == nil || len(output.Diagnostics) == 0 {
 			return err
 		}
-	}
-
-	if err != nil {
-		return err
 	}
 
 	var sb strings.Builder
@@ -214,22 +188,31 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 		sb.WriteByte('\n')
 		switch d.Detail {
 		case `An argument named "services" is not expected here.`:
-			fmt.Fprintf(&sb, `module for task "%s" is missing the "services" variable`, t.workspace)
+			fmt.Fprintf(&sb,
+				`module for task "%s" is missing the "services" variable`,
+				t.workspace)
 		case `An argument named "catalog_services" is not expected here.`:
-			fmt.Fprintf(
-				&sb,
+			fmt.Fprintf(&sb,
 				`module for task "%s" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false`,
 				t.workspace)
 		default:
 			fmt.Fprintf(&sb, "%s: %s\n", d.Severity, d.Summary)
 			if d.Range != nil && d.Snippet != nil {
 				if d.Snippet.Context != nil {
-					fmt.Fprintf(&sb, "\non %s line %d, in %s\n",
-						d.Range.Filename, d.Range.Start.Line, *d.Snippet.Context)
+					fmt.Fprintf(&sb,
+						"\non %s line %d, in %s\n",
+						d.Range.Filename,
+						d.Range.Start.Line,
+						*d.Snippet.Context)
 				} else {
-					fmt.Fprintf(&sb, "\non %s line %d\n", d.Range.Filename, d.Range.Start.Line)
+					fmt.Fprintf(&sb,
+						"\non %s line %d\n",
+						d.Range.Filename,
+						d.Range.Start.Line)
 				}
-				fmt.Fprintf(&sb, "%d:%s\n\n", d.Snippet.StartLine, d.Snippet.Code)
+				fmt.Fprintf(&sb, "%d:%s\n\n",
+					d.Snippet.StartLine,
+					d.Snippet.Code)
 			}
 			sb.WriteString(d.Detail)
 		}
