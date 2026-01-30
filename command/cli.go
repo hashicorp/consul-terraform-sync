@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2020, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package command
@@ -155,7 +155,7 @@ func generateHelp(commands map[string]string, usage string, omitFlags []string) 
 		fmt.Fprintf(tw, "\nCommands:\n")
 
 		for _, v := range commonCommands {
-			fmt.Fprintf(tw, commands[v])
+			fmt.Fprintf(tw, "%s", commands[v])
 		}
 	}
 

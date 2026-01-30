@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2020, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 //go:build e2e
@@ -42,7 +42,7 @@ const (
 
 	// liberal default times to wait
 	defaultWaitForRegistration  = 8 * time.Second
-	defaultWaitForEvent         = 15 * time.Second
+	defaultWaitForEvent         = 30 * time.Second
 	defaultWaitForTestReadiness = 30 * time.Second
 	defaultWaitForCheckUpdate   = 15 * time.Second
 

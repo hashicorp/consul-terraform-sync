@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2020, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package api
@@ -215,7 +215,7 @@ func TestTaskLifeCycleHandler_CreateTask_InternalError(t *testing.T) {
 
 	ctrl := new(mocks.Server)
 	ctrl.On("Task", mock.Anything, testTaskName).Return(config.TaskConfig{}, fmt.Errorf("DNE"))
-	ctrl.On("TaskCreate", mock.Anything, mock.Anything).Return(config.TaskConfig{}, fmt.Errorf(errMsg))
+	ctrl.On("TaskCreate", mock.Anything, mock.Anything).Return(config.TaskConfig{}, fmt.Errorf("%s", errMsg))
 	handler := NewTaskLifeCycleHandler(ctrl)
 
 	resp := runTestCreateTask(t, handler, "", http.StatusInternalServerError, testTaskJSON)

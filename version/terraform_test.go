@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2020, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package version
@@ -46,7 +46,7 @@ func TestTerraformConstraint(t *testing.T) {
 			false,
 		}, {
 			"invalid upper bound",
-			"1.8.0",
+			"1.15.0",
 			false,
 		}, {
 			"unsupported beta release",

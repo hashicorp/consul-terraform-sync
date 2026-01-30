@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2020, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package controller
@@ -83,11 +83,11 @@ func (f *driverFactory) Make(ctx context.Context, conf *config.Config,
 	// Using the newly created driver, initialize the task
 	err = d.InitTask(ctx)
 	if err != nil {
-		logger.Error("error initializing task")
+		logger.Error("error initializing task", "task_name", taskName, "error", err)
 
 		// Cleanup the task
 		d.DestroyTask(ctx)
-		logger.Debug("cleaned up task that errored initializing")
+		logger.Debug("cleaned up task that errored initializing", "task_name", taskName)
 		return nil, err
 	}
 

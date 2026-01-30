@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2020, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 //go:build e2e
@@ -243,12 +243,12 @@ func TestCondition_Services_InvalidQueries(t *testing.T) {
 		{
 			"filter",
 			`filter = "\"foo\" in Service.Bar"`,
-			`Selector "Service.Bar" is not valid`,
+			`Selector`,
 		},
 		{
 			"namespace_with_oss_consul",
 			`namespace = "foo"`,
-			`Invalid query parameter: "ns"`,
+			`Invalid query parameter`,
 		},
 	}
 

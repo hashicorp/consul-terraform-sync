@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2020, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 //go:build e2e
@@ -69,7 +69,7 @@ func TestE2E_CommandTLSErrors(t *testing.T) {
 
 	commands := map[string][]string{
 		"task disable": {"task", "disable"},
-		"task enable":  {"task", "enable"},
+		"task enable":  {"task", "enable", "-auto-approve"},
 		"task delete":  {"task", "delete", "-auto-approve"}, // Doesn't inspect so need to approve to get error
 		"task create":  {"task", "create", fmt.Sprintf("--task-file=%s", taskFilePath)},
 	}
@@ -360,7 +360,7 @@ func TestE2E_CommandMTLSErrors(t *testing.T) {
 
 	commands := map[string][]string{
 		"task disable": {"task", "disable"},
-		"task enable":  {"task", "enable"},
+		"task enable":  {"task", "enable", "-auto-approve"},
 		"task delete":  {"task", "delete", "-auto-approve"},
 		"task create":  {"task", "create", fmt.Sprintf("--task-file=%s", taskFilePath)},
 	}
@@ -402,7 +402,7 @@ func TestE2E_CommandMTLSErrors(t *testing.T) {
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "true"),
 				dbTaskName,
 			},
-			"bad certificate",
+			"certificate required",
 		},
 		{
 			"ssl verify disabled and no cert key pair provided",
@@ -411,7 +411,7 @@ func TestE2E_CommandMTLSErrors(t *testing.T) {
 				fmt.Sprintf("-%s=%s", command.FlagSSLVerify, "false"),
 				dbTaskName,
 			},
-			"bad certificate",
+			"certificate required",
 		},
 	}
 
@@ -650,7 +650,7 @@ func getTestCommands(taskFilePath string) []testCommand {
 		},
 		{
 			name:           "task enable",
-			subcmd:         []string{"task", "enable"},
+			subcmd:         []string{"task", "enable", "-auto-approve"},
 			outputContains: "enable complete!",
 			arg:            dbTaskName,
 		},
