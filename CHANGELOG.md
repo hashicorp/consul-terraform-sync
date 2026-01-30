@@ -2,6 +2,7 @@
 
 SECURITY:
 * Fixed Go standard library vulnerabilities: GO-2026-4341, GO-2026-4340 by upgrading to Go 1.25.6
+* Fixed GO-2026-4316 in github.com/go-chi/chi/v5 by upgrading to v5.2.4
 
 IMPROVEMENTS:
 * Upgraded Go version to 1.25.6
