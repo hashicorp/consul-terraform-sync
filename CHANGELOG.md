@@ -1,6 +1,11 @@
-## UNRELEASED
-FEATURES:
-* Go version bump to 1.22.4
+## 0.8.0 (June 15, 2025)
+
+SECURITY:
+* Fixed CVE GHSA-vrw8-fxc6-2r93 in github.com/go-chi/chi/v5@v5.0.7
+* Fixed CVE GO-2025-3750 in golang.org/x/crypto
+
+IMPROVEMENTS:
+* Support for Terraform v1.7.5
 
 ## 0.7.1 (October 26, 2023)
 

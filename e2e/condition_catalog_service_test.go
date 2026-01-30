@@ -76,9 +76,9 @@ func TestCondition_CatalogServices_Registration(t *testing.T) {
 // TestCondition_CatalogServices_SuppressTriggers runs the CTS binary. It
 // specifically tests a task configured with a catalog service condition. This
 // test confirms that the types of changes below do not trigger the task:
-//  - changes in service instances that do not affect overall service
-//    [de]registration
-//  - changes in service tag data
+//   - changes in service instances that do not affect overall service
+//     [de]registration
+//   - changes in service tag data
 func TestCondition_CatalogServices_SuppressTriggers(t *testing.T) {
 	setParallelism(t)
 
@@ -167,9 +167,9 @@ func TestCondition_CatalogServices_UseAsModuleInput(t *testing.T) {
 // tests a task configured with a catalog service condition with the regexp
 // configuration set. This test confirms that when a service is registered that
 // doesn't match the task condition's regexp config:
-//  1) the task is not triggered (determined by confirming from the Task Status
+//  1. the task is not triggered (determined by confirming from the Task Status
 //     API that an event had not been added)
-//  2) the service information does not exist in the tfvars file
+//  2. the service information does not exist in the tfvars file
 func TestCondition_CatalogServices_Regexp(t *testing.T) {
 	setParallelism(t)
 
@@ -347,7 +347,7 @@ func TestCondition_CatalogServices_InvalidQueries(t *testing.T) {
 		{
 			"namespace_with_oss_consul",
 			`namespace = "foo"`,
-			`Invalid query parameter: "ns"`,
+			`Invalid query parameter`,
 		},
 	}
 

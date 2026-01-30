@@ -16,7 +16,7 @@ import (
 // account for. The upper bound may be removed once CTS has protocols
 // set in place for compatible modules and can handle Terraform syntax changes
 // and enhancements between versions.
-const CompatibleTerraformVersionConstraint = ">= 0.13.0, <= 1.7.5"
+const CompatibleTerraformVersionConstraint = ">= 0.13.0, <= 1.14.3"
 
 // TerraformConstraint is the go-version constraint variable for
 // CompatibleTerraformVersionConstraint

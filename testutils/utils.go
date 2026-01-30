@@ -263,11 +263,38 @@ func (t *TestingTB) DoCleanup() {
 // Failed implements Consul's testutil.TestingTB's Failed()
 func (*TestingTB) Failed() bool { return false }
 
+// Fail implements Consul's testutil.TestingTB's Fail()
+func (*TestingTB) Fail() {}
+
+// FailNow implements Consul's testutil.TestingTB's FailNow()
+func (*TestingTB) FailNow() {}
+
+// Fatal implements Consul's testutil.TestingTB's Fatal()
+func (*TestingTB) Fatal(...interface{}) {}
+
+// Error implements Consul's testutil.TestingTB's Error()
+func (*TestingTB) Error(...interface{}) {}
+
+// Errorf implements Consul's testutil.TestingTB's Errorf()
+func (*TestingTB) Errorf(string, ...interface{}) {}
+
+// Helper implements Consul's testutil.TestingTB's Helper()
+func (*TestingTB) Helper() {}
+
+// Log implements Consul's testutil.TestingTB's Log()
+func (*TestingTB) Log(...interface{}) {}
+
 // Logf implements Consul's testutil.TestingTB's Logf()
 func (*TestingTB) Logf(string, ...interface{}) {}
 
 // Name implements Consul's testutil.TestingTB's Name()
 func (*TestingTB) Name() string { return "TestingTB" }
+
+// Setenv implements Consul's testutil.TestingTB's Setenv()
+func (*TestingTB) Setenv(string, string) {}
+
+// TempDir implements Consul's testutil.TestingTB's TempDir()
+func (*TestingTB) TempDir() string { return "" }
 
 // Fatalf implements Consul's testutil.TestingTB's Fatalf()
 func (*TestingTB) Fatalf(string, ...interface{}) {}
@@ -390,6 +417,7 @@ func NewHttpClient(t *testing.T, intercepts []*HttpIntercept) *http.Client {
 		return &http.Response{
 			StatusCode: intercept.ResponseStatusCode,
 			Body:       io.NopCloser(bytes.NewBuffer(intercept.ResponseData)),
+			Header:     make(http.Header),
 		}
 	}
 
