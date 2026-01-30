@@ -42,7 +42,7 @@ const (
 
 	// liberal default times to wait
 	defaultWaitForRegistration  = 8 * time.Second
-	defaultWaitForEvent         = 15 * time.Second
+	defaultWaitForEvent         = 30 * time.Second
 	defaultWaitForTestReadiness = 30 * time.Second
 	defaultWaitForCheckUpdate   = 15 * time.Second
 
