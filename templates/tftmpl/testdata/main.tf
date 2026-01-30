@@ -9,7 +9,7 @@
 # Description: user description for task named 'test'
 
 terraform {
-  required_version = ">= 0.13.0, <= 1.7.5"
+  required_version = ">= 0.13.0, <= 1.14.3"
   required_providers {
     testProvider = {
       source  = "namespace/testProvider"

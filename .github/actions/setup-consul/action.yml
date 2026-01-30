@@ -16,5 +16,5 @@ runs:
       shell: bash
       run: |
         curl -sLo consul.zip https://releases.hashicorp.com/consul/${{ inputs.version }}/consul_${{ inputs.version }}_linux_amd64.zip
-        sudo unzip consul.zip -d /usr/local/bin/
+        sudo unzip -o consul.zip -d /usr/local/bin/
         consul version

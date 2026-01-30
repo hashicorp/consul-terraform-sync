@@ -12,7 +12,7 @@
 # Description: automate services for website X
 
 terraform {
-  required_version = ">= 0.13.0, <= 1.7.5"
+  required_version = ">= 0.13.0, <= 1.14.3"
   required_providers {
     myprovider = {
       source  = "namespace/myprovider"
@@ -34,12 +34,12 @@ provider "myprovider" {
 
 # automate services for website X
 module "my-task" {
-  module   = "namespace/example/module"
-  version  = "1.2.0"
+  source  = "namespace/example/module"
+  version = "1.2.0"
   services = var.services
 
-  count   = var.count
-  enabled = var.enabled
-  format  = var.format
-  tags    = var.tags
+  # count   = var.count
+  # enabled = var.enabled
+  # format  = var.format
+  # tags    = var.tags
 }

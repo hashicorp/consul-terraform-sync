@@ -32,6 +32,7 @@ const (
 // to execute Terraform cli commands
 type TerraformCLI struct {
 	tf         terraformExec
+	execPath   string
 	workingDir string
 	workspace  string
 	logger     logging.Logger
@@ -58,6 +59,7 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 	if err != nil {
 		return nil, err
 	}
+	execPath := tfPath
 
 	// tfexec does not support logging levels. This enables Terraform output to
 	// log within CTS logs. This is useful for debugging and development
@@ -87,6 +89,7 @@ func NewTerraformCLI(config *TerraformCLIConfig) (*TerraformCLI, error) {
 
 	client := &TerraformCLI{
 		tf:         tf,
+		execPath:   execPath,
 		workingDir: config.WorkingDir,
 		workspace:  config.Workspace,
 		logger:     logger,
@@ -171,8 +174,13 @@ func (t *TerraformCLI) Plan(ctx context.Context) (bool, error) {
 // Validate verifies the generated configuration files
 func (t *TerraformCLI) Validate(ctx context.Context) error {
 	output, err := t.tf.Validate(ctx)
+
+	// FIX: terraform-exec can return an error with no diagnostics
+	// (observed with terraform-exec v0.17.x + Terraform 1.7.x)
 	if err != nil {
-		return err
+		if output == nil || len(output.Diagnostics) == 0 {
+			return err
+		}
 	}
 
 	var sb strings.Builder
@@ -180,22 +188,31 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 		sb.WriteByte('\n')
 		switch d.Detail {
 		case `An argument named "services" is not expected here.`:
-			fmt.Fprintf(&sb, `module for task "%s" is missing the "services" variable`, t.workspace)
+			fmt.Fprintf(&sb,
+				`module for task "%s" is missing the "services" variable`,
+				t.workspace)
 		case `An argument named "catalog_services" is not expected here.`:
-			fmt.Fprintf(
-				&sb,
+			fmt.Fprintf(&sb,
 				`module for task "%s" is missing the "catalog_services" variable, add to module or set "use_as_module_input" to false`,
 				t.workspace)
 		default:
 			fmt.Fprintf(&sb, "%s: %s\n", d.Severity, d.Summary)
 			if d.Range != nil && d.Snippet != nil {
 				if d.Snippet.Context != nil {
-					fmt.Fprintf(&sb, "\non %s line %d, in %s\n",
-						d.Range.Filename, d.Range.Start.Line, *d.Snippet.Context)
+					fmt.Fprintf(&sb,
+						"\non %s line %d, in %s\n",
+						d.Range.Filename,
+						d.Range.Start.Line,
+						*d.Snippet.Context)
 				} else {
-					fmt.Fprintf(&sb, "\non %s line %d\n", d.Range.Filename, d.Range.Start.Line)
+					fmt.Fprintf(&sb,
+						"\non %s line %d\n",
+						d.Range.Filename,
+						d.Range.Start.Line)
 				}
-				fmt.Fprintf(&sb, "%d:%s\n\n", d.Snippet.StartLine, d.Snippet.Code)
+				fmt.Fprintf(&sb, "%d:%s\n\n",
+					d.Snippet.StartLine,
+					d.Snippet.Code)
 			}
 			sb.WriteString(d.Detail)
 		}
@@ -203,7 +220,7 @@ func (t *TerraformCLI) Validate(ctx context.Context) error {
 	}
 
 	if !output.Valid {
-		return fmt.Errorf(sb.String())
+		return fmt.Errorf("%s", sb.String())
 	}
 
 	if sb.Len() > 0 {

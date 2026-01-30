@@ -1,0 +1,9 @@
+```release-note:security
+- deps: Upgraded golang.org/x/crypto from v0.38.0 to v0.45.0 for security fixes (GO-2025-4134, GO-2025-4135)
+- deps: Upgraded golang.org/x/net from v0.40.0 to v0.47.0
+- deps: Upgraded golang.org/x/sys from v0.33.0 to v0.38.0
+- deps: Upgraded golang.org/x/text from v0.25.0 to v0.31.0
+- deps: Upgraded github.com/hashicorp/consul/api to v1.33.2 and consul/sdk to v0.17.1
+- build: Go version set to 1.25.5 in go.mod
+- build: Upgraded Consul to "1.22.3", Terraform to 1.14.3, Vault to 1.21.2
+```
