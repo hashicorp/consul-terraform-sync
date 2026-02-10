@@ -1,3 +1,15 @@
+## 0.9.0 (January 30, 2026)
+
+SECURITY:
+* Fixed Go standard library vulnerabilities: GO-2026-4341, GO-2026-4340 by upgrading to Go 1.25.6
+* Fixed GO-2026-4316 in github.com/go-chi/chi/v5 by upgrading to v5.2.4
+
+IMPROVEMENTS:
+* Upgraded Go version to 1.25.6
+* Upgraded github.com/hashicorp/consul/api to v1.33.2 
+* Upgraded github.com/hashicorp/consul/sdk to v0.17.1
+* Added support for Terraform v1.14.3, Consul v1.22.3, and Vault v1.21.2
+
 ## 0.8.0 (June 15, 2025)
 
 SECURITY:
