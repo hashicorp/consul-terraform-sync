@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/hashicorp/consul/api v1.33.2
 	github.com/hashicorp/consul/sdk v0.17.1
-	github.com/hashicorp/cronexpr v1.1.1
+	github.com/hashicorp/cronexpr v1.1.3
 	github.com/hashicorp/go-bexpr v0.1.4
 	github.com/hashicorp/go-checkpoint v0.5.0
 	github.com/hashicorp/go-getter v1.8.2

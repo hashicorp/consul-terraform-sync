@@ -209,8 +209,8 @@ github.com/hashicorp/consul/api v1.33.2/go.mod h1:K3yoL/vnIBcQV/25NeMZVokRvPPERi
 github.com/hashicorp/consul/sdk v0.4.0/go.mod h1:fY08Y9z5SvJqevyZNy6WWPXiG3KwBPAvlcdx16zZ0fM=
 github.com/hashicorp/consul/sdk v0.17.1 h1:LumAh8larSXmXw2wvw/lK5ZALkJ2wK8VRwWMLVV5M5c=
 github.com/hashicorp/consul/sdk v0.17.1/go.mod h1:EngiixMhmw9T7wApycq6rDRFXXVUwjjf7HuLiGMH/Sw=
-github.com/hashicorp/cronexpr v1.1.1 h1:NJZDd87hGXjoZBdvyCF9mX4DCq5Wy7+A/w+A7q0wn6c=
-github.com/hashicorp/cronexpr v1.1.1/go.mod h1:P4wA0KBl9C5q2hABiMO7cp6jcIg96CDh1Efb3g1PWA4=
+github.com/hashicorp/cronexpr v1.1.3 h1:rl5IkxXN2m681EfivTlccqIryzYJSXRGRNa0xeG7NA4=
+github.com/hashicorp/cronexpr v1.1.3/go.mod h1:P4wA0KBl9C5q2hABiMO7cp6jcIg96CDh1Efb3g1PWA4=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY2I=
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
