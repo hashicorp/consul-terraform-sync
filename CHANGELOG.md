@@ -1,3 +1,8 @@
+## UNRELEASED
+
+DEPENDENCIES:
+* Upgrade `github.com/hashicorp/cronexpr` to `v1.1.3` [[GH-1147](https://github.com/hashicorp/consul-terraform-sync/pull/1147)]
+
 ## 0.9.0 (January 30, 2026)
 
 SECURITY:
