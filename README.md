@@ -1,4 +1,4 @@
-# Consul-Terraform-Sync [![Build Status](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/build.yml/badge.svg)](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/build.yml) [![CI](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/ci.yml)
+# Consul-Terraform-Sync [![Build Status](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/build.yml/badge.svg)](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/build.yml) [![CI](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/ci.yml) [![Coverage](https://raw.githubusercontent.com/hashicorp/consul-terraform-sync/badges/coverage.svg)](https://github.com/hashicorp/consul-terraform-sync/actions/workflows/ci.yml)
 
 **We're looking for feedback on how our users interact with Consul-Terraform-Sync (CTS), please fill out our brief [survey](https://hashicorp.sjc1.qualtrics.com/jfe/form/SV_9BHmabK0UHe5O06)!**
 
