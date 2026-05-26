@@ -37,6 +37,7 @@ jobs:
         with:
           pattern: '*-coverage'
           path: coverage-artifacts
+          merge-multiple: false
 
       - name: Compute coverage
         id: coverage

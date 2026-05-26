@@ -34,6 +34,17 @@ jobs:
       - run: |
           echo "Run-check job ran successfully"
 
+  get-go-version:
+    name: Get Go Version
+    runs-on: ubuntu-latest
+    needs: [run-check]
+    if: needs.run-check.result == 'success'
+    outputs:
+      go-version: ${{ steps.get.outputs.go-version }}
+    steps:
+      - id: get
+        run: echo "go-version=${{ env.GO_VERSION }}" >> "$GITHUB_OUTPUT"
+
   checks:
     name: Checks
     runs-on: ubuntu-latest
@@ -212,9 +223,9 @@ jobs:
 
   coverage-report:
     name: Coverage Report
-    runs-on: ubuntu-latest
     needs:
       - run-check
+      - get-go-version
       - unit-and-integration
     if: ${{ !cancelled() && needs.run-check.result == 'success' && needs.unit-and-integration.result != 'skipped' }}
     uses: ./.github/workflows/reusable-coverage-report.yml
@@ -223,7 +234,7 @@ jobs:
       pull-requests: write
       id-token: write
     with:
-      go-version: ${{ env.GO_VERSION }}
+      go-version: ${{ needs.get-go-version.outputs.go-version }}
       pr-number: ${{ github.event.pull_request.number != 0 && toJson(github.event.pull_request.number) || '' }}
 
   slack-notification:
