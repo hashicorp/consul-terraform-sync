@@ -240,10 +240,14 @@ jobs:
   coverage-gate:
     name: Coverage Gate
     needs: [coverage-report]
-    # Patch coverage measures the lines a PR adds/modifies, so it only applies
-    # to pull requests. Pushes to main run coverage-report for the badge but
-    # have no "patch" to evaluate. Only gate when the report succeeded.
-    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.coverage-report.result == 'success' }}
+    # Patch coverage measures the lines a PR adds/modifies. This repo validates
+    # same-repo PRs through the `push` event (the `pull_request` run is skipped
+    # for non-fork branches via run-check), so the gate must NOT be limited to
+    # `pull_request` events. The coverage-report job resolves the open PR for
+    # the pushed branch and computes patch coverage; when there is no open PR
+    # (e.g. push to main), the patch output is empty and the gate passes as
+    # N/A. Only gate when the report succeeded.
+    if: ${{ !cancelled() && needs.coverage-report.result == 'success' }}
     runs-on: ubuntu-latest
     env:
       # Minimum required coverage of the lines a PR adds/modifies (patch
