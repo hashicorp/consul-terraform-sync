@@ -17,4 +17,11 @@ binary {
       known = ["tfc", "hcp", "tfe", "github", "artifactory", "slack", "aws", "google", "azure"]
     }
   }
+  triage {
+    suppress {
+      vulnerabilities = [
+          "GO-2026-5932", #supressing as there is no resolution for this CVE.
+      ]
+    }
+  }
 }
