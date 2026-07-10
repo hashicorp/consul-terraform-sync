@@ -24,6 +24,8 @@ var (
 	//
 	// Version must conform to the format expected by
 	// github.com/hashicorp/go-version for tests to work.
+	// Note: 0.9.1 includes the go-jose/go-jose/v3 v3.0.5 security fix
+	// (GHSA-78h2-9frx-2jm8 / GO-2026-4945).
 	Version = "0.9.1"
 
 	// VersionPrerelease is a pre-release marker for the version. If this is ""
