@@ -235,7 +235,69 @@ jobs:
       id-token: write
     with:
       go-version: ${{ needs.get-go-version.outputs.go-version }}
-      pr-number: ${{ github.event.pull_request.number != 0 && toJson(github.event.pull_request.number) || '' }}
+      pr-number: ${{ github.event_name == 'pull_request' && toJson(github.event.pull_request.number) || '' }}
+
+  coverage-gate:
+    name: Coverage Gate
+    needs: [coverage-report]
+    # Patch coverage measures the lines a PR adds/modifies. This repo validates
+    # same-repo PRs through the `push` event (the `pull_request` run is skipped
+    # for non-fork branches via run-check), so the gate must NOT be limited to
+    # `pull_request` events. The coverage-report job resolves the open PR for
+    # the pushed branch and computes patch coverage; when there is no open PR
+    # (e.g. push to main), the patch output is empty and the gate passes as
+    # N/A. Only gate when the report succeeded.
+    if: ${{ !cancelled() && needs.coverage-report.result == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      # Minimum required coverage of the lines a PR adds/modifies (patch
+      # coverage). New/changed code must be at least this well tested.
+      PATCH_THRESHOLD: "90"
+    steps:
+      - name: Enforce patch coverage threshold
+        env:
+          PATCH: ${{ needs.coverage-report.outputs.patch }}
+          COVERED: ${{ needs.coverage-report.outputs.patch_covered }}
+          COVERABLE: ${{ needs.coverage-report.outputs.patch_coverable }}
+        run: |
+          set -euo pipefail
+
+          echo "Patch coverage:     ${PATCH:-<empty>}"
+          echo "Required threshold: ${PATCH_THRESHOLD}%"
+          echo "Changed lines:      ${COVERED:-0}/${COVERABLE:-0} covered"
+
+          # No coverable Go lines changed (docs/test-only) -> nothing to gate.
+          if [ -z "${PATCH}" ] || [ "${PATCH}" = "N/A" ]; then
+            echo "::notice::No coverable Go lines changed in this PR; patch-coverage gate skipped."
+            {
+              echo "### ✅ Coverage gate passed"
+              echo ""
+              echo "No coverable Go lines changed in this PR, so there is nothing to gate."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          PCT="${PATCH%\%}"
+
+          if awk -v pct="${PCT}" -v threshold="${PATCH_THRESHOLD}" 'BEGIN { exit !(pct >= threshold) }'; then
+            echo "::notice::Patch coverage ${PATCH} meets the ${PATCH_THRESHOLD}% threshold."
+            {
+              echo "### ✅ Coverage gate passed"
+              echo ""
+              echo "Patch coverage **${PATCH}** (${COVERED}/${COVERABLE} changed lines) ≥ required **${PATCH_THRESHOLD}%**."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::Patch coverage ${PATCH} is below the required ${PATCH_THRESHOLD}% threshold."
+            {
+              echo "### ❌ Coverage gate failed"
+              echo ""
+              echo "Patch coverage **${PATCH}** (${COVERED}/${COVERABLE} changed lines) is below the required **${PATCH_THRESHOLD}%** threshold."
+              echo ""
+              echo "The lines this PR adds or modifies are not sufficiently covered by tests."
+              echo "Add tests for the new/changed code, or adjust \`PATCH_THRESHOLD\` in \`.github/workflows/ci.yml\` (with reviewer sign-off)."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
   slack-notification:
     name: Slack Notification
