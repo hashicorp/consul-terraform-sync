@@ -5,7 +5,7 @@ go 1.26.7
 require (
 	github.com/PaloAltoNetworks/pango v0.5.1
 	github.com/getkin/kin-openapi v0.147.0
-	github.com/go-chi/chi/v5 v5.2.4
+	github.com/go-chi/chi/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.34.4
 	github.com/hashicorp/consul/sdk v0.18.1
