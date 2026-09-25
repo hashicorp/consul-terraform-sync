@@ -9,6 +9,10 @@ on:
     branches:
       - main
       - "release/**"
+    # ready_for_review lets coverage run when a fork draft PR is marked ready.
+    # For same-repo branches CI runs on the push event, where draft state is
+    # resolved by the check-draft job below.
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
@@ -33,6 +37,38 @@ jobs:
     steps:
       - run: |
           echo "Run-check job ran successfully"
+
+  # Resolves whether the current PR is a draft, for both event models this repo
+  # uses: pull_request events (fork PRs) expose the draft flag directly, while
+  # same-repo branches run on the push event and must look the PR up by commit.
+  # The coverage report/gate jobs skip when this returns 'true'. Fails open
+  # (treats as not-draft) so a lookup failure never silently bypasses the gate.
+  check-draft:
+    name: Check draft status
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      is-draft: ${{ steps.check.outputs.is-draft }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "is-draft=${PR_DRAFT:-false}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # push / workflow_dispatch: no PR context, so find the open PR whose
+          # head is this commit and read its draft flag.
+          is_draft=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" \
+            --jq 'map(select(.state == "open")) | (.[0].draft // false) | tostring' 2>/dev/null || echo "false")
+          echo "is-draft=${is_draft:-false}" >> "$GITHUB_OUTPUT"
 
   get-go-version:
     name: Get Go Version
@@ -227,7 +263,9 @@ jobs:
       - run-check
       - get-go-version
       - unit-and-integration
-    if: ${{ !cancelled() && needs.run-check.result == 'success' && needs.unit-and-integration.result != 'skipped' }}
+      - check-draft
+    # Skip coverage reporting/gating on draft PRs; it runs once marked ready.
+    if: ${{ !cancelled() && needs.run-check.result == 'success' && needs.unit-and-integration.result != 'skipped' && needs.check-draft.outputs.is-draft != 'true' }}
     uses: ./.github/workflows/reusable-coverage-report.yml
     permissions:
       contents: write
@@ -235,7 +273,69 @@ jobs:
       id-token: write
     with:
       go-version: ${{ needs.get-go-version.outputs.go-version }}
-      pr-number: ${{ github.event.pull_request.number != 0 && toJson(github.event.pull_request.number) || '' }}
+      pr-number: ${{ github.event_name == 'pull_request' && toJson(github.event.pull_request.number) || '' }}
+
+  coverage-gate:
+    name: Coverage Gate
+    needs: [coverage-report]
+    # Patch coverage measures the lines a PR adds/modifies. This repo validates
+    # same-repo PRs through the `push` event (the `pull_request` run is skipped
+    # for non-fork branches via run-check), so the gate must NOT be limited to
+    # `pull_request` events. The coverage-report job resolves the open PR for
+    # the pushed branch and computes patch coverage; when there is no open PR
+    # (e.g. push to main), the patch output is empty and the gate passes as
+    # N/A. Only gate when the report succeeded.
+    if: ${{ !cancelled() && needs.coverage-report.result == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      # Minimum required coverage of the lines a PR adds/modifies (patch
+      # coverage). New/changed code must be at least this well tested.
+      PATCH_THRESHOLD: "90"
+    steps:
+      - name: Enforce patch coverage threshold
+        env:
+          PATCH: ${{ needs.coverage-report.outputs.patch }}
+          COVERED: ${{ needs.coverage-report.outputs.patch_covered }}
+          COVERABLE: ${{ needs.coverage-report.outputs.patch_coverable }}
+        run: |
+          set -euo pipefail
+
+          echo "Patch coverage:     ${PATCH:-<empty>}"
+          echo "Required threshold: ${PATCH_THRESHOLD}%"
+          echo "Changed lines:      ${COVERED:-0}/${COVERABLE:-0} covered"
+
+          # No coverable Go lines changed (docs/test-only) -> nothing to gate.
+          if [ -z "${PATCH}" ] || [ "${PATCH}" = "N/A" ]; then
+            echo "::notice::No coverable Go lines changed in this PR; patch-coverage gate skipped."
+            {
+              echo "### ✅ Coverage gate passed"
+              echo ""
+              echo "No coverable Go lines changed in this PR, so there is nothing to gate."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          PCT="${PATCH%\%}"
+
+          if awk -v pct="${PCT}" -v threshold="${PATCH_THRESHOLD}" 'BEGIN { exit !(pct >= threshold) }'; then
+            echo "::notice::Patch coverage ${PATCH} meets the ${PATCH_THRESHOLD}% threshold."
+            {
+              echo "### ✅ Coverage gate passed"
+              echo ""
+              echo "Patch coverage **${PATCH}** (${COVERED}/${COVERABLE} changed lines) ≥ required **${PATCH_THRESHOLD}%**."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::Patch coverage ${PATCH} is below the required ${PATCH_THRESHOLD}% threshold."
+            {
+              echo "### ❌ Coverage gate failed"
+              echo ""
+              echo "Patch coverage **${PATCH}** (${COVERED}/${COVERABLE} changed lines) is below the required **${PATCH_THRESHOLD}%** threshold."
+              echo ""
+              echo "The lines this PR adds or modifies are not sufficiently covered by tests."
+              echo "Add tests for the new/changed code, or adjust \`PATCH_THRESHOLD\` in \`.github/workflows/ci.yml\` (with reviewer sign-off)."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
   slack-notification:
     name: Slack Notification
