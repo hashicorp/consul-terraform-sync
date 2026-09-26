@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -145,7 +145,7 @@ func NewTerraform(config *TerraformConfig) (*Terraform, error) {
 		postApply:         h,
 		resolver:          hcat.NewResolver(),
 		watcher:           config.Watcher,
-		fileReader:        ioutil.ReadFile,
+		fileReader:        os.ReadFile,
 		logger:            logger,
 	}, nil
 }
@@ -496,7 +496,7 @@ func (tf *Terraform) inspectTask(ctx context.Context, returnPlan bool) (InspectP
 		if tf.logClient {
 			tfLogger = log.New(log.Writer(), "", log.Flags())
 		} else {
-			tfLogger = log.New(ioutil.Discard, "", 0)
+			tfLogger = log.New(io.Discard, "", 0)
 		}
 		defer tf.client.SetStdout(tfLogger.Writer())
 	}
