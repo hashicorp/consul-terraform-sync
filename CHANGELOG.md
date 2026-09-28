@@ -1,3 +1,23 @@
+## 0.9.1 (July 9, 2026)
+
+SECURITY:
+* Fixed GHSA-78h2-9frx-2jm8 (GO-2026-4945) in github.com/go-jose/go-jose/v3 by upgrading to v3.0.5
+
+IMPROVEMENTS:
+* Upgraded github.com/hashicorp/consul/api from v1.33.2 to v1.34.4
+* Upgraded github.com/hashicorp/consul/sdk from v0.17.1 to v0.18.1
+* Upgraded github.com/hashicorp/go-version from v1.6.0 to v1.9.0
+* Upgraded github.com/hashicorp/serf from v0.10.1 to v0.10.4
+* Upgraded github.com/hashicorp/golang-lru from v0.5.4 to v1.0.2
+* Upgraded github.com/mitchellh/cli from v1.1.2 to v1.1.5
+* Upgraded github.com/stretchr/testify from v1.9.0 to v1.11.1
+* Upgraded golang.org/x/crypto from v0.45.0 to v0.53.0
+* Upgraded golang.org/x/net from v0.47.0 to v0.56.0
+* Upgraded golang.org/x/sys from v0.38.0 to v0.46.0
+* Upgraded golang.org/x/text from v0.31.0 to v0.38.0
+* Upgraded google.golang.org/protobuf from v1.33.0 to v1.36.8
+* Upgraded Go version to 1.26 in go.mod
+
 ## 0.9.0 (January 30, 2026)
 
 SECURITY:
