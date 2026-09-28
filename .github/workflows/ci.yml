@@ -34,6 +34,17 @@ jobs:
       - run: |
           echo "Run-check job ran successfully"
 
+  get-go-version:
+    name: Get Go Version
+    runs-on: ubuntu-latest
+    needs: [run-check]
+    if: needs.run-check.result == 'success'
+    outputs:
+      go-version: ${{ steps.get.outputs.go-version }}
+    steps:
+      - id: get
+        run: echo "go-version=${{ env.GO_VERSION }}" >> "$GITHUB_OUTPUT"
+
   checks:
     name: Checks
     runs-on: ubuntu-latest
@@ -115,6 +126,14 @@ jobs:
       - name: Run unit and integration tests
         run: |
           make test-unit-and-integration
+
+      - name: Upload coverage profile
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: cts-coverage
+          path: coverage.txt
+          retention-days: 3
 
       - name: Annotate tests
         if: always()
@@ -201,6 +220,22 @@ jobs:
         uses: guyarb/golang-test-annotations@2941118d7ef622b1b3771d1ff6eae9e90659eb26 # v0.8.0
         with:
           test-results: .build/test-results.json
+
+  coverage-report:
+    name: Coverage Report
+    needs:
+      - run-check
+      - get-go-version
+      - unit-and-integration
+    if: ${{ !cancelled() && needs.run-check.result == 'success' && needs.unit-and-integration.result != 'skipped' }}
+    uses: ./.github/workflows/reusable-coverage-report.yml
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    with:
+      go-version: ${{ needs.get-go-version.outputs.go-version }}
+      pr-number: ${{ github.event.pull_request.number != 0 && toJson(github.event.pull_request.number) || '' }}
 
   slack-notification:
     name: Slack Notification

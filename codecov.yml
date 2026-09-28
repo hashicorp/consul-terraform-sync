@@ -1,0 +1,15 @@
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+
+ignore:
+  - "**/*_test.go"
+  - "mocks/**"
+  - "**/*.pb.go"
+  - "vendor/**"
+  - "e2e/**"

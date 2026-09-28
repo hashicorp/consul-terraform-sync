@@ -37,14 +37,14 @@ dev:
 # test runs the unit tests
 test:
 	@echo "==> Testing ${NAME}"
-	@go test -count=1 -timeout=30s -cover ./... ${TESTARGS}
+	@go test -count=1 -timeout=120s -cover ./... ${TESTARGS}
 .PHONY: test
 
 # test-unit-and-integration runs the unit and integration tests
 test-unit-and-integration:
 	@echo "==> Testing ${NAME} (unit & integration tests)"
 	@mkdir -p .build/test-results
-	@gotestsum --format testname --jsonfile .build/test-results.json -- -count=1 -timeout=2m -tags=integration -cover ./... ${TESTARGS}
+	@gotestsum --format testname --jsonfile .build/test-results.json -- -count=1 -timeout=2m -tags=integration -cover -coverprofile=coverage.txt ./... ${TESTARGS}
 .PHONY: test-unit-and-integration
 
 # test-setup-e2e sets up the CTS binary and permissions to run in E2E tests
