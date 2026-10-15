@@ -28,12 +28,13 @@ jobs:
   run-check:
     name: Run-Check
     runs-on: ubuntu-latest
-    # This job only runs if the action trigger is manual, a commit push, or a PR from a different repo (fork).
-    # Other jobs can check if this job ran successfully to determine if they should run as well.
+    # This job only runs if the action trigger is manual, a commit push, a PR from a different repo (fork),
+    # or when a PR is marked as ready for review (ready_for_review event).
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) ||
+      (github.event_name == 'pull_request' && github.event.action == 'ready_for_review')
     steps:
       - run: |
           echo "Run-check job ran successfully"
