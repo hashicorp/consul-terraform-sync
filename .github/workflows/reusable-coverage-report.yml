@@ -163,6 +163,7 @@ jobs:
                   | select(.filename | test("_test\\.go$") | not)
                   | select(.filename | test("\\.pb\\.go$") | not)
                   | select(.filename | test("(^|/)mocks/|(^|/)mock_") | not)
+                  | select(.filename | test("(^|/)api/oapigen/") | not)
                   | if (.patch == null and .changes > 0)
                     then "NULLPATCH\t\(.filename)"
                     elif (.patch == null)
