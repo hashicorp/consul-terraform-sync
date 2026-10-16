@@ -1,6 +1,6 @@
 module github.com/hashicorp/consul-terraform-sync
 
-go 1.26.7
+go 1.26.9
 
 require (
 	github.com/PaloAltoNetworks/pango v0.5.1
@@ -39,7 +39,7 @@ require (
 	github.com/zclconf/go-cty v1.10.0
 )
 
-require golang.org/x/net v0.58.0 // indirect
+require golang.org/x/net v0.60.0 // indirect
 
 require (
 	cel.dev/expr v0.25.2 // indirect
