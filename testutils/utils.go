@@ -13,7 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -130,8 +130,8 @@ func CopyFile(t testing.TB, src, dst string) {
 }
 
 // CheckDir checks whether a directory exists. If it exists, returns the file infos for further checking.
-func CheckDir(t testing.TB, exists bool, dir string) []os.FileInfo {
-	files, err := ioutil.ReadDir(dir)
+func CheckDir(t testing.TB, exists bool, dir string) []fs.DirEntry {
+	files, err := os.ReadDir(dir)
 	if exists {
 		require.NoError(t, err)
 		return files
@@ -139,7 +139,7 @@ func CheckDir(t testing.TB, exists bool, dir string) []os.FileInfo {
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no such file or directory")
-	return []os.FileInfo{}
+	return []fs.DirEntry{}
 }
 
 // WriteFile write a content to a file path.
@@ -167,7 +167,7 @@ func CheckFile(t testing.TB, exists bool, path, filename string) string {
 	require.NoError(t, err, fmt.Sprintf("file '%s' does not exist", filename))
 
 	// Return content of file if exists
-	content, err := ioutil.ReadFile(fp)
+	content, err := os.ReadFile(fp)
 	require.NoError(t, err, fmt.Sprintf("unable to read file '%s'", filename))
 	return string(content)
 }

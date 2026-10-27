@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"strings"
 
@@ -82,7 +81,7 @@ func (m *meta) defaultFlagSet(name string) *flag.FlagSet {
 	m.tls.sslVerify = m.flags.Bool(FlagSSLVerify, true, fmt.Sprintf("Boolean to verify SSL or not. Set to true to verify SSL. "+
 		"\n\t\tThis can also be specified using the %s environment variable.", api.EnvTLSSSLVerify))
 
-	m.flags.SetOutput(ioutil.Discard)
+	m.flags.SetOutput(io.Discard)
 
 	return m.flags
 }

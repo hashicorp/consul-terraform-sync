@@ -6,7 +6,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -101,7 +101,7 @@ func (h *taskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		logger.Trace("unable to read request body from update", "error", err)
 		jsonErrorResponse(ctx, w, http.StatusInternalServerError, err)

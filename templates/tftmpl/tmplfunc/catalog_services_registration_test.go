@@ -4,7 +4,7 @@
 package tmplfunc
 
 import (
-	"io/ioutil"
+	"io"
 	"regexp"
 	"testing"
 	"time"
@@ -182,8 +182,8 @@ func TestCatalogServicesRegistrationQuery_Fetch(t *testing.T) {
 		func(c *testutil.TestServerConfig) {
 			c.Bootstrap = false
 			c.LogLevel = "warn"
-			c.Stdout = ioutil.Discard
-			c.Stderr = ioutil.Discard
+			c.Stdout = io.Discard
+			c.Stderr = io.Discard
 			c.NodeMeta = map[string]string{"k": "v"}
 		})
 
@@ -195,8 +195,8 @@ func TestCatalogServicesRegistrationQuery_Fetch(t *testing.T) {
 			c.Datacenter = "dc2"
 			c.Bootstrap = true
 			c.LogLevel = "warn"
-			c.Stdout = ioutil.Discard
-			c.Stderr = ioutil.Discard
+			c.Stdout = io.Discard
+			c.Stderr = io.Discard
 		})
 	require.NoError(t, err, "failed to start consul server 3")
 	defer srv3.Stop()

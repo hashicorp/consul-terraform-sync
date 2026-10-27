@@ -4,7 +4,7 @@
 package command
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/mitchellh/cli"
@@ -12,7 +12,7 @@ import (
 )
 
 func Test_Commands(t *testing.T) {
-	cf := Commands(ioutil.Discard, ioutil.Discard)
+	cf := Commands(io.Discard, io.Discard)
 
 	// map of commands to synopsis
 	expectedCommands := map[string]cli.Command{
