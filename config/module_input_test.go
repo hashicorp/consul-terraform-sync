@@ -45,6 +45,26 @@ task {
 		recurse = true
 	}
 }`
+
+	testModuleInputIntentionsSuccess = `
+task {
+	name = "module_input_task"
+	module = "..."
+	condition "schedule" {
+		cron = "* * * * * * *"
+	}
+	module_input "intentions" {
+		datacenter = "dc2"
+		namespace = "ns2"
+		source_services {
+			regexp = "^web.*"
+		}
+		destination_services {
+			regexp = "^api.*"
+		}
+	}
+}`
+
 	testModuleInputsSuccess = `
 task {
 	name = "module_input_task"
@@ -57,6 +77,14 @@ task {
 	}
 	module_input "consul-kv" {
 		path = "my/path"
+	}
+	module_input "intentions" {
+		source_services {
+			regexp = "^web.*"
+		}
+		destination_services {
+			regexp = "^api.*"
+		}
 	}
 }`
 
@@ -85,6 +113,23 @@ task {
 		namespace = "ns2"
 		datacenter = "dc2"
 		recurse = true
+	}
+}`
+	testModuleInputIntentionsUnsupportedFieldError = `
+task {
+	name = "module_input_task"
+	module = "..."
+	condition "schedule" {
+		cron = "* * * * * * *"
+	}
+	module_input "intentions" {
+		nonexistent_field = true
+		source_services {
+			regexp = "^web.*"
+		}
+		destination_services {
+			regexp = "^api.*"
+		}
 	}
 }`
 
@@ -129,6 +174,26 @@ func TestModuleInput_DecodeConfig_Success(t *testing.T) {
 			config: testModuleInputConsulKVSuccess,
 		},
 		{
+			name: "intentions",
+			expected: &ModuleInputConfigs{
+				&IntentionsModuleInputConfig{
+					IntentionsMonitorConfig{
+						Datacenter: String("dc2"),
+						Namespace:  String("ns2"),
+						SourceServices: &IntentionsServicesConfig{
+							Regexp: String("^web.*"),
+							Names:  []string{},
+						},
+						DestinationServices: &IntentionsServicesConfig{
+							Regexp: String("^api.*"),
+							Names:  []string{},
+						},
+					},
+				},
+			},
+			config: testModuleInputIntentionsSuccess,
+		},
+		{
 			name: "multiple unique module_inputs",
 			expected: &ModuleInputConfigs{
 				&ServicesModuleInputConfig{
@@ -146,6 +211,20 @@ func TestModuleInput_DecodeConfig_Success(t *testing.T) {
 						Recurse:    Bool(false),
 						Datacenter: String(""),
 						Namespace:  String(""),
+					},
+				},
+				&IntentionsModuleInputConfig{
+					IntentionsMonitorConfig{
+						Datacenter: String(""),
+						Namespace:  String(""),
+						SourceServices: &IntentionsServicesConfig{
+							Regexp: String("^web.*"),
+							Names:  []string{},
+						},
+						DestinationServices: &IntentionsServicesConfig{
+							Regexp: String("^api.*"),
+							Names:  []string{},
+						},
 					},
 				},
 			},
@@ -190,6 +269,11 @@ func TestModuleInput_DecodeConfig_Error(t *testing.T) {
 			expected: nil,
 			config:   testModuleInputConsulKVUnsupportedFieldError,
 		},
+		{
+			name:     "intentions unsupported field",
+			expected: nil,
+			config:   testModuleInputConsulKVUnsupportedFieldError,
+		},
 	}
 
 	for _, tc := range cases {
@@ -219,8 +303,9 @@ func TestModuleInputConfigs_Len(t *testing.T) {
 			&ModuleInputConfigs{
 				&ServicesModuleInputConfig{},
 				&ConsulKVModuleInputConfig{},
+				&IntentionsModuleInputConfig{},
 			},
-			2,
+			3,
 		},
 	}
 
@@ -272,6 +357,18 @@ func TestModuleInputConfigs_Copy(t *testing.T) {
 						Namespace:  String("ns2"),
 					},
 				},
+				&IntentionsModuleInputConfig{
+					IntentionsMonitorConfig{
+						Datacenter: String("datacenter"),
+						Namespace:  String("namespace"),
+						SourceServices: &IntentionsServicesConfig{
+							Regexp: String("^web.*"),
+						},
+						DestinationServices: &IntentionsServicesConfig{
+							Regexp: String("^api.*"),
+						},
+					},
+				},
 			},
 			&ModuleInputConfigs{
 				&ServicesModuleInputConfig{
@@ -291,6 +388,18 @@ func TestModuleInputConfigs_Copy(t *testing.T) {
 						Recurse:    Bool(true),
 						Datacenter: String("dc2"),
 						Namespace:  String("ns2"),
+					},
+				},
+				&IntentionsModuleInputConfig{
+					IntentionsMonitorConfig{
+						Datacenter: String("datacenter"),
+						Namespace:  String("namespace"),
+						SourceServices: &IntentionsServicesConfig{
+							Regexp: String("^web.*"),
+						},
+						DestinationServices: &IntentionsServicesConfig{
+							Regexp: String("^api.*"),
+						},
 					},
 				},
 			},
@@ -339,12 +448,21 @@ func TestModuleInputConfigs_Merge(t *testing.T) {
 			&ModuleInputConfigs{},
 		},
 		{
-			"happy_path_different_type",
+			"happy_path_different_type_one",
 			&ModuleInputConfigs{&ServicesModuleInputConfig{}},
 			&ModuleInputConfigs{&ConsulKVModuleInputConfig{}},
 			&ModuleInputConfigs{
 				&ServicesModuleInputConfig{},
 				&ConsulKVModuleInputConfig{},
+			},
+		},
+		{
+			"happy_path_different_type_two",
+			&ModuleInputConfigs{&ServicesModuleInputConfig{}},
+			&ModuleInputConfigs{&IntentionsModuleInputConfig{}},
+			&ModuleInputConfigs{
+				&ServicesModuleInputConfig{},
+				&IntentionsModuleInputConfig{},
 			},
 		},
 		{
@@ -438,6 +556,7 @@ func TestModuleInputConfigs_Validate(t *testing.T) {
 			moduleInputs: &ModuleInputConfigs{
 				&ServicesModuleInputConfig{},
 				&ConsulKVModuleInputConfig{},
+				&IntentionsModuleInputConfig{},
 			},
 			valid: true,
 		},
@@ -447,6 +566,7 @@ func TestModuleInputConfigs_Validate(t *testing.T) {
 			moduleInputs: &ModuleInputConfigs{
 				&ServicesModuleInputConfig{},
 				&ConsulKVModuleInputConfig{},
+				&IntentionsModuleInputConfig{},
 			},
 			valid: true,
 		},
@@ -523,11 +643,26 @@ func TestModuleInputConfigs_GoString(t *testing.T) {
 						Path: String("my/path"),
 					},
 				},
+				&IntentionsModuleInputConfig{
+					IntentionsMonitorConfig: IntentionsMonitorConfig{
+						Datacenter: String("datacenter"),
+						Namespace:  String("namespace"),
+						SourceServices: &IntentionsServicesConfig{
+							Regexp: String("^web.*"),
+						},
+						DestinationServices: &IntentionsServicesConfig{
+							Regexp: String("^api.*"),
+						},
+					},
+				},
 			},
 			"{&ServicesModuleInputConfig{&ServicesMonitorConfig{Regexp:^api$, Names:[], " +
 				"Datacenter:, Namespace:, Filter:, CTSUserDefinedMeta:map[]}}, " +
 				"&ConsulKVModuleInputConfig{&ConsulKVMonitorConfig{Path:my/path, " +
-				"Recurse:false, Datacenter:, Namespace:, }}}",
+				"Recurse:false, Datacenter:, Namespace:, }}, " +
+				"&IntentionsModuleInputConfig{&IntentionsMonitorConfig" +
+				"{Datacenter:datacenter, Namespace:namespace, " +
+				"Source Services: Regexp:^web.*, Destination Services: Regexp:^api.*}}}",
 		},
 	}
 
