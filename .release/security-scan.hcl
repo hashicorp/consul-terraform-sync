@@ -9,6 +9,9 @@ container {
     suppress {
       vulnerabilities = [
         "GO-2026-5932", // x/crypto/openpgp: no fixed version exists upstream; CTS imports no openpgp package.
+        "GHSA-vvm8-gf78-28g4", // go-jose/v3: no fixed v3 release (fixed only in v4); pulled in transitively via vault/api.
+        "GHSA-4w3g-jfj2-cw2q", // go-jose/v3: no fixed v3 release (fixed only in v4); pulled in transitively via vault/api.
+        "GHSA-mgcc-cww5-fp2q", // go-jose/v3: no fixed v3 release (fixed only in v4); pulled in transitively via vault/api.
       ]
     }
   }
@@ -23,6 +26,9 @@ binary {
     suppress {
       vulnerabilities = [
         "GO-2026-5932", // x/crypto/openpgp: no fixed version exists upstream; CTS imports no openpgp package.
+        "GHSA-vvm8-gf78-28g4", // go-jose/v3: no fixed v3 release (fixed only in v4); pulled in transitively via vault/api.
+        "GHSA-4w3g-jfj2-cw2q", // go-jose/v3: no fixed v3 release (fixed only in v4); pulled in transitively via vault/api.
+        "GHSA-mgcc-cww5-fp2q", // go-jose/v3: no fixed v3 release (fixed only in v4); pulled in transitively via vault/api.
       ]
     }
   }
