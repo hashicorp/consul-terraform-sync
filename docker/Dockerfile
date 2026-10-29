@@ -31,7 +31,8 @@ RUN addgroup ${NAME} && \
 
 # Set up certificates, base tools, and software.
 RUN set -eux && \
-    apk add --no-cache dumb-init git bash openssh && \
+    apk add --no-cache dumb-init git bash && \
+    apk add --no-cache --repository https://dl-cdn.alpinelinux.org/alpine/edge/main "openssh>=10.6" && \
     apk add --no-cache ca-certificates curl gnupg libcap openssl su-exec iputils && \
     BUILD_GPGKEY=C874011F0AB405110D02105534365D9472D7468F; \
     found=''; \
