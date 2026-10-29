@@ -7,8 +7,8 @@ require (
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/go-chi/chi/v5 v5.3.0
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/consul/api v1.34.4
-	github.com/hashicorp/consul/sdk v0.18.1
+	github.com/hashicorp/consul/api v1.35.0
+	github.com/hashicorp/consul/sdk v0.19.0
 	github.com/hashicorp/cronexpr v1.1.3
 	github.com/hashicorp/go-bexpr v0.1.4
 	github.com/hashicorp/go-checkpoint v0.5.0
