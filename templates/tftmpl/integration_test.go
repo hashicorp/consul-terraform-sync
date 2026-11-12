@@ -8,7 +8,7 @@ package tftmpl
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -27,7 +27,7 @@ import (
 )
 
 func TestInitRootModule(t *testing.T) {
-	dir, err := ioutil.TempDir(".", "consul-terraform-sync-tftmpl-")
+	dir, err := os.MkdirTemp(".", "consul-terraform-sync-tftmpl-")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -233,12 +233,12 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 			t.Parallel()
 
 			// Setup Consul server
-			log.SetOutput(ioutil.Discard)
+			log.SetOutput(io.Discard)
 			srv, err := testutil.NewTestServerConfigT(tb,
 				func(c *testutil.TestServerConfig) {
 					c.LogLevel = "warn"
-					c.Stdout = ioutil.Discard
-					c.Stderr = ioutil.Discard
+					c.Stdout = io.Discard
+					c.Stderr = io.Discard
 
 					// Hardcode node info so it doesn't change per run
 					c.NodeName = "worker-01"
@@ -275,8 +275,8 @@ func TestRenderTFVarsTmpl(t *testing.T) {
 					func(c *testutil.TestServerConfig) {
 						c.Bootstrap = false
 						c.LogLevel = "warn"
-						c.Stdout = ioutil.Discard
-						c.Stderr = ioutil.Discard
+						c.Stdout = io.Discard
+						c.Stderr = io.Discard
 
 						// Hardcode node info so it doesn't change per run
 						c.NodeName = "worker-02"

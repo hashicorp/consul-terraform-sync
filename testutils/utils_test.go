@@ -4,7 +4,6 @@
 package testutils
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -41,11 +40,11 @@ func TestMakeTempDir(t *testing.T) {
 		tempDir := "test-temp"
 		del := MakeTempDir(t, tempDir)
 
-		_, err := ioutil.ReadDir(tempDir)
+		_, err := os.ReadDir(tempDir)
 		require.NoError(t, err)
 
 		del()
-		_, err = ioutil.ReadDir(tempDir)
+		_, err = os.ReadDir(tempDir)
 		require.Error(t, err)
 	})
 }

@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -44,8 +44,8 @@ func NewTestConsulServer(tb testing.TB, config TestConsulServerConfig) *testutil
 	srv, err := testutil.NewTestServerConfigT(tb,
 		func(c *testutil.TestServerConfig) {
 			c.LogLevel = "warn"
-			c.Stdout = ioutil.Discard
-			c.Stderr = ioutil.Discard
+			c.Stdout = io.Discard
+			c.Stderr = io.Discard
 
 			// Support CTS connecting over HTTP2
 			if config.HTTPSRelPath != "" {
@@ -158,7 +158,7 @@ func ListConsulServices(tb testing.TB, srv *testutil.TestServer, filter string) 
 	}
 	resp := RequestHTTP(tb, http.MethodGet, u, "")
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	require.NoError(tb, err)
 	defer resp.Body.Close()
 
@@ -193,7 +193,7 @@ func GetConsulService(tb testing.TB, srv *testutil.TestServer, serviceID string)
 	resp := RequestHTTP(tb, http.MethodGet, u, "")
 	defer resp.Body.Close()
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	require.NoError(tb, err)
 
 	if resp.StatusCode != 200 {
@@ -243,7 +243,7 @@ func ListConsulChecks(tb testing.TB, srv *testutil.TestServer) map[string]Consul
 	u := fmt.Sprintf("http://%s/v1/agent/checks", srv.HTTPAddr)
 	resp := RequestHTTP(tb, http.MethodGet, u, "")
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	require.NoError(tb, err)
 	defer resp.Body.Close()
 
@@ -340,7 +340,7 @@ func CheckStateFile(t *testing.T, consulAddr, taskname string) {
 func ShowMeServices(t testing.TB, srv *testutil.TestServer) {
 	u := fmt.Sprintf("http://%s/v1/agent/services", srv.HTTPAddr)
 	resp := RequestHTTP(t, http.MethodGet, u, "")
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	fmt.Println(string(b))
 	defer resp.Body.Close()
@@ -351,7 +351,7 @@ func ShowMeHealth(t testing.TB, srv *testutil.TestServer, svcName string) {
 	// get the node
 	u := fmt.Sprintf("http://%s/v1/health/service/%s", srv.HTTPAddr, svcName)
 	resp := RequestHTTP(t, http.MethodGet, u, "")
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	resp.Body.Close()
 	nodes := []struct{ Node struct{ Node string } }{}
@@ -361,7 +361,7 @@ func ShowMeHealth(t testing.TB, srv *testutil.TestServer, svcName string) {
 	// all services on that node
 	u = fmt.Sprintf("http://%s/v1/health/node/%s", srv.HTTPAddr, node)
 	resp = RequestHTTP(t, http.MethodGet, u, "")
-	b, err = ioutil.ReadAll(resp.Body)
+	b, err = io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	resp.Body.Close()
 
