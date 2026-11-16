@@ -1,0 +1,3 @@
+```release-note:security
+- deps: Upgraded github.com/hashicorp/vault/api from v1.12.2 to v1.23.0 for security fixes, removing the indirect dependency on github.com/go-jose/go-jose/v3
+```
