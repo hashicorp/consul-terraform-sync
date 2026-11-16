@@ -3,8 +3,9 @@
 
 # Reusable workflow: merges per-runner coverage profiles from unit-and-integration,
 # computes the total, posts/edits a PR comment (same-repo only), uploads an HTML
-# artifact, uploads to Codecov, and (on main) pushes a coverage badge SVG to the
-# `badges` branch for the README.
+# artifact, uploads to Codecov, and (on main) publishes the coverage badge SVG
+# and the per-package coverage baseline (coverage-baseline.txt, consumed by the
+# coverage-regression-gate job) to the `badges` branch.
 
 name: reusable-coverage-report
 
@@ -36,6 +37,14 @@ on:
       patch_coverable:
         description: Number of changed coverable lines in the PR.
         value: ${{ jobs.report.outputs.patch_coverable }}
+      pr-number:
+        description: Open PR for this run, or empty when there is none.
+        value: ${{ jobs.report.outputs.pr-number }}
+      pr-base:
+        description: >-
+          Base branch of that PR, or empty when there is no PR or the lookup
+          failed.
+        value: ${{ jobs.report.outputs.pr-base }}
 
 jobs:
   report:
@@ -49,6 +58,8 @@ jobs:
       patch: ${{ steps.patch.outputs.patch }}
       patch_covered: ${{ steps.patch.outputs.covered }}
       patch_coverable: ${{ steps.patch.outputs.coverable }}
+      pr-number: ${{ steps.resolve-pr.outputs.pr-number }}
+      pr-base: ${{ steps.resolve-pr.outputs.pr-base }}
     steps:
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
@@ -67,7 +78,13 @@ jobs:
               --jq '.[0].number // ""' 2>/dev/null || echo "")
             echo "Resolved PR number from branch: $PR"
           fi
+          BASE=""
+          if [ -n "$PR" ]; then
+            BASE=$(gh api "repos/${{ github.repository }}/pulls/${PR}" --jq '.base.ref' 2>/dev/null || echo "")
+            echo "PR base branch: ${BASE:-<unknown>}"
+          fi
           echo "pr-number=$PR" >> "$GITHUB_OUTPUT"
+          echo "pr-base=$BASE" >> "$GITHUB_OUTPUT"
 
       - name: Download coverage profiles
         uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
@@ -139,6 +156,15 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           go tool cover -html=merged-coverage.out -o coverage.html
+
+      - name: Upload pkg-summary artifact
+        # Consumed by the coverage-regression-gate job in ci.yml.
+        if: steps.coverage.outputs.total != 'N/A'
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: pkg-summary
+          path: pkg-summary.txt
+          if-no-files-found: error
 
       - name: Compute patch coverage
         id: patch
@@ -309,19 +335,26 @@ jobs:
           fail_ci_if_error: false
           verbose: false
 
-      - name: Update coverage badge
+      - name: Publish coverage badge and baseline
+        # The `badges` branch is not covered by the org pull_request ruleset that
+        # protects main, so the workflow token can push to it. PRs cannot modify
+        # it, which keeps the regression-gate baseline tamper-proof.
         if: github.ref == 'refs/heads/main' && steps.coverage.outputs.total != 'N/A'
         env:
           TOTAL: ${{ steps.coverage.outputs.total }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           PCT="${TOTAL%%%}"
           if (( $(echo "$PCT >= 80" | bc -l) )); then COLOR="brightgreen"
           elif (( $(echo "$PCT >= 60" | bc -l) )); then COLOR="yellow"
           else COLOR="red"
           fi
 
-          cat > coverage.svg <<SVGEOF
+          # Prepare outside the main checkout: the badges branch tracks
+          # coverage.svg, so an untracked copy in the workspace would block the
+          # branch switch.
+          cat > "$RUNNER_TEMP/coverage.svg" <<SVGEOF
           <svg xmlns="http://www.w3.org/2000/svg" width="120" height="20">
             <linearGradient id="s" x2="0" y2="100%">
               <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
@@ -340,23 +373,26 @@ jobs:
           </svg>
           SVGEOF
 
+          WORK="$RUNNER_TEMP/badges"
+          git init -q "$WORK"
+          cd "$WORK"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin \
-            "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
 
-          git fetch origin badges 2>/dev/null || true
-          if git rev-parse --verify origin/badges >/dev/null 2>&1; then
-            git checkout -B badges origin/badges
+          if git ls-remote --exit-code --heads origin badges >/dev/null; then
+            git fetch -q --depth=1 origin badges
+            git checkout -q -B badges FETCH_HEAD
           else
-            git checkout --orphan badges
-            git rm -rf . --quiet || true
+            git checkout -q --orphan badges
           fi
 
-          mv coverage.svg coverage.svg.tmp
-          git rm -rf . --quiet || true
-          mv coverage.svg.tmp coverage.svg
-
-          git add coverage.svg
-          git commit -m "ci: update coverage badge to ${TOTAL}" || echo "No changes to badge"
-          git push origin badges
+          cp "$RUNNER_TEMP/coverage.svg" coverage.svg
+          cp "$GITHUB_WORKSPACE/pkg-summary.txt" coverage-baseline.txt
+          git add coverage.svg coverage-baseline.txt
+          if git diff --cached --quiet; then
+            echo "Badge and baseline unchanged"
+          else
+            git commit -q -m "ci: update coverage badge to ${TOTAL} and baseline"
+            git push origin badges
+          fi
