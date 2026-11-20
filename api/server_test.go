@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -82,7 +82,7 @@ func TestRequest(t *testing.T) {
 			require.NoError(t, err)
 			bytesR := bytes.NewBuffer(b)
 			mockResp := &http.Response{
-				Body:       ioutil.NopCloser(bytesR),
+				Body:       io.NopCloser(bytesR),
 				StatusCode: tc.httpStatus,
 			}
 			hc.On("Do", mock.Anything).Return(mockResp, tc.httpError).Once()
